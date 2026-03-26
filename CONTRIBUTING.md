@@ -1,0 +1,90 @@
+# Contributing
+
+## 목표
+
+이 저장소는 빠르게 기능을 붙일 수 있으면서도, 구조와 계약이 흐트러지지 않도록 협업 규칙을 명확하게 유지합니다.
+
+## 기본 작업 순서
+
+1. 최신 브랜치에서 작업 브랜치를 만듭니다.
+2. 변경 전에 관련 문서와 계약 구조를 확인합니다.
+3. 기능 구현 후 `npm run check:quick`와 `npm run test`를 실행합니다.
+4. 동작 방식이 바뀌면 문서를 같이 수정합니다.
+5. 리뷰 가능한 단위로 PR을 올립니다.
+
+## 브랜치와 PR 기본 규칙
+
+- 기본 브랜치는 `main`으로 고정합니다.
+- `main`에는 직접 push하지 않고, 작업 브랜치에서 PR을 통해서만 변경을 반영합니다.
+- PR 머지 전에는 GitHub Actions `CI` 워크플로가 반드시 통과해야 합니다.
+- 브랜치 예시: `feat/auth-refresh`, `fix/dashboard-summary`, `docs/windows-env-guide`
+- PR 제목 예시: `feat: add transaction mutation flow`
+- PR 본문에는 목적, 변경 범위, 검증 방법, 문서 반영 여부를 적습니다.
+- 계약, env, migration, 운영 문서 변경이 있으면 PR 체크리스트에서 명시합니다.
+
+## GitHub 저장소 설정 체크리스트
+
+- Default branch는 `main`으로 둡니다.
+- `main` 보호 브랜치 규칙에서 PR 기반 머지를 강제합니다.
+- `main` 보호 브랜치 규칙에서 상태 검사 통과를 강제합니다.
+- 필수 상태 검사는 GitHub UI에 표시되는 `validate` 또는 `CI / validate` 항목으로 지정합니다.
+- 머지 전에 브랜치 최신화를 요구해 오래된 CI 결과가 그대로 합쳐지지 않도록 합니다.
+- `main` 직접 push는 차단합니다.
+- 현재 기준 CODEOWNERS 기본 범위는 전체 저장소이며, 기본 책임자는 `@cheon0965`입니다.
+- 저장소가 단일 유지보수 단계인 동안에는 승인 리뷰 강제를 기본값으로 두지 않고, 협업 인원이 늘면 CODEOWNERS 리뷰 강제를 다시 검토합니다.
+
+## 릴리즈와 태그 규칙
+
+- 첫 기준 태그부터 `vMAJOR.MINOR.PATCH` 형식을 사용합니다.
+- 호환성 깨짐은 MAJOR, 기능 추가는 MINOR, 버그 수정/문서/설정 변경은 PATCH를 올립니다.
+- 초기 예시: `v0.1.0`, `v0.1.1`, `v0.2.0`
+- 첫 공개 가능한 기준 커밋을 만든 뒤 `v0.1.0`을 시작 태그로 사용합니다.
+
+## 구조 규칙
+
+- Web은 `app -> features -> shared` 흐름을 유지합니다.
+- API는 `controller -> service -> repository -> mapper/calculator` 흐름을 유지합니다.
+- 공용 계약은 `packages/contracts`를 단일 소스로 사용합니다.
+- 사용자 경계가 필요한 데이터는 항상 `userId` 기준으로 다룹니다.
+
+## 비밀정보 규칙
+
+- `DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` 같은 비밀값은 저장소 밖 SECRET 폴더에 둡니다.
+- 현재 기준 SECRET 폴더 경로는 루트 [.secret-dir.local](/d:/참고자료/프로젝트소스/personal-erp-starter/.secret-dir.local#L1) 에 정의된 `C:\secrets\personal-erp` 입니다.
+- 실제 기준 파일은 `C:\secrets\personal-erp\api.env`, `C:\secrets\personal-erp\web.env` 입니다.
+- `.secret-dir.local`에는 `PERSONAL_ERP_SECRET_DIR` 경로만 기록합니다.
+- 실제 비밀값 파일은 Git에 추가하지 않습니다.
+
+## DB 변경 규칙
+
+- 스키마 변경은 `npm run db:migrate` 기준으로 진행합니다.
+- `db:push:unsafe`는 로컬 복구나 예외 상황이 아니면 기본 흐름으로 쓰지 않습니다.
+- 스키마 PR에는 migration 파일이 함께 포함되어야 합니다.
+
+## fallback 규칙
+
+- demo fallback은 기본적으로 끈 상태가 기준입니다.
+- 로컬 개발에서만 `NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=true`로 명시적으로 켭니다.
+- 현재 권장 위치는 `C:\secrets\personal-erp\web.env` 입니다.
+- fallback 정책이 바뀌면 [FALLBACK_POLICY.md](/d:/참고자료/프로젝트소스/personal-erp-starter/docs/FALLBACK_POLICY.md) 를 같이 갱신합니다.
+
+## 테스트 규칙
+
+- 최소 실행 기준: `npm run check:quick`
+- PR 전 권장 기준: `npm run test`
+- 인증, 소유권 검증, 월말 계산 로직을 건드리면 관련 테스트를 같이 수정합니다.
+
+## 문서 갱신 규칙
+
+- env 키 또는 SECRET 경로 방식 변경: `ENVIRONMENT_SETUP.md`
+- 협업 흐름 변경: `CONTRIBUTING.md`
+- 구조 변경: `docs/ARCHITECTURE.md`
+- 설계 결정 기록: `docs/adr/`
+
+## ADR 작성 기준
+
+다음 중 하나에 해당하면 ADR 추가를 권장합니다.
+
+- 장기적으로 유지할 구조 경계를 바꿀 때
+- 테스트 또는 배포 전략을 바꿀 때
+- 앱 간 계약 관리 방식을 바꿀 때

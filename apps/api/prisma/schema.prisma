@@ -1,0 +1,211 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum AccountType {
+  BANK
+  CASH
+  CARD
+}
+
+enum CategoryKind {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum TransactionOrigin {
+  MANUAL
+  RECURRING
+  IMPORT
+}
+
+enum TransactionStatus {
+  POSTED
+  PENDING
+  CANCELLED
+}
+
+enum RecurrenceFrequency {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum InsuranceCycle {
+  MONTHLY
+  YEARLY
+}
+
+enum FuelType {
+  GASOLINE
+  DIESEL
+  LPG
+  HYBRID
+  ELECTRIC
+}
+
+model User {
+  id               String            @id @default(cuid())
+  email            String            @unique
+  passwordHash     String
+  name             String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  settings         UserSetting?
+  accounts         Account[]
+  categories       Category[]
+  transactions     Transaction[]
+  recurringRules   RecurringRule[]
+  insurancePolicies InsurancePolicy[]
+  vehicles         Vehicle[]
+}
+
+model UserSetting {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  minimumReserveWon     Int      @default(400000)
+  monthlySinkingFundWon Int      @default(140000)
+  timezone              String   @default("Asia/Seoul")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id         String      @id @default(cuid())
+  userId     String
+  name       String
+  type       AccountType
+  balanceWon Int         @default(0)
+  sortOrder  Int         @default(0)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  recurringRules RecurringRule[]
+
+  @@index([userId, sortOrder])
+}
+
+model Category {
+  id         String       @id @default(cuid())
+  userId     String
+  name       String
+  kind       CategoryKind
+  sortOrder  Int          @default(0)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  recurringRules RecurringRule[]
+
+  @@index([userId, kind, sortOrder])
+}
+
+model Transaction {
+  id           String            @id @default(cuid())
+  userId       String
+  title        String
+  type         TransactionType
+  amountWon    Int
+  businessDate DateTime
+  accountId    String
+  categoryId   String?
+  origin       TransactionOrigin @default(MANUAL)
+  status       TransactionStatus @default(POSTED)
+  memo         String?           @db.Text
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account      Account           @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  category     Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([userId, businessDate])
+  @@index([userId, type, businessDate])
+}
+
+model RecurringRule {
+  id          String              @id @default(cuid())
+  userId      String
+  accountId   String
+  categoryId  String?
+  title       String
+  amountWon   Int
+  frequency   RecurrenceFrequency
+  dayOfMonth  Int?
+  startDate   DateTime
+  endDate     DateTime?
+  nextRunDate DateTime?
+  isActive    Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account     Account             @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  category    Category?           @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([userId, isActive, nextRunDate])
+}
+
+model InsurancePolicy {
+  id                String         @id @default(cuid())
+  userId            String
+  provider          String
+  productName       String
+  monthlyPremiumWon Int
+  paymentDay        Int
+  cycle             InsuranceCycle @default(MONTHLY)
+  renewalDate       DateTime?
+  maturityDate      DateTime?
+  isActive          Boolean        @default(true)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+}
+
+model Vehicle {
+  id                                 String    @id @default(cuid())
+  userId                             String
+  name                               String
+  manufacturer                       String?
+  fuelType                           FuelType
+  initialOdometerKm                  Int
+  monthlyExpenseWon                  Int       @default(0)
+  estimatedFuelEfficiencyKmPerLiter  Decimal?  @db.Decimal(10, 2)
+  createdAt                          DateTime  @default(now())
+  updatedAt                          DateTime  @updatedAt
+  user                               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fuelLogs                           FuelLog[]
+
+  @@index([userId, name])
+}
+
+model FuelLog {
+  id           String   @id @default(cuid())
+  vehicleId    String
+  filledOn     DateTime
+  odometerKm   Int
+  liters       Decimal  @db.Decimal(10, 3)
+  amountWon    Int
+  unitPriceWon Int
+  isFullTank   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  vehicle      Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId, filledOn])
+}

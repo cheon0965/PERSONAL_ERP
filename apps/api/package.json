@@ -1,0 +1,52 @@
+{
+  "name": "@personal-erp/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node ../../scripts/run-with-root-env.cjs nest start --watch",
+    "build": "node ../../scripts/run-with-root-env.cjs nest build",
+    "start": "node ../../scripts/run-with-root-env.cjs node dist/main",
+    "lint": "eslint src prisma test --ext .ts --max-warnings=0",
+    "typecheck": "tsc --noEmit --incremental false -p tsconfig.test.json",
+    "test": "tsc -p tsconfig.test-run.json && node --test --test-concurrency=1 --test-isolation=none .test-dist/apps/api/test/*.test.js",
+    "prisma:generate": "node ../../scripts/run-with-root-env.cjs prisma generate",
+    "prisma:migrate:dev": "node ../../scripts/run-with-root-env.cjs prisma migrate dev",
+    "prisma:migrate:deploy": "node ../../scripts/run-with-root-env.cjs prisma migrate deploy",
+    "prisma:migrate:reset": "node ../../scripts/run-with-root-env.cjs prisma migrate reset",
+    "prisma:migrate:status": "node ../../scripts/run-with-root-env.cjs prisma migrate status",
+    "prisma:push:unsafe": "node ../../scripts/run-with-root-env.cjs prisma db push",
+    "prisma:seed": "node ../../scripts/run-with-root-env.cjs tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "node ../../scripts/run-with-root-env.cjs tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.11",
+    "@nestjs/config": "^4.0.2",
+    "@nestjs/core": "^11.0.11",
+    "@nestjs/jwt": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.11",
+    "@nestjs/schedule": "^5.0.1",
+    "@nestjs/swagger": "^11.0.7",
+    "@prisma/client": "^6.4.1",
+    "argon2": "^0.41.1",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
+    "cookie-parser": "^1.4.7",
+    "mysql2": "^3.12.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "swagger-ui-express": "^5.0.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.7",
+    "@nestjs/schematics": "^11.0.6",
+    "@nestjs/testing": "^11.0.11",
+    "@types/cookie-parser": "^1.4.8",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.10",
+    "prisma": "^6.4.1",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}
