@@ -26,7 +26,7 @@
 
 현재 기준 코드:
 
-- [`apps/api/src/main.ts`](/d:/참고자료/프로젝트소스/personal-erp-starter/apps/api/src/main.ts#L10)
+- [`apps/api/src/main.ts`](../apps/api/src/main.ts#L10)
 
 ### 2. 인증 실패는 guard/service에서 명시적으로 표현한다
 
@@ -36,8 +36,8 @@
 
 현재 기준 코드:
 
-- [`apps/api/src/common/auth/jwt-auth.guard.ts`](/d:/참고자료/프로젝트소스/personal-erp-starter/apps/api/src/common/auth/jwt-auth.guard.ts#L34)
-- [`apps/api/src/modules/auth/auth.service.ts`](/d:/참고자료/프로젝트소스/personal-erp-starter/apps/api/src/modules/auth/auth.service.ts#L16)
+- [`apps/api/src/common/auth/jwt-auth.guard.ts`](../apps/api/src/common/auth/jwt-auth.guard.ts#L34)
+- [`apps/api/src/modules/auth/auth.service.ts`](../apps/api/src/modules/auth/auth.service.ts#L16)
 
 ### 3. 도메인 규칙 실패는 controller에서 HTTP 의미로 변환한다
 
@@ -47,8 +47,8 @@
 
 현재 기준 코드:
 
-- [`apps/api/src/modules/transactions/transactions.controller.ts`](/d:/참고자료/프로젝트소스/personal-erp-starter/apps/api/src/modules/transactions/transactions.controller.ts#L23)
-- [`apps/api/src/modules/recurring-rules/recurring-rules.controller.ts`](/d:/참고자료/프로젝트소스/personal-erp-starter/apps/api/src/modules/recurring-rules/recurring-rules.controller.ts#L23)
+- [`apps/api/src/modules/transactions/transactions.controller.ts`](../apps/api/src/modules/transactions/transactions.controller.ts#L23)
+- [`apps/api/src/modules/recurring-rules/recurring-rules.controller.ts`](../apps/api/src/modules/recurring-rules/recurring-rules.controller.ts#L23)
 
 ### 4. 예상하지 못한 실패는 일단 삼키지 않는다
 
@@ -71,7 +71,7 @@
 
 현재 기준 코드:
 
-- [`apps/web/src/shared/api/fetch-json.ts`](/d:/참고자료/프로젝트소스/personal-erp-starter/apps/web/src/shared/api/fetch-json.ts#L62)
+- [`apps/web/src/shared/api/fetch-json.ts`](../apps/web/src/shared/api/fetch-json.ts#L62)
 
 ### 2. 인증 실패는 재시도를 줄이고 빠르게 세션 정리한다
 
@@ -80,7 +80,7 @@
 
 현재 기준 코드:
 
-- [`apps/web/src/shared/providers/query-provider.tsx`](/d:/참고자료/프로젝트소스/personal-erp-starter/apps/web/src/shared/providers/query-provider.tsx#L11)
+- [`apps/web/src/shared/providers/query-provider.tsx`](../apps/web/src/shared/providers/query-provider.tsx#L11)
 
 ### 3. demo fallback은 개발 편의 기능으로만 취급한다
 

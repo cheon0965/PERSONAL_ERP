@@ -18,14 +18,14 @@ npm run test
 
 ## 2. env 준비 기준
 
-현재 기준 SECRET 폴더 경로는 루트 [.secret-dir.local](/d:/참고자료/프로젝트소스/personal-erp-starter/.secret-dir.local#L1) 의 값인 `C:\secrets\personal-erp` 입니다.
+현재 문서의 기본 SECRET 폴더 예시는 루트 [`.secret-dir.local`](../.secret-dir.local) 의 값인 `C:\secrets\personal-erp` 입니다.
 
 실제 기준 파일:
 
 - `C:\secrets\personal-erp\api.env`
 - `C:\secrets\personal-erp\web.env`
 
-값 예시는 [ENVIRONMENT_SETUP.md](/d:/참고자료/프로젝트소스/personal-erp-starter/ENVIRONMENT_SETUP.md) 를 기준으로 맞춥니다.
+값 예시는 [ENVIRONMENT_SETUP.md](../ENVIRONMENT_SETUP.md) 를 기준으로 맞추고, macOS/Linux에서는 같은 의미의 절대 경로로 치환합니다.
 
 ## 3. 백엔드 기능 추가 순서
 

@@ -22,18 +22,24 @@
 
 먼저 참고할 예시 파일:
 
-- 루트 secret-dir 예시: [`.env.example`](/d:/참고자료/프로젝트소스/personal-erp-starter/.env.example#L1)
-- API fallback 예시: [`apps/api/.env.example`](/d:/참고자료/프로젝트소스/personal-erp-starter/apps/api/.env.example#L1)
-- Web fallback 예시: [`apps/web/.env.local.example`](/d:/참고자료/프로젝트소스/personal-erp-starter/apps/web/.env.local.example#L1)
+- 루트 secret-dir 예시: [`.env.example`](./.env.example)
+- API fallback 예시: [`apps/api/.env.example`](./apps/api/.env.example)
+- Web fallback 예시: [`apps/web/.env.local.example`](./apps/web/.env.local.example)
 
 ### 1. SECRET 폴더 경로 확인
 
-현재 프로젝트는 루트의 `.env` 또는 [.secret-dir.local](/d:/참고자료/프로젝트소스/personal-erp-starter/.secret-dir.local#L1) 파일을 기준으로 외부 SECRET 폴더를 읽습니다.
+현재 프로젝트는 루트의 `.env` 또는 [`.secret-dir.local`](./.secret-dir.local) 파일을 기준으로 외부 SECRET 폴더를 읽습니다.
 
 현재 기준 경로:
 
 ```env
 PERSONAL_ERP_SECRET_DIR=C:\secrets\personal-erp
+```
+
+위 경로는 Windows 예시입니다. macOS/Linux에서는 같은 의미로 아래처럼 절대 경로를 사용하면 됩니다.
+
+```env
+PERSONAL_ERP_SECRET_DIR=/Users/<name>/secrets/personal-erp
 ```
 
 즉, 실제로 수정해야 하는 파일은 저장소 안이 아니라 아래 두 파일입니다.
@@ -42,6 +48,8 @@ PERSONAL_ERP_SECRET_DIR=C:\secrets\personal-erp
 C:\secrets\personal-erp\api.env
 C:\secrets\personal-erp\web.env
 ```
+
+Windows 편의용으로 `.bat` 스크립트를 함께 두고 있지만, 기본 실행 흐름은 `npm` 명령과 [`scripts/run-with-root-env.cjs`](./scripts/run-with-root-env.cjs) 기준이라 macOS/Linux에서도 그대로 따라갈 수 있습니다.
 
 경로를 바꾸고 싶다면 `.secret-dir.local`의 값만 바꾸면 됩니다.
 
@@ -157,6 +165,7 @@ personal-erp-starter/
 - 비밀값은 저장소 밖 SECRET 폴더에서 관리하고, 저장소에는 경로 설정만 남깁니다.
 - demo fallback은 기본적으로 끄고, 로컬 개발에서만 명시적으로 켭니다.
 - PR 전에는 최소 `npm run check:quick`와 `npm run test`를 실행합니다.
+- 포트폴리오용 압축본은 clean working tree 기준으로 `.git`, `node_modules`, `dist`, `playwright-report`, `test-results`를 제외하고 만듭니다.
 
 ## 계약과 문서 기준
 

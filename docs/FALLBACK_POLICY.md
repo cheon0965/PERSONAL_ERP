@@ -14,7 +14,8 @@ Web이 통합 오류를 조용히 숨기지 않도록 하는 것이 목적입니
 ## 활성화 방법
 
 현재 권장 위치는 외부 SECRET 폴더의 `web.env` 입니다.
-현재 기준 경로는 `C:\secrets\personal-erp\web.env` 입니다.
+현재 기준 경로 예시는 `C:\secrets\personal-erp\web.env` 입니다.
+macOS/Linux에서는 같은 의미로 `/Users/<name>/secrets/personal-erp/web.env` 같은 절대 경로를 사용하면 됩니다.
 
 ```env
 NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=true

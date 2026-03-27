@@ -3,16 +3,22 @@
 이 문서는 현재 프로젝트의 env 구조와 Windows Server 배포 준비 관점에서 필요한 설정을 함께 정리한 문서입니다.
 기준은 `외부 SECRET 폴더 우선`, `앱 로컬 fallback 허용`, `로컬 개발과 운영 설정 분리`입니다.
 
-실제 배포 순서, 수동 스모크 체크, 운영 장애 대응 순서는 [docs/OPERATIONS_CHECKLIST.md](/d:/참고자료/프로젝트소스/personal-erp-starter/docs/OPERATIONS_CHECKLIST.md) 를 기준으로 봅니다.
+실제 배포 순서, 수동 스모크 체크, 운영 장애 대응 순서는 [배포/운영 체크리스트](./docs/OPERATIONS_CHECKLIST.md) 를 기준으로 봅니다.
 
 ## 1. 현재 기준 경로
 
-현재 프로젝트는 루트의 [.secret-dir.local](/d:/참고자료/프로젝트소스/personal-erp-starter/.secret-dir.local#L1) 파일을 통해 외부 SECRET 폴더를 지정합니다.
+현재 프로젝트는 루트의 [`.secret-dir.local`](./.secret-dir.local) 파일을 통해 외부 SECRET 폴더를 지정합니다.
 
 현재 값:
 
 ```env
 PERSONAL_ERP_SECRET_DIR=C:\secrets\personal-erp
+```
+
+이 경로는 Windows 예시입니다. macOS/Linux에서는 같은 의미로 아래처럼 절대 경로를 사용하면 됩니다.
+
+```env
+PERSONAL_ERP_SECRET_DIR=/Users/<name>/secrets/personal-erp
 ```
 
 따라서 현재 실제 기준 파일은 아래 두 개입니다.
@@ -34,9 +40,9 @@ C:\secrets\personal-erp\web.env
 
 예시 파일:
 
-- 루트 secret-dir 예시: [`.env.example`](/d:/참고자료/프로젝트소스/personal-erp-starter/.env.example#L1)
-- API fallback 예시: [`apps/api/.env.example`](/d:/참고자료/프로젝트소스/personal-erp-starter/apps/api/.env.example#L1)
-- Web fallback 예시: [`apps/web/.env.local.example`](/d:/참고자료/프로젝트소스/personal-erp-starter/apps/web/.env.local.example#L1)
+- 루트 secret-dir 예시: [`.env.example`](./.env.example)
+- API fallback 예시: [`apps/api/.env.example`](./apps/api/.env.example)
+- Web fallback 예시: [`apps/web/.env.local.example`](./apps/web/.env.local.example)
 
 ## 3. 적용 편의성 순위
 
@@ -44,7 +50,7 @@ C:\secrets\personal-erp\web.env
 
 ### 1순위. SECRET 폴더 위치 확인
 
-가장 먼저 확인할 파일은 루트의 [.secret-dir.local](/d:/참고자료/프로젝트소스/personal-erp-starter/.secret-dir.local#L1) 입니다.
+가장 먼저 확인할 파일은 루트의 [`.secret-dir.local`](./.secret-dir.local) 입니다.
 
 현재 기준:
 
@@ -294,14 +300,14 @@ npm run start --workspace @personal-erp/web
 
 ## 9. 검증 코드 위치
 
-- API env 검증: [api-env.ts](/d:/참고자료/프로젝트소스/personal-erp-starter/apps/api/src/config/api-env.ts#L1)
-- Web env 검증: [env.ts](/d:/참고자료/프로젝트소스/personal-erp-starter/apps/web/src/shared/config/env.ts#L1)
-- env 로더: [run-with-root-env.cjs](/d:/참고자료/프로젝트소스/personal-erp-starter/scripts/run-with-root-env.cjs#L1)
+- API env 검증: [api-env.ts](./apps/api/src/config/api-env.ts#L1)
+- Web env 검증: [env.ts](./apps/web/src/shared/config/env.ts#L1)
+- env 로더: [run-with-root-env.cjs](./scripts/run-with-root-env.cjs#L1)
 
 ## 10. 함께 보면 좋은 문서
 
-- [README.md](/d:/참고자료/프로젝트소스/personal-erp-starter/README.md)
-- [docs/OPERATIONS_CHECKLIST.md](/d:/참고자료/프로젝트소스/personal-erp-starter/docs/OPERATIONS_CHECKLIST.md)
-- [docs/ARCHITECTURE.md](/d:/참고자료/프로젝트소스/personal-erp-starter/docs/ARCHITECTURE.md)
-- [docs/DEVELOPMENT_GUIDE.md](/d:/참고자료/프로젝트소스/personal-erp-starter/docs/DEVELOPMENT_GUIDE.md)
-- [PORTFOLIO_ARCHITECTURE_GUIDE.md](/d:/참고자료/프로젝트소스/personal-erp-starter/PORTFOLIO_ARCHITECTURE_GUIDE.md)
+- [README.md](./README.md)
+- [docs/OPERATIONS_CHECKLIST.md](./docs/OPERATIONS_CHECKLIST.md)
+- [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
+- [docs/DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md)
+- [PORTFOLIO_ARCHITECTURE_GUIDE.md](./PORTFOLIO_ARCHITECTURE_GUIDE.md)

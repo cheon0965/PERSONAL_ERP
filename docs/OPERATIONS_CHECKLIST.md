@@ -116,8 +116,8 @@
 
 ## 함께 보면 좋은 문서
 
-- [README.md](/d:/참고자료/프로젝트소스/personal-erp-starter/README.md)
-- [ENVIRONMENT_SETUP.md](/d:/참고자료/프로젝트소스/personal-erp-starter/ENVIRONMENT_SETUP.md)
-- [docs/API.md](/d:/참고자료/프로젝트소스/personal-erp-starter/docs/API.md)
-- [docs/ERROR_HANDLING_AND_LOGGING.md](/d:/참고자료/프로젝트소스/personal-erp-starter/docs/ERROR_HANDLING_AND_LOGGING.md)
-- [docs/VALIDATION_NOTES.md](/d:/참고자료/프로젝트소스/personal-erp-starter/docs/VALIDATION_NOTES.md)
+- [README.md](../README.md)
+- [ENVIRONMENT_SETUP.md](../ENVIRONMENT_SETUP.md)
+- [docs/API.md](./API.md)
+- [docs/ERROR_HANDLING_AND_LOGGING.md](./ERROR_HANDLING_AND_LOGGING.md)
+- [docs/VALIDATION_NOTES.md](./VALIDATION_NOTES.md)

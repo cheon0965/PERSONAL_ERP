@@ -33,7 +33,6 @@ call :remove_dir "packages\contracts\dist"
 call :remove_dir ".turbo"
 call :remove_dir ".cache"
 
-call :remove_file "package-lock.json"
 call :remove_file "apps\api\tsconfig.tsbuildinfo"
 call :remove_file "apps\web\tsconfig.tsbuildinfo"
 call :remove_file "packages\contracts\tsconfig.tsbuildinfo"
@@ -89,5 +88,6 @@ exit /b 0
 :help
 echo Usage: clean.bat [--dry-run]
 echo   --dry-run  Print what would be removed without deleting anything.
-echo This script removes build outputs, caches, node_modules, and package-lock.json.
+echo This script removes build outputs, caches, and node_modules.
+echo package-lock.json is preserved for reproducible installs and CI.
 exit /b 0

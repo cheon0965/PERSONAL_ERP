@@ -59,9 +59,10 @@
 ## 비밀정보 규칙
 
 - `DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` 같은 비밀값은 저장소 밖 SECRET 폴더에 둡니다.
-- 현재 기준 SECRET 폴더 경로는 루트 [.secret-dir.local](/d:/참고자료/프로젝트소스/personal-erp-starter/.secret-dir.local#L1) 에 정의된 `C:\secrets\personal-erp` 입니다.
+- 현재 문서의 기본 SECRET 폴더 예시는 루트 [`.secret-dir.local`](./.secret-dir.local) 에 정의된 `C:\secrets\personal-erp` 입니다.
 - 실제 기준 파일은 `C:\secrets\personal-erp\api.env`, `C:\secrets\personal-erp\web.env` 입니다.
 - `.secret-dir.local`에는 `PERSONAL_ERP_SECRET_DIR` 경로만 기록합니다.
+- macOS/Linux에서는 같은 의미의 절대 경로를 사용하고, 자세한 예시는 `README.md`와 `ENVIRONMENT_SETUP.md`를 기준으로 맞춥니다.
 - 실제 비밀값 파일은 Git에 추가하지 않습니다.
 
 ## DB 변경 규칙
@@ -75,7 +76,7 @@
 - demo fallback은 기본적으로 끈 상태가 기준입니다.
 - 로컬 개발에서만 `NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=true`로 명시적으로 켭니다.
 - 현재 권장 위치는 `C:\secrets\personal-erp\web.env` 입니다.
-- fallback 정책이 바뀌면 [FALLBACK_POLICY.md](/d:/참고자료/프로젝트소스/personal-erp-starter/docs/FALLBACK_POLICY.md) 를 같이 갱신합니다.
+- fallback 정책이 바뀌면 [FALLBACK_POLICY.md](./docs/FALLBACK_POLICY.md) 를 같이 갱신합니다.
 
 ## 테스트 규칙
 

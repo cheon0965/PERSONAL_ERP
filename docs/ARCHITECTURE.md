@@ -126,7 +126,7 @@ Insight Context: controller -> read service -> read repository -> projection
 
 - 루트 공용 `.env`를 기본값으로 쓰지 않습니다.
 - 기본 권장 방식은 `PERSONAL_ERP_SECRET_DIR`가 가리키는 외부 SECRET 폴더를 사용하는 것입니다.
-- 현재 기준 경로는 [\.secret-dir.local](/d:/참고자료/프로젝트소스/personal-erp-starter/.secret-dir.local#L1) 에 정의된 `C:\secrets\personal-erp` 입니다.
+- 현재 문서의 기본 경로 예시는 [`.secret-dir.local`](../.secret-dir.local) 에 정의된 `C:\secrets\personal-erp` 입니다.
 - 현재 실제 기준 파일은 `C:\secrets\personal-erp\api.env`, `C:\secrets\personal-erp\web.env` 입니다.
 - 로컬 fallback으로 API는 `apps/api/.env`, Web은 `apps/web/.env.local`도 읽을 수 있습니다.
 - 앱 시작 시 env를 검증합니다.
@@ -139,7 +139,7 @@ Insight Context: controller -> read service -> read repository -> projection
 - 현재 권장 위치는 `C:\secrets\personal-erp\web.env` 입니다.
 - fallback이 꺼져 있으면 Web은 쿼리 오류를 화면에 직접 표시합니다.
 
-자세한 내용은 [FALLBACK_POLICY.md](/d:/참고자료/프로젝트소스/personal-erp-starter/docs/FALLBACK_POLICY.md) 를 참고합니다.
+자세한 내용은 [FALLBACK_POLICY.md](./FALLBACK_POLICY.md) 를 참고합니다.
 
 ## 9. 테스트 전략
 
