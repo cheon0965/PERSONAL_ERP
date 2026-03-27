@@ -84,7 +84,7 @@ docs/          -> 개발, 운영, ADR, 아키텍처 문서
 
 ```text
 [ Platform & Contracts ] -> 모든 컨텍스트의 계약/공통 인프라 지원
-[ Identity & Access ] -> 모든 컨텍스트의 인증/현재 사용자 기준선
+[ Identity & Access ] -> 모든 컨텍스트의 인증/요청 주체 기준선
 
 [ Recurring Automation ] -- reference only --> [ Ledger ]
 [ Ledger ] -------------------- read -------> [ Insight & Planning ]
@@ -92,14 +92,17 @@ docs/          -> 개발, 운영, ADR, 아키텍처 문서
 [ Asset & Coverage ] ----------- read ------> [ Insight & Planning ]
 ```
 
-| Context              | 현재 모듈                                                        | 소유 책임                      | 읽기/쓰기 성격     | 나중에 분리한다면                 |
-| -------------------- | ---------------------------------------------------------------- | ------------------------------ | ------------------ | --------------------------------- |
-| Identity & Access    | `auth`, `common/auth`                                            | 로그인, 토큰, 현재 사용자 경계 | cross-cutting      | 공통 인증 계층                    |
-| Ledger               | `accounts`, `categories`, `transactions`                         | 계정/카테고리/거래 원장        | 핵심 쓰기          | 가장 강한 후보                    |
-| Recurring Automation | `recurring-rules`                                                | 반복규칙 정의와 반복 입력 예약 | 쓰기 + Ledger 참조 | Ledger 다음 후보                  |
-| Asset & Coverage     | `vehicles`, `insurance-policies`                                 | 운영비 성격의 자산/보장 도메인 | 현재는 조회 중심   | 별도 도메인 후보                  |
-| Insight & Planning   | `dashboard`, `forecast`                                          | 여러 컨텍스트를 읽어 요약/예측 | 읽기/조합 중심     | 나중에 BFF 또는 read service 후보 |
-| Platform & Contracts | `packages/contracts`, env, Prisma, health, 공통 외부 의존성 조립 | 계약 원천, 런타임 기반선       | 지원 계층          | 공통 플랫폼 성격                  |
+| Context              | 현재 모듈                                                        | 소유 책임                                    | 읽기/쓰기 성격     | 나중에 분리한다면                 |
+| -------------------- | ---------------------------------------------------------------- | -------------------------------------------- | ------------------ | --------------------------------- |
+| Identity & Access    | `auth`, `common/auth`                                            | 로그인, 토큰, 요청 주체 인증 경계            | cross-cutting      | 공통 인증 계층                    |
+| Ledger               | `accounts`, `categories`, `transactions`                         | 현재 구현의 계정/카테고리/거래 쓰기 컨텍스트 | 핵심 쓰기          | 가장 강한 후보                    |
+| Recurring Automation | `recurring-rules`                                                | 반복규칙 정의와 반복 입력 예약               | 쓰기 + Ledger 참조 | Ledger 다음 후보                  |
+| Asset & Coverage     | `vehicles`, `insurance-policies`                                 | 운영비 성격의 자산/보장 도메인               | 현재는 조회 중심   | 별도 도메인 후보                  |
+| Insight & Planning   | `dashboard`, `forecast`                                          | 여러 컨텍스트를 읽어 요약/예측               | 읽기/조합 중심     | 나중에 BFF 또는 read service 후보 |
+| Platform & Contracts | `packages/contracts`, env, Prisma, health, 공통 외부 의존성 조립 | 계약 원천, 런타임 기반선                     | 지원 계층          | 공통 플랫폼 성격                  |
+
+여기서 `Ledger`는 현재 코드베이스의 컨텍스트 이름입니다.  
+회계 도메인의 상세 엔티티/상태/권한 기준은 `docs/domain/business-logic-draft.md`, `docs/domain/core-entity-definition.md`를 우선합니다.
 
 면접이나 포트폴리오 설명에서는 이렇게 정리하면 된다.
 
@@ -112,7 +115,7 @@ docs/          -> 개발, 운영, ADR, 아키텍처 문서
 ### 허용되는 의존 방향
 
 - Web은 HTTP와 `packages/contracts`를 통해서만 API와 연결한다.
-- `Identity & Access`는 인증과 현재 사용자 기준선만 제공하고, 다른 비즈니스 도메인의 규칙 소유자가 되지 않는다.
+- `Identity & Access`는 인증과 요청 주체 기준선만 제공하고, 다른 비즈니스 도메인의 규칙 소유자가 되지 않는다.
 - `Recurring Automation`은 `Ledger`의 계정/카테고리 참조 상태를 읽을 수 있다.
 - `Insight & Planning`은 `Ledger`, `Recurring Automation`, `Asset & Coverage`를 읽어 요약과 예측을 만든다.
 - `Platform & Contracts`는 공통 인프라와 계약을 제공하지만 도메인 규칙을 소유하지 않는다.
@@ -165,7 +168,7 @@ controller -> use-case -> port -> adapter
 이렇게 한 이유는 간단하다.
 
 - 두 모듈은 프로젝트의 핵심 쓰기 모델이다.
-- 소유권 검증, 입력 규칙, 생성 흐름이 중요하다.
+- 접근 범위 검증, 입력 규칙, 생성 흐름이 중요하다.
 - 테스트와 설명 가치가 높다.
 - 다른 모든 모듈에 같은 복잡도를 강요할 필요는 없다.
 
@@ -201,7 +204,7 @@ controller -> use-case -> port -> adapter
 ### 명확하게 분리한 것
 
 - DB 접근 경계
-- 소유권 확인 경계
+- 접근 범위 확인 경계
 - 시간 공급 경계
 - 일부 모듈의 저장소 접근 경계
 
