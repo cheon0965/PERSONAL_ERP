@@ -31,7 +31,46 @@ docs/
 - `apps/api`: 인증, 검증, 도메인 처리, 데이터 접근
 - `packages/contracts`: 요청/응답 타입의 단일 소스
 
-## 3. 프론트엔드 구조
+## 3. MSA-ready Context Map
+
+이 저장소는 `실제 MSA`가 아니라 `MSA-ready 설명이 가능한 모듈러 모놀리스`입니다.
+즉 서비스 분리, 브로커, 서비스별 DB를 도입하지는 않지만, 도메인 책임 경계는 아래처럼 읽히도록 유지합니다.
+
+```text
+[ Platform & Contracts ] -> 모든 컨텍스트의 계약/공통 인프라 지원
+[ Identity & Access ] -> 모든 컨텍스트의 인증/현재 사용자 기준선
+
+[ Recurring Automation ] -- reference only --> [ Ledger ]
+[ Ledger ] -------------------- read -------> [ Insight & Planning ]
+[ Recurring Automation ] ------- read ------> [ Insight & Planning ]
+[ Asset & Coverage ] ----------- read ------> [ Insight & Planning ]
+```
+
+| Context              | 현재 모듈                                                        | 역할                             |
+| -------------------- | ---------------------------------------------------------------- | -------------------------------- |
+| Identity & Access    | `auth`, `common/auth`                                            | 로그인, 토큰, 현재 사용자 기준선 |
+| Ledger               | `accounts`, `categories`, `transactions`                         | 계정/카테고리/거래 원장          |
+| Recurring Automation | `recurring-rules`                                                | 반복규칙 정의와 반복 입력 예약   |
+| Asset & Coverage     | `vehicles`, `insurance-policies`                                 | 운영비 성격의 자산/보장 도메인   |
+| Insight & Planning   | `dashboard`, `forecast`                                          | 읽기 기반 요약/예측 조합         |
+| Platform & Contracts | `packages/contracts`, env, Prisma, health, 공통 외부 의존성 조립 | 계약과 런타임 기반선             |
+
+허용되는 방향:
+
+- Web은 HTTP + `packages/contracts`를 통해서만 API와 연결합니다.
+- `Recurring Automation`은 `Ledger`의 참조 상태를 읽을 수 있습니다.
+- `Insight & Planning`은 `Ledger`, `Recurring Automation`, `Asset & Coverage`를 읽어 조합합니다.
+- `Identity & Access`는 인증 기준선만 제공합니다.
+- `Platform & Contracts`는 공통 지원 계층으로만 동작합니다.
+
+금지선:
+
+- `dashboard`, `forecast`가 거래/반복규칙의 쓰기 규칙을 직접 소유하지 않습니다.
+- 다른 모듈의 `repository`, `adapter`, `controller`를 직접 import하는 것을 기본 규칙으로 두지 않습니다.
+- `packages/contracts`에 앱 구현 코드나 비즈니스 로직을 넣지 않습니다.
+- 메시지 브로커, outbox, gateway, service split은 별도 ADR 없이 도입하지 않습니다.
+
+## 4. 프론트엔드 구조
 
 Web은 다음 경계를 유지합니다.
 
@@ -49,28 +88,41 @@ test/      # 브라우저 없이 가능한 스모크 테스트
 - 재사용 가능한 조각만 `shared`로 올립니다.
 - feature 내부 API 파일이 mock fallback과 실제 fetch를 함께 소유합니다.
 
-## 4. 백엔드 구조
+## 5. 백엔드 구조
 
 API는 다음 흐름을 기본으로 사용합니다.
 
 ```text
-controller -> service -> repository -> mapper/calculator
+기본: controller -> service -> repository -> mapper/calculator
+전환 대상 모듈: controller -> use-case -> port -> adapter
+Insight Context: controller -> read service -> read repository -> projection
 ```
+
+공통 전환 규약:
+
+- 외부 의존성 포트는 `apps/api/src/common/application/ports`에 둡니다.
+- 공통 어댑터 조립은 `apps/api/src/common/infrastructure`에서 시작합니다.
+- `application/domain/infrastructure` 폴더는 실제 전환 대상 모듈에서만 만듭니다.
+- `transactions`, `recurring-rules` 는 이미 `use-case/port/adapter` 경계로 전환되었습니다.
+- `transactions`, `recurring-rules`, `dashboard`, `forecast`는 모듈 바깥에서 각 모듈의 `public.ts`만 공식 진입점으로 사용합니다.
+- `dashboard`, `forecast`는 `read service -> read repository -> projection` 네이밍으로 읽기 조합 컨텍스트임을 코드에서 드러냅니다.
+- 나머지 모듈은 설명 가능한 이유가 생길 때만 같은 방향으로 옮깁니다.
+- mapper/calculator/helper는 계속 함수 또는 plain class로 두고 provider/token으로 만들지 않습니다.
 
 원칙:
 
 - controller는 요청/응답과 인증 컨텍스트만 다룹니다.
-- service는 유즈케이스를 조합합니다.
-- repository는 Prisma 접근을 담당합니다.
+- service 또는 use-case는 모듈 상태에 맞는 비즈니스 흐름을 조합합니다.
+- repository 또는 adapter는 Prisma 접근을 담당합니다.
 - mapper/calculator는 응답 변환과 계산을 분리합니다.
 
-## 5. 인증과 사용자 경계
+## 6. 인증과 사용자 경계
 
 - `health`, `auth/login`을 제외한 API는 기본적으로 보호됩니다.
 - 컨트롤러는 현재 사용자 컨텍스트를 받고, 서비스는 `userId`를 기준으로 동작합니다.
 - 계좌, 카테고리 등 참조 대상도 현재 사용자 소유인지 검증합니다.
 
-## 6. 환경변수 정책
+## 7. 환경변수 정책
 
 - 루트 공용 `.env`를 기본값으로 쓰지 않습니다.
 - 기본 권장 방식은 `PERSONAL_ERP_SECRET_DIR`가 가리키는 외부 SECRET 폴더를 사용하는 것입니다.
@@ -80,7 +132,7 @@ controller -> service -> repository -> mapper/calculator
 - 앱 시작 시 env를 검증합니다.
 - env 구조가 바뀌면 관련 문서와 검증 코드를 함께 수정합니다.
 
-## 7. fallback 정책
+## 8. fallback 정책
 
 - demo fallback은 기본적으로 꺼져 있습니다.
 - 개발 환경에서 `NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=true`일 때만 허용됩니다.
@@ -89,11 +141,25 @@ controller -> service -> repository -> mapper/calculator
 
 자세한 내용은 [FALLBACK_POLICY.md](/d:/참고자료/프로젝트소스/personal-erp-starter/docs/FALLBACK_POLICY.md) 를 참고합니다.
 
-## 8. 테스트 전략
+## 9. 테스트 전략
 
-현재 테스트는 두 축으로 나뉩니다.
+현재 테스트는 아래 네 층으로 나뉩니다.
 
-- API 서비스 레벨 테스트: 인증, 소유권 검증, 대시보드/예측 계산
-- Web 런타임 정책 테스트: env 파싱, fallback 동작
+- use-case / service 테스트
+  인증, 소유권 검증, 대시보드/예측 계산, 핵심 쓰기 흐름 규칙
+- 요청 단위 API 테스트
+  guard, ValidationPipe, 인증 실패, DTO validation, 응답 shape, readiness, `x-request-id`
+- Web 런타임 정책 테스트
+  env 파싱, fallback 동작, Bearer 토큰 주입, `401` 처리
+- 대표 경계 검증
+  브라우저 E2E와 Prisma 통합 테스트
 
-현재는 회귀 방지용 최소 매트릭스가 들어가 있으며, 다음 확장 우선순위는 요청 단위 통합 테스트입니다.
+기본 개발 루프는 `npm run check:quick`, `npm run test`이고,
+`npm run test:e2e`, `npm run test:prisma`는 대표 사용자 흐름과 실DB 경계를 따로 보는 심화 검증입니다.
+
+## 10. 운영 신호
+
+- 모든 API 응답에는 `x-request-id` 헤더가 들어갑니다.
+- 클라이언트가 보낸 `x-request-id`가 있으면 그대로 이어받고, 없으면 서버가 새로 만듭니다.
+- API 경계 로그는 `[module] METHOD path status duration requestId=...` 형태로 남깁니다.
+- `GET /health`는 liveness, `GET /health/ready`는 DB 연결 포함 readiness를 나타냅니다.

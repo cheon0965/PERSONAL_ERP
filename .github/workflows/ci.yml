@@ -6,6 +6,9 @@ on:
       - main
       - master
   pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * 2'
 
 permissions:
   contents: read
@@ -30,3 +33,103 @@ jobs:
 
       - name: Run CI checks
         run: npm run ci
+
+  security-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run security-focused API regression tests
+        run: npm run test:security:api
+
+  audit-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit runtime dependencies
+        run: npm run audit:runtime
+
+  semgrep-ce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep CE scan
+        run: >-
+          docker run --rm
+          -v "${{ github.workspace }}:/src"
+          -w /src
+          semgrep/semgrep
+          semgrep scan
+          --config auto
+          --error
+          --exclude node_modules
+          --exclude .next
+          --exclude dist
+          --exclude .test-dist
+          --exclude apps/api/prisma/migrations
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks CLI
+        run: >-
+          docker run --rm
+          -v "${{ github.workspace }}:/repo"
+          -w /repo
+          ghcr.io/gitleaks/gitleaks:v8.30.0
+          detect
+          --source .
+          --redact
+          --exit-code 1
+
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          fail-on-scopes: runtime
+          comment-summary-in-pr: false

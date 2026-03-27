@@ -11,3 +11,6 @@ ADR은 장기적으로 유지할 구조 결정을 기록하는 문서입니다.
 ## 현재 문서
 
 - [0001-workspace-boundaries.md](./0001-workspace-boundaries.md)
+- [0002-contract-and-doc-precedence.md](./0002-contract-and-doc-precedence.md)
+- [0003-msa-ready-context-map-and-guardrails.md](./0003-msa-ready-context-map-and-guardrails.md)
+- [0004-asvs-level-2-baseline-and-evidence-policy.md](./0004-asvs-level-2-baseline-and-evidence-policy.md)

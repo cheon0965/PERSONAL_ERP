@@ -1,11 +1,15 @@
 'use client';
 
 import { Grid, Stack, Switch, TextField, Typography } from '@mui/material';
+import { useAuthSession } from '@/shared/auth/auth-provider';
+import { accessTokenStoragePolicy } from '@/shared/auth/auth-session-store';
 import { webEnv, webRuntime } from '@/shared/config/env';
 import { PageHeader } from '@/shared/ui/page-header';
 import { SectionCard } from '@/shared/ui/section-card';
 
 export default function SettingsPage() {
+  const { status, user } = useAuthSession();
+
   return (
     <Stack spacing={3}>
       <PageHeader
@@ -48,6 +52,24 @@ export default function SettingsPage() {
                 <Typography>API base URL</Typography>
                 <Typography variant="body2" color="text.secondary">
                   {webEnv.NEXT_PUBLIC_API_BASE_URL}
+                </Typography>
+              </Stack>
+              <Stack spacing={0.5}>
+                <Typography>Session status</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {status}
+                </Typography>
+              </Stack>
+              <Stack spacing={0.5}>
+                <Typography>Signed-in user</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {user ? `${user.name} <${user.email}>` : 'No active session'}
+                </Typography>
+              </Stack>
+              <Stack spacing={0.5}>
+                <Typography>Access token storage</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {accessTokenStoragePolicy}
                 </Typography>
               </Stack>
             </Stack>

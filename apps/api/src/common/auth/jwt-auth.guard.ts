@@ -1,7 +1,15 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Reflector } from '@nestjs/core';
-import { Request } from 'express';
+import { Request, Response } from 'express';
+import {
+  ensureRequestContext,
+  readClientIp,
+  readRequestId,
+  readRequestPath,
+  RequestWithContext
+} from '../infrastructure/operational/request-context';
+import { SecurityEventLogger } from '../infrastructure/operational/security-event.logger';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthenticatedUser } from './authenticated-user.interface';
 import { getAccessTokenSecret } from './jwt-config';
@@ -10,6 +18,8 @@ import { IS_PUBLIC_KEY } from './public.decorator';
 type JwtAccessPayload = {
   sub: string;
   email?: string;
+  sid?: string;
+  type?: 'access';
 };
 
 type AuthenticatedRequest = Request & {
@@ -21,7 +31,8 @@ export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly jwtService: JwtService,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
+    private readonly securityEvents: SecurityEventLogger
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -35,13 +46,16 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const response = context.switchToHttp().getResponse<Response>();
+    ensureRequestContext(request, response);
     const token = this.extractBearerToken(request.headers.authorization);
 
     if (!token) {
+      this.logAccessDenied(request, 'missing_bearer_token');
       throw new UnauthorizedException('Missing bearer token');
     }
 
-    request.user = await this.resolveUser(token);
+    request.user = await this.resolveUser(token, request);
     return true;
   }
 
@@ -58,7 +72,10 @@ export class JwtAuthGuard implements CanActivate {
     return token;
   }
 
-  private async resolveUser(token: string): Promise<AuthenticatedUser> {
+  private async resolveUser(
+    token: string,
+    request: RequestWithContext
+  ): Promise<AuthenticatedUser> {
     let payload: JwtAccessPayload;
 
     try {
@@ -66,10 +83,26 @@ export class JwtAuthGuard implements CanActivate {
         secret: getAccessTokenSecret()
       });
     } catch {
+      this.logAccessDenied(request, 'invalid_access_token');
       throw new UnauthorizedException('Invalid access token');
     }
 
-    if (!payload.sub) {
+    if (!payload.sub || !payload.sid || payload.type !== 'access') {
+      this.logAccessDenied(request, 'invalid_access_token');
+      throw new UnauthorizedException('Invalid access token');
+    }
+
+    const session = await this.prisma.authSession.findUnique({
+      where: { id: payload.sid }
+    });
+
+    if (
+      !session ||
+      session.userId !== payload.sub ||
+      session.revokedAt ||
+      session.expiresAt.getTime() <= Date.now()
+    ) {
+      this.logAccessDenied(request, 'session_not_active', payload.sub);
       throw new UnauthorizedException('Invalid access token');
     }
 
@@ -79,9 +112,24 @@ export class JwtAuthGuard implements CanActivate {
     });
 
     if (!user) {
+      this.logAccessDenied(request, 'user_not_found', payload.sub);
       throw new UnauthorizedException('User not found');
     }
 
     return user;
+  }
+
+  private logAccessDenied(
+    request: RequestWithContext,
+    reason: string,
+    userId?: string
+  ): void {
+    this.securityEvents.warn('auth.access_denied', {
+      requestId: readRequestId(request),
+      clientIp: readClientIp(request),
+      path: readRequestPath(request),
+      reason,
+      userId
+    });
   }
 }

@@ -19,6 +19,54 @@ const nextWebConfig = compat.extends('next/core-web-vitals').map((config) => ({
   files: ['apps/web/**/*.{js,jsx,ts,tsx}']
 }));
 
+const apiLayerBoundaryRestrictions = {
+  patterns: [
+    {
+      group: [
+        '@nestjs/*',
+        '@prisma/client',
+        'argon2',
+        'cookie-parser',
+        'express',
+        'rxjs'
+      ],
+      message:
+        'application/domain layer files must stay framework-free and depend on ports or pure logic instead.'
+    },
+    {
+      group: ['**/common/prisma/*', '**/common/auth/jwt-config'],
+      message:
+        'application/domain layer files must not import infrastructure helpers directly.'
+    }
+  ]
+};
+
+const modulePublicApiRestrictions = {
+  patterns: [
+    {
+      group: [
+        '**/transactions/**',
+        '!**/transactions/public',
+        '**/recurring-rules/**',
+        '!**/recurring-rules/public',
+        '**/dashboard/**',
+        '!**/dashboard/public',
+        '**/forecast/**',
+        '!**/forecast/public'
+      ],
+      message:
+        'Cross-module imports for transactions/recurring-rules/dashboard/forecast must go through each module public.ts entrypoint.'
+    }
+  ]
+};
+
+const applicationAndDomainBoundaryRestrictions = {
+  patterns: [
+    ...modulePublicApiRestrictions.patterns,
+    ...apiLayerBoundaryRestrictions.patterns
+  ]
+};
+
 export default [
   {
     ignores: [
@@ -83,11 +131,32 @@ export default [
     }
   },
   {
-    files: ['apps/api/**/*.ts'],
+    files: ['apps/api/src/**/*.ts'],
     languageOptions: {
       globals: {
         ...globals.node
       }
+    },
+    rules: {
+      'no-restricted-imports': ['error', modulePublicApiRestrictions]
+    }
+  },
+  {
+    files: ['apps/api/src/**/application/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        applicationAndDomainBoundaryRestrictions
+      ]
+    }
+  },
+  {
+    files: ['apps/api/src/**/domain/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        applicationAndDomainBoundaryRestrictions
+      ]
     }
   },
   {

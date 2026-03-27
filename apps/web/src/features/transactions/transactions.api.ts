@@ -1,5 +1,10 @@
-import type { TransactionItem } from '@personal-erp/contracts';
-import { fetchJson } from '@/shared/api/fetch-json';
+import type {
+  CreateTransactionRequest,
+  TransactionItem
+} from '@personal-erp/contracts';
+import { fetchJson, postJson } from '@/shared/api/fetch-json';
+
+export const transactionsQueryKey = ['transactions'] as const;
 
 export const mockTransactions: TransactionItem[] = [
   {
@@ -50,4 +55,44 @@ export const mockTransactions: TransactionItem[] = [
 
 export function getTransactions() {
   return fetchJson<TransactionItem[]>('/transactions', mockTransactions);
+}
+
+export function createTransaction(
+  input: CreateTransactionRequest,
+  fallback: TransactionItem
+) {
+  return postJson<TransactionItem, CreateTransactionRequest>(
+    '/transactions',
+    input,
+    fallback
+  );
+}
+
+export function buildTransactionFallbackItem(
+  input: CreateTransactionRequest,
+  context: {
+    accountName: string;
+    categoryName?: string;
+  }
+): TransactionItem {
+  return {
+    id: `txn-demo-${Date.now()}`,
+    businessDate: input.businessDate,
+    title: input.title,
+    type: input.type,
+    amountWon: input.amountWon,
+    accountName: context.accountName,
+    categoryName: context.categoryName ?? '-',
+    origin: 'MANUAL',
+    status: 'POSTED'
+  };
+}
+
+export function mergeTransactionItem(
+  current: TransactionItem[] | undefined,
+  created: TransactionItem
+): TransactionItem[] {
+  return [created, ...(current ?? []).filter((item) => item.id !== created.id)].sort(
+    (left, right) => right.businessDate.localeCompare(left.businessDate)
+  );
 }

@@ -11,7 +11,7 @@ import { SectionCard } from '@/shared/ui/section-card';
 import { StatusChip } from '@/shared/ui/status-chip';
 import { formatWon } from '@/shared/lib/format';
 import { TransactionForm } from './transaction-form';
-import { getTransactions } from './transactions.api';
+import { getTransactions, transactionsQueryKey } from './transactions.api';
 
 const columns: GridColDef<TransactionItem>[] = [
   { field: 'businessDate', headerName: 'Date', flex: 0.8 },
@@ -34,7 +34,10 @@ const columns: GridColDef<TransactionItem>[] = [
 ];
 
 export function TransactionsPage() {
-  const { data = [], error } = useQuery({ queryKey: ['transactions'], queryFn: getTransactions });
+  const { data = [], error } = useQuery({
+    queryKey: transactionsQueryKey,
+    queryFn: getTransactions
+  });
 
   return (
     <Stack spacing={3}>

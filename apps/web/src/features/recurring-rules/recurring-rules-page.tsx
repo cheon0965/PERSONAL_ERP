@@ -1,15 +1,17 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Stack } from '@mui/material';
+import { Grid, Stack } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import type { RecurringRuleItem } from '@personal-erp/contracts';
 import { formatDate, formatWon } from '@/shared/lib/format';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
+import { SectionCard } from '@/shared/ui/section-card';
 import { StatusChip } from '@/shared/ui/status-chip';
-import { getRecurringRules } from './recurring-rules.api';
+import { RecurringRuleForm } from './recurring-rule-form';
+import { getRecurringRules, recurringRulesQueryKey } from './recurring-rules.api';
 
 const columns: GridColDef<RecurringRuleItem>[] = [
   { field: 'title', headerName: 'Title', flex: 1.2 },
@@ -38,7 +40,7 @@ const columns: GridColDef<RecurringRuleItem>[] = [
 
 export function RecurringRulesPage() {
   const { data = [], error } = useQuery({
-    queryKey: ['recurring-rules'],
+    queryKey: recurringRulesQueryKey,
     queryFn: getRecurringRules
   });
 
@@ -51,12 +53,24 @@ export function RecurringRulesPage() {
         primaryActionLabel="Add Rule"
       />
       {error ? <QueryErrorAlert title="Recurring rule request failed" error={error} /> : null}
-      <DataTableCard
-        title="Recurring Payment Rules"
-        description="Each rule is the source of future cash-flow events, not the event itself."
-        rows={data}
-        columns={columns}
-      />
+      <Grid container spacing={2.5}>
+        <Grid size={{ xs: 12, xl: 8 }}>
+          <DataTableCard
+            title="Recurring Payment Rules"
+            description="Each rule is the source of future cash-flow events, not the event itself."
+            rows={data}
+            columns={columns}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, xl: 4 }}>
+          <SectionCard
+            title="Quick Add"
+            description="Create a recurring rule without leaving the rules workspace."
+          >
+            <RecurringRuleForm />
+          </SectionCard>
+        </Grid>
+      </Grid>
     </Stack>
   );
 }

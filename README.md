@@ -9,14 +9,26 @@
 - 백엔드: NestJS + Prisma + MySQL
 - 공용 계약 계층: `packages/contracts`
 - 인증 기본 정책: `login`, `health`를 제외한 API는 기본적으로 보호
+- Web 인증 세션: `/login`, 메모리 기반 access token 유지, `POST /auth/refresh` 기반 사용자 복원
+- 핵심 입력 흐름: 거래/반복규칙 Quick Add 폼이 실제 `POST` mutation과 목록 갱신까지 연결됨
+- 요청 단위 검증: `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `401`, `GET /auth/me`, 거래/반복규칙 DTO/소유권 검증 포함
+- 대표 브라우저 E2E: 보호 라우트 진입, 로그인, 세션 복원, 거래 생성 후 목록 반영까지 자동 검증
+- 운영 신호: 모든 API 응답에 `x-request-id` 헤더 부여, `GET /api/health/ready` 준비 상태 확인 지원
+- CI 보안 게이트: `CI` 워크플로 안의 보안 job에서 보안 회귀 API 테스트, runtime dependency audit, Semgrep CE, Gitleaks, 조건부 dependency review 실행
 - 프론트 fallback 정책: 개발 환경에서 명시적으로 켠 경우에만 demo fallback 허용
 - 검증 기준: `npm run check:quick`, `npm run test`
 
 ## 빠른 시작
 
+먼저 참고할 예시 파일:
+
+- 루트 secret-dir 예시: [`.env.example`](/d:/참고자료/프로젝트소스/personal-erp-starter/.env.example#L1)
+- API fallback 예시: [`apps/api/.env.example`](/d:/참고자료/프로젝트소스/personal-erp-starter/apps/api/.env.example#L1)
+- Web fallback 예시: [`apps/web/.env.local.example`](/d:/참고자료/프로젝트소스/personal-erp-starter/apps/web/.env.local.example#L1)
+
 ### 1. SECRET 폴더 경로 확인
 
-현재 프로젝트는 루트의 [.secret-dir.local](/d:/참고자료/프로젝트소스/personal-erp-starter/.secret-dir.local#L1) 파일을 기준으로 외부 SECRET 폴더를 읽습니다.
+현재 프로젝트는 루트의 `.env` 또는 [.secret-dir.local](/d:/참고자료/프로젝트소스/personal-erp-starter/.secret-dir.local#L1) 파일을 기준으로 외부 SECRET 폴더를 읽습니다.
 
 현재 기준 경로:
 
@@ -51,6 +63,12 @@ fallback 경로:
 - API: `apps/api/.env`
 - Web: `apps/web/.env.local`
 
+빠르게 시작하려면:
+
+- 루트 `.env`가 필요하면 `.env.example`을 복사
+- API fallback이 필요하면 `apps/api/.env.example`을 `apps/api/.env`로 복사
+- Web fallback이 필요하면 `apps/web/.env.local.example`을 `apps/web/.env.local`로 복사
+
 ### 3. 의존성 설치
 
 ```bash
@@ -78,7 +96,7 @@ npm run dev
 
 - Web: `http://localhost:3000`
 - API: `http://localhost:4000/api`
-- Swagger: `http://localhost:4000/api/docs`
+- Swagger: `http://localhost:4000/api/docs` (`SWAGGER_ENABLED=true`일 때)
 
 ## 주소 설정에서 가장 중요한 두 값
 
@@ -86,6 +104,10 @@ npm run dev
   프론트가 호출할 API 주소입니다.
 - `api.env`의 `APP_ORIGIN`
   API가 CORS로 허용할 프론트 주소입니다.
+- `api.env`의 `CORS_ALLOWED_ORIGINS`
+  브라우저 요청을 허용할 origin allowlist입니다. 비워두면 `APP_ORIGIN` 하나만 사용합니다.
+- `api.env`의 `SWAGGER_ENABLED`
+  `/api/docs` 노출 여부를 제어하는 토글입니다.
 
 로컬 예시:
 
@@ -97,6 +119,8 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:4000/api
 ```env
 # C:\secrets\personal-erp\api.env
 APP_ORIGIN=http://localhost:3000
+CORS_ALLOWED_ORIGINS=http://localhost:3000
+SWAGGER_ENABLED=true
 ```
 
 ## 주요 명령
@@ -104,6 +128,10 @@ APP_ORIGIN=http://localhost:3000
 ```bash
 npm run check:quick
 npm run test
+npm run test:security:api
+npm run test:prisma
+npm run test:e2e
+npm run audit:runtime
 npm run build
 npm run db:status
 npm run db:deploy
@@ -130,20 +158,37 @@ personal-erp-starter/
 - demo fallback은 기본적으로 끄고, 로컬 개발에서만 명시적으로 켭니다.
 - PR 전에는 최소 `npm run check:quick`와 `npm run test`를 실행합니다.
 
+## 계약과 문서 기준
+
+- 공유 요청/응답 shape의 1차 기준은 `packages/contracts`입니다.
+- 현재 구현된 엔드포인트, DTO validation, 인증 노출 상태의 1차 기준은 Swagger(`http://localhost:4000/api/docs`)입니다.
+- 사람이 빠르게 읽는 API 요약과 인증 흐름은 `docs/API.md`에 유지합니다.
+- 저장소 진입 설명과 빠른 시작은 `README.md`에만 유지하고, 상세 API 설명은 넣지 않습니다.
+- 현재 실제 검증 범위와 남은 공백은 `docs/VALIDATION_NOTES.md`에 유지합니다.
+- 실DB Prisma 경계 검증은 `npm run test:prisma`로 별도 실행합니다.
+- 예외 처리와 최소 로깅 기준은 `docs/ERROR_HANDLING_AND_LOGGING.md`에 유지합니다.
+- 중기 제품 로드맵은 `docs/PROJECT_PLAN.md`, 포트폴리오용 아키텍처 목적과 판단 원칙, 현재 구조 설명과 완료된 MSA-ready 경계 정리는 `PORTFOLIO_ARCHITECTURE_GUIDE.md`에 유지합니다.
+- API shape나 문서 기준이 바뀌면 같은 PR에서 계약, Swagger, 관련 문서를 함께 맞춥니다.
+
 ## 데모 계정
 
 - Email: `demo@example.com`
 - Password: `Demo1234!`
 
+- [ASVS L2 실행계획](./docs/ASVS_L2_EXECUTION_PLAN.md)
+
 ## 문서
 
 - [환경변수 설정](./ENVIRONMENT_SETUP.md)
+- [배포/운영 체크리스트](./docs/OPERATIONS_CHECKLIST.md)
 - [기여 가이드](./CONTRIBUTING.md)
 - [아키텍처](./docs/ARCHITECTURE.md)
 - [개발 가이드](./docs/DEVELOPMENT_GUIDE.md)
 - [API 개요](./docs/API.md)
+- [예외 처리와 로깅 원칙](./docs/ERROR_HANDLING_AND_LOGGING.md)
 - [디자인 시스템](./docs/DESIGN_SYSTEM.md)
 - [프로젝트 계획](./docs/PROJECT_PLAN.md)
+- [포트폴리오 아키텍처 가이드](./PORTFOLIO_ARCHITECTURE_GUIDE.md)
 - [검증 메모](./docs/VALIDATION_NOTES.md)
 - [fallback 정책](./docs/FALLBACK_POLICY.md)
 - [ADR 목록](./docs/adr/README.md)

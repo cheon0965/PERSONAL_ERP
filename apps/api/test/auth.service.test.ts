@@ -41,6 +41,7 @@ function setJwtEnv() {
 test('AuthService.login returns tokens and user for valid credentials', async () => {
   const restoreEnv = setJwtEnv();
   const passwordHash = await argon2.hash('Demo1234!');
+  const createdSessions: Array<Record<string, unknown>> = [];
 
   const prisma = {
     user: {
@@ -50,6 +51,12 @@ test('AuthService.login returns tokens and user for valid credentials', async ()
         name: 'Demo User',
         passwordHash
       })
+    },
+    authSession: {
+      create: async (args: { data: Record<string, unknown> }) => {
+        createdSessions.push(args.data);
+        return args.data;
+      }
     }
   };
 
@@ -64,37 +71,74 @@ test('AuthService.login returns tokens and user for valid credentials', async ()
     ) => {
       tokenCalls.push({ payload, secret: options.secret });
       return options.secret === 'test-access-secret'
-        ? 'access-token'
-        : 'refresh-token';
+        ? `access-token:${String(payload.sid)}`
+        : `refresh-token:${String(payload.sid)}`;
     }
   };
 
   try {
-    const service = new AuthService(prisma as never, jwtService as never);
+    const service = new AuthService(
+      prisma as never,
+      jwtService as never,
+      {
+        assertLoginAttemptAllowed: () => undefined,
+        recordFailedLoginAttempt: () => undefined,
+        clearLoginAttempts: () => undefined,
+        assertRefreshAttemptAllowed: () => undefined,
+        recordFailedRefreshAttempt: () => undefined,
+        clearRefreshAttempts: () => undefined
+      } as never,
+      {
+        now: () => new Date('2026-03-27T00:00:00.000Z')
+      } as never,
+      {
+        log: () => undefined,
+        warn: () => undefined,
+        error: () => undefined
+      } as never
+    );
 
-    const result = await service.login({
-      email: 'demo@example.com',
-      password: 'Demo1234!'
-    });
-
-    assert.deepEqual(result, {
-      accessToken: 'access-token',
-      refreshToken: 'refresh-token',
-      user: {
-        id: 'user-1',
+    const result = await service.login(
+      {
         email: 'demo@example.com',
-        name: 'Demo User'
+        password: 'Demo1234!'
+      },
+      {
+        clientIp: '127.0.0.1',
+        requestId: 'request-auth-service-login'
       }
-    });
+    );
+
+    const accessCall = tokenCalls[0];
+    const refreshCall = tokenCalls[1];
+    const createdSession = createdSessions[0];
+    assert.ok(accessCall);
+    assert.ok(refreshCall);
+    assert.ok(createdSession);
+
+    assert.equal(result.user.id, 'user-1');
+    assert.equal(result.user.email, 'demo@example.com');
+    assert.equal(result.user.name, 'Demo User');
     assert.equal(tokenCalls.length, 2);
-    assert.deepEqual(tokenCalls[0], {
-      payload: { sub: 'user-1', email: 'demo@example.com' },
-      secret: 'test-access-secret'
-    });
-    assert.deepEqual(tokenCalls[1], {
-      payload: { sub: 'user-1' },
-      secret: 'test-refresh-secret-2'
-    });
+    assert.equal(accessCall.secret, 'test-access-secret');
+    assert.equal(refreshCall.secret, 'test-refresh-secret-2');
+    assert.equal(accessCall.payload.sub, 'user-1');
+    assert.equal(accessCall.payload.email, 'demo@example.com');
+    assert.equal(accessCall.payload.type, 'access');
+    assert.equal(refreshCall.payload.sub, 'user-1');
+    assert.equal(refreshCall.payload.type, 'refresh');
+    assert.equal(accessCall.payload.sid, refreshCall.payload.sid);
+    assert.equal(
+      result.accessToken,
+      `access-token:${String(accessCall.payload.sid)}`
+    );
+    assert.equal(
+      result.refreshToken,
+      `refresh-token:${String(refreshCall.payload.sid)}`
+    );
+    assert.equal(createdSessions.length, 1);
+    assert.equal(createdSession.id, accessCall.payload.sid);
+    assert.equal(createdSession.userId, 'user-1');
   } finally {
     restoreEnv();
   }
@@ -112,6 +156,9 @@ test('AuthService.login rejects invalid credentials', async () => {
         name: 'Demo User',
         passwordHash
       })
+    },
+    authSession: {
+      create: async () => undefined
     }
   };
 
@@ -120,14 +167,39 @@ test('AuthService.login rejects invalid credentials', async () => {
   };
 
   try {
-    const service = new AuthService(prisma as never, jwtService as never);
+    const service = new AuthService(
+      prisma as never,
+      jwtService as never,
+      {
+        assertLoginAttemptAllowed: () => undefined,
+        recordFailedLoginAttempt: () => undefined,
+        clearLoginAttempts: () => undefined,
+        assertRefreshAttemptAllowed: () => undefined,
+        recordFailedRefreshAttempt: () => undefined,
+        clearRefreshAttempts: () => undefined
+      } as never,
+      {
+        now: () => new Date('2026-03-27T00:00:00.000Z')
+      } as never,
+      {
+        log: () => undefined,
+        warn: () => undefined,
+        error: () => undefined
+      } as never
+    );
 
     await assert.rejects(
       () =>
-        service.login({
-          email: 'demo@example.com',
-          password: 'WrongPassword!'
-        }),
+        service.login(
+          {
+            email: 'demo@example.com',
+            password: 'WrongPassword!'
+          },
+          {
+            clientIp: '127.0.0.1',
+            requestId: 'request-auth-service-invalid-login'
+          }
+        ),
       (error: unknown) =>
         error instanceof UnauthorizedException &&
         error.message === 'Invalid credentials'

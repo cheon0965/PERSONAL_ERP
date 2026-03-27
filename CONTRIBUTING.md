@@ -15,8 +15,8 @@
 ## 브랜치와 PR 기본 규칙
 
 - 기본 브랜치는 `main`으로 고정합니다.
-- `main`에는 직접 push하지 않고, 작업 브랜치에서 PR을 통해서만 변경을 반영합니다.
-- PR 머지 전에는 GitHub Actions `CI` 워크플로가 반드시 통과해야 합니다.
+- 현재 운영 기준은 `main` 직접 push 대신 작업 브랜치 + PR 흐름입니다.
+- PR을 머지할 때는 GitHub Actions `CI` 워크플로 통과를 기본 기준으로 봅니다.
 - 브랜치 예시: `feat/auth-refresh`, `fix/dashboard-summary`, `docs/windows-env-guide`
 - PR 제목 예시: `feat: add transaction mutation flow`
 - PR 본문에는 목적, 변경 범위, 검증 방법, 문서 반영 여부를 적습니다.
@@ -24,6 +24,7 @@
 
 ## GitHub 저장소 설정 체크리스트
 
+- 아래 항목은 `저장소 설정이 허용하는 범위에서 목표로 삼는 운영 기준`입니다.
 - Default branch는 `main`으로 둡니다.
 - `main` 보호 브랜치 규칙에서 PR 기반 머지를 강제합니다.
 - `main` 보호 브랜치 규칙에서 상태 검사 통과를 강제합니다.
@@ -32,6 +33,8 @@
 - `main` 직접 push는 차단합니다.
 - 현재 기준 CODEOWNERS 기본 범위는 전체 저장소이며, 기본 책임자는 `@cheon0965`입니다.
 - 저장소가 단일 유지보수 단계인 동안에는 승인 리뷰 강제를 기본값으로 두지 않고, 협업 인원이 늘면 CODEOWNERS 리뷰 강제를 다시 검토합니다.
+- 현재 private repository 플랜이나 GitHub 설정 상태에 따라 ruleset/server-side enforcement가 바로 활성화되지 않을 수 있습니다.
+- 이 경우에도 저장소 운영 규칙 자체는 `작업 브랜치 -> PR -> CI 확인`을 기본 흐름으로 유지합니다.
 
 ## 릴리즈와 태그 규칙
 
@@ -43,9 +46,15 @@
 ## 구조 규칙
 
 - Web은 `app -> features -> shared` 흐름을 유지합니다.
-- API는 `controller -> service -> repository -> mapper/calculator` 흐름을 유지합니다.
+- API 기본 흐름은 `controller -> service -> repository -> mapper/calculator` 입니다.
+- `transactions`, `recurring-rules`는 `controller -> use-case -> port -> adapter` 경계를 사용합니다.
+- `dashboard`, `forecast`는 `controller -> read service -> read repository -> projection` 흐름을 사용합니다.
 - 공용 계약은 `packages/contracts`를 단일 소스로 사용합니다.
 - 사용자 경계가 필요한 데이터는 항상 `userId` 기준으로 다룹니다.
+- `dashboard`, `forecast`는 읽기/조합 컨텍스트로 보고, `transactions`, `recurring-rules`의 쓰기 규칙을 직접 소유하지 않습니다.
+- 다른 모듈의 `repository`, `adapter`, `controller`를 직접 import하는 방식은 기본 규칙으로 사용하지 않습니다.
+- `transactions`, `recurring-rules`, `dashboard`, `forecast`를 모듈 밖에서 참조할 때는 각 모듈의 `public.ts`만 공식 진입점으로 사용합니다.
+- 서비스 분리, 메시지 브로커, outbox, gateway 도입은 별도 ADR 없이 진행하지 않습니다.
 
 ## 비밀정보 규칙
 
@@ -72,14 +81,30 @@
 
 - 최소 실행 기준: `npm run check:quick`
 - PR 전 권장 기준: `npm run test`
+- 인증/세션, CORS, 보안 헤더, 브라우저/API 경계 정책을 바꿨다면 `npm run test:security:api`를 같이 봅니다.
+- `package.json` 또는 lockfile을 바꿨다면 `npm run audit:runtime`와 PR의 `dependency-review` 결과를 같이 확인합니다.
+- 브라우저 흐름을 건드리면 `npm run test:e2e`를 추가로 봅니다.
+- Prisma/MySQL 경계를 건드리면 `npm run test:prisma`를 대표 심화 검증으로 사용합니다.
 - 인증, 소유권 검증, 월말 계산 로직을 건드리면 관련 테스트를 같이 수정합니다.
 
 ## 문서 갱신 규칙
 
 - env 키 또는 SECRET 경로 방식 변경: `ENVIRONMENT_SETUP.md`
+- 배포/운영 절차 변경: `docs/OPERATIONS_CHECKLIST.md`
 - 협업 흐름 변경: `CONTRIBUTING.md`
 - 구조 변경: `docs/ARCHITECTURE.md`
 - 설계 결정 기록: `docs/adr/`
+
+## 계약과 문서 동기화 규칙
+
+- Web과 API가 함께 쓰는 요청/응답 shape 변경은 항상 `packages/contracts`부터 반영합니다.
+- 현재 구현된 엔드포인트 목록, DTO validation, 인증 노출 상태는 Swagger(`api/docs`)를 기준으로 확인합니다.
+- `docs/API.md`는 사람이 읽는 API 요약과 인증/쓰기 흐름 설명만 유지합니다.
+- `README.md`는 저장소 진입점과 빠른 시작만 담당하고, 상세 API 기준 문서 역할은 맡기지 않습니다.
+- `docs/VALIDATION_NOTES.md`는 “지금 실제로 무엇을 검증하고 있는가”와 남은 공백만 기록합니다.
+- `docs/PROJECT_PLAN.md`는 중기 로드맵, `PORTFOLIO_ARCHITECTURE_GUIDE.md`는 프로젝트 목적, 판단 원칙, 현재 아키텍처 설명을 기록합니다.
+- API, env, fallback, 테스트 범위가 바뀌면 관련 문서를 같은 PR에서 함께 갱신합니다.
+- 이 우선순위 자체가 바뀌는 구조 결정이면 ADR을 추가합니다.
 
 ## ADR 작성 기준
 

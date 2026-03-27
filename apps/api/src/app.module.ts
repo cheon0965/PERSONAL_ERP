@@ -2,17 +2,17 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { validateApiEnv } from './config/api-env';
-import { PrismaModule } from './common/prisma/prisma.module';
+import { ExternalDependenciesModule } from './common/infrastructure/external-dependencies.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AccountsModule } from './modules/accounts/accounts.module';
 import { CategoriesModule } from './modules/categories/categories.module';
-import { TransactionsModule } from './modules/transactions/transactions.module';
-import { RecurringRulesModule } from './modules/recurring-rules/recurring-rules.module';
+import { TransactionsModule } from './modules/transactions/public';
+import { RecurringRulesModule } from './modules/recurring-rules/public';
 import { InsurancePoliciesModule } from './modules/insurance-policies/insurance-policies.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
-import { DashboardModule } from './modules/dashboard/dashboard.module';
-import { ForecastModule } from './modules/forecast/forecast.module';
+import { DashboardModule } from './modules/dashboard/public';
+import { ForecastModule } from './modules/forecast/public';
 
 @Module({
   imports: [
@@ -22,7 +22,7 @@ import { ForecastModule } from './modules/forecast/forecast.module';
       validate: validateApiEnv
     }),
     ScheduleModule.forRoot(),
-    PrismaModule,
+    ExternalDependenciesModule,
     HealthModule,
     AuthModule,
     AccountsModule,

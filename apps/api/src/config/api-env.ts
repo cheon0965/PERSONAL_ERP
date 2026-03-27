@@ -3,6 +3,8 @@ type EnvSource = Record<string, unknown>;
 export type ApiEnv = {
   PORT: number;
   APP_ORIGIN: string;
+  CORS_ALLOWED_ORIGINS: string[];
+  SWAGGER_ENABLED: boolean;
   JWT_ACCESS_SECRET: string;
   JWT_REFRESH_SECRET: string;
   ACCESS_TOKEN_TTL: string;
@@ -61,6 +63,57 @@ function readUrl(source: EnvSource, key: string): string {
   }
 }
 
+function readBoolean(
+  source: EnvSource,
+  key: string,
+  fallback: boolean
+): boolean {
+  const rawValue = source[key];
+
+  if (typeof rawValue !== 'string' || !rawValue.trim()) {
+    return fallback;
+  }
+
+  const normalizedValue = rawValue.trim().toLowerCase();
+  if (normalizedValue === 'true') {
+    return true;
+  }
+
+  if (normalizedValue === 'false') {
+    return false;
+  }
+
+  throw new Error(`[api env] ${key} must be either true or false.`);
+}
+
+function readAllowedOrigins(source: EnvSource, fallbackOrigin: string): string[] {
+  const rawValue = source.CORS_ALLOWED_ORIGINS;
+  const rawOrigins =
+    typeof rawValue === 'string' && rawValue.trim().length > 0
+      ? rawValue.split(',')
+      : [fallbackOrigin];
+
+  const normalizedOrigins = rawOrigins.map((candidate) => {
+    const trimmed = candidate.trim();
+
+    if (!trimmed) {
+      throw new Error(
+        '[api env] CORS_ALLOWED_ORIGINS must not contain empty entries.'
+      );
+    }
+
+    try {
+      return new URL(trimmed).origin;
+    } catch {
+      throw new Error(
+        `[api env] CORS_ALLOWED_ORIGINS contains an invalid URL: ${trimmed}`
+      );
+    }
+  });
+
+  return [...new Set(normalizedOrigins)];
+}
+
 function readJwtDuration(source: EnvSource, key: string): string {
   const value = readString(source, key);
 
@@ -74,9 +127,13 @@ function readJwtDuration(source: EnvSource, key: string): string {
 }
 
 export function parseApiEnv(source: EnvSource): ApiEnv {
+  const appOrigin = readUrl(source, 'APP_ORIGIN');
+
   return {
     PORT: readPort(source),
-    APP_ORIGIN: readUrl(source, 'APP_ORIGIN'),
+    APP_ORIGIN: appOrigin,
+    CORS_ALLOWED_ORIGINS: readAllowedOrigins(source, appOrigin),
+    SWAGGER_ENABLED: readBoolean(source, 'SWAGGER_ENABLED', true),
     JWT_ACCESS_SECRET: readString(source, 'JWT_ACCESS_SECRET', { minLength: 16 }),
     JWT_REFRESH_SECRET: readString(source, 'JWT_REFRESH_SECRET', { minLength: 16 }),
     ACCESS_TOKEN_TTL: readJwtDuration(source, 'ACCESS_TOKEN_TTL'),
@@ -92,7 +149,9 @@ export function validateApiEnv(config: Record<string, unknown>): Record<string, 
   return {
     ...config,
     ...env,
-    PORT: String(env.PORT)
+    PORT: String(env.PORT),
+    CORS_ALLOWED_ORIGINS: env.CORS_ALLOWED_ORIGINS.join(','),
+    SWAGGER_ENABLED: String(env.SWAGGER_ENABLED)
   };
 }
 
@@ -102,4 +161,8 @@ export function getApiEnv(): ApiEnv {
   }
 
   return cachedApiEnv;
+}
+
+export function resetApiEnvCache(): void {
+  cachedApiEnv = undefined;
 }

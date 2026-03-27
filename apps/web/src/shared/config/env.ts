@@ -29,7 +29,13 @@ export function readWebEnv(source: NodeJS.ProcessEnv): WebEnv {
   };
 }
 
-export const webEnv = Object.freeze(readWebEnv(process.env));
+const rawProcessEnv = {
+  NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
+  NEXT_PUBLIC_ENABLE_DEMO_FALLBACK: process.env.NEXT_PUBLIC_ENABLE_DEMO_FALLBACK,
+  NODE_ENV: process.env.NODE_ENV
+};
+
+export const webEnv = Object.freeze(readWebEnv(rawProcessEnv));
 export function createWebRuntime(source: NodeJS.ProcessEnv, env: WebEnv): WebRuntime {
   const nodeEnv = source.NODE_ENV ?? 'development';
 
@@ -39,7 +45,7 @@ export function createWebRuntime(source: NodeJS.ProcessEnv, env: WebEnv): WebRun
   };
 }
 
-export const webRuntime = Object.freeze(createWebRuntime(process.env, webEnv));
+export const webRuntime = Object.freeze(createWebRuntime(rawProcessEnv, webEnv));
 
 export function readBooleanFlag(value: string | undefined, defaultValue: boolean): boolean {
   if (value == null || value.trim() === '') {

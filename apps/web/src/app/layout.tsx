@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { AuthProvider } from '@/shared/auth/auth-provider';
 import { ThemeRegistry } from '@/shared/providers/theme-registry';
 import { QueryProvider } from '@/shared/providers/query-provider';
 import './globals.css';
@@ -17,7 +18,9 @@ export default function RootLayout({
     <html lang="ko">
       <body>
         <ThemeRegistry>
-          <QueryProvider>{children}</QueryProvider>
+          <QueryProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </QueryProvider>
         </ThemeRegistry>
       </body>
     </html>
