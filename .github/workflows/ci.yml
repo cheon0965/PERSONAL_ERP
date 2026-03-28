@@ -128,3 +128,16 @@ jobs:
           --source .
           --redact
           --exit-code 1
+
+  CI:
+    if: always()
+    needs: [validate, security-regression, audit-runtime, semgrep-ce, gitleaks]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check build status
+        if: >-
+          contains(needs.*.result, 'failure') || 
+          contains(needs.*.result, 'cancelled')
+        run: exit 1
+      - name: Success
+        run: echo "All statuses passed."
