@@ -29,16 +29,18 @@ npm run test
 
 ## 3. 백엔드 기능 추가 순서
 
-1. 먼저 이 기능이 `단순 CRUD`, `핵심 쓰기 흐름`, `읽기/조합 흐름` 중 어디에 속하는지 판단합니다.
-2. `packages/contracts`에 새 요청/응답 계약이 필요한지 먼저 확인합니다.
-3. 필요한 DTO와 컨트롤러 엔드포인트를 추가합니다.
-4. 구현 패턴은 아래 셋 중 하나를 고릅니다.
+1. 먼저 `docs/domain/business-logic-draft.md`와 `docs/domain/core-entity-definition.md`를 기준으로 이 기능이 어떤 운영 흐름과 엔티티 경계에 속하는지 판단합니다.
+2. 이어서 이 기능이 `단순 CRUD`, `핵심 쓰기 흐름`, `읽기/조합 흐름` 중 어디에 속하는지 판단합니다.
+3. `packages/contracts`에 새 요청/응답 계약이 필요한지 먼저 확인합니다.
+4. 필요한 DTO와 컨트롤러 엔드포인트를 추가합니다.
+5. 구현 패턴은 아래 셋 중 하나를 고릅니다.
    `단순 CRUD`: `controller -> service -> repository -> mapper/calculator`
    `핵심 쓰기 흐름`: `controller -> use-case -> port -> adapter`
    `읽기/조합 흐름`: `controller -> read service -> read repository -> projection`
-5. `transactions`, `recurring-rules`, `dashboard`, `forecast`처럼 모듈 바깥 참조가 있는 영역이면 `public.ts` 진입점도 같이 맞춥니다.
-6. 현재 사용자 경계(`userId`)가 필요한지 확인합니다.
-7. 관련 테스트를 같이 추가합니다.
+6. `transactions`, `recurring-rules`, `dashboard`, `forecast`처럼 모듈 바깥 참조가 있는 영역이면 `public.ts` 진입점도 같이 맞춥니다.
+7. 현재 요청이 어떤 `tenantId` / `TenantMembership` / `ActorRef` 경계에서 실행되는지 확인합니다.
+   현재 구현이 auth user 범위를 직접 쓰더라도, 상위 도메인 기준은 Tenant/Ledger/Actor 경계라는 점을 문서와 코드에서 분리해 둡니다.
+8. 관련 테스트를 같이 추가합니다.
    `핵심 쓰기 흐름`: use-case 테스트 + 요청 단위 API 테스트
    `읽기/조합 흐름`: read service 테스트
    필요 시 브라우저 E2E 또는 Prisma 대표 통합 테스트
@@ -70,6 +72,9 @@ API나 공유 계약이 바뀌면 아래 순서를 같은 PR 안에서 닫습니
 문서별 역할:
 
 - `README.md`: 저장소 진입 설명, 빠른 시작, 가장 큰 운영 원칙
+- `docs/domain/README.md`: 도메인 기준 문서의 진입점과 읽는 순서
+- `docs/domain/business-logic-draft.md`: 운영 사이클, 권한 모델, 주요 회계 정책, 상태 정의
+- `docs/domain/core-entity-definition.md`: 핵심 엔티티, 불변조건, 관계, 구현 우선순위
 - `docs/OPERATIONS_CHECKLIST.md`: 배포 순서, 수동 스모크 체크, 운영 장애 대응
 - `docs/API.md`: 사람이 읽는 엔드포인트 요약과 인증/쓰기 흐름
 - `docs/ERROR_HANDLING_AND_LOGGING.md`: 예외 처리 기준, 최소 로그 기준, 민감정보 금지선
@@ -130,7 +135,7 @@ npm run check
 ## 9. 자주 놓치기 쉬운 항목
 
 - demo fallback을 기본값처럼 켜두지 않았는지
-- `userId` 경계 없이 데이터를 조회하지 않았는지
+- 요청 주체 경계 없이 데이터를 조회하지 않았는지
 - contracts와 실제 응답 shape가 어긋나지 않았는지
 - Swagger 노출 상태와 문서 설명이 달라지지 않았는지
 - `docs/VALIDATION_NOTES.md`가 현재 검증 범위보다 뒤처지지 않았는지

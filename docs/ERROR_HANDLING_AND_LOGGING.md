@@ -15,6 +15,7 @@
 3. 로그는 경계 지점에서만 남기고, 비즈니스 로직 내부에는 무분별하게 뿌리지 않습니다.
 4. 민감정보는 로그와 응답에 남기지 않습니다.
 5. 1인 개발과 포트폴리오 목적에 맞게, 현재는 `짧고 일관된 규칙`을 우선합니다.
+6. 회계 쓰기 흐름 로그는 가능하면 `userId` 하나보다 `tenantId`, `membershipId`, `ActorRef` 계열 식별자를 우선 고려합니다.
 
 ## 현재 API 예외 처리 원칙
 
@@ -43,6 +44,7 @@
 
 - `Transactions`, `Recurring Rules`는 use-case/domain이 HTTP를 직접 모르게 유지합니다.
 - 대신 controller가 `MissingOwned...Error`를 받아 `NotFoundException`으로 변환합니다.
+- 현재 구현의 에러 이름에 `Owned`가 남아 있더라도, 상위 도메인 기준은 단순 소유권보다 Tenant/Membership 접근 범위 판정입니다.
 - 이 규칙 덕분에 도메인 규칙은 테스트하기 쉬워지고, HTTP 상태 코드는 바깥 계층에서만 결정됩니다.
 
 현재 기준 코드:
@@ -102,6 +104,9 @@
 
 ### 현재 기록하는 대표 보안 이벤트
 
+인증 이벤트는 현재 구현 기준으로 `userId`, `sessionId`를 주로 사용합니다.  
+도메인 쓰기/권한 이벤트는 가능하면 `tenantId`, `membershipId`, `actorType` / `actorId`까지 함께 남기는 방향을 기준으로 둡니다.
+
 - `auth.login_succeeded`
   `log` 레벨, `requestId`, `clientIp`, `userId`, `sessionId`
 - `auth.login_failed`
@@ -119,9 +124,9 @@
 - `auth.browser_origin_blocked`
   `warn` 레벨, `requestId`, `clientIp`, `path`, `origin`
 - `auth.access_denied`
-  `warn` 레벨, `requestId`, `clientIp`, `path`, `reason`, 선택적 `userId`
+  `warn` 레벨, `requestId`, `clientIp`, `path`, `reason`, 선택적 `userId`, `tenantId`
 - `authorization.scope_denied`
-  `warn` 레벨, `requestId`, `path`, `userId`, `resource`
+  `warn` 레벨, `requestId`, `path`, 선택적 `userId`, `tenantId`, `membershipId`, `resource`
 - `system.readiness_failed`
   `error` 레벨, `requestId`, `path`, `check=database`
 
@@ -132,7 +137,7 @@
   예: 로그인 성공, refresh 성공, 로그아웃 성공
 - `warn`
   차단되었지만 시스템 장애는 아닌 보안 이벤트
-  예: 잘못된 자격증명, origin 차단, bearer 누락, refresh 재사용, ownership 거부
+  예: 잘못된 자격증명, origin 차단, bearer 누락, refresh 재사용, scope 거부
 - `error`
   운영자가 바로 원인 확인을 해야 하는 보안/운영 실패
   예: readiness 실패
@@ -162,7 +167,7 @@
   예: `auth`, `transactions`, `web fetch`, `external adapter`
 - 상태 코드 또는 실패 종류
 - 필요한 경우 안전한 식별자만
-  예: `userId`, request path
+  예: `userId`/`platformUserId`, `tenantId`, `membershipId`, request path
 - 가능하면 `requestId`
 
 ### 로그를 남기지 않는 위치

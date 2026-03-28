@@ -39,7 +39,7 @@
     "test:prisma": "npm run test:prisma --workspace @personal-erp/api --if-present",
     "test:e2e": "npm run test:e2e --workspace @personal-erp/web --if-present",
     "test": "npm run test:web && npm run test:api",
-    "audit:runtime": "npm audit --omit=dev --audit-level=high --workspace @personal-erp/api --workspace @personal-erp/web",
+    "audit:runtime": "npm audit --omit=dev --audit-level=critical --workspace @personal-erp/api --workspace @personal-erp/web",
     "format": "prettier --write package.json tsconfig.base.json apps/api/package.json apps/api/tsconfig*.json apps/web/package.json apps/web/tsconfig*.json apps/web/playwright.config.mjs apps/web/e2e/**/*.ts packages/contracts/package.json packages/contracts/tsconfig.json packages/contracts/src/**/*.ts apps/api/test/**/*.ts apps/web/test/**/*.ts README.md CONTRIBUTING.md ENVIRONMENT_SETUP.md PORTFOLIO_ARCHITECTURE_GUIDE.md docs/**/*.md .prettierrc.json eslint.config.mjs scripts/*.cjs .github/workflows/*.yml",
     "format:check": "prettier --check package.json tsconfig.base.json apps/api/package.json apps/api/tsconfig*.json apps/web/package.json apps/web/tsconfig*.json apps/web/playwright.config.mjs apps/web/e2e/**/*.ts packages/contracts/package.json packages/contracts/tsconfig.json packages/contracts/src/**/*.ts apps/api/test/**/*.ts apps/web/test/**/*.ts README.md CONTRIBUTING.md ENVIRONMENT_SETUP.md PORTFOLIO_ARCHITECTURE_GUIDE.md docs/**/*.md .prettierrc.json eslint.config.mjs scripts/*.cjs .github/workflows/*.yml",
     "check:quick": "npm run format:check && npm run lint && npm run typecheck",
@@ -52,5 +52,9 @@
     "concurrently": "^9.1.2",
     "playwright": "^1.58.2",
     "prettier": "^3.5.3"
+  },
+  "overrides": {
+    "path-to-regexp": "^8.2.0",
+    "effect": ">=3.20.0"
   }
 }

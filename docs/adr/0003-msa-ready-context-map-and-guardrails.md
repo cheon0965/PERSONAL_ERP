@@ -29,8 +29,9 @@
 - `Ledger`는 계정/카테고리/거래 원장을 소유합니다.
 - `Recurring Automation`은 반복규칙을 소유하고, `Ledger`의 참조 상태를 읽을 수 있습니다.
 - `Insight & Planning`은 `Ledger`, `Recurring Automation`, `Asset & Coverage`를 읽어 조합하지만 쓰기 규칙을 소유하지 않습니다.
-- `Identity & Access`는 인증과 현재 사용자 기준선만 제공하는 cross-cutting context로 둡니다.
+- `Identity & Access`는 인증과 요청 주체 기준선만 제공하는 cross-cutting context로 둡니다.
 - `Platform & Contracts`는 공통 인프라와 계약만 소유하고, 비즈니스 규칙을 소유하지 않습니다.
+- 여기서 `Ledger`는 현재 코드베이스의 회계 쓰기 컨텍스트 이름이며, 세부 도메인 엔티티/상태/권한 기준은 `docs/domain/business-logic-draft.md`, `docs/domain/core-entity-definition.md`를 우선합니다.
 
 다음은 기본 금지선으로 둡니다.
 

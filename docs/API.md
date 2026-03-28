@@ -9,6 +9,12 @@
 3. `docs/API.md`
    사람이 빠르게 읽는 엔드포인트 요약, 인증 흐름, 쓰기 흐름 설명을 유지합니다.
 
+## 도메인 기준선
+
+- 비즈니스 로직의 시작/끝, 상태, 권한, 마감/이월 정책의 1차 기준은 `docs/domain/business-logic-draft.md`입니다.
+- 핵심 엔티티, 불변조건, 트랜잭션 경계, 반올림 정책의 1차 기준은 `docs/domain/core-entity-definition.md`입니다.
+- 이 문서는 현재 HTTP surface와 구현 상태를 설명하며, 도메인 정책을 다시 정의하지 않습니다.
+
 ## Base URL
 
 - API Prefix: `/api`
@@ -67,23 +73,27 @@
 
 - 요청 계약: `CreateTransactionRequest`
 - 응답 계약: `TransactionItem`
+- 현재 엔드포인트는 도메인 기준의 `CollectedTransaction -> JournalEntry` 흐름으로 가기 전 입력/수집 단계 구현에 가깝습니다.
 - 현재 응답은 `GET /transactions` 목록 아이템 shape와 동일하게 매핑됩니다.
 - 계정은 필수이며, 카테고리는 선택입니다.
-- 계정/카테고리는 현재 사용자 소유 범위에서만 허용됩니다.
+- 현재 구현에서는 인증 사용자 범위 내 참조만 허용하며, 장기 기준은 Tenant/Membership 접근 범위로 수렴합니다.
+- 상위 도메인 기준에서는 손익 성격 거래를 확정(`ReadyToPost`/전표 생성)하려면 Category 확정이 필요합니다.
 
 ### `POST /recurring-rules`
 
 - 요청 계약: `CreateRecurringRuleRequest`
 - 응답 계약: `RecurringRuleItem`
+- 현재 엔드포인트는 도메인 기준의 `RecurringRule -> PlanItem` 생성 흐름의 초기 입력 단계 구현입니다.
 - 현재 응답은 `GET /recurring-rules` 목록 아이템 shape와 동일하게 매핑됩니다.
 - 계정은 필수이며, 카테고리는 선택입니다.
-- 계정/카테고리는 현재 사용자 소유 범위에서만 허용됩니다.
+- 현재 구현에서는 인증 사용자 범위 내 참조만 허용하며, 장기 기준은 Tenant/Membership 접근 범위로 수렴합니다.
 
-## 사용자 범위와 데이터 최소 노출
+## 접근 범위와 데이터 최소 노출
 
-- `GET /transactions`는 현재 인증 사용자 데이터만 반환합니다.
-- `GET /recurring-rules`는 현재 인증 사용자 데이터만 반환합니다.
-- 두 목록 응답은 `userId`, `accountId`, `categoryId`, `memo` 같은 내부 소유권/저장 모델 필드를 직접 노출하지 않습니다.
+- `GET /transactions`는 현재 구현 기준으로 인증 사용자 범위 데이터만 반환합니다.
+- `GET /recurring-rules`는 현재 구현 기준으로 인증 사용자 범위 데이터만 반환합니다.
+- 상위 도메인 기준은 Tenant/Membership/Ledger 접근 범위이며, 현재 user-scoped 구현은 그 전단계입니다.
+- 두 목록 응답은 `userId`, `tenantId`, `membershipId`, `accountId`, `categoryId`, `memo` 같은 내부 접근 제어/저장 모델 필드를 직접 노출하지 않습니다.
 - `GET /dashboard/summary`와 `GET /forecast/monthly`는 집계 결과만 반환합니다.
 - 두 read endpoint는 raw read model(`accounts`, `transactions`, `recurringRules`, `settings`)을 직접 응답하지 않습니다.
 - 접근통제 실패는 `404` 또는 `401/403`으로 처리하고, 보안 이벤트 로그와 함께 남깁니다.

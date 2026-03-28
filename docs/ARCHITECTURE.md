@@ -38,7 +38,7 @@ docs/
 
 ```text
 [ Platform & Contracts ] -> 모든 컨텍스트의 계약/공통 인프라 지원
-[ Identity & Access ] -> 모든 컨텍스트의 인증/현재 사용자 기준선
+[ Identity & Access ] -> 모든 컨텍스트의 인증/요청 주체 기준선
 
 [ Recurring Automation ] -- reference only --> [ Ledger ]
 [ Ledger ] -------------------- read -------> [ Insight & Planning ]
@@ -46,21 +46,24 @@ docs/
 [ Asset & Coverage ] ----------- read ------> [ Insight & Planning ]
 ```
 
-| Context              | 현재 모듈                                                        | 역할                             |
-| -------------------- | ---------------------------------------------------------------- | -------------------------------- |
-| Identity & Access    | `auth`, `common/auth`                                            | 로그인, 토큰, 현재 사용자 기준선 |
-| Ledger               | `accounts`, `categories`, `transactions`                         | 계정/카테고리/거래 원장          |
-| Recurring Automation | `recurring-rules`                                                | 반복규칙 정의와 반복 입력 예약   |
-| Asset & Coverage     | `vehicles`, `insurance-policies`                                 | 운영비 성격의 자산/보장 도메인   |
-| Insight & Planning   | `dashboard`, `forecast`                                          | 읽기 기반 요약/예측 조합         |
-| Platform & Contracts | `packages/contracts`, env, Prisma, health, 공통 외부 의존성 조립 | 계약과 런타임 기반선             |
+| Context              | 현재 모듈                                                        | 역할                                         |
+| -------------------- | ---------------------------------------------------------------- | -------------------------------------------- |
+| Identity & Access    | `auth`, `common/auth`                                            | 로그인, 토큰, 요청 주체 인증 기준선          |
+| Ledger               | `accounts`, `categories`, `transactions`                         | 현재 구현의 계정/카테고리/거래 쓰기 컨텍스트 |
+| Recurring Automation | `recurring-rules`                                                | 반복규칙 정의와 반복 입력 예약               |
+| Asset & Coverage     | `vehicles`, `insurance-policies`                                 | 운영비 성격의 자산/보장 도메인               |
+| Insight & Planning   | `dashboard`, `forecast`                                          | 읽기 기반 요약/예측 조합                     |
+| Platform & Contracts | `packages/contracts`, env, Prisma, health, 공통 외부 의존성 조립 | 계약과 런타임 기반선                         |
+
+여기서 `Ledger`는 현재 코드베이스의 컨텍스트 이름입니다.  
+회계 도메인의 상세 기준은 [business-logic-draft.md](/d:/PROJECT/PERSONAL_ERP/docs/domain/business-logic-draft.md) 와 [core-entity-definition.md](/d:/PROJECT/PERSONAL_ERP/docs/domain/core-entity-definition.md) 를 우선하며, 최종 write model은 `Ledger`, `AccountingPeriod`, `CollectedTransaction`, `JournalEntry` 중심으로 수렴합니다.
 
 허용되는 방향:
 
 - Web은 HTTP + `packages/contracts`를 통해서만 API와 연결합니다.
 - `Recurring Automation`은 `Ledger`의 참조 상태를 읽을 수 있습니다.
 - `Insight & Planning`은 `Ledger`, `Recurring Automation`, `Asset & Coverage`를 읽어 조합합니다.
-- `Identity & Access`는 인증 기준선만 제공합니다.
+- `Identity & Access`는 인증과 요청 주체 기준선만 제공하고, 도메인 write 흐름의 `TenantMembership` / `ActorRef` 판정 자체를 소유하지 않습니다.
 - `Platform & Contracts`는 공통 지원 계층으로만 동작합니다.
 
 금지선:
@@ -116,11 +119,12 @@ Insight Context: controller -> read service -> read repository -> projection
 - repository 또는 adapter는 Prisma 접근을 담당합니다.
 - mapper/calculator는 응답 변환과 계산을 분리합니다.
 
-## 6. 인증과 사용자 경계
+## 6. 인증과 접근 경계
 
 - `health`, `auth/login`을 제외한 API는 기본적으로 보호됩니다.
-- 컨트롤러는 현재 사용자 컨텍스트를 받고, 서비스는 `userId`를 기준으로 동작합니다.
-- 계좌, 카테고리 등 참조 대상도 현재 사용자 소유인지 검증합니다.
+- 컨트롤러는 인증된 요청 주체 컨텍스트를 받고, 도메인 write 흐름에서는 이를 `tenantId`, `TenantMembership`, `ActorRef` 기준으로 해석해야 합니다.
+- 현재 일부 구현과 검증은 auth user 범위를 직접 사용하지만, 상위 비즈니스 기준은 Tenant/Ledger 경계 안의 접근 판정입니다.
+- 계좌, 카테고리, 장부, 기간 등 참조 대상은 최종적으로 tenant/ledger 접근 범위 안에서 검증합니다.
 
 ## 7. 환경변수 정책
 
@@ -146,7 +150,7 @@ Insight Context: controller -> read service -> read repository -> projection
 현재 테스트는 아래 네 층으로 나뉩니다.
 
 - use-case / service 테스트
-  인증, 소유권 검증, 대시보드/예측 계산, 핵심 쓰기 흐름 규칙
+  인증, 접근 범위 검증, 대시보드/예측 계산, 핵심 쓰기 흐름 규칙
 - 요청 단위 API 테스트
   guard, ValidationPipe, 인증 실패, DTO validation, 응답 shape, readiness, `x-request-id`
 - Web 런타임 정책 테스트

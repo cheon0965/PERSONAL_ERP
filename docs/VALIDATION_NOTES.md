@@ -1,5 +1,8 @@
 # 검증 메모
 
+이 문서는 **현재 구현 상태의 검증 범위**를 기록합니다.  
+비즈니스 흐름, 상태, 권한, 엔티티의 최종 기준은 `docs/domain/business-logic-draft.md`, `docs/domain/core-entity-definition.md`를 우선합니다.
+
 ## 현재 기본 검증 기준
 
 - `npm run check:quick`
@@ -43,9 +46,9 @@
 - 보호 라우트의 `401`
 - `GET /auth/me`
 - `POST /transactions`
-  DTO validation, 현재 사용자 소유 계정/카테고리 검증, 생성 응답 shape
+  DTO validation, 현재 구현의 인증 사용자 접근 범위 내 계정/카테고리 검증, 생성 응답 shape
 - `POST /recurring-rules`
-  DTO validation, 현재 사용자 소유 계정/카테고리 검증, 생성 응답 shape
+  DTO validation, 현재 구현의 인증 사용자 접근 범위 내 계정/카테고리 검증, 생성 응답 shape
 - 거래/반복규칙 use-case 생성 로직
 - 대시보드 요약 계산
 - 예측 잔액 계산
@@ -54,17 +57,17 @@
 - 허용된 origin에 대한 CORS/security header 적용
 - 인증/민감 응답의 `Cache-Control: no-store`
 - allowlist 밖 origin의 cookie-auth 요청 차단(`403 Origin not allowed`)
-- 로그인 실패, refresh 재사용, bearer 누락, ownership 거부, readiness 실패에 대한 보안 이벤트 로그 기록
+- 로그인 실패, refresh 재사용, bearer 누락, scope 거부, readiness 실패에 대한 보안 이벤트 로그 기록
 - `transactions` Prisma 통합 테스트
-  실제 MySQL 기준으로 ownership 확인, 생성, 조회 정렬과 사용자 스코프를 대표 검증
+  실제 MySQL 기준으로 현재 구현의 접근 범위 확인, 생성, 조회 정렬과 인증 사용자 스코프를 대표 검증
 - `GET /transactions`
-  현재 사용자 범위만 반환하는지, 내부 소유권 필드를 노출하지 않는지 검증
+  현재 구현 기준 인증 사용자 범위만 반환하는지, 내부 접근 제어 필드를 노출하지 않는지 검증
 - `GET /recurring-rules`
-  현재 사용자 범위만 반환하는지, 내부 소유권 필드를 노출하지 않는지 검증
+  현재 구현 기준 인증 사용자 범위만 반환하는지, 내부 접근 제어 필드를 노출하지 않는지 검증
 - `GET /dashboard/summary`
   다른 사용자 데이터가 집계에 섞이지 않고 raw read model을 노출하지 않는지 검증
 - `GET /forecast/monthly`
-  현재 사용자 집계만 사용하고 month query를 그대로 반영하는지 검증
+  현재 구현 기준 인증 사용자 집계만 사용하고 month query를 그대로 반영하는지 검증
 
 ### Web
 
@@ -86,6 +89,6 @@
 
 ## 해석
 
-현재 검증체계는 성공 경로 계약, 인증, DTO validation, 소유권 검증, readiness/request-id 같은 운영 신호, 핵심 쓰기 흐름, 대표 브라우저 사용자 흐름까지를 자동으로 막는 상태입니다.
+현재 검증체계는 성공 경로 계약, 인증, DTO validation, 접근 범위 검증, readiness/request-id 같은 운영 신호, 핵심 쓰기 흐름, 대표 브라우저 사용자 흐름까지를 자동으로 막는 상태입니다.
 `npm run test:e2e`, `npm run test:prisma`는 빠른 기본 테스트와 분리된 대표 심화 검증으로 유지합니다.
 다음 보강 우선순위는 반복규칙 브라우저 흐름과 배포 전 스모크 검증 자동화입니다.

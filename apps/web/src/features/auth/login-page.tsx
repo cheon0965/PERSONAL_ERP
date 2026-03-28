@@ -57,7 +57,7 @@ export function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = React.useMemo(
-    () => resolveNextPath(searchParams.get('next')),
+    () => resolveNextPath(searchParams?.get('next') ?? null),
     [searchParams]
   );
   const { login, status } = useAuthSession();

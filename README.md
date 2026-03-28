@@ -1,6 +1,6 @@
 # Personal ERP Starter
 
-개인 현금흐름을 ERP처럼 관리할 수 있도록 구성한 워크스페이스형 스타터입니다.
+개인의 월별 재무 운영을 ERP처럼 관리할 수 있도록 구성한 워크스페이스형 스타터입니다.
 실제 거래, 반복규칙, 보험, 차량비, 월말 예측을 한 구조 안에서 다루도록 설계했습니다.
 
 ## 현재 상태
@@ -11,7 +11,7 @@
 - 인증 기본 정책: `login`, `health`를 제외한 API는 기본적으로 보호
 - Web 인증 세션: `/login`, 메모리 기반 access token 유지, `POST /auth/refresh` 기반 사용자 복원
 - 핵심 입력 흐름: 거래/반복규칙 Quick Add 폼이 실제 `POST` mutation과 목록 갱신까지 연결됨
-- 요청 단위 검증: `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `401`, `GET /auth/me`, 거래/반복규칙 DTO/소유권 검증 포함
+- 요청 단위 검증: `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `401`, `GET /auth/me`, 거래/반복규칙 DTO와 현재 접근 범위 검증 포함
 - 대표 브라우저 E2E: 보호 라우트 진입, 로그인, 세션 복원, 거래 생성 후 목록 반영까지 자동 검증
 - 운영 신호: 모든 API 응답에 `x-request-id` 헤더 부여, `GET /api/health/ready` 준비 상태 확인 지원
 - CI 보안 게이트: `CI` 워크플로 안의 보안 job에서 보안 회귀 API 테스트, runtime dependency audit, Semgrep CE, Gitleaks, 조건부 dependency review 실행
@@ -154,7 +154,7 @@ personal-erp-starter/
     web/        # Next.js Web
   packages/
     contracts/  # 공용 요청/응답 계약
-  docs/         # 아키텍처, 개발, 운영 문서
+  docs/         # 도메인, 아키텍처, 개발, 운영 문서
 ```
 
 ## 협업 원칙
@@ -173,6 +173,10 @@ personal-erp-starter/
 - 현재 구현된 엔드포인트, DTO validation, 인증 노출 상태의 1차 기준은 Swagger(`http://localhost:4000/api/docs`)입니다.
 - 사람이 빠르게 읽는 API 요약과 인증 흐름은 `docs/API.md`에 유지합니다.
 - 저장소 진입 설명과 빠른 시작은 `README.md`에만 유지하고, 상세 API 설명은 넣지 않습니다.
+- 비즈니스 로직의 시작/끝, 운영 사이클, 권한/회계 정책의 상위 기준은 `docs/domain/business-logic-draft.md`에 유지합니다.
+- 핵심 엔티티, Aggregate Root, 불변조건, 관계, 구현 우선순위의 상세 기준은 `docs/domain/core-entity-definition.md`에 유지합니다.
+- 도메인 문서의 읽는 순서와 상위 문서 경계는 `docs/domain/README.md`에 유지합니다.
+- 다른 문서는 도메인 용어/상태/권한/마감 정책을 중복 정의하지 않고, 필요 시 도메인 문서를 참조하면서 현재 구현 상태만 설명합니다.
 - 현재 실제 검증 범위와 남은 공백은 `docs/VALIDATION_NOTES.md`에 유지합니다.
 - 실DB Prisma 경계 검증은 `npm run test:prisma`로 별도 실행합니다.
 - 예외 처리와 최소 로깅 기준은 `docs/ERROR_HANDLING_AND_LOGGING.md`에 유지합니다.
@@ -191,6 +195,9 @@ personal-erp-starter/
 - [환경변수 설정](./ENVIRONMENT_SETUP.md)
 - [배포/운영 체크리스트](./docs/OPERATIONS_CHECKLIST.md)
 - [기여 가이드](./CONTRIBUTING.md)
+- [도메인 기준 문서 안내](./docs/domain/README.md)
+- [비즈니스 로직 설계 초안](./docs/domain/business-logic-draft.md)
+- [핵심 엔티티 정의서](./docs/domain/core-entity-definition.md)
 - [아키텍처](./docs/ARCHITECTURE.md)
 - [개발 가이드](./docs/DEVELOPMENT_GUIDE.md)
 - [API 개요](./docs/API.md)

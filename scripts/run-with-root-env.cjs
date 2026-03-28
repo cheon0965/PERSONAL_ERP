@@ -185,36 +185,25 @@ for (const [key, value] of Object.entries(loadedEnv)) {
   }
 }
 
-const shouldUseShellCommand =
+const isWindowsCmd =
   process.platform === 'win32' && resolvedCommand.endsWith('.cmd');
 
-function quoteShellArg(value) {
-  if (!/[\s"]/u.test(value)) {
-    return value;
-  }
+const spawnCmd = isWindowsCmd ? 'cmd.exe' : resolvedCommand;
+const spawnArgs = isWindowsCmd
+  ? ['/c', resolvedCommand, ...commandArgs]
+  : commandArgs;
 
-  return `"${value.replace(/"/g, '\\"')}"`;
-}
-
-const child = shouldUseShellCommand
-  ? spawn([resolvedCommand, ...commandArgs].map(quoteShellArg).join(' '), {
-      stdio: 'inherit',
-      env: process.env,
-      shell: true
-    })
-  : spawn(resolvedCommand, commandArgs, {
-      stdio: 'inherit',
-      env: process.env
-    });
+const child = spawn(spawnCmd, spawnArgs, {
+  stdio: 'inherit',
+  env: process.env
+});
 
 child.on('exit', (code) => {
   process.exit(code ?? 1);
 });
 
 child.on('error', (error) => {
-  console.error(
-    `[run-with-root-env] Failed to run "${command}":`,
-    error.message
-  );
+  const prefix = '[run-with-root-env] Failed to run "' + command + '":';
+  console.error(prefix, error.message);
   process.exit(1);
 });

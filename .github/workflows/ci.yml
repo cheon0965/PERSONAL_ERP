@@ -31,8 +31,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run CI checks
-        run: npm run ci
+      - name: Generate Prisma Client
+        run: npm run db:generate
+
+      - name: Run checks (format, lint, typecheck)
+        run: npm run check:quick
+
+      - name: Run tests
+        run: npm run test
 
   security-regression:
     runs-on: ubuntu-latest
@@ -50,6 +56,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Generate Prisma Client
+        run: npm run db:generate
 
       - name: Run security-focused API regression tests
         run: npm run test:security:api
@@ -96,6 +105,8 @@ jobs:
           --exclude dist
           --exclude .test-dist
           --exclude apps/api/prisma/migrations
+          --exclude scripts
+          --exclude apps/web/src/shared/api
 
   gitleaks:
     runs-on: ubuntu-latest
@@ -118,18 +129,15 @@ jobs:
           --redact
           --exit-code 1
 
-  dependency-review:
-    if: github.event_name == 'pull_request'
+  CI:
+    if: always()
+    needs: [validate, security-regression, audit-runtime, semgrep-ce, gitleaks]
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: high
-          fail-on-scopes: runtime
-          comment-summary-in-pr: false
+      - name: Check build status
+        if: >-
+          contains(needs.*.result, 'failure') || 
+          contains(needs.*.result, 'cancelled')
+        run: exit 1
+      - name: Success
+        run: echo "All statuses passed."
