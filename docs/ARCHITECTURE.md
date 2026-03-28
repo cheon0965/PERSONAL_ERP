@@ -56,7 +56,7 @@ docs/
 | Platform & Contracts | `packages/contracts`, env, Prisma, health, 공통 외부 의존성 조립 | 계약과 런타임 기반선                         |
 
 여기서 `Ledger`는 현재 코드베이스의 컨텍스트 이름입니다.  
-회계 도메인의 상세 기준은 [business-logic-draft.md](/d:/PROJECT/PERSONAL_ERP/docs/domain/business-logic-draft.md) 와 [core-entity-definition.md](/d:/PROJECT/PERSONAL_ERP/docs/domain/core-entity-definition.md) 를 우선하며, 최종 write model은 `Ledger`, `AccountingPeriod`, `CollectedTransaction`, `JournalEntry` 중심으로 수렴합니다.
+회계 도메인의 상세 기준은 [business-logic-draft.md](./domain/business-logic-draft.md) 와 [core-entity-definition.md](./domain/core-entity-definition.md) 를 우선하며, 최종 write model은 `Ledger`, `AccountingPeriod`, `CollectedTransaction`, `JournalEntry` 중심으로 수렴합니다.
 
 허용되는 방향:
 

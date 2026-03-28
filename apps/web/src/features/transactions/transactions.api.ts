@@ -1,97 +1,100 @@
 import type {
-  CreateTransactionRequest,
-  TransactionItem
+  CollectedTransactionItem,
+  CreateCollectedTransactionRequest
 } from '@personal-erp/contracts';
 import { fetchJson, postJson } from '@/shared/api/fetch-json';
 
-export const transactionsQueryKey = ['transactions'] as const;
+export const collectedTransactionsQueryKey = ['collected-transactions'] as const;
 
-export const mockTransactions: TransactionItem[] = [
+export const mockCollectedTransactions: CollectedTransactionItem[] = [
   {
     id: 'txn-1',
     businessDate: '2026-03-01',
-    title: 'March salary',
+    title: '3월 급여',
     type: 'INCOME',
     amountWon: 3200000,
-    accountName: 'Main checking',
-    categoryName: 'Salary',
-    origin: 'MANUAL',
-    status: 'POSTED'
+    fundingAccountName: '주거래 통장',
+    categoryName: '급여',
+    sourceKind: 'MANUAL',
+    postingStatus: 'POSTED'
   },
   {
     id: 'txn-2',
     businessDate: '2026-03-03',
-    title: 'Fuel refill',
+    title: '주유',
     type: 'EXPENSE',
     amountWon: 84000,
-    accountName: 'Living expenses',
-    categoryName: 'Fuel',
-    origin: 'MANUAL',
-    status: 'POSTED'
+    fundingAccountName: '생활비 통장',
+    categoryName: '주유',
+    sourceKind: 'MANUAL',
+    postingStatus: 'POSTED'
   },
   {
     id: 'txn-3',
     businessDate: '2026-03-10',
-    title: 'Mobile bill transfer',
+    title: '휴대폰 요금 이체',
     type: 'EXPENSE',
     amountWon: 75000,
-    accountName: 'Main checking',
-    categoryName: 'Telecom',
-    origin: 'RECURRING',
-    status: 'POSTED'
+    fundingAccountName: '주거래 통장',
+    categoryName: '통신비',
+    sourceKind: 'RECURRING',
+    postingStatus: 'POSTED'
   },
   {
     id: 'txn-4',
     businessDate: '2026-03-12',
-    title: 'Grocery run',
+    title: '장보기',
     type: 'EXPENSE',
     amountWon: 126000,
-    accountName: 'Living expenses',
-    categoryName: 'Groceries',
-    origin: 'MANUAL',
-    status: 'POSTED'
+    fundingAccountName: '생활비 통장',
+    categoryName: '식비',
+    sourceKind: 'MANUAL',
+    postingStatus: 'POSTED'
   }
 ];
 
-export function getTransactions() {
-  return fetchJson<TransactionItem[]>('/transactions', mockTransactions);
+export function getCollectedTransactions() {
+  return fetchJson<CollectedTransactionItem[]>(
+    '/collected-transactions',
+    mockCollectedTransactions
+  );
 }
 
-export function createTransaction(
-  input: CreateTransactionRequest,
-  fallback: TransactionItem
+export function createCollectedTransaction(
+  input: CreateCollectedTransactionRequest,
+  fallback: CollectedTransactionItem
 ) {
-  return postJson<TransactionItem, CreateTransactionRequest>(
-    '/transactions',
+  return postJson<CollectedTransactionItem, CreateCollectedTransactionRequest>(
+    '/collected-transactions',
     input,
     fallback
   );
 }
 
-export function buildTransactionFallbackItem(
-  input: CreateTransactionRequest,
+export function buildCollectedTransactionFallbackItem(
+  input: CreateCollectedTransactionRequest,
   context: {
-    accountName: string;
+    fundingAccountName: string;
     categoryName?: string;
   }
-): TransactionItem {
+): CollectedTransactionItem {
   return {
     id: `txn-demo-${Date.now()}`,
     businessDate: input.businessDate,
     title: input.title,
     type: input.type,
     amountWon: input.amountWon,
-    accountName: context.accountName,
+    fundingAccountName: context.fundingAccountName,
     categoryName: context.categoryName ?? '-',
-    origin: 'MANUAL',
-    status: 'POSTED'
+    sourceKind: 'MANUAL',
+    postingStatus: 'POSTED'
   };
 }
 
-export function mergeTransactionItem(
-  current: TransactionItem[] | undefined,
-  created: TransactionItem
-): TransactionItem[] {
+export function mergeCollectedTransactionItem(
+  current: CollectedTransactionItem[] | undefined,
+  created: CollectedTransactionItem
+): CollectedTransactionItem[] {
   return [created, ...(current ?? []).filter((item) => item.id !== created.id)].sort(
     (left, right) => right.businessDate.localeCompare(left.businessDate)
   );

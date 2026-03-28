@@ -17,11 +17,11 @@ function readStatusCode(propsStatusCode?: number, responseStatusCode?: number): 
 }
 
 export default function ErrorPage({ statusCode }: ErrorPageProps) {
-  const title = statusCode === 404 ? 'Page not found' : 'Server error';
+  const title = statusCode === 404 ? '페이지를 찾을 수 없습니다' : '서버 오류가 발생했습니다';
   const description =
     statusCode === 404
-      ? 'The page you requested does not exist or is no longer available.'
-      : 'Something went wrong while preparing this page. Please try again in a moment.';
+      ? '요청하신 페이지가 없거나 더 이상 제공되지 않습니다.'
+      : '페이지를 준비하는 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.';
 
   return (
     <main

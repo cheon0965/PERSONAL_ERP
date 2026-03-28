@@ -12,8 +12,8 @@ export const mockForecast: ForecastResponse = {
   expectedMonthEndBalanceWon: 2235000,
   safetySurplusWon: 1835000,
   notes: [
-    'Variable income is intentionally excluded from the baseline MVP forecast.',
-    'Irregular spending buckets are still represented as a simple sinking-fund assumption.'
+    '변동 수입은 기준 MVP 전망에서 의도적으로 제외했습니다.',
+    '비정기 지출은 단순 적립금 가정으로만 반영하고 있습니다.'
   ]
 };
 

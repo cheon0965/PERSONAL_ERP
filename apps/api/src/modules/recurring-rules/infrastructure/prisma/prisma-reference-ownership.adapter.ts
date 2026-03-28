@@ -6,12 +6,12 @@ import { ReferenceOwnershipPort } from '../../application/ports/reference-owners
 export class PrismaReferenceOwnershipAdapter implements ReferenceOwnershipPort {
   constructor(private readonly prisma: PrismaService) {}
 
-  async accountExistsForUser(
+  async fundingAccountExistsForUser(
     userId: string,
-    accountId: string
+    fundingAccountId: string
   ): Promise<boolean> {
     const account = await this.prisma.account.findFirst({
-      where: { id: accountId, userId },
+      where: { id: fundingAccountId, userId },
       select: { id: true }
     });
 

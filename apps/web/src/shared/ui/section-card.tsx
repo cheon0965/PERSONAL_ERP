@@ -1,6 +1,7 @@
 'use client';
 
 import { Box, Card, CardContent, Stack, Typography } from '@mui/material';
+import { appLayout } from './layout-metrics';
 
 type SectionCardProps = {
   title: string;
@@ -11,12 +12,16 @@ type SectionCardProps = {
 export function SectionCard({ title, description, children }: SectionCardProps) {
   return (
     <Card>
-      <CardContent>
-        <Stack spacing={2}>
+      <CardContent sx={{ p: appLayout.cardPadding }}>
+        <Stack spacing={appLayout.cardGap}>
           <Box>
             <Typography variant="h6">{title}</Typography>
             {description ? (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: appLayout.cardDescriptionOffset }}
+              >
                 {description}
               </Typography>
             ) : null}

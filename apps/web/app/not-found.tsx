@@ -14,10 +14,10 @@ export default function NotFound() {
       <section style={{ maxWidth: '32rem', textAlign: 'center' }}>
         <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700 }}>404</p>
         <h1 style={{ margin: '0.5rem 0 0', fontSize: '2rem' }}>
-          Page not found
+          페이지를 찾을 수 없습니다
         </h1>
         <p style={{ margin: '1rem 0 0', lineHeight: 1.6, color: '#52606d' }}>
-          The page you requested does not exist or is no longer available.
+          요청하신 페이지가 없거나 더 이상 제공되지 않습니다.
         </p>
       </section>
     </main>

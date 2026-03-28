@@ -9,22 +9,22 @@ export const recurringRulesQueryKey = ['recurring-rules'] as const;
 export const mockRecurringRules: RecurringRuleItem[] = [
   {
     id: 'rr-1',
-    title: 'Mobile bill',
+    title: '휴대폰 요금',
     amountWon: 75000,
     frequency: 'MONTHLY',
     nextRunDate: '2026-04-10',
-    accountName: 'Main checking',
-    categoryName: 'Telecom',
+    fundingAccountName: '주거래 통장',
+    categoryName: '통신비',
     isActive: true
   },
   {
     id: 'rr-2',
-    title: 'Car installment',
+    title: '차량 할부금',
     amountWon: 280000,
     frequency: 'MONTHLY',
     nextRunDate: '2026-04-03',
-    accountName: 'Main checking',
-    categoryName: 'Transport',
+    fundingAccountName: '주거래 통장',
+    categoryName: '차량비',
     isActive: true
   }
 ];
@@ -47,7 +47,7 @@ export function createRecurringRule(
 export function buildRecurringRuleFallbackItem(
   input: CreateRecurringRuleRequest,
   context: {
-    accountName: string;
+    fundingAccountName: string;
     categoryName?: string;
   }
 ): RecurringRuleItem {
@@ -57,7 +57,7 @@ export function buildRecurringRuleFallbackItem(
     amountWon: input.amountWon,
     frequency: input.frequency,
     nextRunDate: input.startDate,
-    accountName: context.accountName,
+    fundingAccountName: context.fundingAccountName,
     categoryName: context.categoryName ?? '-',
     isActive: input.isActive ?? true
   };

@@ -1,0 +1,14 @@
+import type { FundingAccountItem } from '@personal-erp/contracts';
+
+type AccountRecord = Pick<FundingAccountItem, 'id' | 'name' | 'type' | 'balanceWon'>;
+
+export function mapFundingAccountRecordToItem(
+  account: AccountRecord
+): FundingAccountItem {
+  return {
+    id: account.id,
+    name: account.name,
+    type: account.type,
+    balanceWon: account.balanceWon
+  };
+}

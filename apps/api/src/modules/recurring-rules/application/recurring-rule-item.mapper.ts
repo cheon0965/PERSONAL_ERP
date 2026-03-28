@@ -10,7 +10,7 @@ export function mapRecurringRuleToItem(
     amountWon: rule.amountWon,
     frequency: rule.frequency,
     nextRunDate: rule.nextRunDate?.toISOString().slice(0, 10) ?? null,
-    accountName: rule.account.name,
+    fundingAccountName: rule.account.name,
     categoryName: rule.category?.name ?? '-',
     isActive: rule.isActive
   };

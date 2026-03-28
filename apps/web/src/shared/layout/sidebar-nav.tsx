@@ -30,6 +30,10 @@ export function SidebarNav() {
         '& .MuiDrawer-paper': {
           width: drawerWidth,
           boxSizing: 'border-box',
+          borderTopLeftRadius: 0,
+          borderTopRightRadius: 0,
+          borderBottomLeftRadius: 20,
+          borderBottomRightRadius: 20,
           borderRight: '1px solid',
           borderColor: 'divider',
           backgroundColor: 'background.paper'
@@ -41,7 +45,7 @@ export function SidebarNav() {
         <Box>
           <Typography variant="h6">Personal ERP</Typography>
           <Typography variant="body2" color="text.secondary">
-            Cash-flow operating system
+            개인 재무 운영 시스템
           </Typography>
         </Box>
       </Toolbar>

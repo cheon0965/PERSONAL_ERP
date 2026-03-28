@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Personal ERP Starter',
-  description: 'Portfolio-ready personal cash-flow ERP starter'
+  title: 'Personal ERP',
+  description: '월별 재무 운영을 위한 개인 ERP'
 };
 
 export const dynamic = 'force-dynamic';

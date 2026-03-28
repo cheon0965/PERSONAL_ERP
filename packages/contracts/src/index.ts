@@ -6,9 +6,6 @@ export type AuthenticatedUser = {
 
 export type AccountType = 'BANK' | 'CASH' | 'CARD';
 export type CategoryKind = 'INCOME' | 'EXPENSE' | 'TRANSFER';
-export type TransactionType = 'INCOME' | 'EXPENSE' | 'TRANSFER';
-export type TransactionOrigin = 'MANUAL' | 'RECURRING' | 'IMPORT';
-export type TransactionStatus = 'POSTED' | 'PENDING' | 'CANCELLED';
 export type RecurrenceFrequency = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 export type InsuranceCycle = 'MONTHLY' | 'YEARLY';
 export type FuelType = 'GASOLINE' | 'DIESEL' | 'LPG' | 'HYBRID' | 'ELECTRIC';
@@ -23,7 +20,7 @@ export type LoginResponse = {
   user: AuthenticatedUser;
 };
 
-export type AccountItem = {
+export type FundingAccountItem = {
   id: string;
   name: string;
   type: AccountType;
@@ -36,24 +33,31 @@ export type CategoryItem = {
   kind: CategoryKind;
 };
 
-export type TransactionItem = {
+export type CollectedTransactionType = 'INCOME' | 'EXPENSE' | 'TRANSFER';
+export type CollectedTransactionSourceKind = 'MANUAL' | 'RECURRING' | 'IMPORT';
+export type CollectedTransactionPostingStatus =
+  | 'POSTED'
+  | 'PENDING'
+  | 'CANCELLED';
+
+export type CollectedTransactionItem = {
   id: string;
   businessDate: string;
   title: string;
-  type: TransactionType;
+  type: CollectedTransactionType;
   amountWon: number;
-  accountName: string;
+  fundingAccountName: string;
   categoryName: string;
-  origin: TransactionOrigin;
-  status: TransactionStatus;
+  sourceKind: CollectedTransactionSourceKind;
+  postingStatus: CollectedTransactionPostingStatus;
 };
 
-export type CreateTransactionRequest = {
+export type CreateCollectedTransactionRequest = {
   title: string;
-  type: TransactionType;
+  type: CollectedTransactionType;
   amountWon: number;
   businessDate: string;
-  accountId: string;
+  fundingAccountId: string;
   categoryId?: string;
   memo?: string;
 };
@@ -64,14 +68,14 @@ export type RecurringRuleItem = {
   amountWon: number;
   frequency: RecurrenceFrequency;
   nextRunDate: string | null;
-  accountName: string;
+  fundingAccountName: string;
   categoryName: string;
   isActive: boolean;
 };
 
 export type CreateRecurringRuleRequest = {
   title: string;
-  accountId: string;
+  fundingAccountId: string;
   categoryId?: string;
   amountWon: number;
   frequency: RecurrenceFrequency;

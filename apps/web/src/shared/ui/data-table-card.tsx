@@ -2,6 +2,7 @@
 
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import { Card, CardContent, Stack, Typography } from '@mui/material';
+import { appLayout } from './layout-metrics';
 
 type DataTableCardProps<T extends { id: string }> = {
   title: string;
@@ -20,12 +21,16 @@ export function DataTableCard<T extends { id: string }>({
 }: DataTableCardProps<T>) {
   return (
     <Card>
-      <CardContent>
-        <Stack spacing={2}>
+      <CardContent sx={{ p: appLayout.cardPadding }}>
+        <Stack spacing={appLayout.cardGap}>
           <div>
             <Typography variant="h6">{title}</Typography>
             {description ? (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: appLayout.cardDescriptionOffset }}
+              >
                 {description}
               </Typography>
             ) : null}

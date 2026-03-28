@@ -2,16 +2,18 @@ import { Controller, Get } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
-import { AccountsService } from './accounts.service';
+import { FundingAccountsService } from './funding-accounts.service';
 
-@ApiTags('accounts')
+@ApiTags('funding-accounts')
 @ApiBearerAuth()
-@Controller('accounts')
-export class AccountsController {
-  constructor(private readonly accountsService: AccountsService) {}
+@Controller('funding-accounts')
+export class FundingAccountsController {
+  constructor(
+    private readonly fundingAccountsService: FundingAccountsService
+  ) {}
 
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {
-    return this.accountsService.findAll(user.id);
+    return this.fundingAccountsService.findAll(user.id);
   }
 }

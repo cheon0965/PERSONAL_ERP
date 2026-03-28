@@ -5,30 +5,31 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Grid, MenuItem, Stack, TextField } from '@mui/material';
 import type {
-  CreateTransactionRequest,
-  TransactionItem
+  CollectedTransactionItem,
+  CreateCollectedTransactionRequest
 } from '@personal-erp/contracts';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { getAccounts, getCategories } from '@/features/reference-data/reference-data.api';
+import { getFundingAccounts, getCategories } from '@/features/reference-data/reference-data.api';
 import { webRuntime } from '@/shared/config/env';
 import { getTodayDateInputValue } from '@/shared/lib/date-input';
+import { appLayout } from '@/shared/ui/layout-metrics';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import {
-  buildTransactionFallbackItem,
-  createTransaction,
-  mergeTransactionItem,
-  transactionsQueryKey
+  buildCollectedTransactionFallbackItem,
+  collectedTransactionsQueryKey,
+  createCollectedTransaction,
+  mergeCollectedTransactionItem
 } from './transactions.api';
 
 const transactionSchema = z.object({
-  title: z.string().trim().min(2, 'Title must be at least 2 characters.'),
-  amountWon: z.coerce.number().int().positive('Amount must be greater than 0.'),
-  businessDate: z.string().min(1, 'Business date is required.'),
+  title: z.string().trim().min(2, '제목은 2자 이상이어야 합니다.'),
+  amountWon: z.coerce.number().int().positive('금액은 0보다 커야 합니다.'),
+  businessDate: z.string().min(1, '거래일을 입력해 주세요.'),
   type: z.enum(['INCOME', 'EXPENSE']),
-  accountId: z.string().min(1, 'Account is required.'),
+  accountId: z.string().min(1, '자금수단을 선택해 주세요.'),
   categoryId: z.string(),
-  memo: z.string().max(500, 'Memo must be 500 characters or fewer.')
+  memo: z.string().max(500, '메모는 500자 이하여야 합니다.')
 });
 
 type TransactionFormInput = z.infer<typeof transactionSchema>;
@@ -41,16 +42,16 @@ type SubmitFeedback =
   | null;
 
 type CreateTransactionMutationInput = {
-  payload: CreateTransactionRequest;
-  fallback: TransactionItem;
+  payload: CreateCollectedTransactionRequest;
+  fallback: CollectedTransactionItem;
 };
 
 export function TransactionForm() {
   const queryClient = useQueryClient();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
-  const { data: accounts = [], error: accountsError } = useQuery({
-    queryKey: ['accounts'],
-    queryFn: getAccounts
+  const { data: fundingAccounts = [], error: fundingAccountsError } = useQuery({
+    queryKey: ['funding-accounts'],
+    queryFn: getFundingAccounts
   });
   const { data: categories = [], error: categoriesError } = useQuery({
     queryKey: ['categories'],
@@ -76,16 +77,16 @@ export function TransactionForm() {
 
   const mutation = useMutation({
     mutationFn: ({ payload, fallback }: CreateTransactionMutationInput) =>
-      createTransaction(payload, fallback),
+      createCollectedTransaction(payload, fallback),
     onSuccess: async (created) => {
-      queryClient.setQueryData<TransactionItem[]>(
-        transactionsQueryKey,
-        (current) => mergeTransactionItem(current, created)
+      queryClient.setQueryData<CollectedTransactionItem[]>(
+        collectedTransactionsQueryKey,
+        (current) => mergeCollectedTransactionItem(current, created)
       );
 
       if (!webRuntime.demoFallbackEnabled) {
         await Promise.all([
-          queryClient.invalidateQueries({ queryKey: transactionsQueryKey }),
+          queryClient.invalidateQueries({ queryKey: collectedTransactionsQueryKey }),
           queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] })
         ]);
       }
@@ -93,11 +94,11 @@ export function TransactionForm() {
   });
 
   React.useEffect(() => {
-    const firstAccount = accounts[0];
-    if (!form.getValues('accountId') && firstAccount) {
-      form.setValue('accountId', firstAccount.id, { shouldValidate: true });
+    const firstFundingAccount = fundingAccounts[0];
+    if (!form.getValues('accountId') && firstFundingAccount) {
+      form.setValue('accountId', firstFundingAccount.id, { shouldValidate: true });
     }
-  }, [accounts, form]);
+  }, [fundingAccounts, form]);
 
   React.useEffect(() => {
     const selectedCategoryId = form.getValues('categoryId');
@@ -109,11 +110,11 @@ export function TransactionForm() {
     }
   }, [filteredCategories, form]);
 
-  const referenceError = accountsError ?? categoriesError;
+  const referenceError = fundingAccountsError ?? categoriesError;
   const isBusy =
     mutation.isPending ||
     form.formState.isSubmitting ||
-    accounts.length === 0 ||
+    fundingAccounts.length === 0 ||
     Boolean(referenceError);
 
   return (
@@ -121,13 +122,13 @@ export function TransactionForm() {
       onSubmit={form.handleSubmit(async (values) => {
         setFeedback(null);
 
-        const selectedAccount = accounts.find(
-          (account) => account.id === values.accountId
+        const selectedFundingAccount = fundingAccounts.find(
+          (fundingAccount) => fundingAccount.id === values.accountId
         );
-        if (!selectedAccount) {
+        if (!selectedFundingAccount) {
           setFeedback({
             severity: 'error',
-            message: 'Choose an account before saving the transaction.'
+            message: '수집 거래를 등록하기 전에 자금수단을 선택해 주세요.'
           });
           return;
         }
@@ -135,12 +136,12 @@ export function TransactionForm() {
         const selectedCategory = filteredCategories.find(
           (category) => category.id === values.categoryId
         );
-        const payload: CreateTransactionRequest = {
+        const payload: CreateCollectedTransactionRequest = {
           title: values.title.trim(),
           type: values.type,
           amountWon: values.amountWon,
           businessDate: values.businessDate,
-          accountId: values.accountId,
+          fundingAccountId: values.accountId,
           categoryId: values.categoryId || undefined,
           memo: values.memo.trim() || undefined
         };
@@ -148,8 +149,8 @@ export function TransactionForm() {
         try {
           await mutation.mutateAsync({
             payload,
-            fallback: buildTransactionFallbackItem(payload, {
-              accountName: selectedAccount.name,
+            fallback: buildCollectedTransactionFallbackItem(payload, {
+              fundingAccountName: selectedFundingAccount.name,
               categoryName: selectedCategory?.name
             })
           });
@@ -165,7 +166,7 @@ export function TransactionForm() {
           });
           setFeedback({
             severity: 'success',
-            message: 'Transaction saved and the ledger list was refreshed.'
+            message: '수집 거래를 등록했고 목록을 새로고침했습니다.'
           });
         } catch (error) {
           setFeedback({
@@ -173,15 +174,15 @@ export function TransactionForm() {
             message:
               error instanceof Error
                 ? error.message
-                : 'Could not save the transaction.'
+                : '수집 거래를 등록하지 못했습니다.'
           });
         }
       })}
     >
-      <Stack spacing={2.5}>
+      <Stack spacing={appLayout.cardGap}>
         {referenceError ? (
           <QueryErrorAlert
-            title="Reference data request failed"
+            title="자금수단 또는 카테고리 조회에 실패했습니다."
             error={referenceError}
           />
         ) : null}
@@ -191,10 +192,10 @@ export function TransactionForm() {
           </Alert>
         ) : null}
 
-        <Grid container spacing={2}>
+        <Grid container spacing={appLayout.fieldGap}>
           <Grid size={{ xs: 12, md: 6 }}>
             <TextField
-              label="Title"
+              label="적요"
               error={Boolean(form.formState.errors.title)}
               helperText={form.formState.errors.title?.message}
               {...form.register('title')}
@@ -202,7 +203,7 @@ export function TransactionForm() {
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
             <TextField
-              label="Amount (KRW)"
+              label="금액 (원)"
               type="number"
               error={Boolean(form.formState.errors.amountWon)}
               helperText={form.formState.errors.amountWon?.message}
@@ -211,7 +212,7 @@ export function TransactionForm() {
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
             <TextField
-              label="Business Date"
+              label="거래일"
               type="date"
               error={Boolean(form.formState.errors.businessDate)}
               helperText={form.formState.errors.businessDate?.message}
@@ -221,30 +222,32 @@ export function TransactionForm() {
           <Grid size={{ xs: 12, md: 4 }}>
             <TextField
               select
-              label="Type"
+              label="거래 성격"
               error={Boolean(form.formState.errors.type)}
               helperText={form.formState.errors.type?.message}
               {...form.register('type')}
             >
-              <MenuItem value="EXPENSE">Expense</MenuItem>
-              <MenuItem value="INCOME">Income</MenuItem>
+              <MenuItem value="EXPENSE">지출</MenuItem>
+              <MenuItem value="INCOME">수입</MenuItem>
             </TextField>
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
             <TextField
               select
-              label="Account"
-              disabled={accounts.length === 0}
+              label="자금수단"
+              disabled={fundingAccounts.length === 0}
               error={Boolean(form.formState.errors.accountId)}
               helperText={
                 form.formState.errors.accountId?.message ??
-                (accounts.length === 0 ? 'No accounts available yet.' : ' ')
+                (fundingAccounts.length === 0
+                  ? '사용할 수 있는 자금수단이 아직 없습니다.'
+                  : ' ')
               }
               {...form.register('accountId')}
             >
-              {accounts.map((account) => (
-                <MenuItem key={account.id} value={account.id}>
-                  {account.name}
+              {fundingAccounts.map((fundingAccount) => (
+                <MenuItem key={fundingAccount.id} value={fundingAccount.id}>
+                  {fundingAccount.name}
                 </MenuItem>
               ))}
             </TextField>
@@ -252,16 +255,16 @@ export function TransactionForm() {
           <Grid size={{ xs: 12, md: 4 }}>
             <TextField
               select
-              label="Category"
+              label="카테고리"
               disabled={filteredCategories.length === 0}
               helperText={
                 filteredCategories.length === 0
-                  ? 'No categories match the selected transaction type.'
-                  : 'Optional'
+                  ? '선택한 거래 유형에 맞는 카테고리가 없습니다.'
+                  : '선택 사항'
               }
               {...form.register('categoryId')}
             >
-              <MenuItem value="">No category</MenuItem>
+              <MenuItem value="">카테고리 없음</MenuItem>
               {filteredCategories.map((category) => (
                 <MenuItem key={category.id} value={category.id}>
                   {category.name}
@@ -271,17 +274,17 @@ export function TransactionForm() {
           </Grid>
           <Grid size={{ xs: 12 }}>
             <TextField
-              label="Memo"
+              label="메모"
               multiline
               minRows={3}
               error={Boolean(form.formState.errors.memo)}
-              helperText={form.formState.errors.memo?.message ?? 'Optional'}
+              helperText={form.formState.errors.memo?.message ?? '선택 사항'}
               {...form.register('memo')}
             />
           </Grid>
         </Grid>
         <Button type="submit" variant="contained" disabled={isBusy} sx={{ alignSelf: 'flex-start' }}>
-          {mutation.isPending ? 'Saving...' : 'Save Transaction'}
+          {mutation.isPending ? '저장 중...' : '수집 거래 등록'}
         </Button>
       </Stack>
     </form>

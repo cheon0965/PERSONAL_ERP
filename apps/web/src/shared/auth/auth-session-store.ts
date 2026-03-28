@@ -58,4 +58,4 @@ export function handleUnauthorizedSession(
   unauthorizedSessionHandler?.(reason);
 }
 
-export const accessTokenStoragePolicy = 'memory-only runtime state';
+export const accessTokenStoragePolicy = '메모리 전용 런타임 상태';
