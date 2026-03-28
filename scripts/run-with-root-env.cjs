@@ -203,9 +203,7 @@ child.on('exit', (code) => {
 });
 
 child.on('error', (error) => {
-  console.error(
-    `[run-with-root-env] Failed to run "${command}":`,
-    error.message
-  );
+  const prefix = '[run-with-root-env] Failed to run "' + command + '":';
+  console.error(prefix, error.message);
   process.exit(1);
 });

@@ -54,6 +54,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate Prisma Client
+        run: npm run db:generate
+
       - name: Run security-focused API regression tests
         run: npm run test:security:api
 
@@ -99,6 +102,7 @@ jobs:
           --exclude dist
           --exclude .test-dist
           --exclude apps/api/prisma/migrations
+          --exclude scripts
 
   gitleaks:
     runs-on: ubuntu-latest
@@ -136,4 +140,3 @@ jobs:
           fail-on-severity: high
           fail-on-scopes: runtime
           comment-summary-in-pr: false
-          allow-dependencies-licenses: 'mit, apache-2.0, bsd-2-clause, bsd-3-clause, isc'

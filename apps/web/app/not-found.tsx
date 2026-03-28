@@ -1,4 +1,4 @@
-export default function ServerErrorPage() {
+export default function NotFound() {
   return (
     <main
       style={{
@@ -12,12 +12,12 @@ export default function ServerErrorPage() {
       }}
     >
       <section style={{ maxWidth: '32rem', textAlign: 'center' }}>
-        <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700 }}>500</p>
+        <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700 }}>404</p>
         <h1 style={{ margin: '0.5rem 0 0', fontSize: '2rem' }}>
-          Server error
+          Page not found
         </h1>
         <p style={{ margin: '1rem 0 0', lineHeight: 1.6, color: '#52606d' }}>
-          Something went wrong while preparing this page. Please try again in a moment.
+          The page you requested does not exist or is no longer available.
         </p>
       </section>
     </main>
