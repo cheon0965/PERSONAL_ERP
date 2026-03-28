@@ -24,9 +24,9 @@ async function main() {
   fs.rmSync(distDir, { recursive: true, force: true });
   process.chdir(appDir);
 
-  // This environment fails on Next's default prerender worker path.
-  // The debug-prerender mode keeps the build on a stable path that completes successfully.
-  await build(appDir, false, false, true);
+  // Run a standard production build. Debug-prerender mode is intentionally
+  // disabled to avoid triggering the legacy _error page prerender path.
+  await build(appDir, false, false, false);
 }
 
 main().catch((error) => {

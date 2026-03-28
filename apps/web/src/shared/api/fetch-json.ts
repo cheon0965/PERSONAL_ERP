@@ -105,7 +105,8 @@ export async function fetchJsonWithConfig<T>(
     }
 
     if (config.demoFallbackEnabled) {
-      console.warn('[personal-erp] demo fallback data used for ' + path, error);
+      const warnMsg = '[personal-erp] demo fallback data used for ' + path;
+      console.warn(warnMsg, error);
       return fallback;
     }
 

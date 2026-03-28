@@ -29,6 +29,10 @@ services:
       retries: 10
     security_opt:
       - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run/mysqld
 
 volumes:
   personal_erp_mysql_data:
