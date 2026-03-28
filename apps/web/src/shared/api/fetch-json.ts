@@ -9,16 +9,21 @@ const API_BASE_URL = webEnv.NEXT_PUBLIC_API_BASE_URL;
 const browserFetch: typeof fetch = (input, init) => fetch(input, init);
 
 export async function fetchJson<T>(path: string, fallback: T): Promise<T> {
-  return fetchJsonWithConfig(path, fallback, {
-    apiBaseUrl: API_BASE_URL,
-    demoFallbackEnabled: webRuntime.demoFallbackEnabled,
-    fetchImpl: browserFetch,
-    getAccessToken: getStoredAccessToken,
-    refreshAccessToken: refreshStoredAccessToken,
-    onUnauthorized: () => {
-      handleUnauthorizedSession('unauthorized_response');
-    }
-  }, { requireAuth: true });
+  return fetchJsonWithConfig(
+    path,
+    fallback,
+    {
+      apiBaseUrl: API_BASE_URL,
+      demoFallbackEnabled: webRuntime.demoFallbackEnabled,
+      fetchImpl: browserFetch,
+      getAccessToken: getStoredAccessToken,
+      refreshAccessToken: refreshStoredAccessToken,
+      onUnauthorized: () => {
+        handleUnauthorizedSession('unauthorized_response');
+      }
+    },
+    { requireAuth: true }
+  );
 }
 
 export async function postJson<TResponse, TRequest>(
@@ -100,7 +105,7 @@ export async function fetchJsonWithConfig<T>(
     }
 
     if (config.demoFallbackEnabled) {
-      console.warn(`[personal-erp] demo fallback data used for ${path}`, error);
+      console.warn('[personal-erp] demo fallback data used for ' + path, error);
       return fallback;
     }
 
@@ -166,10 +171,7 @@ async function sendRequest<T>(
   if (!response.ok) {
     throw new ApiRequestError(
       response.status,
-      buildApiErrorMessage(
-        responseBody,
-        `Request failed: ${response.status}`
-      ),
+      buildApiErrorMessage(responseBody, `Request failed: ${response.status}`),
       responseBody
     );
   }
@@ -177,8 +179,12 @@ async function sendRequest<T>(
   return responseBody as T;
 }
 
-export function buildRequestFailureMessage(path: string, error: unknown): string {
-  const detail = error instanceof Error ? error.message : 'Unknown request error';
+export function buildRequestFailureMessage(
+  path: string,
+  error: unknown
+): string {
+  const detail =
+    error instanceof Error ? error.message : 'Unknown request error';
   return [
     `[personal-erp] Request failed for ${path}.`,
     detail,

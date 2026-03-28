@@ -1,4 +1,4 @@
-version: "3.9"
+version: '3.9'
 
 services:
   mysql:
@@ -12,17 +12,23 @@ services:
       MYSQL_PASSWORD: erp_password_local_2026
       TZ: Asia/Seoul
     ports:
-      - "3306:3306"
+      - '3306:3306'
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_0900_ai_ci
     volumes:
       - personal_erp_mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u erp_user -perp_password_local_2026 --silent"]
+      test:
+        [
+          'CMD-SHELL',
+          'mysqladmin ping -h localhost -u erp_user -perp_password_local_2026 --silent'
+        ]
       interval: 10s
       timeout: 5s
       retries: 10
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
   personal_erp_mysql_data:
