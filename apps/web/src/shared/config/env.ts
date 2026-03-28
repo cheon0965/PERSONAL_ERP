@@ -13,28 +13,43 @@ type RawWebProcessEnv = Pick<
   'NEXT_PUBLIC_API_BASE_URL' | 'NEXT_PUBLIC_ENABLE_DEMO_FALLBACK' | 'NODE_ENV'
 >;
 
-function readRequiredUrl(source: NodeJS.ProcessEnv, key: keyof WebEnv): string {
-  const value = source[key]?.trim();
-  if (!value) {
+const defaultRawWebProcessEnv: RawWebProcessEnv = {
+  NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
+  NEXT_PUBLIC_ENABLE_DEMO_FALLBACK: process.env.NEXT_PUBLIC_ENABLE_DEMO_FALLBACK,
+  NODE_ENV: process.env.NODE_ENV
+};
+
+function readRequiredUrl(
+  value: string | undefined,
+  key: 'NEXT_PUBLIC_API_BASE_URL'
+): string {
+  const normalizedValue = value?.trim();
+  if (!normalizedValue) {
     throw new Error(`[web env] ${key} is required.`);
   }
 
   try {
-    const url = new URL(value);
+    const url = new URL(normalizedValue);
     return url.toString().replace(/\/$/, '');
   } catch {
     throw new Error(`[web env] ${key} must be a valid URL.`);
   }
 }
 
-export function readWebEnv(source: NodeJS.ProcessEnv): WebEnv {
+export function readWebEnv(source: RawWebProcessEnv): WebEnv {
   return {
-    NEXT_PUBLIC_API_BASE_URL: readRequiredUrl(source, 'NEXT_PUBLIC_API_BASE_URL'),
+    NEXT_PUBLIC_API_BASE_URL: readRequiredUrl(
+      source.NEXT_PUBLIC_API_BASE_URL,
+      'NEXT_PUBLIC_API_BASE_URL'
+    ),
     NEXT_PUBLIC_ENABLE_DEMO_FALLBACK: readBooleanFlag(source.NEXT_PUBLIC_ENABLE_DEMO_FALLBACK, false)
   };
 }
 
-export function createWebRuntime(source: NodeJS.ProcessEnv, env: WebEnv): WebRuntime {
+export function createWebRuntime(
+  source: Pick<RawWebProcessEnv, 'NODE_ENV'>,
+  env: WebEnv
+): WebRuntime {
   const nodeEnv = source.NODE_ENV ?? 'development';
 
   return {
@@ -43,34 +58,9 @@ export function createWebRuntime(source: NodeJS.ProcessEnv, env: WebEnv): WebRun
   };
 }
 
-function readRawProcessEnv(source: NodeJS.ProcessEnv = process.env): RawWebProcessEnv {
-  return {
-    NEXT_PUBLIC_API_BASE_URL: source.NEXT_PUBLIC_API_BASE_URL,
-    NEXT_PUBLIC_ENABLE_DEMO_FALLBACK: source.NEXT_PUBLIC_ENABLE_DEMO_FALLBACK,
-    NODE_ENV: source.NODE_ENV
-  };
-}
+export const webEnv: WebEnv = readWebEnv(defaultRawWebProcessEnv);
 
-function resolveWebEnv(source: NodeJS.ProcessEnv = process.env): WebEnv {
-  return readWebEnv(readRawProcessEnv(source));
-}
-
-function resolveWebRuntime(source: NodeJS.ProcessEnv = process.env): WebRuntime {
-  const rawProcessEnv = readRawProcessEnv(source);
-  return createWebRuntime(rawProcessEnv, readWebEnv(rawProcessEnv));
-}
-
-export const webEnv: WebEnv = new Proxy({} as WebEnv, {
-  get(_target, property: keyof WebEnv) {
-    return resolveWebEnv()[property];
-  }
-});
-
-export const webRuntime: WebRuntime = new Proxy({} as WebRuntime, {
-  get(_target, property: keyof WebRuntime) {
-    return resolveWebRuntime()[property];
-  }
-});
+export const webRuntime: WebRuntime = createWebRuntime(defaultRawWebProcessEnv, webEnv);
 
 export function readBooleanFlag(value: string | undefined, defaultValue: boolean): boolean {
   if (value == null || value.trim() === '') {

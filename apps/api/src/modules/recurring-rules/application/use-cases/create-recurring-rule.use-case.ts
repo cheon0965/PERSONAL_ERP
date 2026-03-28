@@ -22,10 +22,10 @@ export class CreateRecurringRuleUseCase {
   ) {}
 
   async execute(command: CreateRecurringRuleCommand): Promise<RecurringRuleItem> {
-    const [accountExists, categoryExists] = await Promise.all([
-      this.referenceOwnership.accountExistsForUser(
+    const [fundingAccountExists, categoryExists] = await Promise.all([
+      this.referenceOwnership.fundingAccountExistsForUser(
         command.userId,
-        command.accountId
+        command.fundingAccountId
       ),
       this.referenceOwnership.categoryExistsForUser(
         command.userId,
@@ -34,7 +34,7 @@ export class CreateRecurringRuleUseCase {
     ]);
 
     const missingReference = resolveMissingOwnedRecurringRuleReference({
-      accountExists,
+      fundingAccountExists,
       categoryExists
     });
 
@@ -51,7 +51,7 @@ export class CreateRecurringRuleUseCase {
     const rule = await this.recurringRuleStore.createForUser({
       userId: command.userId,
       title: command.title,
-      accountId: command.accountId,
+      accountId: command.fundingAccountId,
       categoryId: command.categoryId,
       amountWon: command.amountWon,
       frequency: command.frequency,

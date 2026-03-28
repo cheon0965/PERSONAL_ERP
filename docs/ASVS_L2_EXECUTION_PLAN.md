@@ -312,7 +312,7 @@ P4 완료 반영:
 
 구현 반영:
 
-- `GET /transactions`, `GET /recurring-rules`가 현재 사용자 범위만 반환하고 내부 소유권 필드(`userId`, `accountId`, `categoryId`, `memo`)를 노출하지 않음을 요청 단위 API 테스트로 검증했습니다.
+- `GET /collected-transactions`, `GET /recurring-rules`가 현재 사용자 범위만 반환하고 내부 소유권 필드(`userId`, `fundingAccountId`, `categoryId`, `memo`)를 노출하지 않음을 요청 단위 API 테스트로 검증했습니다.
 - `GET /dashboard/summary`, `GET /forecast/monthly`가 현재 사용자 데이터만 집계하고 raw read model이나 내부 설정 객체를 노출하지 않음을 요청 단위 API 테스트로 검증했습니다.
 - `docs/API.md`에 사용자 범위, 최소 응답 shape, 집계 전용 read endpoint 원칙을 명시했습니다.
 - `docs/VALIDATION_NOTES.md`에 P5 증적 테스트 범위를 반영했습니다.

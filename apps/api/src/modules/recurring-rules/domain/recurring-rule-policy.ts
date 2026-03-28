@@ -1,18 +1,22 @@
-type MissingOwnedRecurringRuleReference = 'account' | 'category';
+type MissingOwnedRecurringRuleReference = 'funding_account' | 'category';
 
 export class MissingOwnedRecurringRuleReferenceError extends Error {
   constructor(readonly reference: MissingOwnedRecurringRuleReference) {
-    super(reference === 'account' ? 'Account not found' : 'Category not found');
+    super(
+      reference === 'funding_account'
+        ? 'Funding account not found'
+        : 'Category not found'
+    );
     this.name = 'MissingOwnedRecurringRuleReferenceError';
   }
 }
 
 export function resolveMissingOwnedRecurringRuleReference(input: {
-  accountExists: boolean;
+  fundingAccountExists: boolean;
   categoryExists: boolean;
 }): MissingOwnedRecurringRuleReference | null {
-  if (!input.accountExists) {
-    return 'account';
+  if (!input.fundingAccountExists) {
+    return 'funding_account';
   }
 
   if (!input.categoryExists) {

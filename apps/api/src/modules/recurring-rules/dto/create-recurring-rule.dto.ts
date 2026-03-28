@@ -5,7 +5,7 @@ import { IsBoolean, IsDateString, IsEnum, IsInt, IsOptional, IsString, Max, Min 
 
 export class CreateRecurringRuleDto implements CreateRecurringRuleRequest {
   @ApiProperty() @IsString() title!: string;
-  @ApiProperty() @IsString() accountId!: string;
+  @ApiProperty() @IsString() fundingAccountId!: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() categoryId?: string;
   @ApiProperty() @IsInt() @Min(1) amountWon!: number;
   @ApiProperty({ enum: RecurrenceFrequency }) @IsEnum(RecurrenceFrequency) frequency!: RecurrenceFrequency;

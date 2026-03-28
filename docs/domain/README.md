@@ -26,3 +26,8 @@
 - 비즈니스 로직, 유스케이스, 상태 흐름, DB 모델링 논의 전 이 폴더의 문서를 먼저 기준으로 본다.
 - 루트 문서 진입은 `README.md`에서 시작하고, 도메인 기준 확인은 이 폴더에서 시작한다.
 - 구현이 기준과 달라지면 관련 PR에서 이 폴더 문서도 함께 갱신한다.
+
+## 추가 설계 문서
+
+- [`phase-1-db-backbone-design.md`](./phase-1-db-backbone-design.md): 현재 `schema.prisma`를 도메인 기준에 맞춰 올리기 위한 1차 DB 백본 설계안
+- [`phase-1-screen-implementation-order.md`](./phase-1-screen-implementation-order.md): 대표 시나리오 기준으로 어떤 화면부터 구현해야 하는지 정리한 1차 화면 구현 우선순위

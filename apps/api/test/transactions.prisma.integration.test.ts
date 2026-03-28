@@ -9,10 +9,10 @@ import {
   TransactionType
 } from '@prisma/client';
 import { PrismaService } from '../src/common/prisma/prisma.service';
-import { CreateTransactionUseCase } from '../src/modules/transactions/application/use-cases/create-transaction.use-case';
-import { ListTransactionsUseCase } from '../src/modules/transactions/application/use-cases/list-transactions.use-case';
-import { PrismaReferenceOwnershipAdapter } from '../src/modules/transactions/infrastructure/prisma/prisma-reference-ownership.adapter';
-import { PrismaTransactionStoreAdapter } from '../src/modules/transactions/infrastructure/prisma/prisma-transaction-store.adapter';
+import { CreateCollectedTransactionUseCase } from '../src/modules/collected-transactions/application/use-cases/create-collected-transaction.use-case';
+import { ListCollectedTransactionsUseCase } from '../src/modules/collected-transactions/application/use-cases/list-collected-transactions.use-case';
+import { PrismaReferenceOwnershipAdapter } from '../src/modules/collected-transactions/infrastructure/prisma/prisma-reference-ownership.adapter';
+import { PrismaCollectedTransactionStoreAdapter } from '../src/modules/collected-transactions/infrastructure/prisma/prisma-collected-transaction-store.adapter';
 
 const shouldRunPrismaIntegration = process.env.RUN_PRISMA_INTEGRATION === '1';
 
@@ -129,24 +129,26 @@ test(
       });
 
       const referenceOwnership = new PrismaReferenceOwnershipAdapter(prisma);
-      const transactionStore = new PrismaTransactionStoreAdapter(prisma);
-      const createTransactionUseCase = new CreateTransactionUseCase(
+      const transactionStore = new PrismaCollectedTransactionStoreAdapter(
+        prisma
+      );
+      const createTransactionUseCase = new CreateCollectedTransactionUseCase(
         transactionStore,
         referenceOwnership
       );
-      const listTransactionsUseCase = new ListTransactionsUseCase(
+      const listTransactionsUseCase = new ListCollectedTransactionsUseCase(
         transactionStore
       );
 
       assert.equal(
-        await referenceOwnership.accountExistsForUser(
+        await referenceOwnership.fundingAccountExistsForUser(
           owner.id,
           ownerAccount.id
         ),
         true
       );
       assert.equal(
-        await referenceOwnership.accountExistsForUser(
+        await referenceOwnership.fundingAccountExistsForUser(
           owner.id,
           outsiderAccount.id
         ),
@@ -173,7 +175,7 @@ test(
         type: TransactionType.EXPENSE,
         amountWon: 84000,
         businessDate: '2026-03-03',
-        accountId: ownerAccount.id,
+        fundingAccountId: ownerAccount.id,
         categoryId: ownerCategory.id,
         memo: 'Full tank'
       });
@@ -184,10 +186,10 @@ test(
         title: 'Fuel refill',
         type: TransactionType.EXPENSE,
         amountWon: 84000,
-        accountName: 'Integration Main Account',
+        fundingAccountName: 'Integration Main Account',
         categoryName: 'Integration Fuel',
-        origin: TransactionOrigin.MANUAL,
-        status: TransactionStatus.POSTED
+        sourceKind: TransactionOrigin.MANUAL,
+        postingStatus: TransactionStatus.POSTED
       });
 
       const transactions = await listTransactionsUseCase.execute(owner.id);

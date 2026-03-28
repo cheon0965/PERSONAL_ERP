@@ -74,7 +74,7 @@ export class AuthService {
         clientIp: context.clientIp,
         reason: 'invalid_credentials'
       });
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.');
     }
 
     const passwordMatches = await argon2.verify(user.passwordHash, dto.password);
@@ -85,7 +85,7 @@ export class AuthService {
         clientIp: context.clientIp,
         reason: 'invalid_credentials'
       });
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.');
     }
 
     this.rateLimit.clearLoginAttempts(context.clientIp, dto.email);

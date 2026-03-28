@@ -56,10 +56,10 @@
 아래 엔드포인트는 기본적으로 Bearer 토큰이 필요합니다.
 
 - `GET /auth/me`
-- `GET /accounts`
+- `GET /funding-accounts`
 - `GET /categories`
-- `GET /transactions`
-- `POST /transactions`
+- `GET /collected-transactions`
+- `POST /collected-transactions`
 - `GET /recurring-rules`
 - `POST /recurring-rules`
 - `GET /insurance-policies`
@@ -69,12 +69,12 @@
 
 ## 현재 쓰기 엔드포인트
 
-### `POST /transactions`
+### `POST /collected-transactions`
 
-- 요청 계약: `CreateTransactionRequest`
-- 응답 계약: `TransactionItem`
+- 요청 계약: `CreateCollectedTransactionRequest`
+- 응답 계약: `CollectedTransactionItem`
 - 현재 엔드포인트는 도메인 기준의 `CollectedTransaction -> JournalEntry` 흐름으로 가기 전 입력/수집 단계 구현에 가깝습니다.
-- 현재 응답은 `GET /transactions` 목록 아이템 shape와 동일하게 매핑됩니다.
+- 현재 응답은 `GET /collected-transactions` 목록 아이템 shape와 동일하게 매핑됩니다.
 - 계정은 필수이며, 카테고리는 선택입니다.
 - 현재 구현에서는 인증 사용자 범위 내 참조만 허용하며, 장기 기준은 Tenant/Membership 접근 범위로 수렴합니다.
 - 상위 도메인 기준에서는 손익 성격 거래를 확정(`ReadyToPost`/전표 생성)하려면 Category 확정이 필요합니다.
@@ -90,7 +90,7 @@
 
 ## 접근 범위와 데이터 최소 노출
 
-- `GET /transactions`는 현재 구현 기준으로 인증 사용자 범위 데이터만 반환합니다.
+- `GET /collected-transactions`는 현재 구현 기준으로 인증 사용자 범위 데이터만 반환합니다.
 - `GET /recurring-rules`는 현재 구현 기준으로 인증 사용자 범위 데이터만 반환합니다.
 - 상위 도메인 기준은 Tenant/Membership/Ledger 접근 범위이며, 현재 user-scoped 구현은 그 전단계입니다.
 - 두 목록 응답은 `userId`, `tenantId`, `membershipId`, `accountId`, `categoryId`, `memo` 같은 내부 접근 제어/저장 모델 필드를 직접 노출하지 않습니다.

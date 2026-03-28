@@ -30,13 +30,18 @@ test('fetchJsonWithConfig returns fallback data when demo mode is explicitly ena
   console.warn = () => undefined;
 
   try {
-    const result = await fetchJsonWithConfig('/transactions', fallback, {
-      apiBaseUrl: 'http://localhost:4000/api',
-      demoFallbackEnabled: true,
-      fetchImpl: async () => {
-        throw new Error('connect ECONNREFUSED');
-      }
-    });
+    const result = await fetchJsonWithConfig(
+      '/collected-transactions',
+      fallback,
+      {
+        apiBaseUrl: 'http://localhost:4000/api',
+        demoFallbackEnabled: true,
+        fetchImpl: async () => {
+          throw new Error('connect ECONNREFUSED');
+        }
+      },
+      { allowDemoFallback: true }
+    );
 
     assert.deepEqual(result, fallback);
   } finally {
@@ -44,18 +49,44 @@ test('fetchJsonWithConfig returns fallback data when demo mode is explicitly ena
   }
 });
 
+test('fetchJsonWithConfig does not fabricate mutation success from demo fallback', async () => {
+  const { fetchJsonWithConfig } = await import('../src/shared/api/fetch-json');
+
+  await assert.rejects(
+    () =>
+      fetchJsonWithConfig(
+        '/collected-transactions',
+        { id: 'fallback' },
+        {
+          apiBaseUrl: 'http://localhost:4000/api',
+          demoFallbackEnabled: true,
+          fetchImpl: async () => {
+            throw new Error('connect ECONNREFUSED');
+          }
+        },
+        {
+          method: 'POST',
+          body: { title: 'Fuel refill' }
+        }
+      ),
+    (error: unknown) =>
+      error instanceof Error &&
+      error.message.includes('/collected-transactions')
+  );
+});
+
 test('fetchJsonWithConfig throws a helpful error when demo mode is disabled', async () => {
   const { fetchJsonWithConfig } = await import('../src/shared/api/fetch-json');
   await assert.rejects(
     () =>
-      fetchJsonWithConfig('/transactions', [], {
+      fetchJsonWithConfig('/collected-transactions', [], {
         apiBaseUrl: 'http://localhost:4000/api',
         demoFallbackEnabled: false,
         fetchImpl: async () => {
           throw new Error('connect ECONNREFUSED');
         }
       }),
-    /Demo fallback is disabled/
+    /데모 폴백이 비활성화되어 있습니다/
   );
 });
 
@@ -98,7 +129,7 @@ test('fetchJsonWithConfig serializes JSON bodies for mutation requests', async (
   let capturedBody: string | undefined;
 
   const result = await fetchJsonWithConfig(
-    '/transactions',
+    '/collected-transactions',
     { id: 'fallback' },
     {
       apiBaseUrl: 'http://localhost:4000/api',
@@ -144,7 +175,7 @@ test('fetchJsonWithConfig clears the session on 401 instead of falling back', as
   await assert.rejects(
     () =>
       fetchJsonWithConfig(
-        '/transactions',
+        '/collected-transactions',
         [{ id: 'fallback' }],
         {
           apiBaseUrl: 'http://localhost:4000/api',
@@ -176,7 +207,7 @@ test('fetchJsonWithConfig retries once after refreshing the access token', async
   let refreshCalls = 0;
 
   const result = await fetchJsonWithConfig(
-    '/transactions',
+    '/collected-transactions',
     [],
     {
       apiBaseUrl: 'http://localhost:4000/api',
@@ -220,10 +251,10 @@ test('buildRequestFailureMessage explains how to re-enable demo fallback locally
   const { buildRequestFailureMessage } =
     await import('../src/shared/api/fetch-json');
   const message = buildRequestFailureMessage(
-    '/transactions',
+    '/collected-transactions',
     new Error('Request failed: 500')
   );
 
   assert.match(message, /NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=true/);
-  assert.match(message, /Request failed for \/transactions/);
+  assert.match(message, /\/collected-transactions 요청에 실패했습니다/);
 });

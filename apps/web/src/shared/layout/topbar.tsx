@@ -28,6 +28,7 @@ export function Topbar() {
       elevation={0}
       color="inherit"
       sx={{
+        borderRadius: 0,
         borderBottom: '1px solid',
         borderColor: 'divider',
         ml: { lg: `${sidebarWidth}px` },
@@ -38,7 +39,8 @@ export function Topbar() {
         <Stack direction="row" alignItems="center" justifyContent="space-between" width="100%" gap={2}>
           <TextField
             size="small"
-            placeholder="Search pages, rules, or transactions"
+            disabled
+            placeholder="전체 검색은 준비 중입니다"
             InputProps={{
               startAdornment: <SearchRoundedIcon fontSize="small" style={{ marginRight: 8 }} />
             }}
@@ -56,10 +58,10 @@ export function Topbar() {
             >
               <Stack spacing={0} textAlign="right" sx={{ display: { xs: 'none', md: 'flex' } }}>
                 <Typography variant="body2" fontWeight={700}>
-                  {user?.name ?? 'Workspace User'}
+                  {user?.name ?? '워크스페이스 사용자'}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {user?.email ?? 'Not signed in'}
+                  {user?.email ?? '로그인되지 않음'}
                 </Typography>
               </Stack>
               <Avatar sx={{ width: 36, height: 36 }}>
@@ -74,7 +76,7 @@ export function Topbar() {
                   router.replace('/login' as Route);
                 }}
               >
-                Sign out
+                로그아웃
               </Button>
             </Stack>
           </Stack>

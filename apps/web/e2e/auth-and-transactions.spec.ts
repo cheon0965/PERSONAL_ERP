@@ -1,10 +1,10 @@
 import { expect, test } from '@playwright/test';
 import type {
-  AccountItem,
   AuthenticatedUser,
   CategoryItem,
-  CreateTransactionRequest,
-  TransactionItem
+  CollectedTransactionItem,
+  CreateCollectedTransactionRequest,
+  FundingAccountItem
 } from '@personal-erp/contracts';
 
 test('protects the transactions route, restores the session, and saves a transaction through the UI', async ({
@@ -21,7 +21,7 @@ test('protects the transactions route, restores the session, and saves a transac
     name: 'Demo User'
   };
 
-  const accounts: AccountItem[] = [
+  const fundingAccounts: FundingAccountItem[] = [
     {
       id: 'acc-main',
       name: 'Main Checking',
@@ -39,27 +39,27 @@ test('protects the transactions route, restores the session, and saves a transac
   const categories: CategoryItem[] = [
     {
       id: 'cat-food',
-      name: 'Food',
+      name: '식비',
       kind: 'EXPENSE'
     },
     {
       id: 'cat-salary',
-      name: 'Salary',
+      name: '급여',
       kind: 'INCOME'
     }
   ];
 
-  let transactions: TransactionItem[] = [
+  let transactions: CollectedTransactionItem[] = [
     {
       id: 'txn-seeded-1',
       businessDate: '2026-03-12',
-      title: 'Seeded expense',
+      title: '초기 지출',
       type: 'EXPENSE',
       amountWon: 126_000,
-      accountName: 'Living Expenses',
-      categoryName: 'Food',
-      origin: 'MANUAL',
-      status: 'POSTED'
+      fundingAccountName: '생활비 통장',
+      categoryName: '식비',
+      sourceKind: 'MANUAL',
+      postingStatus: 'POSTED'
     }
   ];
 
@@ -126,11 +126,11 @@ test('protects the transactions route, restores the session, and saves a transac
       return;
     }
 
-    if (path === '/api/accounts' && request.method() === 'GET') {
+    if (path === '/api/funding-accounts' && request.method() === 'GET') {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(accounts)
+        body: JSON.stringify(fundingAccounts)
       });
       return;
     }
@@ -144,7 +144,7 @@ test('protects the transactions route, restores the session, and saves a transac
       return;
     }
 
-    if (path === '/api/transactions' && request.method() === 'GET') {
+    if (path === '/api/collected-transactions' && request.method() === 'GET') {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -153,25 +153,27 @@ test('protects the transactions route, restores the session, and saves a transac
       return;
     }
 
-    if (path === '/api/transactions' && request.method() === 'POST') {
-      const payload = request.postDataJSON() as CreateTransactionRequest;
-      const accountName =
-        accounts.find((account) => account.id === payload.accountId)?.name ??
-        '-';
+    if (path === '/api/collected-transactions' && request.method() === 'POST') {
+      const payload =
+        request.postDataJSON() as CreateCollectedTransactionRequest;
+      const fundingAccountName =
+        fundingAccounts.find(
+          (fundingAccount) => fundingAccount.id === payload.fundingAccountId
+        )?.name ?? '-';
       const categoryName =
         categories.find((category) => category.id === payload.categoryId)
           ?.name ?? '-';
 
-      const createdItem: TransactionItem = {
+      const createdItem: CollectedTransactionItem = {
         id: `txn-e2e-${Date.now()}`,
         businessDate: payload.businessDate,
         title: payload.title,
         type: payload.type,
         amountWon: payload.amountWon,
-        accountName,
+        fundingAccountName,
         categoryName,
-        origin: 'MANUAL',
-        status: 'POSTED'
+        sourceKind: 'MANUAL',
+        postingStatus: 'POSTED'
       };
 
       transactions = [createdItem, ...transactions];
@@ -206,37 +208,33 @@ test('protects the transactions route, restores the session, and saves a transac
   }
 
   await expect(
-    page.getByRole('heading', { name: 'Sign in to the workspace' })
+    page.getByRole('heading', { name: '워크스페이스에 로그인' })
   ).toBeVisible();
 
-  await page.getByLabel('Email').fill('demo@example.com');
-  await page.getByLabel('Password').fill('Demo1234!');
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByLabel('이메일').fill('demo@example.com');
+  await page.getByLabel('비밀번호').fill('Demo1234!');
+  await page.getByRole('button', { name: '로그인' }).click();
 
   await expect(page).toHaveURL(/\/transactions$/);
-  await expect(
-    page.getByRole('heading', { name: 'Transactions' })
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: '수집 거래' })).toBeVisible();
   await expect(page.getByText('Demo User')).toBeVisible();
 
   await page.reload();
 
   await expect(page).toHaveURL(/\/transactions$/);
-  await expect(
-    page.getByRole('heading', { name: 'Transactions' })
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: '수집 거래' })).toBeVisible();
   await expect(page.getByText('Demo User')).toBeVisible();
 
-  await page.getByRole('textbox', { name: 'Title' }).fill(transactionTitle);
-  await page.getByRole('spinbutton', { name: 'Amount (KRW)' }).fill('54321');
-  await page.getByLabel('Business Date').fill(businessDate);
+  await page.getByRole('textbox', { name: '적요' }).fill(transactionTitle);
+  await page.getByRole('spinbutton', { name: '금액 (원)' }).fill('54321');
+  await page.getByLabel('거래일').fill(businessDate);
 
-  const saveButton = page.getByRole('button', { name: 'Save Transaction' });
+  const saveButton = page.getByRole('button', { name: '수집 거래 등록' });
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
 
   await expect(
-    page.getByText('Transaction saved and the ledger list was refreshed.')
+    page.getByText('수집 거래를 등록했고 목록을 새로고침했습니다.')
   ).toBeVisible();
   await expect(page.getByText(transactionTitle)).toBeVisible();
 });

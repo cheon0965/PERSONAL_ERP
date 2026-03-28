@@ -45,7 +45,7 @@
 - 인증 세션 생성/회전/로그아웃
 - 보호 라우트의 `401`
 - `GET /auth/me`
-- `POST /transactions`
+- `POST /collected-transactions`
   DTO validation, 현재 구현의 인증 사용자 접근 범위 내 계정/카테고리 검증, 생성 응답 shape
 - `POST /recurring-rules`
   DTO validation, 현재 구현의 인증 사용자 접근 범위 내 계정/카테고리 검증, 생성 응답 shape
@@ -60,7 +60,7 @@
 - 로그인 실패, refresh 재사용, bearer 누락, scope 거부, readiness 실패에 대한 보안 이벤트 로그 기록
 - `transactions` Prisma 통합 테스트
   실제 MySQL 기준으로 현재 구현의 접근 범위 확인, 생성, 조회 정렬과 인증 사용자 스코프를 대표 검증
-- `GET /transactions`
+- `GET /collected-transactions`
   현재 구현 기준 인증 사용자 범위만 반환하는지, 내부 접근 제어 필드를 노출하지 않는지 검증
 - `GET /recurring-rules`
   현재 구현 기준 인증 사용자 범위만 반환하는지, 내부 접근 제어 필드를 노출하지 않는지 검증

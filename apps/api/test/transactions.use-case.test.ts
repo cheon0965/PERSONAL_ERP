@@ -1,22 +1,22 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { TransactionType } from '@prisma/client';
-import { CreateTransactionUseCase } from '../src/modules/transactions/application/use-cases/create-transaction.use-case';
-import { ListTransactionsUseCase } from '../src/modules/transactions/application/use-cases/list-transactions.use-case';
-import { MissingOwnedTransactionReferenceError } from '../src/modules/transactions/domain/transaction-policy';
+import { CreateCollectedTransactionUseCase } from '../src/modules/collected-transactions/application/use-cases/create-collected-transaction.use-case';
+import { ListCollectedTransactionsUseCase } from '../src/modules/collected-transactions/application/use-cases/list-collected-transactions.use-case';
+import { MissingOwnedCollectedTransactionReferenceError } from '../src/modules/collected-transactions/domain/collected-transaction-policy';
 
-const createTransactionCommand = {
+const createCollectedTransactionCommand = {
   userId: 'user-1',
   title: 'Fuel refill',
   type: TransactionType.EXPENSE,
   amountWon: 84000,
   businessDate: '2026-03-03',
-  accountId: 'acc-1',
+  fundingAccountId: 'acc-1',
   categoryId: 'cat-1',
   memo: 'Full tank'
 };
 
-test('CreateTransactionUseCase executes ownership checks before persisting the transaction', async () => {
+test('CreateCollectedTransactionUseCase executes ownership checks before persisting the collected transaction', async () => {
   const storeCalls: Array<Record<string, unknown>> = [];
   const transactionStore = {
     findRecentByUserId: async () => [],
@@ -34,16 +34,16 @@ test('CreateTransactionUseCase executes ownership checks before persisting the t
     }
   };
   const referenceOwnership = {
-    accountExistsForUser: async () => true,
+    fundingAccountExistsForUser: async () => true,
     categoryExistsForUser: async () => true
   };
 
-  const useCase = new CreateTransactionUseCase(
+  const useCase = new CreateCollectedTransactionUseCase(
     transactionStore as never,
     referenceOwnership as never
   );
 
-  const result = await useCase.execute(createTransactionCommand);
+  const result = await useCase.execute(createCollectedTransactionCommand);
 
   assert.equal(storeCalls.length, 1);
   assert.deepEqual(storeCalls[0], {
@@ -52,7 +52,7 @@ test('CreateTransactionUseCase executes ownership checks before persisting the t
     type: TransactionType.EXPENSE,
     amountWon: 84000,
     businessDate: new Date('2026-03-03T00:00:00.000Z'),
-    accountId: 'acc-1',
+    fundingAccountId: 'acc-1',
     categoryId: 'cat-1',
     memo: 'Full tank'
   });
@@ -62,60 +62,60 @@ test('CreateTransactionUseCase executes ownership checks before persisting the t
     title: 'Fuel refill',
     type: TransactionType.EXPENSE,
     amountWon: 84000,
-    accountName: 'Main checking',
+    fundingAccountName: 'Main checking',
     categoryName: 'Fuel',
-    origin: 'MANUAL',
-    status: 'POSTED'
+    sourceKind: 'MANUAL',
+    postingStatus: 'POSTED'
   });
 });
 
-test('CreateTransactionUseCase rejects requests for accounts outside the current user scope', async () => {
+test('CreateCollectedTransactionUseCase rejects requests for funding accounts outside the current user scope', async () => {
   const transactionStore = {
     findRecentByUserId: async () => [],
     createForUser: async () => ({})
   };
   const referenceOwnership = {
-    accountExistsForUser: async () => false,
+    fundingAccountExistsForUser: async () => false,
     categoryExistsForUser: async () => true
   };
 
-  const useCase = new CreateTransactionUseCase(
+  const useCase = new CreateCollectedTransactionUseCase(
     transactionStore as never,
     referenceOwnership as never
   );
 
   await assert.rejects(
-    () => useCase.execute(createTransactionCommand),
+    () => useCase.execute(createCollectedTransactionCommand),
     (error: unknown) =>
-      error instanceof MissingOwnedTransactionReferenceError &&
-      error.message === 'Account not found'
+      error instanceof MissingOwnedCollectedTransactionReferenceError &&
+      error.message === 'Funding account not found'
   );
 });
 
-test('CreateTransactionUseCase rejects requests for categories outside the current user scope', async () => {
+test('CreateCollectedTransactionUseCase rejects requests for categories outside the current user scope', async () => {
   const transactionStore = {
     findRecentByUserId: async () => [],
     createForUser: async () => ({})
   };
   const referenceOwnership = {
-    accountExistsForUser: async () => true,
+    fundingAccountExistsForUser: async () => true,
     categoryExistsForUser: async () => false
   };
 
-  const useCase = new CreateTransactionUseCase(
+  const useCase = new CreateCollectedTransactionUseCase(
     transactionStore as never,
     referenceOwnership as never
   );
 
   await assert.rejects(
-    () => useCase.execute(createTransactionCommand),
+    () => useCase.execute(createCollectedTransactionCommand),
     (error: unknown) =>
-      error instanceof MissingOwnedTransactionReferenceError &&
+      error instanceof MissingOwnedCollectedTransactionReferenceError &&
       error.message === 'Category not found'
   );
 });
 
-test('ListTransactionsUseCase maps stored transactions into the shared response shape', async () => {
+test('ListCollectedTransactionsUseCase maps stored transactions into the shared response shape', async () => {
   const transactionStore = {
     findRecentByUserId: async () => [
       {
@@ -135,7 +135,9 @@ test('ListTransactionsUseCase maps stored transactions into the shared response 
     }
   };
 
-  const useCase = new ListTransactionsUseCase(transactionStore as never);
+  const useCase = new ListCollectedTransactionsUseCase(
+    transactionStore as never
+  );
   const result = await useCase.execute('user-1');
 
   assert.deepEqual(result, [
@@ -145,10 +147,10 @@ test('ListTransactionsUseCase maps stored transactions into the shared response 
       title: 'Fuel refill',
       type: TransactionType.EXPENSE,
       amountWon: 84000,
-      accountName: 'Main checking',
+      fundingAccountName: 'Main checking',
       categoryName: 'Fuel',
-      origin: 'MANUAL',
-      status: 'POSTED'
+      sourceKind: 'MANUAL',
+      postingStatus: 'POSTED'
     }
   ]);
 });

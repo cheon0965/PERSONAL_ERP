@@ -1,9 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { CreateTransactionRequest } from '@personal-erp/contracts';
+import type { CreateCollectedTransactionRequest } from '@personal-erp/contracts';
 import { TransactionType } from '@prisma/client';
 import { IsDateString, IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
-export class CreateTransactionDto implements CreateTransactionRequest {
+export class CreateCollectedTransactionRequestDto
+  implements CreateCollectedTransactionRequest
+{
   @ApiProperty()
   @IsString()
   title!: string;
@@ -23,7 +25,7 @@ export class CreateTransactionDto implements CreateTransactionRequest {
 
   @ApiProperty()
   @IsString()
-  accountId!: string;
+  fundingAccountId!: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

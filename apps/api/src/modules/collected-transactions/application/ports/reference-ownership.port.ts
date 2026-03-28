@@ -1,7 +1,7 @@
 export abstract class ReferenceOwnershipPort {
-  abstract accountExistsForUser(
+  abstract fundingAccountExistsForUser(
     userId: string,
-    accountId: string
+    fundingAccountId: string
   ): Promise<boolean>;
 
   abstract categoryExistsForUser(

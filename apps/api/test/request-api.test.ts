@@ -19,7 +19,7 @@ import { DashboardModule } from '../src/modules/dashboard/dashboard.module';
 import { ForecastModule } from '../src/modules/forecast/forecast.module';
 import { HealthModule } from '../src/modules/health/health.module';
 import { RecurringRulesModule } from '../src/modules/recurring-rules/recurring-rules.module';
-import { TransactionsModule } from '../src/modules/transactions/transactions.module';
+import { CollectedTransactionsModule } from '../src/modules/collected-transactions/collected-transactions.module';
 
 type RequestTestUser = {
   id: string;
@@ -856,7 +856,7 @@ async function createRequestTestContext(): Promise<RequestTestContext> {
         AuthModule,
         DashboardModule,
         ForecastModule,
-        TransactionsModule,
+        CollectedTransactionsModule,
         RecurringRulesModule
       ]
     })
@@ -1311,7 +1311,7 @@ test('POST /auth/login returns 401 for invalid credentials', async () => {
     assert.equal(response.status, 401);
     assert.equal(
       (response.body as { message: string }).message,
-      'Invalid credentials'
+      '이메일 또는 비밀번호가 올바르지 않습니다.'
     );
     assert.ok(
       context.securityEvents.some(
@@ -1391,7 +1391,7 @@ test('POST /auth/login returns 429 after too many invalid attempts from the same
     assert.equal(response.status, 429);
     assert.equal(
       (response.body as { message: string }).message,
-      'Too many sign-in attempts. Try again later.'
+      '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.'
     );
     assert.ok(
       context.securityEvents.some(
@@ -1406,11 +1406,11 @@ test('POST /auth/login returns 429 after too many invalid attempts from the same
   }
 });
 
-test('GET /transactions returns 401 when the bearer token is missing', async () => {
+test('GET /collected-transactions returns 401 when the bearer token is missing', async () => {
   const context = await createRequestTestContext();
 
   try {
-    const response = await context.request('/transactions');
+    const response = await context.request('/collected-transactions');
 
     assert.equal(response.status, 401);
     assert.equal(
@@ -1453,11 +1453,11 @@ test('GET /auth/me returns the authenticated user', async () => {
   }
 });
 
-test('GET /transactions returns only the current user transaction items without internal ownership fields', async () => {
+test('GET /collected-transactions returns only the current user collected transaction items without internal ownership fields', async () => {
   const context = await createRequestTestContext();
 
   try {
-    const response = await context.request('/transactions', {
+    const response = await context.request('/collected-transactions', {
       headers: context.authHeaders()
     });
 
@@ -1472,10 +1472,10 @@ test('GET /transactions returns only the current user transaction items without 
         title: 'March salary',
         type: TransactionType.INCOME,
         amountWon: 3_000_000,
-        accountName: 'Main checking',
+        fundingAccountName: 'Main checking',
         categoryName: 'Salary',
-        origin: TransactionOrigin.MANUAL,
-        status: TransactionStatus.POSTED
+        sourceKind: TransactionOrigin.MANUAL,
+        postingStatus: TransactionStatus.POSTED
       },
       {
         id: 'txn-seed-2',
@@ -1483,10 +1483,10 @@ test('GET /transactions returns only the current user transaction items without 
         title: 'Fuel refill',
         type: TransactionType.EXPENSE,
         amountWon: 84_000,
-        accountName: 'Main checking',
+        fundingAccountName: 'Main checking',
         categoryName: 'Fuel',
-        origin: TransactionOrigin.MANUAL,
-        status: TransactionStatus.POSTED
+        sourceKind: TransactionOrigin.MANUAL,
+        postingStatus: TransactionStatus.POSTED
       }
     ]);
     assert.equal(
@@ -1494,7 +1494,7 @@ test('GET /transactions returns only the current user transaction items without 
       false
     );
     assert.equal(
-      items.some((candidate) => 'accountId' in candidate),
+      items.some((candidate) => 'fundingAccountId' in candidate),
       false
     );
     assert.equal(
@@ -1528,7 +1528,7 @@ test('GET /recurring-rules returns only the current user recurring rule items wi
         amountWon: 75_000,
         frequency: RecurrenceFrequency.MONTHLY,
         nextRunDate: '2026-03-10',
-        accountName: 'Main checking',
+        fundingAccountName: 'Main checking',
         categoryName: 'Utilities',
         isActive: true
       }
@@ -1538,7 +1538,7 @@ test('GET /recurring-rules returns only the current user recurring rule items wi
       false
     );
     assert.equal(
-      items.some((candidate) => 'accountId' in candidate),
+      items.some((candidate) => 'fundingAccountId' in candidate),
       false
     );
     assert.equal(
@@ -1615,12 +1615,12 @@ test('GET /forecast/monthly returns only aggregated forecast data for the authen
   }
 });
 
-test('POST /transactions returns 400 when the request body fails DTO validation', async () => {
+test('POST /collected-transactions returns 400 when the request body fails DTO validation', async () => {
   const context = await createRequestTestContext();
 
   try {
     const initialTransactionCount = context.state.transactions.length;
-    const response = await context.request('/transactions', {
+    const response = await context.request('/collected-transactions', {
       method: 'POST',
       headers: context.authHeaders(),
       body: {
@@ -1628,7 +1628,7 @@ test('POST /transactions returns 400 when the request body fails DTO validation'
         type: TransactionType.EXPENSE,
         amountWon: 0,
         businessDate: 'not-a-date',
-        accountId: 'acc-1',
+        fundingAccountId: 'acc-1',
         categoryId: 'cat-1'
       }
     });
@@ -1644,12 +1644,12 @@ test('POST /transactions returns 400 when the request body fails DTO validation'
   }
 });
 
-test('POST /transactions returns 404 when the account is outside the current user scope', async () => {
+test('POST /collected-transactions returns 404 when the funding account is outside the current user scope', async () => {
   const context = await createRequestTestContext();
 
   try {
     const initialTransactionCount = context.state.transactions.length;
-    const response = await context.request('/transactions', {
+    const response = await context.request('/collected-transactions', {
       method: 'POST',
       headers: context.authHeaders(),
       body: {
@@ -1657,7 +1657,7 @@ test('POST /transactions returns 404 when the account is outside the current use
         type: TransactionType.EXPENSE,
         amountWon: 84000,
         businessDate: '2026-03-03',
-        accountId: 'acc-2',
+        fundingAccountId: 'acc-2',
         categoryId: 'cat-1',
         memo: 'Full tank'
       }
@@ -1666,7 +1666,7 @@ test('POST /transactions returns 404 when the account is outside the current use
     assert.equal(response.status, 404);
     assert.equal(
       (response.body as { message: string }).message,
-      'Account not found'
+      'Funding account not found'
     );
     assert.equal(context.state.transactions.length, initialTransactionCount);
     assert.ok(
@@ -1677,7 +1677,7 @@ test('POST /transactions returns 404 when the account is outside the current use
           candidate.details.requestId ===
             response.headers.get('x-request-id') &&
           candidate.details.userId === 'user-1' &&
-          candidate.details.resource === 'transaction_account'
+          candidate.details.resource === 'collected_transaction_funding_account'
       )
     );
   } finally {
@@ -1685,11 +1685,11 @@ test('POST /transactions returns 404 when the account is outside the current use
   }
 });
 
-test('POST /transactions returns the created transaction item shape', async () => {
+test('POST /collected-transactions returns the created collected transaction item shape', async () => {
   const context = await createRequestTestContext();
 
   try {
-    const response = await context.request('/transactions', {
+    const response = await context.request('/collected-transactions', {
       method: 'POST',
       headers: context.authHeaders(),
       body: {
@@ -1697,7 +1697,7 @@ test('POST /transactions returns the created transaction item shape', async () =
         type: TransactionType.EXPENSE,
         amountWon: 84000,
         businessDate: '2026-03-03',
-        accountId: 'acc-1',
+        fundingAccountId: 'acc-1',
         categoryId: 'cat-1',
         memo: 'Full tank'
       }
@@ -1710,10 +1710,10 @@ test('POST /transactions returns the created transaction item shape', async () =
       title: 'Fuel refill',
       type: TransactionType.EXPENSE,
       amountWon: 84000,
-      accountName: 'Main checking',
+      fundingAccountName: 'Main checking',
       categoryName: 'Fuel',
-      origin: 'MANUAL',
-      status: 'POSTED'
+      sourceKind: 'MANUAL',
+      postingStatus: 'POSTED'
     });
     assert.equal(context.state.transactions.length, 4);
   } finally {
@@ -1731,7 +1731,7 @@ test('POST /recurring-rules returns 400 when the request body fails DTO validati
       headers: context.authHeaders(),
       body: {
         title: 'Phone bill',
-        accountId: 'acc-1',
+        fundingAccountId: 'acc-1',
         categoryId: 'cat-1',
         amountWon: 0,
         frequency: RecurrenceFrequency.MONTHLY,
@@ -1765,7 +1765,7 @@ test('POST /recurring-rules returns 404 when the category is outside the current
       headers: context.authHeaders(),
       body: {
         title: 'Phone bill',
-        accountId: 'acc-1',
+        fundingAccountId: 'acc-1',
         categoryId: 'cat-2',
         amountWon: 75000,
         frequency: RecurrenceFrequency.MONTHLY,
@@ -1809,7 +1809,7 @@ test('POST /recurring-rules returns the created recurring rule item shape', asyn
       headers: context.authHeaders(),
       body: {
         title: 'Phone bill',
-        accountId: 'acc-1',
+        fundingAccountId: 'acc-1',
         categoryId: 'cat-1',
         amountWon: 75000,
         frequency: RecurrenceFrequency.MONTHLY,
@@ -1826,7 +1826,7 @@ test('POST /recurring-rules returns the created recurring rule item shape', asyn
       amountWon: 75000,
       frequency: RecurrenceFrequency.MONTHLY,
       nextRunDate: '2026-03-10',
-      accountName: 'Main checking',
+      fundingAccountName: 'Main checking',
       categoryName: 'Fuel',
       isActive: true
     });

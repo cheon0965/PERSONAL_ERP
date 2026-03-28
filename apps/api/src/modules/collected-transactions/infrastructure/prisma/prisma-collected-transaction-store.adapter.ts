@@ -2,16 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { TransactionOrigin, TransactionStatus } from '@prisma/client';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
 import type {
-  CreateTransactionRecord,
-  StoredTransaction
-} from '../../application/ports/transaction-store.port';
-import { TransactionStorePort } from '../../application/ports/transaction-store.port';
+  CreateCollectedTransactionRecord,
+  StoredCollectedTransaction
+} from '../../application/ports/collected-transaction-store.port';
+import { CollectedTransactionStorePort } from '../../application/ports/collected-transaction-store.port';
 
 @Injectable()
-export class PrismaTransactionStoreAdapter implements TransactionStorePort {
+export class PrismaCollectedTransactionStoreAdapter
+  implements CollectedTransactionStorePort
+{
   constructor(private readonly prisma: PrismaService) {}
 
-  findRecentByUserId(userId: string): Promise<StoredTransaction[]> {
+  findRecentByUserId(userId: string): Promise<StoredCollectedTransaction[]> {
     return this.prisma.transaction.findMany({
       where: { userId },
       include: { account: true, category: true },
@@ -20,7 +22,9 @@ export class PrismaTransactionStoreAdapter implements TransactionStorePort {
     });
   }
 
-  createForUser(record: CreateTransactionRecord): Promise<StoredTransaction> {
+  createForUser(
+    record: CreateCollectedTransactionRecord
+  ): Promise<StoredCollectedTransaction> {
     return this.prisma.transaction.create({
       data: {
         userId: record.userId,
@@ -28,7 +32,7 @@ export class PrismaTransactionStoreAdapter implements TransactionStorePort {
         type: record.type,
         amountWon: record.amountWon,
         businessDate: record.businessDate,
-        accountId: record.accountId,
+        accountId: record.fundingAccountId,
         categoryId: record.categoryId,
         memo: record.memo,
         origin: TransactionOrigin.MANUAL,

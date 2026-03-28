@@ -6,9 +6,24 @@ const colorMap: Record<string, 'default' | 'success' | 'warning' | 'error' | 'pr
   POSTED: 'success',
   ACTIVE: 'primary',
   PENDING: 'warning',
-  CANCELLED: 'error'
+  CANCELLED: 'error',
+  PAUSED: 'warning'
+};
+
+const labelMap: Record<string, string> = {
+  POSTED: '확정',
+  ACTIVE: '활성',
+  PENDING: '대기',
+  CANCELLED: '중지',
+  PAUSED: '일시중지'
 };
 
 export function StatusChip({ label }: { label: string }) {
-  return <Chip label={label} color={colorMap[label] ?? 'default'} size="small" />;
+  return (
+    <Chip
+      label={labelMap[label] ?? label}
+      color={colorMap[label] ?? 'default'}
+      size="small"
+    />
+  );
 }

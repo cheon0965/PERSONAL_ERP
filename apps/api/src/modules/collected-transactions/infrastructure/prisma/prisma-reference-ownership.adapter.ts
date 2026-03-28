@@ -8,12 +8,12 @@ export class PrismaReferenceOwnershipAdapter
 {
   constructor(private readonly prisma: PrismaService) {}
 
-  async accountExistsForUser(
+  async fundingAccountExistsForUser(
     userId: string,
-    accountId: string
+    fundingAccountId: string
   ): Promise<boolean> {
     const account = await this.prisma.account.findFirst({
-      where: { id: accountId, userId },
+      where: { id: fundingAccountId, userId },
       select: { id: true }
     });
 

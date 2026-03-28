@@ -18,7 +18,9 @@
     "prisma:migrate:reset": "node ../../scripts/run-with-root-env.cjs prisma migrate reset",
     "prisma:migrate:status": "node ../../scripts/run-with-root-env.cjs prisma migrate status",
     "prisma:push:unsafe": "node ../../scripts/run-with-root-env.cjs prisma db push",
-    "prisma:seed": "node ../../scripts/run-with-root-env.cjs tsx prisma/seed.ts"
+    "prisma:backfill:phase1": "node ../../scripts/run-with-root-env.cjs tsx prisma/backfill-phase1-backbone.ts",
+    "prisma:seed": "node ../../scripts/run-with-root-env.cjs tsx prisma/seed.ts",
+    "prisma:seed:reset": "node ../../scripts/run-with-root-env.cjs tsx prisma/seed.ts --reset"
   },
   "prisma": {
     "seed": "node ../../scripts/run-with-root-env.cjs tsx prisma/seed.ts"

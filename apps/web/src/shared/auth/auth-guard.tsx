@@ -4,6 +4,7 @@ import * as React from 'react';
 import type { Route } from 'next';
 import { CircularProgress, Stack, Typography } from '@mui/material';
 import { usePathname, useRouter } from 'next/navigation';
+import { appLayout } from '@/shared/ui/layout-metrics';
 import { useAuthSession } from './auth-provider';
 
 export function AuthGuard({ children }: React.PropsWithChildren) {
@@ -28,7 +29,7 @@ export function AuthGuard({ children }: React.PropsWithChildren) {
         minHeight="100vh"
         alignItems="center"
         justifyContent="center"
-        spacing={2}
+        spacing={appLayout.fieldGap}
         sx={{
           background:
             'radial-gradient(circle at top, rgba(37, 99, 235, 0.12), transparent 42%), #f5f7fb'
@@ -37,8 +38,8 @@ export function AuthGuard({ children }: React.PropsWithChildren) {
         <CircularProgress size={32} />
         <Typography variant="body1" color="text.secondary">
           {status === 'loading'
-            ? 'Restoring your workspace session...'
-            : 'Moving you to the sign-in screen...'}
+            ? '워크스페이스 세션을 복원하고 있습니다...'
+            : '로그인 화면으로 이동하고 있습니다...'}
         </Typography>
       </Stack>
     );

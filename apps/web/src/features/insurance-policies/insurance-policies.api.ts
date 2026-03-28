@@ -4,8 +4,8 @@ import { fetchJson } from '@/shared/api/fetch-json';
 export const mockInsurancePolicies: InsurancePolicyItem[] = [
   {
     id: 'ins-1',
-    provider: 'Samsung Fire',
-    productName: 'Auto coverage',
+    provider: '삼성화재',
+    productName: '자동차 보험',
     monthlyPremiumWon: 98000,
     paymentDay: 25,
     cycle: 'MONTHLY',
@@ -14,8 +14,8 @@ export const mockInsurancePolicies: InsurancePolicyItem[] = [
   },
   {
     id: 'ins-2',
-    provider: 'Meritz',
-    productName: 'Dental plan',
+    provider: '메리츠',
+    productName: '치아 보험',
     monthlyPremiumWon: 43000,
     paymentDay: 25,
     cycle: 'MONTHLY',

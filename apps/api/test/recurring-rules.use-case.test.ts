@@ -11,7 +11,7 @@ import {
 const createRecurringRuleCommand = {
   userId: 'user-1',
   title: 'Phone bill',
-  accountId: 'acc-1',
+  fundingAccountId: 'acc-1',
   categoryId: 'cat-1',
   amountWon: 75000,
   frequency: RecurrenceFrequency.MONTHLY,
@@ -36,7 +36,7 @@ test('CreateRecurringRuleUseCase persists a rule after ownership checks pass', a
     }
   };
   const referenceOwnership = {
-    accountExistsForUser: async () => true,
+    fundingAccountExistsForUser: async () => true,
     categoryExistsForUser: async () => true
   };
 
@@ -67,19 +67,19 @@ test('CreateRecurringRuleUseCase persists a rule after ownership checks pass', a
     amountWon: 75000,
     frequency: RecurrenceFrequency.MONTHLY,
     nextRunDate: '2026-03-10',
-    accountName: 'Main checking',
+    fundingAccountName: 'Main checking',
     categoryName: 'Fuel',
     isActive: true
   });
 });
 
-test('CreateRecurringRuleUseCase rejects missing accounts', async () => {
+test('CreateRecurringRuleUseCase rejects missing funding accounts', async () => {
   const recurringRuleStore = {
     findAllByUserId: async () => [],
     createForUser: async () => ({})
   };
   const referenceOwnership = {
-    accountExistsForUser: async () => false,
+    fundingAccountExistsForUser: async () => false,
     categoryExistsForUser: async () => true
   };
 
@@ -92,7 +92,7 @@ test('CreateRecurringRuleUseCase rejects missing accounts', async () => {
     () => useCase.execute(createRecurringRuleCommand),
     (error: unknown) =>
       error instanceof MissingOwnedRecurringRuleReferenceError &&
-      error.message === 'Account not found'
+      error.message === 'Funding account not found'
   );
 });
 
@@ -102,7 +102,7 @@ test('CreateRecurringRuleUseCase rejects missing categories', async () => {
     createForUser: async () => ({})
   };
   const referenceOwnership = {
-    accountExistsForUser: async () => true,
+    fundingAccountExistsForUser: async () => true,
     categoryExistsForUser: async () => false
   };
 
@@ -148,7 +148,7 @@ test('ListRecurringRulesUseCase maps stored rules into the shared response shape
       amountWon: 75000,
       frequency: RecurrenceFrequency.MONTHLY,
       nextRunDate: '2026-03-10',
-      accountName: 'Main checking',
+      fundingAccountName: 'Main checking',
       categoryName: 'Fuel',
       isActive: true
     }

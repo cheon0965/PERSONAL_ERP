@@ -20,7 +20,7 @@ export class AuthRateLimitService {
     this.assertAllowed(
       this.buildLoginKey(clientIp, email),
       LOGIN_LIMIT,
-      'Too many sign-in attempts. Try again later.'
+      '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.'
     );
   }
 
@@ -36,7 +36,7 @@ export class AuthRateLimitService {
     this.assertAllowed(
       this.buildRefreshKey(clientIp),
       REFRESH_LIMIT,
-      'Too many session refresh attempts. Try again later.'
+      '세션 갱신 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.'
     );
   }
 

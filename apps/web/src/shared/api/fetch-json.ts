@@ -65,6 +65,7 @@ type FetchJsonOptions = {
   requireAuth?: boolean;
   method?: string;
   body?: unknown;
+  allowDemoFallback?: boolean;
 };
 
 export class ApiRequestError extends Error {
@@ -104,8 +105,11 @@ export async function fetchJsonWithConfig<T>(
       throw error;
     }
 
-    if (config.demoFallbackEnabled) {
-      const warnMsg = '[personal-erp] demo fallback data used for ' + path;
+    const allowDemoFallback =
+      options.allowDemoFallback ?? (options.method == null || options.method === 'GET');
+
+    if (config.demoFallbackEnabled && allowDemoFallback) {
+      const warnMsg = '[personal-erp] 데모 폴백 데이터를 사용했습니다: ' + path;
       console.warn(warnMsg, error);
       return fallback;
     }
@@ -128,7 +132,7 @@ async function sendRequest<T>(
     if (!token) {
       config.onUnauthorized?.();
       throw new UnauthorizedRequestError(
-        `[personal-erp] Sign in is required before calling ${path}.`
+        `[personal-erp] ${path} 호출 전에 로그인이 필요합니다.`
       );
     }
 
@@ -163,7 +167,7 @@ async function sendRequest<T>(
     throw new UnauthorizedRequestError(
       buildApiErrorMessage(
         responseBody,
-        `[personal-erp] Session expired while requesting ${path}.`
+        `[personal-erp] ${path} 요청 중 세션이 만료되었습니다.`
       ),
       responseBody
     );
@@ -172,7 +176,7 @@ async function sendRequest<T>(
   if (!response.ok) {
     throw new ApiRequestError(
       response.status,
-      buildApiErrorMessage(responseBody, `Request failed: ${response.status}`),
+      buildApiErrorMessage(responseBody, `요청에 실패했습니다: ${response.status}`),
       responseBody
     );
   }
@@ -185,12 +189,12 @@ export function buildRequestFailureMessage(
   error: unknown
 ): string {
   const detail =
-    error instanceof Error ? error.message : 'Unknown request error';
+    error instanceof Error ? error.message : '알 수 없는 요청 오류';
   return [
-    `[personal-erp] Request failed for ${path}.`,
+    `[personal-erp] ${path} 요청에 실패했습니다.`,
     detail,
-    'Demo fallback is disabled.',
-    'Start the API server or set NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=true in <PERSONAL_ERP_SECRET_DIR>/web.env (or apps/web/.env.local) during local development.'
+    '데모 폴백이 비활성화되어 있습니다.',
+    '로컬 개발 중에는 API 서버를 실행하거나 <PERSONAL_ERP_SECRET_DIR>/web.env (또는 apps/web/.env.local)에 NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=true 를 설정해 주세요.'
   ].join(' ');
 }
 

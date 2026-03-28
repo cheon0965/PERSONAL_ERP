@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const fs = require('node:fs');
 const path = require('node:path');
 
 const {
@@ -14,6 +15,7 @@ const { startServer } = require('next/dist/server/lib/start-server.js');
 
 const repoRoot = path.resolve(__dirname, '..');
 const appDir = path.join(repoRoot, 'apps', 'web');
+const distDir = path.join(appDir, '.next');
 
 function printHelp() {
   console.log(
@@ -71,6 +73,7 @@ async function main() {
 
   const { port, hostname } = parseArgs(process.argv.slice(2));
 
+  fs.rmSync(distDir, { recursive: true, force: true });
   process.chdir(appDir);
 
   await startServer({

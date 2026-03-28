@@ -5,9 +5,9 @@ import { validateApiEnv } from './config/api-env';
 import { ExternalDependenciesModule } from './common/infrastructure/external-dependencies.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { AccountsModule } from './modules/accounts/accounts.module';
+import { FundingAccountsModule } from './modules/funding-accounts/funding-accounts.module';
 import { CategoriesModule } from './modules/categories/categories.module';
-import { TransactionsModule } from './modules/transactions/public';
+import { CollectedTransactionsModule } from './modules/collected-transactions/public';
 import { RecurringRulesModule } from './modules/recurring-rules/public';
 import { InsurancePoliciesModule } from './modules/insurance-policies/insurance-policies.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
@@ -25,9 +25,9 @@ import { ForecastModule } from './modules/forecast/public';
     ExternalDependenciesModule,
     HealthModule,
     AuthModule,
-    AccountsModule,
+    FundingAccountsModule,
     CategoriesModule,
-    TransactionsModule,
+    CollectedTransactionsModule,
     RecurringRulesModule,
     InsurancePoliciesModule,
     VehiclesModule,
