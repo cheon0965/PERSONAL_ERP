@@ -9,55 +9,136 @@ import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { SectionCard } from '@/shared/ui/section-card';
 
+const sessionStatusLabelMap: Record<string, string> = {
+  loading: '확인 중',
+  authenticated: '인증됨',
+  unauthenticated: '미인증'
+};
+
+const tenantStatusLabelMap: Record<string, string> = {
+  TRIAL: '체험',
+  ACTIVE: '활성',
+  SUSPENDED: '중지',
+  ARCHIVED: '보관'
+};
+
+const membershipRoleLabelMap: Record<string, string> = {
+  OWNER: 'Owner',
+  MANAGER: 'Manager',
+  EDITOR: 'Editor',
+  VIEWER: 'Viewer'
+};
+
+const membershipStatusLabelMap: Record<string, string> = {
+  INVITED: '초대됨',
+  ACTIVE: '활성',
+  SUSPENDED: '중지',
+  REMOVED: '제거됨'
+};
+
+const ledgerStatusLabelMap: Record<string, string> = {
+  ACTIVE: '활성',
+  SUSPENDED: '중지',
+  ARCHIVED: '보관'
+};
+
 export default function SettingsPage() {
   const { status, user } = useAuthSession();
-  const sessionStatusLabelMap: Record<string, string> = {
-    loading: '확인 중',
-    authenticated: '인증됨',
-    unauthenticated: '미인증'
-  };
+  const currentWorkspace = user?.currentWorkspace ?? null;
 
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
         eyebrow="설정"
-        title="테넌트 / 운영 설정"
-        description="Tenant, Ledger, 운영 기간 기준값과 실행 환경을 함께 확인하는 화면입니다."
+        title="테넌트 / 장부 기준"
+        description="Round 1 기준선에서는 현재 로그인 사용자가 어떤 TenantMembership과 Ledger 문맥 안에서 작업하는지 먼저 확인합니다."
       />
 
       <DomainContextCard
-        description="설정 화면은 운영 환경과 기본값을 보여주지만, 실제 회계 저장을 직접 수정하는 화면은 아직 아닙니다."
-        primaryEntity="테넌트 / 장부 (Tenant / Ledger)"
+        description="이 화면은 현재 작업 문맥을 보여주는 운영 기준 화면입니다. 실제 기간 시작, 전표 확정, 마감은 이후 라운드에서 이 문맥 위에 연결됩니다."
+        primaryEntity="테넌트 / 멤버십 / 장부 (Tenant / TenantMembership / Ledger)"
         relatedEntities={[
-          '멤버십 (TenantMembership)',
           '운영 기간 (AccountingPeriod)',
           '자금수단 (FundingAccount)',
-          '카테고리 (Category)'
+          '거래유형 (TransactionType)',
+          '수집 거래 (CollectedTransaction)'
         ]}
-        truthSource="설정 값은 운영 기준을 제공하는 성격이며 공식 회계 확정은 전표와 스냅샷에 있습니다."
-        readModelNote="현재 화면은 기본 운영값과 환경 상태를 보는 관리 보조 화면입니다."
+        truthSource="지금 단계의 공식 기준은 현재 작업 TenantMembership과 Ledger를 해석하는 런타임 문맥입니다."
+        readModelNote="현재 화면은 기준선 확인용이며, 기간 생성과 마감 같은 실제 쓰기 기능은 후속 라운드에서 붙습니다."
       />
 
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, lg: 6 }}>
-          <SectionCard title="기본 운영 값">
+          <SectionCard
+            title="현재 작업 문맥"
+            description="이 사용자가 지금 어떤 테넌트와 장부를 기준으로 동작하는지 확인합니다."
+          >
             <Stack spacing={appLayout.fieldGap}>
               <TextField
-                label="기본 예비자금 (원)"
-                defaultValue="400000"
-                helperText="현재는 읽기 전용 기본값입니다. 실제 저장 기능은 월 운영 시작 화면과 함께 연결됩니다."
+                label="테넌트 이름"
+                value={currentWorkspace?.tenant.name ?? '연결된 테넌트 없음'}
                 InputProps={{ readOnly: true }}
               />
               <TextField
-                label="시간대"
-                defaultValue="Asia/Seoul"
-                helperText="현재는 읽기 전용 기본값입니다."
+                label="테넌트 슬러그"
+                value={currentWorkspace?.tenant.slug ?? '-'}
                 InputProps={{ readOnly: true }}
               />
               <TextField
-                label="기본 운영 기간"
-                defaultValue="2026-03"
-                helperText="월 운영 시작 기능이 연결되기 전까지는 표시 전용 값입니다."
+                label="테넌트 상태"
+                value={
+                  currentWorkspace
+                    ? tenantStatusLabelMap[currentWorkspace.tenant.status] ??
+                      currentWorkspace.tenant.status
+                    : '-'
+                }
+                InputProps={{ readOnly: true }}
+              />
+              <TextField
+                label="멤버십 역할"
+                value={
+                  currentWorkspace
+                    ? membershipRoleLabelMap[currentWorkspace.membership.role] ??
+                      currentWorkspace.membership.role
+                    : '-'
+                }
+                helperText="Round 1에서는 현재 로그인 사용자의 TenantMembership을 공식 작업 주체 기준으로 봅니다."
+                InputProps={{ readOnly: true }}
+              />
+              <TextField
+                label="멤버십 상태"
+                value={
+                  currentWorkspace
+                    ? membershipStatusLabelMap[
+                        currentWorkspace.membership.status
+                      ] ?? currentWorkspace.membership.status
+                    : '-'
+                }
+                InputProps={{ readOnly: true }}
+              />
+              <TextField
+                label="현재 장부"
+                value={currentWorkspace?.ledger?.name ?? '기본 장부 미선정'}
+                helperText="다음 Round에서는 이 장부 문맥 안에서 AccountingPeriod를 열게 됩니다."
+                InputProps={{ readOnly: true }}
+              />
+              <TextField
+                label="장부 통화 / 시간대"
+                value={
+                  currentWorkspace?.ledger
+                    ? `${currentWorkspace.ledger.baseCurrency} / ${currentWorkspace.ledger.timezone}`
+                    : '-'
+                }
+                InputProps={{ readOnly: true }}
+              />
+              <TextField
+                label="장부 상태"
+                value={
+                  currentWorkspace?.ledger
+                    ? ledgerStatusLabelMap[currentWorkspace.ledger.status] ??
+                      currentWorkspace.ledger.status
+                    : '-'
+                }
                 InputProps={{ readOnly: true }}
               />
             </Stack>
@@ -66,14 +147,19 @@ export default function SettingsPage() {
         <Grid size={{ xs: 12, lg: 6 }}>
           <SectionCard
             title="환경 / 세션"
-            description="데모 동작과 현재 인증 상태를 함께 확인하는 영역입니다."
+            description="개발 환경과 현재 인증 세션 상태를 함께 확인합니다."
           >
             <Stack spacing={appLayout.fieldGap}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+              >
                 <Stack spacing={0.5}>
                   <Typography>데모 대체 모드</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    개발 환경에서 `NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=true`일 때만 활성화됩니다.
+                    개발 환경에서만 `NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=true`일 때
+                    활성화됩니다.
                   </Typography>
                 </Stack>
                 <Switch checked={webRuntime.demoFallbackEnabled} disabled />
@@ -103,7 +189,7 @@ export default function SettingsPage() {
                 </Typography>
               </Stack>
               <Stack spacing={0.5}>
-                <Typography>액세스 토큰 저장 위치</Typography>
+                <Typography>액세스 토큰 보관 위치</Typography>
                 <Typography variant="body2" color="text.secondary">
                   {accessTokenStoragePolicy}
                 </Typography>

@@ -201,6 +201,13 @@ enum BalanceSnapshotKind {
   CLOSING
 }
 
+enum FinancialStatementKind {
+  STATEMENT_OF_FINANCIAL_POSITION
+  MONTHLY_PROFIT_AND_LOSS
+  CASH_FLOW_SUMMARY
+  NET_WORTH_MOVEMENT
+}
+
 model User {
   id                 String            @id @default(cuid())
   email              String            @unique
@@ -244,6 +251,8 @@ model Tenant {
   journalEntries           JournalEntry[]
   openingBalanceSnapshots  OpeningBalanceSnapshot[]
   closingSnapshots         ClosingSnapshot[]
+  carryForwardRecords      CarryForwardRecord[]
+  financialStatementSnapshots FinancialStatementSnapshot[]
 }
 
 model TenantMembership {
@@ -291,6 +300,8 @@ model Ledger {
   journalEntries          JournalEntry[]
   openingBalanceSnapshots OpeningBalanceSnapshot[]
   closingSnapshots        ClosingSnapshot[]
+  carryForwardRecords     CarryForwardRecord[]
+  financialStatementSnapshots FinancialStatementSnapshot[]
 
   @@unique([tenantId, name])
   @@index([tenantId, status])
@@ -449,6 +460,9 @@ model AccountingPeriod {
   journalEntries        JournalEntry[]
   openingBalanceSnapshot OpeningBalanceSnapshot?
   closingSnapshot       ClosingSnapshot?
+  carryForwardSourceRecord CarryForwardRecord? @relation("CarryForwardFromPeriod")
+  carryForwardTargetRecord CarryForwardRecord? @relation("CarryForwardToPeriod")
+  financialStatementSnapshots FinancialStatementSnapshot[]
 
   @@unique([ledgerId, year, month])
   @@index([tenantId, ledgerId, status])
@@ -647,6 +661,7 @@ model JournalEntry {
   reversedByJournalEntry      JournalEntry?          @relation("JournalEntryReversal")
   correctsJournalEntry        JournalEntry?          @relation("JournalEntryCorrection", fields: [correctsJournalEntryId], references: [id], onDelete: SetNull)
   correctionEntries           JournalEntry[]         @relation("JournalEntryCorrection")
+  createdCarryForwardRecord   CarryForwardRecord?    @relation("CarryForwardCreatedJournalEntry")
   lines                       JournalLine[]
 
   @@unique([ledgerId, entryNumber])
@@ -701,6 +716,7 @@ model ClosingSnapshot {
   ledger               Ledger                @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
   period               AccountingPeriod      @relation(fields: [periodId], references: [id], onDelete: Cascade)
   lines                BalanceSnapshotLine[] @relation("ClosingSnapshotLines")
+  carryForwardRecord   CarryForwardRecord?
 }
 
 model BalanceSnapshotLine {
@@ -718,6 +734,45 @@ model BalanceSnapshotLine {
 
   @@index([openingSnapshotId, accountSubjectId])
   @@index([closingSnapshotId, accountSubjectId])
+}
+
+model FinancialStatementSnapshot {
+  id            String                 @id @default(cuid())
+  tenantId      String
+  ledgerId      String
+  periodId      String
+  statementKind FinancialStatementKind
+  currency      String                 @db.VarChar(3)
+  payload       Json
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  tenant        Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger        Ledger                 @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  period        AccountingPeriod       @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  @@unique([periodId, statementKind])
+  @@index([tenantId, ledgerId, createdAt])
+}
+
+model CarryForwardRecord {
+  id                      String                 @id @default(cuid())
+  tenantId                String
+  ledgerId                String
+  fromPeriodId            String                 @unique
+  toPeriodId              String                 @unique
+  sourceClosingSnapshotId String                 @unique
+  createdJournalEntryId   String?                @unique
+  createdAt               DateTime               @default(now())
+  createdByActorType      AuditActorType
+  createdByMembershipId   String?
+  tenant                  Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                  Ledger                 @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  fromPeriod              AccountingPeriod       @relation("CarryForwardFromPeriod", fields: [fromPeriodId], references: [id], onDelete: Cascade)
+  toPeriod                AccountingPeriod       @relation("CarryForwardToPeriod", fields: [toPeriodId], references: [id], onDelete: Cascade)
+  sourceClosingSnapshot   ClosingSnapshot        @relation(fields: [sourceClosingSnapshotId], references: [id], onDelete: Cascade)
+  createdJournalEntry     JournalEntry?          @relation("CarryForwardCreatedJournalEntry", fields: [createdJournalEntryId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, ledgerId, createdAt])
 }
 
 model InsurancePolicy {

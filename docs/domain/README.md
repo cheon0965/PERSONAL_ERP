@@ -30,4 +30,6 @@
 ## 추가 설계 문서
 
 - [`phase-1-db-backbone-design.md`](./phase-1-db-backbone-design.md): 현재 `schema.prisma`를 도메인 기준에 맞춰 올리기 위한 1차 DB 백본 설계안
-- [`phase-1-screen-implementation-order.md`](./phase-1-screen-implementation-order.md): 대표 시나리오 기준으로 어떤 화면부터 구현해야 하는지 정리한 1차 화면 구현 우선순위
+
+- [phase-1-thin-first-execution-plan.md](./phase-1-thin-first-execution-plan.md): 엔티티 설계에 맞춰 전체를 얇게 먼저 구현하고 이후 깊게 확장하기 위한 1차 실행계획
+- [`phase-1-round-0-baseline-lock.md`](./phase-1-round-0-baseline-lock.md): Phase 1 착수 전 문서, DB, API, 화면 기준선을 고정한 Round 0 결과 문서

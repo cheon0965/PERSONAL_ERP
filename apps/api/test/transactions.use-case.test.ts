@@ -7,6 +7,9 @@ import { MissingOwnedCollectedTransactionReferenceError } from '../src/modules/c
 
 const createCollectedTransactionCommand = {
   userId: 'user-1',
+  tenantId: 'tenant-1',
+  ledgerId: 'ledger-1',
+  periodId: 'period-1',
   title: 'Fuel refill',
   type: TransactionType.EXPENSE,
   amountWon: 84000,
@@ -19,8 +22,8 @@ const createCollectedTransactionCommand = {
 test('CreateCollectedTransactionUseCase executes ownership checks before persisting the collected transaction', async () => {
   const storeCalls: Array<Record<string, unknown>> = [];
   const transactionStore = {
-    findRecentByUserId: async () => [],
-    createForUser: async (record: Record<string, unknown>) => {
+    findRecentInWorkspace: async () => [],
+    createInWorkspace: async (record: Record<string, unknown>) => {
       storeCalls.push(record);
       return {
         id: 'txn-1',
@@ -28,6 +31,8 @@ test('CreateCollectedTransactionUseCase executes ownership checks before persist
         businessDate: new Date('2026-03-03T00:00:00.000Z'),
         origin: 'MANUAL',
         status: 'POSTED',
+        postedJournalEntryId: null,
+        postedJournalEntryNumber: null,
         account: { name: 'Main checking' },
         category: { name: 'Fuel' }
       };
@@ -47,7 +52,9 @@ test('CreateCollectedTransactionUseCase executes ownership checks before persist
 
   assert.equal(storeCalls.length, 1);
   assert.deepEqual(storeCalls[0], {
-    userId: 'user-1',
+    tenantId: 'tenant-1',
+    ledgerId: 'ledger-1',
+    periodId: 'period-1',
     title: 'Fuel refill',
     type: TransactionType.EXPENSE,
     amountWon: 84000,
@@ -65,14 +72,16 @@ test('CreateCollectedTransactionUseCase executes ownership checks before persist
     fundingAccountName: 'Main checking',
     categoryName: 'Fuel',
     sourceKind: 'MANUAL',
-    postingStatus: 'POSTED'
+    postingStatus: 'POSTED',
+    postedJournalEntryId: null,
+    postedJournalEntryNumber: null
   });
 });
 
 test('CreateCollectedTransactionUseCase rejects requests for funding accounts outside the current user scope', async () => {
   const transactionStore = {
-    findRecentByUserId: async () => [],
-    createForUser: async () => ({})
+    findRecentInWorkspace: async () => [],
+    createInWorkspace: async () => ({})
   };
   const referenceOwnership = {
     fundingAccountExistsForUser: async () => false,
@@ -94,8 +103,8 @@ test('CreateCollectedTransactionUseCase rejects requests for funding accounts ou
 
 test('CreateCollectedTransactionUseCase rejects requests for categories outside the current user scope', async () => {
   const transactionStore = {
-    findRecentByUserId: async () => [],
-    createForUser: async () => ({})
+    findRecentInWorkspace: async () => [],
+    createInWorkspace: async () => ({})
   };
   const referenceOwnership = {
     fundingAccountExistsForUser: async () => true,
@@ -117,7 +126,7 @@ test('CreateCollectedTransactionUseCase rejects requests for categories outside 
 
 test('ListCollectedTransactionsUseCase maps stored transactions into the shared response shape', async () => {
   const transactionStore = {
-    findRecentByUserId: async () => [
+    findRecentInWorkspace: async () => [
       {
         id: 'txn-1',
         businessDate: new Date('2026-03-03T00:00:00.000Z'),
@@ -126,19 +135,24 @@ test('ListCollectedTransactionsUseCase maps stored transactions into the shared 
         amountWon: 84000,
         origin: 'MANUAL',
         status: 'POSTED',
+        postedJournalEntryId: null,
+        postedJournalEntryNumber: null,
         account: { name: 'Main checking' },
         category: { name: 'Fuel' }
       }
     ],
-    createForUser: async () => {
-      throw new Error('createForUser should not be called');
+    createInWorkspace: async () => {
+      throw new Error('createInWorkspace should not be called');
     }
   };
 
   const useCase = new ListCollectedTransactionsUseCase(
     transactionStore as never
   );
-  const result = await useCase.execute('user-1');
+  const result = await useCase.execute({
+    tenantId: 'tenant-1',
+    ledgerId: 'ledger-1'
+  });
 
   assert.deepEqual(result, [
     {
@@ -150,7 +164,9 @@ test('ListCollectedTransactionsUseCase maps stored transactions into the shared 
       fundingAccountName: 'Main checking',
       categoryName: 'Fuel',
       sourceKind: 'MANUAL',
-      postingStatus: 'POSTED'
+      postingStatus: 'POSTED',
+      postedJournalEntryId: null,
+      postedJournalEntryNumber: null
     }
   ]);
 });

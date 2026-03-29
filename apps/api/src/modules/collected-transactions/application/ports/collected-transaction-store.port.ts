@@ -14,10 +14,19 @@ export type StoredCollectedTransaction = {
   category: {
     name: string;
   } | null;
+  postedJournalEntryId: string | null;
+  postedJournalEntryNumber: string | null;
+};
+
+export type CollectedTransactionWorkspaceScope = {
+  tenantId: string;
+  ledgerId: string;
 };
 
 export type CreateCollectedTransactionRecord = {
-  userId: string;
+  tenantId: string;
+  ledgerId: string;
+  periodId: string;
   title: string;
   type: CollectedTransactionItem['type'];
   amountWon: number;
@@ -28,11 +37,11 @@ export type CreateCollectedTransactionRecord = {
 };
 
 export abstract class CollectedTransactionStorePort {
-  abstract findRecentByUserId(
-    userId: string
+  abstract findRecentInWorkspace(
+    workspace: CollectedTransactionWorkspaceScope
   ): Promise<StoredCollectedTransaction[]>;
 
-  abstract createForUser(
+  abstract createInWorkspace(
     record: CreateCollectedTransactionRecord
   ): Promise<StoredCollectedTransaction>;
 }

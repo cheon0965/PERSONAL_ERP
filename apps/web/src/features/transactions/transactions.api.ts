@@ -1,6 +1,7 @@
 import type {
   CollectedTransactionItem,
-  CreateCollectedTransactionRequest
+  CreateCollectedTransactionRequest,
+  JournalEntryItem
 } from '@personal-erp/contracts';
 import { fetchJson, postJson } from '@/shared/api/fetch-json';
 
@@ -16,7 +17,9 @@ export const mockCollectedTransactions: CollectedTransactionItem[] = [
     fundingAccountName: '주거래 통장',
     categoryName: '급여',
     sourceKind: 'MANUAL',
-    postingStatus: 'POSTED'
+    postingStatus: 'POSTED',
+    postedJournalEntryId: 'je-demo-1',
+    postedJournalEntryNumber: '202603-0001'
   },
   {
     id: 'txn-2',
@@ -27,7 +30,9 @@ export const mockCollectedTransactions: CollectedTransactionItem[] = [
     fundingAccountName: '생활비 통장',
     categoryName: '주유',
     sourceKind: 'MANUAL',
-    postingStatus: 'POSTED'
+    postingStatus: 'POSTED',
+    postedJournalEntryId: 'je-demo-2',
+    postedJournalEntryNumber: '202603-0002'
   },
   {
     id: 'txn-3',
@@ -38,7 +43,9 @@ export const mockCollectedTransactions: CollectedTransactionItem[] = [
     fundingAccountName: '주거래 통장',
     categoryName: '통신비',
     sourceKind: 'RECURRING',
-    postingStatus: 'POSTED'
+    postingStatus: 'POSTED',
+    postedJournalEntryId: 'je-demo-3',
+    postedJournalEntryNumber: '202603-0003'
   },
   {
     id: 'txn-4',
@@ -49,7 +56,9 @@ export const mockCollectedTransactions: CollectedTransactionItem[] = [
     fundingAccountName: '생활비 통장',
     categoryName: '식비',
     sourceKind: 'MANUAL',
-    postingStatus: 'POSTED'
+    postingStatus: 'POSTED',
+    postedJournalEntryId: 'je-demo-4',
+    postedJournalEntryNumber: '202603-0004'
   }
 ];
 
@@ -71,6 +80,17 @@ export function createCollectedTransaction(
   );
 }
 
+export function confirmCollectedTransaction(
+  collectedTransactionId: string,
+  fallback: JournalEntryItem
+) {
+  return postJson<JournalEntryItem, Record<string, never>>(
+    `/collected-transactions/${collectedTransactionId}/confirm`,
+    {},
+    fallback
+  );
+}
+
 export function buildCollectedTransactionFallbackItem(
   input: CreateCollectedTransactionRequest,
   context: {
@@ -87,7 +107,9 @@ export function buildCollectedTransactionFallbackItem(
     fundingAccountName: context.fundingAccountName,
     categoryName: context.categoryName ?? '-',
     sourceKind: 'MANUAL',
-    postingStatus: 'POSTED'
+    postingStatus: 'PENDING',
+    postedJournalEntryId: null,
+    postedJournalEntryNumber: null
   };
 }
 

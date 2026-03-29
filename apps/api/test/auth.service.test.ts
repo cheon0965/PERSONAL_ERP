@@ -52,6 +52,36 @@ test('AuthService.login returns tokens and user for valid credentials', async ()
         passwordHash
       })
     },
+    tenantMembership: {
+      findMany: async () => [
+        {
+          id: 'membership-1',
+          role: 'OWNER',
+          status: 'ACTIVE',
+          tenantId: 'tenant-1',
+          joinedAt: new Date('2026-03-01T00:00:00.000Z')
+        }
+      ]
+    },
+    tenant: {
+      findUnique: async () => ({
+        id: 'tenant-1',
+        slug: 'demo-tenant',
+        name: 'Demo Workspace',
+        status: 'ACTIVE',
+        defaultLedgerId: 'ledger-1'
+      })
+    },
+    ledger: {
+      findUnique: async () => ({
+        id: 'ledger-1',
+        name: '개인 장부',
+        baseCurrency: 'KRW',
+        timezone: 'Asia/Seoul',
+        status: 'ACTIVE'
+      }),
+      findFirst: async () => null
+    },
     authSession: {
       create: async (args: { data: Record<string, unknown> }) => {
         createdSessions.push(args.data);
@@ -80,6 +110,35 @@ test('AuthService.login returns tokens and user for valid credentials', async ()
     const service = new AuthService(
       prisma as never,
       jwtService as never,
+      {
+        buildAuthenticatedUser: async (user: {
+          id: string;
+          email: string;
+          name: string;
+        }) => ({
+          ...user,
+          currentWorkspace: {
+            tenant: {
+              id: 'tenant-1',
+              slug: 'demo-tenant',
+              name: 'Demo Workspace',
+              status: 'ACTIVE'
+            },
+            membership: {
+              id: 'membership-1',
+              role: 'OWNER',
+              status: 'ACTIVE'
+            },
+            ledger: {
+              id: 'ledger-1',
+              name: '개인 장부',
+              baseCurrency: 'KRW',
+              timezone: 'Asia/Seoul',
+              status: 'ACTIVE'
+            }
+          }
+        })
+      } as never,
       {
         assertLoginAttemptAllowed: () => undefined,
         recordFailedLoginAttempt: () => undefined,
@@ -119,6 +178,26 @@ test('AuthService.login returns tokens and user for valid credentials', async ()
     assert.equal(result.user.id, 'user-1');
     assert.equal(result.user.email, 'demo@example.com');
     assert.equal(result.user.name, 'Demo User');
+    assert.deepEqual(result.user.currentWorkspace, {
+      tenant: {
+        id: 'tenant-1',
+        slug: 'demo-tenant',
+        name: 'Demo Workspace',
+        status: 'ACTIVE'
+      },
+      membership: {
+        id: 'membership-1',
+        role: 'OWNER',
+        status: 'ACTIVE'
+      },
+      ledger: {
+        id: 'ledger-1',
+        name: '개인 장부',
+        baseCurrency: 'KRW',
+        timezone: 'Asia/Seoul',
+        status: 'ACTIVE'
+      }
+    });
     assert.equal(tokenCalls.length, 2);
     assert.equal(accessCall.secret, 'test-access-secret');
     assert.equal(refreshCall.secret, 'test-refresh-secret-2');
@@ -170,6 +249,11 @@ test('AuthService.login rejects invalid credentials', async () => {
     const service = new AuthService(
       prisma as never,
       jwtService as never,
+      {
+        buildAuthenticatedUser: async () => {
+          throw new Error('should not build workspace for invalid login');
+        }
+      } as never,
       {
         assertLoginAttemptAllowed: () => undefined,
         recordFailedLoginAttempt: () => undefined,

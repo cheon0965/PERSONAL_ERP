@@ -12,6 +12,9 @@ import { mapCollectedTransactionToItem } from '../collected-transaction-item.map
 
 type CreateCollectedTransactionCommand = CreateCollectedTransactionRequest & {
   userId: string;
+  tenantId: string;
+  ledgerId: string;
+  periodId: string;
 };
 
 export class CreateCollectedTransactionUseCase {
@@ -43,8 +46,10 @@ export class CreateCollectedTransactionUseCase {
       throw new MissingOwnedCollectedTransactionReferenceError(missingReference);
     }
 
-    const transaction = await this.collectedTransactionStore.createForUser({
-      userId: command.userId,
+    const transaction = await this.collectedTransactionStore.createInWorkspace({
+      tenantId: command.tenantId,
+      ledgerId: command.ledgerId,
+      periodId: command.periodId,
       title: command.title,
       type: command.type,
       amountWon: command.amountWon,

@@ -18,7 +18,27 @@ test('protects the transactions route, restores the session, and saves a transac
   const currentUser: AuthenticatedUser = {
     id: 'user-demo',
     email: 'demo@example.com',
-    name: 'Demo User'
+    name: 'Demo User',
+    currentWorkspace: {
+      tenant: {
+        id: 'tenant-demo',
+        slug: 'demo-tenant',
+        name: 'Demo Workspace',
+        status: 'ACTIVE'
+      },
+      membership: {
+        id: 'membership-demo',
+        role: 'OWNER',
+        status: 'ACTIVE'
+      },
+      ledger: {
+        id: 'ledger-demo',
+        name: '개인 장부',
+        baseCurrency: 'KRW',
+        timezone: 'Asia/Seoul',
+        status: 'ACTIVE'
+      }
+    }
   };
 
   const fundingAccounts: FundingAccountItem[] = [
@@ -59,7 +79,9 @@ test('protects the transactions route, restores the session, and saves a transac
       fundingAccountName: '생활비 통장',
       categoryName: '식비',
       sourceKind: 'MANUAL',
-      postingStatus: 'POSTED'
+      postingStatus: 'POSTED',
+      postedJournalEntryId: 'je-seeded-1',
+      postedJournalEntryNumber: '202603-0001'
     }
   ];
 
@@ -173,7 +195,9 @@ test('protects the transactions route, restores the session, and saves a transac
         fundingAccountName,
         categoryName,
         sourceKind: 'MANUAL',
-        postingStatus: 'POSTED'
+        postingStatus: 'POSTED',
+        postedJournalEntryId: null,
+        postedJournalEntryNumber: null
       };
 
       transactions = [createdItem, ...transactions];

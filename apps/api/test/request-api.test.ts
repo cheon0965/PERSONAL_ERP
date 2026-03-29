@@ -3,8 +3,20 @@ import test from 'node:test';
 import * as argon2 from 'argon2';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
+import type {
+  CarryForwardView,
+  CloseAccountingPeriodResponse,
+  FinancialStatementPayload,
+  FinancialStatementsView
+} from '@personal-erp/contracts';
 import {
+  AccountingPeriodStatus,
+  AuditActorType,
+  CollectedTransactionStatus,
+  FinancialStatementKind,
+  LedgerTransactionFlowKind,
   RecurrenceFrequency,
+  OpeningBalanceSourceKind,
   TransactionOrigin,
   TransactionStatus,
   TransactionType
@@ -15,9 +27,13 @@ import { SecurityEventLogger } from '../src/common/infrastructure/operational/se
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { getApiEnv, resetApiEnvCache } from '../src/config/api-env';
 import { AuthModule } from '../src/modules/auth/auth.module';
+import { AccountingPeriodsModule } from '../src/modules/accounting-periods/accounting-periods.module';
+import { CarryForwardsModule } from '../src/modules/carry-forwards/carry-forwards.module';
 import { DashboardModule } from '../src/modules/dashboard/dashboard.module';
+import { FinancialStatementsModule } from '../src/modules/financial-statements/financial-statements.module';
 import { ForecastModule } from '../src/modules/forecast/forecast.module';
 import { HealthModule } from '../src/modules/health/health.module';
+import { JournalEntriesModule } from '../src/modules/journal-entries/journal-entries.module';
 import { RecurringRulesModule } from '../src/modules/recurring-rules/recurring-rules.module';
 import { CollectedTransactionsModule } from '../src/modules/collected-transactions/collected-transactions.module';
 
@@ -35,6 +51,126 @@ type RequestTestUser = {
 type RequestTestState = {
   databaseReady: boolean;
   users: RequestTestUser[];
+  tenants: Array<{
+    id: string;
+    slug: string;
+    name: string;
+    status: 'ACTIVE' | 'TRIAL' | 'SUSPENDED' | 'ARCHIVED';
+    defaultLedgerId: string | null;
+  }>;
+  memberships: Array<{
+    id: string;
+    tenantId: string;
+    userId: string;
+    role: 'OWNER' | 'MANAGER' | 'EDITOR' | 'VIEWER';
+    status: 'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'REMOVED';
+    joinedAt: Date;
+  }>;
+  ledgers: Array<{
+    id: string;
+    tenantId: string;
+    name: string;
+    baseCurrency: string;
+    timezone: string;
+    status: 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED';
+    createdAt: Date;
+  }>;
+  ledgerTransactionTypes: Array<{
+    id: string;
+    tenantId: string;
+    ledgerId: string;
+    code: string;
+    flowKind: LedgerTransactionFlowKind;
+    isActive: boolean;
+  }>;
+  accountingPeriods: Array<{
+    id: string;
+    tenantId: string;
+    ledgerId: string;
+    year: number;
+    month: number;
+    startDate: Date;
+    endDate: Date;
+    status: AccountingPeriodStatus;
+    openedAt: Date;
+    lockedAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+  periodStatusHistory: Array<{
+    id: string;
+    tenantId: string;
+    ledgerId: string;
+    periodId: string;
+    fromStatus: AccountingPeriodStatus | null;
+    toStatus: AccountingPeriodStatus;
+    reason: string | null;
+    actorType: AuditActorType;
+    actorMembershipId: string | null;
+    changedAt: Date;
+  }>;
+  openingBalanceSnapshots: Array<{
+    id: string;
+    tenantId: string;
+    ledgerId: string;
+    effectivePeriodId: string;
+    sourceKind: OpeningBalanceSourceKind;
+    createdAt: Date;
+    createdByActorType: AuditActorType;
+    createdByMembershipId: string | null;
+  }>;
+  closingSnapshots: Array<{
+    id: string;
+    tenantId: string;
+    ledgerId: string;
+    periodId: string;
+    lockedAt: Date;
+    totalAssetAmount: number;
+    totalLiabilityAmount: number;
+    totalEquityAmount: number;
+    periodPnLAmount: number;
+    createdAt: Date;
+  }>;
+  balanceSnapshotLines: Array<{
+    id: string;
+    snapshotKind: 'OPENING' | 'CLOSING';
+    openingSnapshotId: string | null;
+    closingSnapshotId: string | null;
+    accountSubjectId: string;
+    fundingAccountId: string | null;
+    balanceAmount: number;
+  }>;
+  financialStatementSnapshots: Array<{
+    id: string;
+    tenantId: string;
+    ledgerId: string;
+    periodId: string;
+    statementKind: FinancialStatementKind;
+    currency: string;
+    payload: FinancialStatementPayload;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+  carryForwardRecords: Array<{
+    id: string;
+    tenantId: string;
+    ledgerId: string;
+    fromPeriodId: string;
+    toPeriodId: string;
+    sourceClosingSnapshotId: string;
+    createdJournalEntryId: string | null;
+    createdAt: Date;
+    createdByActorType: AuditActorType;
+    createdByMembershipId: string | null;
+  }>;
+  accountSubjects: Array<{
+    id: string;
+    tenantId: string;
+    ledgerId: string;
+    code: string;
+    name: string;
+    isActive: boolean;
+  }>;
   authSessions: Array<{
     id: string;
     userId: string;
@@ -49,6 +185,24 @@ type RequestTestState = {
     balanceWon: number;
   }>;
   categories: Array<{ id: string; userId: string; name: string }>;
+  collectedTransactions: Array<{
+    id: string;
+    tenantId: string;
+    ledgerId: string;
+    periodId: string | null;
+    ledgerTransactionTypeId: string;
+    fundingAccountId: string;
+    categoryId: string | null;
+    matchedPlanItemId: string | null;
+    importBatchId: string | null;
+    title: string;
+    occurredOn: Date;
+    amount: number;
+    status: CollectedTransactionStatus;
+    memo: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
   transactions: Array<{
     id: string;
     userId: string;
@@ -79,6 +233,36 @@ type RequestTestState = {
     nextRunDate: Date;
     createdAt: Date;
     updatedAt: Date;
+  }>;
+  journalEntries: Array<{
+    id: string;
+    tenantId: string;
+    ledgerId: string;
+    periodId: string;
+    entryNumber: string;
+    entryDate: Date;
+    sourceKind:
+      | 'COLLECTED_TRANSACTION'
+      | 'PLAN_SETTLEMENT'
+      | 'OPENING_BALANCE'
+      | 'CARRY_FORWARD'
+      | 'MANUAL_ADJUSTMENT';
+    sourceCollectedTransactionId: string | null;
+    status: 'POSTED' | 'REVERSED' | 'SUPERSEDED';
+    memo: string | null;
+    createdByActorType: AuditActorType;
+    createdByMembershipId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    lines: Array<{
+      id: string;
+      lineNumber: number;
+      accountSubjectId: string;
+      fundingAccountId: string | null;
+      debitAmount: number;
+      creditAmount: number;
+      description: string | null;
+    }>;
   }>;
   insurancePolicies: Array<{
     id: string;
@@ -189,6 +373,151 @@ async function createRequestTestState(): Promise<RequestTestState> {
         }
       }
     ],
+    tenants: [
+      {
+        id: 'tenant-1',
+        slug: 'demo-tenant',
+        name: 'Demo Workspace',
+        status: 'ACTIVE',
+        defaultLedgerId: 'ledger-1'
+      },
+      {
+        id: 'tenant-2',
+        slug: 'other-tenant',
+        name: 'Other Workspace',
+        status: 'ACTIVE',
+        defaultLedgerId: 'ledger-2'
+      }
+    ],
+    memberships: [
+      {
+        id: 'membership-1',
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        role: 'OWNER',
+        status: 'ACTIVE',
+        joinedAt: new Date('2026-03-01T00:00:00.000Z')
+      },
+      {
+        id: 'membership-2',
+        tenantId: 'tenant-2',
+        userId: 'user-2',
+        role: 'OWNER',
+        status: 'ACTIVE',
+        joinedAt: new Date('2026-03-01T00:00:00.000Z')
+      }
+    ],
+    ledgers: [
+      {
+        id: 'ledger-1',
+        tenantId: 'tenant-1',
+        name: '개인 장부',
+        baseCurrency: 'KRW',
+        timezone: 'Asia/Seoul',
+        status: 'ACTIVE',
+        createdAt: new Date('2026-03-01T00:00:00.000Z')
+      },
+      {
+        id: 'ledger-2',
+        tenantId: 'tenant-2',
+        name: 'Other Ledger',
+        baseCurrency: 'KRW',
+        timezone: 'Asia/Seoul',
+        status: 'ACTIVE',
+        createdAt: new Date('2026-03-01T00:00:00.000Z')
+      }
+    ],
+    ledgerTransactionTypes: [
+      {
+        id: 'ltt-1-income',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        code: 'INCOME_BASIC',
+        flowKind: LedgerTransactionFlowKind.INCOME,
+        isActive: true
+      },
+      {
+        id: 'ltt-1-expense',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        code: 'EXPENSE_BASIC',
+        flowKind: LedgerTransactionFlowKind.EXPENSE,
+        isActive: true
+      },
+      {
+        id: 'ltt-1-transfer',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        code: 'TRANSFER_BASIC',
+        flowKind: LedgerTransactionFlowKind.TRANSFER,
+        isActive: true
+      },
+      {
+        id: 'ltt-2-expense',
+        tenantId: 'tenant-2',
+        ledgerId: 'ledger-2',
+        code: 'EXPENSE_BASIC',
+        flowKind: LedgerTransactionFlowKind.EXPENSE,
+        isActive: true
+      }
+    ],
+    accountingPeriods: [],
+    periodStatusHistory: [],
+    openingBalanceSnapshots: [],
+    closingSnapshots: [],
+    balanceSnapshotLines: [],
+    financialStatementSnapshots: [],
+    carryForwardRecords: [],
+    accountSubjects: [
+      {
+        id: 'as-1-1010',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        code: '1010',
+        name: '현금및예금',
+        isActive: true
+      },
+      {
+        id: 'as-1-4100',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        code: '4100',
+        name: '운영수익',
+        isActive: true
+      },
+      {
+        id: 'as-1-5100',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        code: '5100',
+        name: '운영비용',
+        isActive: true
+      },
+      {
+        id: 'as-2-1010',
+        tenantId: 'tenant-2',
+        ledgerId: 'ledger-2',
+        code: '1010',
+        name: '현금및예금',
+        isActive: true
+      },
+      {
+        id: 'as-2-4100',
+        tenantId: 'tenant-2',
+        ledgerId: 'ledger-2',
+        code: '4100',
+        name: '운영수익',
+        isActive: true
+      },
+      {
+        id: 'as-2-5100',
+        tenantId: 'tenant-2',
+        ledgerId: 'ledger-2',
+        code: '5100',
+        name: '운영비용',
+        isActive: true
+      }
+    ],
     authSessions: [
       {
         id: 'session-user-1',
@@ -230,6 +559,62 @@ async function createRequestTestState(): Promise<RequestTestState> {
       { id: 'cat-1b', userId: 'user-1', name: 'Salary' },
       { id: 'cat-1c', userId: 'user-1', name: 'Utilities' },
       { id: 'cat-2', userId: 'user-2', name: 'Other category' }
+    ],
+    collectedTransactions: [
+      {
+        id: 'ctx-seed-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: null,
+        ledgerTransactionTypeId: 'ltt-1-income',
+        fundingAccountId: 'acc-1',
+        categoryId: 'cat-1b',
+        matchedPlanItemId: null,
+        importBatchId: null,
+        title: 'March salary',
+        occurredOn: new Date('2026-03-25T00:00:00.000Z'),
+        amount: 3_000_000,
+        status: CollectedTransactionStatus.POSTED,
+        memo: null,
+        createdAt: new Date('2026-03-25T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-25T09:00:00.000Z')
+      },
+      {
+        id: 'ctx-seed-2',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: null,
+        ledgerTransactionTypeId: 'ltt-1-expense',
+        fundingAccountId: 'acc-1',
+        categoryId: 'cat-1',
+        matchedPlanItemId: null,
+        importBatchId: null,
+        title: 'Fuel refill',
+        occurredOn: new Date('2026-03-20T00:00:00.000Z'),
+        amount: 84_000,
+        status: CollectedTransactionStatus.POSTED,
+        memo: 'Full tank',
+        createdAt: new Date('2026-03-20T08:00:00.000Z'),
+        updatedAt: new Date('2026-03-20T08:00:00.000Z')
+      },
+      {
+        id: 'ctx-seed-3',
+        tenantId: 'tenant-2',
+        ledgerId: 'ledger-2',
+        periodId: null,
+        ledgerTransactionTypeId: 'ltt-2-expense',
+        fundingAccountId: 'acc-2',
+        categoryId: 'cat-2',
+        matchedPlanItemId: null,
+        importBatchId: null,
+        title: 'Other user expense',
+        occurredOn: new Date('2026-03-18T00:00:00.000Z'),
+        amount: 777_777,
+        status: CollectedTransactionStatus.POSTED,
+        memo: null,
+        createdAt: new Date('2026-03-18T08:00:00.000Z'),
+        updatedAt: new Date('2026-03-18T08:00:00.000Z')
+      }
     ],
     transactions: [
       {
@@ -312,6 +697,7 @@ async function createRequestTestState(): Promise<RequestTestState> {
         updatedAt: new Date('2026-03-01T10:00:00.000Z')
       }
     ],
+    journalEntries: [],
     insurancePolicies: [
       {
         id: 'policy-1',
@@ -341,13 +727,24 @@ async function createRequestTestState(): Promise<RequestTestState> {
   };
 }
 
-function createPrismaMock(state: RequestTestState) {
+function createPrismaMock(state: RequestTestState): Record<string, unknown> {
   const sortTransactions = (
     items: RequestTestState['transactions']
   ): RequestTestState['transactions'] =>
     [...items].sort((left, right) => {
       if (left.businessDate.getTime() !== right.businessDate.getTime()) {
         return right.businessDate.getTime() - left.businessDate.getTime();
+      }
+
+      return right.createdAt.getTime() - left.createdAt.getTime();
+    });
+
+  const sortCollectedTransactions = (
+    items: RequestTestState['collectedTransactions']
+  ): RequestTestState['collectedTransactions'] =>
+    [...items].sort((left, right) => {
+      if (left.occurredOn.getTime() !== right.occurredOn.getTime()) {
+        return right.occurredOn.getTime() - left.occurredOn.getTime();
       }
 
       return right.createdAt.getTime() - left.createdAt.getTime();
@@ -364,6 +761,17 @@ function createPrismaMock(state: RequestTestState) {
       return left.nextRunDate.getTime() - right.nextRunDate.getTime();
     });
 
+  const sortAccountingPeriods = (
+    items: RequestTestState['accountingPeriods']
+  ): RequestTestState['accountingPeriods'] =>
+    [...items].sort((left, right) => {
+      if (left.year !== right.year) {
+        return right.year - left.year;
+      }
+
+      return right.month - left.month;
+    });
+
   const findUser = (where: { email?: string; id?: string }) =>
     state.users.find((candidate) => {
       const { email, id } = where;
@@ -371,6 +779,25 @@ function createPrismaMock(state: RequestTestState) {
         (!email || candidate.email === email) && (!id || candidate.id === id)
       );
     });
+  const findTenant = (tenantId: string) =>
+    state.tenants.find((candidate) => candidate.id === tenantId) ?? null;
+  const findLedger = (ledgerId: string) =>
+    state.ledgers.find((candidate) => candidate.id === ledgerId) ?? null;
+  const findAccountingPeriod = (periodId: string) =>
+    state.accountingPeriods.find((candidate) => candidate.id === periodId) ??
+    null;
+  const findOpeningBalanceSnapshot = (periodId: string) =>
+    state.openingBalanceSnapshots.find(
+      (candidate) => candidate.effectivePeriodId === periodId
+    ) ?? null;
+  const findClosingSnapshot = (periodId: string) =>
+    state.closingSnapshots.find(
+      (candidate) => candidate.periodId === periodId
+    ) ?? null;
+  const findCarryForwardRecord = (fromPeriodId: string) =>
+    state.carryForwardRecords.find(
+      (candidate) => candidate.fromPeriodId === fromPeriodId
+    ) ?? null;
 
   const projectUser = (
     user: RequestTestUser,
@@ -426,6 +853,103 @@ function createPrismaMock(state: RequestTestState) {
     state.accounts.find((candidate) => candidate.id === accountId) ?? null;
   const resolveCategory = (categoryId: string) =>
     state.categories.find((candidate) => candidate.id === categoryId) ?? null;
+  const resolveLedgerTransactionType = (ledgerTransactionTypeId: string) =>
+    state.ledgerTransactionTypes.find(
+      (candidate) => candidate.id === ledgerTransactionTypeId
+    ) ?? null;
+  const resolveAccountSubject = (accountSubjectId: string) =>
+    state.accountSubjects.find(
+      (candidate) => candidate.id === accountSubjectId
+    ) ?? null;
+  const resolveJournalEntryByCollectedTransaction = (
+    collectedTransactionId: string
+  ) =>
+    state.journalEntries.find(
+      (candidate) =>
+        candidate.sourceCollectedTransactionId === collectedTransactionId
+    ) ?? null;
+  const projectJournalEntry = (
+    candidate: RequestTestState['journalEntries'][number],
+    include?: {
+      sourceCollectedTransaction?: {
+        select?: { id?: boolean; title?: boolean };
+      };
+      lines?: {
+        include?: {
+          accountSubject?: {
+            select?: { code?: boolean; name?: boolean };
+          };
+          fundingAccount?: {
+            select?: { name?: boolean };
+          };
+        };
+      };
+    }
+  ) => {
+    const sourceCollectedTransaction = candidate.sourceCollectedTransactionId
+      ? (state.collectedTransactions.find(
+          (item) => item.id === candidate.sourceCollectedTransactionId
+        ) ?? null)
+      : null;
+
+    return {
+      ...candidate,
+      ...(include?.sourceCollectedTransaction
+        ? {
+            sourceCollectedTransaction: sourceCollectedTransaction
+              ? {
+                  ...(include.sourceCollectedTransaction.select?.id
+                    ? { id: sourceCollectedTransaction.id }
+                    : {}),
+                  ...(include.sourceCollectedTransaction.select?.title
+                    ? { title: sourceCollectedTransaction.title }
+                    : {})
+                }
+              : null
+          }
+        : {}),
+      ...(include?.lines
+        ? {
+            lines: candidate.lines.map((line) => {
+              const accountSubject = resolveAccountSubject(
+                line.accountSubjectId
+              );
+              const fundingAccount = line.fundingAccountId
+                ? resolveAccount(line.fundingAccountId)
+                : null;
+
+              return {
+                ...line,
+                ...(include.lines?.include?.accountSubject
+                  ? {
+                      accountSubject: {
+                        ...(include.lines.include.accountSubject.select?.code
+                          ? { code: accountSubject?.code ?? '' }
+                          : {}),
+                        ...(include.lines.include.accountSubject.select?.name
+                          ? { name: accountSubject?.name ?? '' }
+                          : {})
+                      }
+                    }
+                  : {}),
+                ...(include.lines?.include?.fundingAccount
+                  ? {
+                      fundingAccount: fundingAccount
+                        ? {
+                            ...(include.lines.include.fundingAccount.select
+                              ?.name
+                              ? { name: fundingAccount.name }
+                              : {})
+                          }
+                        : null
+                    }
+                  : {})
+              };
+            })
+          }
+        : {})
+    };
+  };
 
   return {
     $queryRaw: async () => {
@@ -435,6 +959,9 @@ function createPrismaMock(state: RequestTestState) {
 
       return [{ ready: 1 }];
     },
+    $transaction: async <T>(
+      callback: (tx: Record<string, unknown>) => Promise<T>
+    ) => callback(createPrismaMock(state)),
     user: {
       findUnique: async (args: {
         where: { email?: string; id?: string };
@@ -535,6 +1062,1041 @@ function createPrismaMock(state: RequestTestState) {
         return { count };
       }
     },
+    tenantMembership: {
+      findMany: async (args: {
+        where?: {
+          userId?: string;
+          status?: 'ACTIVE' | 'INVITED' | 'SUSPENDED' | 'REMOVED';
+        };
+        select?: {
+          id?: boolean;
+          role?: boolean;
+          status?: boolean;
+          tenantId?: boolean;
+          joinedAt?: boolean;
+        };
+      }) => {
+        const items = state.memberships.filter((candidate) => {
+          const matchesUser =
+            !args.where?.userId || candidate.userId === args.where.userId;
+          const matchesStatus =
+            !args.where?.status || candidate.status === args.where.status;
+          return matchesUser && matchesStatus;
+        });
+
+        if (!args.select) {
+          return items;
+        }
+
+        return items.map((candidate) => ({
+          ...(args.select?.id ? { id: candidate.id } : {}),
+          ...(args.select?.role ? { role: candidate.role } : {}),
+          ...(args.select?.status ? { status: candidate.status } : {}),
+          ...(args.select?.tenantId ? { tenantId: candidate.tenantId } : {}),
+          ...(args.select?.joinedAt ? { joinedAt: candidate.joinedAt } : {})
+        }));
+      }
+    },
+    tenant: {
+      findUnique: async (args: {
+        where: { id: string };
+        select?: {
+          id?: boolean;
+          slug?: boolean;
+          name?: boolean;
+          status?: boolean;
+          defaultLedgerId?: boolean;
+        };
+      }) => {
+        const tenant = findTenant(args.where.id);
+        if (!tenant) {
+          return null;
+        }
+
+        if (!args.select) {
+          return tenant;
+        }
+
+        return {
+          ...(args.select.id ? { id: tenant.id } : {}),
+          ...(args.select.slug ? { slug: tenant.slug } : {}),
+          ...(args.select.name ? { name: tenant.name } : {}),
+          ...(args.select.status ? { status: tenant.status } : {}),
+          ...(args.select.defaultLedgerId
+            ? { defaultLedgerId: tenant.defaultLedgerId }
+            : {})
+        };
+      }
+    },
+    ledger: {
+      findUnique: async (args: {
+        where: { id: string };
+        select?: {
+          id?: boolean;
+          name?: boolean;
+          baseCurrency?: boolean;
+          timezone?: boolean;
+          status?: boolean;
+        };
+      }) => {
+        const ledger = findLedger(args.where.id);
+        if (!ledger) {
+          return null;
+        }
+
+        if (!args.select) {
+          return ledger;
+        }
+
+        return {
+          ...(args.select.id ? { id: ledger.id } : {}),
+          ...(args.select.name ? { name: ledger.name } : {}),
+          ...(args.select.baseCurrency
+            ? { baseCurrency: ledger.baseCurrency }
+            : {}),
+          ...(args.select.timezone ? { timezone: ledger.timezone } : {}),
+          ...(args.select.status ? { status: ledger.status } : {})
+        };
+      },
+      findFirst: async (args: {
+        where?: { tenantId?: string };
+        select?: {
+          id?: boolean;
+          name?: boolean;
+          baseCurrency?: boolean;
+          timezone?: boolean;
+          status?: boolean;
+        };
+      }) => {
+        const ledger =
+          state.ledgers.find(
+            (candidate) =>
+              !args.where?.tenantId ||
+              candidate.tenantId === args.where.tenantId
+          ) ?? null;
+
+        if (!ledger) {
+          return null;
+        }
+
+        if (!args.select) {
+          return ledger;
+        }
+
+        return {
+          ...(args.select.id ? { id: ledger.id } : {}),
+          ...(args.select.name ? { name: ledger.name } : {}),
+          ...(args.select.baseCurrency
+            ? { baseCurrency: ledger.baseCurrency }
+            : {}),
+          ...(args.select.timezone ? { timezone: ledger.timezone } : {}),
+          ...(args.select.status ? { status: ledger.status } : {})
+        };
+      }
+    },
+    accountingPeriod: {
+      findFirst: async (args: {
+        where?: {
+          id?: string;
+          tenantId?: string;
+          ledgerId?: string;
+          year?: number;
+          month?: number;
+          status?: AccountingPeriodStatus | { in?: AccountingPeriodStatus[] };
+          OR?: Array<{
+            year?: number | { lt?: number };
+            month?: number | { lt?: number };
+          }>;
+        };
+        select?: {
+          id?: boolean;
+        };
+        include?: {
+          ledger?: {
+            select?: { baseCurrency?: boolean };
+          };
+          openingBalanceSnapshot?: {
+            select?: { sourceKind?: boolean };
+          };
+          statusHistory?: {
+            orderBy?: { changedAt?: 'asc' | 'desc' };
+            select?: {
+              id?: boolean;
+              fromStatus?: boolean;
+              toStatus?: boolean;
+              reason?: boolean;
+              actorType?: boolean;
+              actorMembershipId?: boolean;
+              changedAt?: boolean;
+            };
+          };
+        };
+        orderBy?: Array<{ year?: 'asc' | 'desc'; month?: 'asc' | 'desc' }>;
+      }) => {
+        let items = state.accountingPeriods.filter((candidate) => {
+          const matchesId = !args.where?.id || candidate.id === args.where.id;
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesYear =
+            args.where?.year === undefined ||
+            candidate.year === args.where.year;
+          const matchesMonth =
+            args.where?.month === undefined ||
+            candidate.month === args.where.month;
+          const matchesStatus =
+            args.where?.status === undefined
+              ? true
+              : typeof args.where.status === 'string'
+                ? candidate.status === args.where.status
+                : !args.where.status.in ||
+                  args.where.status.in.includes(candidate.status);
+          const matchesOr =
+            !args.where?.OR ||
+            args.where.OR.some((clause) => {
+              const matchesClauseYear =
+                clause.year === undefined
+                  ? true
+                  : typeof clause.year === 'number'
+                    ? candidate.year === clause.year
+                    : clause.year.lt === undefined
+                      ? true
+                      : candidate.year < clause.year.lt;
+              const matchesClauseMonth =
+                clause.month === undefined
+                  ? true
+                  : typeof clause.month === 'number'
+                    ? candidate.month === clause.month
+                    : clause.month.lt === undefined
+                      ? true
+                      : candidate.month < clause.month.lt;
+
+              return matchesClauseYear && matchesClauseMonth;
+            });
+
+          return (
+            matchesId &&
+            matchesTenant &&
+            matchesLedger &&
+            matchesYear &&
+            matchesMonth &&
+            matchesStatus &&
+            matchesOr
+          );
+        });
+
+        items = sortAccountingPeriods(items);
+
+        const candidate = items[0];
+        if (!candidate) {
+          return null;
+        }
+
+        if (args.select) {
+          return {
+            ...(args.select.id ? { id: candidate.id } : {})
+          };
+        }
+
+        const ledger = args.include?.ledger
+          ? findLedger(candidate.ledgerId)
+          : null;
+        const openingBalanceSnapshot = args.include?.openingBalanceSnapshot
+          ? (state.openingBalanceSnapshots.find(
+              (snapshot) => snapshot.effectivePeriodId === candidate.id
+            ) ?? null)
+          : undefined;
+        const statusHistory = args.include?.statusHistory
+          ? [...state.periodStatusHistory]
+              .filter((history) => history.periodId === candidate.id)
+              .sort(
+                (left, right) =>
+                  right.changedAt.getTime() - left.changedAt.getTime()
+              )
+              .map((history) => ({
+                ...(args.include?.statusHistory?.select?.id
+                  ? { id: history.id }
+                  : {}),
+                ...(args.include?.statusHistory?.select?.fromStatus
+                  ? { fromStatus: history.fromStatus }
+                  : {}),
+                ...(args.include?.statusHistory?.select?.toStatus
+                  ? { toStatus: history.toStatus }
+                  : {}),
+                ...(args.include?.statusHistory?.select?.reason
+                  ? { reason: history.reason }
+                  : {}),
+                ...(args.include?.statusHistory?.select?.actorType
+                  ? { actorType: history.actorType }
+                  : {}),
+                ...(args.include?.statusHistory?.select?.actorMembershipId
+                  ? { actorMembershipId: history.actorMembershipId }
+                  : {}),
+                ...(args.include?.statusHistory?.select?.changedAt
+                  ? { changedAt: history.changedAt }
+                  : {})
+              }))
+          : undefined;
+
+        return {
+          ...candidate,
+          ...(args.include?.ledger
+            ? {
+                ledger: ledger
+                  ? {
+                      ...(args.include.ledger.select?.baseCurrency
+                        ? { baseCurrency: ledger.baseCurrency }
+                        : {})
+                    }
+                  : null
+              }
+            : {}),
+          ...(args.include?.openingBalanceSnapshot
+            ? {
+                openingBalanceSnapshot: openingBalanceSnapshot
+                  ? {
+                      ...(args.include?.openingBalanceSnapshot?.select
+                        ?.sourceKind
+                        ? { sourceKind: openingBalanceSnapshot.sourceKind }
+                        : {})
+                    }
+                  : null
+              }
+            : {}),
+          ...(args.include?.statusHistory ? { statusHistory } : {})
+        };
+      },
+      findMany: async (args: {
+        where?: { tenantId?: string; ledgerId?: string };
+        include?: {
+          openingBalanceSnapshot?: {
+            select?: { sourceKind?: boolean };
+          };
+          statusHistory?: {
+            orderBy?: { changedAt?: 'asc' | 'desc' };
+            select?: {
+              id?: boolean;
+              fromStatus?: boolean;
+              toStatus?: boolean;
+              reason?: boolean;
+              actorType?: boolean;
+              actorMembershipId?: boolean;
+              changedAt?: boolean;
+            };
+          };
+        };
+        orderBy?: Array<{ year?: 'asc' | 'desc'; month?: 'asc' | 'desc' }>;
+      }) => {
+        let items = state.accountingPeriods.filter((candidate) => {
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+
+          return matchesTenant && matchesLedger;
+        });
+
+        items = sortAccountingPeriods(items);
+
+        return items.map((candidate) => {
+          const openingBalanceSnapshot = args.include?.openingBalanceSnapshot
+            ? (state.openingBalanceSnapshots.find(
+                (snapshot) => snapshot.effectivePeriodId === candidate.id
+              ) ?? null)
+            : undefined;
+          const statusHistory = args.include?.statusHistory
+            ? [...state.periodStatusHistory]
+                .filter((history) => history.periodId === candidate.id)
+                .sort(
+                  (left, right) =>
+                    right.changedAt.getTime() - left.changedAt.getTime()
+                )
+                .map((history) => ({
+                  ...(args.include?.statusHistory?.select?.id
+                    ? { id: history.id }
+                    : {}),
+                  ...(args.include?.statusHistory?.select?.fromStatus
+                    ? { fromStatus: history.fromStatus }
+                    : {}),
+                  ...(args.include?.statusHistory?.select?.toStatus
+                    ? { toStatus: history.toStatus }
+                    : {}),
+                  ...(args.include?.statusHistory?.select?.reason
+                    ? { reason: history.reason }
+                    : {}),
+                  ...(args.include?.statusHistory?.select?.actorType
+                    ? { actorType: history.actorType }
+                    : {}),
+                  ...(args.include?.statusHistory?.select?.actorMembershipId
+                    ? { actorMembershipId: history.actorMembershipId }
+                    : {}),
+                  ...(args.include?.statusHistory?.select?.changedAt
+                    ? { changedAt: history.changedAt }
+                    : {})
+                }))
+            : undefined;
+
+          return {
+            ...candidate,
+            ...(args.include?.openingBalanceSnapshot
+              ? {
+                  openingBalanceSnapshot: openingBalanceSnapshot
+                    ? {
+                        ...(args.include?.openingBalanceSnapshot?.select
+                          ?.sourceKind
+                          ? { sourceKind: openingBalanceSnapshot.sourceKind }
+                          : {})
+                      }
+                    : null
+                }
+              : {}),
+            ...(args.include?.statusHistory ? { statusHistory } : {})
+          };
+        });
+      },
+      create: async (args: {
+        data: {
+          tenantId: string;
+          ledgerId: string;
+          year: number;
+          month: number;
+          startDate: Date;
+          endDate: Date;
+          status: AccountingPeriodStatus;
+        };
+      }) => {
+        const created = {
+          id: `period-${state.accountingPeriods.length + 1}`,
+          tenantId: args.data.tenantId,
+          ledgerId: args.data.ledgerId,
+          year: args.data.year,
+          month: args.data.month,
+          startDate: args.data.startDate,
+          endDate: args.data.endDate,
+          status: args.data.status,
+          openedAt: new Date(),
+          lockedAt: null,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+
+        state.accountingPeriods.push(created);
+        return created;
+      },
+      update: async (args: {
+        where: { id: string };
+        data: {
+          status?: AccountingPeriodStatus;
+          lockedAt?: Date | null;
+        };
+      }) => {
+        const candidate = state.accountingPeriods.find(
+          (item) => item.id === args.where.id
+        );
+
+        if (!candidate) {
+          throw new Error('Accounting period not found');
+        }
+
+        if (args.data.status !== undefined) {
+          candidate.status = args.data.status;
+        }
+
+        if (args.data.lockedAt !== undefined) {
+          candidate.lockedAt = args.data.lockedAt;
+        }
+
+        candidate.updatedAt = new Date();
+        return candidate;
+      }
+    },
+    periodStatusHistory: {
+      create: async (args: {
+        data: {
+          tenantId: string;
+          ledgerId: string;
+          periodId: string;
+          fromStatus: AccountingPeriodStatus | null;
+          toStatus: AccountingPeriodStatus;
+          reason: string | null;
+          actorType: AuditActorType;
+          actorMembershipId: string | null;
+        };
+      }) => {
+        const created = {
+          id: `period-history-${state.periodStatusHistory.length + 1}`,
+          tenantId: args.data.tenantId,
+          ledgerId: args.data.ledgerId,
+          periodId: args.data.periodId,
+          fromStatus: args.data.fromStatus,
+          toStatus: args.data.toStatus,
+          reason: args.data.reason,
+          actorType: args.data.actorType,
+          actorMembershipId: args.data.actorMembershipId,
+          changedAt: new Date()
+        };
+
+        state.periodStatusHistory.push(created);
+        return created;
+      }
+    },
+    openingBalanceSnapshot: {
+      findUnique: async (args: {
+        where: {
+          effectivePeriodId: string;
+        };
+        include?: {
+          lines?: {
+            include?: {
+              accountSubject?: {
+                select?: {
+                  code?: boolean;
+                  name?: boolean;
+                };
+              };
+              fundingAccount?: {
+                select?: {
+                  name?: boolean;
+                };
+              };
+            };
+          };
+        };
+      }) => {
+        const snapshot = findOpeningBalanceSnapshot(
+          args.where.effectivePeriodId
+        );
+
+        if (!snapshot) {
+          return null;
+        }
+
+        const lines = args.include?.lines
+          ? state.balanceSnapshotLines
+              .filter((line) => line.openingSnapshotId === snapshot.id)
+              .map((line) => {
+                const accountSubject = resolveAccountSubject(
+                  line.accountSubjectId
+                );
+                const fundingAccount = line.fundingAccountId
+                  ? resolveAccount(line.fundingAccountId)
+                  : null;
+
+                return {
+                  ...line,
+                  accountSubject: {
+                    ...(args.include?.lines?.include?.accountSubject?.select
+                      ?.code
+                      ? { code: accountSubject?.code ?? '' }
+                      : {}),
+                    ...(args.include?.lines?.include?.accountSubject?.select
+                      ?.name
+                      ? { name: accountSubject?.name ?? '' }
+                      : {})
+                  },
+                  fundingAccount: fundingAccount
+                    ? {
+                        ...(args.include?.lines?.include?.fundingAccount?.select
+                          ?.name
+                          ? { name: fundingAccount.name }
+                          : {})
+                      }
+                    : null
+                };
+              })
+          : undefined;
+
+        return {
+          ...snapshot,
+          ...(args.include?.lines ? { lines } : {})
+        };
+      },
+      create: async (args: {
+        data: {
+          tenantId: string;
+          ledgerId: string;
+          effectivePeriodId: string;
+          sourceKind: OpeningBalanceSourceKind;
+          createdByActorType: AuditActorType;
+          createdByMembershipId: string | null;
+        };
+        select?: {
+          sourceKind?: boolean;
+        };
+      }) => {
+        const period = findAccountingPeriod(args.data.effectivePeriodId);
+        if (!period) {
+          throw new Error('Period not found');
+        }
+
+        const created = {
+          id: `opening-snapshot-${state.openingBalanceSnapshots.length + 1}`,
+          tenantId: args.data.tenantId,
+          ledgerId: args.data.ledgerId,
+          effectivePeriodId: args.data.effectivePeriodId,
+          sourceKind: args.data.sourceKind,
+          createdAt: new Date(),
+          createdByActorType: args.data.createdByActorType,
+          createdByMembershipId: args.data.createdByMembershipId
+        };
+
+        state.openingBalanceSnapshots.push(created);
+
+        if (args.select?.sourceKind) {
+          return {
+            sourceKind: created.sourceKind
+          };
+        }
+
+        return created;
+      }
+    },
+    closingSnapshot: {
+      findUnique: async (args: {
+        where: {
+          periodId: string;
+        };
+        select?: {
+          id?: boolean;
+        };
+        include?: {
+          lines?: {
+            include?: {
+              accountSubject?: {
+                select?: {
+                  code?: boolean;
+                  name?: boolean;
+                };
+              };
+              fundingAccount?: {
+                select?: {
+                  name?: boolean;
+                };
+              };
+            };
+          };
+        };
+      }) => {
+        const snapshot = findClosingSnapshot(args.where.periodId);
+
+        if (!snapshot) {
+          return null;
+        }
+
+        if (args.select?.id) {
+          return { id: snapshot.id };
+        }
+
+        const lines = args.include?.lines
+          ? state.balanceSnapshotLines
+              .filter((line) => line.closingSnapshotId === snapshot.id)
+              .map((line) => {
+                const accountSubject = resolveAccountSubject(
+                  line.accountSubjectId
+                );
+                const fundingAccount = line.fundingAccountId
+                  ? resolveAccount(line.fundingAccountId)
+                  : null;
+
+                return {
+                  ...line,
+                  accountSubject: {
+                    ...(args.include?.lines?.include?.accountSubject?.select
+                      ?.code
+                      ? { code: accountSubject?.code ?? '' }
+                      : {}),
+                    ...(args.include?.lines?.include?.accountSubject?.select
+                      ?.name
+                      ? { name: accountSubject?.name ?? '' }
+                      : {})
+                  },
+                  fundingAccount: fundingAccount
+                    ? {
+                        ...(args.include?.lines?.include?.fundingAccount?.select
+                          ?.name
+                          ? { name: fundingAccount.name }
+                          : {})
+                      }
+                    : null
+                };
+              })
+          : undefined;
+
+        return {
+          ...snapshot,
+          ...(args.include?.lines ? { lines } : {})
+        };
+      },
+      create: async (args: {
+        data: {
+          tenantId: string;
+          ledgerId: string;
+          periodId: string;
+          lockedAt: Date;
+          totalAssetAmount: number;
+          totalLiabilityAmount: number;
+          totalEquityAmount: number;
+          periodPnLAmount: number;
+        };
+      }) => {
+        const created = {
+          id: `closing-snapshot-${state.closingSnapshots.length + 1}`,
+          tenantId: args.data.tenantId,
+          ledgerId: args.data.ledgerId,
+          periodId: args.data.periodId,
+          lockedAt: new Date(String(args.data.lockedAt)),
+          totalAssetAmount: args.data.totalAssetAmount,
+          totalLiabilityAmount: args.data.totalLiabilityAmount,
+          totalEquityAmount: args.data.totalEquityAmount,
+          periodPnLAmount: args.data.periodPnLAmount,
+          createdAt: new Date()
+        };
+
+        state.closingSnapshots.push(created);
+        return created;
+      }
+    },
+    balanceSnapshotLine: {
+      findMany: async (args: {
+        where?: {
+          openingSnapshotId?: string;
+          closingSnapshotId?: string;
+        };
+        include?: {
+          accountSubject?: {
+            select?: {
+              code?: boolean;
+              name?: boolean;
+            };
+          };
+          fundingAccount?: {
+            select?: {
+              name?: boolean;
+            };
+          };
+        };
+      }) => {
+        const items = state.balanceSnapshotLines.filter((line) => {
+          const matchesOpeningSnapshot =
+            !args.where?.openingSnapshotId ||
+            line.openingSnapshotId === args.where.openingSnapshotId;
+          const matchesClosingSnapshot =
+            !args.where?.closingSnapshotId ||
+            line.closingSnapshotId === args.where.closingSnapshotId;
+
+          return matchesOpeningSnapshot && matchesClosingSnapshot;
+        });
+
+        return items.map((line) => {
+          const accountSubject = resolveAccountSubject(line.accountSubjectId);
+          const fundingAccount = line.fundingAccountId
+            ? resolveAccount(line.fundingAccountId)
+            : null;
+
+          return {
+            ...line,
+            ...(args.include?.accountSubject
+              ? {
+                  accountSubject: {
+                    ...(args.include.accountSubject.select?.code
+                      ? { code: accountSubject?.code ?? '' }
+                      : {}),
+                    ...(args.include.accountSubject.select?.name
+                      ? { name: accountSubject?.name ?? '' }
+                      : {})
+                  }
+                }
+              : {}),
+            ...(args.include?.fundingAccount
+              ? {
+                  fundingAccount: fundingAccount
+                    ? {
+                        ...(args.include.fundingAccount.select?.name
+                          ? { name: fundingAccount.name }
+                          : {})
+                      }
+                    : null
+                }
+              : {})
+          };
+        });
+      },
+      createMany: async (args: {
+        data: Array<{
+          snapshotKind: 'OPENING' | 'CLOSING';
+          openingSnapshotId?: string | null;
+          closingSnapshotId?: string | null;
+          accountSubjectId: string;
+          fundingAccountId?: string | null;
+          balanceAmount: number;
+        }>;
+      }) => {
+        for (const line of args.data) {
+          state.balanceSnapshotLines.push({
+            id: `balance-snapshot-line-${state.balanceSnapshotLines.length + 1}`,
+            snapshotKind: line.snapshotKind,
+            openingSnapshotId: line.openingSnapshotId ?? null,
+            closingSnapshotId: line.closingSnapshotId ?? null,
+            accountSubjectId: line.accountSubjectId,
+            fundingAccountId: line.fundingAccountId ?? null,
+            balanceAmount: line.balanceAmount
+          });
+        }
+
+        return {
+          count: args.data.length
+        };
+      }
+    },
+    financialStatementSnapshot: {
+      findMany: async (args: {
+        where?: {
+          tenantId?: string;
+          ledgerId?: string;
+          periodId?: string;
+        };
+        include?: {
+          period?: {
+            select?: {
+              year?: boolean;
+              month?: boolean;
+            };
+          };
+        };
+      }) => {
+        const items = state.financialStatementSnapshots.filter((candidate) => {
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesPeriod =
+            !args.where?.periodId || candidate.periodId === args.where.periodId;
+
+          return matchesTenant && matchesLedger && matchesPeriod;
+        });
+
+        return items.map((candidate) => {
+          const period = findAccountingPeriod(candidate.periodId);
+
+          return {
+            ...candidate,
+            ...(args.include?.period
+              ? {
+                  period: period
+                    ? {
+                        ...(args.include.period.select?.year
+                          ? { year: period.year }
+                          : {}),
+                        ...(args.include.period.select?.month
+                          ? { month: period.month }
+                          : {})
+                      }
+                    : null
+                }
+              : {})
+          };
+        });
+      },
+      upsert: async (args: {
+        where: {
+          periodId_statementKind: {
+            periodId: string;
+            statementKind: FinancialStatementKind;
+          };
+        };
+        update: {
+          currency: string;
+          payload: FinancialStatementPayload;
+        };
+        create: {
+          tenantId: string;
+          ledgerId: string;
+          periodId: string;
+          statementKind: FinancialStatementKind;
+          currency: string;
+          payload: FinancialStatementPayload;
+        };
+      }) => {
+        const existing = state.financialStatementSnapshots.find(
+          (candidate) =>
+            candidate.periodId === args.where.periodId_statementKind.periodId &&
+            candidate.statementKind ===
+              args.where.periodId_statementKind.statementKind
+        );
+
+        if (existing) {
+          existing.currency = args.update.currency;
+          existing.payload = args.update.payload;
+          existing.updatedAt = new Date();
+          return existing;
+        }
+
+        const created = {
+          id: `financial-statement-snapshot-${state.financialStatementSnapshots.length + 1}`,
+          tenantId: args.create.tenantId,
+          ledgerId: args.create.ledgerId,
+          periodId: args.create.periodId,
+          statementKind: args.create.statementKind,
+          currency: args.create.currency,
+          payload: args.create.payload,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+
+        state.financialStatementSnapshots.push(created);
+        return created;
+      }
+    },
+    carryForwardRecord: {
+      findFirst: async (args: {
+        where?: {
+          tenantId?: string;
+          ledgerId?: string;
+          fromPeriodId?: string;
+        };
+      }) => {
+        const fromPeriodMatch = args.where?.fromPeriodId
+          ? findCarryForwardRecord(args.where.fromPeriodId)
+          : null;
+
+        if (
+          fromPeriodMatch &&
+          (!args.where?.tenantId ||
+            fromPeriodMatch.tenantId === args.where.tenantId) &&
+          (!args.where?.ledgerId ||
+            fromPeriodMatch.ledgerId === args.where.ledgerId)
+        ) {
+          return fromPeriodMatch;
+        }
+
+        return (
+          state.carryForwardRecords.find((candidate) => {
+            const matchesTenant =
+              !args.where?.tenantId ||
+              candidate.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId;
+            const matchesFromPeriod =
+              !args.where?.fromPeriodId ||
+              candidate.fromPeriodId === args.where.fromPeriodId;
+
+            return matchesTenant && matchesLedger && matchesFromPeriod;
+          }) ?? null
+        );
+      },
+      create: async (args: {
+        data: {
+          tenantId: string;
+          ledgerId: string;
+          fromPeriodId: string;
+          toPeriodId: string;
+          sourceClosingSnapshotId: string;
+          createdJournalEntryId: string | null;
+          createdByActorType: AuditActorType;
+          createdByMembershipId: string | null;
+        };
+      }) => {
+        const created = {
+          id: `carry-forward-record-${state.carryForwardRecords.length + 1}`,
+          tenantId: args.data.tenantId,
+          ledgerId: args.data.ledgerId,
+          fromPeriodId: args.data.fromPeriodId,
+          toPeriodId: args.data.toPeriodId,
+          sourceClosingSnapshotId: args.data.sourceClosingSnapshotId,
+          createdJournalEntryId: args.data.createdJournalEntryId,
+          createdAt: new Date(),
+          createdByActorType: args.data.createdByActorType,
+          createdByMembershipId: args.data.createdByMembershipId
+        };
+
+        state.carryForwardRecords.push(created);
+        return created;
+      }
+    },
+    accountSubject: {
+      findMany: async (args: {
+        where?: {
+          tenantId?: string;
+          ledgerId?: string;
+          code?: { in?: string[] };
+          isActive?: boolean;
+        };
+        select?: {
+          id?: boolean;
+          code?: boolean;
+        };
+      }) => {
+        const items = state.accountSubjects.filter((candidate) => {
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesCode =
+            !args.where?.code?.in ||
+            args.where.code.in.includes(candidate.code);
+          const matchesActive =
+            args.where?.isActive === undefined ||
+            candidate.isActive === args.where.isActive;
+
+          return matchesTenant && matchesLedger && matchesCode && matchesActive;
+        });
+
+        if (!args.select) {
+          return items;
+        }
+
+        return items.map((candidate) => ({
+          ...(args.select?.id ? { id: candidate.id } : {}),
+          ...(args.select?.code ? { code: candidate.code } : {})
+        }));
+      }
+    },
+    ledgerTransactionType: {
+      findFirst: async (args: {
+        where: {
+          tenantId?: string;
+          ledgerId?: string;
+          code?: string;
+          isActive?: boolean;
+        };
+        select?: {
+          id?: boolean;
+        };
+      }) => {
+        const item =
+          state.ledgerTransactionTypes.find((candidate) => {
+            const matchesTenant =
+              !args.where.tenantId ||
+              candidate.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId;
+            const matchesCode =
+              !args.where.code || candidate.code === args.where.code;
+            const matchesActive =
+              args.where.isActive === undefined ||
+              candidate.isActive === args.where.isActive;
+
+            return (
+              matchesTenant && matchesLedger && matchesCode && matchesActive
+            );
+          }) ?? null;
+
+        if (!item) {
+          return null;
+        }
+
+        if (args.select?.id) {
+          return {
+            id: item.id
+          };
+        }
+
+        return item;
+      }
+    },
     account: {
       findFirst: async (args: { where: { id: string; userId: string } }) => {
         const account = state.accounts.find(
@@ -572,6 +2134,679 @@ function createPrismaMock(state: RequestTestState) {
         );
 
         return category ? { id: category.id } : null;
+      }
+    },
+    collectedTransaction: {
+      findFirst: async (args: {
+        where?: {
+          id?: string;
+          tenantId?: string;
+          ledgerId?: string;
+        };
+        include?: {
+          period?: {
+            select?: {
+              id?: boolean;
+              year?: boolean;
+              month?: boolean;
+              status?: boolean;
+            };
+          };
+          fundingAccount?: {
+            select?: {
+              id?: boolean;
+              name?: boolean;
+            };
+          };
+          category?: {
+            select?: {
+              name?: boolean;
+            };
+          };
+          ledgerTransactionType?: {
+            select?: {
+              postingPolicyKey?: boolean;
+            };
+          };
+          postedJournalEntry?: {
+            select?: {
+              id?: boolean;
+            };
+          };
+        };
+      }) => {
+        const candidate =
+          state.collectedTransactions.find((item) => {
+            const matchesId = !args.where?.id || item.id === args.where.id;
+            const matchesTenant =
+              !args.where?.tenantId || item.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId || item.ledgerId === args.where.ledgerId;
+
+            return matchesId && matchesTenant && matchesLedger;
+          }) ?? null;
+
+        if (!candidate) {
+          return null;
+        }
+
+        const period = candidate.periodId
+          ? findAccountingPeriod(candidate.periodId)
+          : null;
+        const fundingAccount = resolveAccount(candidate.fundingAccountId);
+        const category = candidate.categoryId
+          ? resolveCategory(candidate.categoryId)
+          : null;
+        const _ledgerTransactionType = resolveLedgerTransactionType(
+          candidate.ledgerTransactionTypeId
+        );
+        const postedJournalEntry = resolveJournalEntryByCollectedTransaction(
+          candidate.id
+        );
+
+        if (!args.include) {
+          return candidate;
+        }
+
+        return {
+          ...candidate,
+          ...(args.include.period
+            ? {
+                period: period
+                  ? {
+                      ...(args.include.period.select?.id
+                        ? { id: period.id }
+                        : {}),
+                      ...(args.include.period.select?.year
+                        ? { year: period.year }
+                        : {}),
+                      ...(args.include.period.select?.month
+                        ? { month: period.month }
+                        : {}),
+                      ...(args.include.period.select?.status
+                        ? { status: period.status }
+                        : {})
+                    }
+                  : null
+              }
+            : {}),
+          ...(args.include.fundingAccount
+            ? {
+                fundingAccount: {
+                  ...(args.include.fundingAccount.select?.id
+                    ? { id: fundingAccount?.id ?? '' }
+                    : {}),
+                  ...(args.include.fundingAccount.select?.name
+                    ? { name: fundingAccount?.name ?? '' }
+                    : {})
+                }
+              }
+            : {}),
+          ...(args.include.category
+            ? {
+                category: category
+                  ? {
+                      ...(args.include.category.select?.name
+                        ? { name: category.name }
+                        : {})
+                    }
+                  : null
+              }
+            : {}),
+          ...(args.include.ledgerTransactionType
+            ? {
+                ledgerTransactionType: {
+                  ...(args.include.ledgerTransactionType.select
+                    ?.postingPolicyKey
+                    ? {
+                        postingPolicyKey:
+                          candidate.ledgerTransactionTypeId === 'ltt-1-income'
+                            ? 'INCOME_BASIC'
+                            : candidate.ledgerTransactionTypeId ===
+                                'ltt-1-transfer'
+                              ? 'TRANSFER_BASIC'
+                              : 'EXPENSE_BASIC'
+                      }
+                    : {})
+                }
+              }
+            : {}),
+          ...(args.include.postedJournalEntry
+            ? {
+                postedJournalEntry: postedJournalEntry
+                  ? {
+                      ...(args.include.postedJournalEntry.select?.id
+                        ? { id: postedJournalEntry.id }
+                        : {})
+                    }
+                  : null
+              }
+            : {})
+        };
+      },
+      findMany: async (args: {
+        where?: { tenantId?: string; ledgerId?: string };
+        select?: {
+          id?: boolean;
+          occurredOn?: boolean;
+          title?: boolean;
+          amount?: boolean;
+          status?: boolean;
+          importBatchId?: boolean;
+          matchedPlanItemId?: boolean;
+          postedJournalEntry?: {
+            select?: {
+              id?: boolean;
+              entryNumber?: boolean;
+            };
+          };
+          fundingAccount?: {
+            select?: { name?: boolean };
+          };
+          category?: {
+            select?: { name?: boolean };
+          };
+          ledgerTransactionType?: {
+            select?: { flowKind?: boolean };
+          };
+        };
+        orderBy?: Array<{
+          occurredOn?: 'asc' | 'desc';
+          createdAt?: 'asc' | 'desc';
+        }>;
+        take?: number;
+      }) => {
+        let items = state.collectedTransactions.filter((candidate) => {
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+
+          return matchesTenant && matchesLedger;
+        });
+
+        items = sortCollectedTransactions(items);
+
+        if (args.take !== undefined) {
+          items = items.slice(0, args.take);
+        }
+
+        return items.map((candidate) => {
+          const fundingAccount = resolveAccount(candidate.fundingAccountId);
+          const category = candidate.categoryId
+            ? resolveCategory(candidate.categoryId)
+            : null;
+          const ledgerTransactionType = resolveLedgerTransactionType(
+            candidate.ledgerTransactionTypeId
+          );
+          const postedJournalEntry = resolveJournalEntryByCollectedTransaction(
+            candidate.id
+          );
+
+          if (!args.select) {
+            return candidate;
+          }
+
+          return {
+            ...(args.select.id ? { id: candidate.id } : {}),
+            ...(args.select.occurredOn
+              ? { occurredOn: candidate.occurredOn }
+              : {}),
+            ...(args.select.title ? { title: candidate.title } : {}),
+            ...(args.select.amount ? { amount: candidate.amount } : {}),
+            ...(args.select.status ? { status: candidate.status } : {}),
+            ...(args.select.importBatchId
+              ? { importBatchId: candidate.importBatchId }
+              : {}),
+            ...(args.select.matchedPlanItemId
+              ? { matchedPlanItemId: candidate.matchedPlanItemId }
+              : {}),
+            ...(args.select.postedJournalEntry
+              ? {
+                  postedJournalEntry: postedJournalEntry
+                    ? {
+                        ...(args.select.postedJournalEntry.select?.id
+                          ? { id: postedJournalEntry.id }
+                          : {}),
+                        ...(args.select.postedJournalEntry.select?.entryNumber
+                          ? { entryNumber: postedJournalEntry.entryNumber }
+                          : {})
+                      }
+                    : null
+                }
+              : {}),
+            ...(args.select.fundingAccount
+              ? {
+                  fundingAccount: {
+                    ...(args.select.fundingAccount.select?.name
+                      ? { name: fundingAccount?.name ?? '' }
+                      : {})
+                  }
+                }
+              : {}),
+            ...(args.select.category
+              ? {
+                  category: category
+                    ? {
+                        ...(args.select.category.select?.name
+                          ? { name: category.name }
+                          : {})
+                      }
+                    : null
+                }
+              : {}),
+            ...(args.select.ledgerTransactionType
+              ? {
+                  ledgerTransactionType: {
+                    ...(args.select.ledgerTransactionType.select?.flowKind
+                      ? {
+                          flowKind:
+                            ledgerTransactionType?.flowKind ??
+                            LedgerTransactionFlowKind.EXPENSE
+                        }
+                      : {})
+                  }
+                }
+              : {})
+          };
+        });
+      },
+      create: async (args: {
+        data: {
+          tenantId: string;
+          ledgerId: string;
+          periodId?: string;
+          ledgerTransactionTypeId: string;
+          fundingAccountId: string;
+          categoryId?: string;
+          title: string;
+          occurredOn: Date;
+          amount: number;
+          status: CollectedTransactionStatus;
+          memo?: string;
+        };
+        select?: {
+          id?: boolean;
+          occurredOn?: boolean;
+          title?: boolean;
+          amount?: boolean;
+          status?: boolean;
+          importBatchId?: boolean;
+          matchedPlanItemId?: boolean;
+          postedJournalEntry?: {
+            select?: {
+              id?: boolean;
+              entryNumber?: boolean;
+            };
+          };
+          fundingAccount?: {
+            select?: { name?: boolean };
+          };
+          category?: {
+            select?: { name?: boolean };
+          };
+          ledgerTransactionType?: {
+            select?: { flowKind?: boolean };
+          };
+        };
+      }) => {
+        const fundingAccount = resolveAccount(args.data.fundingAccountId);
+        const category = args.data.categoryId
+          ? resolveCategory(args.data.categoryId)
+          : null;
+        const ledgerTransactionType = resolveLedgerTransactionType(
+          args.data.ledgerTransactionTypeId
+        );
+        const created = {
+          id: `ctx-${state.collectedTransactions.length + 1}`,
+          tenantId: args.data.tenantId,
+          ledgerId: args.data.ledgerId,
+          periodId: args.data.periodId ?? null,
+          ledgerTransactionTypeId: args.data.ledgerTransactionTypeId,
+          fundingAccountId: args.data.fundingAccountId,
+          categoryId: args.data.categoryId ?? null,
+          matchedPlanItemId: null,
+          importBatchId: null,
+          title: args.data.title,
+          occurredOn: new Date(String(args.data.occurredOn)),
+          amount: Number(args.data.amount),
+          status: args.data.status,
+          memo: args.data.memo ?? null,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        state.collectedTransactions.push(created);
+
+        if (!args.select) {
+          return created;
+        }
+
+        const postedJournalEntry = resolveJournalEntryByCollectedTransaction(
+          created.id
+        );
+
+        return {
+          ...(args.select.id ? { id: created.id } : {}),
+          ...(args.select.occurredOn ? { occurredOn: created.occurredOn } : {}),
+          ...(args.select.title ? { title: created.title } : {}),
+          ...(args.select.amount ? { amount: created.amount } : {}),
+          ...(args.select.status ? { status: created.status } : {}),
+          ...(args.select.importBatchId
+            ? { importBatchId: created.importBatchId }
+            : {}),
+          ...(args.select.matchedPlanItemId
+            ? { matchedPlanItemId: created.matchedPlanItemId }
+            : {}),
+          ...(args.select.postedJournalEntry
+            ? {
+                postedJournalEntry: postedJournalEntry
+                  ? {
+                      ...(args.select.postedJournalEntry.select?.id
+                        ? { id: postedJournalEntry.id }
+                        : {}),
+                      ...(args.select.postedJournalEntry.select?.entryNumber
+                        ? { entryNumber: postedJournalEntry.entryNumber }
+                        : {})
+                    }
+                  : null
+              }
+            : {}),
+          ...(args.select.fundingAccount
+            ? {
+                fundingAccount: {
+                  ...(args.select.fundingAccount.select?.name
+                    ? { name: fundingAccount?.name ?? '' }
+                    : {})
+                }
+              }
+            : {}),
+          ...(args.select.category
+            ? {
+                category: category
+                  ? {
+                      ...(args.select.category.select?.name
+                        ? { name: category.name }
+                        : {})
+                    }
+                  : null
+              }
+            : {}),
+          ...(args.select.ledgerTransactionType
+            ? {
+                ledgerTransactionType: {
+                  ...(args.select.ledgerTransactionType.select?.flowKind
+                    ? {
+                        flowKind:
+                          ledgerTransactionType?.flowKind ??
+                          LedgerTransactionFlowKind.EXPENSE
+                      }
+                    : {})
+                }
+              }
+            : {})
+        };
+      },
+      update: async (args: {
+        where: { id: string };
+        data: {
+          status?: CollectedTransactionStatus;
+        };
+      }) => {
+        const candidate = state.collectedTransactions.find(
+          (item) => item.id === args.where.id
+        );
+
+        if (!candidate) {
+          throw new Error('Collected transaction not found');
+        }
+
+        if (args.data.status) {
+          candidate.status = args.data.status;
+        }
+        candidate.updatedAt = new Date();
+
+        return candidate;
+      }
+    },
+    journalEntry: {
+      count: async (args: {
+        where?: { tenantId?: string; ledgerId?: string; periodId?: string };
+      }) => {
+        return state.journalEntries.filter((candidate) => {
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesPeriod =
+            !args.where?.periodId || candidate.periodId === args.where.periodId;
+
+          return matchesTenant && matchesLedger && matchesPeriod;
+        }).length;
+      },
+      findMany: async (args: {
+        where?: { tenantId?: string; ledgerId?: string };
+        include?: {
+          sourceCollectedTransaction?: {
+            select?: { id?: boolean; title?: boolean };
+          };
+          lines?: {
+            include?: {
+              accountSubject?: {
+                select?: { code?: boolean; name?: boolean };
+              };
+              fundingAccount?: {
+                select?: { name?: boolean };
+              };
+            };
+            orderBy?: { lineNumber?: 'asc' | 'desc' };
+          };
+        };
+        orderBy?: Array<{
+          entryDate?: 'asc' | 'desc';
+          createdAt?: 'asc' | 'desc';
+        }>;
+        take?: number;
+      }) => {
+        let items = state.journalEntries.filter((candidate) => {
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+
+          return matchesTenant && matchesLedger;
+        });
+
+        items = [...items].sort((left, right) => {
+          if (left.entryDate.getTime() !== right.entryDate.getTime()) {
+            return right.entryDate.getTime() - left.entryDate.getTime();
+          }
+
+          return right.createdAt.getTime() - left.createdAt.getTime();
+        });
+
+        if (args.take !== undefined) {
+          items = items.slice(0, args.take);
+        }
+
+        return items.map((candidate) =>
+          projectJournalEntry(candidate, {
+            sourceCollectedTransaction:
+              args.include?.sourceCollectedTransaction,
+            lines: args.include?.lines
+          })
+        );
+      },
+      create: async (args: {
+        data: {
+          tenantId: string;
+          ledgerId: string;
+          periodId: string;
+          entryNumber: string;
+          entryDate: Date;
+          sourceKind:
+            | 'COLLECTED_TRANSACTION'
+            | 'PLAN_SETTLEMENT'
+            | 'OPENING_BALANCE'
+            | 'CARRY_FORWARD'
+            | 'MANUAL_ADJUSTMENT';
+          sourceCollectedTransactionId?: string;
+          status: 'POSTED' | 'REVERSED' | 'SUPERSEDED';
+          memo?: string | null;
+          createdByActorType: AuditActorType;
+          createdByMembershipId: string | null;
+          lines: {
+            create: Array<{
+              lineNumber: number;
+              accountSubjectId: string;
+              fundingAccountId?: string;
+              debitAmount: number;
+              creditAmount: number;
+              description?: string;
+            }>;
+          };
+        };
+        include?: {
+          sourceCollectedTransaction?: {
+            select?: { id?: boolean; title?: boolean };
+          };
+          lines?: {
+            include?: {
+              accountSubject?: {
+                select?: { code?: boolean; name?: boolean };
+              };
+              fundingAccount?: {
+                select?: { name?: boolean };
+              };
+            };
+            orderBy?: { lineNumber?: 'asc' | 'desc' };
+          };
+        };
+      }) => {
+        const created = {
+          id: `je-${state.journalEntries.length + 1}`,
+          tenantId: args.data.tenantId,
+          ledgerId: args.data.ledgerId,
+          periodId: args.data.periodId,
+          entryNumber: args.data.entryNumber,
+          entryDate: new Date(String(args.data.entryDate)),
+          sourceKind: args.data.sourceKind,
+          sourceCollectedTransactionId:
+            args.data.sourceCollectedTransactionId ?? null,
+          status: args.data.status,
+          memo: args.data.memo ?? null,
+          createdByActorType: args.data.createdByActorType,
+          createdByMembershipId: args.data.createdByMembershipId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          lines: args.data.lines.create.map((line, index) => ({
+            id: `jel-${state.journalEntries.length + 1}-${index + 1}`,
+            lineNumber: line.lineNumber,
+            accountSubjectId: line.accountSubjectId,
+            fundingAccountId: line.fundingAccountId ?? null,
+            debitAmount: line.debitAmount,
+            creditAmount: line.creditAmount,
+            description: line.description ?? null
+          }))
+        };
+
+        state.journalEntries.push(created);
+
+        if (!args.include) {
+          return created;
+        }
+
+        return projectJournalEntry(created, {
+          sourceCollectedTransaction: args.include.sourceCollectedTransaction,
+          lines: args.include.lines
+        });
+      }
+    },
+    journalLine: {
+      findMany: async (args: {
+        where?: {
+          journalEntry?: {
+            tenantId?: string;
+            ledgerId?: string;
+            periodId?: string;
+            status?: 'POSTED' | 'REVERSED' | 'SUPERSEDED';
+          };
+        };
+        include?: {
+          accountSubject?: {
+            select?: {
+              id?: boolean;
+              code?: boolean;
+              name?: boolean;
+            };
+          };
+          fundingAccount?: {
+            select?: {
+              id?: boolean;
+              name?: boolean;
+            };
+          };
+        };
+      }) => {
+        const entries = state.journalEntries.filter((candidate) => {
+          const matchesTenant =
+            !args.where?.journalEntry?.tenantId ||
+            candidate.tenantId === args.where.journalEntry.tenantId;
+          const matchesLedger =
+            !args.where?.journalEntry?.ledgerId ||
+            candidate.ledgerId === args.where.journalEntry.ledgerId;
+          const matchesPeriod =
+            !args.where?.journalEntry?.periodId ||
+            candidate.periodId === args.where.journalEntry.periodId;
+          const matchesStatus =
+            !args.where?.journalEntry?.status ||
+            candidate.status === args.where.journalEntry.status;
+
+          return (
+            matchesTenant && matchesLedger && matchesPeriod && matchesStatus
+          );
+        });
+
+        return entries.flatMap((entry) =>
+          entry.lines.map((line) => {
+            const accountSubject = resolveAccountSubject(line.accountSubjectId);
+            const fundingAccount = line.fundingAccountId
+              ? resolveAccount(line.fundingAccountId)
+              : null;
+
+            return {
+              ...line,
+              ...(args.include?.accountSubject
+                ? {
+                    accountSubject: {
+                      ...(args.include.accountSubject.select?.id
+                        ? { id: accountSubject?.id ?? '' }
+                        : {}),
+                      ...(args.include.accountSubject.select?.code
+                        ? { code: accountSubject?.code ?? '' }
+                        : {}),
+                      ...(args.include.accountSubject.select?.name
+                        ? { name: accountSubject?.name ?? '' }
+                        : {})
+                    }
+                  }
+                : {}),
+              ...(args.include?.fundingAccount
+                ? {
+                    fundingAccount: fundingAccount
+                      ? {
+                          ...(args.include.fundingAccount.select?.id
+                            ? { id: fundingAccount.id }
+                            : {}),
+                          ...(args.include.fundingAccount.select?.name
+                            ? { name: fundingAccount.name }
+                            : {})
+                        }
+                      : null
+                  }
+                : {})
+            };
+          })
+        );
       }
     },
     transaction: {
@@ -854,8 +3089,12 @@ async function createRequestTestContext(): Promise<RequestTestContext> {
         ExternalDependenciesModule,
         HealthModule,
         AuthModule,
+        AccountingPeriodsModule,
+        CarryForwardsModule,
         DashboardModule,
+        FinancialStatementsModule,
         ForecastModule,
+        JournalEntriesModule,
         CollectedTransactionsModule,
         RecurringRulesModule
       ]
@@ -973,7 +3212,27 @@ test('POST /auth/login returns access token and a refresh cookie for valid crede
     assert.deepEqual((response.body as { user: unknown }).user, {
       id: 'user-1',
       email: 'demo@example.com',
-      name: 'Demo User'
+      name: 'Demo User',
+      currentWorkspace: {
+        tenant: {
+          id: 'tenant-1',
+          slug: 'demo-tenant',
+          name: 'Demo Workspace',
+          status: 'ACTIVE'
+        },
+        membership: {
+          id: 'membership-1',
+          role: 'OWNER',
+          status: 'ACTIVE'
+        },
+        ledger: {
+          id: 'ledger-1',
+          name: '개인 장부',
+          baseCurrency: 'KRW',
+          timezone: 'Asia/Seoul',
+          status: 'ACTIVE'
+        }
+      }
     });
     assert.match(readSetCookieHeader(response.headers), /refreshToken=/);
     assert.match(readSetCookieHeader(response.headers), /HttpOnly/i);
@@ -1444,10 +3703,882 @@ test('GET /auth/me returns the authenticated user', async () => {
     assert.deepEqual(response.body, {
       id: 'user-1',
       email: 'demo@example.com',
-      name: 'Demo User'
+      name: 'Demo User',
+      currentWorkspace: {
+        tenant: {
+          id: 'tenant-1',
+          slug: 'demo-tenant',
+          name: 'Demo Workspace',
+          status: 'ACTIVE'
+        },
+        membership: {
+          id: 'membership-1',
+          role: 'OWNER',
+          status: 'ACTIVE'
+        },
+        ledger: {
+          id: 'ledger-1',
+          name: '개인 장부',
+          baseCurrency: 'KRW',
+          timezone: 'Asia/Seoul',
+          status: 'ACTIVE'
+        }
+      }
     });
     assert.equal(response.headers.get('cache-control'), 'no-store');
     assert.equal(response.headers.get('pragma'), 'no-cache');
+  } finally {
+    await context.close();
+  }
+});
+
+test('GET /accounting-periods returns the current ledger periods in reverse chronological order', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push({
+      id: 'period-existing-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 2,
+      startDate: new Date('2026-02-01T00:00:00.000Z'),
+      endDate: new Date('2026-03-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.LOCKED,
+      openedAt: new Date('2026-02-01T00:00:00.000Z'),
+      lockedAt: new Date('2026-02-28T15:00:00.000Z'),
+      createdAt: new Date('2026-02-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-02-28T15:00:00.000Z')
+    });
+    context.state.periodStatusHistory.push({
+      id: 'period-history-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-existing-1',
+      fromStatus: null,
+      toStatus: AccountingPeriodStatus.OPEN,
+      reason: '운영 시작',
+      actorType: AuditActorType.TENANT_MEMBERSHIP,
+      actorMembershipId: 'membership-1',
+      changedAt: new Date('2026-02-01T00:00:00.000Z')
+    });
+    context.state.openingBalanceSnapshots.push({
+      id: 'opening-snapshot-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      effectivePeriodId: 'period-existing-1',
+      sourceKind: OpeningBalanceSourceKind.INITIAL_SETUP,
+      createdAt: new Date('2026-02-01T00:00:00.000Z'),
+      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+      createdByMembershipId: 'membership-1'
+    });
+    context.state.accountingPeriods.push({
+      id: 'period-other-1',
+      tenantId: 'tenant-2',
+      ledgerId: 'ledger-2',
+      year: 2026,
+      month: 2,
+      startDate: new Date('2026-02-01T00:00:00.000Z'),
+      endDate: new Date('2026-03-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.OPEN,
+      openedAt: new Date('2026-02-01T00:00:00.000Z'),
+      lockedAt: null,
+      createdAt: new Date('2026-02-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-02-01T00:00:00.000Z')
+    });
+
+    const response = await context.request('/accounting-periods', {
+      headers: context.authHeaders()
+    });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body, [
+      {
+        id: 'period-existing-1',
+        year: 2026,
+        month: 2,
+        monthLabel: '2026-02',
+        startDate: '2026-02-01T00:00:00.000Z',
+        endDate: '2026-03-01T00:00:00.000Z',
+        status: AccountingPeriodStatus.LOCKED,
+        openedAt: '2026-02-01T00:00:00.000Z',
+        lockedAt: '2026-02-28T15:00:00.000Z',
+        hasOpeningBalanceSnapshot: true,
+        openingBalanceSourceKind: OpeningBalanceSourceKind.INITIAL_SETUP,
+        statusHistory: [
+          {
+            id: 'period-history-1',
+            fromStatus: null,
+            toStatus: AccountingPeriodStatus.OPEN,
+            reason: '운영 시작',
+            actorType: AuditActorType.TENANT_MEMBERSHIP,
+            actorMembershipId: 'membership-1',
+            changedAt: '2026-02-01T00:00:00.000Z'
+          }
+        ]
+      }
+    ]);
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /accounting-periods blocks the first period when opening balance initialization is missing', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/accounting-periods', {
+      method: 'POST',
+      headers: context.authHeaders(),
+      body: {
+        month: '2026-03'
+      }
+    });
+
+    assert.equal(response.status, 400);
+    assert.deepEqual(response.body, {
+      statusCode: 400,
+      message: '첫 월 운영 시작에는 오프닝 잔액 스냅샷 생성이 필요합니다.',
+      error: 'Bad Request'
+    });
+    assert.equal(context.state.accountingPeriods.length, 0);
+    assert.equal(context.state.openingBalanceSnapshots.length, 0);
+    assert.equal(context.state.periodStatusHistory.length, 0);
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /accounting-periods opens the first period and records status history with an opening balance snapshot', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/accounting-periods', {
+      method: 'POST',
+      headers: context.authHeaders(),
+      body: {
+        month: '2026-03',
+        initializeOpeningBalance: true,
+        note: '2026년 3월 운영 시작'
+      }
+    });
+
+    const createdPeriod = response.body as Record<string, unknown>;
+
+    assert.equal(response.status, 201);
+    assert.equal(createdPeriod.monthLabel, '2026-03');
+    assert.equal(createdPeriod.status, AccountingPeriodStatus.OPEN);
+    assert.equal(createdPeriod.hasOpeningBalanceSnapshot, true);
+    assert.equal(
+      createdPeriod.openingBalanceSourceKind,
+      OpeningBalanceSourceKind.INITIAL_SETUP
+    );
+    assert.equal(context.state.accountingPeriods.length, 1);
+    assert.equal(context.state.openingBalanceSnapshots.length, 1);
+    assert.equal(context.state.periodStatusHistory.length, 1);
+    assert.equal(context.state.accountingPeriods[0]?.year, 2026);
+    assert.equal(context.state.accountingPeriods[0]?.month, 3);
+    assert.equal(
+      context.state.periodStatusHistory[0]?.toStatus,
+      AccountingPeriodStatus.OPEN
+    );
+    assert.equal(
+      context.state.periodStatusHistory[0]?.actorMembershipId,
+      'membership-1'
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('GET /accounting-periods/current returns the currently open period for the active ledger', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push({
+      id: 'period-current-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 3,
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.OPEN,
+      openedAt: new Date('2026-03-01T00:00:00.000Z'),
+      lockedAt: null,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
+    context.state.periodStatusHistory.push({
+      id: 'period-history-current-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-current-1',
+      fromStatus: null,
+      toStatus: AccountingPeriodStatus.OPEN,
+      reason: '3월 운영 시작',
+      actorType: AuditActorType.TENANT_MEMBERSHIP,
+      actorMembershipId: 'membership-1',
+      changedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
+
+    const response = await context.request('/accounting-periods/current', {
+      headers: context.authHeaders()
+    });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body, {
+      id: 'period-current-1',
+      year: 2026,
+      month: 3,
+      monthLabel: '2026-03',
+      startDate: '2026-03-01T00:00:00.000Z',
+      endDate: '2026-04-01T00:00:00.000Z',
+      status: AccountingPeriodStatus.OPEN,
+      openedAt: '2026-03-01T00:00:00.000Z',
+      lockedAt: null,
+      hasOpeningBalanceSnapshot: false,
+      openingBalanceSourceKind: null,
+      statusHistory: [
+        {
+          id: 'period-history-current-1',
+          fromStatus: null,
+          toStatus: AccountingPeriodStatus.OPEN,
+          reason: '3월 운영 시작',
+          actorType: AuditActorType.TENANT_MEMBERSHIP,
+          actorMembershipId: 'membership-1',
+          changedAt: '2026-03-01T00:00:00.000Z'
+        }
+      ]
+    });
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /accounting-periods/:id/close locks the period and creates a closing snapshot', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push({
+      id: 'period-close-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 3,
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.OPEN,
+      openedAt: new Date('2026-03-01T00:00:00.000Z'),
+      lockedAt: null,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
+    context.state.periodStatusHistory.push({
+      id: 'period-history-close-open-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-close-1',
+      fromStatus: null,
+      toStatus: AccountingPeriodStatus.OPEN,
+      reason: '3월 운영 시작',
+      actorType: AuditActorType.TENANT_MEMBERSHIP,
+      actorMembershipId: 'membership-1',
+      changedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
+    context.state.journalEntries.push({
+      id: 'je-close-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-close-1',
+      entryNumber: '202603-0001',
+      entryDate: new Date('2026-03-12T00:00:00.000Z'),
+      sourceKind: 'COLLECTED_TRANSACTION',
+      sourceCollectedTransactionId: 'ctx-seed-2',
+      status: 'POSTED',
+      memo: 'Fuel refill',
+      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+      createdByMembershipId: 'membership-1',
+      createdAt: new Date('2026-03-12T01:00:00.000Z'),
+      updatedAt: new Date('2026-03-12T01:00:00.000Z'),
+      lines: [
+        {
+          id: 'jel-close-1',
+          lineNumber: 1,
+          accountSubjectId: 'as-1-5100',
+          fundingAccountId: null,
+          debitAmount: 84_000,
+          creditAmount: 0,
+          description: 'Fuel refill'
+        },
+        {
+          id: 'jel-close-2',
+          lineNumber: 2,
+          accountSubjectId: 'as-1-1010',
+          fundingAccountId: 'acc-1',
+          debitAmount: 0,
+          creditAmount: 84_000,
+          description: 'Fuel refill'
+        }
+      ]
+    });
+
+    const response = await context.request(
+      '/accounting-periods/period-close-1/close',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          note: '3월 월마감'
+        }
+      }
+    );
+
+    const body = response.body as CloseAccountingPeriodResponse;
+
+    assert.equal(response.status, 201);
+    assert.equal(body.period.status, AccountingPeriodStatus.LOCKED);
+    assert.equal(context.state.closingSnapshots.length, 1);
+    assert.equal(context.state.balanceSnapshotLines.length, 2);
+    assert.equal(
+      context.state.periodStatusHistory.at(-1)?.toStatus,
+      AccountingPeriodStatus.LOCKED
+    );
+    assert.equal(body.closingSnapshot.totalAssetAmount, -84_000);
+    assert.equal(body.closingSnapshot.totalLiabilityAmount, 0);
+    assert.equal(body.closingSnapshot.totalEquityAmount, -84_000);
+    assert.equal(body.closingSnapshot.periodPnLAmount, -84_000);
+    assert.equal(body.closingSnapshot.lines.length, 2);
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /financial-statements/generate creates official statement snapshots for a locked period', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push({
+      id: 'period-report-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 3,
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.LOCKED,
+      openedAt: new Date('2026-03-01T00:00:00.000Z'),
+      lockedAt: new Date('2026-03-31T15:00:00.000Z'),
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-31T15:00:00.000Z')
+    });
+    context.state.periodStatusHistory.push({
+      id: 'period-history-report-open-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-report-1',
+      fromStatus: null,
+      toStatus: AccountingPeriodStatus.OPEN,
+      reason: '3월 운영 시작',
+      actorType: AuditActorType.TENANT_MEMBERSHIP,
+      actorMembershipId: 'membership-1',
+      changedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
+    context.state.periodStatusHistory.push({
+      id: 'period-history-report-lock-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-report-1',
+      fromStatus: AccountingPeriodStatus.OPEN,
+      toStatus: AccountingPeriodStatus.LOCKED,
+      reason: '3월 마감',
+      actorType: AuditActorType.TENANT_MEMBERSHIP,
+      actorMembershipId: 'membership-1',
+      changedAt: new Date('2026-03-31T15:00:00.000Z')
+    });
+    context.state.closingSnapshots.push({
+      id: 'closing-report-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-report-1',
+      lockedAt: new Date('2026-03-31T15:00:00.000Z'),
+      totalAssetAmount: -84_000,
+      totalLiabilityAmount: 0,
+      totalEquityAmount: -84_000,
+      periodPnLAmount: -84_000,
+      createdAt: new Date('2026-03-31T15:00:00.000Z')
+    });
+    context.state.balanceSnapshotLines.push(
+      {
+        id: 'balance-report-1',
+        snapshotKind: 'CLOSING',
+        openingSnapshotId: null,
+        closingSnapshotId: 'closing-report-1',
+        accountSubjectId: 'as-1-1010',
+        fundingAccountId: 'acc-1',
+        balanceAmount: -84_000
+      },
+      {
+        id: 'balance-report-2',
+        snapshotKind: 'CLOSING',
+        openingSnapshotId: null,
+        closingSnapshotId: 'closing-report-1',
+        accountSubjectId: 'as-1-5100',
+        fundingAccountId: null,
+        balanceAmount: 84_000
+      }
+    );
+    context.state.journalEntries.push({
+      id: 'je-report-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-report-1',
+      entryNumber: '202603-0009',
+      entryDate: new Date('2026-03-20T00:00:00.000Z'),
+      sourceKind: 'COLLECTED_TRANSACTION',
+      sourceCollectedTransactionId: 'ctx-seed-2',
+      status: 'POSTED',
+      memo: 'Fuel refill',
+      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+      createdByMembershipId: 'membership-1',
+      createdAt: new Date('2026-03-20T01:00:00.000Z'),
+      updatedAt: new Date('2026-03-20T01:00:00.000Z'),
+      lines: [
+        {
+          id: 'jel-report-1',
+          lineNumber: 1,
+          accountSubjectId: 'as-1-5100',
+          fundingAccountId: null,
+          debitAmount: 84_000,
+          creditAmount: 0,
+          description: 'Fuel refill'
+        },
+        {
+          id: 'jel-report-2',
+          lineNumber: 2,
+          accountSubjectId: 'as-1-1010',
+          fundingAccountId: 'acc-1',
+          debitAmount: 0,
+          creditAmount: 84_000,
+          description: 'Fuel refill'
+        }
+      ]
+    });
+
+    const response = await context.request('/financial-statements/generate', {
+      method: 'POST',
+      headers: context.authHeaders(),
+      body: {
+        periodId: 'period-report-1'
+      }
+    });
+
+    const body = response.body as FinancialStatementsView;
+    const statementKinds = body.snapshots.map(
+      (snapshot) => snapshot.statementKind
+    );
+    const positionStatement = body.snapshots.find(
+      (snapshot) => snapshot.statementKind === 'STATEMENT_OF_FINANCIAL_POSITION'
+    );
+    const cashFlowStatement = body.snapshots.find(
+      (snapshot) => snapshot.statementKind === 'CASH_FLOW_SUMMARY'
+    );
+
+    assert.equal(response.status, 201);
+    assert.equal(body.period.id, 'period-report-1');
+    assert.equal(body.snapshots.length, 4);
+    assert.equal(context.state.financialStatementSnapshots.length, 4);
+    assert.deepEqual(statementKinds, [
+      'STATEMENT_OF_FINANCIAL_POSITION',
+      'MONTHLY_PROFIT_AND_LOSS',
+      'CASH_FLOW_SUMMARY',
+      'NET_WORTH_MOVEMENT'
+    ]);
+    assert.equal(positionStatement?.payload.summary[0]?.amountWon, -84_000);
+    assert.equal(cashFlowStatement?.payload.summary[2]?.amountWon, -84_000);
+  } finally {
+    await context.close();
+  }
+});
+
+test('GET /financial-statements returns stored official statement snapshots for the selected locked period', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push({
+      id: 'period-report-view-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 4,
+      startDate: new Date('2026-04-01T00:00:00.000Z'),
+      endDate: new Date('2026-05-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.LOCKED,
+      openedAt: new Date('2026-04-01T00:00:00.000Z'),
+      lockedAt: new Date('2026-04-30T15:00:00.000Z'),
+      createdAt: new Date('2026-04-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-04-30T15:00:00.000Z')
+    });
+    context.state.periodStatusHistory.push({
+      id: 'period-history-report-view-open-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-report-view-1',
+      fromStatus: null,
+      toStatus: AccountingPeriodStatus.OPEN,
+      reason: '4월 운영 시작',
+      actorType: AuditActorType.TENANT_MEMBERSHIP,
+      actorMembershipId: 'membership-1',
+      changedAt: new Date('2026-04-01T00:00:00.000Z')
+    });
+    context.state.periodStatusHistory.push({
+      id: 'period-history-report-view-lock-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-report-view-1',
+      fromStatus: AccountingPeriodStatus.OPEN,
+      toStatus: AccountingPeriodStatus.LOCKED,
+      reason: '4월 마감',
+      actorType: AuditActorType.TENANT_MEMBERSHIP,
+      actorMembershipId: 'membership-1',
+      changedAt: new Date('2026-04-30T15:00:00.000Z')
+    });
+    context.state.financialStatementSnapshots.push(
+      {
+        id: 'financial-view-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-report-view-1',
+        statementKind: FinancialStatementKind.STATEMENT_OF_FINANCIAL_POSITION,
+        currency: 'KRW',
+        payload: {
+          summary: [{ label: '자산 합계', amountWon: 3_000_000 }],
+          sections: [],
+          notes: []
+        },
+        createdAt: new Date('2026-04-30T15:10:00.000Z'),
+        updatedAt: new Date('2026-04-30T15:10:00.000Z')
+      },
+      {
+        id: 'financial-view-2',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-report-view-1',
+        statementKind: FinancialStatementKind.MONTHLY_PROFIT_AND_LOSS,
+        currency: 'KRW',
+        payload: {
+          summary: [{ label: '당기 손익', amountWon: 120_000 }],
+          sections: [],
+          notes: []
+        },
+        createdAt: new Date('2026-04-30T15:10:00.000Z'),
+        updatedAt: new Date('2026-04-30T15:10:00.000Z')
+      },
+      {
+        id: 'financial-view-3',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-report-view-1',
+        statementKind: FinancialStatementKind.CASH_FLOW_SUMMARY,
+        currency: 'KRW',
+        payload: {
+          summary: [{ label: '순현금흐름', amountWon: 120_000 }],
+          sections: [],
+          notes: []
+        },
+        createdAt: new Date('2026-04-30T15:10:00.000Z'),
+        updatedAt: new Date('2026-04-30T15:10:00.000Z')
+      },
+      {
+        id: 'financial-view-4',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-report-view-1',
+        statementKind: FinancialStatementKind.NET_WORTH_MOVEMENT,
+        currency: 'KRW',
+        payload: {
+          summary: [{ label: '기말 순자산', amountWon: 3_120_000 }],
+          sections: [],
+          notes: []
+        },
+        createdAt: new Date('2026-04-30T15:10:00.000Z'),
+        updatedAt: new Date('2026-04-30T15:10:00.000Z')
+      }
+    );
+
+    const response = await context.request(
+      '/financial-statements?periodId=period-report-view-1',
+      {
+        headers: context.authHeaders()
+      }
+    );
+
+    const body = response.body as FinancialStatementsView;
+
+    assert.equal(response.status, 200);
+    assert.equal(body.period.id, 'period-report-view-1');
+    assert.equal(body.period.monthLabel, '2026-04');
+    assert.equal(body.snapshots.length, 4);
+    assert.equal(
+      body.snapshots[0]?.statementKind,
+      'STATEMENT_OF_FINANCIAL_POSITION'
+    );
+    assert.equal(body.snapshots[3]?.statementKind, 'NET_WORTH_MOVEMENT');
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /carry-forwards/generate creates a carry forward record and the next opening snapshot', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push({
+      id: 'period-carry-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 4,
+      startDate: new Date('2026-04-01T00:00:00.000Z'),
+      endDate: new Date('2026-05-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.LOCKED,
+      openedAt: new Date('2026-04-01T00:00:00.000Z'),
+      lockedAt: new Date('2026-04-30T15:00:00.000Z'),
+      createdAt: new Date('2026-04-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-04-30T15:00:00.000Z')
+    });
+    context.state.periodStatusHistory.push({
+      id: 'period-history-carry-open-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-carry-1',
+      fromStatus: null,
+      toStatus: AccountingPeriodStatus.OPEN,
+      reason: '4월 운영 시작',
+      actorType: AuditActorType.TENANT_MEMBERSHIP,
+      actorMembershipId: 'membership-1',
+      changedAt: new Date('2026-04-01T00:00:00.000Z')
+    });
+    context.state.periodStatusHistory.push({
+      id: 'period-history-carry-lock-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-carry-1',
+      fromStatus: AccountingPeriodStatus.OPEN,
+      toStatus: AccountingPeriodStatus.LOCKED,
+      reason: '4월 마감',
+      actorType: AuditActorType.TENANT_MEMBERSHIP,
+      actorMembershipId: 'membership-1',
+      changedAt: new Date('2026-04-30T15:00:00.000Z')
+    });
+    context.state.closingSnapshots.push({
+      id: 'closing-carry-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-carry-1',
+      lockedAt: new Date('2026-04-30T15:00:00.000Z'),
+      totalAssetAmount: 2_916_000,
+      totalLiabilityAmount: 0,
+      totalEquityAmount: 2_916_000,
+      periodPnLAmount: -84_000,
+      createdAt: new Date('2026-04-30T15:00:00.000Z')
+    });
+    context.state.balanceSnapshotLines.push(
+      {
+        id: 'carry-balance-1',
+        snapshotKind: 'CLOSING',
+        openingSnapshotId: null,
+        closingSnapshotId: 'closing-carry-1',
+        accountSubjectId: 'as-1-1010',
+        fundingAccountId: 'acc-1',
+        balanceAmount: 2_916_000
+      },
+      {
+        id: 'carry-balance-2',
+        snapshotKind: 'CLOSING',
+        openingSnapshotId: null,
+        closingSnapshotId: 'closing-carry-1',
+        accountSubjectId: 'as-1-5100',
+        fundingAccountId: null,
+        balanceAmount: 84_000
+      }
+    );
+
+    const response = await context.request('/carry-forwards/generate', {
+      method: 'POST',
+      headers: context.authHeaders(),
+      body: {
+        fromPeriodId: 'period-carry-1'
+      }
+    });
+
+    const body = response.body as CarryForwardView;
+
+    assert.equal(response.status, 201);
+    assert.equal(context.state.carryForwardRecords.length, 1);
+    assert.equal(body.sourcePeriod.id, 'period-carry-1');
+    assert.equal(body.targetPeriod.monthLabel, '2026-05');
+    assert.equal(body.targetPeriod.status, AccountingPeriodStatus.OPEN);
+    assert.equal(body.targetOpeningBalanceSnapshot.sourceKind, 'CARRY_FORWARD');
+    assert.equal(body.targetOpeningBalanceSnapshot.lines.length, 1);
+    assert.equal(
+      body.targetOpeningBalanceSnapshot.lines[0]?.accountSubjectCode,
+      '1010'
+    );
+    assert.equal(
+      body.targetOpeningBalanceSnapshot.lines[0]?.balanceAmount,
+      2_916_000
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('GET /carry-forwards returns the stored carry forward view for the selected source period', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push(
+      {
+        id: 'period-carry-view-source',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        year: 2026,
+        month: 5,
+        startDate: new Date('2026-05-01T00:00:00.000Z'),
+        endDate: new Date('2026-06-01T00:00:00.000Z'),
+        status: AccountingPeriodStatus.LOCKED,
+        openedAt: new Date('2026-05-01T00:00:00.000Z'),
+        lockedAt: new Date('2026-05-31T15:00:00.000Z'),
+        createdAt: new Date('2026-05-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-05-31T15:00:00.000Z')
+      },
+      {
+        id: 'period-carry-view-target',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        year: 2026,
+        month: 6,
+        startDate: new Date('2026-06-01T00:00:00.000Z'),
+        endDate: new Date('2026-07-01T00:00:00.000Z'),
+        status: AccountingPeriodStatus.OPEN,
+        openedAt: new Date('2026-06-01T00:00:00.000Z'),
+        lockedAt: null,
+        createdAt: new Date('2026-06-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-06-01T00:00:00.000Z')
+      }
+    );
+    context.state.periodStatusHistory.push(
+      {
+        id: 'period-history-carry-view-source-open',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-carry-view-source',
+        fromStatus: null,
+        toStatus: AccountingPeriodStatus.OPEN,
+        reason: '5월 운영 시작',
+        actorType: AuditActorType.TENANT_MEMBERSHIP,
+        actorMembershipId: 'membership-1',
+        changedAt: new Date('2026-05-01T00:00:00.000Z')
+      },
+      {
+        id: 'period-history-carry-view-source-lock',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-carry-view-source',
+        fromStatus: AccountingPeriodStatus.OPEN,
+        toStatus: AccountingPeriodStatus.LOCKED,
+        reason: '5월 마감',
+        actorType: AuditActorType.TENANT_MEMBERSHIP,
+        actorMembershipId: 'membership-1',
+        changedAt: new Date('2026-05-31T15:00:00.000Z')
+      },
+      {
+        id: 'period-history-carry-view-target-open',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-carry-view-target',
+        fromStatus: null,
+        toStatus: AccountingPeriodStatus.OPEN,
+        reason: '5월 이월 생성',
+        actorType: AuditActorType.TENANT_MEMBERSHIP,
+        actorMembershipId: 'membership-1',
+        changedAt: new Date('2026-06-01T00:00:00.000Z')
+      }
+    );
+    context.state.closingSnapshots.push({
+      id: 'closing-carry-view',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-carry-view-source',
+      lockedAt: new Date('2026-05-31T15:00:00.000Z'),
+      totalAssetAmount: 3_120_000,
+      totalLiabilityAmount: 0,
+      totalEquityAmount: 3_120_000,
+      periodPnLAmount: 120_000,
+      createdAt: new Date('2026-05-31T15:00:00.000Z')
+    });
+    context.state.balanceSnapshotLines.push(
+      {
+        id: 'carry-view-closing-line',
+        snapshotKind: 'CLOSING',
+        openingSnapshotId: null,
+        closingSnapshotId: 'closing-carry-view',
+        accountSubjectId: 'as-1-1010',
+        fundingAccountId: 'acc-1',
+        balanceAmount: 3_120_000
+      },
+      {
+        id: 'carry-view-opening-line',
+        snapshotKind: 'OPENING',
+        openingSnapshotId: 'opening-carry-view',
+        closingSnapshotId: null,
+        accountSubjectId: 'as-1-1010',
+        fundingAccountId: 'acc-1',
+        balanceAmount: 3_120_000
+      }
+    );
+    context.state.openingBalanceSnapshots.push({
+      id: 'opening-carry-view',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      effectivePeriodId: 'period-carry-view-target',
+      sourceKind: OpeningBalanceSourceKind.CARRY_FORWARD,
+      createdAt: new Date('2026-06-01T00:00:00.000Z'),
+      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+      createdByMembershipId: 'membership-1'
+    });
+    context.state.carryForwardRecords.push({
+      id: 'carry-record-view',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      fromPeriodId: 'period-carry-view-source',
+      toPeriodId: 'period-carry-view-target',
+      sourceClosingSnapshotId: 'closing-carry-view',
+      createdJournalEntryId: null,
+      createdAt: new Date('2026-06-01T00:00:00.000Z'),
+      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+      createdByMembershipId: 'membership-1'
+    });
+
+    const response = await context.request(
+      '/carry-forwards?fromPeriodId=period-carry-view-source',
+      {
+        headers: context.authHeaders()
+      }
+    );
+
+    const body = response.body as CarryForwardView;
+
+    assert.equal(response.status, 200);
+    assert.equal(body.carryForwardRecord.id, 'carry-record-view');
+    assert.equal(body.sourcePeriod.monthLabel, '2026-05');
+    assert.equal(body.targetPeriod.monthLabel, '2026-06');
+    assert.equal(body.targetOpeningBalanceSnapshot.lines.length, 1);
+    assert.equal(
+      body.targetOpeningBalanceSnapshot.lines[0]?.accountSubjectCode,
+      '1010'
+    );
   } finally {
     await context.close();
   }
@@ -1467,26 +4598,30 @@ test('GET /collected-transactions returns only the current user collected transa
     assert.equal(items.length, 2);
     assert.deepEqual(items, [
       {
-        id: 'txn-seed-1',
+        id: 'ctx-seed-1',
         businessDate: '2026-03-25',
         title: 'March salary',
         type: TransactionType.INCOME,
         amountWon: 3_000_000,
         fundingAccountName: 'Main checking',
         categoryName: 'Salary',
-        sourceKind: TransactionOrigin.MANUAL,
-        postingStatus: TransactionStatus.POSTED
+        sourceKind: 'MANUAL',
+        postingStatus: 'POSTED',
+        postedJournalEntryId: null,
+        postedJournalEntryNumber: null
       },
       {
-        id: 'txn-seed-2',
+        id: 'ctx-seed-2',
         businessDate: '2026-03-20',
         title: 'Fuel refill',
         type: TransactionType.EXPENSE,
         amountWon: 84_000,
         fundingAccountName: 'Main checking',
         categoryName: 'Fuel',
-        sourceKind: TransactionOrigin.MANUAL,
-        postingStatus: TransactionStatus.POSTED
+        sourceKind: 'MANUAL',
+        postingStatus: 'POSTED',
+        postedJournalEntryId: null,
+        postedJournalEntryNumber: null
       }
     ]);
     assert.equal(
@@ -1619,7 +4754,7 @@ test('POST /collected-transactions returns 400 when the request body fails DTO v
   const context = await createRequestTestContext();
 
   try {
-    const initialTransactionCount = context.state.transactions.length;
+    const initialTransactionCount = context.state.collectedTransactions.length;
     const response = await context.request('/collected-transactions', {
       method: 'POST',
       headers: context.authHeaders(),
@@ -1638,7 +4773,10 @@ test('POST /collected-transactions returns 400 when the request body fails DTO v
       JSON.stringify((response.body as { message: string[] }).message),
       /amountWon must not be less than 1/
     );
-    assert.equal(context.state.transactions.length, initialTransactionCount);
+    assert.equal(
+      context.state.collectedTransactions.length,
+      initialTransactionCount
+    );
   } finally {
     await context.close();
   }
@@ -1648,7 +4786,22 @@ test('POST /collected-transactions returns 404 when the funding account is outsi
   const context = await createRequestTestContext();
 
   try {
-    const initialTransactionCount = context.state.transactions.length;
+    context.state.accountingPeriods.push({
+      id: 'period-open-404',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 3,
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.OPEN,
+      openedAt: new Date('2026-03-01T00:00:00.000Z'),
+      lockedAt: null,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
+
+    const initialTransactionCount = context.state.collectedTransactions.length;
     const response = await context.request('/collected-transactions', {
       method: 'POST',
       headers: context.authHeaders(),
@@ -1668,7 +4821,10 @@ test('POST /collected-transactions returns 404 when the funding account is outsi
       (response.body as { message: string }).message,
       'Funding account not found'
     );
-    assert.equal(context.state.transactions.length, initialTransactionCount);
+    assert.equal(
+      context.state.collectedTransactions.length,
+      initialTransactionCount
+    );
     assert.ok(
       context.securityEvents.some(
         (candidate) =>
@@ -1689,6 +4845,21 @@ test('POST /collected-transactions returns the created collected transaction ite
   const context = await createRequestTestContext();
 
   try {
+    context.state.accountingPeriods.push({
+      id: 'period-open-created',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 3,
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.OPEN,
+      openedAt: new Date('2026-03-01T00:00:00.000Z'),
+      lockedAt: null,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
+
     const response = await context.request('/collected-transactions', {
       method: 'POST',
       headers: context.authHeaders(),
@@ -1705,7 +4876,7 @@ test('POST /collected-transactions returns the created collected transaction ite
 
     assert.equal(response.status, 201);
     assert.deepEqual(response.body, {
-      id: 'txn-4',
+      id: 'ctx-4',
       businessDate: '2026-03-03',
       title: 'Fuel refill',
       type: TransactionType.EXPENSE,
@@ -1713,9 +4884,204 @@ test('POST /collected-transactions returns the created collected transaction ite
       fundingAccountName: 'Main checking',
       categoryName: 'Fuel',
       sourceKind: 'MANUAL',
-      postingStatus: 'POSTED'
+      postingStatus: 'PENDING',
+      postedJournalEntryId: null,
+      postedJournalEntryNumber: null
     });
-    assert.equal(context.state.transactions.length, 4);
+    assert.equal(context.state.collectedTransactions.length, 4);
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /collected-transactions/:id/confirm creates a journal entry and marks the collected transaction as posted', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push({
+      id: 'period-open-confirm',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 3,
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.OPEN,
+      openedAt: new Date('2026-03-01T00:00:00.000Z'),
+      lockedAt: null,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
+
+    context.state.collectedTransactions.push({
+      id: 'ctx-confirm-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-open-confirm',
+      ledgerTransactionTypeId: 'ltt-1-expense',
+      fundingAccountId: 'acc-1',
+      categoryId: 'cat-1',
+      matchedPlanItemId: null,
+      importBatchId: null,
+      title: 'Fuel refill',
+      occurredOn: new Date('2026-03-03T00:00:00.000Z'),
+      amount: 84000,
+      status: CollectedTransactionStatus.COLLECTED,
+      memo: 'Full tank',
+      createdAt: new Date('2026-03-03T08:00:00.000Z'),
+      updatedAt: new Date('2026-03-03T08:00:00.000Z')
+    });
+
+    const response = await context.request(
+      '/collected-transactions/ctx-confirm-1/confirm',
+      {
+        method: 'POST',
+        headers: context.authHeaders()
+      }
+    );
+
+    assert.equal(response.status, 201);
+    assert.deepEqual(response.body, {
+      id: 'je-1',
+      entryNumber: '202603-0001',
+      entryDate: '2026-03-03T00:00:00.000Z',
+      status: 'POSTED',
+      sourceKind: 'COLLECTED_TRANSACTION',
+      memo: 'Full tank',
+      sourceCollectedTransactionId: 'ctx-confirm-1',
+      sourceCollectedTransactionTitle: 'Fuel refill',
+      lines: [
+        {
+          id: 'jel-1-1',
+          lineNumber: 1,
+          accountSubjectCode: '5100',
+          accountSubjectName: '운영비용',
+          fundingAccountName: null,
+          debitAmount: 84000,
+          creditAmount: 0,
+          description: 'Fuel refill'
+        },
+        {
+          id: 'jel-1-2',
+          lineNumber: 2,
+          accountSubjectCode: '1010',
+          accountSubjectName: '현금및예금',
+          fundingAccountName: 'Main checking',
+          debitAmount: 0,
+          creditAmount: 84000,
+          description: 'Fuel refill'
+        }
+      ]
+    });
+    assert.equal(context.state.journalEntries.length, 1);
+    assert.equal(
+      context.state.collectedTransactions.find(
+        (item) => item.id === 'ctx-confirm-1'
+      )?.status,
+      CollectedTransactionStatus.POSTED
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('GET /journal-entries returns recent journal entries for the current ledger', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.journalEntries.push({
+      id: 'je-seed-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-seed-1',
+      entryNumber: '202603-0003',
+      entryDate: new Date('2026-03-20T00:00:00.000Z'),
+      sourceKind: 'COLLECTED_TRANSACTION',
+      sourceCollectedTransactionId: 'ctx-seed-2',
+      status: 'POSTED',
+      memo: 'Fuel refill',
+      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+      createdByMembershipId: 'membership-1',
+      createdAt: new Date('2026-03-20T08:00:00.000Z'),
+      updatedAt: new Date('2026-03-20T08:00:00.000Z'),
+      lines: [
+        {
+          id: 'jel-seed-1',
+          lineNumber: 1,
+          accountSubjectId: 'as-1-5100',
+          fundingAccountId: null,
+          debitAmount: 84000,
+          creditAmount: 0,
+          description: 'Fuel refill'
+        },
+        {
+          id: 'jel-seed-2',
+          lineNumber: 2,
+          accountSubjectId: 'as-1-1010',
+          fundingAccountId: 'acc-1',
+          debitAmount: 0,
+          creditAmount: 84000,
+          description: 'Fuel refill'
+        }
+      ]
+    });
+    context.state.journalEntries.push({
+      id: 'je-other-1',
+      tenantId: 'tenant-2',
+      ledgerId: 'ledger-2',
+      periodId: 'period-other-1',
+      entryNumber: '202603-0001',
+      entryDate: new Date('2026-03-21T00:00:00.000Z'),
+      sourceKind: 'COLLECTED_TRANSACTION',
+      sourceCollectedTransactionId: 'ctx-seed-3',
+      status: 'POSTED',
+      memo: 'Other user expense',
+      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+      createdByMembershipId: 'membership-2',
+      createdAt: new Date('2026-03-21T08:00:00.000Z'),
+      updatedAt: new Date('2026-03-21T08:00:00.000Z'),
+      lines: []
+    });
+
+    const response = await context.request('/journal-entries', {
+      headers: context.authHeaders()
+    });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body, [
+      {
+        id: 'je-seed-1',
+        entryNumber: '202603-0003',
+        entryDate: '2026-03-20T00:00:00.000Z',
+        status: 'POSTED',
+        sourceKind: 'COLLECTED_TRANSACTION',
+        memo: 'Fuel refill',
+        sourceCollectedTransactionId: 'ctx-seed-2',
+        sourceCollectedTransactionTitle: 'Fuel refill',
+        lines: [
+          {
+            id: 'jel-seed-1',
+            lineNumber: 1,
+            accountSubjectCode: '5100',
+            accountSubjectName: '운영비용',
+            fundingAccountName: null,
+            debitAmount: 84000,
+            creditAmount: 0,
+            description: 'Fuel refill'
+          },
+          {
+            id: 'jel-seed-2',
+            lineNumber: 2,
+            accountSubjectCode: '1010',
+            accountSubjectName: '현금및예금',
+            fundingAccountName: 'Main checking',
+            debitAmount: 0,
+            creditAmount: 84000,
+            description: 'Fuel refill'
+          }
+        ]
+      }
+    ]);
   } finally {
     await context.close();
   }
