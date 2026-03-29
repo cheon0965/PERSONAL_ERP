@@ -12,6 +12,7 @@ import {
 import { SecurityEventLogger } from '../infrastructure/operational/security-event.logger';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthenticatedUser } from './authenticated-user.interface';
+import { AuthenticatedWorkspaceResolver } from './authenticated-workspace-resolver';
 import { getAccessTokenSecret } from './jwt-config';
 import { IS_PUBLIC_KEY } from './public.decorator';
 
@@ -32,6 +33,7 @@ export class JwtAuthGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
+    private readonly authenticatedWorkspaceResolver: AuthenticatedWorkspaceResolver,
     private readonly securityEvents: SecurityEventLogger
   ) {}
 
@@ -116,7 +118,7 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('User not found');
     }
 
-    return user;
+    return this.authenticatedWorkspaceResolver.buildAuthenticatedUser(user);
   }
 
   private logAccessDenied(

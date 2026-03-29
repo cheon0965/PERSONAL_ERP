@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Grid, MenuItem, Stack, TextField } from '@mui/material';
 import type {
+  AccountingPeriodItem,
   CollectedTransactionItem,
   CreateCollectedTransactionRequest
 } from '@personal-erp/contracts';
@@ -46,7 +47,11 @@ type CreateTransactionMutationInput = {
   fallback: CollectedTransactionItem;
 };
 
-export function TransactionForm() {
+type TransactionFormProps = {
+  currentPeriod: AccountingPeriodItem | null;
+};
+
+export function TransactionForm({ currentPeriod }: TransactionFormProps) {
   const queryClient = useQueryClient();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const { data: fundingAccounts = [], error: fundingAccountsError } = useQuery({
@@ -62,7 +67,7 @@ export function TransactionForm() {
     defaultValues: {
       title: '',
       amountWon: 0,
-      businessDate: getTodayDateInputValue(),
+      businessDate: resolveInitialBusinessDate(currentPeriod),
       type: 'EXPENSE',
       accountId: '',
       categoryId: '',
@@ -110,17 +115,49 @@ export function TransactionForm() {
     }
   }, [filteredCategories, form]);
 
+  React.useEffect(() => {
+    const nextValue = resolveInitialBusinessDate(currentPeriod);
+    const currentValue = form.getValues('businessDate');
+
+    if (
+      !currentValue ||
+      !isWithinPeriod(currentValue, currentPeriod)
+    ) {
+      form.setValue('businessDate', nextValue, { shouldValidate: true });
+    }
+  }, [currentPeriod, form]);
+
   const referenceError = fundingAccountsError ?? categoriesError;
+  const canCreateInPeriod = Boolean(currentPeriod);
   const isBusy =
     mutation.isPending ||
     form.formState.isSubmitting ||
     fundingAccounts.length === 0 ||
-    Boolean(referenceError);
+    Boolean(referenceError) ||
+    !canCreateInPeriod;
 
   return (
     <form
       onSubmit={form.handleSubmit(async (values) => {
         setFeedback(null);
+
+        if (!currentPeriod) {
+          setFeedback({
+            severity: 'error',
+            message:
+              '현재 열린 운영 기간이 없어 수집 거래를 등록할 수 없습니다. 먼저 월 운영을 시작해 주세요.'
+          });
+          return;
+        }
+
+        if (!isWithinPeriod(values.businessDate, currentPeriod)) {
+          setFeedback({
+            severity: 'error',
+            message:
+              '거래 일자는 현재 열린 운영 기간 안에 있어야 합니다.'
+          });
+          return;
+        }
 
         const selectedFundingAccount = fundingAccounts.find(
           (fundingAccount) => fundingAccount.id === values.accountId
@@ -158,7 +195,7 @@ export function TransactionForm() {
           form.reset({
             title: '',
             amountWon: 0,
-            businessDate: getTodayDateInputValue(),
+            businessDate: resolveInitialBusinessDate(currentPeriod),
             type: values.type,
             accountId: values.accountId,
             categoryId: '',
@@ -191,6 +228,16 @@ export function TransactionForm() {
             {feedback.message}
           </Alert>
         ) : null}
+        {!currentPeriod ? (
+          <Alert severity="warning" variant="outlined">
+            현재 열린 운영 기간이 없습니다. 먼저 `월 운영` 화면에서 운영 기간을 시작해야
+            수집 거래를 등록할 수 있습니다.
+          </Alert>
+        ) : (
+          <Alert severity="info" variant="outlined">
+            현재 수집 거래는 {currentPeriod.monthLabel} 운영 기간 안에서만 등록됩니다.
+          </Alert>
+        )}
 
         <Grid container spacing={appLayout.fieldGap}>
           <Grid size={{ xs: 12, md: 6 }}>
@@ -214,8 +261,14 @@ export function TransactionForm() {
             <TextField
               label="거래일"
               type="date"
+              disabled={!currentPeriod}
               error={Boolean(form.formState.errors.businessDate)}
-              helperText={form.formState.errors.businessDate?.message}
+              helperText={
+                form.formState.errors.businessDate?.message ??
+                (currentPeriod
+                  ? `${currentPeriod.monthLabel} 운영 기간 범위 안에서만 선택할 수 있습니다.`
+                  : '현재 열린 운영 기간이 없습니다.')
+              }
               {...form.register('businessDate')}
             />
           </Grid>
@@ -223,6 +276,7 @@ export function TransactionForm() {
             <TextField
               select
               label="거래 성격"
+              disabled={!currentPeriod}
               error={Boolean(form.formState.errors.type)}
               helperText={form.formState.errors.type?.message}
               {...form.register('type')}
@@ -235,7 +289,7 @@ export function TransactionForm() {
             <TextField
               select
               label="자금수단"
-              disabled={fundingAccounts.length === 0}
+              disabled={!currentPeriod || fundingAccounts.length === 0}
               error={Boolean(form.formState.errors.accountId)}
               helperText={
                 form.formState.errors.accountId?.message ??
@@ -256,7 +310,7 @@ export function TransactionForm() {
             <TextField
               select
               label="카테고리"
-              disabled={filteredCategories.length === 0}
+              disabled={!currentPeriod || filteredCategories.length === 0}
               helperText={
                 filteredCategories.length === 0
                   ? '선택한 거래 유형에 맞는 카테고리가 없습니다.'
@@ -289,4 +343,32 @@ export function TransactionForm() {
       </Stack>
     </form>
   );
+}
+
+function resolveInitialBusinessDate(currentPeriod: AccountingPeriodItem | null): string {
+  const today = getTodayDateInputValue();
+  if (!currentPeriod) {
+    return today;
+  }
+
+  if (isWithinPeriod(today, currentPeriod)) {
+    return today;
+  }
+
+  return currentPeriod.startDate.slice(0, 10);
+}
+
+function isWithinPeriod(
+  businessDate: string,
+  currentPeriod: AccountingPeriodItem | null
+): boolean {
+  if (!currentPeriod) {
+    return false;
+  }
+
+  const businessTime = Date.parse(`${businessDate}T00:00:00.000Z`);
+  const startTime = Date.parse(currentPeriod.startDate);
+  const endTime = Date.parse(currentPeriod.endDate);
+
+  return businessTime >= startTime && businessTime < endTime;
 }

@@ -18,6 +18,7 @@ import {
 import { ClockPort } from '../../common/application/ports/clock.port';
 import { SecurityEventLogger } from '../../common/infrastructure/operational/security-event.logger';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { AuthenticatedWorkspaceResolver } from '../../common/auth/authenticated-workspace-resolver';
 import { LoginDto } from './dto/login.dto';
 import { AuthRateLimitService } from './auth-rate-limit.service';
 
@@ -55,6 +56,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly authenticatedWorkspaceResolver: AuthenticatedWorkspaceResolver,
     private readonly rateLimit: AuthRateLimitService,
     private readonly clock: ClockPort,
     private readonly securityEvents: SecurityEventLogger
@@ -204,7 +206,7 @@ export class AuthService {
       sessionId,
       accessToken,
       refreshToken,
-      user: { id: user.id, email: user.email, name: user.name }
+      user: await this.authenticatedWorkspaceResolver.buildAuthenticatedUser(user)
     };
   }
 

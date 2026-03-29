@@ -6,8 +6,7 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     "test/**/*.ts",
-    "test/**/*.tsx",
-    ".next/types/**/*.ts"
+    "test/**/*.tsx"
   ],
   "exclude": ["node_modules"]
 }

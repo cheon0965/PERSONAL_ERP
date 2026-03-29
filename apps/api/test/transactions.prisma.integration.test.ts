@@ -1,18 +1,13 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
-import {
-  AccountType,
-  CategoryKind,
-  TransactionOrigin,
-  TransactionStatus,
-  TransactionType
-} from '@prisma/client';
+import { AccountType, CategoryKind, TransactionType } from '@prisma/client';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { CreateCollectedTransactionUseCase } from '../src/modules/collected-transactions/application/use-cases/create-collected-transaction.use-case';
 import { ListCollectedTransactionsUseCase } from '../src/modules/collected-transactions/application/use-cases/list-collected-transactions.use-case';
 import { PrismaReferenceOwnershipAdapter } from '../src/modules/collected-transactions/infrastructure/prisma/prisma-reference-ownership.adapter';
 import { PrismaCollectedTransactionStoreAdapter } from '../src/modules/collected-transactions/infrastructure/prisma/prisma-collected-transaction-store.adapter';
+import { ensurePhase1BackboneForUser } from '../prisma/phase1-backbone';
 
 const shouldRunPrismaIntegration = process.env.RUN_PRISMA_INTEGRATION === '1';
 
@@ -101,30 +96,73 @@ test(
         }
       });
 
-      await prisma.transaction.create({
+      const ownerBackbone = await ensurePhase1BackboneForUser(prisma, owner.id);
+      const outsiderBackbone = await ensurePhase1BackboneForUser(
+        prisma,
+        outsider.id
+      );
+
+      const ownerPeriod = await prisma.accountingPeriod.create({
         data: {
-          userId: owner.id,
-          title: 'Parking',
-          type: TransactionType.EXPENSE,
-          amountWon: 12000,
-          businessDate: new Date('2026-03-01T00:00:00.000Z'),
-          accountId: ownerAccount.id,
-          categoryId: ownerCategory.id,
-          origin: TransactionOrigin.MANUAL,
-          status: TransactionStatus.POSTED
+          tenantId: ownerBackbone.tenantId,
+          ledgerId: ownerBackbone.ledgerId,
+          year: 2026,
+          month: 3,
+          startDate: new Date('2026-03-01T00:00:00.000Z'),
+          endDate: new Date('2026-04-01T00:00:00.000Z')
         }
       });
-      await prisma.transaction.create({
+
+      const ownerExpenseType =
+        await prisma.ledgerTransactionType.findUniqueOrThrow({
+          where: {
+            ledgerId_code: {
+              ledgerId: ownerBackbone.ledgerId,
+              code: 'EXPENSE_BASIC'
+            }
+          },
+          select: {
+            id: true
+          }
+        });
+      const outsiderExpenseType =
+        await prisma.ledgerTransactionType.findUniqueOrThrow({
+          where: {
+            ledgerId_code: {
+              ledgerId: outsiderBackbone.ledgerId,
+              code: 'EXPENSE_BASIC'
+            }
+          },
+          select: {
+            id: true
+          }
+        });
+
+      await prisma.collectedTransaction.create({
         data: {
-          userId: outsider.id,
-          title: 'Outsider purchase',
-          type: TransactionType.EXPENSE,
-          amountWon: 99000,
-          businessDate: new Date('2026-03-05T00:00:00.000Z'),
-          accountId: outsiderAccount.id,
+          tenantId: ownerBackbone.tenantId,
+          ledgerId: ownerBackbone.ledgerId,
+          periodId: ownerPeriod.id,
+          ledgerTransactionTypeId: ownerExpenseType.id,
+          fundingAccountId: ownerAccount.id,
+          categoryId: ownerCategory.id,
+          title: 'Parking',
+          occurredOn: new Date('2026-03-01T00:00:00.000Z'),
+          amount: 12000,
+          status: 'COLLECTED'
+        }
+      });
+      await prisma.collectedTransaction.create({
+        data: {
+          tenantId: outsiderBackbone.tenantId,
+          ledgerId: outsiderBackbone.ledgerId,
+          ledgerTransactionTypeId: outsiderExpenseType.id,
+          fundingAccountId: outsiderAccount.id,
           categoryId: outsiderCategory.id,
-          origin: TransactionOrigin.MANUAL,
-          status: TransactionStatus.POSTED
+          title: 'Outsider purchase',
+          occurredOn: new Date('2026-03-05T00:00:00.000Z'),
+          amount: 99000,
+          status: 'COLLECTED'
         }
       });
 
@@ -171,6 +209,9 @@ test(
 
       const created = await createTransactionUseCase.execute({
         userId: owner.id,
+        tenantId: ownerBackbone.tenantId,
+        ledgerId: ownerBackbone.ledgerId,
+        periodId: ownerPeriod.id,
         title: 'Fuel refill',
         type: TransactionType.EXPENSE,
         amountWon: 84000,
@@ -188,11 +229,14 @@ test(
         amountWon: 84000,
         fundingAccountName: 'Integration Main Account',
         categoryName: 'Integration Fuel',
-        sourceKind: TransactionOrigin.MANUAL,
-        postingStatus: TransactionStatus.POSTED
+        sourceKind: 'MANUAL',
+        postingStatus: 'PENDING'
       });
 
-      const transactions = await listTransactionsUseCase.execute(owner.id);
+      const transactions = await listTransactionsUseCase.execute({
+        tenantId: ownerBackbone.tenantId,
+        ledgerId: ownerBackbone.ledgerId
+      });
 
       assert.equal(transactions.length, 2);
       assert.deepEqual(
@@ -210,11 +254,32 @@ test(
         false
       );
     } finally {
-      await prisma.transaction.deleteMany({
+      await prisma.collectedTransaction.deleteMany({
         where: {
-          user: {
-            email: {
-              in: userEmails
+          tenant: {
+            memberships: {
+              some: {
+                user: {
+                  email: {
+                    in: userEmails
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+      await prisma.accountingPeriod.deleteMany({
+        where: {
+          tenant: {
+            memberships: {
+              some: {
+                user: {
+                  email: {
+                    in: userEmails
+                  }
+                }
+              }
             }
           }
         }
@@ -233,6 +298,19 @@ test(
           user: {
             email: {
               in: userEmails
+            }
+          }
+        }
+      });
+      await prisma.tenant.deleteMany({
+        where: {
+          memberships: {
+            some: {
+              user: {
+                email: {
+                  in: userEmails
+                }
+              }
             }
           }
         }

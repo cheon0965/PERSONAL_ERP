@@ -101,7 +101,7 @@ export function DesignSystemPage() {
         title="기본 입력 폼"
         description="수집 거래 화면에서 재사용하는 입력 블록 예시입니다."
       >
-        <TransactionForm />
+        <TransactionForm currentPeriod={null} />
       </SectionCard>
     </Stack>
   );

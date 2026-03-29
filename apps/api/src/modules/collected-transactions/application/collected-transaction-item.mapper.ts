@@ -13,6 +13,8 @@ export function mapCollectedTransactionToItem(
     fundingAccountName: transaction.account.name,
     categoryName: transaction.category?.name ?? '-',
     sourceKind: transaction.origin,
-    postingStatus: transaction.status
+    postingStatus: transaction.status,
+    postedJournalEntryId: transaction.postedJournalEntryId,
+    postedJournalEntryNumber: transaction.postedJournalEntryNumber
   };
 }

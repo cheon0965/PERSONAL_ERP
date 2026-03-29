@@ -1,6 +1,14 @@
-import { Body, Controller, Get, NotFoundException, Post, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Post,
+  Req
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import type { CollectedTransactionItem } from '@personal-erp/contracts';
+import type { CollectedTransactionItem, JournalEntryItem } from '@personal-erp/contracts';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
 import {
@@ -11,6 +19,9 @@ import {
 import { SecurityEventLogger } from '../../common/infrastructure/operational/security-event.logger';
 import { CreateCollectedTransactionUseCase } from './application/use-cases/create-collected-transaction.use-case';
 import { ListCollectedTransactionsUseCase } from './application/use-cases/list-collected-transactions.use-case';
+import { AccountingPeriodsService } from '../accounting-periods/accounting-periods.service';
+import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
+import { ConfirmCollectedTransactionService } from './confirm-collected-transaction.service';
 import { MissingOwnedCollectedTransactionReferenceError } from './domain/collected-transaction-policy';
 import { CreateCollectedTransactionRequestDto } from './dto/create-collected-transaction.dto';
 
@@ -21,6 +32,8 @@ export class CollectedTransactionsController {
   constructor(
     private readonly listCollectedTransactionsUseCase: ListCollectedTransactionsUseCase,
     private readonly createCollectedTransactionUseCase: CreateCollectedTransactionUseCase,
+    private readonly confirmCollectedTransactionService: ConfirmCollectedTransactionService,
+    private readonly accountingPeriodsService: AccountingPeriodsService,
     private readonly securityEvents: SecurityEventLogger
   ) {}
 
@@ -28,7 +41,12 @@ export class CollectedTransactionsController {
   async findAll(
     @CurrentUser() user: AuthenticatedUser
   ): Promise<CollectedTransactionItem[]> {
-    return this.listCollectedTransactionsUseCase.execute(user.id);
+    const workspace = requireCurrentWorkspace(user);
+
+    return this.listCollectedTransactionsUseCase.execute({
+      tenantId: workspace.tenantId,
+      ledgerId: workspace.ledgerId
+    });
   }
 
   @Post()
@@ -38,8 +56,18 @@ export class CollectedTransactionsController {
     @Body() dto: CreateCollectedTransactionRequestDto
   ) {
     try {
+      const workspace = requireCurrentWorkspace(user);
+      const currentPeriod =
+        await this.accountingPeriodsService.assertCollectingDateAllowed(
+        user,
+        dto.businessDate
+      );
+
       const created = await this.createCollectedTransactionUseCase.execute({
-        userId: user.id,
+        userId: workspace.userId,
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId,
+        periodId: currentPeriod.id,
         title: dto.title,
         type: dto.type,
         amountWon: dto.amountWon,
@@ -63,5 +91,20 @@ export class CollectedTransactionsController {
 
       throw error;
     }
+  }
+
+  @Post(':id/confirm')
+  async confirm(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') collectedTransactionId: string
+  ): Promise<JournalEntryItem> {
+    const workspace = requireCurrentWorkspace(user);
+
+    return this.confirmCollectedTransactionService.execute({
+      collectedTransactionId,
+      tenantId: workspace.tenantId,
+      ledgerId: workspace.ledgerId,
+      membershipId: workspace.membershipId
+    });
   }
 }
