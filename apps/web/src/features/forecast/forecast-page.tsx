@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Grid, List, ListItem, ListItemText, Stack } from '@mui/material';
 import { formatWon } from '@/shared/lib/format';
-import { DomainContextCard } from '@/shared/ui/domain-context-card';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { SectionCard } from '@/shared/ui/section-card';
@@ -17,6 +17,21 @@ export function ForecastPage() {
     queryFn: () => getForecast('2026-03')
   });
 
+  useDomainHelp({
+    title: '기간 운영 전망 개요',
+    description:
+      '전망 화면은 기간 운영 판단을 돕는 해석 화면입니다. 공식 숫자는 잠금 이후 스냅샷과 재무제표에서 확정합니다.',
+    primaryEntity: '운영 기간 (AccountingPeriod)',
+    relatedEntities: [
+      '계획 항목 (PlanItem)',
+      '반복 규칙 (RecurringRule)',
+      '전표 (JournalEntry)',
+      '자금수단 (FundingAccount)'
+    ],
+    truthSource: '공식 수치와 보고 기준은 ClosingSnapshot 및 FinancialStatementSnapshot에 둡니다.',
+    readModelNote: '현재 전망 값은 운영 의사결정용이며, 마감 후 확정 재무제표와는 구분됩니다.'
+  });
+
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
@@ -25,20 +40,6 @@ export function ForecastPage() {
         description="이 화면은 AccountingPeriod 안에서 확정 전표와 계획 데이터를 함께 보는 읽기 모델입니다. 공식 재무제표 확정 전 단계의 운영 전망을 제공합니다."
       />
       {error ? <QueryErrorAlert title="전망 조회에 실패했습니다." error={error} /> : null}
-
-      <DomainContextCard
-        description="전망 화면은 기간 운영 판단을 돕는 해석 화면입니다. 공식 숫자는 잠금 이후 스냅샷과 재무제표에서 확정합니다."
-        primaryEntity="운영 기간 (AccountingPeriod)"
-        relatedEntities={[
-          '계획 항목 (PlanItem)',
-          '반복 규칙 (RecurringRule)',
-          '전표 (JournalEntry)',
-          '자금수단 (FundingAccount)'
-        ]}
-        truthSource="공식 수치와 보고 기준은 ClosingSnapshot 및 FinancialStatementSnapshot에 둡니다."
-        readModelNote="현재 전망 값은 운영 의사결정용이며, 마감 후 확정 재무제표와는 구분됩니다."
-      />
-
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, md: 3 }}>
           <SummaryCard title="현재 자금 잔액" value={formatWon(data?.actualBalanceWon ?? 0)} />

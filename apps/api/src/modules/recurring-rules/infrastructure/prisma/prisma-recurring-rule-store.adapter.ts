@@ -10,20 +10,25 @@ import { RecurringRuleStorePort } from '../../application/ports/recurring-rule-s
 export class PrismaRecurringRuleStoreAdapter implements RecurringRuleStorePort {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAllByUserId(userId: string): Promise<StoredRecurringRule[]> {
+  findAllInWorkspace(
+    tenantId: string,
+    ledgerId: string
+  ): Promise<StoredRecurringRule[]> {
     return this.prisma.recurringRule.findMany({
-      where: { userId },
+      where: { tenantId, ledgerId },
       include: { account: true, category: true },
       orderBy: [{ isActive: 'desc' }, { nextRunDate: 'asc' }]
     });
   }
 
-  createForUser(
+  createInWorkspace(
     record: CreateRecurringRuleRecord
   ): Promise<StoredRecurringRule> {
     return this.prisma.recurringRule.create({
       data: {
         userId: record.userId,
+        tenantId: record.tenantId,
+        ledgerId: record.ledgerId,
         accountId: record.accountId,
         categoryId: record.categoryId,
         title: record.title,

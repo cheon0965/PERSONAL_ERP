@@ -14,7 +14,8 @@ import {
   AccountingPeriodStatus,
   AuditActorType,
   BalanceSnapshotKind,
-  OpeningBalanceSourceKind
+  OpeningBalanceSourceKind,
+  AccountSubjectKind
 } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -95,7 +96,8 @@ export class CarryForwardsService {
             accountSubject: {
               select: {
                 code: true,
-                name: true
+                name: true,
+                subjectKind: true
               }
             },
             fundingAccount: {
@@ -174,7 +176,7 @@ export class CarryForwardsService {
     }
 
     const carryableLines = sourceClosingSnapshot.lines
-      .filter((line) => isCarryForwardAccount(line.accountSubject.code))
+      .filter((line) => isCarryForwardAccount(line.accountSubject.subjectKind))
       .map((line) => ({
         accountSubjectId: line.accountSubjectId,
         accountSubjectCode: line.accountSubject.code,
@@ -455,10 +457,10 @@ function readPeriodBoundary(year: number, month: number) {
   };
 }
 
-function isCarryForwardAccount(accountSubjectCode: string) {
+function isCarryForwardAccount(subjectKind: AccountSubjectKind) {
   return (
-    accountSubjectCode.startsWith('1') ||
-    accountSubjectCode.startsWith('2') ||
-    accountSubjectCode.startsWith('3')
+    subjectKind === 'ASSET' ||
+    subjectKind === 'LIABILITY' ||
+    subjectKind === 'EQUITY'
   );
 }

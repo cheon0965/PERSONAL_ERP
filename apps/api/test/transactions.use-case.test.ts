@@ -39,8 +39,8 @@ test('CreateCollectedTransactionUseCase executes ownership checks before persist
     }
   };
   const referenceOwnership = {
-    fundingAccountExistsForUser: async () => true,
-    categoryExistsForUser: async () => true
+    fundingAccountExistsInWorkspace: async () => true,
+    categoryExistsInWorkspace: async () => true
   };
 
   const useCase = new CreateCollectedTransactionUseCase(
@@ -84,8 +84,8 @@ test('CreateCollectedTransactionUseCase rejects requests for funding accounts ou
     createInWorkspace: async () => ({})
   };
   const referenceOwnership = {
-    fundingAccountExistsForUser: async () => false,
-    categoryExistsForUser: async () => true
+    fundingAccountExistsInWorkspace: async () => false,
+    categoryExistsInWorkspace: async () => true
   };
 
   const useCase = new CreateCollectedTransactionUseCase(
@@ -107,8 +107,8 @@ test('CreateCollectedTransactionUseCase rejects requests for categories outside 
     createInWorkspace: async () => ({})
   };
   const referenceOwnership = {
-    fundingAccountExistsForUser: async () => true,
-    categoryExistsForUser: async () => false
+    fundingAccountExistsInWorkspace: async () => true,
+    categoryExistsInWorkspace: async () => false
   };
 
   const useCase = new CreateCollectedTransactionUseCase(

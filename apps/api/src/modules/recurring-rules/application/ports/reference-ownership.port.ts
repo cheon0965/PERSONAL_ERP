@@ -1,11 +1,13 @@
 export abstract class ReferenceOwnershipPort {
-  abstract fundingAccountExistsForUser(
-    userId: string,
+  abstract fundingAccountExistsInWorkspace(
+    tenantId: string,
+    ledgerId: string,
     fundingAccountId: string
   ): Promise<boolean>;
 
-  abstract categoryExistsForUser(
-    userId: string,
+  abstract categoryExistsInWorkspace(
+    tenantId: string,
+    ledgerId: string,
     categoryId?: string
   ): Promise<boolean>;
 }

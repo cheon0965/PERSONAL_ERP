@@ -14,6 +14,6 @@ export class FundingAccountsController {
 
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {
-    return this.fundingAccountsService.findAll(user.id);
+    return this.fundingAccountsService.findAll(user);
   }
 }

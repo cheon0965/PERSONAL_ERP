@@ -11,7 +11,8 @@ import {
   CollectedTransactionStatus,
   JournalEntrySourceKind,
   JournalEntryStatus,
-  PostingPolicyKey
+  PostingPolicyKey,
+  PlanItemStatus
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { mapJournalEntryRecordToItem } from '../journal-entries/journal-entry-item.mapper';
@@ -24,6 +25,7 @@ type ConfirmCollectedTransactionCommand = {
 };
 
 const ASSET_SUBJECT_CODE = '1010';
+const LIABILITY_SUBJECT_CODE = '2010'; // 미지급금(카드대금)
 const INCOME_SUBJECT_CODE = '4100';
 const EXPENSE_SUBJECT_CODE = '5100';
 
@@ -64,6 +66,11 @@ export class ConfirmCollectedTransactionService {
           ledgerTransactionType: {
             select: {
               postingPolicyKey: true
+            }
+          },
+          matchedPlanItem: {
+            select: {
+              id: true
             }
           },
           postedJournalEntry: {
@@ -109,7 +116,12 @@ export class ConfirmCollectedTransactionService {
         tenantId: command.tenantId,
         ledgerId: command.ledgerId,
         code: {
-          in: [ASSET_SUBJECT_CODE, INCOME_SUBJECT_CODE, EXPENSE_SUBJECT_CODE]
+          in: [
+            ASSET_SUBJECT_CODE,
+            LIABILITY_SUBJECT_CODE,
+            INCOME_SUBJECT_CODE,
+            EXPENSE_SUBJECT_CODE
+          ]
         },
         isActive: true
       },
@@ -124,12 +136,18 @@ export class ConfirmCollectedTransactionService {
     );
 
     const assetSubjectId = accountSubjectByCode.get(ASSET_SUBJECT_CODE);
+    const liabilitySubjectId = accountSubjectByCode.get(LIABILITY_SUBJECT_CODE);
     const incomeSubjectId = accountSubjectByCode.get(INCOME_SUBJECT_CODE);
     const expenseSubjectId = accountSubjectByCode.get(EXPENSE_SUBJECT_CODE);
 
-    if (!assetSubjectId || !incomeSubjectId || !expenseSubjectId) {
+    if (
+      !assetSubjectId ||
+      !liabilitySubjectId ||
+      !incomeSubjectId ||
+      !expenseSubjectId
+    ) {
       throw new InternalServerErrorException(
-        '?꾩옱 Ledger??湲곕낯 怨꾩젙怨쇰ぉ 留덉뒪?곌? 以鍮꾨릺???덉? ?딆뒿?덈떎.'
+        '현재 Ledger의 기본 계정과목 마스터가 준비되어 있지 않습니다.'
       );
     }
 
@@ -154,6 +172,7 @@ export class ConfirmCollectedTransactionService {
         title: collectedTransaction.title,
         fundingAccountId: collectedTransaction.fundingAccount.id,
         assetSubjectId,
+        liabilitySubjectId,
         incomeSubjectId,
         expenseSubjectId
       });
@@ -212,6 +231,17 @@ export class ConfirmCollectedTransactionService {
         }
       });
 
+      if (collectedTransaction.matchedPlanItemId) {
+        await tx.planItem.update({
+          where: {
+            id: collectedTransaction.matchedPlanItemId
+          },
+          data: {
+            status: PlanItemStatus.CONFIRMED
+          }
+        });
+      }
+
       return created;
     });
 
@@ -232,6 +262,7 @@ function buildJournalLines(input: {
   title: string;
   fundingAccountId: string;
   assetSubjectId: string;
+  liabilitySubjectId: string;
   incomeSubjectId: string;
   expenseSubjectId: string;
 }) {
@@ -272,6 +303,29 @@ function buildJournalLines(input: {
           description: input.title
         }
       ];
+    case PostingPolicyKey.CARD_SPEND:
+      return [
+        {
+          lineNumber: 1,
+          accountSubjectId: input.expenseSubjectId,
+          debitAmount: input.amount,
+          creditAmount: 0,
+          description: input.title
+        },
+        {
+          lineNumber: 2,
+          accountSubjectId: input.liabilitySubjectId,
+          fundingAccountId: input.fundingAccountId,
+          debitAmount: 0,
+          creditAmount: input.amount,
+          description: input.title
+        }
+      ];
+    case PostingPolicyKey.TRANSFER_BASIC:
+    case PostingPolicyKey.CARD_PAYMENT:
+      throw new BadRequestException(
+        '기본 이체 및 카드 대금 납부(2개 이상의 자금수단 매핑 필요) 거래는 현재 버전에서 수동 분개가 필요합니다.'
+      );
     default:
       throw new BadRequestException(
         '?꾩옱 ?④퀎?먯꽌??湲곕낯 ?섏엯/吏異??섏쭛 嫄곕옒留??꾪몴濡??뺤젙?????덉뒿?덈떎.'

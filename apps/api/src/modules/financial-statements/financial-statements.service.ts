@@ -13,7 +13,8 @@ import type {
 import {
   AccountingPeriodStatus,
   FinancialStatementKind,
-  JournalEntryStatus
+  JournalEntryStatus,
+  AccountSubjectKind
 } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -141,7 +142,8 @@ export class FinancialStatementsService {
         accountSubject: {
           select: {
             code: true,
-            name: true
+            name: true,
+            subjectKind: true
           }
         },
         fundingAccount: {
@@ -165,7 +167,8 @@ export class FinancialStatementsService {
         accountSubject: {
           select: {
             code: true,
-            name: true
+            name: true,
+            subjectKind: true
           }
         },
         fundingAccount: {
@@ -338,6 +341,7 @@ function buildStatementPayloads(input: {
     accountSubject: {
       code: string;
       name: string;
+      subjectKind: AccountSubjectKind;
     };
     fundingAccount: {
       name: string;
@@ -349,6 +353,7 @@ function buildStatementPayloads(input: {
     accountSubject: {
       code: string;
       name: string;
+      subjectKind: AccountSubjectKind;
     };
     fundingAccount: {
       name: string;
@@ -357,24 +362,24 @@ function buildStatementPayloads(input: {
   openingNetWorth: number;
 }): Map<FinancialStatementKind, FinancialStatementPayload> {
   const assets = input.closingLines.filter((line) =>
-    line.accountSubject.code.startsWith('1')
+    line.accountSubject.subjectKind === 'ASSET'
   );
   const liabilities = input.closingLines.filter((line) =>
-    line.accountSubject.code.startsWith('2')
+    line.accountSubject.subjectKind === 'LIABILITY'
   );
   const equity = input.closingLines.filter((line) =>
-    line.accountSubject.code.startsWith('3')
+    line.accountSubject.subjectKind === 'EQUITY'
   );
   const incomeLines = input.closingLines.filter((line) =>
-    line.accountSubject.code.startsWith('4')
+    line.accountSubject.subjectKind === 'INCOME'
   );
   const expenseLines = input.closingLines.filter((line) =>
-    line.accountSubject.code.startsWith('5')
+    line.accountSubject.subjectKind === 'EXPENSE'
   );
 
   const cashFlowByFundingAccount = new Map<string, number>();
   for (const line of input.journalLines) {
-    if (!line.accountSubject.code.startsWith('1') || !line.fundingAccount) {
+    if (line.accountSubject.subjectKind !== 'ASSET' || !line.fundingAccount) {
       continue;
     }
 

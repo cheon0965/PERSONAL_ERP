@@ -27,12 +27,14 @@ export class CreateCollectedTransactionUseCase {
     command: CreateCollectedTransactionCommand
   ): Promise<CollectedTransactionItem> {
     const [fundingAccountExists, categoryExists] = await Promise.all([
-      this.referenceOwnership.fundingAccountExistsForUser(
-        command.userId,
+      this.referenceOwnership.fundingAccountExistsInWorkspace(
+        command.tenantId,
+        command.ledgerId,
         command.fundingAccountId
       ),
-      this.referenceOwnership.categoryExistsForUser(
-        command.userId,
+      this.referenceOwnership.categoryExistsInWorkspace(
+        command.tenantId,
+        command.ledgerId,
         command.categoryId
       )
     ]);

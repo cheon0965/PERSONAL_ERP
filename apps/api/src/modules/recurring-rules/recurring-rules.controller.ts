@@ -2,6 +2,7 @@ import { Body, Controller, Get, NotFoundException, Post, Req } from '@nestjs/com
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
+import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import {
   readRequestId,
   readRequestPath,
@@ -25,7 +26,12 @@ export class RecurringRulesController {
 
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {
-    return this.listRecurringRulesUseCase.execute(user.id);
+    const workspace = requireCurrentWorkspace(user);
+
+    return this.listRecurringRulesUseCase.execute({
+      tenantId: workspace.tenantId,
+      ledgerId: workspace.ledgerId
+    });
   }
 
   @Post()
@@ -35,8 +41,12 @@ export class RecurringRulesController {
     @Body() dto: CreateRecurringRuleDto
   ) {
     try {
+      const workspace = requireCurrentWorkspace(user);
+
       return await this.createRecurringRuleUseCase.execute({
-        userId: user.id,
+        userId: workspace.userId,
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId,
         ...dto
       });
     } catch (error) {

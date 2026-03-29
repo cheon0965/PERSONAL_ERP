@@ -26,14 +26,18 @@ import { ExternalDependenciesModule } from '../src/common/infrastructure/externa
 import { SecurityEventLogger } from '../src/common/infrastructure/operational/security-event.logger';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { getApiEnv, resetApiEnvCache } from '../src/config/api-env';
+import { AccountSubjectsModule } from '../src/modules/account-subjects/account-subjects.module';
 import { AuthModule } from '../src/modules/auth/auth.module';
 import { AccountingPeriodsModule } from '../src/modules/accounting-periods/accounting-periods.module';
 import { CarryForwardsModule } from '../src/modules/carry-forwards/carry-forwards.module';
+import { CategoriesModule } from '../src/modules/categories/categories.module';
 import { DashboardModule } from '../src/modules/dashboard/dashboard.module';
 import { FinancialStatementsModule } from '../src/modules/financial-statements/financial-statements.module';
 import { ForecastModule } from '../src/modules/forecast/forecast.module';
+import { FundingAccountsModule } from '../src/modules/funding-accounts/funding-accounts.module';
 import { HealthModule } from '../src/modules/health/health.module';
 import { JournalEntriesModule } from '../src/modules/journal-entries/journal-entries.module';
+import { LedgerTransactionTypesModule } from '../src/modules/ledger-transaction-types/ledger-transaction-types.module';
 import { RecurringRulesModule } from '../src/modules/recurring-rules/recurring-rules.module';
 import { CollectedTransactionsModule } from '../src/modules/collected-transactions/collected-transactions.module';
 
@@ -80,7 +84,17 @@ type RequestTestState = {
     tenantId: string;
     ledgerId: string;
     code: string;
+    name?: string;
     flowKind: LedgerTransactionFlowKind;
+    postingPolicyKey?:
+      | 'INCOME_BASIC'
+      | 'EXPENSE_BASIC'
+      | 'TRANSFER_BASIC'
+      | 'CARD_SPEND'
+      | 'CARD_PAYMENT'
+      | 'OPENING_BALANCE'
+      | 'CARRY_FORWARD'
+      | 'MANUAL_ADJUSTMENT';
     isActive: boolean;
   }>;
   accountingPeriods: Array<{
@@ -169,6 +183,10 @@ type RequestTestState = {
     ledgerId: string;
     code: string;
     name: string;
+    statementType?: 'BALANCE_SHEET' | 'PROFIT_AND_LOSS';
+    normalSide?: 'DEBIT' | 'CREDIT';
+    subjectKind?: 'ASSET' | 'LIABILITY' | 'EQUITY' | 'INCOME' | 'EXPENSE';
+    isSystem?: boolean;
     isActive: boolean;
   }>;
   authSessions: Array<{
@@ -181,10 +199,21 @@ type RequestTestState = {
   accounts: Array<{
     id: string;
     userId: string;
+    tenantId: string;
+    ledgerId: string;
     name: string;
+    type?: 'BANK' | 'CASH' | 'CARD';
     balanceWon: number;
   }>;
-  categories: Array<{ id: string; userId: string; name: string }>;
+  categories: Array<{
+    id: string;
+    userId: string;
+    tenantId: string;
+    ledgerId: string;
+    name: string;
+    kind?: 'INCOME' | 'EXPENSE' | 'TRANSFER';
+    isActive: boolean;
+  }>;
   collectedTransactions: Array<{
     id: string;
     tenantId: string;
@@ -221,6 +250,8 @@ type RequestTestState = {
   recurringRules: Array<{
     id: string;
     userId: string;
+    tenantId: string;
+    ledgerId: string;
     accountId: string;
     categoryId: string;
     title: string;
@@ -433,7 +464,9 @@ async function createRequestTestState(): Promise<RequestTestState> {
         tenantId: 'tenant-1',
         ledgerId: 'ledger-1',
         code: 'INCOME_BASIC',
+        name: '기본 수입',
         flowKind: LedgerTransactionFlowKind.INCOME,
+        postingPolicyKey: 'INCOME_BASIC',
         isActive: true
       },
       {
@@ -441,7 +474,9 @@ async function createRequestTestState(): Promise<RequestTestState> {
         tenantId: 'tenant-1',
         ledgerId: 'ledger-1',
         code: 'EXPENSE_BASIC',
+        name: '기본 지출',
         flowKind: LedgerTransactionFlowKind.EXPENSE,
+        postingPolicyKey: 'EXPENSE_BASIC',
         isActive: true
       },
       {
@@ -449,7 +484,9 @@ async function createRequestTestState(): Promise<RequestTestState> {
         tenantId: 'tenant-1',
         ledgerId: 'ledger-1',
         code: 'TRANSFER_BASIC',
+        name: '기본 이체',
         flowKind: LedgerTransactionFlowKind.TRANSFER,
+        postingPolicyKey: 'TRANSFER_BASIC',
         isActive: true
       },
       {
@@ -457,7 +494,9 @@ async function createRequestTestState(): Promise<RequestTestState> {
         tenantId: 'tenant-2',
         ledgerId: 'ledger-2',
         code: 'EXPENSE_BASIC',
+        name: '기본 지출',
         flowKind: LedgerTransactionFlowKind.EXPENSE,
+        postingPolicyKey: 'EXPENSE_BASIC',
         isActive: true
       }
     ],
@@ -475,6 +514,10 @@ async function createRequestTestState(): Promise<RequestTestState> {
         ledgerId: 'ledger-1',
         code: '1010',
         name: '현금및예금',
+        statementType: 'BALANCE_SHEET',
+        normalSide: 'DEBIT',
+        subjectKind: 'ASSET',
+        isSystem: true,
         isActive: true
       },
       {
@@ -483,6 +526,10 @@ async function createRequestTestState(): Promise<RequestTestState> {
         ledgerId: 'ledger-1',
         code: '4100',
         name: '운영수익',
+        statementType: 'PROFIT_AND_LOSS',
+        normalSide: 'CREDIT',
+        subjectKind: 'INCOME',
+        isSystem: true,
         isActive: true
       },
       {
@@ -491,6 +538,10 @@ async function createRequestTestState(): Promise<RequestTestState> {
         ledgerId: 'ledger-1',
         code: '5100',
         name: '운영비용',
+        statementType: 'PROFIT_AND_LOSS',
+        normalSide: 'DEBIT',
+        subjectKind: 'EXPENSE',
+        isSystem: true,
         isActive: true
       },
       {
@@ -499,6 +550,10 @@ async function createRequestTestState(): Promise<RequestTestState> {
         ledgerId: 'ledger-2',
         code: '1010',
         name: '현금및예금',
+        statementType: 'BALANCE_SHEET',
+        normalSide: 'DEBIT',
+        subjectKind: 'ASSET',
+        isSystem: true,
         isActive: true
       },
       {
@@ -507,6 +562,10 @@ async function createRequestTestState(): Promise<RequestTestState> {
         ledgerId: 'ledger-2',
         code: '4100',
         name: '운영수익',
+        statementType: 'PROFIT_AND_LOSS',
+        normalSide: 'CREDIT',
+        subjectKind: 'INCOME',
+        isSystem: true,
         isActive: true
       },
       {
@@ -515,6 +574,10 @@ async function createRequestTestState(): Promise<RequestTestState> {
         ledgerId: 'ledger-2',
         code: '5100',
         name: '운영비용',
+        statementType: 'PROFIT_AND_LOSS',
+        normalSide: 'DEBIT',
+        subjectKind: 'EXPENSE',
+        isSystem: true,
         isActive: true
       }
     ],
@@ -538,27 +601,68 @@ async function createRequestTestState(): Promise<RequestTestState> {
       {
         id: 'acc-1',
         userId: 'user-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
         name: 'Main checking',
+        type: 'BANK',
         balanceWon: 2_000_000
       },
       {
         id: 'acc-1b',
         userId: 'user-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
         name: 'Emergency savings',
+        type: 'BANK',
         balanceWon: 3_500_000
       },
       {
         id: 'acc-2',
         userId: 'user-2',
+        tenantId: 'tenant-2',
+        ledgerId: 'ledger-2',
         name: 'Other account',
+        type: 'BANK',
         balanceWon: 9_000_000
       }
     ],
     categories: [
-      { id: 'cat-1', userId: 'user-1', name: 'Fuel' },
-      { id: 'cat-1b', userId: 'user-1', name: 'Salary' },
-      { id: 'cat-1c', userId: 'user-1', name: 'Utilities' },
-      { id: 'cat-2', userId: 'user-2', name: 'Other category' }
+      {
+        id: 'cat-1',
+        userId: 'user-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        name: 'Fuel',
+        kind: 'EXPENSE',
+        isActive: true
+      },
+      {
+        id: 'cat-1b',
+        userId: 'user-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        name: 'Salary',
+        kind: 'INCOME',
+        isActive: true
+      },
+      {
+        id: 'cat-1c',
+        userId: 'user-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        name: 'Utilities',
+        kind: 'EXPENSE',
+        isActive: true
+      },
+      {
+        id: 'cat-2',
+        userId: 'user-2',
+        tenantId: 'tenant-2',
+        ledgerId: 'ledger-2',
+        name: 'Other category',
+        kind: 'EXPENSE',
+        isActive: true
+      }
     ],
     collectedTransactions: [
       {
@@ -667,6 +771,8 @@ async function createRequestTestState(): Promise<RequestTestState> {
       {
         id: 'rr-seed-1',
         userId: 'user-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
         accountId: 'acc-1',
         categoryId: 'cat-1c',
         title: 'Phone bill',
@@ -683,6 +789,8 @@ async function createRequestTestState(): Promise<RequestTestState> {
       {
         id: 'rr-seed-2',
         userId: 'user-2',
+        tenantId: 'tenant-2',
+        ledgerId: 'ledger-2',
         accountId: 'acc-2',
         categoryId: 'cat-2',
         title: 'Other user recurring rule',
@@ -2095,26 +2203,66 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
         }
 
         return item;
+      },
+      findMany: async (args: {
+        where?: {
+          tenantId?: string;
+          ledgerId?: string;
+          isActive?: boolean;
+        };
+      }) => {
+        return state.ledgerTransactionTypes.filter((candidate) => {
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesActive =
+            args.where?.isActive === undefined ||
+            candidate.isActive === args.where.isActive;
+
+          return matchesTenant && matchesLedger && matchesActive;
+        });
       }
     },
     account: {
-      findFirst: async (args: { where: { id: string; userId: string } }) => {
+      findFirst: async (args: {
+        where: {
+          id: string;
+          userId?: string;
+          tenantId?: string;
+          ledgerId?: string;
+        };
+      }) => {
         const account = state.accounts.find(
           (candidate) =>
             candidate.id === args.where.id &&
-            candidate.userId === args.where.userId
+            (!args.where.userId || candidate.userId === args.where.userId) &&
+            (!args.where.tenantId ||
+              candidate.tenantId === args.where.tenantId) &&
+            (!args.where.ledgerId || candidate.ledgerId === args.where.ledgerId)
         );
 
         return account ? { id: account.id } : null;
       },
       findMany: async (args: {
-        where?: { userId?: string };
+        where?: {
+          userId?: string;
+          tenantId?: string;
+          ledgerId?: string;
+          status?: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+        };
         select?: { balanceWon?: boolean };
       }) => {
-        const items = state.accounts.filter(
-          (candidate) =>
-            !args.where?.userId || candidate.userId === args.where.userId
-        );
+        const items = state.accounts.filter((candidate) => {
+          const matchesUser =
+            !args.where?.userId || candidate.userId === args.where.userId;
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+
+          return matchesUser && matchesTenant && matchesLedger;
+        });
 
         if (args.select?.balanceWon) {
           return items.map((candidate) => ({
@@ -2126,14 +2274,74 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
       }
     },
     category: {
-      findFirst: async (args: { where: { id: string; userId: string } }) => {
+      findFirst: async (args: {
+        where: {
+          id: string;
+          userId?: string;
+          tenantId?: string;
+          ledgerId?: string;
+        };
+      }) => {
         const category = state.categories.find(
           (candidate) =>
             candidate.id === args.where.id &&
-            candidate.userId === args.where.userId
+            (!args.where.userId || candidate.userId === args.where.userId) &&
+            (!args.where.tenantId ||
+              candidate.tenantId === args.where.tenantId) &&
+            (!args.where.ledgerId || candidate.ledgerId === args.where.ledgerId)
         );
 
         return category ? { id: category.id } : null;
+      },
+      findMany: async (args: {
+        where?: {
+          userId?: string;
+          tenantId?: string;
+          ledgerId?: string;
+          kind?: 'INCOME' | 'EXPENSE' | 'TRANSFER';
+          isActive?: boolean;
+        };
+      }) => {
+        return state.categories
+          .filter((candidate) => {
+            const matchesUser =
+              !args.where?.userId || candidate.userId === args.where.userId;
+            const matchesTenant =
+              !args.where?.tenantId ||
+              candidate.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId;
+            const matchesKind =
+              !args.where?.kind || candidate.kind === args.where.kind;
+            const matchesActive =
+              args.where?.isActive === undefined ||
+              candidate.isActive === args.where.isActive;
+
+            return (
+              matchesUser &&
+              matchesTenant &&
+              matchesLedger &&
+              matchesKind &&
+              matchesActive
+            );
+          })
+          .sort((left, right) => {
+            if (left.kind !== right.kind) {
+              const categoryKindOrder = {
+                INCOME: 0,
+                EXPENSE: 1,
+                TRANSFER: 2
+              } as const;
+
+              return (
+                categoryKindOrder[left.kind ?? 'EXPENSE'] -
+                categoryKindOrder[right.kind ?? 'EXPENSE']
+              );
+            }
+
+            return left.name.localeCompare(right.name);
+          });
       }
     },
     collectedTransaction: {
@@ -2886,7 +3094,12 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
     },
     recurringRule: {
       findMany: async (args: {
-        where?: { userId?: string; isActive?: boolean };
+        where?: {
+          userId?: string;
+          tenantId?: string;
+          ledgerId?: string;
+          isActive?: boolean;
+        };
         include?: { account?: boolean; category?: boolean };
         select?: { amountWon?: boolean };
         orderBy?: Array<{
@@ -2897,10 +3110,14 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
         let items = state.recurringRules.filter((candidate) => {
           const matchesUser =
             !args.where?.userId || candidate.userId === args.where.userId;
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
           const matchesActive =
             args.where?.isActive === undefined ||
             candidate.isActive === args.where.isActive;
-          return matchesUser && matchesActive;
+          return matchesUser && matchesTenant && matchesLedger && matchesActive;
         });
 
         items = sortRecurringRules(items);
@@ -2934,6 +3151,8 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
         const created = {
           id: `rr-${state.recurringRules.length + 1}`,
           userId: String(args.data.userId),
+          tenantId: String(args.data.tenantId),
+          ledgerId: String(args.data.ledgerId),
           accountId: String(args.data.accountId),
           categoryId: String(args.data.categoryId),
           title: String(args.data.title),
@@ -3089,12 +3308,16 @@ async function createRequestTestContext(): Promise<RequestTestContext> {
         ExternalDependenciesModule,
         HealthModule,
         AuthModule,
+        AccountSubjectsModule,
         AccountingPeriodsModule,
         CarryForwardsModule,
+        CategoriesModule,
         DashboardModule,
         FinancialStatementsModule,
         ForecastModule,
+        FundingAccountsModule,
         JournalEntriesModule,
+        LedgerTransactionTypesModule,
         CollectedTransactionsModule,
         RecurringRulesModule
       ]
@@ -3816,6 +4039,151 @@ test('GET /accounting-periods returns the current ledger periods in reverse chro
             changedAt: '2026-02-01T00:00:00.000Z'
           }
         ]
+      }
+    ]);
+  } finally {
+    await context.close();
+  }
+});
+
+test('GET /funding-accounts returns only active funding accounts for the current workspace ledger', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/funding-accounts', {
+      headers: context.authHeaders()
+    });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body, [
+      {
+        id: 'acc-1',
+        name: 'Main checking',
+        type: 'BANK',
+        balanceWon: 2_000_000
+      },
+      {
+        id: 'acc-1b',
+        name: 'Emergency savings',
+        type: 'BANK',
+        balanceWon: 3_500_000
+      }
+    ]);
+  } finally {
+    await context.close();
+  }
+});
+
+test('GET /categories returns only active categories for the current workspace ledger', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/categories', {
+      headers: context.authHeaders()
+    });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body, [
+      {
+        id: 'cat-1b',
+        name: 'Salary',
+        kind: 'INCOME'
+      },
+      {
+        id: 'cat-1',
+        name: 'Fuel',
+        kind: 'EXPENSE'
+      },
+      {
+        id: 'cat-1c',
+        name: 'Utilities',
+        kind: 'EXPENSE'
+      }
+    ]);
+  } finally {
+    await context.close();
+  }
+});
+
+test('GET /account-subjects returns active account subjects for the current workspace ledger', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/account-subjects', {
+      headers: context.authHeaders()
+    });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body, [
+      {
+        id: 'as-1-1010',
+        code: '1010',
+        name: '현금및예금',
+        statementType: 'BALANCE_SHEET',
+        normalSide: 'DEBIT',
+        subjectKind: 'ASSET',
+        isSystem: true,
+        isActive: true
+      },
+      {
+        id: 'as-1-4100',
+        code: '4100',
+        name: '운영수익',
+        statementType: 'PROFIT_AND_LOSS',
+        normalSide: 'CREDIT',
+        subjectKind: 'INCOME',
+        isSystem: true,
+        isActive: true
+      },
+      {
+        id: 'as-1-5100',
+        code: '5100',
+        name: '운영비용',
+        statementType: 'PROFIT_AND_LOSS',
+        normalSide: 'DEBIT',
+        subjectKind: 'EXPENSE',
+        isSystem: true,
+        isActive: true
+      }
+    ]);
+  } finally {
+    await context.close();
+  }
+});
+
+test('GET /ledger-transaction-types returns active transaction types for the current workspace ledger', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/ledger-transaction-types', {
+      headers: context.authHeaders()
+    });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body, [
+      {
+        id: 'ltt-1-income',
+        code: 'INCOME_BASIC',
+        name: '기본 수입',
+        flowKind: 'INCOME',
+        postingPolicyKey: 'INCOME_BASIC',
+        isActive: true
+      },
+      {
+        id: 'ltt-1-expense',
+        code: 'EXPENSE_BASIC',
+        name: '기본 지출',
+        flowKind: 'EXPENSE',
+        postingPolicyKey: 'EXPENSE_BASIC',
+        isActive: true
+      },
+      {
+        id: 'ltt-1-transfer',
+        code: 'TRANSFER_BASIC',
+        name: '기본 이체',
+        flowKind: 'TRANSFER',
+        postingPolicyKey: 'TRANSFER_BASIC',
+        isActive: true
       }
     ]);
   } finally {

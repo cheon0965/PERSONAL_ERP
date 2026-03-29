@@ -15,7 +15,7 @@ import type {
   FinancialStatementKind
 } from '@personal-erp/contracts';
 import { formatWon } from '@/shared/lib/format';
-import { DomainContextCard } from '@/shared/ui/domain-context-card';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -42,6 +42,22 @@ export function FinancialStatementsPage() {
   const periodsQuery = useQuery({
     queryKey: accountingPeriodsQueryKey,
     queryFn: getAccountingPeriods
+  });
+
+  useDomainHelp({
+    title: '재무제표 스냅샷 개요',
+    description:
+      '이 화면은 마감 후 생성되는 공식 보고 스냅샷을 보여줍니다. 전망이나 대시보드와 달리, 잠금된 기간에 대해 확정 저장된 결과만 다룹니다.',
+    primaryEntity: '재무제표 스냅샷 (FinancialStatementSnapshot)',
+    relatedEntities: [
+      '운영 기간 (AccountingPeriod)',
+      '마감 스냅샷 (ClosingSnapshot)',
+      '전표 (JournalEntry)',
+      '마감 라인 (BalanceSnapshotLine)'
+    ],
+    truthSource: '공식 재무제표는 잠금된 기간의 ClosingSnapshot과 JournalEntry를 근거로 생성됩니다.',
+    readModelNote:
+      'Round 8에서는 보고 결과를 snapshot으로 먼저 고정하고, 상세 표현과 비교 분석은 이후 라운드에서 확장합니다.'
   });
 
   const lockedPeriods = React.useMemo(
@@ -92,20 +108,6 @@ export function FinancialStatementsPage() {
         title="재무제표 스냅샷"
         description="잠금된 운영 기간을 기준으로 공식 FinancialStatementSnapshot을 생성하고 조회합니다. Round 8에서는 재산상태표, 월간 손익, 현금흐름 요약, 순자산 변동 요약을 얇게 연결합니다."
       />
-
-      <DomainContextCard
-        description="이 화면은 마감 후 생성되는 공식 보고 스냅샷을 보여줍니다. 전망이나 대시보드와 달리, 잠금된 기간에 대해 확정 저장된 결과만 다룹니다."
-        primaryEntity="재무제표 스냅샷 (FinancialStatementSnapshot)"
-        relatedEntities={[
-          '운영 기간 (AccountingPeriod)',
-          '마감 스냅샷 (ClosingSnapshot)',
-          '전표 (JournalEntry)',
-          '마감 라인 (BalanceSnapshotLine)'
-        ]}
-        truthSource="공식 재무제표는 잠금된 기간의 ClosingSnapshot과 JournalEntry를 근거로 생성됩니다."
-        readModelNote="Round 8에서는 보고 결과를 snapshot으로 먼저 고정하고, 상세 표현과 비교 분석은 이후 라운드에서 확장합니다."
-      />
-
       {feedback ? (
         <Alert severity={feedback.severity} variant="outlined">
           {feedback.message}

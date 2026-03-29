@@ -12,6 +12,6 @@ export class CategoriesController {
 
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {
-    return this.categoriesService.findAll(user.id);
+    return this.categoriesService.findAll(user);
   }
 }

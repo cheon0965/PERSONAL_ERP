@@ -1,12 +1,13 @@
 'use client';
 
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { Grid, Stack } from '@mui/material';
+import { Button, Grid, Stack } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import type { RecurringRuleItem } from '@personal-erp/contracts';
 import { formatDate, formatWon } from '@/shared/lib/format';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { DataTableCard } from '@/shared/ui/data-table-card';
-import { DomainContextCard } from '@/shared/ui/domain-context-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -58,6 +59,24 @@ export function RecurringRulesPage() {
     queryFn: getRecurringRules
   });
 
+  useDomainHelp({
+    title: '반복 규칙 개요',
+    description:
+      '반복 규칙 화면은 계획 데이터의 입력 영역입니다. 미래 일정과 금액 기준을 정의하지만, 이 화면 자체가 공식 회계 대상을 만들지는 않습니다.',
+    primaryEntity: '반복 규칙 (RecurringRule)',
+    relatedEntities: [
+      '계획 항목 (PlanItem)',
+      '거래 유형 (TransactionType)',
+      '자금수단 (FundingAccount)',
+      '카테고리 (Category)',
+      '수집 거래 (CollectedTransaction)'
+    ],
+    truthSource:
+      'RecurringRule과 PlanItem은 계획 기준이며, 회계 확정은 이후 수집 거래와 전표에서 이뤄집니다.',
+    readModelNote:
+      '현재 목록은 앞으로 생성될 계획 항목의 기준을 보여주는 운영 화면입니다.'
+  });
+
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
@@ -67,21 +86,19 @@ export function RecurringRulesPage() {
         primaryActionLabel="반복 규칙 등록"
         primaryActionHref="#recurring-rule-form"
       />
-      {error ? <QueryErrorAlert title="반복 규칙 조회에 실패했습니다." error={error} /> : null}
 
-      <DomainContextCard
-        description="반복 규칙 화면은 계획 데이터 영역입니다. 미래 일정과 금액 기준을 정의하지만, 이 화면 자체가 공식 회계 저장을 만들지는 않습니다."
-        primaryEntity="반복 규칙 (RecurringRule)"
-        relatedEntities={[
-          '계획 항목 (PlanItem)',
-          '거래 유형 (TransactionType)',
-          '자금수단 (FundingAccount)',
-          '카테고리 (Category)',
-          '수집 거래 (CollectedTransaction)'
-        ]}
-        truthSource="RecurringRule과 PlanItem은 계획 기준이며, 회계 확정은 이후 수집 거래와 전표에서 이뤄집니다."
-        readModelNote="현재 목록은 앞으로 생성될 계획 항목의 기준을 보여주는 운영 화면입니다."
-      />
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+        <Button component={Link} href="/plan-items" variant="outlined">
+          계획 항목 보기
+        </Button>
+      </Stack>
+
+      {error ? (
+        <QueryErrorAlert
+          title="반복 규칙 조회에 실패했습니다."
+          error={error}
+        />
+      ) : null}
 
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, xl: 8 }}>

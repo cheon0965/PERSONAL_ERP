@@ -13,7 +13,7 @@ import type { CollectedTransactionItem } from '@personal-erp/contracts';
 import { formatWon } from '@/shared/lib/format';
 import { ChartCard } from '@/shared/ui/chart-card';
 import { DataTableCard } from '@/shared/ui/data-table-card';
-import { DomainContextCard } from '@/shared/ui/domain-context-card';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -44,6 +44,22 @@ export function DashboardPage() {
     queryFn: getCollectedTransactions
   });
 
+  useDomainHelp({
+    title: '월 운영 대시보드 개요',
+    description:
+      '대시보드는 장부 전체를 직접 수정하는 화면이 아니라, 현재 운영 기간의 요약과 해석을 제공하는 화면입니다.',
+    primaryEntity: '장부 / 운영 기간 (Ledger / AccountingPeriod)',
+    relatedEntities: [
+      '수집 거래 (CollectedTransaction)',
+      '전표 (JournalEntry / JournalLine)',
+      '마감 스냅샷 (ClosingSnapshot)',
+      '재무제표 스냅샷 (FinancialStatementSnapshot)'
+    ],
+    truthSource: '공식 수치와 회계적 단일 원천은 확정 전표와 잠금 이후 스냅샷에 둡니다.',
+    readModelNote:
+      '현재 카드와 표는 운영 판단을 돕는 요약 화면이며, 회계 진실 자체를 직접 편집하는 화면이 아닙니다.'
+  });
+
   const summary = summaryQuery.data;
   const transactions = transactionsQuery.data ?? [];
 
@@ -55,19 +71,6 @@ export function DashboardPage() {
         description="이 화면은 Ledger와 AccountingPeriod 기준의 읽기 모델입니다. 월 운영 판단은 여기서 빠르게 보고, 공식 회계 확정은 전표와 스냅샷을 기준으로 해석합니다."
         primaryActionLabel="수집 거래 등록"
         primaryActionHref="/transactions#collected-transaction-form"
-      />
-
-      <DomainContextCard
-        description="대시보드는 장부 전체를 직접 수정하는 화면이 아니라, 현재 운영 기간의 요약과 해석을 제공하는 화면입니다."
-        primaryEntity="장부 / 운영 기간 (Ledger / AccountingPeriod)"
-        relatedEntities={[
-          '수집 거래 (CollectedTransaction)',
-          '전표 (JournalEntry / JournalLine)',
-          '마감 스냅샷 (ClosingSnapshot)',
-          '재무제표 스냅샷 (FinancialStatementSnapshot)'
-        ]}
-        truthSource="공식 수치와 회계적 단일 원천은 확정 전표와 잠금 이후 스냅샷에 둡니다."
-        readModelNote="현재 카드와 표는 운영 판단을 돕는 요약 화면이며, 회계 진실 자체를 직접 편집하는 화면이 아닙니다."
       />
 
       <Box
