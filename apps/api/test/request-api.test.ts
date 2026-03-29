@@ -521,6 +521,18 @@ async function createRequestTestState(): Promise<RequestTestState> {
         isActive: true
       },
       {
+        id: 'as-1-2010',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        code: '2010',
+        name: '카드대금',
+        statementType: 'BALANCE_SHEET',
+        normalSide: 'CREDIT',
+        subjectKind: 'LIABILITY',
+        isSystem: true,
+        isActive: true
+      },
+      {
         id: 'as-1-4100',
         tenantId: 'tenant-1',
         ledgerId: 'ledger-1',
@@ -553,6 +565,18 @@ async function createRequestTestState(): Promise<RequestTestState> {
         statementType: 'BALANCE_SHEET',
         normalSide: 'DEBIT',
         subjectKind: 'ASSET',
+        isSystem: true,
+        isActive: true
+      },
+      {
+        id: 'as-2-2010',
+        tenantId: 'tenant-2',
+        ledgerId: 'ledger-2',
+        code: '2010',
+        name: '카드대금',
+        statementType: 'BALANCE_SHEET',
+        normalSide: 'CREDIT',
+        subjectKind: 'LIABILITY',
         isSystem: true,
         isActive: true
       },
@@ -1661,6 +1685,7 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
                 select?: {
                   code?: boolean;
                   name?: boolean;
+                  subjectKind?: boolean;
                 };
               };
               fundingAccount?: {
@@ -1701,6 +1726,10 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
                     ...(args.include?.lines?.include?.accountSubject?.select
                       ?.name
                       ? { name: accountSubject?.name ?? '' }
+                      : {}),
+                    ...(args.include?.lines?.include?.accountSubject?.select
+                      ?.subjectKind
+                      ? { subjectKind: accountSubject?.subjectKind ?? 'ASSET' }
                       : {})
                   },
                   fundingAccount: fundingAccount
@@ -1775,6 +1804,7 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
                 select?: {
                   code?: boolean;
                   name?: boolean;
+                  subjectKind?: boolean;
                 };
               };
               fundingAccount?: {
@@ -1817,6 +1847,10 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
                     ...(args.include?.lines?.include?.accountSubject?.select
                       ?.name
                       ? { name: accountSubject?.name ?? '' }
+                      : {}),
+                    ...(args.include?.lines?.include?.accountSubject?.select
+                      ?.subjectKind
+                      ? { subjectKind: accountSubject?.subjectKind ?? 'ASSET' }
                       : {})
                   },
                   fundingAccount: fundingAccount
@@ -1876,6 +1910,7 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
             select?: {
               code?: boolean;
               name?: boolean;
+              subjectKind?: boolean;
             };
           };
           fundingAccount?: {
@@ -1912,6 +1947,9 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
                       : {}),
                     ...(args.include.accountSubject.select?.name
                       ? { name: accountSubject?.name ?? '' }
+                      : {}),
+                    ...(args.include.accountSubject.select?.subjectKind
+                      ? { subjectKind: accountSubject?.subjectKind ?? 'ASSET' }
                       : {})
                   }
                 }
@@ -2945,6 +2983,7 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
               id?: boolean;
               code?: boolean;
               name?: boolean;
+              subjectKind?: boolean;
             };
           };
           fundingAccount?: {
@@ -2994,6 +3033,11 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
                         : {}),
                       ...(args.include.accountSubject.select?.name
                         ? { name: accountSubject?.name ?? '' }
+                        : {}),
+                      ...(args.include.accountSubject.select?.subjectKind
+                        ? {
+                            subjectKind: accountSubject?.subjectKind ?? 'ASSET'
+                          }
                         : {})
                     }
                   }
@@ -4122,6 +4166,16 @@ test('GET /account-subjects returns active account subjects for the current work
         statementType: 'BALANCE_SHEET',
         normalSide: 'DEBIT',
         subjectKind: 'ASSET',
+        isSystem: true,
+        isActive: true
+      },
+      {
+        id: 'as-1-2010',
+        code: '2010',
+        name: '카드대금',
+        statementType: 'BALANCE_SHEET',
+        normalSide: 'CREDIT',
+        subjectKind: 'LIABILITY',
         isSystem: true,
         isActive: true
       },
