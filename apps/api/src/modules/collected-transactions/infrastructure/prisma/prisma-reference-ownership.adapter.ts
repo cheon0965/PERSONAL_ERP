@@ -8,20 +8,22 @@ export class PrismaReferenceOwnershipAdapter
 {
   constructor(private readonly prisma: PrismaService) {}
 
-  async fundingAccountExistsForUser(
-    userId: string,
+  async fundingAccountExistsInWorkspace(
+    tenantId: string,
+    ledgerId: string,
     fundingAccountId: string
   ): Promise<boolean> {
     const account = await this.prisma.account.findFirst({
-      where: { id: fundingAccountId, userId },
+      where: { id: fundingAccountId, tenantId, ledgerId },
       select: { id: true }
     });
 
     return Boolean(account);
   }
 
-  async categoryExistsForUser(
-    userId: string,
+  async categoryExistsInWorkspace(
+    tenantId: string,
+    ledgerId: string,
     categoryId?: string
   ): Promise<boolean> {
     if (!categoryId) {
@@ -29,7 +31,7 @@ export class PrismaReferenceOwnershipAdapter
     }
 
     const category = await this.prisma.category.findFirst({
-      where: { id: categoryId, userId },
+      where: { id: categoryId, tenantId, ledgerId },
       select: { id: true }
     });
 

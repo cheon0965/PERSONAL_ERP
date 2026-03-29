@@ -10,6 +10,8 @@ import {
 
 const createRecurringRuleCommand = {
   userId: 'user-1',
+  tenantId: 'tenant-1',
+  ledgerId: 'ledger-1',
   title: 'Phone bill',
   fundingAccountId: 'acc-1',
   categoryId: 'cat-1',
@@ -23,8 +25,8 @@ const createRecurringRuleCommand = {
 test('CreateRecurringRuleUseCase persists a rule after ownership checks pass', async () => {
   const calls: Array<Record<string, unknown>> = [];
   const recurringRuleStore = {
-    findAllByUserId: async () => [],
-    createForUser: async (record: Record<string, unknown>) => {
+    findAllInWorkspace: async () => [],
+    createInWorkspace: async (record: Record<string, unknown>) => {
       calls.push(record);
       return {
         id: 'rr-1',
@@ -36,8 +38,8 @@ test('CreateRecurringRuleUseCase persists a rule after ownership checks pass', a
     }
   };
   const referenceOwnership = {
-    fundingAccountExistsForUser: async () => true,
-    categoryExistsForUser: async () => true
+    fundingAccountExistsInWorkspace: async () => true,
+    categoryExistsInWorkspace: async () => true
   };
 
   const useCase = new CreateRecurringRuleUseCase(
@@ -50,6 +52,8 @@ test('CreateRecurringRuleUseCase persists a rule after ownership checks pass', a
   assert.equal(calls.length, 1);
   assert.deepEqual(calls[0], {
     userId: 'user-1',
+    tenantId: 'tenant-1',
+    ledgerId: 'ledger-1',
     title: 'Phone bill',
     accountId: 'acc-1',
     categoryId: 'cat-1',
@@ -75,12 +79,12 @@ test('CreateRecurringRuleUseCase persists a rule after ownership checks pass', a
 
 test('CreateRecurringRuleUseCase rejects missing funding accounts', async () => {
   const recurringRuleStore = {
-    findAllByUserId: async () => [],
-    createForUser: async () => ({})
+    findAllInWorkspace: async () => [],
+    createInWorkspace: async () => ({})
   };
   const referenceOwnership = {
-    fundingAccountExistsForUser: async () => false,
-    categoryExistsForUser: async () => true
+    fundingAccountExistsInWorkspace: async () => false,
+    categoryExistsInWorkspace: async () => true
   };
 
   const useCase = new CreateRecurringRuleUseCase(
@@ -98,12 +102,12 @@ test('CreateRecurringRuleUseCase rejects missing funding accounts', async () => 
 
 test('CreateRecurringRuleUseCase rejects missing categories', async () => {
   const recurringRuleStore = {
-    findAllByUserId: async () => [],
-    createForUser: async () => ({})
+    findAllInWorkspace: async () => [],
+    createInWorkspace: async () => ({})
   };
   const referenceOwnership = {
-    fundingAccountExistsForUser: async () => true,
-    categoryExistsForUser: async () => false
+    fundingAccountExistsInWorkspace: async () => true,
+    categoryExistsInWorkspace: async () => false
   };
 
   const useCase = new CreateRecurringRuleUseCase(
@@ -121,7 +125,7 @@ test('CreateRecurringRuleUseCase rejects missing categories', async () => {
 
 test('ListRecurringRulesUseCase maps stored rules into the shared response shape', async () => {
   const recurringRuleStore = {
-    findAllByUserId: async () => [
+    findAllInWorkspace: async () => [
       {
         id: 'rr-1',
         title: 'Phone bill',
@@ -133,13 +137,16 @@ test('ListRecurringRulesUseCase maps stored rules into the shared response shape
         category: { name: 'Fuel' }
       }
     ],
-    createForUser: async () => {
-      throw new Error('createForUser should not be called');
+    createInWorkspace: async () => {
+      throw new Error('createInWorkspace should not be called');
     }
   };
 
   const useCase = new ListRecurringRulesUseCase(recurringRuleStore as never);
-  const result = await useCase.execute('user-1');
+  const result = await useCase.execute({
+    tenantId: 'tenant-1',
+    ledgerId: 'ledger-1'
+  });
 
   assert.deepEqual(result, [
     {

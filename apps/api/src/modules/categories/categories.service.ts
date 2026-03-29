@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import type { CategoryItem } from '@personal-erp/contracts';
+import type { AuthenticatedUser, CategoryItem } from '@personal-erp/contracts';
+import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { mapCategoryToItem } from './categories.mapper';
 import { CategoriesRepository } from './categories.repository';
 
@@ -7,8 +8,12 @@ import { CategoriesRepository } from './categories.repository';
 export class CategoriesService {
   constructor(private readonly categoriesRepository: CategoriesRepository) {}
 
-  async findAll(userId: string): Promise<CategoryItem[]> {
-    const categories = await this.categoriesRepository.findAllByUserId(userId);
+  async findAll(user: AuthenticatedUser): Promise<CategoryItem[]> {
+    const workspace = requireCurrentWorkspace(user);
+    const categories = await this.categoriesRepository.findAllInWorkspace(
+      workspace.tenantId,
+      workspace.ledgerId
+    );
     return categories.map(mapCategoryToItem);
   }
 }

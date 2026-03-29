@@ -6,7 +6,7 @@ import { Box, Divider, Stack, Typography } from '@mui/material';
 import type { JournalEntryItem } from '@personal-erp/contracts';
 import { useSearchParams } from 'next/navigation';
 import { formatWon } from '@/shared/lib/format';
-import { DomainContextCard } from '@/shared/ui/domain-context-card';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -39,6 +39,21 @@ export function JournalEntriesPage() {
     return [highlighted, ...data.filter((item) => item.id !== highlightedEntryId)];
   }, [highlightedEntryId, journalEntriesQuery.data]);
 
+  useDomainHelp({
+    title: '전표 조회 개요',
+    description:
+      '전표는 회계적 진실의 단일 원천입니다. 이 화면은 확정된 수집 거래가 실제 차변/대변 라인으로 어떻게 기록되었는지 보여주는 최소 조회 흐름입니다.',
+    primaryEntity: '전표 (JournalEntry)',
+    relatedEntities: [
+      '전표 라인 (JournalLine)',
+      '수집 거래 (CollectedTransaction)',
+      '계정과목 (AccountSubject)',
+      '자금수단 (FundingAccount)',
+      '운영 기간 (AccountingPeriod)'
+    ],
+    truthSource: '월 운영 중 확정된 거래는 반드시 전표로 이어지고, 이후 마감과 보고는 이 전표를 기준으로 진행됩니다.'
+  });
+
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
@@ -53,20 +68,6 @@ export function JournalEntriesPage() {
           error={journalEntriesQuery.error}
         />
       ) : null}
-
-      <DomainContextCard
-        description="전표는 회계적 진실의 단일 원천입니다. 이 화면은 확정된 수집 거래가 실제 차변/대변 라인으로 어떻게 기록되었는지 보여주는 최소 조회 흐름입니다."
-        primaryEntity="전표 (JournalEntry)"
-        relatedEntities={[
-          '전표 라인 (JournalLine)',
-          '수집 거래 (CollectedTransaction)',
-          '계정과목 (AccountSubject)',
-          '자금수단 (FundingAccount)',
-          '운영 기간 (AccountingPeriod)'
-        ]}
-        truthSource="월 운영 중 확정된 거래는 반드시 전표로 이어지고, 이후 마감과 보고는 이 전표를 기준으로 진행됩니다."
-      />
-
       {entries.length === 0 ? (
         <SectionCard
           title="최근 전표가 없습니다"

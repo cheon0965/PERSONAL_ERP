@@ -5,9 +5,13 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 export class FundingAccountsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAllByUserId(userId: string) {
+  findAllInWorkspace(tenantId: string, ledgerId: string) {
     return this.prisma.account.findMany({
-      where: { userId },
+      where: {
+        tenantId,
+        ledgerId,
+        status: 'ACTIVE'
+      },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }]
     });
   }

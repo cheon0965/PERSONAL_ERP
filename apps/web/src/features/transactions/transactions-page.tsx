@@ -24,8 +24,8 @@ import {
 } from '@/features/accounting-periods/accounting-periods.api';
 import { journalEntriesQueryKey } from '@/features/journal-entries/journal-entries.api';
 import { formatWon } from '@/shared/lib/format';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { DataTableCard } from '@/shared/ui/data-table-card';
-import { DomainContextCard } from '@/shared/ui/domain-context-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -90,11 +90,30 @@ export function TransactionsPage() {
     }
   });
 
+
   const data = React.useMemo(
     () => transactionsQuery.data ?? [],
     [transactionsQuery.data]
   );
   const currentPeriod = currentPeriodQuery.data ?? null;
+
+  useDomainHelp({
+    title: '수집 거래 개요',
+    description:
+      '수집 거래는 회계적 진실의 최종 원천이 아니라, 현재 운영 기간 안에서 검토되고 전표로 이어지는 중간 단계입니다. 이번 라운드부터는 보류 상태 수집 거래를 직접 JournalEntry로 확정할 수 있습니다.',
+    primaryEntity: '수집 거래 (CollectedTransaction)',
+    relatedEntities: [
+      '운영 기간 (AccountingPeriod)',
+      '거래 유형 (TransactionType)',
+      '자금수단 (FundingAccount)',
+      '카테고리 (Category)',
+      '전표 (JournalEntry)'
+    ],
+    truthSource: '공식 회계 기준은 전표이며, 수집 거래는 전표 확정 전 단계의 운영 기록입니다.',
+    readModelNote: currentPeriod
+      ? `${currentPeriod.monthLabel} 운영 기간 안의 거래를 검토하고, 아직 전표가 없는 보류 상태 거래만 확정할 수 있습니다.`
+      : '아직 열린 운영 기간이 없어 수집 거래 등록과 전표 확정이 잠겨 있습니다.'
+  });
   const [keyword, setKeyword] = React.useState('');
   const [fundingAccountName, setFundingAccountName] = React.useState('');
   const [categoryName, setCategoryName] = React.useState('');
@@ -243,25 +262,6 @@ export function TransactionsPage() {
           error={transactionsQuery.error}
         />
       ) : null}
-
-      <DomainContextCard
-        description="수집 거래는 회계적 진실의 최종 원천이 아니라, 현재 운영 기간 안에서 검토되고 전표로 이어지는 중간 단계입니다. 이번 라운드부터는 보류 상태 수집 거래를 직접 JournalEntry로 확정할 수 있습니다."
-        primaryEntity="수집 거래 (CollectedTransaction)"
-        relatedEntities={[
-          '운영 기간 (AccountingPeriod)',
-          '거래 유형 (TransactionType)',
-          '자금수단 (FundingAccount)',
-          '카테고리 (Category)',
-          '전표 (JournalEntry)'
-        ]}
-        truthSource="공식 회계 기준은 전표이며, 수집 거래는 전표 확정 전 단계의 운영 기록입니다."
-        readModelNote={
-          currentPeriod
-            ? `${currentPeriod.monthLabel} 운영 기간 안의 거래를 검토하고, 아직 전표가 없는 보류 상태 거래만 확정할 수 있습니다.`
-            : '아직 열린 운영 기간이 없어 수집 거래 등록과 전표 확정이 잠겨 있습니다.'
-        }
-      />
-
       <SectionCard
         title="현재 운영 기간"
         description="수집 거래 입력과 전표 확정은 현재 열린 운영 기간 문맥 안에서만 진행됩니다."

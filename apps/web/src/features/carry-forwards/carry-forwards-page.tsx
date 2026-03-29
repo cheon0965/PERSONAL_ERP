@@ -6,7 +6,7 @@ import { Alert, Button, MenuItem, Stack, TextField, Typography } from '@mui/mate
 import type { AccountingPeriodItem } from '@personal-erp/contracts';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { formatDate, formatWon } from '@/shared/lib/format';
-import { DomainContextCard } from '@/shared/ui/domain-context-card';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -32,6 +32,21 @@ export function CarryForwardsPage() {
   const periodsQuery = useQuery({
     queryKey: accountingPeriodsQueryKey,
     queryFn: getAccountingPeriods
+  });
+
+  useDomainHelp({
+    title: '차기 이월 개요',
+    description:
+      '이 화면은 마감 결과를 다음 월 시작 기준으로 넘기는 공식 이월 화면입니다. 재무제표와 달리, 다음 운영 월의 오프닝 잔액이 실제로 어떻게 만들어졌는지까지 함께 고정합니다.',
+    primaryEntity: '이월 기록 (CarryForwardRecord)',
+    relatedEntities: [
+      '마감 스냅샷 (ClosingSnapshot)',
+      '오프닝 잔액 스냅샷 (OpeningBalanceSnapshot)',
+      '운영 기간 (AccountingPeriod)'
+    ],
+    truthSource: '차기 이월은 잠금된 기간의 ClosingSnapshot과 BalanceSnapshotLine을 근거로 생성됩니다.',
+    readModelNote:
+      'Round 9에서는 자산·부채·자본 계정의 잔액만 다음 월 오프닝으로 이월하고, 향후 라운드에서 생성 전표나 정교한 예외 흐름을 확장합니다.'
   });
 
   const lockedPeriods = React.useMemo(
@@ -82,18 +97,6 @@ export function CarryForwardsPage() {
         eyebrow="차기 이월"
         title="이월 기준 생성"
         description="잠금된 운영 기간의 ClosingSnapshot을 다음 월 오프닝 기준으로 연결합니다. Round 9에서는 CarryForwardRecord와 OpeningBalanceSnapshot을 얇게 먼저 연결합니다."
-      />
-
-      <DomainContextCard
-        description="이 화면은 마감 결과를 다음 월 시작 기준으로 넘기는 공식 이월 화면입니다. 재무제표와 달리, 다음 운영 월의 오프닝 잔액이 실제로 어떻게 만들어졌는지까지 함께 고정합니다."
-        primaryEntity="이월 기록 (CarryForwardRecord)"
-        relatedEntities={[
-          '마감 스냅샷 (ClosingSnapshot)',
-          '오프닝 잔액 스냅샷 (OpeningBalanceSnapshot)',
-          '운영 기간 (AccountingPeriod)'
-        ]}
-        truthSource="차기 이월은 잠금된 기간의 ClosingSnapshot과 BalanceSnapshotLine을 근거로 생성됩니다."
-        readModelNote="Round 9에서는 자산·부채·자본 계정의 잔액만 다음 월 오프닝으로 이월하고, 향후 라운드에서 생성 전표나 정교한 예외 흐름을 확장합니다."
       />
 
       {feedback ? (

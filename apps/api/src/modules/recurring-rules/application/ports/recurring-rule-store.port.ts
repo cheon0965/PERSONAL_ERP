@@ -17,6 +17,8 @@ export type StoredRecurringRule = {
 
 export type CreateRecurringRuleRecord = {
   userId: string;
+  tenantId: string;
+  ledgerId: string;
   title: string;
   accountId: string;
   categoryId?: string;
@@ -30,9 +32,12 @@ export type CreateRecurringRuleRecord = {
 };
 
 export abstract class RecurringRuleStorePort {
-  abstract findAllByUserId(userId: string): Promise<StoredRecurringRule[]>;
+  abstract findAllInWorkspace(
+    tenantId: string,
+    ledgerId: string
+  ): Promise<StoredRecurringRule[]>;
 
-  abstract createForUser(
+  abstract createInWorkspace(
     record: CreateRecurringRuleRecord
   ): Promise<StoredRecurringRule>;
 }

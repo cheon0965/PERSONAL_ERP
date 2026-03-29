@@ -6,9 +6,9 @@ import type { GridColDef } from '@mui/x-data-grid';
 import { BarChart } from '@mui/x-charts/BarChart';
 import type { FuelLogItem } from '@personal-erp/contracts';
 import { formatDate, formatNumber, formatWon } from '@/shared/lib/format';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { ChartCard } from '@/shared/ui/chart-card';
 import { DataTableCard } from '@/shared/ui/data-table-card';
-import { DomainContextCard } from '@/shared/ui/domain-context-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -91,6 +91,21 @@ export function VehiclesPage() {
     )
     .sort((left, right) => right.filledOn.localeCompare(left.filledOn));
 
+  useDomainHelp({
+    title: '차량 운영 개요',
+    description:
+      '차량 화면은 운영 판단과 분류를 돕는 보조 영역입니다. 공식 회계 확정은 수집 거래와 전표에서 이뤄집니다.',
+    primaryEntity: '차량 운영 보조 데이터',
+    relatedEntities: [
+      '수집 거래 (CollectedTransaction)',
+      '카테고리 (Category)',
+      '자금수단 (FundingAccount)',
+      '전표 (JournalEntry)'
+    ],
+    truthSource: '차량과 주유 기록 자체는 회계 저장이 아니며 실제 확정은 수집 거래 분류와 전표 반영에서 이뤄집니다.',
+    readModelNote: '주유비와 연비는 비용 판단을 돕는 운영 지표입니다.'
+  });
+
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
@@ -100,20 +115,6 @@ export function VehiclesPage() {
       />
 
       {error ? <QueryErrorAlert title="차량 정보 조회에 실패했습니다." error={error} /> : null}
-
-      <DomainContextCard
-        description="차량 화면은 운영 판단과 분류를 돕는 보조 영역입니다. 공식 회계 확정은 수집 거래와 전표에서 이뤄집니다."
-        primaryEntity="차량 운영 보조 데이터"
-        relatedEntities={[
-          '수집 거래 (CollectedTransaction)',
-          '카테고리 (Category)',
-          '자금수단 (FundingAccount)',
-          '전표 (JournalEntry)'
-        ]}
-        truthSource="차량과 주유 기록 자체는 회계 저장이 아니며 실제 확정은 수집 거래 분류와 전표 반영에서 이뤄집니다."
-        readModelNote="주유비와 연비는 비용 판단을 돕는 운영 지표입니다."
-      />
-
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, md: 4 }}>
           <SummaryCard

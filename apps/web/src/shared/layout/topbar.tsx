@@ -1,6 +1,7 @@
 'use client';
 
 import type { Route } from 'next';
+import HelpOutlineRoundedIcon from '@mui/icons-material/HelpOutlineRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import NotificationsRoundedIcon from '@mui/icons-material/NotificationsRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
@@ -12,15 +13,18 @@ import {
   Stack,
   TextField,
   Toolbar,
+  Tooltip,
   Typography
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { useAuthSession } from '@/shared/auth/auth-provider';
+import { useDomainHelpStore } from '../providers/domain-help-provider';
 import { sidebarWidth } from './sidebar-nav';
 
 export function Topbar() {
   const router = useRouter();
   const { logout, user } = useAuthSession();
+  const { activeContext, setDrawerOpen } = useDomainHelpStore();
 
   return (
     <AppBar
@@ -47,6 +51,17 @@ export function Topbar() {
             sx={{ maxWidth: 420 }}
           />
           <Stack direction="row" alignItems="center" spacing={1}>
+            <Tooltip title={activeContext ? '도메인 가이드 열기' : '도움말 정보가 없습니다'}>
+              <span>
+                <IconButton 
+                  disabled={!activeContext} 
+                  onClick={() => setDrawerOpen(true)}
+                  color="primary"
+                >
+                  <HelpOutlineRoundedIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
             <IconButton>
               <NotificationsRoundedIcon />
             </IconButton>

@@ -25,7 +25,7 @@ import { useAuthSession } from '@/shared/auth/auth-provider';
 import { getTodayMonthInputValue } from '@/shared/lib/date-input';
 import { formatDate, formatWon } from '@/shared/lib/format';
 import { DataTableCard } from '@/shared/ui/data-table-card';
-import { DomainContextCard } from '@/shared/ui/domain-context-card';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -104,6 +104,23 @@ export function AccountingPeriodsPage() {
     queryFn: getAccountingPeriods
   });
 
+  useDomainHelp({
+    title: '운영 기간 관리 개요',
+    description:
+      '운영 기간은 모든 수집 거래, 전표 확정, 마감, 재무제표의 기준 월을 고정합니다. 이 라운드에서는 월 운영 시작과 상태 이력의 최소 경로를 먼저 연결합니다.',
+    primaryEntity: '운영 기간 (AccountingPeriod)',
+    relatedEntities: [
+      '기간 상태 이력 (PeriodStatusHistory)',
+      '오프닝 잔액 스냅샷 (OpeningBalanceSnapshot)',
+      '장부 (Ledger)',
+      '테넌트 멤버십 (TenantMembership)'
+    ],
+    truthSource:
+      '운영 월의 공식 시작 기준은 AccountingPeriod이며, 첫 월 시작은 OpeningBalanceSnapshot 생성 여부까지 함께 남깁니다.',
+    readModelNote:
+      '현재 목록은 기간 운영 상태를 빠르게 확인하는 읽기 모델이며, 이후 라운드에서 마감과 이월 흐름이 여기에 이어집니다.'
+  });
+
   const form = useForm<PeriodFormInput>({
     resolver: zodResolver(periodFormSchema),
     defaultValues: {
@@ -175,20 +192,6 @@ export function AccountingPeriodsPage() {
         primaryActionLabel="월 운영 시작"
         primaryActionHref="#open-accounting-period-form"
       />
-
-      <DomainContextCard
-        description="운영 기간은 모든 수집 거래, 전표 확정, 마감, 재무제표의 기준 월을 고정합니다. 이 라운드에서는 월 운영 시작과 상태 이력의 최소 경로를 먼저 연결합니다."
-        primaryEntity="운영 기간 (AccountingPeriod)"
-        relatedEntities={[
-          '기간 상태 이력 (PeriodStatusHistory)',
-          '오프닝 잔액 스냅샷 (OpeningBalanceSnapshot)',
-          '장부 (Ledger)',
-          '테넌트 멤버십 (TenantMembership)'
-        ]}
-        truthSource="운영 월의 공식 시작 기준은 AccountingPeriod이며, 첫 월 시작은 OpeningBalanceSnapshot 생성 여부까지 함께 남깁니다."
-        readModelNote="현재 목록은 기간 운영 상태를 빠르게 확인하는 읽기 모델이며, 이후 라운드에서 마감과 이월 흐름이 여기에 이어집니다."
-      />
-
       {error ? (
         <QueryErrorAlert
           title="운영 기간 목록을 불러오지 못했습니다."

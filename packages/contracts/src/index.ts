@@ -219,6 +219,52 @@ export type CategoryItem = {
   kind: CategoryKind;
 };
 
+export type AccountSubjectStatementType = 'BALANCE_SHEET' | 'PROFIT_AND_LOSS';
+export type AccountNormalSide = 'DEBIT' | 'CREDIT';
+export type AccountSubjectKind =
+  | 'ASSET'
+  | 'LIABILITY'
+  | 'EQUITY'
+  | 'INCOME'
+  | 'EXPENSE';
+
+export type AccountSubjectItem = {
+  id: string;
+  code: string;
+  name: string;
+  statementType: AccountSubjectStatementType;
+  normalSide: AccountNormalSide;
+  subjectKind: AccountSubjectKind;
+  isSystem: boolean;
+  isActive: boolean;
+};
+
+export type LedgerTransactionFlowKind =
+  | 'INCOME'
+  | 'EXPENSE'
+  | 'TRANSFER'
+  | 'ADJUSTMENT'
+  | 'OPENING_BALANCE'
+  | 'CARRY_FORWARD';
+export type PostingPolicyKey =
+  | 'INCOME_BASIC'
+  | 'EXPENSE_BASIC'
+  | 'TRANSFER_BASIC'
+  | 'CARD_SPEND'
+  | 'CARD_PAYMENT'
+  | 'OPENING_BALANCE'
+  | 'CARRY_FORWARD'
+  | 'MANUAL_ADJUSTMENT';
+
+export type LedgerTransactionTypeItem = {
+  id: string;
+  code: string;
+  name: string;
+  flowKind: LedgerTransactionFlowKind;
+  postingPolicyKey: PostingPolicyKey;
+  isActive: boolean;
+};
+
 export type CollectedTransactionType = 'INCOME' | 'EXPENSE' | 'TRANSFER';
 export type CollectedTransactionSourceKind = 'MANUAL' | 'RECURRING' | 'IMPORT';
 export type CollectedTransactionPostingStatus =
@@ -302,6 +348,57 @@ export type CreateRecurringRuleRequest = {
   startDate: string;
   endDate?: string;
   isActive?: boolean;
+};
+
+export type PlanItemStatus =
+  | 'DRAFT'
+  | 'MATCHED'
+  | 'CONFIRMED'
+  | 'SKIPPED'
+  | 'EXPIRED';
+
+export type PlanItemItem = {
+  id: string;
+  periodId: string;
+  title: string;
+  plannedDate: string;
+  plannedAmount: number;
+  status: PlanItemStatus;
+  recurringRuleId: string | null;
+  recurringRuleTitle: string | null;
+  ledgerTransactionTypeName: string;
+  fundingAccountName: string;
+  categoryName: string;
+  matchedCollectedTransactionId: string | null;
+  postedJournalEntryId: string | null;
+};
+
+export type PlanItemSummary = {
+  totalCount: number;
+  totalPlannedAmount: number;
+  draftCount: number;
+  matchedCount: number;
+  confirmedCount: number;
+  skippedCount: number;
+  expiredCount: number;
+};
+
+export type PlanItemsView = {
+  period: AccountingPeriodItem;
+  items: PlanItemItem[];
+  summary: PlanItemSummary;
+};
+
+export type GeneratePlanItemsRequest = {
+  periodId: string;
+};
+
+export type GeneratePlanItemsResponse = PlanItemsView & {
+  generation: {
+    createdCount: number;
+    skippedExistingCount: number;
+    excludedRuleCount: number;
+  };
 };
 
 export type InsurancePolicyItem = {

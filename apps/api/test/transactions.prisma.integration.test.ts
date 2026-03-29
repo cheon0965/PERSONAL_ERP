@@ -179,29 +179,33 @@ test(
       );
 
       assert.equal(
-        await referenceOwnership.fundingAccountExistsForUser(
-          owner.id,
+        await referenceOwnership.fundingAccountExistsInWorkspace(
+          ownerBackbone.tenantId,
+          ownerBackbone.ledgerId,
           ownerAccount.id
         ),
         true
       );
       assert.equal(
-        await referenceOwnership.fundingAccountExistsForUser(
-          owner.id,
+        await referenceOwnership.fundingAccountExistsInWorkspace(
+          ownerBackbone.tenantId,
+          ownerBackbone.ledgerId,
           outsiderAccount.id
         ),
         false
       );
       assert.equal(
-        await referenceOwnership.categoryExistsForUser(
-          owner.id,
+        await referenceOwnership.categoryExistsInWorkspace(
+          ownerBackbone.tenantId,
+          ownerBackbone.ledgerId,
           ownerCategory.id
         ),
         true
       );
       assert.equal(
-        await referenceOwnership.categoryExistsForUser(
-          owner.id,
+        await referenceOwnership.categoryExistsInWorkspace(
+          ownerBackbone.tenantId,
+          ownerBackbone.ledgerId,
           outsiderCategory.id
         ),
         false

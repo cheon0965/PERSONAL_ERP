@@ -11,7 +11,12 @@ import type {
 } from '@personal-erp/contracts';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { getFundingAccounts, getCategories } from '@/features/reference-data/reference-data.api';
+import {
+  categoriesQueryKey,
+  fundingAccountsQueryKey,
+  getCategories,
+  getFundingAccounts
+} from '@/features/reference-data/reference-data.api';
 import { webRuntime } from '@/shared/config/env';
 import { getTodayDateInputValue } from '@/shared/lib/date-input';
 import { appLayout } from '@/shared/ui/layout-metrics';
@@ -55,11 +60,11 @@ export function TransactionForm({ currentPeriod }: TransactionFormProps) {
   const queryClient = useQueryClient();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const { data: fundingAccounts = [], error: fundingAccountsError } = useQuery({
-    queryKey: ['funding-accounts'],
+    queryKey: fundingAccountsQueryKey,
     queryFn: getFundingAccounts
   });
   const { data: categories = [], error: categoriesError } = useQuery({
-    queryKey: ['categories'],
+    queryKey: categoriesQueryKey,
     queryFn: getCategories
   });
   const form = useForm<TransactionFormInput>({

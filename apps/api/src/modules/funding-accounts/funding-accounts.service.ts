@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import type { FundingAccountItem } from '@personal-erp/contracts';
+import type {
+  AuthenticatedUser,
+  FundingAccountItem
+} from '@personal-erp/contracts';
+import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { mapFundingAccountRecordToItem } from './funding-account.mapper';
 import { FundingAccountsRepository } from './funding-accounts.repository';
 
@@ -9,8 +13,12 @@ export class FundingAccountsService {
     private readonly fundingAccountsRepository: FundingAccountsRepository
   ) {}
 
-  async findAll(userId: string): Promise<FundingAccountItem[]> {
-    const accounts = await this.fundingAccountsRepository.findAllByUserId(userId);
+  async findAll(user: AuthenticatedUser): Promise<FundingAccountItem[]> {
+    const workspace = requireCurrentWorkspace(user);
+    const accounts = await this.fundingAccountsRepository.findAllInWorkspace(
+      workspace.tenantId,
+      workspace.ledgerId
+    );
     return accounts.map(mapFundingAccountRecordToItem);
   }
 }

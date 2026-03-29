@@ -5,8 +5,8 @@ import { Grid, Stack } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import type { InsurancePolicyItem } from '@personal-erp/contracts';
 import { formatDate, formatWon } from '@/shared/lib/format';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { DataTableCard } from '@/shared/ui/data-table-card';
-import { DomainContextCard } from '@/shared/ui/domain-context-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -59,6 +59,21 @@ export function InsurancePoliciesPage() {
     return diffDays >= 0 && diffDays <= 60;
   }).length;
 
+  useDomainHelp({
+    title: '보험 계약 개요',
+    description:
+      '보험 화면은 공식 장부가 아니라 추후 계획 지출과 실제 지급 흐름을 잇는 보조 화면입니다.',
+    primaryEntity: '보험 계약 보조 데이터',
+    relatedEntities: [
+      '반복 규칙 (RecurringRule)',
+      '계획 항목 (PlanItem)',
+      '수집 거래 (CollectedTransaction)',
+      '전표 (JournalEntry)'
+    ],
+    truthSource: '보험 계약 자체는 회계 저장이 아니며 실제 회계 확정은 수집 거래와 전표에서 이뤄집니다.',
+    readModelNote: '월 보험료와 갱신일은 운영 판단을 위한 보조 지표입니다.'
+  });
+
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
@@ -67,20 +82,6 @@ export function InsurancePoliciesPage() {
         description="보험 계약은 코어 회계 엔티티 자체가 아니라 반복 규칙과 수집 거래를 설명하는 운영 보조 데이터로 관리합니다."
       />
       {error ? <QueryErrorAlert title="보험 정보 조회에 실패했습니다." error={error} /> : null}
-
-      <DomainContextCard
-        description="보험 화면은 공식 장부가 아니라 추후 계획 지출과 실제 지급 흐름을 잇는 보조 화면입니다."
-        primaryEntity="보험 계약 보조 데이터"
-        relatedEntities={[
-          '반복 규칙 (RecurringRule)',
-          '계획 항목 (PlanItem)',
-          '수집 거래 (CollectedTransaction)',
-          '전표 (JournalEntry)'
-        ]}
-        truthSource="보험 계약 자체는 회계 저장이 아니며 실제 회계 확정은 수집 거래와 전표에서 이뤄집니다."
-        readModelNote="월 보험료와 갱신일은 운영 판단을 위한 보조 지표입니다."
-      />
-
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, md: 4 }}>
           <SummaryCard

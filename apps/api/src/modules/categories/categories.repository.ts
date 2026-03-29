@@ -5,9 +5,13 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 export class CategoriesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAllByUserId(userId: string) {
+  findAllInWorkspace(tenantId: string, ledgerId: string) {
     return this.prisma.category.findMany({
-      where: { userId },
+      where: {
+        tenantId,
+        ledgerId,
+        isActive: true
+      },
       orderBy: [{ kind: 'asc' }, { name: 'asc' }]
     });
   }

@@ -13,6 +13,8 @@ import { mapRecurringRuleToItem } from '../recurring-rule-item.mapper';
 
 type CreateRecurringRuleCommand = CreateRecurringRuleRequest & {
   userId: string;
+  tenantId: string;
+  ledgerId: string;
 };
 
 export class CreateRecurringRuleUseCase {
@@ -23,12 +25,14 @@ export class CreateRecurringRuleUseCase {
 
   async execute(command: CreateRecurringRuleCommand): Promise<RecurringRuleItem> {
     const [fundingAccountExists, categoryExists] = await Promise.all([
-      this.referenceOwnership.fundingAccountExistsForUser(
-        command.userId,
+      this.referenceOwnership.fundingAccountExistsInWorkspace(
+        command.tenantId,
+        command.ledgerId,
         command.fundingAccountId
       ),
-      this.referenceOwnership.categoryExistsForUser(
-        command.userId,
+      this.referenceOwnership.categoryExistsInWorkspace(
+        command.tenantId,
+        command.ledgerId,
         command.categoryId
       )
     ]);
@@ -48,8 +52,10 @@ export class CreateRecurringRuleUseCase {
       isActive: command.isActive
     });
 
-    const rule = await this.recurringRuleStore.createForUser({
+    const rule = await this.recurringRuleStore.createInWorkspace({
       userId: command.userId,
+      tenantId: command.tenantId,
+      ledgerId: command.ledgerId,
       title: command.title,
       accountId: command.fundingAccountId,
       categoryId: command.categoryId,

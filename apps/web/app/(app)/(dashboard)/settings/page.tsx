@@ -4,7 +4,7 @@ import { Grid, Stack, Switch, TextField, Typography } from '@mui/material';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { accessTokenStoragePolicy } from '@/shared/auth/auth-session-store';
 import { webEnv, webRuntime } from '@/shared/config/env';
-import { DomainContextCard } from '@/shared/ui/domain-context-card';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { SectionCard } from '@/shared/ui/section-card';
@@ -46,6 +46,21 @@ export default function SettingsPage() {
   const { status, user } = useAuthSession();
   const currentWorkspace = user?.currentWorkspace ?? null;
 
+  useDomainHelp({
+    title: '테넌트 / 장부 설정 개요',
+    description:
+      '이 화면은 현재 작업 문맥을 보여주는 운영 기준 화면입니다. 실제 기간 시작, 전표 확정, 마감은 이후 라운드에서 이 문맥 위에 연결됩니다.',
+    primaryEntity: '테넌트 / 멤버십 / 장부 (Tenant / TenantMembership / Ledger)',
+    relatedEntities: [
+      '운영 기간 (AccountingPeriod)',
+      '자금수단 (FundingAccount)',
+      '거래유형 (TransactionType)',
+      '수집 거래 (CollectedTransaction)'
+    ],
+    truthSource: '지금 단계의 공식 기준은 현재 작업 TenantMembership과 Ledger를 해석하는 런타임 문맥입니다.',
+    readModelNote: '현재 화면은 기준선 확인용이며, 기간 생성과 마감 같은 실제 쓰기 기능은 후속 라운드에서 붙습니다.'
+  });
+
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
@@ -53,20 +68,6 @@ export default function SettingsPage() {
         title="테넌트 / 장부 기준"
         description="Round 1 기준선에서는 현재 로그인 사용자가 어떤 TenantMembership과 Ledger 문맥 안에서 작업하는지 먼저 확인합니다."
       />
-
-      <DomainContextCard
-        description="이 화면은 현재 작업 문맥을 보여주는 운영 기준 화면입니다. 실제 기간 시작, 전표 확정, 마감은 이후 라운드에서 이 문맥 위에 연결됩니다."
-        primaryEntity="테넌트 / 멤버십 / 장부 (Tenant / TenantMembership / Ledger)"
-        relatedEntities={[
-          '운영 기간 (AccountingPeriod)',
-          '자금수단 (FundingAccount)',
-          '거래유형 (TransactionType)',
-          '수집 거래 (CollectedTransaction)'
-        ]}
-        truthSource="지금 단계의 공식 기준은 현재 작업 TenantMembership과 Ledger를 해석하는 런타임 문맥입니다."
-        readModelNote="현재 화면은 기준선 확인용이며, 기간 생성과 마감 같은 실제 쓰기 기능은 후속 라운드에서 붙습니다."
-      />
-
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, lg: 6 }}>
           <SectionCard

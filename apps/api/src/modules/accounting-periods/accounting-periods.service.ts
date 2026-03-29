@@ -16,7 +16,8 @@ import {
   AccountingPeriodStatus,
   AuditActorType,
   BalanceSnapshotKind,
-  JournalEntryStatus
+  JournalEntryStatus,
+  AccountSubjectKind
 } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -286,7 +287,8 @@ export class AccountingPeriodsService {
           select: {
             id: true,
             code: true,
-            name: true
+            name: true,
+            subjectKind: true
           }
         },
         fundingAccount: {
@@ -509,6 +511,7 @@ type AggregatedClosingSnapshotLine = {
   accountSubjectId: string;
   accountSubjectCode: string;
   accountSubjectName: string;
+  accountSubjectKind: AccountSubjectKind;
   fundingAccountId: string | null;
   fundingAccountName: string | null;
   balanceAmount: number;
@@ -520,6 +523,7 @@ function aggregateClosingSnapshotLines(
       id: string;
       code: string;
       name: string;
+      subjectKind: AccountSubjectKind;
     };
     fundingAccount: {
       id: string;
@@ -533,7 +537,7 @@ function aggregateClosingSnapshotLines(
 
   for (const line of journalLines) {
     const balanceAmount = projectNaturalBalance(
-      line.accountSubject.code,
+      line.accountSubject.subjectKind,
       line.debitAmount,
       line.creditAmount
     );
@@ -554,6 +558,7 @@ function aggregateClosingSnapshotLines(
       accountSubjectId: line.accountSubject.id,
       accountSubjectCode: line.accountSubject.code,
       accountSubjectName: line.accountSubject.name,
+      accountSubjectKind: line.accountSubject.subjectKind,
       fundingAccountId: line.fundingAccount?.id ?? null,
       fundingAccountName: line.fundingAccount?.name ?? null,
       balanceAmount
@@ -571,7 +576,7 @@ function summarizeClosingSnapshot(lines: AggregatedClosingSnapshotLine[]) {
   let totalExpenseAmount = 0;
 
   for (const line of lines) {
-    const bucket = classifyAccountSubject(line.accountSubjectCode);
+    const bucket = line.accountSubjectKind;
 
     switch (bucket) {
       case 'ASSET':
@@ -605,43 +610,20 @@ function summarizeClosingSnapshot(lines: AggregatedClosingSnapshotLine[]) {
   };
 }
 
-function classifyAccountSubject(code: string) {
-  if (code.startsWith('1')) {
-    return 'ASSET' as const;
-  }
-
-  if (code.startsWith('2')) {
-    return 'LIABILITY' as const;
-  }
-
-  if (code.startsWith('3')) {
-    return 'EQUITY' as const;
-  }
-
-  if (code.startsWith('4')) {
-    return 'INCOME' as const;
-  }
-
-  if (code.startsWith('5')) {
-    return 'EXPENSE' as const;
-  }
-
-  return 'OTHER' as const;
-}
-
 function projectNaturalBalance(
-  accountSubjectCode: string,
+  subjectKind: AccountSubjectKind,
   debitAmount: number,
   creditAmount: number
 ) {
-  const bucket = classifyAccountSubject(accountSubjectCode);
-
-  switch (bucket) {
+  switch (subjectKind) {
     case 'LIABILITY':
     case 'EQUITY':
     case 'INCOME':
       return creditAmount - debitAmount;
+    case 'ASSET':
+    case 'EXPENSE':
     default:
       return debitAmount - creditAmount;
   }
 }
+
