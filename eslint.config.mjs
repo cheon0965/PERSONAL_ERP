@@ -3,6 +3,7 @@ import { FlatCompat } from '@eslint/eslintrc';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 import globals from 'globals';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -18,6 +19,35 @@ const nextWebConfig = compat.extends('next/core-web-vitals').map((config) => ({
   ...config,
   files: ['apps/web/**/*.{js,jsx,ts,tsx}']
 }));
+
+const modulePublicApiNames = [
+  'collected-transactions',
+  'recurring-rules',
+  'dashboard',
+  'forecast'
+];
+
+const apiModuleNames = fs
+  .readdirSync(path.join(__dirname, 'apps/api/src/modules'), {
+    withFileTypes: true
+  })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name);
+
+const crossModuleRelativeImportPrefixes = [
+  '../',
+  '../../',
+  '../../../',
+  '../../../../',
+  '../../../../../'
+];
+
+const createCrossModuleRelativePatterns = (moduleNames, suffixes) =>
+  crossModuleRelativeImportPrefixes.flatMap((prefix) =>
+    moduleNames.flatMap((moduleName) =>
+      suffixes.map((suffix) => `${prefix}${moduleName}/${suffix}`)
+    )
+  );
 
 const apiLayerBoundaryRestrictions = {
   patterns: [
@@ -44,18 +74,27 @@ const apiLayerBoundaryRestrictions = {
 const modulePublicApiRestrictions = {
   patterns: [
     {
-      group: [
-        '**/transactions/**',
-        '!**/transactions/public',
-        '**/recurring-rules/**',
-        '!**/recurring-rules/public',
-        '**/dashboard/**',
-        '!**/dashboard/public',
-        '**/forecast/**',
-        '!**/forecast/public'
-      ],
+      group: modulePublicApiNames.flatMap((moduleName) => [
+        `**/${moduleName}/**`,
+        `!**/${moduleName}/public`
+      ]),
       message:
-        'Cross-module imports for transactions/recurring-rules/dashboard/forecast must go through each module public.ts entrypoint.'
+        'Cross-module imports for modules with a public.ts entrypoint must go through that public API.'
+    }
+  ]
+};
+
+const crossModuleInternalFileRestrictions = {
+  patterns: [
+    {
+      group: createCrossModuleRelativePatterns(apiModuleNames, [
+        '**/*.controller',
+        '**/*.repository',
+        '**/*.adapter',
+        'infrastructure/**'
+      ]),
+      message:
+        'Cross-module imports must not reach another module internal controller/repository/adapter/infrastructure files directly.'
     }
   ]
 };
@@ -63,7 +102,15 @@ const modulePublicApiRestrictions = {
 const applicationAndDomainBoundaryRestrictions = {
   patterns: [
     ...modulePublicApiRestrictions.patterns,
+    ...crossModuleInternalFileRestrictions.patterns,
     ...apiLayerBoundaryRestrictions.patterns
+  ]
+};
+
+const apiModuleBoundaryRestrictions = {
+  patterns: [
+    ...modulePublicApiRestrictions.patterns,
+    ...crossModuleInternalFileRestrictions.patterns
   ]
 };
 
@@ -138,7 +185,7 @@ export default [
       }
     },
     rules: {
-      'no-restricted-imports': ['error', modulePublicApiRestrictions]
+      'no-restricted-imports': ['error', apiModuleBoundaryRestrictions]
     }
   },
   {
