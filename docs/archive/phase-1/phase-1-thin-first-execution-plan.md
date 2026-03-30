@@ -4,6 +4,8 @@
 
 이 문서는 [business-logic-draft.md](../../domain/business-logic-draft.md), [core-entity-definition.md](../../domain/core-entity-definition.md), [phase-1-db-backbone-design.md](./phase-1-db-backbone-design.md), [phase-1-screen-implementation-order.md](./phase-1-screen-implementation-order.md)를 기준으로, 프로젝트 전반을 **엔티티 설계에 맞게 얇게 먼저 구현하고 이후 깊게 확장하는 실행 순서**를 고정하기 위한 계획서다.
 
+참고: 이 아카이브 문서에서 말하는 `transactions`는 당시 화면 shorthand를 뜻하며, 현재 API 구현 이름은 `collected-transactions`, Web 라우트는 `/transactions`입니다.
+
 여기서 말하는 전략은 다음과 같다.
 
 - 코어 엔티티 전체를 한 번에 깊게 완성하지 않는다.

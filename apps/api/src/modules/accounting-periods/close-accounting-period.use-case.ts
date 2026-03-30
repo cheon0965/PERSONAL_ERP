@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException
 } from '@nestjs/common';
@@ -12,11 +11,12 @@ import type {
 } from '@personal-erp/contracts';
 import {
   AccountingPeriodStatus,
-  AuditActorType,
   BalanceSnapshotKind,
   JournalEntryStatus
 } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
+import { readWorkspaceActorRef } from '../../common/auth/workspace-actor-ref.util';
+import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { mapAccountingPeriodRecordToItem } from './accounting-period.mapper';
 import { mapClosingSnapshotRecordToItem } from './closing-snapshot.mapper';
@@ -40,6 +40,7 @@ export class CloseAccountingPeriodUseCase {
     input: CloseAccountingPeriodRequest
   ): Promise<CloseAccountingPeriodResponse> {
     const workspace = requireCurrentWorkspace(user);
+    const actorRef = readWorkspaceActorRef(workspace);
     assertClosePermission(workspace.membershipRole);
 
     const period =
@@ -151,8 +152,7 @@ export class CloseAccountingPeriodUseCase {
           fromStatus: period.status,
           toStatus: AccountingPeriodStatus.LOCKED,
           reason,
-          actorType: AuditActorType.TENANT_MEMBERSHIP,
-          actorMembershipId: workspace.membershipId
+          ...actorRef
         }
       });
 
@@ -191,9 +191,5 @@ export class CloseAccountingPeriodUseCase {
 function assertClosePermission(
   membershipRole: ReturnType<typeof requireCurrentWorkspace>['membershipRole']
 ) {
-  if (membershipRole === 'OWNER') {
-    return;
-  }
-
-  throw new ForbiddenException('월 마감은 Owner만 실행할 수 있습니다.');
+  return assertWorkspaceActionAllowed(membershipRole, 'accounting_period.close');
 }

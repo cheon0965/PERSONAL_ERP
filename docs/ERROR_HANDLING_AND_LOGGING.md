@@ -42,14 +42,14 @@
 
 ### 3. 도메인 규칙 실패는 controller에서 HTTP 의미로 변환한다
 
-- `Transactions`, `Recurring Rules`는 use-case/domain이 HTTP를 직접 모르게 유지합니다.
+- `Collected Transactions`, `Recurring Rules`는 use-case/domain이 HTTP를 직접 모르게 유지합니다.
 - 대신 controller가 `MissingOwned...Error`를 받아 `NotFoundException`으로 변환합니다.
 - 현재 구현의 에러 이름에 `Owned`가 남아 있더라도, 상위 도메인 기준은 단순 소유권보다 Tenant/Membership 접근 범위 판정입니다.
 - 이 규칙 덕분에 도메인 규칙은 테스트하기 쉬워지고, HTTP 상태 코드는 바깥 계층에서만 결정됩니다.
 
 현재 기준 코드:
 
-- [`apps/api/src/modules/transactions/transactions.controller.ts`](../apps/api/src/modules/transactions/transactions.controller.ts#L23)
+- [`apps/api/src/modules/collected-transactions/collected-transactions.controller.ts`](../apps/api/src/modules/collected-transactions/collected-transactions.controller.ts#L23)
 - [`apps/api/src/modules/recurring-rules/recurring-rules.controller.ts`](../apps/api/src/modules/recurring-rules/recurring-rules.controller.ts#L23)
 
 ### 4. 예상하지 못한 실패는 일단 삼키지 않는다
@@ -164,7 +164,7 @@
 
 - 어떤 기능에서 실패했는지
 - 어떤 경계에서 실패했는지
-  예: `auth`, `transactions`, `web fetch`, `external adapter`
+  예: `auth`, `collected-transactions`, `web fetch`, `external adapter`
 - 상태 코드 또는 실패 종류
 - 필요한 경우 안전한 식별자만
   예: `userId`/`platformUserId`, `tenantId`, `membershipId`, request path

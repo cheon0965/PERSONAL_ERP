@@ -112,17 +112,7 @@ const nextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
   env: resolvedPublicEnv,
-  webpack: (config, { dev }) => {
-    // Our custom in-process dev launcher is more stable when webpack keeps
-    // transient cache data in memory instead of racing on .next/cache files.
-    if (dev) {
-      config.cache = {
-        type: 'memory'
-      };
-    }
-
-    return config;
-  }
+  webpack: (config) => config
 };
 
 export default nextConfig;

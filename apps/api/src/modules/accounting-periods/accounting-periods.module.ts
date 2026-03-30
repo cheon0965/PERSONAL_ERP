@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CloseAccountingPeriodUseCase } from './close-accounting-period.use-case';
 import { OpenAccountingPeriodUseCase } from './open-accounting-period.use-case';
+import { ReopenAccountingPeriodUseCase } from './reopen-accounting-period.use-case';
 import { AccountingPeriodsController } from './accounting-periods.controller';
 import { AccountingPeriodsService } from './accounting-periods.service';
 
@@ -9,7 +10,8 @@ import { AccountingPeriodsService } from './accounting-periods.service';
   providers: [
     AccountingPeriodsService,
     OpenAccountingPeriodUseCase,
-    CloseAccountingPeriodUseCase
+    CloseAccountingPeriodUseCase,
+    ReopenAccountingPeriodUseCase
   ],
   exports: [AccountingPeriodsService]
 })

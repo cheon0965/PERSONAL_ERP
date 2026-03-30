@@ -58,7 +58,7 @@
 - 인증/민감 응답의 `Cache-Control: no-store`
 - allowlist 밖 origin의 cookie-auth 요청 차단(`403 Origin not allowed`)
 - 로그인 실패, refresh 재사용, bearer 누락, scope 거부, readiness 실패에 대한 보안 이벤트 로그 기록
-- `transactions` Prisma 통합 테스트
+- `collected-transactions` Prisma 통합 테스트
   실제 MySQL 기준으로 현재 구현의 접근 범위 확인, 생성, 조회 정렬과 인증 사용자 스코프를 대표 검증
 - `GET /collected-transactions`
   현재 구현 기준 인증 사용자 범위만 반환하는지, 내부 접근 제어 필드를 노출하지 않는지 검증
@@ -77,7 +77,7 @@
 - `401` 응답 시 세션 정리 정책
 - mutation 요청의 JSON body 직렬화
 - 요청 실패 메시지 안내
-- 브라우저에서 `/transactions` 보호 라우트 리다이렉트
+- 브라우저에서 `/transactions` 보호 라우트(Collected Transactions 화면) 리다이렉트
 - 브라우저 기준 로그인 후 세션 복원
 - 실제 브라우저 상호작용으로 거래 Quick Add 성공 및 목록 갱신
 

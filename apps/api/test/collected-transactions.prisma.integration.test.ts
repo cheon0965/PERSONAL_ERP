@@ -20,7 +20,7 @@ async function safeDisconnect(prisma: PrismaService) {
 }
 
 test(
-  'Transactions Prisma integration persists and reads through the real MySQL boundary',
+  'Collected transactions Prisma integration persists and reads through the real MySQL boundary',
   {
     skip: shouldRunPrismaIntegration
       ? false

@@ -2,12 +2,24 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as argon2 from 'argon2';
 import { UnauthorizedException } from '@nestjs/common';
+import { resetApiEnvCache } from '../src/config/api-env';
 import { AuthService } from '../src/modules/auth/auth.service';
+
+function restoreEnvVar(key: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[key];
+    return;
+  }
+
+  process.env[key] = value;
+}
 
 function setJwtEnv() {
   const previous = {
     PORT: process.env.PORT,
     APP_ORIGIN: process.env.APP_ORIGIN,
+    CORS_ALLOWED_ORIGINS: process.env.CORS_ALLOWED_ORIGINS,
+    SWAGGER_ENABLED: process.env.SWAGGER_ENABLED,
     JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
     JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
     ACCESS_TOKEN_TTL: process.env.ACCESS_TOKEN_TTL,
@@ -18,6 +30,9 @@ function setJwtEnv() {
 
   process.env.PORT = '4000';
   process.env.APP_ORIGIN = 'http://localhost:3000';
+  process.env.CORS_ALLOWED_ORIGINS =
+    'http://localhost:3000,http://127.0.0.1:3000';
+  process.env.SWAGGER_ENABLED = 'true';
   process.env.JWT_ACCESS_SECRET = 'test-access-secret';
   process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-2';
   process.env.ACCESS_TOKEN_TTL = '15m';
@@ -25,16 +40,20 @@ function setJwtEnv() {
   process.env.DATABASE_URL =
     'mysql://test:test@localhost:3306/personal_erp_test';
   process.env.DEMO_EMAIL = 'demo@example.com';
+  resetApiEnvCache();
 
   return () => {
-    process.env.PORT = previous.PORT;
-    process.env.APP_ORIGIN = previous.APP_ORIGIN;
-    process.env.JWT_ACCESS_SECRET = previous.JWT_ACCESS_SECRET;
-    process.env.JWT_REFRESH_SECRET = previous.JWT_REFRESH_SECRET;
-    process.env.ACCESS_TOKEN_TTL = previous.ACCESS_TOKEN_TTL;
-    process.env.REFRESH_TOKEN_TTL = previous.REFRESH_TOKEN_TTL;
-    process.env.DATABASE_URL = previous.DATABASE_URL;
-    process.env.DEMO_EMAIL = previous.DEMO_EMAIL;
+    restoreEnvVar('PORT', previous.PORT);
+    restoreEnvVar('APP_ORIGIN', previous.APP_ORIGIN);
+    restoreEnvVar('CORS_ALLOWED_ORIGINS', previous.CORS_ALLOWED_ORIGINS);
+    restoreEnvVar('SWAGGER_ENABLED', previous.SWAGGER_ENABLED);
+    restoreEnvVar('JWT_ACCESS_SECRET', previous.JWT_ACCESS_SECRET);
+    restoreEnvVar('JWT_REFRESH_SECRET', previous.JWT_REFRESH_SECRET);
+    restoreEnvVar('ACCESS_TOKEN_TTL', previous.ACCESS_TOKEN_TTL);
+    restoreEnvVar('REFRESH_TOKEN_TTL', previous.REFRESH_TOKEN_TTL);
+    restoreEnvVar('DATABASE_URL', previous.DATABASE_URL);
+    restoreEnvVar('DEMO_EMAIL', previous.DEMO_EMAIL);
+    resetApiEnvCache();
   };
 }
 

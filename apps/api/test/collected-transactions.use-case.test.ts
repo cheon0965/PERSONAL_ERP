@@ -124,7 +124,7 @@ test('CreateCollectedTransactionUseCase rejects requests for categories outside 
   );
 });
 
-test('ListCollectedTransactionsUseCase maps stored transactions into the shared response shape', async () => {
+test('ListCollectedTransactionsUseCase maps stored collected transactions into the shared response shape', async () => {
   const transactionStore = {
     findRecentInWorkspace: async () => [
       {

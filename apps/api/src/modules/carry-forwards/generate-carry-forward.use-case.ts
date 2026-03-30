@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException
 } from '@nestjs/common';
@@ -12,11 +11,15 @@ import type {
 } from '@personal-erp/contracts';
 import {
   AccountingPeriodStatus,
-  AuditActorType,
   BalanceSnapshotKind,
   OpeningBalanceSourceKind
 } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
+import {
+  readWorkspaceActorRef,
+  readWorkspaceCreatedByActorRef
+} from '../../common/auth/workspace-actor-ref.util';
+import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   isCarryForwardAccount,
@@ -37,6 +40,8 @@ export class GenerateCarryForwardUseCase {
     input: GenerateCarryForwardRequest
   ): Promise<CarryForwardView> {
     const workspace = requireCurrentWorkspace(user);
+    const actorRef = readWorkspaceActorRef(workspace);
+    const createdByActorRef = readWorkspaceCreatedByActorRef(workspace);
     assertGeneratePermission(workspace.membershipRole);
 
     const sourcePeriod =
@@ -162,8 +167,7 @@ export class GenerateCarryForwardUseCase {
             fromStatus: null,
             toStatus: AccountingPeriodStatus.OPEN,
             reason: `${sourcePeriod.year}-${String(sourcePeriod.month).padStart(2, '0')} 이월 생성`,
-            actorType: AuditActorType.TENANT_MEMBERSHIP,
-            actorMembershipId: workspace.membershipId
+            ...actorRef
           }
         });
       }
@@ -174,8 +178,7 @@ export class GenerateCarryForwardUseCase {
           ledgerId: workspace.ledgerId,
           effectivePeriodId: targetPeriod.id,
           sourceKind: OpeningBalanceSourceKind.CARRY_FORWARD,
-          createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
-          createdByMembershipId: workspace.membershipId
+          ...createdByActorRef
         }
       });
 
@@ -199,8 +202,7 @@ export class GenerateCarryForwardUseCase {
           toPeriodId: targetPeriod.id,
           sourceClosingSnapshotId: sourceClosingSnapshot.id,
           createdJournalEntryId: null,
-          createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
-          createdByMembershipId: workspace.membershipId
+          ...createdByActorRef
         }
       });
     });
@@ -224,11 +226,5 @@ export class GenerateCarryForwardUseCase {
 function assertGeneratePermission(
   membershipRole: ReturnType<typeof requireCurrentWorkspace>['membershipRole']
 ) {
-  if (membershipRole === 'OWNER' || membershipRole === 'MANAGER') {
-    return;
-  }
-
-  throw new ForbiddenException(
-    '차기 이월 생성은 Owner 또는 Manager만 실행할 수 있습니다.'
-  );
+  return assertWorkspaceActionAllowed(membershipRole, 'carry_forward.generate');
 }

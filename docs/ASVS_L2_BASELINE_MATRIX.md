@@ -1,4 +1,4 @@
-# ASVS L2 Baseline Matrix
+﻿# ASVS L2 Baseline Matrix
 
 ## 목적
 
@@ -27,7 +27,7 @@
 - 근거 파일:
   `apps/api/src/modules/auth/auth.service.ts`
   `apps/api/src/common/auth/jwt-auth.guard.ts`
-  `apps/api/test/request-api.test.ts`
+  `apps/api/test/*.request-api.test.ts`
 - 판정: `부분 적용`
 - 다음 단계: 운영 계정 회복/MFA 기능이 생기면 재판정
 
@@ -47,9 +47,9 @@
 - 현재 상태: 전역 guard, 사용자 소유권 검증, 목록/집계 응답의 사용자 범위 분리
 - 근거 파일:
   `apps/api/src/common/auth/jwt-auth.guard.ts`
-  `apps/api/src/modules/transactions/application/use-cases/create-transaction.use-case.ts`
+  `apps/api/src/modules/collected-transactions/application/use-cases/create-collected-transaction.use-case.ts`
   `apps/api/src/modules/recurring-rules/application/use-cases/create-recurring-rule.use-case.ts`
-  `apps/api/test/request-api.test.ts`
+  `apps/api/test/*.request-api.test.ts`
 - 판정: `적용`
 - 다음 단계: 관리자/다중권한 기능 추가 시 재판정
 
@@ -58,7 +58,7 @@
 - 현재 상태: DTO validation, whitelist, forbidNonWhitelisted, 계약 테스트
 - 근거 파일:
   `apps/api/src/main.ts`
-  `apps/api/test/request-api.test.ts`
+  `apps/api/test/*.request-api.test.ts`
 - 판정: `적용`
 - 다음 단계: 에러 표준화와 증적 유지
 
@@ -71,7 +71,7 @@
   `ENVIRONMENT_SETUP.md`
   `apps/web/src/shared/auth/auth-session-store.ts`
   `docs/API.md`
-  `apps/api/test/request-api.test.ts`
+  `apps/api/test/*.request-api.test.ts`
 - 판정: `부분 적용`
 - 다음 단계: 운영 데이터 분류와 장기 보관 정책 보강
 
@@ -81,7 +81,7 @@
 - 근거 파일:
   `apps/api/src/bootstrap/configure-api-app.ts`
   `apps/api/src/common/infrastructure/security/browser-boundary.ts`
-  `apps/api/test/request-api.test.ts`
+  `apps/api/test/*.request-api.test.ts`
   `apps/web/src/shared/api/fetch-json.ts`
 - 판정: `적용`
 - 다음 단계: 운영 HTTPS/HSTS와 Swagger 토글 리허설
@@ -103,7 +103,7 @@
   `apps/api/src/common/infrastructure/operational/request-context.interceptor.ts`
   `apps/api/src/common/infrastructure/operational/security-event.logger.ts`
   `apps/api/src/modules/health/health.controller.ts`
-  `apps/api/test/request-api.test.ts`
+  `apps/api/test/*.request-api.test.ts`
 - 판정: `부분 적용`
 - 다음 단계: 외부 sink 없이 앱 로그 중심 운영
 

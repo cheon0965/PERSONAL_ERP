@@ -74,6 +74,7 @@
 - 요청 계약: `CreateCollectedTransactionRequest`
 - 응답 계약: `CollectedTransactionItem`
 - 현재 엔드포인트는 도메인 기준의 `CollectedTransaction -> JournalEntry` 흐름으로 가기 전 입력/수집 단계 구현에 가깝습니다.
+- 현재 API 구현 이름은 `collected-transactions`이고, Web 화면 경로는 shorthand로 `/transactions`를 사용합니다.
 - 현재 응답은 `GET /collected-transactions` 목록 아이템 shape와 동일하게 매핑됩니다.
 - 계정은 필수이며, 카테고리는 선택입니다.
 - 현재 구현에서는 인증 사용자 범위 내 참조만 허용하며, 장기 기준은 Tenant/Membership 접근 범위로 수렴합니다.

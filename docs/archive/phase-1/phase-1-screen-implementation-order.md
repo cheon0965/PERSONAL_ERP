@@ -4,6 +4,8 @@
 
 이 문서는 [business-logic-draft.md](../../domain/business-logic-draft.md), [core-entity-definition.md](../../domain/core-entity-definition.md), [phase-1-db-backbone-design.md](./phase-1-db-backbone-design.md) 를 기준으로, 실제 화면 구현을 어떤 순서로 올려야 하는지 고정하기 위한 기준서다.
 
+참고: 이 아카이브 문서에서 말하는 `transactions`는 당시 화면 shorthand를 뜻하며, 현재 API 구현 이름은 `collected-transactions`, Web 라우트는 `/transactions`입니다.
+
 목표는 다음과 같다.
 
 - 이미 있는 화면을 최대한 재사용하되, 대표 시나리오 완주에 필요한 화면부터 구현한다.

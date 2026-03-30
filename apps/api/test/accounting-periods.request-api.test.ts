@@ -1,0 +1,567 @@
+﻿import assert from 'node:assert/strict';
+import test from 'node:test';
+import type {
+  CloseAccountingPeriodResponse,
+  FinancialStatementPayload
+} from '@personal-erp/contracts';
+import {
+  AccountingPeriodStatus,
+  AuditActorType,
+  FinancialStatementKind,
+  OpeningBalanceSourceKind
+} from '@prisma/client';
+import { createRequestTestContext } from './request-api.test-support';
+test('GET /accounting-periods returns the current ledger periods in reverse chronological order', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push({
+      id: 'period-existing-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 2,
+      startDate: new Date('2026-02-01T00:00:00.000Z'),
+      endDate: new Date('2026-03-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.LOCKED,
+      openedAt: new Date('2026-02-01T00:00:00.000Z'),
+      lockedAt: new Date('2026-02-28T15:00:00.000Z'),
+      createdAt: new Date('2026-02-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-02-28T15:00:00.000Z')
+    });
+    context.state.periodStatusHistory.push({
+      id: 'period-history-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-existing-1',
+      fromStatus: null,
+      toStatus: AccountingPeriodStatus.OPEN,
+      reason: '운영 시작',
+      actorType: AuditActorType.TENANT_MEMBERSHIP,
+      actorMembershipId: 'membership-1',
+      changedAt: new Date('2026-02-01T00:00:00.000Z')
+    });
+    context.state.openingBalanceSnapshots.push({
+      id: 'opening-snapshot-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      effectivePeriodId: 'period-existing-1',
+      sourceKind: OpeningBalanceSourceKind.INITIAL_SETUP,
+      createdAt: new Date('2026-02-01T00:00:00.000Z'),
+      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+      createdByMembershipId: 'membership-1'
+    });
+    context.state.accountingPeriods.push({
+      id: 'period-other-1',
+      tenantId: 'tenant-2',
+      ledgerId: 'ledger-2',
+      year: 2026,
+      month: 2,
+      startDate: new Date('2026-02-01T00:00:00.000Z'),
+      endDate: new Date('2026-03-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.OPEN,
+      openedAt: new Date('2026-02-01T00:00:00.000Z'),
+      lockedAt: null,
+      createdAt: new Date('2026-02-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-02-01T00:00:00.000Z')
+    });
+
+    const response = await context.request('/accounting-periods', {
+      headers: context.authHeaders()
+    });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body, [
+      {
+        id: 'period-existing-1',
+        year: 2026,
+        month: 2,
+        monthLabel: '2026-02',
+        startDate: '2026-02-01T00:00:00.000Z',
+        endDate: '2026-03-01T00:00:00.000Z',
+        status: AccountingPeriodStatus.LOCKED,
+        openedAt: '2026-02-01T00:00:00.000Z',
+        lockedAt: '2026-02-28T15:00:00.000Z',
+        hasOpeningBalanceSnapshot: true,
+        openingBalanceSourceKind: OpeningBalanceSourceKind.INITIAL_SETUP,
+        statusHistory: [
+          {
+            id: 'period-history-1',
+            fromStatus: null,
+            toStatus: AccountingPeriodStatus.OPEN,
+            reason: '운영 시작',
+            actorType: AuditActorType.TENANT_MEMBERSHIP,
+            actorMembershipId: 'membership-1',
+            changedAt: '2026-02-01T00:00:00.000Z'
+          }
+        ]
+      }
+    ]);
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /accounting-periods blocks the first period when opening balance initialization is missing', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/accounting-periods', {
+      method: 'POST',
+      headers: context.authHeaders(),
+      body: {
+        month: '2026-03'
+      }
+    });
+
+    assert.equal(response.status, 400);
+    assert.deepEqual(response.body, {
+      statusCode: 400,
+      message: '첫 월 운영 시작에는 오프닝 잔액 스냅샷 생성이 필요합니다.',
+      error: 'Bad Request'
+    });
+    assert.equal(context.state.accountingPeriods.length, 0);
+    assert.equal(context.state.openingBalanceSnapshots.length, 0);
+    assert.equal(context.state.periodStatusHistory.length, 0);
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /accounting-periods opens the first period and records status history with an opening balance snapshot', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/accounting-periods', {
+      method: 'POST',
+      headers: context.authHeaders(),
+      body: {
+        month: '2026-03',
+        initializeOpeningBalance: true,
+        note: '2026년 3월 운영 시작'
+      }
+    });
+
+    const createdPeriod = response.body as Record<string, unknown>;
+
+    assert.equal(response.status, 201);
+    assert.equal(createdPeriod.monthLabel, '2026-03');
+    assert.equal(createdPeriod.status, AccountingPeriodStatus.OPEN);
+    assert.equal(createdPeriod.hasOpeningBalanceSnapshot, true);
+    assert.equal(
+      createdPeriod.openingBalanceSourceKind,
+      OpeningBalanceSourceKind.INITIAL_SETUP
+    );
+    assert.equal(context.state.accountingPeriods.length, 1);
+    assert.equal(context.state.openingBalanceSnapshots.length, 1);
+    assert.equal(context.state.periodStatusHistory.length, 1);
+    assert.equal(context.state.accountingPeriods[0]?.year, 2026);
+    assert.equal(context.state.accountingPeriods[0]?.month, 3);
+    assert.equal(
+      context.state.periodStatusHistory[0]?.toStatus,
+      AccountingPeriodStatus.OPEN
+    );
+    assert.equal(
+      context.state.periodStatusHistory[0]?.actorMembershipId,
+      'membership-1'
+    );
+    assert.equal(
+      context.state.openingBalanceSnapshots[0]?.createdByActorType,
+      AuditActorType.TENANT_MEMBERSHIP
+    );
+    assert.equal(
+      context.state.openingBalanceSnapshots[0]?.createdByMembershipId,
+      'membership-1'
+    );
+    assert.ok(
+      context.securityEvents.some(
+        (candidate) =>
+          candidate.level === 'log' &&
+          candidate.event === 'audit.action_succeeded' &&
+          candidate.details.requestId ===
+            response.headers.get('x-request-id') &&
+          candidate.details.action === 'accounting_period.open' &&
+          candidate.details.periodId === createdPeriod.id
+      )
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('GET /accounting-periods/current returns the currently open period for the active ledger', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push({
+      id: 'period-current-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 3,
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.OPEN,
+      openedAt: new Date('2026-03-01T00:00:00.000Z'),
+      lockedAt: null,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
+    context.state.periodStatusHistory.push({
+      id: 'period-history-current-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-current-1',
+      fromStatus: null,
+      toStatus: AccountingPeriodStatus.OPEN,
+      reason: '3월 운영 시작',
+      actorType: AuditActorType.TENANT_MEMBERSHIP,
+      actorMembershipId: 'membership-1',
+      changedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
+
+    const response = await context.request('/accounting-periods/current', {
+      headers: context.authHeaders()
+    });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body, {
+      id: 'period-current-1',
+      year: 2026,
+      month: 3,
+      monthLabel: '2026-03',
+      startDate: '2026-03-01T00:00:00.000Z',
+      endDate: '2026-04-01T00:00:00.000Z',
+      status: AccountingPeriodStatus.OPEN,
+      openedAt: '2026-03-01T00:00:00.000Z',
+      lockedAt: null,
+      hasOpeningBalanceSnapshot: false,
+      openingBalanceSourceKind: null,
+      statusHistory: [
+        {
+          id: 'period-history-current-1',
+          fromStatus: null,
+          toStatus: AccountingPeriodStatus.OPEN,
+          reason: '3월 운영 시작',
+          actorType: AuditActorType.TENANT_MEMBERSHIP,
+          actorMembershipId: 'membership-1',
+          changedAt: '2026-03-01T00:00:00.000Z'
+        }
+      ]
+    });
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /accounting-periods/:id/close locks the period and creates a closing snapshot', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push({
+      id: 'period-close-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 3,
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.OPEN,
+      openedAt: new Date('2026-03-01T00:00:00.000Z'),
+      lockedAt: null,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
+    context.state.periodStatusHistory.push({
+      id: 'period-history-close-open-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-close-1',
+      fromStatus: null,
+      toStatus: AccountingPeriodStatus.OPEN,
+      reason: '3월 운영 시작',
+      actorType: AuditActorType.TENANT_MEMBERSHIP,
+      actorMembershipId: 'membership-1',
+      changedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
+    context.state.journalEntries.push({
+      id: 'je-close-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-close-1',
+      entryNumber: '202603-0001',
+      entryDate: new Date('2026-03-12T00:00:00.000Z'),
+      sourceKind: 'COLLECTED_TRANSACTION',
+      sourceCollectedTransactionId: 'ctx-seed-2',
+      status: 'POSTED',
+      memo: 'Fuel refill',
+      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+      createdByMembershipId: 'membership-1',
+      createdAt: new Date('2026-03-12T01:00:00.000Z'),
+      updatedAt: new Date('2026-03-12T01:00:00.000Z'),
+      lines: [
+        {
+          id: 'jel-close-1',
+          lineNumber: 1,
+          accountSubjectId: 'as-1-5100',
+          fundingAccountId: null,
+          debitAmount: 84_000,
+          creditAmount: 0,
+          description: 'Fuel refill'
+        },
+        {
+          id: 'jel-close-2',
+          lineNumber: 2,
+          accountSubjectId: 'as-1-1010',
+          fundingAccountId: 'acc-1',
+          debitAmount: 0,
+          creditAmount: 84_000,
+          description: 'Fuel refill'
+        }
+      ]
+    });
+
+    const response = await context.request(
+      '/accounting-periods/period-close-1/close',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          note: '3월 월마감'
+        }
+      }
+    );
+
+    const body = response.body as CloseAccountingPeriodResponse;
+
+    assert.equal(response.status, 201);
+    assert.equal(body.period.status, AccountingPeriodStatus.LOCKED);
+    assert.equal(context.state.closingSnapshots.length, 1);
+    assert.equal(context.state.balanceSnapshotLines.length, 2);
+    assert.equal(
+      context.state.periodStatusHistory.at(-1)?.toStatus,
+      AccountingPeriodStatus.LOCKED
+    );
+    assert.equal(body.closingSnapshot.totalAssetAmount, -84_000);
+    assert.equal(body.closingSnapshot.totalLiabilityAmount, 0);
+    assert.equal(body.closingSnapshot.totalEquityAmount, -84_000);
+    assert.equal(body.closingSnapshot.periodPnLAmount, -84_000);
+    assert.equal(body.closingSnapshot.lines.length, 2);
+    assert.ok(
+      context.securityEvents.some(
+        (candidate) =>
+          candidate.level === 'log' &&
+          candidate.event === 'audit.action_succeeded' &&
+          candidate.details.requestId ===
+            response.headers.get('x-request-id') &&
+          candidate.details.action === 'accounting_period.close' &&
+          candidate.details.periodId === 'period-close-1' &&
+          candidate.details.closingSnapshotId === body.closingSnapshot.id
+      )
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /accounting-periods/:id/reopen reopens the latest locked period and clears closing outputs', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push({
+      id: 'period-reopen-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 3,
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.LOCKED,
+      openedAt: new Date('2026-03-01T00:00:00.000Z'),
+      lockedAt: new Date('2026-03-31T15:00:00.000Z'),
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-31T15:00:00.000Z')
+    });
+    context.state.periodStatusHistory.push(
+      {
+        id: 'period-history-reopen-open-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-reopen-1',
+        fromStatus: null,
+        toStatus: AccountingPeriodStatus.OPEN,
+        reason: '3? ?? ??',
+        actorType: AuditActorType.TENANT_MEMBERSHIP,
+        actorMembershipId: 'membership-1',
+        changedAt: new Date('2026-03-01T00:00:00.000Z')
+      },
+      {
+        id: 'period-history-reopen-lock-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-reopen-1',
+        fromStatus: AccountingPeriodStatus.OPEN,
+        toStatus: AccountingPeriodStatus.LOCKED,
+        reason: '3? ??',
+        actorType: AuditActorType.TENANT_MEMBERSHIP,
+        actorMembershipId: 'membership-1',
+        changedAt: new Date('2026-03-31T15:00:00.000Z')
+      }
+    );
+    context.state.closingSnapshots.push({
+      id: 'closing-reopen-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-reopen-1',
+      lockedAt: new Date('2026-03-31T15:00:00.000Z'),
+      totalAssetAmount: 140_000,
+      totalLiabilityAmount: 0,
+      totalEquityAmount: 140_000,
+      periodPnLAmount: 140_000,
+      createdAt: new Date('2026-03-31T15:00:00.000Z')
+    });
+    context.state.balanceSnapshotLines.push({
+      id: 'closing-reopen-line-1',
+      snapshotKind: 'CLOSING',
+      openingSnapshotId: null,
+      closingSnapshotId: 'closing-reopen-1',
+      accountSubjectId: 'as-1-1010',
+      fundingAccountId: 'acc-1',
+      balanceAmount: 140_000
+    });
+    context.state.financialStatementSnapshots.push(
+      {
+        id: 'financial-reopen-bs',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-reopen-1',
+        statementKind: FinancialStatementKind.STATEMENT_OF_FINANCIAL_POSITION,
+        currency: 'KRW',
+        payload: {
+          summary: [{ label: '?? ??', amountWon: 140_000 }],
+          sections: [],
+          notes: []
+        } as FinancialStatementPayload,
+        createdAt: new Date('2026-03-31T15:10:00.000Z'),
+        updatedAt: new Date('2026-03-31T15:10:00.000Z')
+      },
+      {
+        id: 'financial-reopen-pl',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-reopen-1',
+        statementKind: FinancialStatementKind.MONTHLY_PROFIT_AND_LOSS,
+        currency: 'KRW',
+        payload: {
+          summary: [{ label: '?? ??', amountWon: 140_000 }],
+          sections: [],
+          notes: []
+        } as FinancialStatementPayload,
+        createdAt: new Date('2026-03-31T15:10:00.000Z'),
+        updatedAt: new Date('2026-03-31T15:10:00.000Z')
+      }
+    );
+
+    const response = await context.request(
+      '/accounting-periods/period-reopen-1/reopen',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          note: '?? ??? ?? ???'
+        }
+      }
+    );
+
+    const body = response.body as Record<string, unknown>;
+
+    assert.equal(response.status, 201);
+    assert.equal(body.status, AccountingPeriodStatus.OPEN);
+    assert.equal(body.lockedAt, null);
+    assert.equal(context.state.closingSnapshots.length, 0);
+    assert.equal(context.state.balanceSnapshotLines.length, 0);
+    assert.equal(context.state.financialStatementSnapshots.length, 0);
+    assert.equal(
+      context.state.accountingPeriods.find(
+        (item) => item.id === 'period-reopen-1'
+      )?.status,
+      AccountingPeriodStatus.OPEN
+    );
+    assert.equal(
+      context.state.accountingPeriods.find(
+        (item) => item.id === 'period-reopen-1'
+      )?.lockedAt,
+      null
+    );
+    assert.equal(
+      context.state.periodStatusHistory.at(-1)?.toStatus,
+      AccountingPeriodStatus.OPEN
+    );
+    assert.equal(
+      context.state.periodStatusHistory.at(-1)?.actorMembershipId,
+      'membership-1'
+    );
+    assert.ok(
+      context.securityEvents.some(
+        (candidate) =>
+          candidate.level === 'log' &&
+          candidate.event === 'audit.action_succeeded' &&
+          candidate.details.requestId ===
+            response.headers.get('x-request-id') &&
+          candidate.details.action === 'accounting_period.reopen' &&
+          candidate.details.periodId === 'period-reopen-1'
+      )
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /accounting-periods/:id/reopen returns 403 when the current membership role cannot reopen', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.memberships[0]!.role = 'MANAGER';
+    context.state.accountingPeriods.push({
+      id: 'period-reopen-denied-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 3,
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.LOCKED,
+      openedAt: new Date('2026-03-01T00:00:00.000Z'),
+      lockedAt: new Date('2026-03-31T15:00:00.000Z'),
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-31T15:00:00.000Z')
+    });
+
+    const response = await context.request(
+      '/accounting-periods/period-reopen-denied-1/reopen',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          note: '?? ?? ??? ??'
+        }
+      }
+    );
+
+    assert.equal(response.status, 403);
+    assert.ok(
+      context.securityEvents.some(
+        (candidate) =>
+          candidate.level === 'warn' &&
+          candidate.event === 'authorization.action_denied' &&
+          candidate.details.requestId ===
+            response.headers.get('x-request-id') &&
+          candidate.details.action === 'accounting_period.reopen' &&
+          candidate.details.periodId === 'period-reopen-denied-1' &&
+          candidate.details.membershipRole === 'MANAGER'
+      )
+    );
+  } finally {
+    await context.close();
+  }
+});

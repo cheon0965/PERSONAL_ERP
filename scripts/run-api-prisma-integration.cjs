@@ -38,5 +38,5 @@ run(process.execPath, [
   '--test',
   '--test-concurrency=1',
   '--test-isolation=none',
-  '.test-dist/apps/api/test/transactions.prisma.integration.test.js'
+  '.test-dist/apps/api/test/collected-transactions.prisma.integration.test.js'
 ]);
