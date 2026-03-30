@@ -330,6 +330,15 @@ export type RequestTestContext = {
 
 const demoPasswordHashPromise = argon2.hash('Demo1234!');
 
+function restoreEnvVar(key: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[key];
+    return;
+  }
+
+  process.env[key] = value;
+}
+
 function setJwtEnv() {
   const previous = {
     PORT: process.env.PORT,
@@ -359,16 +368,16 @@ function setJwtEnv() {
   resetApiEnvCache();
 
   return () => {
-    process.env.PORT = previous.PORT;
-    process.env.APP_ORIGIN = previous.APP_ORIGIN;
-    process.env.CORS_ALLOWED_ORIGINS = previous.CORS_ALLOWED_ORIGINS;
-    process.env.SWAGGER_ENABLED = previous.SWAGGER_ENABLED;
-    process.env.JWT_ACCESS_SECRET = previous.JWT_ACCESS_SECRET;
-    process.env.JWT_REFRESH_SECRET = previous.JWT_REFRESH_SECRET;
-    process.env.ACCESS_TOKEN_TTL = previous.ACCESS_TOKEN_TTL;
-    process.env.REFRESH_TOKEN_TTL = previous.REFRESH_TOKEN_TTL;
-    process.env.DATABASE_URL = previous.DATABASE_URL;
-    process.env.DEMO_EMAIL = previous.DEMO_EMAIL;
+    restoreEnvVar('PORT', previous.PORT);
+    restoreEnvVar('APP_ORIGIN', previous.APP_ORIGIN);
+    restoreEnvVar('CORS_ALLOWED_ORIGINS', previous.CORS_ALLOWED_ORIGINS);
+    restoreEnvVar('SWAGGER_ENABLED', previous.SWAGGER_ENABLED);
+    restoreEnvVar('JWT_ACCESS_SECRET', previous.JWT_ACCESS_SECRET);
+    restoreEnvVar('JWT_REFRESH_SECRET', previous.JWT_REFRESH_SECRET);
+    restoreEnvVar('ACCESS_TOKEN_TTL', previous.ACCESS_TOKEN_TTL);
+    restoreEnvVar('REFRESH_TOKEN_TTL', previous.REFRESH_TOKEN_TTL);
+    restoreEnvVar('DATABASE_URL', previous.DATABASE_URL);
+    restoreEnvVar('DEMO_EMAIL', previous.DEMO_EMAIL);
     resetApiEnvCache();
   };
 }
