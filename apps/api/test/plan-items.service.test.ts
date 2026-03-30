@@ -6,6 +6,7 @@ import {
   CategoryKind,
   PlanItemStatus
 } from '@prisma/client';
+import { GeneratePlanItemsUseCase } from '../src/modules/plan-items/generate-plan-items.use-case';
 import { PlanItemsService } from '../src/modules/plan-items/plan-items.service';
 
 const user: AuthenticatedUser = {
@@ -34,7 +35,7 @@ const user: AuthenticatedUser = {
   }
 };
 
-test('PlanItemsService generates plan items for recurring rules inside the selected period', async () => {
+test('GeneratePlanItemsUseCase generates plan items for recurring rules inside the selected period', async () => {
   const period = createPeriod({
     id: 'period-2026-03',
     year: 2026,
@@ -67,10 +68,12 @@ test('PlanItemsService generates plan items for recurring rules inside the selec
     planItems: []
   });
 
-  const service = new PlanItemsService(
-    createPrismaMock(period, state) as never
+  const prisma = createPrismaMock(period, state);
+  const useCase = new GeneratePlanItemsUseCase(
+    prisma as never,
+    new PlanItemsService(prisma as never)
   );
-  const result = await service.generate(user, { periodId: period.id });
+  const result = await useCase.execute(user, { periodId: period.id });
 
   assert.equal(result.generation.createdCount, 1);
   assert.equal(result.generation.skippedExistingCount, 0);
@@ -93,7 +96,7 @@ test('PlanItemsService generates plan items for recurring rules inside the selec
   });
 });
 
-test('PlanItemsService skips existing occurrences and excludes recurring rules without a resolvable transaction type', async () => {
+test('GeneratePlanItemsUseCase skips existing occurrences and excludes recurring rules without a resolvable transaction type', async () => {
   const period = createPeriod({
     id: 'period-2026-04',
     year: 2026,
@@ -179,10 +182,12 @@ test('PlanItemsService skips existing occurrences and excludes recurring rules w
     ]
   });
 
-  const service = new PlanItemsService(
-    createPrismaMock(period, state) as never
+  const prisma = createPrismaMock(period, state);
+  const useCase = new GeneratePlanItemsUseCase(
+    prisma as never,
+    new PlanItemsService(prisma as never)
   );
-  const result = await service.generate(user, { periodId: period.id });
+  const result = await useCase.execute(user, { periodId: period.id });
 
   assert.equal(result.generation.createdCount, 1);
   assert.equal(result.generation.skippedExistingCount, 1);

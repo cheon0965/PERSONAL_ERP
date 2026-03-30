@@ -5,6 +5,7 @@ import type {
   CarryForwardView
 } from '@personal-erp/contracts';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
+import { GenerateCarryForwardUseCase } from './generate-carry-forward.use-case';
 import { GenerateCarryForwardRequestDto } from './dto/generate-carry-forward.dto';
 import { CarryForwardsService } from './carry-forwards.service';
 
@@ -12,7 +13,10 @@ import { CarryForwardsService } from './carry-forwards.service';
 @ApiBearerAuth()
 @Controller('carry-forwards')
 export class CarryForwardsController {
-  constructor(private readonly carryForwardsService: CarryForwardsService) {}
+  constructor(
+    private readonly carryForwardsService: CarryForwardsService,
+    private readonly generateCarryForwardUseCase: GenerateCarryForwardUseCase
+  ) {}
 
   @Get()
   findView(
@@ -27,6 +31,6 @@ export class CarryForwardsController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() body: GenerateCarryForwardRequestDto
   ): Promise<CarryForwardView> {
-    return this.carryForwardsService.generate(user, body);
+    return this.generateCarryForwardUseCase.execute(user, body);
   }
 }

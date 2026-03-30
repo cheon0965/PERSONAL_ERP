@@ -112,6 +112,21 @@ Insight Context: controller -> read service -> read repository -> projection
 - 나머지 모듈은 설명 가능한 이유가 생길 때만 같은 방향으로 옮깁니다.
 - mapper/calculator/helper는 계속 함수 또는 plain class로 두고 provider/token으로 만들지 않습니다.
 
+### 5.1 모듈 승격 기준 (Promotion Triggers)
+
+모듈이 `Standard` 방식(Service 중심)에서 `Advanced` 방식(Hexagonal 중심)으로 승격되는 기준은 다음과 같습니다.
+
+1.  **비즈니스 복잡도 (Complexity):**
+    - 단일 Service 파일이 **400줄 이상**으로 길어질 때.
+    - 로직 내부에 중괄호 depth가 깊거나 복잡한 정책(`Policy`)이 3개 이상 얽힐 때.
+2.  **데이터 중요도 (Criticality):**
+    - **돈(현금, 자산)**의 흐름을 직접 계산하거나 변경하는 로직일 때.
+    - 법적/회계적 **증빙(Journal Entry, Audit)**이 반드시 필요한 데이터일 때.
+3.  **테스트 요구사항 (Testability):**
+    - DB 없이 순수 로직만으로 **단위 테스트(Unit Test)**를 20개 이상 작성해야 할 만큼 검증이 중요할 때.
+4.  **외부 결합도 (External Integration):**
+    - Prisma 외에 외부 API(뱅킹, 세무 API 등)를 2개 이상 연동해야 할 때.
+
 원칙:
 
 - controller는 요청/응답과 인증 컨텍스트만 다룹니다.

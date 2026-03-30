@@ -19,8 +19,8 @@ Round 0의 목적은 다음과 같다.
 
 Round 0 기준 문서는 아래 다섯 개로 잠근다.
 
-- [business-logic-draft.md](./business-logic-draft.md)
-- [core-entity-definition.md](./core-entity-definition.md)
+- [business-logic-draft.md](../../domain/business-logic-draft.md)
+- [core-entity-definition.md](../../domain/core-entity-definition.md)
 - [phase-1-db-backbone-design.md](./phase-1-db-backbone-design.md)
 - [phase-1-screen-implementation-order.md](./phase-1-screen-implementation-order.md)
 - [phase-1-thin-first-execution-plan.md](./phase-1-thin-first-execution-plan.md)

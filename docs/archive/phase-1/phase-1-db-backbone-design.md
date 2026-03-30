@@ -2,7 +2,7 @@
 
 ## 1. 문서 목적
 
-이 문서는 [business-logic-draft.md](./business-logic-draft.md) 와 [core-entity-definition.md](./core-entity-definition.md) 를 실제 `schema.prisma`와 연결하기 위한 **1차 DB 반영 기준안**이다.
+이 문서는 [business-logic-draft.md](../../domain/business-logic-draft.md) 와 [core-entity-definition.md](../../domain/core-entity-definition.md) 를 실제 `schema.prisma`와 연결하기 위한 **1차 DB 반영 기준안**이다.
 
 목표는 두 가지다.
 
@@ -22,7 +22,7 @@
 
 ## 2. 현재 스키마와 도메인 문서 사이의 간극
 
-현재 [schema.prisma](../../apps/api/prisma/schema.prisma) 는 다음 성격이 강하다.
+현재 [schema.prisma](../../../apps/api/prisma/schema.prisma) 는 다음 성격이 강하다.
 
 - `User` 중심 단일 사용자 스키마
 - `Account`, `Category`, `Transaction`, `RecurringRule` 중심의 초기 CRUD 구조

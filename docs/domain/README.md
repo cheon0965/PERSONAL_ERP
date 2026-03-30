@@ -1,35 +1,36 @@
 # 도메인 기준 문서
 
-이 폴더는 비즈니스 로직과 핵심 도메인 모델의 기준 문서를 보관한다.
+이 폴더는 비즈니스 로직과 핵심 도메인 모델의 현재 기준 문서를 보관한다.
 
 ## 읽는 순서
 
 1. `business-logic-draft.md`
-   운영 사이클, 권한 모델, 주요 회계 정책, 상태 정의, 아키텍처 선택 근거를 먼저 확인한다.
+   운영 사이클, 권한 모델, 주요 회계 정책, 상태 정의를 먼저 확인한다.
 2. `core-entity-definition.md`
    엔티티 책임, Aggregate Root, 불변조건, 관계, 구현 우선순위를 상세 기준으로 확인한다.
 
-## 문서 역할
+## 현재 기준 문서
 
-- `README.md`: 저장소 진입 설명, 빠른 시작, 상위 문서 맵을 제공한다.
-- `docs/domain/README.md`: 도메인 기준 문서의 진입점과 읽는 순서를 제공한다.
-- `docs/domain/business-logic-draft.md`: 비즈니스 로직의 시작/끝, 운영 흐름, 권한, 회계 정책의 상위 기준을 유지한다.
-- `docs/domain/core-entity-definition.md`: 엔티티 책임, 불변조건, 관계, 구현 우선순위의 상세 기준을 유지한다.
-- `docs/ARCHITECTURE.md`: 현재 코드베이스 구조와 모듈 경계를 설명한다.
-- `docs/API.md`: API 계약과 인증/쓰기 흐름 요약을 유지한다.
-- `docs/PROJECT_PLAN.md`: 중기 로드맵을 유지한다.
-- `docs/adr/`: 장기 구조 결정을 기록한다.
-- `docs/DEVELOPMENT_GUIDE.md`: 구현 전 확인 순서와 문서 동기화 절차를 유지한다.
+- `business-logic-draft.md`: 비즈니스 로직의 시작/끝, 운영 흐름, 권한, 회계 정책의 상위 기준
+- `core-entity-definition.md`: 엔티티 책임, 불변조건, 관계, 구현 우선순위의 상세 기준
+
+## 함께 보는 상위 문서
+
+- `../README.md`: `docs/` 전체 문서 맵
+- `../../README.md`: 저장소 진입 설명과 빠른 시작
+- `../ARCHITECTURE.md`: 현재 코드베이스 구조와 모듈 경계
+- `../API.md`: API 계약과 인증/쓰기 흐름 요약
+- `../PROJECT_PLAN.md`: 중기 로드맵
+- `../DEVELOPMENT_GUIDE.md`: 구현 전 확인 순서와 문서 동기화 절차
+- `../adr/`: 장기 구조 결정 기록
 
 ## 사용 방식
 
-- 비즈니스 로직, 유스케이스, 상태 흐름, DB 모델링 논의 전 이 폴더의 문서를 먼저 기준으로 본다.
-- 루트 문서 진입은 `README.md`에서 시작하고, 도메인 기준 확인은 이 폴더에서 시작한다.
+- 비즈니스 로직, 유스케이스, 상태 흐름, DB 모델링 논의 전 이 폴더 문서를 먼저 기준으로 본다.
 - 구현이 기준과 달라지면 관련 PR에서 이 폴더 문서도 함께 갱신한다.
+- 다른 문서가 도메인 정책을 다시 정의하지 않도록, 필요하면 이 폴더 문서를 링크로 참조한다.
 
-## 추가 설계 문서
+## 아카이브
 
-- [`phase-1-db-backbone-design.md`](./phase-1-db-backbone-design.md): 현재 `schema.prisma`를 도메인 기준에 맞춰 올리기 위한 1차 DB 백본 설계안
-
-- [phase-1-thin-first-execution-plan.md](./phase-1-thin-first-execution-plan.md): 엔티티 설계에 맞춰 전체를 얇게 먼저 구현하고 이후 깊게 확장하기 위한 1차 실행계획
-- [`phase-1-round-0-baseline-lock.md`](./phase-1-round-0-baseline-lock.md): Phase 1 착수 전 문서, DB, API, 화면 기준선을 고정한 Round 0 결과 문서
+과거 단계 설계와 실행 문서는 [`../archive/phase-1/README.md`](../archive/phase-1/README.md)로 옮겼다.
+이 문서들은 이력 참고용이며, 현재 기준 문서를 대체하지 않는다.

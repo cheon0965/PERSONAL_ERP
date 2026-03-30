@@ -2,7 +2,7 @@
 
 ## 1. 문서 목적
 
-이 문서는 [business-logic-draft.md](./business-logic-draft.md), [core-entity-definition.md](./core-entity-definition.md), [phase-1-db-backbone-design.md](./phase-1-db-backbone-design.md) 를 기준으로, 실제 화면 구현을 어떤 순서로 올려야 하는지 고정하기 위한 기준서다.
+이 문서는 [business-logic-draft.md](../../domain/business-logic-draft.md), [core-entity-definition.md](../../domain/core-entity-definition.md), [phase-1-db-backbone-design.md](./phase-1-db-backbone-design.md) 를 기준으로, 실제 화면 구현을 어떤 순서로 올려야 하는지 고정하기 위한 기준서다.
 
 목표는 다음과 같다.
 
