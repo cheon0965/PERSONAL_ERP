@@ -6,6 +6,8 @@ import type {
   CloseAccountingPeriodResponse
 } from '@personal-erp/contracts';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
+import { CloseAccountingPeriodUseCase } from './close-accounting-period.use-case';
+import { OpenAccountingPeriodUseCase } from './open-accounting-period.use-case';
 import { CloseAccountingPeriodRequestDto } from './dto/close-accounting-period.dto';
 import { OpenAccountingPeriodRequestDto } from './dto/open-accounting-period.dto';
 import { AccountingPeriodsService } from './accounting-periods.service';
@@ -15,7 +17,9 @@ import { AccountingPeriodsService } from './accounting-periods.service';
 @Controller('accounting-periods')
 export class AccountingPeriodsController {
   constructor(
-    private readonly accountingPeriodsService: AccountingPeriodsService
+    private readonly accountingPeriodsService: AccountingPeriodsService,
+    private readonly openAccountingPeriodUseCase: OpenAccountingPeriodUseCase,
+    private readonly closeAccountingPeriodUseCase: CloseAccountingPeriodUseCase
   ) {}
 
   @Get()
@@ -37,7 +41,7 @@ export class AccountingPeriodsController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: OpenAccountingPeriodRequestDto
   ): Promise<AccountingPeriodItem> {
-    return this.accountingPeriodsService.open(user, dto);
+    return this.openAccountingPeriodUseCase.execute(user, dto);
   }
 
   @Post(':id/close')
@@ -46,6 +50,6 @@ export class AccountingPeriodsController {
     @Param('id') periodId: string,
     @Body() dto: CloseAccountingPeriodRequestDto
   ): Promise<CloseAccountingPeriodResponse> {
-    return this.accountingPeriodsService.close(user, periodId, dto);
+    return this.closeAccountingPeriodUseCase.execute(user, periodId, dto);
   }
 }

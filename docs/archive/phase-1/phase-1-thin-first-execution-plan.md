@@ -2,7 +2,7 @@
 
 ## 1. 문서 목적
 
-이 문서는 [business-logic-draft.md](./business-logic-draft.md), [core-entity-definition.md](./core-entity-definition.md), [phase-1-db-backbone-design.md](./phase-1-db-backbone-design.md), [phase-1-screen-implementation-order.md](./phase-1-screen-implementation-order.md)를 기준으로, 프로젝트 전반을 **엔티티 설계에 맞게 얇게 먼저 구현하고 이후 깊게 확장하는 실행 순서**를 고정하기 위한 계획서다.
+이 문서는 [business-logic-draft.md](../../domain/business-logic-draft.md), [core-entity-definition.md](../../domain/core-entity-definition.md), [phase-1-db-backbone-design.md](./phase-1-db-backbone-design.md), [phase-1-screen-implementation-order.md](./phase-1-screen-implementation-order.md)를 기준으로, 프로젝트 전반을 **엔티티 설계에 맞게 얇게 먼저 구현하고 이후 깊게 확장하는 실행 순서**를 고정하기 위한 계획서다.
 
 여기서 말하는 전략은 다음과 같다.
 

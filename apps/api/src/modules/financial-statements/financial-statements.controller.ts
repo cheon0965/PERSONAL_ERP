@@ -2,9 +2,10 @@ import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type {
   AuthenticatedUser,
-  FinancialStatementsView,
+  FinancialStatementsView
 } from '@personal-erp/contracts';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
+import { GenerateFinancialStatementsUseCase } from './generate-financial-statements.use-case';
 import { GenerateFinancialStatementsRequestDto } from './dto/generate-financial-statements.dto';
 import { FinancialStatementsService } from './financial-statements.service';
 
@@ -13,7 +14,8 @@ import { FinancialStatementsService } from './financial-statements.service';
 @Controller('financial-statements')
 export class FinancialStatementsController {
   constructor(
-    private readonly financialStatementsService: FinancialStatementsService
+    private readonly financialStatementsService: FinancialStatementsService,
+    private readonly generateFinancialStatementsUseCase: GenerateFinancialStatementsUseCase
   ) {}
 
   @Get()
@@ -29,6 +31,6 @@ export class FinancialStatementsController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() body: GenerateFinancialStatementsRequestDto
   ): Promise<FinancialStatementsView> {
-    return this.financialStatementsService.generate(user, body);
+    return this.generateFinancialStatementsUseCase.execute(user, body);
   }
 }

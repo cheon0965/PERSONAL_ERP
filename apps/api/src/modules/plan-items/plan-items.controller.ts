@@ -6,6 +6,7 @@ import type {
   PlanItemsView
 } from '@personal-erp/contracts';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
+import { GeneratePlanItemsUseCase } from './generate-plan-items.use-case';
 import { GeneratePlanItemsRequestDto } from './dto/generate-plan-items.dto';
 import { PlanItemsService } from './plan-items.service';
 
@@ -13,7 +14,10 @@ import { PlanItemsService } from './plan-items.service';
 @ApiBearerAuth()
 @Controller('plan-items')
 export class PlanItemsController {
-  constructor(private readonly planItemsService: PlanItemsService) {}
+  constructor(
+    private readonly planItemsService: PlanItemsService,
+    private readonly generatePlanItemsUseCase: GeneratePlanItemsUseCase
+  ) {}
 
   @Get()
   findView(
@@ -28,6 +32,6 @@ export class PlanItemsController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() body: GeneratePlanItemsRequestDto
   ): Promise<GeneratePlanItemsResponse> {
-    return this.planItemsService.generate(user, body);
+    return this.generatePlanItemsUseCase.execute(user, body);
   }
 }

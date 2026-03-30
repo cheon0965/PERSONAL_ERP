@@ -193,6 +193,7 @@ personal-erp-starter/
 ## 문서
 
 - [환경변수 설정](./ENVIRONMENT_SETUP.md)
+- [문서 인덱스](./docs/README.md)
 - [배포/운영 체크리스트](./docs/OPERATIONS_CHECKLIST.md)
 - [기여 가이드](./CONTRIBUTING.md)
 - [도메인 기준 문서 안내](./docs/domain/README.md)
