@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   NotFoundException
 } from '@nestjs/common';
@@ -14,6 +13,7 @@ import {
   LedgerTransactionFlowKind
 } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
+import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   buildPlannedDates,
@@ -224,15 +224,6 @@ export class GeneratePlanItemsUseCase {
 function assertGeneratePermission(
   membershipRole: ReturnType<typeof requireCurrentWorkspace>['membershipRole']
 ) {
-  if (
-    membershipRole === 'OWNER' ||
-    membershipRole === 'MANAGER' ||
-    membershipRole === 'EDITOR'
-  ) {
-    return;
-  }
+  return assertWorkspaceActionAllowed(membershipRole, 'plan_item.generate');
 
-  throw new ForbiddenException(
-    '계획 항목 생성은 Owner, Manager, Editor만 실행할 수 있습니다.'
-  );
 }

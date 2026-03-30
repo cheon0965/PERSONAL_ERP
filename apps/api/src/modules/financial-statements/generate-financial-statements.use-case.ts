@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   NotFoundException
 } from '@nestjs/common';
@@ -11,6 +10,7 @@ import type {
 } from '@personal-erp/contracts';
 import { AccountingPeriodStatus, JournalEntryStatus } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
+import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { buildStatementPayloads } from './financial-statement-payload.policy';
 import { FinancialStatementsService } from './financial-statements.service';
@@ -187,11 +187,8 @@ export class GenerateFinancialStatementsUseCase {
 function assertGeneratePermission(
   membershipRole: ReturnType<typeof requireCurrentWorkspace>['membershipRole']
 ) {
-  if (membershipRole === 'OWNER' || membershipRole === 'MANAGER') {
-    return;
-  }
-
-  throw new ForbiddenException(
-    '공식 재무제표 생성은 Owner 또는 Manager만 실행할 수 있습니다.'
+  return assertWorkspaceActionAllowed(
+    membershipRole,
+    'financial_statement.generate'
   );
 }

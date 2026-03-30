@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable
 } from '@nestjs/common';
 import type {
@@ -9,8 +8,13 @@ import type {
   AuthenticatedUser,
   OpenAccountingPeriodRequest
 } from '@personal-erp/contracts';
-import { AccountingPeriodStatus, AuditActorType } from '@prisma/client';
+import { AccountingPeriodStatus } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
+import {
+  readWorkspaceActorRef,
+  readWorkspaceCreatedByActorRef
+} from '../../common/auth/workspace-actor-ref.util';
+import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { parseMonthRange } from '../../common/utils/date.util';
 import { mapAccountingPeriodRecordToItem } from './accounting-period.mapper';
@@ -30,6 +34,8 @@ export class OpenAccountingPeriodUseCase {
     input: OpenAccountingPeriodRequest
   ): Promise<AccountingPeriodItem> {
     const workspace = requireCurrentWorkspace(user);
+    const actorRef = readWorkspaceActorRef(workspace);
+    const createdByActorRef = readWorkspaceCreatedByActorRef(workspace);
     assertOpenPermission(workspace.membershipRole);
 
     const monthToken = normalizeMonthToken(input.month);
@@ -108,8 +114,7 @@ export class OpenAccountingPeriodUseCase {
         fromStatus: null,
         toStatus: AccountingPeriodStatus.OPEN,
         reason: normalizeOptionalText(input.note),
-        actorType: AuditActorType.TENANT_MEMBERSHIP,
-        actorMembershipId: workspace.membershipId
+        ...actorRef
       }
     });
 
@@ -120,8 +125,7 @@ export class OpenAccountingPeriodUseCase {
             ledgerId: workspace.ledgerId,
             effectivePeriodId: createdPeriod.id,
             sourceKind: 'INITIAL_SETUP',
-            createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
-            createdByMembershipId: workspace.membershipId
+            ...createdByActorRef
           },
           select: {
             sourceKind: true
@@ -140,11 +144,5 @@ export class OpenAccountingPeriodUseCase {
 function assertOpenPermission(
   membershipRole: ReturnType<typeof requireCurrentWorkspace>['membershipRole']
 ) {
-  if (membershipRole === 'OWNER' || membershipRole === 'MANAGER') {
-    return;
-  }
-
-  throw new ForbiddenException(
-    '월 운영 시작은 Owner 또는 Manager만 실행할 수 있습니다.'
-  );
+  return assertWorkspaceActionAllowed(membershipRole, 'accounting_period.open');
 }

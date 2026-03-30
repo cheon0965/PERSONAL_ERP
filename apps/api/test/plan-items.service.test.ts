@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { ForbiddenException } from '@nestjs/common';
 import type { AuthenticatedUser } from '@personal-erp/contracts';
 import {
   AccountingPeriodStatus,
@@ -197,6 +198,41 @@ test('GeneratePlanItemsUseCase skips existing occurrences and excludes recurring
   assert.deepEqual(
     result.items.map((item) => item.title),
     ['정기 보험료', '월급 예상']
+  );
+});
+
+test('GeneratePlanItemsUseCase rejects editor role because plan generation is limited to owner or manager', async () => {
+  const currentWorkspace = user.currentWorkspace!;
+  const editorUser: AuthenticatedUser = {
+    ...user,
+    currentWorkspace: {
+      ...currentWorkspace,
+      membership: {
+        ...currentWorkspace.membership,
+        role: 'EDITOR'
+      }
+    }
+  };
+  const period = createPeriod({
+    id: 'period-2026-05',
+    year: 2026,
+    month: 5
+  });
+  const prisma = createPrismaMock(
+    period,
+    createPlanItemTestState({
+      recurringRules: [],
+      planItems: []
+    })
+  );
+  const useCase = new GeneratePlanItemsUseCase(
+    prisma as never,
+    new PlanItemsService(prisma as never)
+  );
+
+  await assert.rejects(
+    () => useCase.execute(editorUser, { periodId: period.id }),
+    ForbiddenException
   );
 });
 

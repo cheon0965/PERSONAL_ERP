@@ -49,13 +49,14 @@ docs/
 | Context              | 현재 모듈                                                        | 역할                                         |
 | -------------------- | ---------------------------------------------------------------- | -------------------------------------------- |
 | Identity & Access    | `auth`, `common/auth`                                            | 로그인, 토큰, 요청 주체 인증 기준선          |
-| Ledger               | `accounts`, `categories`, `transactions`                         | 현재 구현의 계정/카테고리/거래 쓰기 컨텍스트 |
+| Ledger               | `accounts`, `categories`, `collected-transactions`               | 현재 구현의 계정/카테고리/거래 쓰기 컨텍스트 |
 | Recurring Automation | `recurring-rules`                                                | 반복규칙 정의와 반복 입력 예약               |
 | Asset & Coverage     | `vehicles`, `insurance-policies`                                 | 운영비 성격의 자산/보장 도메인               |
 | Insight & Planning   | `dashboard`, `forecast`                                          | 읽기 기반 요약/예측 조합                     |
 | Platform & Contracts | `packages/contracts`, env, Prisma, health, 공통 외부 의존성 조립 | 계약과 런타임 기반선                         |
 
 여기서 `Ledger`는 현재 코드베이스의 컨텍스트 이름입니다.  
+현재 API 모듈명은 `collected-transactions`이고, Web feature/route는 shorthand로 `transactions`를 사용합니다.  
 회계 도메인의 상세 기준은 [business-logic-draft.md](./domain/business-logic-draft.md) 와 [core-entity-definition.md](./domain/core-entity-definition.md) 를 우선하며, 최종 write model은 `Ledger`, `AccountingPeriod`, `CollectedTransaction`, `JournalEntry` 중심으로 수렴합니다.
 
 허용되는 방향:
@@ -106,8 +107,8 @@ Insight Context: controller -> read service -> read repository -> projection
 - 외부 의존성 포트는 `apps/api/src/common/application/ports`에 둡니다.
 - 공통 어댑터 조립은 `apps/api/src/common/infrastructure`에서 시작합니다.
 - `application/domain/infrastructure` 폴더는 실제 전환 대상 모듈에서만 만듭니다.
-- `transactions`, `recurring-rules` 는 이미 `use-case/port/adapter` 경계로 전환되었습니다.
-- `transactions`, `recurring-rules`, `dashboard`, `forecast`는 모듈 바깥에서 각 모듈의 `public.ts`만 공식 진입점으로 사용합니다.
+- `collected-transactions`, `recurring-rules` 는 이미 `use-case/port/adapter` 경계로 전환되었습니다.
+- `collected-transactions`, `recurring-rules`, `dashboard`, `forecast`는 모듈 바깥에서 각 모듈의 `public.ts`만 공식 진입점으로 사용합니다.
 - `dashboard`, `forecast`는 `read service -> read repository -> projection` 네이밍으로 읽기 조합 컨텍스트임을 코드에서 드러냅니다.
 - 나머지 모듈은 설명 가능한 이유가 생길 때만 같은 방향으로 옮깁니다.
 - mapper/calculator/helper는 계속 함수 또는 plain class로 두고 provider/token으로 만들지 않습니다.

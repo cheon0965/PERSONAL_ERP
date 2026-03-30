@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   NotFoundException,
   Param,
@@ -14,19 +15,27 @@ import type {
 } from '@personal-erp/contracts';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
+import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
+import {
+  assertWorkspaceActionAllowed,
+  readAllowedWorkspaceRoles
+} from '../../common/auth/workspace-action.policy';
 import {
   readRequestId,
   readRequestPath,
   RequestWithContext
 } from '../../common/infrastructure/operational/request-context';
 import { SecurityEventLogger } from '../../common/infrastructure/operational/security-event.logger';
+import {
+  logWorkspaceActionDenied,
+  logWorkspaceActionSucceeded
+} from '../../common/infrastructure/operational/workspace-action.audit';
 import { AccountingPeriodsService } from '../accounting-periods/accounting-periods.service';
 import { CreateCollectedTransactionUseCase } from './application/use-cases/create-collected-transaction.use-case';
 import { ListCollectedTransactionsUseCase } from './application/use-cases/list-collected-transactions.use-case';
 import { ConfirmCollectedTransactionUseCase } from './confirm-collected-transaction.use-case';
-import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
-import { MissingOwnedCollectedTransactionReferenceError } from './domain/collected-transaction-policy';
 import { CreateCollectedTransactionRequestDto } from './dto/create-collected-transaction.dto';
+import { MissingOwnedCollectedTransactionReferenceError } from './domain/collected-transaction-policy';
 
 @ApiTags('collected-transactions')
 @ApiBearerAuth()
@@ -58,8 +67,14 @@ export class CollectedTransactionsController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateCollectedTransactionRequestDto
   ) {
+    const workspace = requireCurrentWorkspace(user);
+
     try {
-      const workspace = requireCurrentWorkspace(user);
+      assertWorkspaceActionAllowed(
+        workspace.membershipRole,
+        'collected_transaction.create'
+      );
+
       const currentPeriod =
         await this.accountingPeriodsService.assertCollectingDateAllowed(
           user,
@@ -80,8 +95,31 @@ export class CollectedTransactionsController {
         memo: dto.memo
       });
 
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'collected_transaction.create',
+        request,
+        workspace,
+        details: {
+          collectedTransactionId: created.id,
+          periodId: currentPeriod.id
+        }
+      });
+
       return created;
     } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'collected_transaction.create',
+          request,
+          workspace,
+          details: {
+            requiredRoles: readAllowedWorkspaceRoles(
+              'collected_transaction.create'
+            ).join(',')
+          }
+        });
+      }
+
       if (error instanceof MissingOwnedCollectedTransactionReferenceError) {
         this.securityEvents.warn('authorization.scope_denied', {
           requestId: readRequestId(request),
@@ -98,12 +136,45 @@ export class CollectedTransactionsController {
 
   @Post(':id/confirm')
   async confirm(
+    @Req() request: RequestWithContext,
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') collectedTransactionId: string
   ): Promise<JournalEntryItem> {
-    return this.confirmCollectedTransactionUseCase.execute(
-      user,
-      collectedTransactionId
-    );
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      const journalEntry = await this.confirmCollectedTransactionUseCase.execute(
+        user,
+        collectedTransactionId
+      );
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'collected_transaction.confirm',
+        request,
+        workspace,
+        details: {
+          collectedTransactionId,
+          journalEntryId: journalEntry.id
+        }
+      });
+
+      return journalEntry;
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'collected_transaction.confirm',
+          request,
+          workspace,
+          details: {
+            collectedTransactionId,
+            requiredRoles: readAllowedWorkspaceRoles(
+              'collected_transaction.confirm'
+            ).join(',')
+          }
+        });
+      }
+
+      throw error;
+    }
   }
 }

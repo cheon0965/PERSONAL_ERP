@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node ../../scripts/run-with-root-env.cjs node ../../scripts/start-web-dev-inproc.cjs --port 3000",
-    "build": "node ../../scripts/run-with-root-env.cjs node ../../scripts/build-web-inproc.cjs",
+    "dev": "node ../../scripts/run-with-root-env.cjs next dev --port 3000",
+    "build": "node ../../scripts/run-with-root-env.cjs next build",
     "start": "node ../../scripts/run-with-root-env.cjs next start --port 3000",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit --incremental false -p tsconfig.test.json",

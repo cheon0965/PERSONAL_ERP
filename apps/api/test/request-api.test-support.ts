@@ -1,14 +1,7 @@
-import assert from 'node:assert/strict';
-import test from 'node:test';
-import * as argon2 from 'argon2';
+﻿import * as argon2 from 'argon2';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
-import type {
-  CarryForwardView,
-  CloseAccountingPeriodResponse,
-  FinancialStatementPayload,
-  FinancialStatementsView
-} from '@personal-erp/contracts';
+import type { FinancialStatementPayload } from '@personal-erp/contracts';
 import {
   AccountingPeriodStatus,
   AuditActorType,
@@ -279,6 +272,9 @@ type RequestTestState = {
       | 'CARRY_FORWARD'
       | 'MANUAL_ADJUSTMENT';
     sourceCollectedTransactionId: string | null;
+    reversesJournalEntryId?: string | null;
+    correctsJournalEntryId?: string | null;
+    correctionReason?: string | null;
     status: 'POSTED' | 'REVERSED' | 'SUPERSEDED';
     memo: string | null;
     createdByActorType: AuditActorType;
@@ -320,7 +316,7 @@ type RequestResult = {
   headers: Headers;
 };
 
-type RequestTestContext = {
+export type RequestTestContext = {
   state: RequestTestState;
   securityEvents: Array<{
     level: 'log' | 'warn' | 'error';
@@ -993,6 +989,9 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
     state.accountSubjects.find(
       (candidate) => candidate.id === accountSubjectId
     ) ?? null;
+  const resolveJournalEntry = (journalEntryId: string) =>
+    state.journalEntries.find((candidate) => candidate.id === journalEntryId) ??
+    null;
   const resolveJournalEntryByCollectedTransaction = (
     collectedTransactionId: string
   ) =>
@@ -1897,6 +1896,45 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
 
         state.closingSnapshots.push(created);
         return created;
+      },
+      deleteMany: async (args: {
+        where?: {
+          tenantId?: string;
+          ledgerId?: string;
+          periodId?: string;
+        };
+      }) => {
+        const deletedSnapshotIds = state.closingSnapshots
+          .filter((candidate) => {
+            const matchesTenant =
+              !args.where?.tenantId ||
+              candidate.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId;
+            const matchesPeriod =
+              !args.where?.periodId ||
+              candidate.periodId === args.where.periodId;
+
+            return matchesTenant && matchesLedger && matchesPeriod;
+          })
+          .map((candidate) => candidate.id);
+
+        state.closingSnapshots = state.closingSnapshots.filter(
+          (candidate) => !deletedSnapshotIds.includes(candidate.id)
+        );
+        state.balanceSnapshotLines = state.balanceSnapshotLines.filter(
+          (candidate) =>
+            !deletedSnapshotIds.includes(candidate.closingSnapshotId ?? '')
+        );
+        state.carryForwardRecords = state.carryForwardRecords.filter(
+          (candidate) =>
+            !deletedSnapshotIds.includes(candidate.sourceClosingSnapshotId)
+        );
+
+        return {
+          count: deletedSnapshotIds.length
+        };
       }
     },
     balanceSnapshotLine: {
@@ -2092,6 +2130,33 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
 
         state.financialStatementSnapshots.push(created);
         return created;
+      },
+      deleteMany: async (args: {
+        where?: {
+          tenantId?: string;
+          ledgerId?: string;
+          periodId?: string;
+        };
+      }) => {
+        const beforeCount = state.financialStatementSnapshots.length;
+        state.financialStatementSnapshots =
+          state.financialStatementSnapshots.filter((candidate) => {
+            const matchesTenant =
+              !args.where?.tenantId ||
+              candidate.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId;
+            const matchesPeriod =
+              !args.where?.periodId ||
+              candidate.periodId === args.where.periodId;
+
+            return !(matchesTenant && matchesLedger && matchesPeriod);
+          });
+
+        return {
+          count: beforeCount - state.financialStatementSnapshots.length
+        };
       }
     },
     carryForwardRecord: {
@@ -2829,6 +2894,62 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
           return matchesTenant && matchesLedger && matchesPeriod;
         }).length;
       },
+      findFirst: async (args: {
+        where?: {
+          id?: string;
+          tenantId?: string;
+          ledgerId?: string;
+          sourceCollectedTransactionId?: string | null;
+        };
+        include?: {
+          sourceCollectedTransaction?: {
+            select?: { id?: boolean; title?: boolean };
+          };
+          lines?: {
+            include?: {
+              accountSubject?: {
+                select?: { code?: boolean; name?: boolean };
+              };
+              fundingAccount?: {
+                select?: { name?: boolean };
+              };
+            };
+            orderBy?: { lineNumber?: 'asc' | 'desc' };
+          };
+        };
+      }) => {
+        const candidate = state.journalEntries.find((item) => {
+          const matchesId = !args.where?.id || item.id === args.where.id;
+          const matchesTenant =
+            !args.where?.tenantId || item.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || item.ledgerId === args.where.ledgerId;
+          const matchesSourceCollectedTransaction =
+            args.where?.sourceCollectedTransactionId === undefined ||
+            item.sourceCollectedTransactionId ===
+              args.where.sourceCollectedTransactionId;
+
+          return (
+            matchesId &&
+            matchesTenant &&
+            matchesLedger &&
+            matchesSourceCollectedTransaction
+          );
+        });
+
+        if (!candidate) {
+          return null;
+        }
+
+        if (!args.include) {
+          return candidate;
+        }
+
+        return projectJournalEntry(candidate, {
+          sourceCollectedTransaction: args.include.sourceCollectedTransaction,
+          lines: args.include.lines
+        });
+      },
       findMany: async (args: {
         where?: { tenantId?: string; ledgerId?: string };
         include?: {
@@ -2896,6 +3017,9 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
             | 'CARRY_FORWARD'
             | 'MANUAL_ADJUSTMENT';
           sourceCollectedTransactionId?: string;
+          reversesJournalEntryId?: string | null;
+          correctsJournalEntryId?: string | null;
+          correctionReason?: string | null;
           status: 'POSTED' | 'REVERSED' | 'SUPERSEDED';
           memo?: string | null;
           createdByActorType: AuditActorType;
@@ -2938,6 +3062,9 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
           sourceKind: args.data.sourceKind,
           sourceCollectedTransactionId:
             args.data.sourceCollectedTransactionId ?? null,
+          reversesJournalEntryId: args.data.reversesJournalEntryId ?? null,
+          correctsJournalEntryId: args.data.correctsJournalEntryId ?? null,
+          correctionReason: args.data.correctionReason ?? null,
           status: args.data.status,
           memo: args.data.memo ?? null,
           createdByActorType: args.data.createdByActorType,
@@ -2965,8 +3092,44 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
           sourceCollectedTransaction: args.include.sourceCollectedTransaction,
           lines: args.include.lines
         });
+      },
+      update: async (args: {
+        where: { id: string };
+        data: {
+          status?: 'POSTED' | 'REVERSED' | 'SUPERSEDED';
+          reversesJournalEntryId?: string | null;
+          correctsJournalEntryId?: string | null;
+          correctionReason?: string | null;
+        };
+      }) => {
+        const candidate = resolveJournalEntry(args.where.id);
+
+        if (!candidate) {
+          throw new Error('Journal entry not found');
+        }
+
+        if (args.data.status) {
+          candidate.status = args.data.status;
+        }
+
+        if ('reversesJournalEntryId' in args.data) {
+          candidate.reversesJournalEntryId = args.data.reversesJournalEntryId;
+        }
+
+        if ('correctsJournalEntryId' in args.data) {
+          candidate.correctsJournalEntryId = args.data.correctsJournalEntryId;
+        }
+
+        if ('correctionReason' in args.data) {
+          candidate.correctionReason = args.data.correctionReason;
+        }
+
+        candidate.updatedAt = new Date();
+
+        return candidate;
       }
     },
+
     journalLine: {
       findMany: async (args: {
         where?: {
@@ -3320,7 +3483,7 @@ function createJwtServiceMock(state: RequestTestState) {
   };
 }
 
-function readSetCookieHeader(headers: Headers): string {
+export function readSetCookieHeader(headers: Headers): string {
   const headerBag = headers as Headers & {
     getSetCookie?: () => string[];
   };
@@ -3332,13 +3495,16 @@ function readSetCookieHeader(headers: Headers): string {
   return headers.get('set-cookie') ?? '';
 }
 
-function readCookieValue(headers: Headers, cookieName: string): string | null {
+export function readCookieValue(
+  headers: Headers,
+  cookieName: string
+): string | null {
   const setCookie = readSetCookieHeader(headers);
   const match = setCookie.match(new RegExp(`${cookieName}=([^;]+)`, 'i'));
   return match?.[1] ?? null;
 }
 
-async function createRequestTestContext(): Promise<RequestTestContext> {
+export async function createRequestTestContext(): Promise<RequestTestContext> {
   const restoreEnv = setJwtEnv();
 
   try {
@@ -3457,2169 +3623,3 @@ async function createRequestTestContext(): Promise<RequestTestContext> {
     throw error;
   }
 }
-
-test('POST /auth/login returns access token and a refresh cookie for valid credentials', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const response = await context.request('/auth/login', {
-      method: 'POST',
-      body: {
-        email: 'demo@example.com',
-        password: 'Demo1234!'
-      }
-    });
-
-    assert.equal(response.status, 200);
-    assert.match(response.headers.get('x-request-id') ?? '', /.+/);
-    assert.match(
-      (response.body as { accessToken: string }).accessToken,
-      /^test-access-token:[^:]+:user-1$/
-    );
-    assert.deepEqual((response.body as { user: unknown }).user, {
-      id: 'user-1',
-      email: 'demo@example.com',
-      name: 'Demo User',
-      currentWorkspace: {
-        tenant: {
-          id: 'tenant-1',
-          slug: 'demo-tenant',
-          name: 'Demo Workspace',
-          status: 'ACTIVE'
-        },
-        membership: {
-          id: 'membership-1',
-          role: 'OWNER',
-          status: 'ACTIVE'
-        },
-        ledger: {
-          id: 'ledger-1',
-          name: '개인 장부',
-          baseCurrency: 'KRW',
-          timezone: 'Asia/Seoul',
-          status: 'ACTIVE'
-        }
-      }
-    });
-    assert.match(readSetCookieHeader(response.headers), /refreshToken=/);
-    assert.match(readSetCookieHeader(response.headers), /HttpOnly/i);
-    assert.match(readSetCookieHeader(response.headers), /SameSite=Strict/i);
-    assert.match(readSetCookieHeader(response.headers), /Path=\/api\/auth/i);
-    assert.equal(response.headers.get('cache-control'), 'no-store');
-    assert.equal(response.headers.get('pragma'), 'no-cache');
-    assert.ok(
-      context.securityEvents.some(
-        (candidate) =>
-          candidate.level === 'log' &&
-          candidate.event === 'auth.login_succeeded' &&
-          candidate.details.userId === 'user-1'
-      )
-    );
-  } finally {
-    await context.close();
-  }
-});
-
-test('POST /auth/refresh rotates the refresh session and returns a new access token', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const loginResponse = await context.request('/auth/login', {
-      method: 'POST',
-      body: {
-        email: 'demo@example.com',
-        password: 'Demo1234!'
-      }
-    });
-    const originalRefreshToken = readCookieValue(
-      loginResponse.headers,
-      'refreshToken'
-    );
-
-    assert.ok(originalRefreshToken);
-
-    const response = await context.request('/auth/refresh', {
-      method: 'POST',
-      headers: {
-        cookie: `refreshToken=${originalRefreshToken}`
-      }
-    });
-
-    const rotatedRefreshToken = readCookieValue(
-      response.headers,
-      'refreshToken'
-    );
-    assert.equal(response.status, 200);
-    assert.ok(rotatedRefreshToken);
-    assert.notEqual(rotatedRefreshToken, originalRefreshToken);
-    assert.match(
-      (response.body as { accessToken: string }).accessToken,
-      /^test-access-token:[^:]+:user-1$/
-    );
-
-    const activeSessions = context.state.authSessions.filter(
-      (candidate) =>
-        candidate.userId === 'user-1' && candidate.revokedAt === null
-    );
-    const revokedSessions = context.state.authSessions.filter(
-      (candidate) =>
-        candidate.userId === 'user-1' && candidate.revokedAt !== null
-    );
-    assert.equal(activeSessions.length, 2);
-    assert.equal(revokedSessions.length, 1);
-    assert.ok(
-      context.securityEvents.some(
-        (candidate) =>
-          candidate.level === 'log' &&
-          candidate.event === 'auth.refresh_succeeded' &&
-          candidate.details.userId === 'user-1'
-      )
-    );
-  } finally {
-    await context.close();
-  }
-});
-
-test('POST /auth/refresh returns 401 when the refresh cookie is missing', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const response = await context.request('/auth/refresh', {
-      method: 'POST'
-    });
-
-    assert.equal(response.status, 401);
-    assert.equal(
-      (response.body as { message: string }).message,
-      'Missing refresh token'
-    );
-    assert.ok(
-      context.securityEvents.some(
-        (candidate) =>
-          candidate.level === 'warn' &&
-          candidate.event === 'auth.refresh_failed' &&
-          candidate.details.requestId ===
-            response.headers.get('x-request-id') &&
-          candidate.details.reason === 'missing_refresh_token'
-      )
-    );
-  } finally {
-    await context.close();
-  }
-});
-
-test('POST /auth/logout revokes the current refresh session and clears the cookie', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const loginResponse = await context.request('/auth/login', {
-      method: 'POST',
-      body: {
-        email: 'demo@example.com',
-        password: 'Demo1234!'
-      }
-    });
-    const refreshToken = readCookieValue(loginResponse.headers, 'refreshToken');
-    assert.ok(refreshToken);
-
-    const logoutResponse = await context.request('/auth/logout', {
-      method: 'POST',
-      headers: {
-        cookie: `refreshToken=${refreshToken}`
-      }
-    });
-
-    assert.equal(logoutResponse.status, 200);
-    assert.equal(
-      (logoutResponse.body as { status: string }).status,
-      'logged_out'
-    );
-    assert.match(readSetCookieHeader(logoutResponse.headers), /refreshToken=/);
-
-    const refreshResponse = await context.request('/auth/refresh', {
-      method: 'POST',
-      headers: {
-        cookie: `refreshToken=${refreshToken}`
-      }
-    });
-
-    assert.equal(refreshResponse.status, 401);
-    assert.ok(
-      context.securityEvents.some(
-        (candidate) =>
-          candidate.level === 'log' &&
-          candidate.event === 'auth.logout_succeeded' &&
-          candidate.details.userId === 'user-1'
-      )
-    );
-  } finally {
-    await context.close();
-  }
-});
-
-test('POST /auth/refresh revokes all active sessions when a rotated refresh token is reused', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const loginResponse = await context.request('/auth/login', {
-      method: 'POST',
-      body: {
-        email: 'demo@example.com',
-        password: 'Demo1234!'
-      }
-    });
-    const originalRefreshToken = readCookieValue(
-      loginResponse.headers,
-      'refreshToken'
-    );
-    assert.ok(originalRefreshToken);
-
-    const rotatedResponse = await context.request('/auth/refresh', {
-      method: 'POST',
-      headers: {
-        cookie: `refreshToken=${originalRefreshToken}`
-      }
-    });
-    assert.equal(rotatedResponse.status, 200);
-
-    const reuseResponse = await context.request('/auth/refresh', {
-      method: 'POST',
-      headers: {
-        cookie: `refreshToken=${originalRefreshToken}`
-      }
-    });
-
-    assert.equal(reuseResponse.status, 401);
-    assert.equal(
-      context.state.authSessions.some(
-        (candidate) =>
-          candidate.userId === 'user-1' && candidate.revokedAt === null
-      ),
-      false
-    );
-    assert.ok(
-      context.securityEvents.some(
-        (candidate) =>
-          candidate.level === 'warn' &&
-          candidate.event === 'auth.refresh_reuse_detected' &&
-          candidate.details.userId === 'user-1'
-      )
-    );
-  } finally {
-    await context.close();
-  }
-});
-
-test('GET /health echoes an incoming x-request-id header', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const response = await context.request('/health', {
-      headers: {
-        'x-request-id': 'manual-request-id-123'
-      }
-    });
-
-    assert.equal(response.status, 200);
-    assert.equal(response.headers.get('x-request-id'), 'manual-request-id-123');
-    assert.equal((response.body as { status: string }).status, 'ok');
-  } finally {
-    await context.close();
-  }
-});
-
-test('GET /health applies the browser boundary headers for allowed origins', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const response = await context.request('/health', {
-      headers: {
-        origin: 'http://localhost:3000'
-      }
-    });
-
-    assert.equal(response.status, 200);
-    assert.equal(
-      response.headers.get('access-control-allow-origin'),
-      'http://localhost:3000'
-    );
-    assert.equal(
-      response.headers.get('access-control-allow-credentials'),
-      'true'
-    );
-    assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
-    assert.equal(response.headers.get('x-frame-options'), 'DENY');
-    assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
-    assert.equal(
-      response.headers.get('permissions-policy'),
-      'camera=(), geolocation=(), microphone=()'
-    );
-    assert.equal(
-      response.headers.get('cross-origin-opener-policy'),
-      'same-origin'
-    );
-    assert.equal(
-      response.headers.get('cross-origin-resource-policy'),
-      'same-site'
-    );
-    assert.match(
-      response.headers.get('content-security-policy') ?? '',
-      /default-src 'none'/
-    );
-    assert.equal(response.headers.get('strict-transport-security'), null);
-  } finally {
-    await context.close();
-  }
-});
-
-test('GET /health/ready reports database readiness when Prisma is reachable', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const response = await context.request('/health/ready');
-
-    assert.equal(response.status, 200);
-    assert.match(response.headers.get('x-request-id') ?? '', /.+/);
-    assert.deepEqual(response.body, {
-      status: 'ready',
-      timestamp: (response.body as { timestamp: string }).timestamp,
-      checks: {
-        database: 'ok'
-      }
-    });
-  } finally {
-    await context.close();
-  }
-});
-
-test('GET /health/ready returns 503 and logs a readiness failure when Prisma is unreachable', async () => {
-  const context = await createRequestTestContext();
-  context.state.databaseReady = false;
-
-  try {
-    const response = await context.request('/health/ready');
-
-    assert.equal(response.status, 503);
-    assert.deepEqual(response.body, {
-      status: 'not_ready',
-      timestamp: (response.body as { timestamp: string }).timestamp,
-      checks: {
-        database: 'error'
-      }
-    });
-    assert.ok(
-      context.securityEvents.some(
-        (candidate) =>
-          candidate.level === 'error' &&
-          candidate.event === 'system.readiness_failed' &&
-          candidate.details.requestId ===
-            response.headers.get('x-request-id') &&
-          candidate.details.check === 'database'
-      )
-    );
-  } finally {
-    await context.close();
-  }
-});
-
-test('POST /auth/login returns 401 for invalid credentials', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const response = await context.request('/auth/login', {
-      method: 'POST',
-      body: {
-        email: 'demo@example.com',
-        password: 'WrongPassword!'
-      }
-    });
-
-    assert.equal(response.status, 401);
-    assert.equal(
-      (response.body as { message: string }).message,
-      '이메일 또는 비밀번호가 올바르지 않습니다.'
-    );
-    assert.ok(
-      context.securityEvents.some(
-        (candidate) =>
-          candidate.level === 'warn' &&
-          candidate.event === 'auth.login_failed' &&
-          candidate.details.requestId ===
-            response.headers.get('x-request-id') &&
-          candidate.details.reason === 'invalid_credentials'
-      )
-    );
-  } finally {
-    await context.close();
-  }
-});
-
-test('POST /auth/login returns 403 for disallowed browser origins', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const response = await context.request('/auth/login', {
-      method: 'POST',
-      headers: {
-        origin: 'http://evil.example.com',
-        referer: 'http://evil.example.com/login'
-      },
-      body: {
-        email: 'demo@example.com',
-        password: 'Demo1234!'
-      }
-    });
-
-    assert.equal(response.status, 403);
-    assert.equal(
-      (response.body as { message: string }).message,
-      'Origin not allowed'
-    );
-    assert.ok(
-      context.securityEvents.some(
-        (candidate) =>
-          candidate.level === 'warn' &&
-          candidate.event === 'auth.browser_origin_blocked' &&
-          candidate.details.requestId ===
-            response.headers.get('x-request-id') &&
-          candidate.details.reason === 'origin_not_allowed'
-      )
-    );
-  } finally {
-    await context.close();
-  }
-});
-
-test('POST /auth/login returns 429 after too many invalid attempts from the same client', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-      const response = await context.request('/auth/login', {
-        method: 'POST',
-        body: {
-          email: 'demo@example.com',
-          password: 'WrongPassword!'
-        }
-      });
-
-      assert.equal(response.status, 401);
-    }
-
-    const response = await context.request('/auth/login', {
-      method: 'POST',
-      body: {
-        email: 'demo@example.com',
-        password: 'WrongPassword!'
-      }
-    });
-
-    assert.equal(response.status, 429);
-    assert.equal(
-      (response.body as { message: string }).message,
-      '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.'
-    );
-    assert.ok(
-      context.securityEvents.some(
-        (candidate) =>
-          candidate.level === 'warn' &&
-          candidate.event === 'auth.login_rate_limited' &&
-          candidate.details.requestId === response.headers.get('x-request-id')
-      )
-    );
-  } finally {
-    await context.close();
-  }
-});
-
-test('GET /collected-transactions returns 401 when the bearer token is missing', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const response = await context.request('/collected-transactions');
-
-    assert.equal(response.status, 401);
-    assert.equal(
-      (response.body as { message: string }).message,
-      'Missing bearer token'
-    );
-    assert.ok(
-      context.securityEvents.some(
-        (candidate) =>
-          candidate.level === 'warn' &&
-          candidate.event === 'auth.access_denied' &&
-          candidate.details.requestId ===
-            response.headers.get('x-request-id') &&
-          candidate.details.reason === 'missing_bearer_token'
-      )
-    );
-  } finally {
-    await context.close();
-  }
-});
-
-test('GET /auth/me returns the authenticated user', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const response = await context.request('/auth/me', {
-      headers: context.authHeaders()
-    });
-
-    assert.equal(response.status, 200);
-    assert.deepEqual(response.body, {
-      id: 'user-1',
-      email: 'demo@example.com',
-      name: 'Demo User',
-      currentWorkspace: {
-        tenant: {
-          id: 'tenant-1',
-          slug: 'demo-tenant',
-          name: 'Demo Workspace',
-          status: 'ACTIVE'
-        },
-        membership: {
-          id: 'membership-1',
-          role: 'OWNER',
-          status: 'ACTIVE'
-        },
-        ledger: {
-          id: 'ledger-1',
-          name: '개인 장부',
-          baseCurrency: 'KRW',
-          timezone: 'Asia/Seoul',
-          status: 'ACTIVE'
-        }
-      }
-    });
-    assert.equal(response.headers.get('cache-control'), 'no-store');
-    assert.equal(response.headers.get('pragma'), 'no-cache');
-  } finally {
-    await context.close();
-  }
-});
-
-test('GET /accounting-periods returns the current ledger periods in reverse chronological order', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    context.state.accountingPeriods.push({
-      id: 'period-existing-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      year: 2026,
-      month: 2,
-      startDate: new Date('2026-02-01T00:00:00.000Z'),
-      endDate: new Date('2026-03-01T00:00:00.000Z'),
-      status: AccountingPeriodStatus.LOCKED,
-      openedAt: new Date('2026-02-01T00:00:00.000Z'),
-      lockedAt: new Date('2026-02-28T15:00:00.000Z'),
-      createdAt: new Date('2026-02-01T00:00:00.000Z'),
-      updatedAt: new Date('2026-02-28T15:00:00.000Z')
-    });
-    context.state.periodStatusHistory.push({
-      id: 'period-history-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      periodId: 'period-existing-1',
-      fromStatus: null,
-      toStatus: AccountingPeriodStatus.OPEN,
-      reason: '운영 시작',
-      actorType: AuditActorType.TENANT_MEMBERSHIP,
-      actorMembershipId: 'membership-1',
-      changedAt: new Date('2026-02-01T00:00:00.000Z')
-    });
-    context.state.openingBalanceSnapshots.push({
-      id: 'opening-snapshot-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      effectivePeriodId: 'period-existing-1',
-      sourceKind: OpeningBalanceSourceKind.INITIAL_SETUP,
-      createdAt: new Date('2026-02-01T00:00:00.000Z'),
-      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
-      createdByMembershipId: 'membership-1'
-    });
-    context.state.accountingPeriods.push({
-      id: 'period-other-1',
-      tenantId: 'tenant-2',
-      ledgerId: 'ledger-2',
-      year: 2026,
-      month: 2,
-      startDate: new Date('2026-02-01T00:00:00.000Z'),
-      endDate: new Date('2026-03-01T00:00:00.000Z'),
-      status: AccountingPeriodStatus.OPEN,
-      openedAt: new Date('2026-02-01T00:00:00.000Z'),
-      lockedAt: null,
-      createdAt: new Date('2026-02-01T00:00:00.000Z'),
-      updatedAt: new Date('2026-02-01T00:00:00.000Z')
-    });
-
-    const response = await context.request('/accounting-periods', {
-      headers: context.authHeaders()
-    });
-
-    assert.equal(response.status, 200);
-    assert.deepEqual(response.body, [
-      {
-        id: 'period-existing-1',
-        year: 2026,
-        month: 2,
-        monthLabel: '2026-02',
-        startDate: '2026-02-01T00:00:00.000Z',
-        endDate: '2026-03-01T00:00:00.000Z',
-        status: AccountingPeriodStatus.LOCKED,
-        openedAt: '2026-02-01T00:00:00.000Z',
-        lockedAt: '2026-02-28T15:00:00.000Z',
-        hasOpeningBalanceSnapshot: true,
-        openingBalanceSourceKind: OpeningBalanceSourceKind.INITIAL_SETUP,
-        statusHistory: [
-          {
-            id: 'period-history-1',
-            fromStatus: null,
-            toStatus: AccountingPeriodStatus.OPEN,
-            reason: '운영 시작',
-            actorType: AuditActorType.TENANT_MEMBERSHIP,
-            actorMembershipId: 'membership-1',
-            changedAt: '2026-02-01T00:00:00.000Z'
-          }
-        ]
-      }
-    ]);
-  } finally {
-    await context.close();
-  }
-});
-
-test('GET /funding-accounts returns only active funding accounts for the current workspace ledger', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const response = await context.request('/funding-accounts', {
-      headers: context.authHeaders()
-    });
-
-    assert.equal(response.status, 200);
-    assert.deepEqual(response.body, [
-      {
-        id: 'acc-1',
-        name: 'Main checking',
-        type: 'BANK',
-        balanceWon: 2_000_000
-      },
-      {
-        id: 'acc-1b',
-        name: 'Emergency savings',
-        type: 'BANK',
-        balanceWon: 3_500_000
-      }
-    ]);
-  } finally {
-    await context.close();
-  }
-});
-
-test('GET /categories returns only active categories for the current workspace ledger', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const response = await context.request('/categories', {
-      headers: context.authHeaders()
-    });
-
-    assert.equal(response.status, 200);
-    assert.deepEqual(response.body, [
-      {
-        id: 'cat-1b',
-        name: 'Salary',
-        kind: 'INCOME'
-      },
-      {
-        id: 'cat-1',
-        name: 'Fuel',
-        kind: 'EXPENSE'
-      },
-      {
-        id: 'cat-1c',
-        name: 'Utilities',
-        kind: 'EXPENSE'
-      }
-    ]);
-  } finally {
-    await context.close();
-  }
-});
-
-test('GET /account-subjects returns active account subjects for the current workspace ledger', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const response = await context.request('/account-subjects', {
-      headers: context.authHeaders()
-    });
-
-    assert.equal(response.status, 200);
-    assert.deepEqual(response.body, [
-      {
-        id: 'as-1-1010',
-        code: '1010',
-        name: '현금및예금',
-        statementType: 'BALANCE_SHEET',
-        normalSide: 'DEBIT',
-        subjectKind: 'ASSET',
-        isSystem: true,
-        isActive: true
-      },
-      {
-        id: 'as-1-2010',
-        code: '2010',
-        name: '카드대금',
-        statementType: 'BALANCE_SHEET',
-        normalSide: 'CREDIT',
-        subjectKind: 'LIABILITY',
-        isSystem: true,
-        isActive: true
-      },
-      {
-        id: 'as-1-4100',
-        code: '4100',
-        name: '운영수익',
-        statementType: 'PROFIT_AND_LOSS',
-        normalSide: 'CREDIT',
-        subjectKind: 'INCOME',
-        isSystem: true,
-        isActive: true
-      },
-      {
-        id: 'as-1-5100',
-        code: '5100',
-        name: '운영비용',
-        statementType: 'PROFIT_AND_LOSS',
-        normalSide: 'DEBIT',
-        subjectKind: 'EXPENSE',
-        isSystem: true,
-        isActive: true
-      }
-    ]);
-  } finally {
-    await context.close();
-  }
-});
-
-test('GET /ledger-transaction-types returns active transaction types for the current workspace ledger', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const response = await context.request('/ledger-transaction-types', {
-      headers: context.authHeaders()
-    });
-
-    assert.equal(response.status, 200);
-    assert.deepEqual(response.body, [
-      {
-        id: 'ltt-1-income',
-        code: 'INCOME_BASIC',
-        name: '기본 수입',
-        flowKind: 'INCOME',
-        postingPolicyKey: 'INCOME_BASIC',
-        isActive: true
-      },
-      {
-        id: 'ltt-1-expense',
-        code: 'EXPENSE_BASIC',
-        name: '기본 지출',
-        flowKind: 'EXPENSE',
-        postingPolicyKey: 'EXPENSE_BASIC',
-        isActive: true
-      },
-      {
-        id: 'ltt-1-transfer',
-        code: 'TRANSFER_BASIC',
-        name: '기본 이체',
-        flowKind: 'TRANSFER',
-        postingPolicyKey: 'TRANSFER_BASIC',
-        isActive: true
-      }
-    ]);
-  } finally {
-    await context.close();
-  }
-});
-
-test('POST /accounting-periods blocks the first period when opening balance initialization is missing', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const response = await context.request('/accounting-periods', {
-      method: 'POST',
-      headers: context.authHeaders(),
-      body: {
-        month: '2026-03'
-      }
-    });
-
-    assert.equal(response.status, 400);
-    assert.deepEqual(response.body, {
-      statusCode: 400,
-      message: '첫 월 운영 시작에는 오프닝 잔액 스냅샷 생성이 필요합니다.',
-      error: 'Bad Request'
-    });
-    assert.equal(context.state.accountingPeriods.length, 0);
-    assert.equal(context.state.openingBalanceSnapshots.length, 0);
-    assert.equal(context.state.periodStatusHistory.length, 0);
-  } finally {
-    await context.close();
-  }
-});
-
-test('POST /accounting-periods opens the first period and records status history with an opening balance snapshot', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const response = await context.request('/accounting-periods', {
-      method: 'POST',
-      headers: context.authHeaders(),
-      body: {
-        month: '2026-03',
-        initializeOpeningBalance: true,
-        note: '2026년 3월 운영 시작'
-      }
-    });
-
-    const createdPeriod = response.body as Record<string, unknown>;
-
-    assert.equal(response.status, 201);
-    assert.equal(createdPeriod.monthLabel, '2026-03');
-    assert.equal(createdPeriod.status, AccountingPeriodStatus.OPEN);
-    assert.equal(createdPeriod.hasOpeningBalanceSnapshot, true);
-    assert.equal(
-      createdPeriod.openingBalanceSourceKind,
-      OpeningBalanceSourceKind.INITIAL_SETUP
-    );
-    assert.equal(context.state.accountingPeriods.length, 1);
-    assert.equal(context.state.openingBalanceSnapshots.length, 1);
-    assert.equal(context.state.periodStatusHistory.length, 1);
-    assert.equal(context.state.accountingPeriods[0]?.year, 2026);
-    assert.equal(context.state.accountingPeriods[0]?.month, 3);
-    assert.equal(
-      context.state.periodStatusHistory[0]?.toStatus,
-      AccountingPeriodStatus.OPEN
-    );
-    assert.equal(
-      context.state.periodStatusHistory[0]?.actorMembershipId,
-      'membership-1'
-    );
-  } finally {
-    await context.close();
-  }
-});
-
-test('GET /accounting-periods/current returns the currently open period for the active ledger', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    context.state.accountingPeriods.push({
-      id: 'period-current-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      year: 2026,
-      month: 3,
-      startDate: new Date('2026-03-01T00:00:00.000Z'),
-      endDate: new Date('2026-04-01T00:00:00.000Z'),
-      status: AccountingPeriodStatus.OPEN,
-      openedAt: new Date('2026-03-01T00:00:00.000Z'),
-      lockedAt: null,
-      createdAt: new Date('2026-03-01T00:00:00.000Z'),
-      updatedAt: new Date('2026-03-01T00:00:00.000Z')
-    });
-    context.state.periodStatusHistory.push({
-      id: 'period-history-current-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      periodId: 'period-current-1',
-      fromStatus: null,
-      toStatus: AccountingPeriodStatus.OPEN,
-      reason: '3월 운영 시작',
-      actorType: AuditActorType.TENANT_MEMBERSHIP,
-      actorMembershipId: 'membership-1',
-      changedAt: new Date('2026-03-01T00:00:00.000Z')
-    });
-
-    const response = await context.request('/accounting-periods/current', {
-      headers: context.authHeaders()
-    });
-
-    assert.equal(response.status, 200);
-    assert.deepEqual(response.body, {
-      id: 'period-current-1',
-      year: 2026,
-      month: 3,
-      monthLabel: '2026-03',
-      startDate: '2026-03-01T00:00:00.000Z',
-      endDate: '2026-04-01T00:00:00.000Z',
-      status: AccountingPeriodStatus.OPEN,
-      openedAt: '2026-03-01T00:00:00.000Z',
-      lockedAt: null,
-      hasOpeningBalanceSnapshot: false,
-      openingBalanceSourceKind: null,
-      statusHistory: [
-        {
-          id: 'period-history-current-1',
-          fromStatus: null,
-          toStatus: AccountingPeriodStatus.OPEN,
-          reason: '3월 운영 시작',
-          actorType: AuditActorType.TENANT_MEMBERSHIP,
-          actorMembershipId: 'membership-1',
-          changedAt: '2026-03-01T00:00:00.000Z'
-        }
-      ]
-    });
-  } finally {
-    await context.close();
-  }
-});
-
-test('POST /accounting-periods/:id/close locks the period and creates a closing snapshot', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    context.state.accountingPeriods.push({
-      id: 'period-close-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      year: 2026,
-      month: 3,
-      startDate: new Date('2026-03-01T00:00:00.000Z'),
-      endDate: new Date('2026-04-01T00:00:00.000Z'),
-      status: AccountingPeriodStatus.OPEN,
-      openedAt: new Date('2026-03-01T00:00:00.000Z'),
-      lockedAt: null,
-      createdAt: new Date('2026-03-01T00:00:00.000Z'),
-      updatedAt: new Date('2026-03-01T00:00:00.000Z')
-    });
-    context.state.periodStatusHistory.push({
-      id: 'period-history-close-open-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      periodId: 'period-close-1',
-      fromStatus: null,
-      toStatus: AccountingPeriodStatus.OPEN,
-      reason: '3월 운영 시작',
-      actorType: AuditActorType.TENANT_MEMBERSHIP,
-      actorMembershipId: 'membership-1',
-      changedAt: new Date('2026-03-01T00:00:00.000Z')
-    });
-    context.state.journalEntries.push({
-      id: 'je-close-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      periodId: 'period-close-1',
-      entryNumber: '202603-0001',
-      entryDate: new Date('2026-03-12T00:00:00.000Z'),
-      sourceKind: 'COLLECTED_TRANSACTION',
-      sourceCollectedTransactionId: 'ctx-seed-2',
-      status: 'POSTED',
-      memo: 'Fuel refill',
-      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
-      createdByMembershipId: 'membership-1',
-      createdAt: new Date('2026-03-12T01:00:00.000Z'),
-      updatedAt: new Date('2026-03-12T01:00:00.000Z'),
-      lines: [
-        {
-          id: 'jel-close-1',
-          lineNumber: 1,
-          accountSubjectId: 'as-1-5100',
-          fundingAccountId: null,
-          debitAmount: 84_000,
-          creditAmount: 0,
-          description: 'Fuel refill'
-        },
-        {
-          id: 'jel-close-2',
-          lineNumber: 2,
-          accountSubjectId: 'as-1-1010',
-          fundingAccountId: 'acc-1',
-          debitAmount: 0,
-          creditAmount: 84_000,
-          description: 'Fuel refill'
-        }
-      ]
-    });
-
-    const response = await context.request(
-      '/accounting-periods/period-close-1/close',
-      {
-        method: 'POST',
-        headers: context.authHeaders(),
-        body: {
-          note: '3월 월마감'
-        }
-      }
-    );
-
-    const body = response.body as CloseAccountingPeriodResponse;
-
-    assert.equal(response.status, 201);
-    assert.equal(body.period.status, AccountingPeriodStatus.LOCKED);
-    assert.equal(context.state.closingSnapshots.length, 1);
-    assert.equal(context.state.balanceSnapshotLines.length, 2);
-    assert.equal(
-      context.state.periodStatusHistory.at(-1)?.toStatus,
-      AccountingPeriodStatus.LOCKED
-    );
-    assert.equal(body.closingSnapshot.totalAssetAmount, -84_000);
-    assert.equal(body.closingSnapshot.totalLiabilityAmount, 0);
-    assert.equal(body.closingSnapshot.totalEquityAmount, -84_000);
-    assert.equal(body.closingSnapshot.periodPnLAmount, -84_000);
-    assert.equal(body.closingSnapshot.lines.length, 2);
-  } finally {
-    await context.close();
-  }
-});
-
-test('POST /financial-statements/generate creates official statement snapshots for a locked period', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    context.state.accountingPeriods.push({
-      id: 'period-report-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      year: 2026,
-      month: 3,
-      startDate: new Date('2026-03-01T00:00:00.000Z'),
-      endDate: new Date('2026-04-01T00:00:00.000Z'),
-      status: AccountingPeriodStatus.LOCKED,
-      openedAt: new Date('2026-03-01T00:00:00.000Z'),
-      lockedAt: new Date('2026-03-31T15:00:00.000Z'),
-      createdAt: new Date('2026-03-01T00:00:00.000Z'),
-      updatedAt: new Date('2026-03-31T15:00:00.000Z')
-    });
-    context.state.periodStatusHistory.push({
-      id: 'period-history-report-open-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      periodId: 'period-report-1',
-      fromStatus: null,
-      toStatus: AccountingPeriodStatus.OPEN,
-      reason: '3월 운영 시작',
-      actorType: AuditActorType.TENANT_MEMBERSHIP,
-      actorMembershipId: 'membership-1',
-      changedAt: new Date('2026-03-01T00:00:00.000Z')
-    });
-    context.state.periodStatusHistory.push({
-      id: 'period-history-report-lock-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      periodId: 'period-report-1',
-      fromStatus: AccountingPeriodStatus.OPEN,
-      toStatus: AccountingPeriodStatus.LOCKED,
-      reason: '3월 마감',
-      actorType: AuditActorType.TENANT_MEMBERSHIP,
-      actorMembershipId: 'membership-1',
-      changedAt: new Date('2026-03-31T15:00:00.000Z')
-    });
-    context.state.closingSnapshots.push({
-      id: 'closing-report-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      periodId: 'period-report-1',
-      lockedAt: new Date('2026-03-31T15:00:00.000Z'),
-      totalAssetAmount: -84_000,
-      totalLiabilityAmount: 0,
-      totalEquityAmount: -84_000,
-      periodPnLAmount: -84_000,
-      createdAt: new Date('2026-03-31T15:00:00.000Z')
-    });
-    context.state.balanceSnapshotLines.push(
-      {
-        id: 'balance-report-1',
-        snapshotKind: 'CLOSING',
-        openingSnapshotId: null,
-        closingSnapshotId: 'closing-report-1',
-        accountSubjectId: 'as-1-1010',
-        fundingAccountId: 'acc-1',
-        balanceAmount: -84_000
-      },
-      {
-        id: 'balance-report-2',
-        snapshotKind: 'CLOSING',
-        openingSnapshotId: null,
-        closingSnapshotId: 'closing-report-1',
-        accountSubjectId: 'as-1-5100',
-        fundingAccountId: null,
-        balanceAmount: 84_000
-      }
-    );
-    context.state.journalEntries.push({
-      id: 'je-report-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      periodId: 'period-report-1',
-      entryNumber: '202603-0009',
-      entryDate: new Date('2026-03-20T00:00:00.000Z'),
-      sourceKind: 'COLLECTED_TRANSACTION',
-      sourceCollectedTransactionId: 'ctx-seed-2',
-      status: 'POSTED',
-      memo: 'Fuel refill',
-      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
-      createdByMembershipId: 'membership-1',
-      createdAt: new Date('2026-03-20T01:00:00.000Z'),
-      updatedAt: new Date('2026-03-20T01:00:00.000Z'),
-      lines: [
-        {
-          id: 'jel-report-1',
-          lineNumber: 1,
-          accountSubjectId: 'as-1-5100',
-          fundingAccountId: null,
-          debitAmount: 84_000,
-          creditAmount: 0,
-          description: 'Fuel refill'
-        },
-        {
-          id: 'jel-report-2',
-          lineNumber: 2,
-          accountSubjectId: 'as-1-1010',
-          fundingAccountId: 'acc-1',
-          debitAmount: 0,
-          creditAmount: 84_000,
-          description: 'Fuel refill'
-        }
-      ]
-    });
-
-    const response = await context.request('/financial-statements/generate', {
-      method: 'POST',
-      headers: context.authHeaders(),
-      body: {
-        periodId: 'period-report-1'
-      }
-    });
-
-    const body = response.body as FinancialStatementsView;
-    const statementKinds = body.snapshots.map(
-      (snapshot) => snapshot.statementKind
-    );
-    const positionStatement = body.snapshots.find(
-      (snapshot) => snapshot.statementKind === 'STATEMENT_OF_FINANCIAL_POSITION'
-    );
-    const cashFlowStatement = body.snapshots.find(
-      (snapshot) => snapshot.statementKind === 'CASH_FLOW_SUMMARY'
-    );
-
-    assert.equal(response.status, 201);
-    assert.equal(body.period.id, 'period-report-1');
-    assert.equal(body.snapshots.length, 4);
-    assert.equal(context.state.financialStatementSnapshots.length, 4);
-    assert.deepEqual(statementKinds, [
-      'STATEMENT_OF_FINANCIAL_POSITION',
-      'MONTHLY_PROFIT_AND_LOSS',
-      'CASH_FLOW_SUMMARY',
-      'NET_WORTH_MOVEMENT'
-    ]);
-    assert.equal(positionStatement?.payload.summary[0]?.amountWon, -84_000);
-    assert.equal(cashFlowStatement?.payload.summary[2]?.amountWon, -84_000);
-  } finally {
-    await context.close();
-  }
-});
-
-test('GET /financial-statements returns stored official statement snapshots for the selected locked period', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    context.state.accountingPeriods.push({
-      id: 'period-report-view-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      year: 2026,
-      month: 4,
-      startDate: new Date('2026-04-01T00:00:00.000Z'),
-      endDate: new Date('2026-05-01T00:00:00.000Z'),
-      status: AccountingPeriodStatus.LOCKED,
-      openedAt: new Date('2026-04-01T00:00:00.000Z'),
-      lockedAt: new Date('2026-04-30T15:00:00.000Z'),
-      createdAt: new Date('2026-04-01T00:00:00.000Z'),
-      updatedAt: new Date('2026-04-30T15:00:00.000Z')
-    });
-    context.state.periodStatusHistory.push({
-      id: 'period-history-report-view-open-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      periodId: 'period-report-view-1',
-      fromStatus: null,
-      toStatus: AccountingPeriodStatus.OPEN,
-      reason: '4월 운영 시작',
-      actorType: AuditActorType.TENANT_MEMBERSHIP,
-      actorMembershipId: 'membership-1',
-      changedAt: new Date('2026-04-01T00:00:00.000Z')
-    });
-    context.state.periodStatusHistory.push({
-      id: 'period-history-report-view-lock-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      periodId: 'period-report-view-1',
-      fromStatus: AccountingPeriodStatus.OPEN,
-      toStatus: AccountingPeriodStatus.LOCKED,
-      reason: '4월 마감',
-      actorType: AuditActorType.TENANT_MEMBERSHIP,
-      actorMembershipId: 'membership-1',
-      changedAt: new Date('2026-04-30T15:00:00.000Z')
-    });
-    context.state.financialStatementSnapshots.push(
-      {
-        id: 'financial-view-1',
-        tenantId: 'tenant-1',
-        ledgerId: 'ledger-1',
-        periodId: 'period-report-view-1',
-        statementKind: FinancialStatementKind.STATEMENT_OF_FINANCIAL_POSITION,
-        currency: 'KRW',
-        payload: {
-          summary: [{ label: '자산 합계', amountWon: 3_000_000 }],
-          sections: [],
-          notes: []
-        },
-        createdAt: new Date('2026-04-30T15:10:00.000Z'),
-        updatedAt: new Date('2026-04-30T15:10:00.000Z')
-      },
-      {
-        id: 'financial-view-2',
-        tenantId: 'tenant-1',
-        ledgerId: 'ledger-1',
-        periodId: 'period-report-view-1',
-        statementKind: FinancialStatementKind.MONTHLY_PROFIT_AND_LOSS,
-        currency: 'KRW',
-        payload: {
-          summary: [{ label: '당기 손익', amountWon: 120_000 }],
-          sections: [],
-          notes: []
-        },
-        createdAt: new Date('2026-04-30T15:10:00.000Z'),
-        updatedAt: new Date('2026-04-30T15:10:00.000Z')
-      },
-      {
-        id: 'financial-view-3',
-        tenantId: 'tenant-1',
-        ledgerId: 'ledger-1',
-        periodId: 'period-report-view-1',
-        statementKind: FinancialStatementKind.CASH_FLOW_SUMMARY,
-        currency: 'KRW',
-        payload: {
-          summary: [{ label: '순현금흐름', amountWon: 120_000 }],
-          sections: [],
-          notes: []
-        },
-        createdAt: new Date('2026-04-30T15:10:00.000Z'),
-        updatedAt: new Date('2026-04-30T15:10:00.000Z')
-      },
-      {
-        id: 'financial-view-4',
-        tenantId: 'tenant-1',
-        ledgerId: 'ledger-1',
-        periodId: 'period-report-view-1',
-        statementKind: FinancialStatementKind.NET_WORTH_MOVEMENT,
-        currency: 'KRW',
-        payload: {
-          summary: [{ label: '기말 순자산', amountWon: 3_120_000 }],
-          sections: [],
-          notes: []
-        },
-        createdAt: new Date('2026-04-30T15:10:00.000Z'),
-        updatedAt: new Date('2026-04-30T15:10:00.000Z')
-      }
-    );
-
-    const response = await context.request(
-      '/financial-statements?periodId=period-report-view-1',
-      {
-        headers: context.authHeaders()
-      }
-    );
-
-    const body = response.body as FinancialStatementsView;
-
-    assert.equal(response.status, 200);
-    assert.equal(body.period.id, 'period-report-view-1');
-    assert.equal(body.period.monthLabel, '2026-04');
-    assert.equal(body.snapshots.length, 4);
-    assert.equal(
-      body.snapshots[0]?.statementKind,
-      'STATEMENT_OF_FINANCIAL_POSITION'
-    );
-    assert.equal(body.snapshots[3]?.statementKind, 'NET_WORTH_MOVEMENT');
-  } finally {
-    await context.close();
-  }
-});
-
-test('POST /carry-forwards/generate creates a carry forward record and the next opening snapshot', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    context.state.accountingPeriods.push({
-      id: 'period-carry-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      year: 2026,
-      month: 4,
-      startDate: new Date('2026-04-01T00:00:00.000Z'),
-      endDate: new Date('2026-05-01T00:00:00.000Z'),
-      status: AccountingPeriodStatus.LOCKED,
-      openedAt: new Date('2026-04-01T00:00:00.000Z'),
-      lockedAt: new Date('2026-04-30T15:00:00.000Z'),
-      createdAt: new Date('2026-04-01T00:00:00.000Z'),
-      updatedAt: new Date('2026-04-30T15:00:00.000Z')
-    });
-    context.state.periodStatusHistory.push({
-      id: 'period-history-carry-open-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      periodId: 'period-carry-1',
-      fromStatus: null,
-      toStatus: AccountingPeriodStatus.OPEN,
-      reason: '4월 운영 시작',
-      actorType: AuditActorType.TENANT_MEMBERSHIP,
-      actorMembershipId: 'membership-1',
-      changedAt: new Date('2026-04-01T00:00:00.000Z')
-    });
-    context.state.periodStatusHistory.push({
-      id: 'period-history-carry-lock-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      periodId: 'period-carry-1',
-      fromStatus: AccountingPeriodStatus.OPEN,
-      toStatus: AccountingPeriodStatus.LOCKED,
-      reason: '4월 마감',
-      actorType: AuditActorType.TENANT_MEMBERSHIP,
-      actorMembershipId: 'membership-1',
-      changedAt: new Date('2026-04-30T15:00:00.000Z')
-    });
-    context.state.closingSnapshots.push({
-      id: 'closing-carry-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      periodId: 'period-carry-1',
-      lockedAt: new Date('2026-04-30T15:00:00.000Z'),
-      totalAssetAmount: 2_916_000,
-      totalLiabilityAmount: 0,
-      totalEquityAmount: 2_916_000,
-      periodPnLAmount: -84_000,
-      createdAt: new Date('2026-04-30T15:00:00.000Z')
-    });
-    context.state.balanceSnapshotLines.push(
-      {
-        id: 'carry-balance-1',
-        snapshotKind: 'CLOSING',
-        openingSnapshotId: null,
-        closingSnapshotId: 'closing-carry-1',
-        accountSubjectId: 'as-1-1010',
-        fundingAccountId: 'acc-1',
-        balanceAmount: 2_916_000
-      },
-      {
-        id: 'carry-balance-2',
-        snapshotKind: 'CLOSING',
-        openingSnapshotId: null,
-        closingSnapshotId: 'closing-carry-1',
-        accountSubjectId: 'as-1-5100',
-        fundingAccountId: null,
-        balanceAmount: 84_000
-      }
-    );
-
-    const response = await context.request('/carry-forwards/generate', {
-      method: 'POST',
-      headers: context.authHeaders(),
-      body: {
-        fromPeriodId: 'period-carry-1'
-      }
-    });
-
-    const body = response.body as CarryForwardView;
-
-    assert.equal(response.status, 201);
-    assert.equal(context.state.carryForwardRecords.length, 1);
-    assert.equal(body.sourcePeriod.id, 'period-carry-1');
-    assert.equal(body.targetPeriod.monthLabel, '2026-05');
-    assert.equal(body.targetPeriod.status, AccountingPeriodStatus.OPEN);
-    assert.equal(body.targetOpeningBalanceSnapshot.sourceKind, 'CARRY_FORWARD');
-    assert.equal(body.targetOpeningBalanceSnapshot.lines.length, 1);
-    assert.equal(
-      body.targetOpeningBalanceSnapshot.lines[0]?.accountSubjectCode,
-      '1010'
-    );
-    assert.equal(
-      body.targetOpeningBalanceSnapshot.lines[0]?.balanceAmount,
-      2_916_000
-    );
-  } finally {
-    await context.close();
-  }
-});
-
-test('GET /carry-forwards returns the stored carry forward view for the selected source period', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    context.state.accountingPeriods.push(
-      {
-        id: 'period-carry-view-source',
-        tenantId: 'tenant-1',
-        ledgerId: 'ledger-1',
-        year: 2026,
-        month: 5,
-        startDate: new Date('2026-05-01T00:00:00.000Z'),
-        endDate: new Date('2026-06-01T00:00:00.000Z'),
-        status: AccountingPeriodStatus.LOCKED,
-        openedAt: new Date('2026-05-01T00:00:00.000Z'),
-        lockedAt: new Date('2026-05-31T15:00:00.000Z'),
-        createdAt: new Date('2026-05-01T00:00:00.000Z'),
-        updatedAt: new Date('2026-05-31T15:00:00.000Z')
-      },
-      {
-        id: 'period-carry-view-target',
-        tenantId: 'tenant-1',
-        ledgerId: 'ledger-1',
-        year: 2026,
-        month: 6,
-        startDate: new Date('2026-06-01T00:00:00.000Z'),
-        endDate: new Date('2026-07-01T00:00:00.000Z'),
-        status: AccountingPeriodStatus.OPEN,
-        openedAt: new Date('2026-06-01T00:00:00.000Z'),
-        lockedAt: null,
-        createdAt: new Date('2026-06-01T00:00:00.000Z'),
-        updatedAt: new Date('2026-06-01T00:00:00.000Z')
-      }
-    );
-    context.state.periodStatusHistory.push(
-      {
-        id: 'period-history-carry-view-source-open',
-        tenantId: 'tenant-1',
-        ledgerId: 'ledger-1',
-        periodId: 'period-carry-view-source',
-        fromStatus: null,
-        toStatus: AccountingPeriodStatus.OPEN,
-        reason: '5월 운영 시작',
-        actorType: AuditActorType.TENANT_MEMBERSHIP,
-        actorMembershipId: 'membership-1',
-        changedAt: new Date('2026-05-01T00:00:00.000Z')
-      },
-      {
-        id: 'period-history-carry-view-source-lock',
-        tenantId: 'tenant-1',
-        ledgerId: 'ledger-1',
-        periodId: 'period-carry-view-source',
-        fromStatus: AccountingPeriodStatus.OPEN,
-        toStatus: AccountingPeriodStatus.LOCKED,
-        reason: '5월 마감',
-        actorType: AuditActorType.TENANT_MEMBERSHIP,
-        actorMembershipId: 'membership-1',
-        changedAt: new Date('2026-05-31T15:00:00.000Z')
-      },
-      {
-        id: 'period-history-carry-view-target-open',
-        tenantId: 'tenant-1',
-        ledgerId: 'ledger-1',
-        periodId: 'period-carry-view-target',
-        fromStatus: null,
-        toStatus: AccountingPeriodStatus.OPEN,
-        reason: '5월 이월 생성',
-        actorType: AuditActorType.TENANT_MEMBERSHIP,
-        actorMembershipId: 'membership-1',
-        changedAt: new Date('2026-06-01T00:00:00.000Z')
-      }
-    );
-    context.state.closingSnapshots.push({
-      id: 'closing-carry-view',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      periodId: 'period-carry-view-source',
-      lockedAt: new Date('2026-05-31T15:00:00.000Z'),
-      totalAssetAmount: 3_120_000,
-      totalLiabilityAmount: 0,
-      totalEquityAmount: 3_120_000,
-      periodPnLAmount: 120_000,
-      createdAt: new Date('2026-05-31T15:00:00.000Z')
-    });
-    context.state.balanceSnapshotLines.push(
-      {
-        id: 'carry-view-closing-line',
-        snapshotKind: 'CLOSING',
-        openingSnapshotId: null,
-        closingSnapshotId: 'closing-carry-view',
-        accountSubjectId: 'as-1-1010',
-        fundingAccountId: 'acc-1',
-        balanceAmount: 3_120_000
-      },
-      {
-        id: 'carry-view-opening-line',
-        snapshotKind: 'OPENING',
-        openingSnapshotId: 'opening-carry-view',
-        closingSnapshotId: null,
-        accountSubjectId: 'as-1-1010',
-        fundingAccountId: 'acc-1',
-        balanceAmount: 3_120_000
-      }
-    );
-    context.state.openingBalanceSnapshots.push({
-      id: 'opening-carry-view',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      effectivePeriodId: 'period-carry-view-target',
-      sourceKind: OpeningBalanceSourceKind.CARRY_FORWARD,
-      createdAt: new Date('2026-06-01T00:00:00.000Z'),
-      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
-      createdByMembershipId: 'membership-1'
-    });
-    context.state.carryForwardRecords.push({
-      id: 'carry-record-view',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      fromPeriodId: 'period-carry-view-source',
-      toPeriodId: 'period-carry-view-target',
-      sourceClosingSnapshotId: 'closing-carry-view',
-      createdJournalEntryId: null,
-      createdAt: new Date('2026-06-01T00:00:00.000Z'),
-      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
-      createdByMembershipId: 'membership-1'
-    });
-
-    const response = await context.request(
-      '/carry-forwards?fromPeriodId=period-carry-view-source',
-      {
-        headers: context.authHeaders()
-      }
-    );
-
-    const body = response.body as CarryForwardView;
-
-    assert.equal(response.status, 200);
-    assert.equal(body.carryForwardRecord.id, 'carry-record-view');
-    assert.equal(body.sourcePeriod.monthLabel, '2026-05');
-    assert.equal(body.targetPeriod.monthLabel, '2026-06');
-    assert.equal(body.targetOpeningBalanceSnapshot.lines.length, 1);
-    assert.equal(
-      body.targetOpeningBalanceSnapshot.lines[0]?.accountSubjectCode,
-      '1010'
-    );
-  } finally {
-    await context.close();
-  }
-});
-
-test('GET /collected-transactions returns only the current user collected transaction items without internal ownership fields', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const response = await context.request('/collected-transactions', {
-      headers: context.authHeaders()
-    });
-
-    const items = response.body as Array<Record<string, unknown>>;
-
-    assert.equal(response.status, 200);
-    assert.equal(items.length, 2);
-    assert.deepEqual(items, [
-      {
-        id: 'ctx-seed-1',
-        businessDate: '2026-03-25',
-        title: 'March salary',
-        type: TransactionType.INCOME,
-        amountWon: 3_000_000,
-        fundingAccountName: 'Main checking',
-        categoryName: 'Salary',
-        sourceKind: 'MANUAL',
-        postingStatus: 'POSTED',
-        postedJournalEntryId: null,
-        postedJournalEntryNumber: null
-      },
-      {
-        id: 'ctx-seed-2',
-        businessDate: '2026-03-20',
-        title: 'Fuel refill',
-        type: TransactionType.EXPENSE,
-        amountWon: 84_000,
-        fundingAccountName: 'Main checking',
-        categoryName: 'Fuel',
-        sourceKind: 'MANUAL',
-        postingStatus: 'POSTED',
-        postedJournalEntryId: null,
-        postedJournalEntryNumber: null
-      }
-    ]);
-    assert.equal(
-      items.some((candidate) => 'userId' in candidate),
-      false
-    );
-    assert.equal(
-      items.some((candidate) => 'fundingAccountId' in candidate),
-      false
-    );
-    assert.equal(
-      items.some((candidate) => 'categoryId' in candidate),
-      false
-    );
-    assert.equal(
-      items.some((candidate) => 'memo' in candidate),
-      false
-    );
-  } finally {
-    await context.close();
-  }
-});
-
-test('GET /recurring-rules returns only the current user recurring rule items without internal ownership fields', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const response = await context.request('/recurring-rules', {
-      headers: context.authHeaders()
-    });
-
-    const items = response.body as Array<Record<string, unknown>>;
-
-    assert.equal(response.status, 200);
-    assert.deepEqual(items, [
-      {
-        id: 'rr-seed-1',
-        title: 'Phone bill',
-        amountWon: 75_000,
-        frequency: RecurrenceFrequency.MONTHLY,
-        nextRunDate: '2026-03-10',
-        fundingAccountName: 'Main checking',
-        categoryName: 'Utilities',
-        isActive: true
-      }
-    ]);
-    assert.equal(
-      items.some((candidate) => 'userId' in candidate),
-      false
-    );
-    assert.equal(
-      items.some((candidate) => 'fundingAccountId' in candidate),
-      false
-    );
-    assert.equal(
-      items.some((candidate) => 'categoryId' in candidate),
-      false
-    );
-  } finally {
-    await context.close();
-  }
-});
-
-test('GET /dashboard/summary returns only aggregated data for the authenticated user', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const response = await context.request('/dashboard/summary', {
-      headers: context.authHeaders()
-    });
-
-    const summary = response.body as Record<string, unknown>;
-
-    assert.equal(response.status, 200);
-    assert.deepEqual(summary, {
-      month: '2026-03',
-      actualBalanceWon: 5_500_000,
-      confirmedIncomeWon: 3_000_000,
-      confirmedExpenseWon: 84_000,
-      remainingRecurringWon: 75_000,
-      insuranceMonthlyWon: 42_000,
-      vehicleMonthlyWon: 130_000,
-      expectedMonthEndBalanceWon: 5_425_000,
-      safetySurplusWon: 4_925_000
-    });
-    assert.equal('accounts' in summary, false);
-    assert.equal('transactions' in summary, false);
-    assert.equal('recurringRules' in summary, false);
-    assert.equal('minimumReserveWon' in summary, false);
-  } finally {
-    await context.close();
-  }
-});
-
-test('GET /forecast/monthly returns only aggregated forecast data for the authenticated user and respects the month query', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const response = await context.request('/forecast/monthly?month=2026-04', {
-      headers: context.authHeaders()
-    });
-
-    const forecast = response.body as Record<string, unknown>;
-
-    assert.equal(response.status, 200);
-    assert.deepEqual(forecast, {
-      month: '2026-04',
-      actualBalanceWon: 5_500_000,
-      expectedIncomeWon: 0,
-      confirmedExpenseWon: 84_000,
-      remainingRecurringWon: 75_000,
-      sinkingFundWon: 210_000,
-      minimumReserveWon: 500_000,
-      expectedMonthEndBalanceWon: 5_215_000,
-      safetySurplusWon: 4_715_000,
-      notes: [
-        'Recurring income auto-forecast is not included in the MVP baseline yet.',
-        'Irregular spending buffer is modeled as a monthly sinking fund.'
-      ]
-    });
-    assert.equal('accounts' in forecast, false);
-    assert.equal('transactions' in forecast, false);
-    assert.equal('recurringRules' in forecast, false);
-  } finally {
-    await context.close();
-  }
-});
-
-test('POST /collected-transactions returns 400 when the request body fails DTO validation', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const initialTransactionCount = context.state.collectedTransactions.length;
-    const response = await context.request('/collected-transactions', {
-      method: 'POST',
-      headers: context.authHeaders(),
-      body: {
-        title: 'Fuel refill',
-        type: TransactionType.EXPENSE,
-        amountWon: 0,
-        businessDate: 'not-a-date',
-        fundingAccountId: 'acc-1',
-        categoryId: 'cat-1'
-      }
-    });
-
-    assert.equal(response.status, 400);
-    assert.match(
-      JSON.stringify((response.body as { message: string[] }).message),
-      /amountWon must not be less than 1/
-    );
-    assert.equal(
-      context.state.collectedTransactions.length,
-      initialTransactionCount
-    );
-  } finally {
-    await context.close();
-  }
-});
-
-test('POST /collected-transactions returns 404 when the funding account is outside the current user scope', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    context.state.accountingPeriods.push({
-      id: 'period-open-404',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      year: 2026,
-      month: 3,
-      startDate: new Date('2026-03-01T00:00:00.000Z'),
-      endDate: new Date('2026-04-01T00:00:00.000Z'),
-      status: AccountingPeriodStatus.OPEN,
-      openedAt: new Date('2026-03-01T00:00:00.000Z'),
-      lockedAt: null,
-      createdAt: new Date('2026-03-01T00:00:00.000Z'),
-      updatedAt: new Date('2026-03-01T00:00:00.000Z')
-    });
-
-    const initialTransactionCount = context.state.collectedTransactions.length;
-    const response = await context.request('/collected-transactions', {
-      method: 'POST',
-      headers: context.authHeaders(),
-      body: {
-        title: 'Fuel refill',
-        type: TransactionType.EXPENSE,
-        amountWon: 84000,
-        businessDate: '2026-03-03',
-        fundingAccountId: 'acc-2',
-        categoryId: 'cat-1',
-        memo: 'Full tank'
-      }
-    });
-
-    assert.equal(response.status, 404);
-    assert.equal(
-      (response.body as { message: string }).message,
-      'Funding account not found'
-    );
-    assert.equal(
-      context.state.collectedTransactions.length,
-      initialTransactionCount
-    );
-    assert.ok(
-      context.securityEvents.some(
-        (candidate) =>
-          candidate.level === 'warn' &&
-          candidate.event === 'authorization.scope_denied' &&
-          candidate.details.requestId ===
-            response.headers.get('x-request-id') &&
-          candidate.details.userId === 'user-1' &&
-          candidate.details.resource === 'collected_transaction_funding_account'
-      )
-    );
-  } finally {
-    await context.close();
-  }
-});
-
-test('POST /collected-transactions returns the created collected transaction item shape', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    context.state.accountingPeriods.push({
-      id: 'period-open-created',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      year: 2026,
-      month: 3,
-      startDate: new Date('2026-03-01T00:00:00.000Z'),
-      endDate: new Date('2026-04-01T00:00:00.000Z'),
-      status: AccountingPeriodStatus.OPEN,
-      openedAt: new Date('2026-03-01T00:00:00.000Z'),
-      lockedAt: null,
-      createdAt: new Date('2026-03-01T00:00:00.000Z'),
-      updatedAt: new Date('2026-03-01T00:00:00.000Z')
-    });
-
-    const response = await context.request('/collected-transactions', {
-      method: 'POST',
-      headers: context.authHeaders(),
-      body: {
-        title: 'Fuel refill',
-        type: TransactionType.EXPENSE,
-        amountWon: 84000,
-        businessDate: '2026-03-03',
-        fundingAccountId: 'acc-1',
-        categoryId: 'cat-1',
-        memo: 'Full tank'
-      }
-    });
-
-    assert.equal(response.status, 201);
-    assert.deepEqual(response.body, {
-      id: 'ctx-4',
-      businessDate: '2026-03-03',
-      title: 'Fuel refill',
-      type: TransactionType.EXPENSE,
-      amountWon: 84000,
-      fundingAccountName: 'Main checking',
-      categoryName: 'Fuel',
-      sourceKind: 'MANUAL',
-      postingStatus: 'PENDING',
-      postedJournalEntryId: null,
-      postedJournalEntryNumber: null
-    });
-    assert.equal(context.state.collectedTransactions.length, 4);
-  } finally {
-    await context.close();
-  }
-});
-
-test('POST /collected-transactions/:id/confirm creates a journal entry and marks the collected transaction as posted', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    context.state.accountingPeriods.push({
-      id: 'period-open-confirm',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      year: 2026,
-      month: 3,
-      startDate: new Date('2026-03-01T00:00:00.000Z'),
-      endDate: new Date('2026-04-01T00:00:00.000Z'),
-      status: AccountingPeriodStatus.OPEN,
-      openedAt: new Date('2026-03-01T00:00:00.000Z'),
-      lockedAt: null,
-      createdAt: new Date('2026-03-01T00:00:00.000Z'),
-      updatedAt: new Date('2026-03-01T00:00:00.000Z')
-    });
-
-    context.state.collectedTransactions.push({
-      id: 'ctx-confirm-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      periodId: 'period-open-confirm',
-      ledgerTransactionTypeId: 'ltt-1-expense',
-      fundingAccountId: 'acc-1',
-      categoryId: 'cat-1',
-      matchedPlanItemId: null,
-      importBatchId: null,
-      title: 'Fuel refill',
-      occurredOn: new Date('2026-03-03T00:00:00.000Z'),
-      amount: 84000,
-      status: CollectedTransactionStatus.COLLECTED,
-      memo: 'Full tank',
-      createdAt: new Date('2026-03-03T08:00:00.000Z'),
-      updatedAt: new Date('2026-03-03T08:00:00.000Z')
-    });
-
-    const response = await context.request(
-      '/collected-transactions/ctx-confirm-1/confirm',
-      {
-        method: 'POST',
-        headers: context.authHeaders()
-      }
-    );
-
-    assert.equal(response.status, 201);
-    assert.deepEqual(response.body, {
-      id: 'je-1',
-      entryNumber: '202603-0001',
-      entryDate: '2026-03-03T00:00:00.000Z',
-      status: 'POSTED',
-      sourceKind: 'COLLECTED_TRANSACTION',
-      memo: 'Full tank',
-      sourceCollectedTransactionId: 'ctx-confirm-1',
-      sourceCollectedTransactionTitle: 'Fuel refill',
-      lines: [
-        {
-          id: 'jel-1-1',
-          lineNumber: 1,
-          accountSubjectCode: '5100',
-          accountSubjectName: '운영비용',
-          fundingAccountName: null,
-          debitAmount: 84000,
-          creditAmount: 0,
-          description: 'Fuel refill'
-        },
-        {
-          id: 'jel-1-2',
-          lineNumber: 2,
-          accountSubjectCode: '1010',
-          accountSubjectName: '현금및예금',
-          fundingAccountName: 'Main checking',
-          debitAmount: 0,
-          creditAmount: 84000,
-          description: 'Fuel refill'
-        }
-      ]
-    });
-    assert.equal(context.state.journalEntries.length, 1);
-    assert.equal(
-      context.state.collectedTransactions.find(
-        (item) => item.id === 'ctx-confirm-1'
-      )?.status,
-      CollectedTransactionStatus.POSTED
-    );
-  } finally {
-    await context.close();
-  }
-});
-
-test('GET /journal-entries returns recent journal entries for the current ledger', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    context.state.journalEntries.push({
-      id: 'je-seed-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      periodId: 'period-seed-1',
-      entryNumber: '202603-0003',
-      entryDate: new Date('2026-03-20T00:00:00.000Z'),
-      sourceKind: 'COLLECTED_TRANSACTION',
-      sourceCollectedTransactionId: 'ctx-seed-2',
-      status: 'POSTED',
-      memo: 'Fuel refill',
-      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
-      createdByMembershipId: 'membership-1',
-      createdAt: new Date('2026-03-20T08:00:00.000Z'),
-      updatedAt: new Date('2026-03-20T08:00:00.000Z'),
-      lines: [
-        {
-          id: 'jel-seed-1',
-          lineNumber: 1,
-          accountSubjectId: 'as-1-5100',
-          fundingAccountId: null,
-          debitAmount: 84000,
-          creditAmount: 0,
-          description: 'Fuel refill'
-        },
-        {
-          id: 'jel-seed-2',
-          lineNumber: 2,
-          accountSubjectId: 'as-1-1010',
-          fundingAccountId: 'acc-1',
-          debitAmount: 0,
-          creditAmount: 84000,
-          description: 'Fuel refill'
-        }
-      ]
-    });
-    context.state.journalEntries.push({
-      id: 'je-other-1',
-      tenantId: 'tenant-2',
-      ledgerId: 'ledger-2',
-      periodId: 'period-other-1',
-      entryNumber: '202603-0001',
-      entryDate: new Date('2026-03-21T00:00:00.000Z'),
-      sourceKind: 'COLLECTED_TRANSACTION',
-      sourceCollectedTransactionId: 'ctx-seed-3',
-      status: 'POSTED',
-      memo: 'Other user expense',
-      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
-      createdByMembershipId: 'membership-2',
-      createdAt: new Date('2026-03-21T08:00:00.000Z'),
-      updatedAt: new Date('2026-03-21T08:00:00.000Z'),
-      lines: []
-    });
-
-    const response = await context.request('/journal-entries', {
-      headers: context.authHeaders()
-    });
-
-    assert.equal(response.status, 200);
-    assert.deepEqual(response.body, [
-      {
-        id: 'je-seed-1',
-        entryNumber: '202603-0003',
-        entryDate: '2026-03-20T00:00:00.000Z',
-        status: 'POSTED',
-        sourceKind: 'COLLECTED_TRANSACTION',
-        memo: 'Fuel refill',
-        sourceCollectedTransactionId: 'ctx-seed-2',
-        sourceCollectedTransactionTitle: 'Fuel refill',
-        lines: [
-          {
-            id: 'jel-seed-1',
-            lineNumber: 1,
-            accountSubjectCode: '5100',
-            accountSubjectName: '운영비용',
-            fundingAccountName: null,
-            debitAmount: 84000,
-            creditAmount: 0,
-            description: 'Fuel refill'
-          },
-          {
-            id: 'jel-seed-2',
-            lineNumber: 2,
-            accountSubjectCode: '1010',
-            accountSubjectName: '현금및예금',
-            fundingAccountName: 'Main checking',
-            debitAmount: 0,
-            creditAmount: 84000,
-            description: 'Fuel refill'
-          }
-        ]
-      }
-    ]);
-  } finally {
-    await context.close();
-  }
-});
-
-test('POST /recurring-rules returns 400 when the request body fails DTO validation', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const initialRecurringRuleCount = context.state.recurringRules.length;
-    const response = await context.request('/recurring-rules', {
-      method: 'POST',
-      headers: context.authHeaders(),
-      body: {
-        title: 'Phone bill',
-        fundingAccountId: 'acc-1',
-        categoryId: 'cat-1',
-        amountWon: 0,
-        frequency: RecurrenceFrequency.MONTHLY,
-        dayOfMonth: 0,
-        startDate: 'not-a-date',
-        isActive: true
-      }
-    });
-
-    assert.equal(response.status, 400);
-    assert.match(
-      JSON.stringify((response.body as { message: string[] }).message),
-      /dayOfMonth must not be less than 1/
-    );
-    assert.equal(
-      context.state.recurringRules.length,
-      initialRecurringRuleCount
-    );
-  } finally {
-    await context.close();
-  }
-});
-
-test('POST /recurring-rules returns 404 when the category is outside the current user scope', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const initialRecurringRuleCount = context.state.recurringRules.length;
-    const response = await context.request('/recurring-rules', {
-      method: 'POST',
-      headers: context.authHeaders(),
-      body: {
-        title: 'Phone bill',
-        fundingAccountId: 'acc-1',
-        categoryId: 'cat-2',
-        amountWon: 75000,
-        frequency: RecurrenceFrequency.MONTHLY,
-        dayOfMonth: 10,
-        startDate: '2026-03-10',
-        isActive: true
-      }
-    });
-
-    assert.equal(response.status, 404);
-    assert.equal(
-      (response.body as { message: string }).message,
-      'Category not found'
-    );
-    assert.equal(
-      context.state.recurringRules.length,
-      initialRecurringRuleCount
-    );
-    assert.ok(
-      context.securityEvents.some(
-        (candidate) =>
-          candidate.level === 'warn' &&
-          candidate.event === 'authorization.scope_denied' &&
-          candidate.details.requestId ===
-            response.headers.get('x-request-id') &&
-          candidate.details.userId === 'user-1' &&
-          candidate.details.resource === 'recurring_rule_category'
-      )
-    );
-  } finally {
-    await context.close();
-  }
-});
-
-test('POST /recurring-rules returns the created recurring rule item shape', async () => {
-  const context = await createRequestTestContext();
-
-  try {
-    const response = await context.request('/recurring-rules', {
-      method: 'POST',
-      headers: context.authHeaders(),
-      body: {
-        title: 'Phone bill',
-        fundingAccountId: 'acc-1',
-        categoryId: 'cat-1',
-        amountWon: 75000,
-        frequency: RecurrenceFrequency.MONTHLY,
-        dayOfMonth: 10,
-        startDate: '2026-03-10',
-        isActive: true
-      }
-    });
-
-    assert.equal(response.status, 201);
-    assert.deepEqual(response.body, {
-      id: 'rr-3',
-      title: 'Phone bill',
-      amountWon: 75000,
-      frequency: RecurrenceFrequency.MONTHLY,
-      nextRunDate: '2026-03-10',
-      fundingAccountName: 'Main checking',
-      categoryName: 'Fuel',
-      isActive: true
-    });
-    assert.equal(context.state.recurringRules.length, 3);
-  } finally {
-    await context.close();
-  }
-});

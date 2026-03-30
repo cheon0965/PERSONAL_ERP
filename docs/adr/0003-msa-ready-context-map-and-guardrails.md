@@ -52,7 +52,7 @@
 좋은 점:
 
 - 현재 프로젝트가 왜 모놀리스인지와, 나중에 어디서부터 분리 가능한지를 한 번에 설명할 수 있습니다.
-- `transactions`, `recurring-rules`, `dashboard`, `forecast`의 역할 차이가 더 선명해집니다.
+- `collected-transactions`, `recurring-rules`, `dashboard`, `forecast`의 역할 차이가 더 선명해집니다.
 - 이후 구조 보강이 `의미 있는 경계 강화`인지 `과한 MSA 흉내`인지 판정하기 쉬워집니다.
 
 비용:

@@ -1,4 +1,4 @@
-# Personal ERP Starter Portfolio Architecture Guide
+﻿# Personal ERP Starter Portfolio Architecture Guide
 
 ## 이 문서는 무엇인가
 
@@ -22,13 +22,13 @@
 
 ## 이 프로젝트의 핵심 판단 원칙
 
-| 판단 원칙                        | 쉬운 설명                                                                     | 이 프로젝트에서의 적용                                         |
-| -------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| 목적이 먼저다                    | “멋있어 보이는 구조”보다 “무엇을 증명할 것인가”를 먼저 본다                   | 포트폴리오 메시지를 더 선명하게 만들 때만 구조를 바꾼다        |
-| 설명 가능해야 한다               | 왜 이렇게 했는지 초보자에게도 설명할 수 있어야 한다                           | `Transactions`, `Recurring Rules`만 선택적으로 강화했다        |
-| 외부는 명확하게, 내부는 단순하게 | DB, JWT, 시간 같은 바깥 경계만 엄격히 다루고 내부 호출은 과하게 쪼개지 않는다 | port/adapter는 외부 기술 경계에만 최소한으로 사용한다          |
-| 실무형이어야 한다                | 제품 완성과 운영을 밀어내는 과설계는 피한다                                   | P0~P3까지만 반영하고, P4 이벤트 계약은 의도적으로 보류했다     |
-| 테스트와 문서가 함께 간다        | 코드만 바뀌는 구조 개편은 불완전하다                                          | 요청 단위 테스트, use-case 테스트, 문서 동기화를 같이 유지한다 |
+| 판단 원칙                        | 쉬운 설명                                                                     | 이 프로젝트에서의 적용                                            |
+| -------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| 목적이 먼저다                    | “멋있어 보이는 구조”보다 “무엇을 증명할 것인가”를 먼저 본다                   | 포트폴리오 메시지를 더 선명하게 만들 때만 구조를 바꾼다           |
+| 설명 가능해야 한다               | 왜 이렇게 했는지 초보자에게도 설명할 수 있어야 한다                           | `Collected Transactions`, `Recurring Rules`만 선택적으로 강화했다 |
+| 외부는 명확하게, 내부는 단순하게 | DB, JWT, 시간 같은 바깥 경계만 엄격히 다루고 내부 호출은 과하게 쪼개지 않는다 | port/adapter는 외부 기술 경계에만 최소한으로 사용한다             |
+| 실무형이어야 한다                | 제품 완성과 운영을 밀어내는 과설계는 피한다                                   | P0~P3까지만 반영하고, P4 이벤트 계약은 의도적으로 보류했다        |
+| 테스트와 문서가 함께 간다        | 코드만 바뀌는 구조 개편은 불완전하다                                          | 요청 단위 테스트, use-case 테스트, 문서 동기화를 같이 유지한다    |
 
 ## 용어를 쉬운 말로 바꾸면
 
@@ -95,13 +95,14 @@ docs/          -> 개발, 운영, ADR, 아키텍처 문서
 | Context              | 현재 모듈                                                        | 소유 책임                                    | 읽기/쓰기 성격     | 나중에 분리한다면                 |
 | -------------------- | ---------------------------------------------------------------- | -------------------------------------------- | ------------------ | --------------------------------- |
 | Identity & Access    | `auth`, `common/auth`                                            | 로그인, 토큰, 요청 주체 인증 경계            | cross-cutting      | 공통 인증 계층                    |
-| Ledger               | `accounts`, `categories`, `transactions`                         | 현재 구현의 계정/카테고리/거래 쓰기 컨텍스트 | 핵심 쓰기          | 가장 강한 후보                    |
+| Ledger               | `accounts`, `categories`, `collected-transactions`               | 현재 구현의 계정/카테고리/거래 쓰기 컨텍스트 | 핵심 쓰기          | 가장 강한 후보                    |
 | Recurring Automation | `recurring-rules`                                                | 반복규칙 정의와 반복 입력 예약               | 쓰기 + Ledger 참조 | Ledger 다음 후보                  |
 | Asset & Coverage     | `vehicles`, `insurance-policies`                                 | 운영비 성격의 자산/보장 도메인               | 현재는 조회 중심   | 별도 도메인 후보                  |
 | Insight & Planning   | `dashboard`, `forecast`                                          | 여러 컨텍스트를 읽어 요약/예측               | 읽기/조합 중심     | 나중에 BFF 또는 read service 후보 |
 | Platform & Contracts | `packages/contracts`, env, Prisma, health, 공통 외부 의존성 조립 | 계약 원천, 런타임 기반선                     | 지원 계층          | 공통 플랫폼 성격                  |
 
 여기서 `Ledger`는 현재 코드베이스의 컨텍스트 이름입니다.  
+현재 API 모듈명은 `collected-transactions`이고, Web 화면/라우트는 사용자 경험 관점의 shorthand로 `transactions`를 사용합니다.  
 회계 도메인의 상세 엔티티/상태/권한 기준은 `docs/domain/business-logic-draft.md`, `docs/domain/core-entity-definition.md`를 우선합니다.
 
 면접이나 포트폴리오 설명에서는 이렇게 정리하면 된다.
@@ -122,7 +123,7 @@ docs/          -> 개발, 운영, ADR, 아키텍처 문서
 
 ### 금지되는 직접 참조
 
-- `dashboard`, `forecast`는 `transactions`, `recurring-rules`의 생성/검증 규칙을 직접 소유하지 않는다.
+- `dashboard`, `forecast`는 `collected-transactions`, `recurring-rules`의 생성/검증 규칙을 직접 소유하지 않는다.
 - 어떤 모듈도 다른 모듈의 `repository`, `adapter`, `controller`를 직접 import하는 것을 기본 규칙으로 삼지 않는다.
 - `packages/contracts`에는 앱 전용 구현 코드나 비즈니스 로직을 넣지 않는다.
 - 새로운 메시지 브로커, outbox, gateway, service split은 별도 ADR 없이 도입하지 않는다.
@@ -157,7 +158,7 @@ controller -> service -> repository -> mapper/calculator
 
 ### 3. 핵심 쓰기 모델만 선택적으로 더 엄격한 구조를 쓴다
 
-`transactions`와 `recurring-rules`는 현재 아래 흐름을 사용한다.
+`collected-transactions`와 `recurring-rules`는 현재 아래 흐름을 사용한다.
 
 ```text
 controller -> use-case -> port -> adapter
@@ -174,12 +175,12 @@ controller -> use-case -> port -> adapter
 
 ### 4. 대상 모듈은 `public.ts`를 공식 공개 경계로 둔다
 
-`transactions`, `recurring-rules`, `dashboard`, `forecast`는 이제 모듈 바깥에서
+`collected-transactions`, `recurring-rules`, `dashboard`, `forecast`는 이제 모듈 바깥에서
 직접 내부 파일을 가져다 쓰지 않고 각 모듈의 `public.ts`를 통해서만 접근한다.
 
 이 선택의 의미는 단순하다.
 
-- `transactions.module.ts`, `dashboard-read.service.ts` 같은 파일은 내부 구현이다.
+- `collected-transactions.module.ts`, `dashboard-read.service.ts` 같은 파일은 내부 구현이다.
 - 모듈 조립이나 미래의 확장 포인트는 `public.ts`를 기준으로 설명한다.
 - 아직 facade, interface, token을 과하게 늘리지 않고도 “공개 경계”를 코드에서 보여줄 수 있다.
 
@@ -190,8 +191,8 @@ controller -> use-case -> port -> adapter
 | Web                                          | `app / features / shared` + Provider 패턴                    | 화면 개발과 사용자 흐름이 중심이기 때문                     | 매우 부합   |
 | Contracts                                    | `packages/contracts` 단일 계약 원천                          | Web/API 계약 충돌을 줄이기 위해                             | 매우 부합   |
 | Accounts / Categories / Vehicles / Insurance | controller-service-repository-mapper                         | 규칙보다 CRUD 성격이 더 강함                                | 매우 부합   |
-| Transactions                                 | use-case/port/adapter + pure policy                          | 핵심 쓰기 모델, 설명 가치와 테스트 가치가 큼                | 매우 부합   |
-| Recurring Rules                              | use-case/port/adapter + 최소 recurrence policy               | Transactions 패턴을 재사용하면서도 과설계는 피함            | 매우 부합   |
+| Collected Transactions                       | use-case/port/adapter + pure policy                          | 핵심 쓰기 모델, 설명 가치와 테스트 가치가 큼                | 매우 부합   |
+| Recurring Rules                              | use-case/port/adapter + 최소 recurrence policy               | Collected Transactions 패턴을 재사용하면서도 과설계는 피함  | 매우 부합   |
 | Dashboard / Forecast                         | read service + read repository + projection                  | 읽기 조합 컨텍스트라는 역할을 코드 이름에서도 드러내기 위해 | 매우 부합   |
 | Auth                                         | global module + guard + service, Prisma/JWT/argon2 직접 사용 | 중요하지만 cross-cutting concern이라 지금은 실용성이 우선   | 부분 부합   |
 | Common external dependencies                 | `ClockPort`, `ExternalDependenciesModule` 도입               | 외부 의존성 추상화의 최소 예시를 먼저 고정                  | 부합        |
@@ -237,14 +238,14 @@ controller -> use-case -> port -> adapter
 
 ### use-case 테스트
 
-- `transactions.use-case.test.ts`
+- `collected-transactions.use-case.test.ts`
 - `recurring-rules.use-case.test.ts`
 
 이 테스트는 Nest 없이도 핵심 쓰기 모델 규칙을 검증할 수 있다는 점을 보여준다.
 
 ### 요청 단위 API 테스트
 
-- `request-api.test.ts`
+- `*.request-api.test.ts`
 
 이 테스트는 실제 controller, guard, ValidationPipe, HTTP 계약이 연결된 상태를 확인한다.
 
@@ -272,9 +273,9 @@ controller -> use-case -> port -> adapter
 
 ### Prisma integration 테스트
 
-- `transactions.prisma.integration.test.ts`
+- `collected-transactions.prisma.integration.test.ts`
 
-이 테스트는 `transactions` 모듈이 실제 MySQL 경계에서 `use-case -> port -> Prisma adapter -> DB` 흐름으로 동작하는지 대표적으로 보여준다.
+이 테스트는 `collected-transactions` 모듈이 실제 MySQL 경계에서 `use-case -> port -> Prisma adapter -> DB` 흐름으로 동작하는지 대표적으로 보여준다.
 즉, 이 프로젝트가 말하는 `외부 의존성은 분리하되, 내부는 과하게 추상화하지 않는다`는 원칙이 테스트에서도 보이도록 만든 증거다.
 
 ## 현재 프로젝트는 목적과 판단 원칙에 얼마나 부합하는가
@@ -317,7 +318,7 @@ controller -> use-case -> port -> adapter
 
 - 이 프로젝트는 Next.js, NestJS, Prisma, MySQL 기반의 개인 재무 ERP 스타터다.
 - 기본 구조는 모듈러 모놀리스이며, Web/API 계약은 `packages/contracts`로 통합했다.
-- 모든 모듈을 같은 방식으로 과하게 추상화하지 않고, 핵심 쓰기 모델인 `Transactions`와 `Recurring Rules`에만 use-case/port/adapter 경계를 도입했다.
+- 모든 모듈을 같은 방식으로 과하게 추상화하지 않고, 핵심 쓰기 모델인 `Collected Transactions`와 `Recurring Rules`에만 use-case/port/adapter 경계를 도입했다.
 - DI는 외부 기술 경계에만 최소한으로 적용했고, 내부 helper와 mapper는 순수 함수로 유지했다.
 - 이 선택 덕분에 테스트성과 설명력은 높이고, 1인 개발 복잡도는 통제할 수 있었다.
 

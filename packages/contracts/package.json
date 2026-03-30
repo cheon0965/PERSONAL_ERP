@@ -1,10 +1,17 @@
-{
+﻿{
   "name": "@personal-erp/contracts",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./auth": "./src/auth.ts",
+    "./reference-data": "./src/reference-data.ts",
+    "./accounting": "./src/accounting.ts",
+    "./transactions": "./src/transactions.ts",
+    "./recurring": "./src/recurring.ts",
+    "./planning": "./src/planning.ts",
+    "./assets": "./src/assets.ts"
   },
   "types": "./src/index.ts",
   "scripts": {
