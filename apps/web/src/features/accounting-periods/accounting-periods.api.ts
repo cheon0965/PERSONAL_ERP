@@ -2,19 +2,26 @@ import type {
   AccountingPeriodItem,
   CloseAccountingPeriodRequest,
   CloseAccountingPeriodResponse,
-  OpenAccountingPeriodRequest
+  OpenAccountingPeriodRequest,
+  ReopenAccountingPeriodRequest
 } from '@personal-erp/contracts';
 import { fetchJson, postJson } from '@/shared/api/fetch-json';
 
 export const accountingPeriodsQueryKey = ['accounting-periods'] as const;
-export const currentAccountingPeriodQueryKey = ['accounting-periods', 'current'] as const;
+export const currentAccountingPeriodQueryKey = [
+  'accounting-periods',
+  'current'
+] as const;
 
 export function getAccountingPeriods() {
   return fetchJson<AccountingPeriodItem[]>('/accounting-periods', []);
 }
 
 export function getCurrentAccountingPeriod() {
-  return fetchJson<AccountingPeriodItem | null>('/accounting-periods/current', null);
+  return fetchJson<AccountingPeriodItem | null>(
+    '/accounting-periods/current',
+    null
+  );
 }
 
 export function openAccountingPeriod(input: OpenAccountingPeriodRequest) {
@@ -32,6 +39,18 @@ export function closeAccountingPeriod(
 ) {
   return postJson<CloseAccountingPeriodResponse, CloseAccountingPeriodRequest>(
     `/accounting-periods/${periodId}/close`,
+    input,
+    fallback
+  );
+}
+
+export function reopenAccountingPeriod(
+  periodId: string,
+  input: ReopenAccountingPeriodRequest,
+  fallback: AccountingPeriodItem
+) {
+  return postJson<AccountingPeriodItem, ReopenAccountingPeriodRequest>(
+    `/accounting-periods/${periodId}/reopen`,
     input,
     fallback
   );
@@ -68,6 +87,7 @@ function buildAccountingPeriodFallbackItem(
         id: `period-history-demo-${Date.now()}`,
         fromStatus: null,
         toStatus: 'OPEN',
+        eventType: 'OPEN',
         reason: input.note?.trim() || null,
         actorType: 'TENANT_MEMBERSHIP',
         actorMembershipId: null,
@@ -93,6 +113,7 @@ export function buildCloseAccountingPeriodFallback(
           id: `period-history-demo-close-${Date.now()}`,
           fromStatus: period.status,
           toStatus: 'LOCKED',
+          eventType: 'LOCK',
           reason: input.note?.trim() || null,
           actorType: 'TENANT_MEMBERSHIP',
           actorMembershipId: null,
@@ -111,5 +132,31 @@ export function buildCloseAccountingPeriodFallback(
       periodPnLAmount: 0,
       lines: []
     }
+  };
+}
+
+export function buildReopenAccountingPeriodFallback(
+  period: AccountingPeriodItem,
+  input: ReopenAccountingPeriodRequest
+): AccountingPeriodItem {
+  const changedAt = new Date().toISOString();
+
+  return {
+    ...period,
+    status: 'OPEN',
+    lockedAt: null,
+    statusHistory: [
+      {
+        id: `period-history-demo-reopen-${Date.now()}`,
+        fromStatus: period.status,
+        toStatus: 'OPEN',
+        eventType: 'REOPEN',
+        reason: input.reason.trim(),
+        actorType: 'TENANT_MEMBERSHIP',
+        actorMembershipId: null,
+        changedAt
+      },
+      ...period.statusHistory
+    ]
   };
 }

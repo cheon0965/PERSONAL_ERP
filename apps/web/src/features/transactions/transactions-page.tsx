@@ -22,7 +22,10 @@ import {
   currentAccountingPeriodQueryKey,
   getCurrentAccountingPeriod
 } from '@/features/accounting-periods/accounting-periods.api';
-import { journalEntriesQueryKey } from '@/features/journal-entries/journal-entries.api';
+import {
+  getJournalEntries,
+  journalEntriesQueryKey
+} from '@/features/journal-entries/journal-entries.api';
 import { formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { DataTableCard } from '@/shared/ui/data-table-card';
@@ -44,12 +47,10 @@ const sourceKindLabelMap: Record<string, string> = {
   IMPORT: '파일 업로드'
 };
 
-type SubmitFeedback =
-  | {
-      severity: 'success' | 'error';
-      message: string;
-    }
-  | null;
+type SubmitFeedback = {
+  severity: 'success' | 'error';
+  message: string;
+} | null;
 
 export function TransactionsPage() {
   const queryClient = useQueryClient();
@@ -61,6 +62,10 @@ export function TransactionsPage() {
   const transactionsQuery = useQuery({
     queryKey: collectedTransactionsQueryKey,
     queryFn: getCollectedTransactions
+  });
+  const journalEntriesQuery = useQuery({
+    queryKey: journalEntriesQueryKey,
+    queryFn: getJournalEntries
   });
   const confirmMutation = useMutation({
     mutationFn: (transaction: CollectedTransactionItem) =>
@@ -75,7 +80,9 @@ export function TransactionsPage() {
       });
 
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: collectedTransactionsQueryKey }),
+        queryClient.invalidateQueries({
+          queryKey: collectedTransactionsQueryKey
+        }),
         queryClient.invalidateQueries({ queryKey: journalEntriesQueryKey })
       ]);
     },
@@ -90,10 +97,18 @@ export function TransactionsPage() {
     }
   });
 
-
   const data = React.useMemo(
     () => transactionsQuery.data ?? [],
     [transactionsQuery.data]
+  );
+  const journalEntriesById = React.useMemo(
+    () =>
+      new Map(
+        (journalEntriesQuery.data ?? []).map(
+          (entry) => [entry.id, entry] as const
+        )
+      ),
+    [journalEntriesQuery.data]
   );
   const currentPeriod = currentPeriodQuery.data ?? null;
 
@@ -109,7 +124,8 @@ export function TransactionsPage() {
       '카테고리 (Category)',
       '전표 (JournalEntry)'
     ],
-    truthSource: '공식 회계 기준은 전표이며, 수집 거래는 전표 확정 전 단계의 운영 기록입니다.',
+    truthSource:
+      '공식 회계 기준은 전표이며, 수집 거래는 전표 확정 전 단계의 운영 기록입니다.',
     readModelNote: currentPeriod
       ? `${currentPeriod.monthLabel} 운영 기간 안의 거래를 검토하고, 아직 전표가 없는 보류 상태 거래만 확정할 수 있습니다.`
       : '아직 열린 운영 기간이 없어 수집 거래 등록과 전표 확정이 잠겨 있습니다.'
@@ -138,7 +154,8 @@ export function TransactionsPage() {
 
     return data.filter((item) => {
       const matchesCurrentPeriod =
-        !currentPeriod || isBusinessDateWithinPeriod(item.businessDate, currentPeriod);
+        !currentPeriod ||
+        isBusinessDateWithinPeriod(item.businessDate, currentPeriod);
       const matchesKeyword =
         normalizedKeyword.length === 0 ||
         [item.title, item.categoryName, item.fundingAccountName]
@@ -146,7 +163,8 @@ export function TransactionsPage() {
           .toLowerCase()
           .includes(normalizedKeyword);
       const matchesFundingAccount =
-        fundingAccountName.length === 0 || item.fundingAccountName === fundingAccountName;
+        fundingAccountName.length === 0 ||
+        item.fundingAccountName === fundingAccountName;
       const matchesCategory =
         categoryName.length === 0 || item.categoryName === categoryName;
 
@@ -192,6 +210,10 @@ export function TransactionsPage() {
         filterable: false,
         renderCell: (params) => {
           const row = params.row;
+          const linkedJournalEntry = resolveLatestLinkedJournalEntry(
+            journalEntriesById,
+            row.postedJournalEntryId
+          );
           const isConfirming =
             confirmMutation.isPending &&
             confirmMutation.variables?.id === row.id;
@@ -208,6 +230,18 @@ export function TransactionsPage() {
                 }}
               >
                 {isConfirming ? '확정 중...' : '전표 확정'}
+              </Button>
+            );
+          }
+
+          if (linkedJournalEntry) {
+            return (
+              <Button
+                size="small"
+                component={Link}
+                href={`/journal-entries?entryId=${linkedJournalEntry.id}`}
+              >
+                {linkedJournalEntry.entryNumber}
               </Button>
             );
           }
@@ -232,7 +266,7 @@ export function TransactionsPage() {
         }
       }
     ],
-    [confirmMutation]
+    [confirmMutation, journalEntriesById]
   );
 
   return (
@@ -262,6 +296,12 @@ export function TransactionsPage() {
           error={transactionsQuery.error}
         />
       ) : null}
+      {journalEntriesQuery.error ? (
+        <QueryErrorAlert
+          title="전표 연결 정보를 불러오지 못했습니다."
+          error={journalEntriesQuery.error}
+        />
+      ) : null}
       <SectionCard
         title="현재 운영 기간"
         description="수집 거래 입력과 전표 확정은 현재 열린 운영 기간 문맥 안에서만 진행됩니다."
@@ -283,7 +323,9 @@ export function TransactionsPage() {
                 <Typography variant="caption" color="text.secondary">
                   운영 월
                 </Typography>
-                <Typography variant="body1">{currentPeriod.monthLabel}</Typography>
+                <Typography variant="body1">
+                  {currentPeriod.monthLabel}
+                </Typography>
               </Stack>
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
@@ -394,6 +436,40 @@ export function TransactionsPage() {
       </Grid>
     </Stack>
   );
+}
+
+function resolveLatestLinkedJournalEntry(
+  journalEntriesById: Map<string, JournalEntryItem>,
+  journalEntryId: string | null
+): JournalEntryItem | null {
+  if (!journalEntryId) {
+    return null;
+  }
+
+  let current = journalEntriesById.get(journalEntryId) ?? null;
+  const visited = new Set<string>();
+
+  while (current && !visited.has(current.id)) {
+    visited.add(current.id);
+
+    const nextId =
+      current.correctionEntryIds?.at(-1) ??
+      current.reversedByJournalEntryId ??
+      null;
+
+    if (!nextId) {
+      return current;
+    }
+
+    const next = journalEntriesById.get(nextId) ?? null;
+    if (!next) {
+      return current;
+    }
+
+    current = next;
+  }
+
+  return current;
 }
 
 function isBusinessDateWithinPeriod(

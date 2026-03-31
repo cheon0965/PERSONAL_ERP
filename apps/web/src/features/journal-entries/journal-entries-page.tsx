@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -25,12 +25,10 @@ import {
   journalEntriesQueryKey
 } from './journal-entries.api';
 
-type SubmitFeedback =
-  | {
-      severity: 'success' | 'error';
-      message: string;
-    }
-  | null;
+type SubmitFeedback = {
+  severity: 'success' | 'error';
+  message: string;
+} | null;
 
 type AdjustmentSelection = {
   mode: JournalEntryAdjustmentMode;
@@ -64,7 +62,10 @@ export function JournalEntriesPage() {
       return data;
     }
 
-    return [highlighted, ...data.filter((item) => item.id !== highlightedEntryId)];
+    return [
+      highlighted,
+      ...data.filter((item) => item.id !== highlightedEntryId)
+    ];
   }, [highlightedEntryId, journalEntriesQuery.data]);
 
   const currentPeriod = currentPeriodQuery.data ?? null;
@@ -114,8 +115,8 @@ export function JournalEntriesPage() {
 
         {currentPeriod ? (
           <Alert severity="info" variant="outlined">
-            현재 열린 운영 기간은 {currentPeriod.monthLabel}이며, 반전/정정 전표는 이
-            기간 안의 일자로만 생성할 수 있습니다.
+            현재 열린 운영 기간은 {currentPeriod.monthLabel}이며, 반전/정정
+            전표는 이 기간 안의 일자로만 생성할 수 있습니다.
           </Alert>
         ) : (
           <Alert severity="warning" variant="outlined">
@@ -136,7 +137,8 @@ export function JournalEntriesPage() {
         ) : (
           <Stack spacing={appLayout.sectionGap}>
             {entries.map((entry) => {
-              const canAdjust = entry.status === 'POSTED' && Boolean(currentPeriod);
+              const canAdjust =
+                entry.status === 'POSTED' && Boolean(currentPeriod);
 
               return (
                 <SectionCard
@@ -216,6 +218,32 @@ export function JournalEntriesPage() {
                       </Typography>
                     </Stack>
 
+                    {hasAdjustmentMetadata(entry) ? (
+                      <Box
+                        sx={{
+                          px: appLayout.cardPadding,
+                          py: { xs: 1.25, md: 1.5 },
+                          borderRadius: 2,
+                          bgcolor: 'background.default',
+                          border: (theme) =>
+                            `1px solid ${theme.palette.divider}`
+                        }}
+                      >
+                        <Stack spacing={0.75}>
+                          <Typography variant="subtitle2">조정 계보</Typography>
+                          {buildAdjustmentMetadataRows(entry).map((row) => (
+                            <Typography
+                              key={`${entry.id}-${row.label}`}
+                              variant="body2"
+                              color="text.secondary"
+                            >
+                              {row.label}: {row.value}
+                            </Typography>
+                          ))}
+                        </Stack>
+                      </Box>
+                    ) : null}
+
                     {entry.memo ? (
                       <Box
                         sx={{
@@ -251,7 +279,10 @@ export function JournalEntriesPage() {
                                 : '자금수단 없음'}
                             </Typography>
                             {line.description ? (
-                              <Typography variant="body2" color="text.secondary">
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
                                 {line.description}
                               </Typography>
                             ) : null}
@@ -316,4 +347,54 @@ function buildJournalEntryDescription(entry: JournalEntryItem) {
   ]
     .filter(Boolean)
     .join(' ');
+}
+
+function hasAdjustmentMetadata(entry: JournalEntryItem) {
+  return buildAdjustmentMetadataRows(entry).length > 0;
+}
+
+function buildAdjustmentMetadataRows(entry: JournalEntryItem) {
+  return [
+    entry.reversesJournalEntryNumber
+      ? {
+          label: '반전 원본',
+          value: entry.reversesJournalEntryNumber
+        }
+      : null,
+    entry.reversedByJournalEntryNumber
+      ? {
+          label: '후속 반전 전표',
+          value: entry.reversedByJournalEntryNumber
+        }
+      : null,
+    entry.correctsJournalEntryNumber
+      ? {
+          label: '정정 원본',
+          value: entry.correctsJournalEntryNumber
+        }
+      : null,
+    entry.correctionEntryNumbers && entry.correctionEntryNumbers.length > 0
+      ? {
+          label: '후속 정정 전표',
+          value: entry.correctionEntryNumbers.join(', ')
+        }
+      : null,
+    entry.correctionReason
+      ? {
+          label: '정정 사유',
+          value: entry.correctionReason
+        }
+      : null,
+    entry.createdByActorType
+      ? {
+          label: '생성 주체',
+          value:
+            entry.createdByActorType === 'TENANT_MEMBERSHIP'
+              ? entry.createdByMembershipId
+                ? `작업 사용자 (${entry.createdByMembershipId})`
+                : '작업 사용자'
+              : '시스템'
+        }
+      : null
+  ].filter((row): row is { label: string; value: string } => row != null);
 }

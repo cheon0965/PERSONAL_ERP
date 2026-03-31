@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert/strict';
+import assert from 'node:assert/strict';
 import test from 'node:test';
 import type {
   CloseAccountingPeriodResponse,
@@ -36,6 +36,7 @@ test('GET /accounting-periods returns the current ledger periods in reverse chro
       periodId: 'period-existing-1',
       fromStatus: null,
       toStatus: AccountingPeriodStatus.OPEN,
+      eventType: 'OPEN',
       reason: '운영 시작',
       actorType: AuditActorType.TENANT_MEMBERSHIP,
       actorMembershipId: 'membership-1',
@@ -89,6 +90,7 @@ test('GET /accounting-periods returns the current ledger periods in reverse chro
             id: 'period-history-1',
             fromStatus: null,
             toStatus: AccountingPeriodStatus.OPEN,
+            eventType: 'OPEN',
             reason: '운영 시작',
             actorType: AuditActorType.TENANT_MEMBERSHIP,
             actorMembershipId: 'membership-1',
@@ -239,6 +241,7 @@ test('GET /accounting-periods/current returns the currently open period for the 
       periodId: 'period-current-1',
       fromStatus: null,
       toStatus: AccountingPeriodStatus.OPEN,
+      eventType: 'OPEN',
       reason: '3월 운영 시작',
       actorType: AuditActorType.TENANT_MEMBERSHIP,
       actorMembershipId: 'membership-1',
@@ -267,6 +270,7 @@ test('GET /accounting-periods/current returns the currently open period for the 
           id: 'period-history-current-1',
           fromStatus: null,
           toStatus: AccountingPeriodStatus.OPEN,
+          eventType: 'OPEN',
           reason: '3월 운영 시작',
           actorType: AuditActorType.TENANT_MEMBERSHIP,
           actorMembershipId: 'membership-1',
@@ -304,6 +308,7 @@ test('POST /accounting-periods/:id/close locks the period and creates a closing 
       periodId: 'period-close-1',
       fromStatus: null,
       toStatus: AccountingPeriodStatus.OPEN,
+      eventType: 'OPEN',
       reason: '3월 운영 시작',
       actorType: AuditActorType.TENANT_MEMBERSHIP,
       actorMembershipId: 'membership-1',
@@ -415,7 +420,8 @@ test('POST /accounting-periods/:id/reopen reopens the latest locked period and c
         periodId: 'period-reopen-1',
         fromStatus: null,
         toStatus: AccountingPeriodStatus.OPEN,
-        reason: '3? ?? ??',
+        eventType: 'OPEN',
+        reason: '3월 운영 시작',
         actorType: AuditActorType.TENANT_MEMBERSHIP,
         actorMembershipId: 'membership-1',
         changedAt: new Date('2026-03-01T00:00:00.000Z')
@@ -427,7 +433,8 @@ test('POST /accounting-periods/:id/reopen reopens the latest locked period and c
         periodId: 'period-reopen-1',
         fromStatus: AccountingPeriodStatus.OPEN,
         toStatus: AccountingPeriodStatus.LOCKED,
-        reason: '3? ??',
+        eventType: 'LOCK',
+        reason: '3월 마감',
         actorType: AuditActorType.TENANT_MEMBERSHIP,
         actorMembershipId: 'membership-1',
         changedAt: new Date('2026-03-31T15:00:00.000Z')
@@ -463,7 +470,7 @@ test('POST /accounting-periods/:id/reopen reopens the latest locked period and c
         statementKind: FinancialStatementKind.STATEMENT_OF_FINANCIAL_POSITION,
         currency: 'KRW',
         payload: {
-          summary: [{ label: '?? ??', amountWon: 140_000 }],
+          summary: [{ label: '자산 총계', amountWon: 140_000 }],
           sections: [],
           notes: []
         } as FinancialStatementPayload,
@@ -478,7 +485,7 @@ test('POST /accounting-periods/:id/reopen reopens the latest locked period and c
         statementKind: FinancialStatementKind.MONTHLY_PROFIT_AND_LOSS,
         currency: 'KRW',
         payload: {
-          summary: [{ label: '?? ??', amountWon: 140_000 }],
+          summary: [{ label: '당기 손익', amountWon: 140_000 }],
           sections: [],
           notes: []
         } as FinancialStatementPayload,
@@ -493,7 +500,7 @@ test('POST /accounting-periods/:id/reopen reopens the latest locked period and c
         method: 'POST',
         headers: context.authHeaders(),
         body: {
-          note: '?? ??? ?? ???'
+          reason: '재무제표 재산출 필요'
         }
       }
     );
@@ -522,6 +529,11 @@ test('POST /accounting-periods/:id/reopen reopens the latest locked period and c
       context.state.periodStatusHistory.at(-1)?.toStatus,
       AccountingPeriodStatus.OPEN
     );
+    assert.equal(context.state.periodStatusHistory.at(-1)?.eventType, 'REOPEN');
+    assert.equal(
+      context.state.periodStatusHistory.at(-1)?.reason,
+      '재무제표 재산출 필요'
+    );
     assert.equal(
       context.state.periodStatusHistory.at(-1)?.actorMembershipId,
       'membership-1'
@@ -534,7 +546,8 @@ test('POST /accounting-periods/:id/reopen reopens the latest locked period and c
           candidate.details.requestId ===
             response.headers.get('x-request-id') &&
           candidate.details.action === 'accounting_period.reopen' &&
-          candidate.details.periodId === 'period-reopen-1'
+          candidate.details.periodId === 'period-reopen-1' &&
+          candidate.details.reason === '재무제표 재산출 필요'
       )
     );
   } finally {
@@ -584,6 +597,7 @@ test('POST /accounting-periods/:id/reopen blocks reopening when carry-forward ou
         periodId: 'period-reopen-blocked-1',
         fromStatus: null,
         toStatus: AccountingPeriodStatus.OPEN,
+        eventType: 'OPEN',
         reason: '3월 운영 시작',
         actorType: AuditActorType.TENANT_MEMBERSHIP,
         actorMembershipId: 'membership-1',
@@ -596,6 +610,7 @@ test('POST /accounting-periods/:id/reopen blocks reopening when carry-forward ou
         periodId: 'period-reopen-blocked-1',
         fromStatus: AccountingPeriodStatus.OPEN,
         toStatus: AccountingPeriodStatus.LOCKED,
+        eventType: 'LOCK',
         reason: '3월 마감',
         actorType: AuditActorType.TENANT_MEMBERSHIP,
         actorMembershipId: 'membership-1',
@@ -658,7 +673,7 @@ test('POST /accounting-periods/:id/reopen blocks reopening when carry-forward ou
         method: 'POST',
         headers: context.authHeaders(),
         body: {
-          note: '차기 이월 이후 재오픈 시도'
+          reason: '차기 이월 이후 재오픈 시도'
         }
       }
     );
@@ -678,6 +693,55 @@ test('POST /accounting-periods/:id/reopen blocks reopening when carry-forward ou
     assert.equal(context.state.closingSnapshots.length, 1);
     assert.equal(context.state.financialStatementSnapshots.length, 1);
     assert.equal(context.state.carryForwardRecords.length, 1);
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /accounting-periods/:id/reopen returns 400 when the reopen reason is blank after trimming', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push({
+      id: 'period-reopen-blank-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 3,
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.LOCKED,
+      openedAt: new Date('2026-03-01T00:00:00.000Z'),
+      lockedAt: new Date('2026-03-31T15:00:00.000Z'),
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-31T15:00:00.000Z')
+    });
+
+    const initialHistoryCount = context.state.periodStatusHistory.length;
+    const response = await context.request(
+      '/accounting-periods/period-reopen-blank-1/reopen',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          reason: '   '
+        }
+      }
+    );
+
+    assert.equal(response.status, 400);
+    assert.deepEqual(response.body, {
+      statusCode: 400,
+      message: '재오픈 사유를 입력해 주세요.',
+      error: 'Bad Request'
+    });
+    assert.equal(
+      context.state.accountingPeriods.find(
+        (candidate) => candidate.id === 'period-reopen-blank-1'
+      )?.status,
+      AccountingPeriodStatus.LOCKED
+    );
+    assert.equal(context.state.periodStatusHistory.length, initialHistoryCount);
   } finally {
     await context.close();
   }
@@ -709,7 +773,7 @@ test('POST /accounting-periods/:id/reopen returns 403 when the current membershi
         method: 'POST',
         headers: context.authHeaders(),
         body: {
-          note: '?? ?? ??? ??'
+          reason: '재오픈 사유 확인 필요'
         }
       }
     );

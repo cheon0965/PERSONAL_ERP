@@ -1,4 +1,4 @@
-﻿import {
+import {
   BadRequestException,
   Injectable,
   NotFoundException
@@ -26,12 +26,8 @@ import {
   buildReversalJournalLines,
   normalizeOptionalText
 } from './journal-entry-adjustment.policy';
-import {
-  assertJournalEntryCanBeReversed
-} from './journal-entry-transition.policy';
-import {
-  assertCollectedTransactionCanBeCorrected
-} from '../collected-transactions/public';
+import { assertJournalEntryCanBeReversed } from './journal-entry-transition.policy';
+import { assertCollectedTransactionCanBeCorrected } from '../collected-transactions/public';
 
 const journalEntryItemInclude = {
   sourceCollectedTransaction: {
@@ -39,6 +35,33 @@ const journalEntryItemInclude = {
       id: true,
       title: true,
       status: true
+    }
+  },
+  reversesJournalEntry: {
+    select: {
+      id: true,
+      entryNumber: true
+    }
+  },
+  reversedByJournalEntry: {
+    select: {
+      id: true,
+      entryNumber: true
+    }
+  },
+  correctsJournalEntry: {
+    select: {
+      id: true,
+      entryNumber: true
+    }
+  },
+  correctionEntries: {
+    select: {
+      id: true,
+      entryNumber: true
+    },
+    orderBy: {
+      createdAt: 'asc' as const
     }
   },
   lines: {
@@ -75,12 +98,16 @@ export class ReverseJournalEntryUseCase {
   ): Promise<JournalEntryItem> {
     const workspace = requireCurrentWorkspace(user);
     const createdByActorRef = readWorkspaceCreatedByActorRef(workspace);
-    assertWorkspaceActionAllowed(workspace.membershipRole, 'journal_entry.reverse');
-
-    const targetPeriod = await this.accountingPeriodsService.assertCollectingDateAllowed(
-      user,
-      input.entryDate
+    assertWorkspaceActionAllowed(
+      workspace.membershipRole,
+      'journal_entry.reverse'
     );
+
+    const targetPeriod =
+      await this.accountingPeriodsService.assertCollectingDateAllowed(
+        user,
+        input.entryDate
+      );
 
     const originalJournalEntry = await this.prisma.journalEntry.findFirst({
       where: {

@@ -16,7 +16,8 @@ import {
 import type {
   AccountingPeriodItem,
   CloseAccountingPeriodResponse,
-  OpenAccountingPeriodRequest
+  OpenAccountingPeriodRequest,
+  ReopenAccountingPeriodRequest
 } from '@personal-erp/contracts';
 import type { GridColDef } from '@mui/x-data-grid';
 import { useForm } from 'react-hook-form';
@@ -34,10 +35,12 @@ import { StatusChip } from '@/shared/ui/status-chip';
 import {
   accountingPeriodsQueryKey,
   buildCloseAccountingPeriodFallback,
+  buildReopenAccountingPeriodFallback,
   closeAccountingPeriod,
   currentAccountingPeriodQueryKey,
   getAccountingPeriods,
-  openAccountingPeriod
+  openAccountingPeriod,
+  reopenAccountingPeriod
 } from './accounting-periods.api';
 
 const periodFormSchema = z.object({
@@ -51,12 +54,10 @@ const periodFormSchema = z.object({
 
 type PeriodFormInput = z.infer<typeof periodFormSchema>;
 
-type SubmitFeedback =
-  | {
-      severity: 'success' | 'error';
-      message: string;
-    }
-  | null;
+type SubmitFeedback = {
+  severity: 'success' | 'error';
+  message: string;
+} | null;
 
 const periodColumns: GridColDef<AccountingPeriodItem>[] = [
   { field: 'monthLabel', headerName: '운영 월', flex: 0.8 },
@@ -87,8 +88,7 @@ const periodColumns: GridColDef<AccountingPeriodItem>[] = [
     field: 'lockedAt',
     headerName: '잠금일',
     flex: 1,
-    valueFormatter: (value) =>
-      value ? formatDate(String(value)) : '-'
+    valueFormatter: (value) => (value ? formatDate(String(value)) : '-')
   }
 ];
 
@@ -97,6 +97,7 @@ export function AccountingPeriodsPage() {
   const { user } = useAuthSession();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const [closeNote, setCloseNote] = React.useState('');
+  const [reopenReason, setReopenReason] = React.useState('');
   const [latestClosingResult, setLatestClosingResult] =
     React.useState<CloseAccountingPeriodResponse | null>(null);
   const { data: periods = [], error } = useQuery({
@@ -136,12 +137,15 @@ export function AccountingPeriodsPage() {
   const canOpenPeriod =
     membershipRole === 'OWNER' || membershipRole === 'MANAGER';
   const canClosePeriod = membershipRole === 'OWNER';
+  const canReopenPeriod = membershipRole === 'OWNER';
   const isFirstPeriod = periods.length === 0;
   const openPeriod = React.useMemo(
     () => periods.find((period) => period.status !== 'LOCKED') ?? null,
     [periods]
   );
-  const currentPeriod = openPeriod ?? periods[0] ?? null;
+  const latestPeriod = periods[0] ?? null;
+  const reopenPeriod = latestPeriod?.status === 'LOCKED' ? latestPeriod : null;
+  const currentPeriod = openPeriod ?? latestPeriod ?? null;
 
   React.useEffect(() => {
     form.setValue('initializeOpeningBalance', isFirstPeriod, {
@@ -150,7 +154,8 @@ export function AccountingPeriodsPage() {
   }, [form, isFirstPeriod]);
 
   const mutation = useMutation({
-    mutationFn: (payload: OpenAccountingPeriodRequest) => openAccountingPeriod(payload),
+    mutationFn: (payload: OpenAccountingPeriodRequest) =>
+      openAccountingPeriod(payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: accountingPeriodsQueryKey
@@ -181,7 +186,29 @@ export function AccountingPeriodsPage() {
     }
   });
 
-  const isBusy = mutation.isPending || form.formState.isSubmitting || !hasWorkspace;
+  const reopenMutation = useMutation({
+    mutationFn: (payload: {
+      period: AccountingPeriodItem;
+      input: ReopenAccountingPeriodRequest;
+    }) =>
+      reopenAccountingPeriod(
+        payload.period.id,
+        payload.input,
+        buildReopenAccountingPeriodFallback(payload.period, payload.input)
+      ),
+    onSuccess: async () => {
+      setLatestClosingResult(null);
+      await queryClient.invalidateQueries({
+        queryKey: accountingPeriodsQueryKey
+      });
+      await queryClient.invalidateQueries({
+        queryKey: currentAccountingPeriodQueryKey
+      });
+    }
+  });
+
+  const isBusy =
+    mutation.isPending || form.formState.isSubmitting || !hasWorkspace;
 
   return (
     <Stack spacing={appLayout.pageGap}>
@@ -201,8 +228,8 @@ export function AccountingPeriodsPage() {
 
       {!hasWorkspace ? (
         <Alert severity="warning" variant="outlined">
-          현재 작업 Tenant 및 Ledger 문맥이 아직 준비되지 않았습니다. 설정 화면에서
-          작업 문맥을 먼저 확인해 주세요.
+          현재 작업 Tenant 및 Ledger 문맥이 아직 준비되지 않았습니다. 설정
+          화면에서 작업 문맥을 먼저 확인해 주세요.
         </Alert>
       ) : null}
 
@@ -221,10 +248,11 @@ export function AccountingPeriodsPage() {
 
       {latestClosingResult ? (
         <Alert severity="success" variant="outlined">
-          {latestClosingResult.period.monthLabel} 월 마감이 완료되었습니다.
-          {' '}
-          생성된 스냅샷 라인 {latestClosingResult.closingSnapshot.lines.length}건,
-          당기손익 {formatWon(latestClosingResult.closingSnapshot.periodPnLAmount)}입니다.
+          {latestClosingResult.period.monthLabel} 월 마감이 완료되었습니다.{' '}
+          생성된 스냅샷 라인 {latestClosingResult.closingSnapshot.lines.length}
+          건, 당기손익{' '}
+          {formatWon(latestClosingResult.closingSnapshot.periodPnLAmount)}
+          입니다.
         </Alert>
       ) : null}
 
@@ -247,10 +275,7 @@ export function AccountingPeriodsPage() {
                 label="Ledger"
                 value={currentWorkspace?.ledger?.name ?? '-'}
               />
-              <InfoRow
-                label="역할"
-                value={membershipRole ?? '-'}
-              />
+              <InfoRow label="역할" value={membershipRole ?? '-'} />
               <InfoRow
                 label="기준 통화 / 시간대"
                 value={
@@ -285,7 +310,8 @@ export function AccountingPeriodsPage() {
                       label="오프닝 스냅샷"
                       value={
                         currentPeriod.hasOpeningBalanceSnapshot
-                          ? currentPeriod.openingBalanceSourceKind === 'INITIAL_SETUP'
+                          ? currentPeriod.openingBalanceSourceKind ===
+                            'INITIAL_SETUP'
                             ? '초기 셋업'
                             : '이월'
                           : '미생성'
@@ -303,6 +329,7 @@ export function AccountingPeriodsPage() {
                         color="text.secondary"
                       >
                         {formatDate(history.changedAt)} ·{' '}
+                        {getAccountingPeriodEventLabel(history.eventType)} ·{' '}
                         {history.fromStatus ? `${history.fromStatus} -> ` : ''}
                         {history.toStatus}
                         {history.reason ? ` · ${history.reason}` : ''}
@@ -317,7 +344,8 @@ export function AccountingPeriodsPage() {
               </Stack>
             ) : (
               <Typography variant="body2" color="text.secondary">
-                아직 시작된 운영 기간이 없습니다. 첫 월 운영 시작을 진행해 주세요.
+                아직 시작된 운영 기간이 없습니다. 첫 월 운영 시작을 진행해
+                주세요.
               </Typography>
             )}
           </SectionCard>
@@ -415,7 +443,9 @@ export function AccountingPeriodsPage() {
                     disabled={isBusy || !canOpenPeriod}
                     sx={{ alignSelf: 'flex-start' }}
                   >
-                    {mutation.isPending ? '운영 기간 시작 중...' : '월 운영 시작'}
+                    {mutation.isPending
+                      ? '운영 기간 시작 중...'
+                      : '월 운영 시작'}
                   </Button>
                 </Stack>
               </form>
@@ -426,68 +456,150 @@ export function AccountingPeriodsPage() {
 
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, xl: 5 }}>
-          <SectionCard
-            title="월 마감"
-            description="현재 열린 운영 기간을 잠그고 ClosingSnapshot과 BalanceSnapshotLine을 생성합니다. 얇은 1차 구현에서는 전표가 한 건 이상 존재하는 기간만 마감할 수 있습니다."
-          >
-            <Stack spacing={appLayout.cardGap}>
-              <InfoRow
-                label="마감 대상"
-                value={openPeriod ? openPeriod.monthLabel : '현재 열린 운영 기간 없음'}
-              />
-              <InfoRow
-                label="권한"
-                value={canClosePeriod ? 'Owner' : membershipRole ?? '-'}
-              />
-              <TextField
-                label="마감 메모"
-                multiline
-                minRows={3}
-                value={closeNote}
-                onChange={(event) => {
-                  setCloseNote(event.target.value);
-                }}
-                helperText="월 마감 사유 또는 운영 메모를 남길 수 있습니다."
-                disabled={!openPeriod || !canClosePeriod || !hasWorkspace}
-              />
-              <Button
-                variant="contained"
-                color="inherit"
-                disabled={
-                  !openPeriod ||
-                  !canClosePeriod ||
-                  !hasWorkspace ||
-                  closeMutation.isPending
-                }
-                onClick={async () => {
-                  if (!openPeriod) {
-                    return;
+          <Stack spacing={appLayout.sectionGap}>
+            <SectionCard
+              title="월 마감"
+              description="현재 열린 운영 기간을 잠그고 ClosingSnapshot과 BalanceSnapshotLine을 생성합니다. 얇은 1차 구현에서는 전표가 한 건 이상 존재하는 기간만 마감할 수 있습니다."
+            >
+              <Stack spacing={appLayout.cardGap}>
+                <InfoRow
+                  label="마감 대상"
+                  value={
+                    openPeriod
+                      ? openPeriod.monthLabel
+                      : '현재 열린 운영 기간 없음'
                   }
-
-                  setFeedback(null);
-
-                  try {
-                    const result = await closeMutation.mutateAsync(openPeriod);
-                    setFeedback({
-                      severity: 'success',
-                      message: `${result.period.monthLabel} 월 마감을 완료했습니다.`
-                    });
-                  } catch (mutationError) {
-                    setFeedback({
-                      severity: 'error',
-                      message:
-                        mutationError instanceof Error
-                          ? mutationError.message
-                          : '월 마감을 완료하지 못했습니다.'
-                    });
+                />
+                <InfoRow
+                  label="권한"
+                  value={canClosePeriod ? 'Owner' : (membershipRole ?? '-')}
+                />
+                <TextField
+                  label="마감 메모"
+                  multiline
+                  minRows={3}
+                  value={closeNote}
+                  onChange={(event) => {
+                    setCloseNote(event.target.value);
+                  }}
+                  helperText="월 마감 사유 또는 운영 메모를 남길 수 있습니다."
+                  disabled={!openPeriod || !canClosePeriod || !hasWorkspace}
+                />
+                <Button
+                  variant="contained"
+                  color="inherit"
+                  disabled={
+                    !openPeriod ||
+                    !canClosePeriod ||
+                    !hasWorkspace ||
+                    closeMutation.isPending
                   }
-                }}
-                sx={{ alignSelf: 'flex-start' }}
-              >
-                {closeMutation.isPending ? '월 마감 진행 중...' : '월 마감'}
-              </Button>
-            </Stack>
-          </SectionCard>
+                  onClick={async () => {
+                    if (!openPeriod) {
+                      return;
+                    }
+
+                    setFeedback(null);
+
+                    try {
+                      const result =
+                        await closeMutation.mutateAsync(openPeriod);
+                      setFeedback({
+                        severity: 'success',
+                        message: `${result.period.monthLabel} 월 마감을 완료했습니다.`
+                      });
+                    } catch (mutationError) {
+                      setFeedback({
+                        severity: 'error',
+                        message:
+                          mutationError instanceof Error
+                            ? mutationError.message
+                            : '월 마감을 완료하지 못했습니다.'
+                      });
+                    }
+                  }}
+                  sx={{ alignSelf: 'flex-start' }}
+                >
+                  {closeMutation.isPending ? '월 마감 진행 중...' : '월 마감'}
+                </Button>
+              </Stack>
+            </SectionCard>
+
+            <SectionCard
+              title="월 재오픈"
+              description="가장 최근에 잠긴 운영 기간만 재오픈할 수 있으며, 재오픈 시 해당 기간의 마감 산출물은 함께 정리됩니다."
+            >
+              <Stack spacing={appLayout.cardGap}>
+                <InfoRow
+                  label="재오픈 대상"
+                  value={
+                    reopenPeriod
+                      ? reopenPeriod.monthLabel
+                      : '가장 최근 잠금 운영 기간 없음'
+                  }
+                />
+                <InfoRow
+                  label="권한"
+                  value={canReopenPeriod ? 'Owner' : (membershipRole ?? '-')}
+                />
+                <TextField
+                  label="재오픈 사유"
+                  multiline
+                  minRows={3}
+                  value={reopenReason}
+                  onChange={(event) => {
+                    setReopenReason(event.target.value);
+                  }}
+                  helperText="재무제표 재산출, 전표 정정 등 재오픈 사유를 남겨 주세요."
+                  disabled={!reopenPeriod || !canReopenPeriod || !hasWorkspace}
+                />
+                <Button
+                  variant="outlined"
+                  disabled={
+                    !reopenPeriod ||
+                    !canReopenPeriod ||
+                    !hasWorkspace ||
+                    reopenMutation.isPending ||
+                    reopenReason.trim().length === 0
+                  }
+                  onClick={async () => {
+                    if (!reopenPeriod) {
+                      return;
+                    }
+
+                    setFeedback(null);
+
+                    try {
+                      const result = await reopenMutation.mutateAsync({
+                        period: reopenPeriod,
+                        input: {
+                          reason: reopenReason.trim()
+                        }
+                      });
+                      setReopenReason('');
+                      setFeedback({
+                        severity: 'success',
+                        message: `${result.monthLabel} 월을 재오픈했습니다.`
+                      });
+                    } catch (mutationError) {
+                      setFeedback({
+                        severity: 'error',
+                        message:
+                          mutationError instanceof Error
+                            ? mutationError.message
+                            : '월 재오픈을 완료하지 못했습니다.'
+                      });
+                    }
+                  }}
+                  sx={{ alignSelf: 'flex-start' }}
+                >
+                  {reopenMutation.isPending
+                    ? '월 재오픈 진행 중...'
+                    : '월 재오픈'}
+                </Button>
+              </Stack>
+            </SectionCard>
+          </Stack>
         </Grid>
 
         <Grid size={{ xs: 12, xl: 7 }}>
@@ -536,9 +648,7 @@ export function AccountingPeriodsPage() {
                   )}
                 />
                 <Stack spacing={1}>
-                  <Typography variant="subtitle2">
-                    마감 스냅샷 라인
-                  </Typography>
+                  <Typography variant="subtitle2">마감 스냅샷 라인</Typography>
                   {latestClosingResult.closingSnapshot.lines.map((line) => (
                     <Typography
                       key={line.id}
@@ -548,8 +658,8 @@ export function AccountingPeriodsPage() {
                       {line.accountSubjectCode} {line.accountSubjectName}
                       {line.fundingAccountName
                         ? ` / ${line.fundingAccountName}`
-                        : ''}
-                      {' '}쨌 {formatWon(line.balanceAmount)}
+                        : ''}{' '}
+                      · {formatWon(line.balanceAmount)}
                     </Typography>
                   ))}
                 </Stack>
@@ -567,13 +677,28 @@ export function AccountingPeriodsPage() {
   );
 }
 
-function InfoRow({
-  label,
-  value
-}: {
-  label: string;
-  value: React.ReactNode;
-}) {
+function getAccountingPeriodEventLabel(
+  eventType: AccountingPeriodItem['statusHistory'][number]['eventType']
+) {
+  switch (eventType) {
+    case 'OPEN':
+      return '운영 시작';
+    case 'MOVE_TO_REVIEW':
+      return '검토 이동';
+    case 'START_CLOSING':
+      return '마감 시작';
+    case 'LOCK':
+      return '잠금';
+    case 'REOPEN':
+      return '재오픈';
+    case 'FORCE_LOCK':
+      return '강제 잠금';
+    default:
+      return eventType;
+  }
+}
+
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <Stack spacing={0.5}>
       <Typography variant="caption" color="text.secondary">

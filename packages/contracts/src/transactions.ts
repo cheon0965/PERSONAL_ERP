@@ -1,10 +1,13 @@
-﻿export type CollectedTransactionType = 'INCOME' | 'EXPENSE' | 'TRANSFER';
+import type { AuditActorType } from './accounting';
+
+export type CollectedTransactionType = 'INCOME' | 'EXPENSE' | 'TRANSFER';
 
 export type CollectedTransactionSourceKind = 'MANUAL' | 'RECURRING' | 'IMPORT';
 
 export type CollectedTransactionPostingStatus =
   | 'POSTED'
   | 'PENDING'
+  | 'CORRECTED'
   | 'CANCELLED';
 
 export type CollectedTransactionItem = {
@@ -60,6 +63,17 @@ export type JournalEntryItem = {
   memo: string | null;
   sourceCollectedTransactionId: string | null;
   sourceCollectedTransactionTitle: string | null;
+  reversesJournalEntryId?: string | null;
+  reversesJournalEntryNumber?: string | null;
+  reversedByJournalEntryId?: string | null;
+  reversedByJournalEntryNumber?: string | null;
+  correctsJournalEntryId?: string | null;
+  correctsJournalEntryNumber?: string | null;
+  correctionEntryIds?: string[];
+  correctionEntryNumbers?: string[];
+  correctionReason?: string | null;
+  createdByActorType?: AuditActorType;
+  createdByMembershipId?: string | null;
   lines: JournalLineItem[];
 };
 

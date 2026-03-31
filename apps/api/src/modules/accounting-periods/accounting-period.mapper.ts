@@ -3,6 +3,7 @@ import type {
   PeriodStatusHistoryItem
 } from '@personal-erp/contracts';
 import type {
+  AccountingPeriodEventType,
   AccountingPeriodStatus,
   AuditActorType,
   OpeningBalanceSourceKind
@@ -12,6 +13,7 @@ type PeriodStatusHistoryRecord = {
   id: string;
   fromStatus: AccountingPeriodStatus | null;
   toStatus: AccountingPeriodStatus;
+  eventType: AccountingPeriodEventType;
   reason: string | null;
   actorType: AuditActorType;
   actorMembershipId: string | null;
@@ -59,6 +61,7 @@ function mapPeriodStatusHistoryToItem(
     id: record.id,
     fromStatus: record.fromStatus,
     toStatus: record.toStatus,
+    eventType: record.eventType,
     reason: record.reason,
     actorType: record.actorType,
     actorMembershipId: record.actorMembershipId,

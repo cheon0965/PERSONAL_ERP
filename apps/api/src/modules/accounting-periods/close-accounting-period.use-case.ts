@@ -10,6 +10,7 @@ import type {
   CloseAccountingPeriodResponse
 } from '@personal-erp/contracts';
 import {
+  AccountingPeriodEventType,
   AccountingPeriodStatus,
   BalanceSnapshotKind,
   JournalEntryStatus
@@ -150,6 +151,7 @@ export class CloseAccountingPeriodUseCase {
           periodId: period.id,
           fromStatus: period.status,
           toStatus: AccountingPeriodStatus.LOCKED,
+          eventType: AccountingPeriodEventType.LOCK,
           reason,
           ...actorRef
         }

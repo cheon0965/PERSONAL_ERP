@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException
@@ -6,9 +7,12 @@ import {
 import type {
   AccountingPeriodItem,
   AuthenticatedUser,
-  CloseAccountingPeriodRequest
+  ReopenAccountingPeriodRequest
 } from '@personal-erp/contracts';
-import { AccountingPeriodStatus } from '@prisma/client';
+import {
+  AccountingPeriodEventType,
+  AccountingPeriodStatus
+} from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { readWorkspaceActorRef } from '../../common/auth/workspace-actor-ref.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
@@ -31,7 +35,7 @@ export class ReopenAccountingPeriodUseCase {
   async execute(
     user: AuthenticatedUser,
     periodId: string,
-    input: CloseAccountingPeriodRequest
+    input: ReopenAccountingPeriodRequest
   ): Promise<AccountingPeriodItem> {
     const workspace = requireCurrentWorkspace(user);
     const actorRef = readWorkspaceActorRef(workspace);
@@ -102,7 +106,10 @@ export class ReopenAccountingPeriodUseCase {
       );
     }
 
-    const reason = normalizeOptionalText(input.note);
+    const reason = normalizeOptionalText(input.reason);
+    if (!reason) {
+      throw new BadRequestException('재오픈 사유를 입력해 주세요.');
+    }
 
     await this.prisma.$transaction(async (tx) => {
       await tx.financialStatementSnapshot.deleteMany({
@@ -138,6 +145,7 @@ export class ReopenAccountingPeriodUseCase {
           periodId: period.id,
           fromStatus: period.status,
           toStatus: AccountingPeriodStatus.OPEN,
+          eventType: AccountingPeriodEventType.REOPEN,
           reason,
           ...actorRef
         }
@@ -170,7 +178,10 @@ function assertReopenPermission(
   );
 }
 
-function readNextAccountingPeriodBoundary(year: number, month: number): {
+function readNextAccountingPeriodBoundary(
+  year: number,
+  month: number
+): {
   nextYear: number;
   nextMonth: number;
 } {

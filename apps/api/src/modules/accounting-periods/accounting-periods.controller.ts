@@ -26,6 +26,7 @@ import { CloseAccountingPeriodUseCase } from './close-accounting-period.use-case
 import { AccountingPeriodsService } from './accounting-periods.service';
 import { CloseAccountingPeriodRequestDto } from './dto/close-accounting-period.dto';
 import { OpenAccountingPeriodRequestDto } from './dto/open-accounting-period.dto';
+import { ReopenAccountingPeriodRequestDto } from './dto/reopen-accounting-period.dto';
 import { OpenAccountingPeriodUseCase } from './open-accounting-period.use-case';
 import { ReopenAccountingPeriodUseCase } from './reopen-accounting-period.use-case';
 
@@ -147,7 +148,7 @@ export class AccountingPeriodsController {
     @Req() request: RequestWithContext,
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') periodId: string,
-    @Body() dto: CloseAccountingPeriodRequestDto
+    @Body() dto: ReopenAccountingPeriodRequestDto
   ): Promise<AccountingPeriodItem> {
     const workspace = requireCurrentWorkspace(user);
 
@@ -164,7 +165,8 @@ export class AccountingPeriodsController {
         workspace,
         details: {
           periodId: period.id,
-          periodMonth: period.monthLabel
+          periodMonth: period.monthLabel,
+          reason: dto.reason
         }
       });
 
