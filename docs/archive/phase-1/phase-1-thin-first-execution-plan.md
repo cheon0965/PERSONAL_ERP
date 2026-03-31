@@ -426,12 +426,21 @@
 - 마감 트랜잭션 일관성
 - 상태 전이 예외 흐름
 
+현재 구현 기준으로는 아래 보강이 포함된다.
+
+- 운영 기간 오픈 시 `AccountingPeriod` + `PeriodStatusHistory` + 최초 `OpeningBalanceSnapshot`을 하나의 write transaction으로 묶는다.
+- 전표 확정 시 `CollectedTransaction` 상태/잠금 여부/기전표 존재를 transaction 안에서 다시 검증한 뒤 `JournalEntry`를 생성한다.
+- 재오픈은 최신 잠금 기간에만 허용하고, `CarryForwardRecord` 또는 다음 기간 `OpeningBalanceSnapshot`이 존재하면 차단한다.
+
 ### 7.3 3단계: 업로드와 자동화 강화
 
-- 중복 판정
-- 업로드 파서 다양화
-- 자동 매칭
-- 자동 분개 정책 고도화
+- `ImportBatch` / `ImportedRow` API와 `/imports` 최소 운영 화면을 연결한다.
+- `sourceFingerprint`는 정규화된 `v1` 규칙으로 생성하되, hard unique가 아니라 중복 후보 식별 근거로 사용한다.
+- 파싱 완료 행만 `ImportedRow -> CollectedTransaction`으로 명시 승격한다.
+- 유일한 `PlanItem` 후보가 있으면 `matchedPlanItemId`와 `PlanItemStatus.MATCHED`를 자동 반영한다.
+- category가 비어 있어도 유일한 `PlanItem`에서 보완 가능하고 fingerprint 충돌이 없으면 `READY_TO_POST`까지 자동 준비한다.
+- 기존 `sourceFingerprint` 충돌이 있으면 자동 바인딩/자동 준비를 멈추고 `Collected` 상태로 남긴다.
+- binary 업로드/다중 포맷 확장은 후속 단계로 남기되, 현재 thin-first 경계는 UTF-8 텍스트 업로드로 고정한다.
 
 ### 7.4 4단계: 정정/반전/재오픈 강화
 

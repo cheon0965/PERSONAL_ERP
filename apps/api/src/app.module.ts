@@ -15,6 +15,7 @@ import { JournalEntriesModule } from './modules/journal-entries/public';
 import { PlanItemsModule } from './modules/plan-items/public';
 import { FinancialStatementsModule } from './modules/financial-statements/public';
 import { CarryForwardsModule } from './modules/carry-forwards/public';
+import { ImportBatchesModule } from './modules/import-batches/public';
 import { RecurringRulesModule } from './modules/recurring-rules/public';
 import { InsurancePoliciesModule } from './modules/insurance-policies/insurance-policies.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
@@ -42,6 +43,7 @@ import { ForecastModule } from './modules/forecast/public';
     PlanItemsModule,
     FinancialStatementsModule,
     CarryForwardsModule,
+    ImportBatchesModule,
     RecurringRulesModule,
     InsurancePoliciesModule,
     VehiclesModule,

@@ -15,6 +15,10 @@ import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { mapAccountingPeriodRecordToItem } from './accounting-period.mapper';
 import { normalizeOptionalText } from './accounting-period.policy';
+import {
+  assertAccountingPeriodCanBeReopened,
+  assertAccountingPeriodCanBeReopenedWithoutDependents
+} from './accounting-period-transition.policy';
 import { AccountingPeriodsService } from './accounting-periods.service';
 
 @Injectable()
@@ -41,12 +45,45 @@ export class ReopenAccountingPeriodUseCase {
       );
 
     if (!period) {
-      throw new NotFoundException('??? ?? ??? ?? ? ????.');
+      throw new NotFoundException('재오픈할 운영 기간을 찾을 수 없습니다.');
     }
 
-    if (period.status !== AccountingPeriodStatus.LOCKED) {
-      throw new ConflictException('??? ?? ??? ???? ? ????.');
-    }
+    assertAccountingPeriodCanBeReopened(period.status);
+
+    const { nextYear, nextMonth } = readNextAccountingPeriodBoundary(
+      period.year,
+      period.month
+    );
+    const [existingCarryForwardRecord, nextPeriod] = await Promise.all([
+      this.prisma.carryForwardRecord.findFirst({
+        where: {
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId,
+          fromPeriodId: period.id
+        }
+      }),
+      this.prisma.accountingPeriod.findFirst({
+        where: {
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId,
+          year: nextYear,
+          month: nextMonth
+        },
+        include: {
+          openingBalanceSnapshot: {
+            select: {
+              sourceKind: true
+            }
+          }
+        }
+      })
+    ]);
+
+    assertAccountingPeriodCanBeReopenedWithoutDependents({
+      carryForwardRecordId: existingCarryForwardRecord?.id ?? null,
+      nextOpeningBalanceSourceKind:
+        nextPeriod?.openingBalanceSnapshot?.sourceKind ?? null
+    });
 
     const latestPeriod = await this.prisma.accountingPeriod.findFirst({
       where: {
@@ -61,7 +98,7 @@ export class ReopenAccountingPeriodUseCase {
 
     if (!latestPeriod || latestPeriod.id !== period.id) {
       throw new ConflictException(
-        '?? ??? ??? ?? ??? ???? ? ????.'
+        '가장 최근 운영 기간만 재오픈할 수 있습니다.'
       );
     }
 
@@ -116,7 +153,7 @@ export class ReopenAccountingPeriodUseCase {
 
     if (!refreshedPeriod) {
       throw new NotFoundException(
-        '???? ?? ??? ?? ???? ?????.'
+        '재오픈 이후 운영 기간을 다시 불러오지 못했습니다.'
       );
     }
 
@@ -131,4 +168,21 @@ function assertReopenPermission(
     membershipRole,
     'accounting_period.reopen'
   );
+}
+
+function readNextAccountingPeriodBoundary(year: number, month: number): {
+  nextYear: number;
+  nextMonth: number;
+} {
+  if (month === 12) {
+    return {
+      nextYear: year + 1,
+      nextMonth: 1
+    };
+  }
+
+  return {
+    nextYear: year,
+    nextMonth: month + 1
+  };
 }

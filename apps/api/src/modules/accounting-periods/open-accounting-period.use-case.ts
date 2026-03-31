@@ -24,6 +24,10 @@ import {
   normalizeOptionalText,
   readYearMonth
 } from './accounting-period.policy';
+import {
+  assertAccountingPeriodCanOpenAfterPrevious,
+  assertAccountingPeriodCanRecordInitialOpen
+} from './accounting-period-transition.policy';
 
 @Injectable()
 export class OpenAccountingPeriodUseCase {
@@ -78,11 +82,7 @@ export class OpenAccountingPeriodUseCase {
     }
 
     if (latestPeriod) {
-      if (latestPeriod.status !== AccountingPeriodStatus.LOCKED) {
-        throw new BadRequestException(
-          '새 운영 기간을 열기 전에 이전 기간을 먼저 잠가야 합니다.'
-        );
-      }
+      assertAccountingPeriodCanOpenAfterPrevious(latestPeriod.status);
 
       if (
         compareYearMonth(year, month, latestPeriod.year, latestPeriod.month) <=
@@ -94,44 +94,55 @@ export class OpenAccountingPeriodUseCase {
       }
     }
 
-    const createdPeriod = await this.prisma.accountingPeriod.create({
-      data: {
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId,
-        year,
-        month,
-        startDate: start,
-        endDate: end,
-        status: AccountingPeriodStatus.OPEN
-      }
-    });
+    assertAccountingPeriodCanRecordInitialOpen();
 
-    const createdStatusHistory = await this.prisma.periodStatusHistory.create({
-      data: {
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId,
-        periodId: createdPeriod.id,
-        fromStatus: null,
-        toStatus: AccountingPeriodStatus.OPEN,
-        reason: normalizeOptionalText(input.note),
-        ...actorRef
-      }
-    });
-
-    const openingBalanceSnapshot = shouldCreateOpeningSnapshot
-      ? await this.prisma.openingBalanceSnapshot.create({
+    const { createdPeriod, createdStatusHistory, openingBalanceSnapshot } =
+      await this.prisma.$transaction(async (tx) => {
+        const createdPeriod = await tx.accountingPeriod.create({
           data: {
             tenantId: workspace.tenantId,
             ledgerId: workspace.ledgerId,
-            effectivePeriodId: createdPeriod.id,
-            sourceKind: 'INITIAL_SETUP',
-            ...createdByActorRef
-          },
-          select: {
-            sourceKind: true
+            year,
+            month,
+            startDate: start,
+            endDate: end,
+            status: AccountingPeriodStatus.OPEN
           }
-        })
-      : null;
+        });
+
+        const createdStatusHistory = await tx.periodStatusHistory.create({
+          data: {
+            tenantId: workspace.tenantId,
+            ledgerId: workspace.ledgerId,
+            periodId: createdPeriod.id,
+            fromStatus: null,
+            toStatus: AccountingPeriodStatus.OPEN,
+            reason: normalizeOptionalText(input.note),
+            ...actorRef
+          }
+        });
+
+        const openingBalanceSnapshot = shouldCreateOpeningSnapshot
+          ? await tx.openingBalanceSnapshot.create({
+              data: {
+                tenantId: workspace.tenantId,
+                ledgerId: workspace.ledgerId,
+                effectivePeriodId: createdPeriod.id,
+                sourceKind: 'INITIAL_SETUP',
+                ...createdByActorRef
+              },
+              select: {
+                sourceKind: true
+              }
+            })
+          : null;
+
+        return {
+          createdPeriod,
+          createdStatusHistory,
+          openingBalanceSnapshot
+        };
+      });
 
     return mapAccountingPeriodRecordToItem({
       ...createdPeriod,

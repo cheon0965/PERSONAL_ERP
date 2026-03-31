@@ -1,6 +1,5 @@
 ﻿import {
   BadRequestException,
-  ConflictException,
   Injectable,
   NotFoundException
 } from '@nestjs/common';
@@ -28,12 +27,19 @@ import {
   normalizeOptionalText,
   type JournalAdjustmentLineDraft
 } from './journal-entry-adjustment.policy';
+import {
+  assertJournalEntryCanBeCorrected
+} from './journal-entry-transition.policy';
+import {
+  assertCollectedTransactionCanBeCorrected
+} from '../collected-transactions/public';
 
 const journalEntryItemInclude = {
   sourceCollectedTransaction: {
     select: {
       id: true,
-      title: true
+      title: true,
+      status: true
     }
   },
   lines: {
@@ -103,11 +109,7 @@ export class CorrectJournalEntryUseCase {
       throw new NotFoundException('Journal entry not found.');
     }
 
-    if (originalJournalEntry.status !== JournalEntryStatus.POSTED) {
-      throw new ConflictException(
-        'Only posted journal entries can be corrected.'
-      );
-    }
+    assertJournalEntryCanBeCorrected(originalJournalEntry.status);
 
     await assertJournalAdjustmentReferencesExist(
       this.prisma,
@@ -158,10 +160,14 @@ export class CorrectJournalEntryUseCase {
         }
       });
 
-      if (originalJournalEntry.sourceCollectedTransactionId) {
+      if (originalJournalEntry.sourceCollectedTransaction) {
+        assertCollectedTransactionCanBeCorrected(
+          originalJournalEntry.sourceCollectedTransaction.status
+        );
+
         await tx.collectedTransaction.update({
           where: {
-            id: originalJournalEntry.sourceCollectedTransactionId
+            id: originalJournalEntry.sourceCollectedTransaction.id
           },
           data: {
             status: CollectedTransactionStatus.CORRECTED

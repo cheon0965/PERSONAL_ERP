@@ -21,6 +21,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { mapAccountingPeriodRecordToItem } from './accounting-period.mapper';
 import { mapClosingSnapshotRecordToItem } from './closing-snapshot.mapper';
 import { normalizeOptionalText } from './accounting-period.policy';
+import { assertAccountingPeriodCanBeClosed } from './accounting-period-transition.policy';
 import {
   aggregateClosingSnapshotLines,
   summarizeClosingSnapshot
@@ -54,9 +55,7 @@ export class CloseAccountingPeriodUseCase {
       throw new NotFoundException('마감할 운영 기간을 찾을 수 없습니다.');
     }
 
-    if (period.status === AccountingPeriodStatus.LOCKED) {
-      throw new ConflictException('이미 잠긴 운영 기간입니다.');
-    }
+    assertAccountingPeriodCanBeClosed(period.status);
 
     const existingClosingSnapshot =
       await this.prisma.closingSnapshot.findUnique({

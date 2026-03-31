@@ -1,8 +1,6 @@
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
-  InternalServerErrorException,
   NotFoundException
 } from '@nestjs/common';
 import type {
@@ -21,11 +19,14 @@ import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { mapJournalEntryRecordToItem } from '../journal-entries/journal-entry-item.mapper';
 import {
+  assertConfirmJournalAccountSubjectIdsResolved,
+  assertConfirmJournalLinesSupported,
   buildConfirmCollectedTransactionEntryNumber,
   REQUIRED_CONFIRM_ACCOUNT_SUBJECT_CODES,
-  resolveConfirmCollectedTransactionJournalLines,
-  resolveConfirmJournalAccountSubjectIds
+  resolveConfirmJournalAccountSubjectIds,
+  resolveConfirmCollectedTransactionJournalLines
 } from './confirm-collected-transaction.policy';
+import { assertCollectedTransactionCanBeConfirmed } from './collected-transaction-transition.policy';
 
 @Injectable()
 export class ConfirmCollectedTransactionUseCase {
@@ -88,26 +89,11 @@ export class ConfirmCollectedTransactionUseCase {
     }
 
     const period = collectedTransaction.period;
-
-    if (period.status === 'LOCKED') {
-      throw new BadRequestException(
-        'Collected transaction in a locked period cannot be confirmed.'
-      );
-    }
-
-    if (collectedTransaction.postedJournalEntry) {
-      throw new ConflictException('Collected transaction is already posted.');
-    }
-
-    if (
-      collectedTransaction.status === CollectedTransactionStatus.POSTED ||
-      collectedTransaction.status === CollectedTransactionStatus.CORRECTED ||
-      collectedTransaction.status === CollectedTransactionStatus.LOCKED
-    ) {
-      throw new ConflictException(
-        'Collected transaction in current status cannot be confirmed.'
-      );
-    }
+    assertCollectedTransactionCanBeConfirmed({
+      status: collectedTransaction.status,
+      periodStatus: period.status,
+      postedJournalEntryId: collectedTransaction.postedJournalEntry?.id ?? null
+    });
 
     const accountSubjects = await this.prisma.accountSubject.findMany({
       where: {
@@ -124,48 +110,84 @@ export class ConfirmCollectedTransactionUseCase {
       }
     });
 
-    const accountSubjectIds =
-      resolveConfirmJournalAccountSubjectIds(accountSubjects);
-
-    if (!accountSubjectIds) {
-      throw new InternalServerErrorException(
-        'Required account subjects are missing in this ledger.'
-      );
-    }
-
-    const journalLines = resolveConfirmCollectedTransactionJournalLines({
-      postingPolicyKey:
-        collectedTransaction.ledgerTransactionType.postingPolicyKey,
-      amount: collectedTransaction.amount,
-      title: collectedTransaction.title,
-      fundingAccountId: collectedTransaction.fundingAccount.id,
-      accountSubjectIds
-    });
-
-    if (journalLines.kind === 'requires_counterparty_account') {
-      throw new BadRequestException(
-        'This posting policy requires a second account selection.'
-      );
-    }
-
-    if (journalLines.kind === 'unsupported_policy') {
-      throw new BadRequestException(
-        'This posting policy is not supported for collected transaction confirmation.'
-      );
-    }
+    const accountSubjectIds = assertConfirmJournalAccountSubjectIdsResolved(
+      resolveConfirmJournalAccountSubjectIds(accountSubjects)
+    );
 
     const journalEntry = await this.prisma.$transaction(async (tx) => {
+      const latestCollectedTransaction = await tx.collectedTransaction.findFirst({
+        where: {
+          id: collectedTransaction.id,
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId
+        },
+        include: {
+          period: {
+            select: {
+              id: true,
+              year: true,
+              month: true,
+              status: true
+            }
+          },
+          fundingAccount: {
+            select: {
+              id: true
+            }
+          },
+          ledgerTransactionType: {
+            select: {
+              postingPolicyKey: true
+            }
+          },
+          postedJournalEntry: {
+            select: {
+              id: true
+            }
+          }
+        }
+      });
+
+      if (!latestCollectedTransaction) {
+        throw new NotFoundException('Collected transaction not found.');
+      }
+
+      if (!latestCollectedTransaction.period) {
+        throw new BadRequestException(
+          'Collected transaction is not linked to an accounting period.'
+        );
+      }
+
+      const latestPeriod = latestCollectedTransaction.period;
+      assertCollectedTransactionCanBeConfirmed({
+        status: latestCollectedTransaction.status,
+        periodStatus: latestPeriod.status,
+        postedJournalEntryId:
+          latestCollectedTransaction.postedJournalEntry?.id ?? null
+      });
+
+      const journalLines = assertConfirmJournalLinesSupported(
+        resolveConfirmCollectedTransactionJournalLines({
+          postingPolicyKey:
+            latestCollectedTransaction.ledgerTransactionType.postingPolicyKey,
+          amount: latestCollectedTransaction.amount,
+          title: latestCollectedTransaction.title,
+          fundingAccountId: latestCollectedTransaction.fundingAccount.id,
+          accountSubjectIds
+        })
+      );
+
       const existingCount = await tx.journalEntry.count({
         where: {
           tenantId: workspace.tenantId,
           ledgerId: workspace.ledgerId,
-          periodId: period.id
+          periodId: latestPeriod.id
         }
       });
 
       const entryNumber = buildConfirmCollectedTransactionEntryNumber(
-        period.year,
-        period.month,
+        latestPeriod.year,
+        latestPeriod.month,
         existingCount + 1
       );
 
@@ -173,16 +195,17 @@ export class ConfirmCollectedTransactionUseCase {
         data: {
           tenantId: workspace.tenantId,
           ledgerId: workspace.ledgerId,
-          periodId: period.id,
+          periodId: latestPeriod.id,
           entryNumber,
-          entryDate: collectedTransaction.occurredOn,
+          entryDate: latestCollectedTransaction.occurredOn,
           sourceKind: JournalEntrySourceKind.COLLECTED_TRANSACTION,
-          sourceCollectedTransactionId: collectedTransaction.id,
+          sourceCollectedTransactionId: latestCollectedTransaction.id,
           status: JournalEntryStatus.POSTED,
-          memo: collectedTransaction.memo ?? collectedTransaction.title,
+          memo:
+            latestCollectedTransaction.memo ?? latestCollectedTransaction.title,
           ...createdByActorRef,
           lines: {
-            create: journalLines.lines
+            create: journalLines
           }
         },
         include: {
@@ -215,7 +238,7 @@ export class ConfirmCollectedTransactionUseCase {
 
       await tx.collectedTransaction.update({
         where: {
-          id: collectedTransaction.id
+          id: latestCollectedTransaction.id
         },
         data: {
           status: CollectedTransactionStatus.POSTED
