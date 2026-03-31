@@ -1,4 +1,4 @@
-﻿import * as argon2 from 'argon2';
+import * as argon2 from 'argon2';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import type { FinancialStatementPayload } from '@personal-erp/contracts';
@@ -118,6 +118,13 @@ type RequestTestState = {
     periodId: string;
     fromStatus: AccountingPeriodStatus | null;
     toStatus: AccountingPeriodStatus;
+    eventType:
+      | 'OPEN'
+      | 'MOVE_TO_REVIEW'
+      | 'START_CLOSING'
+      | 'LOCK'
+      | 'REOPEN'
+      | 'FORCE_LOCK';
     reason: string | null;
     actorType: AuditActorType;
     actorMembershipId: string | null;
@@ -1159,29 +1166,63 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
       (candidate) =>
         candidate.sourceCollectedTransactionId === collectedTransactionId
     ) ?? null;
-  const projectJournalEntry = (
-    candidate: RequestTestState['journalEntries'][number],
-    include?: {
-      sourceCollectedTransaction?: {
-        select?: { id?: boolean; title?: boolean; status?: boolean };
-      };
-      lines?: {
-        include?: {
-          accountSubject?: {
-            select?: { code?: boolean; name?: boolean };
-          };
-          fundingAccount?: {
-            select?: { name?: boolean };
-          };
+
+  type JournalEntryRelationInclude = {
+    select?: { id?: boolean; entryNumber?: boolean };
+  };
+
+  type JournalEntryInclude = {
+    sourceCollectedTransaction?: {
+      select?: { id?: boolean; title?: boolean; status?: boolean };
+    };
+    reversesJournalEntry?: JournalEntryRelationInclude;
+    reversedByJournalEntry?: JournalEntryRelationInclude;
+    correctsJournalEntry?: JournalEntryRelationInclude;
+    correctionEntries?: {
+      select?: { id?: boolean; entryNumber?: boolean };
+      orderBy?: { createdAt?: 'asc' | 'desc' };
+    };
+    lines?: {
+      include?: {
+        accountSubject?: {
+          select?: { code?: boolean; name?: boolean };
+        };
+        fundingAccount?: {
+          select?: { name?: boolean };
         };
       };
-    }
+      orderBy?: { lineNumber?: 'asc' | 'desc' };
+    };
+  };
+
+  const projectJournalEntry = (
+    candidate: RequestTestState['journalEntries'][number],
+    include?: JournalEntryInclude
   ) => {
     const sourceCollectedTransaction = candidate.sourceCollectedTransactionId
       ? (state.collectedTransactions.find(
           (item) => item.id === candidate.sourceCollectedTransactionId
         ) ?? null)
       : null;
+    const reversesJournalEntry = candidate.reversesJournalEntryId
+      ? resolveJournalEntry(candidate.reversesJournalEntryId)
+      : null;
+    const reversedByJournalEntry =
+      state.journalEntries.find(
+        (item) => item.reversesJournalEntryId === candidate.id
+      ) ?? null;
+    const correctsJournalEntry = candidate.correctsJournalEntryId
+      ? resolveJournalEntry(candidate.correctsJournalEntryId)
+      : null;
+    const correctionEntries = state.journalEntries
+      .filter((item) => item.correctsJournalEntryId === candidate.id)
+      .sort((left, right) => {
+        if (include?.correctionEntries?.orderBy?.createdAt === 'desc') {
+          return right.createdAt.getTime() - left.createdAt.getTime();
+        }
+
+        return left.createdAt.getTime() - right.createdAt.getTime();
+      });
 
     return {
       ...candidate,
@@ -1200,6 +1241,58 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
                     : {})
                 }
               : null
+          }
+        : {}),
+      ...(include?.reversesJournalEntry
+        ? {
+            reversesJournalEntry: reversesJournalEntry
+              ? {
+                  ...(include.reversesJournalEntry.select?.id
+                    ? { id: reversesJournalEntry.id }
+                    : {}),
+                  ...(include.reversesJournalEntry.select?.entryNumber
+                    ? { entryNumber: reversesJournalEntry.entryNumber }
+                    : {})
+                }
+              : null
+          }
+        : {}),
+      ...(include?.reversedByJournalEntry
+        ? {
+            reversedByJournalEntry: reversedByJournalEntry
+              ? {
+                  ...(include.reversedByJournalEntry.select?.id
+                    ? { id: reversedByJournalEntry.id }
+                    : {}),
+                  ...(include.reversedByJournalEntry.select?.entryNumber
+                    ? { entryNumber: reversedByJournalEntry.entryNumber }
+                    : {})
+                }
+              : null
+          }
+        : {}),
+      ...(include?.correctsJournalEntry
+        ? {
+            correctsJournalEntry: correctsJournalEntry
+              ? {
+                  ...(include.correctsJournalEntry.select?.id
+                    ? { id: correctsJournalEntry.id }
+                    : {}),
+                  ...(include.correctsJournalEntry.select?.entryNumber
+                    ? { entryNumber: correctsJournalEntry.entryNumber }
+                    : {})
+                }
+              : null
+          }
+        : {}),
+      ...(include?.correctionEntries
+        ? {
+            correctionEntries: correctionEntries.map((item) => ({
+              ...(include.correctionEntries?.select?.id ? { id: item.id } : {}),
+              ...(include.correctionEntries?.select?.entryNumber
+                ? { entryNumber: item.entryNumber }
+                : {})
+            }))
           }
         : {}),
       ...(include?.lines
@@ -1860,6 +1953,7 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
               id?: boolean;
               fromStatus?: boolean;
               toStatus?: boolean;
+              eventType?: boolean;
               reason?: boolean;
               actorType?: boolean;
               actorMembershipId?: boolean;
@@ -1964,6 +2058,9 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
                 ...(args.include?.statusHistory?.select?.toStatus
                   ? { toStatus: history.toStatus }
                   : {}),
+                ...(args.include?.statusHistory?.select?.eventType
+                  ? { eventType: history.eventType }
+                  : {}),
                 ...(args.include?.statusHistory?.select?.reason
                   ? { reason: history.reason }
                   : {}),
@@ -2019,6 +2116,7 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
               id?: boolean;
               fromStatus?: boolean;
               toStatus?: boolean;
+              eventType?: boolean;
               reason?: boolean;
               actorType?: boolean;
               actorMembershipId?: boolean;
@@ -2061,6 +2159,9 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
                     : {}),
                   ...(args.include?.statusHistory?.select?.toStatus
                     ? { toStatus: history.toStatus }
+                    : {}),
+                  ...(args.include?.statusHistory?.select?.eventType
+                    ? { eventType: history.eventType }
                     : {}),
                   ...(args.include?.statusHistory?.select?.reason
                     ? { reason: history.reason }
@@ -2159,6 +2260,13 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
           periodId: string;
           fromStatus: AccountingPeriodStatus | null;
           toStatus: AccountingPeriodStatus;
+          eventType:
+            | 'OPEN'
+            | 'MOVE_TO_REVIEW'
+            | 'START_CLOSING'
+            | 'LOCK'
+            | 'REOPEN'
+            | 'FORCE_LOCK';
           reason: string | null;
           actorType: AuditActorType;
           actorMembershipId: string | null;
@@ -2171,6 +2279,7 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
           periodId: args.data.periodId,
           fromStatus: args.data.fromStatus,
           toStatus: args.data.toStatus,
+          eventType: args.data.eventType,
           reason: args.data.reason,
           actorType: args.data.actorType,
           actorMembershipId: args.data.actorMembershipId,
@@ -3468,22 +3577,7 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
           ledgerId?: string;
           sourceCollectedTransactionId?: string | null;
         };
-        include?: {
-          sourceCollectedTransaction?: {
-            select?: { id?: boolean; title?: boolean; status?: boolean };
-          };
-          lines?: {
-            include?: {
-              accountSubject?: {
-                select?: { code?: boolean; name?: boolean };
-              };
-              fundingAccount?: {
-                select?: { name?: boolean };
-              };
-            };
-            orderBy?: { lineNumber?: 'asc' | 'desc' };
-          };
-        };
+        include?: JournalEntryInclude;
       }) => {
         const candidate = state.journalEntries.find((item) => {
           const matchesId = !args.where?.id || item.id === args.where.id;
@@ -3514,27 +3608,16 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
 
         return projectJournalEntry(candidate, {
           sourceCollectedTransaction: args.include.sourceCollectedTransaction,
+          reversesJournalEntry: args.include.reversesJournalEntry,
+          reversedByJournalEntry: args.include.reversedByJournalEntry,
+          correctsJournalEntry: args.include.correctsJournalEntry,
+          correctionEntries: args.include.correctionEntries,
           lines: args.include.lines
         });
       },
       findMany: async (args: {
         where?: { tenantId?: string; ledgerId?: string };
-        include?: {
-          sourceCollectedTransaction?: {
-            select?: { id?: boolean; title?: boolean; status?: boolean };
-          };
-          lines?: {
-            include?: {
-              accountSubject?: {
-                select?: { code?: boolean; name?: boolean };
-              };
-              fundingAccount?: {
-                select?: { name?: boolean };
-              };
-            };
-            orderBy?: { lineNumber?: 'asc' | 'desc' };
-          };
-        };
+        include?: JournalEntryInclude;
         orderBy?: Array<{
           entryDate?: 'asc' | 'desc';
           createdAt?: 'asc' | 'desc';
@@ -3566,6 +3649,10 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
           projectJournalEntry(candidate, {
             sourceCollectedTransaction:
               args.include?.sourceCollectedTransaction,
+            reversesJournalEntry: args.include?.reversesJournalEntry,
+            reversedByJournalEntry: args.include?.reversedByJournalEntry,
+            correctsJournalEntry: args.include?.correctsJournalEntry,
+            correctionEntries: args.include?.correctionEntries,
             lines: args.include?.lines
           })
         );
@@ -3602,22 +3689,7 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
             }>;
           };
         };
-        include?: {
-          sourceCollectedTransaction?: {
-            select?: { id?: boolean; title?: boolean; status?: boolean };
-          };
-          lines?: {
-            include?: {
-              accountSubject?: {
-                select?: { code?: boolean; name?: boolean };
-              };
-              fundingAccount?: {
-                select?: { name?: boolean };
-              };
-            };
-            orderBy?: { lineNumber?: 'asc' | 'desc' };
-          };
-        };
+        include?: JournalEntryInclude;
       }) => {
         const created = {
           id: `je-${state.journalEntries.length + 1}`,
@@ -3657,6 +3729,10 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
 
         return projectJournalEntry(created, {
           sourceCollectedTransaction: args.include.sourceCollectedTransaction,
+          reversesJournalEntry: args.include.reversesJournalEntry,
+          reversedByJournalEntry: args.include.reversedByJournalEntry,
+          correctsJournalEntry: args.include.correctsJournalEntry,
+          correctionEntries: args.include.correctionEntries,
           lines: args.include.lines
         });
       },

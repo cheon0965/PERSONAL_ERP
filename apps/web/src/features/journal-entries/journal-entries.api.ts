@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   AccountSubjectItem,
   CorrectJournalEntryRequest,
   FundingAccountItem,
@@ -19,6 +19,17 @@ export const mockJournalEntries: JournalEntryItem[] = [
     memo: '3월 급여',
     sourceCollectedTransactionId: 'txn-1',
     sourceCollectedTransactionTitle: '3월 급여',
+    reversesJournalEntryId: null,
+    reversesJournalEntryNumber: null,
+    reversedByJournalEntryId: null,
+    reversedByJournalEntryNumber: null,
+    correctsJournalEntryId: null,
+    correctsJournalEntryNumber: null,
+    correctionEntryIds: [],
+    correctionEntryNumbers: [],
+    correctionReason: null,
+    createdByActorType: 'TENANT_MEMBERSHIP',
+    createdByMembershipId: 'membership-demo',
     lines: [
       {
         id: 'jel-demo-1',
@@ -39,6 +50,92 @@ export const mockJournalEntries: JournalEntryItem[] = [
         debitAmount: 0,
         creditAmount: 3200000,
         description: '3월 급여'
+      }
+    ]
+  },
+  {
+    id: 'je-demo-2',
+    entryNumber: '202603-0002',
+    entryDate: '2026-03-03T00:00:00.000Z',
+    status: 'SUPERSEDED',
+    sourceKind: 'COLLECTED_TRANSACTION',
+    memo: '주유',
+    sourceCollectedTransactionId: 'txn-2',
+    sourceCollectedTransactionTitle: '주유',
+    reversesJournalEntryId: null,
+    reversesJournalEntryNumber: null,
+    reversedByJournalEntryId: null,
+    reversedByJournalEntryNumber: null,
+    correctsJournalEntryId: null,
+    correctsJournalEntryNumber: null,
+    correctionEntryIds: ['je-demo-2-c1'],
+    correctionEntryNumbers: ['202604-0001'],
+    correctionReason: null,
+    createdByActorType: 'TENANT_MEMBERSHIP',
+    createdByMembershipId: 'membership-demo',
+    lines: [
+      {
+        id: 'jel-demo-2-1',
+        lineNumber: 1,
+        accountSubjectCode: '5100',
+        accountSubjectName: '차량유지비',
+        fundingAccountName: null,
+        debitAmount: 84000,
+        creditAmount: 0,
+        description: '주유'
+      },
+      {
+        id: 'jel-demo-2-2',
+        lineNumber: 2,
+        accountSubjectCode: '1010',
+        accountSubjectName: '보통예금',
+        fundingAccountName: '생활비 통장',
+        debitAmount: 0,
+        creditAmount: 84000,
+        description: '주유'
+      }
+    ]
+  },
+  {
+    id: 'je-demo-2-c1',
+    entryNumber: '202604-0001',
+    entryDate: '2026-04-04T00:00:00.000Z',
+    status: 'POSTED',
+    sourceKind: 'MANUAL_ADJUSTMENT',
+    memo: '카드 승인 금액 확인 후 정정',
+    sourceCollectedTransactionId: null,
+    sourceCollectedTransactionTitle: null,
+    reversesJournalEntryId: null,
+    reversesJournalEntryNumber: null,
+    reversedByJournalEntryId: null,
+    reversedByJournalEntryNumber: null,
+    correctsJournalEntryId: 'je-demo-2',
+    correctsJournalEntryNumber: '202603-0002',
+    correctionEntryIds: [],
+    correctionEntryNumbers: [],
+    correctionReason: '카드 승인 금액 확인 후 정정',
+    createdByActorType: 'TENANT_MEMBERSHIP',
+    createdByMembershipId: 'membership-demo',
+    lines: [
+      {
+        id: 'jel-demo-2-c1-1',
+        lineNumber: 1,
+        accountSubjectCode: '5100',
+        accountSubjectName: '차량유지비',
+        fundingAccountName: null,
+        debitAmount: 95000,
+        creditAmount: 0,
+        description: '정정 주유'
+      },
+      {
+        id: 'jel-demo-2-c1-2',
+        lineNumber: 2,
+        accountSubjectCode: '1010',
+        accountSubjectName: '보통예금',
+        fundingAccountName: '생활비 통장',
+        debitAmount: 0,
+        creditAmount: 95000,
+        description: '정정 주유'
       }
     ]
   }
@@ -85,6 +182,17 @@ export function buildReverseJournalEntryFallbackItem(
     memo: input.reason?.trim() || `Reversal of ${entry.entryNumber}`,
     sourceCollectedTransactionId: null,
     sourceCollectedTransactionTitle: null,
+    reversesJournalEntryId: entry.id,
+    reversesJournalEntryNumber: entry.entryNumber,
+    reversedByJournalEntryId: null,
+    reversedByJournalEntryNumber: null,
+    correctsJournalEntryId: null,
+    correctsJournalEntryNumber: null,
+    correctionEntryIds: [],
+    correctionEntryNumbers: [],
+    correctionReason: null,
+    createdByActorType: 'TENANT_MEMBERSHIP',
+    createdByMembershipId: null,
     lines: entry.lines.map((line, index) => ({
       id: `jel-demo-reverse-${index + 1}`,
       lineNumber: index + 1,
@@ -115,6 +223,17 @@ export function buildCorrectJournalEntryFallbackItem(
     memo: input.reason,
     sourceCollectedTransactionId: null,
     sourceCollectedTransactionTitle: null,
+    reversesJournalEntryId: null,
+    reversesJournalEntryNumber: null,
+    reversedByJournalEntryId: null,
+    reversedByJournalEntryNumber: null,
+    correctsJournalEntryId: entry.id,
+    correctsJournalEntryNumber: entry.entryNumber,
+    correctionEntryIds: [],
+    correctionEntryNumbers: [],
+    correctionReason: input.reason,
+    createdByActorType: 'TENANT_MEMBERSHIP',
+    createdByMembershipId: null,
     lines: input.lines.map((line, index) => {
       const accountSubject =
         referenceData.accountSubjects.find(

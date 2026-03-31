@@ -40,9 +40,7 @@ type CollectedTransactionRecord = {
 };
 
 @Injectable()
-export class PrismaCollectedTransactionStoreAdapter
-  implements CollectedTransactionStorePort
-{
+export class PrismaCollectedTransactionStoreAdapter implements CollectedTransactionStorePort {
   constructor(private readonly prisma: PrismaService) {}
 
   async findRecentInWorkspace(
@@ -148,8 +146,8 @@ export class PrismaCollectedTransactionStoreAdapter
   private async findLedgerTransactionTypeId(
     record: CreateCollectedTransactionRecord
   ): Promise<string> {
-    const ledgerTransactionType = await this.prisma.ledgerTransactionType.findFirst(
-      {
+    const ledgerTransactionType =
+      await this.prisma.ledgerTransactionType.findFirst({
         where: {
           tenantId: record.tenantId,
           ledgerId: record.ledgerId,
@@ -159,8 +157,7 @@ export class PrismaCollectedTransactionStoreAdapter
         select: {
           id: true
         }
-      }
-    );
+      });
 
     if (!ledgerTransactionType) {
       throw new InternalServerErrorException(
@@ -194,7 +191,8 @@ function mapCollectedTransactionRecordToStoredTransaction(
         }
       : null,
     postedJournalEntryId: transaction.postedJournalEntry?.id ?? null,
-    postedJournalEntryNumber: transaction.postedJournalEntry?.entryNumber ?? null
+    postedJournalEntryNumber:
+      transaction.postedJournalEntry?.entryNumber ?? null
   };
 }
 
@@ -230,7 +228,10 @@ function mapLedgerTransactionFlowKindToCollectedTransactionType(
 }
 
 function mapCollectedTransactionSourceKind(
-  transaction: Pick<CollectedTransactionRecord, 'importBatchId' | 'matchedPlanItemId'>
+  transaction: Pick<
+    CollectedTransactionRecord,
+    'importBatchId' | 'matchedPlanItemId'
+  >
 ): CollectedTransactionSourceKind {
   if (transaction.importBatchId) {
     return 'IMPORT';
@@ -250,6 +251,7 @@ function mapCollectedTransactionPostingStatus(
     case CollectedTransactionStatus.POSTED:
       return 'POSTED';
     case CollectedTransactionStatus.CORRECTED:
+      return 'CORRECTED';
     case CollectedTransactionStatus.LOCKED:
       return 'CANCELLED';
     case CollectedTransactionStatus.COLLECTED:

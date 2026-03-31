@@ -1,4 +1,4 @@
-﻿export type AccountingPeriodStatus =
+export type AccountingPeriodStatus =
   | 'OPEN'
   | 'IN_REVIEW'
   | 'CLOSING'
@@ -6,12 +6,21 @@
 
 export type AuditActorType = 'TENANT_MEMBERSHIP' | 'SYSTEM';
 
+export type AccountingPeriodEventType =
+  | 'OPEN'
+  | 'MOVE_TO_REVIEW'
+  | 'START_CLOSING'
+  | 'LOCK'
+  | 'REOPEN'
+  | 'FORCE_LOCK';
+
 export type OpeningBalanceSourceKind = 'INITIAL_SETUP' | 'CARRY_FORWARD';
 
 export type PeriodStatusHistoryItem = {
   id: string;
   fromStatus: AccountingPeriodStatus | null;
   toStatus: AccountingPeriodStatus;
+  eventType: AccountingPeriodEventType;
   reason: string | null;
   actorType: AuditActorType;
   actorMembershipId: string | null;
@@ -41,6 +50,10 @@ export type OpenAccountingPeriodRequest = {
 
 export type CloseAccountingPeriodRequest = {
   note?: string;
+};
+
+export type ReopenAccountingPeriodRequest = {
+  reason: string;
 };
 
 export type ClosingSnapshotLineItem = {

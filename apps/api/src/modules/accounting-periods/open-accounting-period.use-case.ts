@@ -8,7 +8,10 @@ import type {
   AuthenticatedUser,
   OpenAccountingPeriodRequest
 } from '@personal-erp/contracts';
-import { AccountingPeriodStatus } from '@prisma/client';
+import {
+  AccountingPeriodEventType,
+  AccountingPeriodStatus
+} from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import {
   readWorkspaceActorRef,
@@ -117,6 +120,7 @@ export class OpenAccountingPeriodUseCase {
             periodId: createdPeriod.id,
             fromStatus: null,
             toStatus: AccountingPeriodStatus.OPEN,
+            eventType: AccountingPeriodEventType.OPEN,
             reason: normalizeOptionalText(input.note),
             ...actorRef
           }

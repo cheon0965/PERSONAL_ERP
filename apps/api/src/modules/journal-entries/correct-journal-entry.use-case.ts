@@ -1,4 +1,4 @@
-﻿import {
+import {
   BadRequestException,
   Injectable,
   NotFoundException
@@ -27,12 +27,8 @@ import {
   normalizeOptionalText,
   type JournalAdjustmentLineDraft
 } from './journal-entry-adjustment.policy';
-import {
-  assertJournalEntryCanBeCorrected
-} from './journal-entry-transition.policy';
-import {
-  assertCollectedTransactionCanBeCorrected
-} from '../collected-transactions/public';
+import { assertJournalEntryCanBeCorrected } from './journal-entry-transition.policy';
+import { assertCollectedTransactionCanBeCorrected } from '../collected-transactions/public';
 
 const journalEntryItemInclude = {
   sourceCollectedTransaction: {
@@ -40,6 +36,33 @@ const journalEntryItemInclude = {
       id: true,
       title: true,
       status: true
+    }
+  },
+  reversesJournalEntry: {
+    select: {
+      id: true,
+      entryNumber: true
+    }
+  },
+  reversedByJournalEntry: {
+    select: {
+      id: true,
+      entryNumber: true
+    }
+  },
+  correctsJournalEntry: {
+    select: {
+      id: true,
+      entryNumber: true
+    }
+  },
+  correctionEntries: {
+    select: {
+      id: true,
+      entryNumber: true
+    },
+    orderBy: {
+      createdAt: 'asc' as const
     }
   },
   lines: {
@@ -76,7 +99,10 @@ export class CorrectJournalEntryUseCase {
   ): Promise<JournalEntryItem> {
     const workspace = requireCurrentWorkspace(user);
     const createdByActorRef = readWorkspaceCreatedByActorRef(workspace);
-    assertWorkspaceActionAllowed(workspace.membershipRole, 'journal_entry.correct');
+    assertWorkspaceActionAllowed(
+      workspace.membershipRole,
+      'journal_entry.correct'
+    );
 
     const reason = normalizeOptionalText(input.reason);
     if (!reason) {
@@ -91,10 +117,11 @@ export class CorrectJournalEntryUseCase {
       throw new BadRequestException(readAdjustmentErrorMessage(error));
     }
 
-    const targetPeriod = await this.accountingPeriodsService.assertCollectingDateAllowed(
-      user,
-      input.entryDate
-    );
+    const targetPeriod =
+      await this.accountingPeriodsService.assertCollectingDateAllowed(
+        user,
+        input.entryDate
+      );
 
     const originalJournalEntry = await this.prisma.journalEntry.findFirst({
       where: {
@@ -211,11 +238,13 @@ async function assertJournalAdjustmentReferencesExist(
     }
   }
 
-  const fundingAccountIds = [...new Set(
-    lines
-      .map((line) => line.fundingAccountId)
-      .filter((value): value is string => Boolean(value))
-  )];
+  const fundingAccountIds = [
+    ...new Set(
+      lines
+        .map((line) => line.fundingAccountId)
+        .filter((value): value is string => Boolean(value))
+    )
+  ];
 
   for (const fundingAccountId of fundingAccountIds) {
     const fundingAccount = await prisma.account.findFirst({

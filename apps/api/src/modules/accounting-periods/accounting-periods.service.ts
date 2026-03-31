@@ -24,6 +24,7 @@ const accountingPeriodInclude =
         id: true,
         fromStatus: true,
         toStatus: true,
+        eventType: true,
         reason: true,
         actorType: true,
         actorMembershipId: true,

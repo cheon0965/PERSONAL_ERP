@@ -5,7 +5,9 @@ import type {
 } from '@personal-erp/contracts';
 import { fetchJson, postJson } from '@/shared/api/fetch-json';
 
-export const collectedTransactionsQueryKey = ['collected-transactions'] as const;
+export const collectedTransactionsQueryKey = [
+  'collected-transactions'
+] as const;
 
 export const mockCollectedTransactions: CollectedTransactionItem[] = [
   {
@@ -30,7 +32,7 @@ export const mockCollectedTransactions: CollectedTransactionItem[] = [
     fundingAccountName: '생활비 통장',
     categoryName: '주유',
     sourceKind: 'MANUAL',
-    postingStatus: 'POSTED',
+    postingStatus: 'CORRECTED',
     postedJournalEntryId: 'je-demo-2',
     postedJournalEntryNumber: '202603-0002'
   },
@@ -117,7 +119,8 @@ export function mergeCollectedTransactionItem(
   current: CollectedTransactionItem[] | undefined,
   created: CollectedTransactionItem
 ): CollectedTransactionItem[] {
-  return [created, ...(current ?? []).filter((item) => item.id !== created.id)].sort(
-    (left, right) => right.businessDate.localeCompare(left.businessDate)
-  );
+  return [
+    created,
+    ...(current ?? []).filter((item) => item.id !== created.id)
+  ].sort((left, right) => right.businessDate.localeCompare(left.businessDate));
 }

@@ -96,6 +96,15 @@ enum AuditActorType {
   SYSTEM
 }
 
+enum AccountingPeriodEventType {
+  OPEN
+  MOVE_TO_REVIEW
+  START_CLOSING
+  LOCK
+  REOPEN
+  FORCE_LOCK
+}
+
 enum AccountSubjectStatementType {
   BALANCE_SHEET
   PROFIT_AND_LOSS
@@ -475,6 +484,7 @@ model PeriodStatusHistory {
   periodId          String
   fromStatus        AccountingPeriodStatus?
   toStatus          AccountingPeriodStatus
+  eventType         AccountingPeriodEventType
   reason            String?                @db.Text
   actorType         AuditActorType
   actorMembershipId String?

@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import type { AuthenticatedUser, JournalEntryItem } from '@personal-erp/contracts';
+import type {
+  AuthenticatedUser,
+  JournalEntryItem
+} from '@personal-erp/contracts';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { mapJournalEntryRecordToItem } from './journal-entry-item.mapper';
@@ -20,6 +23,33 @@ export class JournalEntriesService {
           select: {
             id: true,
             title: true
+          }
+        },
+        reversesJournalEntry: {
+          select: {
+            id: true,
+            entryNumber: true
+          }
+        },
+        reversedByJournalEntry: {
+          select: {
+            id: true,
+            entryNumber: true
+          }
+        },
+        correctsJournalEntry: {
+          select: {
+            id: true,
+            entryNumber: true
+          }
+        },
+        correctionEntries: {
+          select: {
+            id: true,
+            entryNumber: true
+          },
+          orderBy: {
+            createdAt: 'asc'
           }
         },
         lines: {

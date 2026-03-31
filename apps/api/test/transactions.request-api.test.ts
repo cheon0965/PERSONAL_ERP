@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert/strict';
+import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   AccountingPeriodStatus,
@@ -63,6 +63,31 @@ test('GET /collected-transactions returns only the current user collected transa
       items.some((candidate) => 'memo' in candidate),
       false
     );
+  } finally {
+    await context.close();
+  }
+});
+
+test('GET /collected-transactions keeps corrected transactions visible as CORRECTED instead of CANCELLED', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const correctedTransaction = context.state.collectedTransactions.find(
+      (candidate) => candidate.id === 'ctx-seed-2'
+    );
+    assert.ok(correctedTransaction);
+    correctedTransaction.status = CollectedTransactionStatus.CORRECTED;
+
+    const response = await context.request('/collected-transactions', {
+      headers: context.authHeaders()
+    });
+
+    const items = response.body as Array<Record<string, unknown>>;
+    const item = items.find((candidate) => candidate.id === 'ctx-seed-2');
+
+    assert.equal(response.status, 200);
+    assert.ok(item);
+    assert.equal(item.postingStatus, 'CORRECTED');
   } finally {
     await context.close();
   }
@@ -323,6 +348,17 @@ test('POST /collected-transactions/:id/confirm creates a journal entry and marks
       memo: 'Full tank',
       sourceCollectedTransactionId: 'ctx-confirm-1',
       sourceCollectedTransactionTitle: 'Fuel refill',
+      reversesJournalEntryId: null,
+      reversesJournalEntryNumber: null,
+      reversedByJournalEntryId: null,
+      reversedByJournalEntryNumber: null,
+      correctsJournalEntryId: null,
+      correctsJournalEntryNumber: null,
+      correctionEntryIds: [],
+      correctionEntryNumbers: [],
+      correctionReason: null,
+      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+      createdByMembershipId: 'membership-1',
       lines: [
         {
           id: 'jel-1-1',
@@ -633,6 +669,15 @@ test('POST /journal-entries/:id/reverse creates a reversal journal entry and mar
     assert.equal(body.sourceKind, 'MANUAL_ADJUSTMENT');
     assert.equal(body.status, 'POSTED');
     assert.equal(body.memo, 'Reverse the March fuel entry.');
+    assert.equal(body.reversesJournalEntryId, 'je-reverse-source-1');
+    assert.equal(body.reversesJournalEntryNumber, '202603-0003');
+    assert.equal(body.reversedByJournalEntryId, null);
+    assert.equal(body.correctsJournalEntryId, null);
+    assert.deepEqual(body.correctionEntryIds, []);
+    assert.deepEqual(body.correctionEntryNumbers, []);
+    assert.equal(body.correctionReason, null);
+    assert.equal(body.createdByActorType, AuditActorType.TENANT_MEMBERSHIP);
+    assert.equal(body.createdByMembershipId, 'membership-1');
     assert.equal(
       context.state.journalEntries.find(
         (candidate) => candidate.id === 'je-reverse-source-1'
@@ -858,6 +903,17 @@ test('POST /journal-entries/:id/correct creates a correction journal entry and m
       body.memo,
       'Adjust the posted amount after invoice verification.'
     );
+    assert.equal(body.reversesJournalEntryId, null);
+    assert.equal(body.correctsJournalEntryId, 'je-correct-source-1');
+    assert.equal(body.correctsJournalEntryNumber, '202603-0004');
+    assert.deepEqual(body.correctionEntryIds, []);
+    assert.deepEqual(body.correctionEntryNumbers, []);
+    assert.equal(
+      body.correctionReason,
+      'Adjust the posted amount after invoice verification.'
+    );
+    assert.equal(body.createdByActorType, AuditActorType.TENANT_MEMBERSHIP);
+    assert.equal(body.createdByMembershipId, 'membership-1');
     assert.equal(
       context.state.journalEntries.find(
         (candidate) => candidate.id === 'je-correct-source-1'
@@ -987,7 +1043,7 @@ test('GET /journal-entries returns recent journal entries for the current ledger
       entryDate: new Date('2026-03-20T00:00:00.000Z'),
       sourceKind: 'COLLECTED_TRANSACTION',
       sourceCollectedTransactionId: 'ctx-seed-2',
-      status: 'POSTED',
+      status: 'SUPERSEDED',
       memo: 'Fuel refill',
       createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
       createdByMembershipId: 'membership-1',
@@ -1011,6 +1067,44 @@ test('GET /journal-entries returns recent journal entries for the current ledger
           debitAmount: 0,
           creditAmount: 84000,
           description: 'Fuel refill'
+        }
+      ]
+    });
+    context.state.journalEntries.push({
+      id: 'je-seed-1-c1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-seed-1',
+      entryNumber: '202603-0004',
+      entryDate: new Date('2026-03-21T00:00:00.000Z'),
+      sourceKind: 'MANUAL_ADJUSTMENT',
+      sourceCollectedTransactionId: null,
+      correctsJournalEntryId: 'je-seed-1',
+      correctionReason: 'Corrected fuel amount',
+      status: 'POSTED',
+      memo: 'Corrected fuel amount',
+      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+      createdByMembershipId: 'membership-1',
+      createdAt: new Date('2026-03-21T08:00:00.000Z'),
+      updatedAt: new Date('2026-03-21T08:00:00.000Z'),
+      lines: [
+        {
+          id: 'jel-seed-1-c1-1',
+          lineNumber: 1,
+          accountSubjectId: 'as-1-5100',
+          fundingAccountId: null,
+          debitAmount: 95_000,
+          creditAmount: 0,
+          description: 'Corrected fuel amount'
+        },
+        {
+          id: 'jel-seed-1-c1-2',
+          lineNumber: 2,
+          accountSubjectId: 'as-1-1010',
+          fundingAccountId: 'acc-1',
+          debitAmount: 0,
+          creditAmount: 95_000,
+          description: 'Corrected fuel amount'
         }
       ]
     });
@@ -1039,14 +1133,68 @@ test('GET /journal-entries returns recent journal entries for the current ledger
     assert.equal(response.status, 200);
     assert.deepEqual(response.body, [
       {
+        id: 'je-seed-1-c1',
+        entryNumber: '202603-0004',
+        entryDate: '2026-03-21T00:00:00.000Z',
+        status: 'POSTED',
+        sourceKind: 'MANUAL_ADJUSTMENT',
+        memo: 'Corrected fuel amount',
+        sourceCollectedTransactionId: null,
+        sourceCollectedTransactionTitle: null,
+        reversesJournalEntryId: null,
+        reversesJournalEntryNumber: null,
+        reversedByJournalEntryId: null,
+        reversedByJournalEntryNumber: null,
+        correctsJournalEntryId: 'je-seed-1',
+        correctsJournalEntryNumber: '202603-0003',
+        correctionEntryIds: [],
+        correctionEntryNumbers: [],
+        correctionReason: 'Corrected fuel amount',
+        createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+        createdByMembershipId: 'membership-1',
+        lines: [
+          {
+            id: 'jel-seed-1-c1-1',
+            lineNumber: 1,
+            accountSubjectCode: '5100',
+            accountSubjectName: '운영비용',
+            fundingAccountName: null,
+            debitAmount: 95_000,
+            creditAmount: 0,
+            description: 'Corrected fuel amount'
+          },
+          {
+            id: 'jel-seed-1-c1-2',
+            lineNumber: 2,
+            accountSubjectCode: '1010',
+            accountSubjectName: '현금및예금',
+            fundingAccountName: 'Main checking',
+            debitAmount: 0,
+            creditAmount: 95_000,
+            description: 'Corrected fuel amount'
+          }
+        ]
+      },
+      {
         id: 'je-seed-1',
         entryNumber: '202603-0003',
         entryDate: '2026-03-20T00:00:00.000Z',
-        status: 'POSTED',
+        status: 'SUPERSEDED',
         sourceKind: 'COLLECTED_TRANSACTION',
         memo: 'Fuel refill',
         sourceCollectedTransactionId: 'ctx-seed-2',
         sourceCollectedTransactionTitle: 'Fuel refill',
+        reversesJournalEntryId: null,
+        reversesJournalEntryNumber: null,
+        reversedByJournalEntryId: null,
+        reversedByJournalEntryNumber: null,
+        correctsJournalEntryId: null,
+        correctsJournalEntryNumber: null,
+        correctionEntryIds: ['je-seed-1-c1'],
+        correctionEntryNumbers: ['202603-0004'],
+        correctionReason: null,
+        createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+        createdByMembershipId: 'membership-1',
         lines: [
           {
             id: 'jel-seed-1',

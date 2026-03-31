@@ -10,6 +10,7 @@ import type {
   GenerateCarryForwardRequest
 } from '@personal-erp/contracts';
 import {
+  AccountingPeriodEventType,
   AccountingPeriodStatus,
   BalanceSnapshotKind,
   OpeningBalanceSourceKind
@@ -166,6 +167,7 @@ export class GenerateCarryForwardUseCase {
             periodId: targetPeriod.id,
             fromStatus: null,
             toStatus: AccountingPeriodStatus.OPEN,
+            eventType: AccountingPeriodEventType.OPEN,
             reason: `${sourcePeriod.year}-${String(sourcePeriod.month).padStart(2, '0')} 이월 생성`,
             ...actorRef
           }

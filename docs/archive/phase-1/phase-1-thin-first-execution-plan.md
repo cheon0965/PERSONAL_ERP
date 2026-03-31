@@ -444,10 +444,55 @@
 
 ### 7.4 4단계: 정정/반전/재오픈 강화
 
-- `Reversal`
-- `Correction`
-- period reopen
-- audit trail 확장
+#### 목표
+
+정정/반전/재오픈을 단순 수정 버튼이 아니라, 잠금 이후에도 추적 가능한 예외 처리 흐름으로 승격한다.
+
+#### 현재 구현 기준
+
+- API/DB에는 `POST /journal-entries/:id/reverse`, `POST /journal-entries/:id/correct`, `POST /accounting-periods/:id/reopen` 최소 경로가 이미 존재한다.
+- 전표 화면에는 반전/정정 다이얼로그가 연결되어 있고 request API 테스트도 존재한다.
+- `PeriodStatusHistory`, `reversesJournalEntryId`, `correctsJournalEntryId`, `correctionReason`, `createdByActorType` 등 최소 감사 필드는 이미 저장된다.
+- 반면 재오픈은 아직 Web 운영 화면에 연결되지 않았고, adjustment lineage와 corrected transaction 결과도 읽기 모델에 충분히 드러나지 않는다.
+
+#### 우선 보강할 공백
+
+- `PeriodStatusHistory.eventType`가 도메인 문서에는 있으나 현재 DB/계약/read model에는 없다.
+- 잠금 상태를 다시 여는 `reopen`은 사유 필수 정책이 자연스럽지만, 현재 API는 `note` 선택 입력만 받는다.
+- `CollectedTransactionStatus.CORRECTED`가 현재 Web 계약에서는 사실상 `CANCELLED`로 축약되어 정정/반전 결과가 흐려진다.
+- `JournalEntry` read model이 `reversesJournalEntryId`, `correctsJournalEntryId`, 원전표/후속전표 관계, 생성 actor를 노출하지 않아 audit trail이 화면에 보이지 않는다.
+- 운영 기간 화면에는 reopen 액션, reopen 사유 입력, reopen 이력 확인 경로가 없다.
+- 상태 chip과 문구가 `REVERSED`, `SUPERSEDED`, `CORRECTED`, `LOCKED`, `OPEN` 같은 핵심 상태를 회계 의미로 충분히 번역하지 못한다.
+
+#### 실행 순서
+
+1. 계약/도메인 정합성 먼저 고정
+   - `PeriodStatusHistory`에 `eventType`을 추가해 `Open/Lock/Reopen`을 명시적으로 구분한다.
+   - `CloseAccountingPeriodRequest`와 분리된 `ReopenAccountingPeriodRequest`를 만들고 `reason`을 필수로 둔다.
+   - `CollectedTransactionItem`, `JournalEntryItem`에 정정/반전 lineage를 보여줄 최소 필드를 추가한다.
+2. 백엔드 write/read model 보강
+   - period open/close/reopen use case가 모두 `eventType`, `ActorRef`, `reason`을 일관되게 기록하게 맞춘다.
+   - reverse/correct 이후 원거래가 “취소됨”이 아니라 “정정됨”으로 드러나도록 read model 매핑을 분리한다.
+   - 원거래에서 최신 유효 전표를 따라갈 수 있는 참조값을 정한다.
+3. 운영 화면 연결
+   - `/accounting-periods`에 Owner 전용 reopen 섹션을 추가한다.
+   - `/journal-entries`에서는 원전표-조정전표 관계, 조정 사유, 생성 주체를 표시한다.
+   - `/transactions`에서는 `CORRECTED` 상태와 최신 조정 전표 링크를 노출한다.
+   - 상태 chip과 도움말 문구를 회계 용어에 맞게 정리한다.
+4. 감사 추적 노출 강화
+   - `audit.action_succeeded` 로그에 `reason`, `reversesJournalEntryId`, `correctsJournalEntryId`, `periodId` 등 핵심 식별자를 함께 남긴다.
+   - 범용 AuditLog 테이블 도입은 이 단계에서 미루고, 우선 도메인 엔티티 + 운영 로그 조합으로 추적성을 확보한다.
+5. 회귀 테스트 고정
+   - request API 테스트에 reopen 사유 필수, `eventType` 기록, corrected transaction 표시, lineage 응답 shape를 추가한다.
+   - Web 테스트 또는 최소 smoke 경로에서 reopen 버튼 노출 조건과 조정 전표 표시를 검증한다.
+
+#### 완료 기준
+
+- 반전/정정/재오픈이 모두 overwrite가 아닌 예외 흐름으로 보인다.
+- 누가, 왜, 어떤 원본을 기준으로 조정했는지 API와 화면에서 추적할 수 있다.
+- 재오픈은 Owner만, 최신 잠금 기간에만, 사유를 남기고 실행할 수 있다.
+- `CollectedTransaction`은 정정 이후 `Cancelled`처럼 보이지 않고 `Corrected`와 최신 전표 관계가 드러난다.
+- 정정/반전/재오픈 request API 테스트와 화면 smoke 검증이 함께 고정된다.
 
 ### 7.5 5단계: 보고와 운영 분석 강화
 
