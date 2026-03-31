@@ -7,6 +7,7 @@ import { AccountingPeriodStatus, Prisma } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { mapAccountingPeriodRecordToItem } from './accounting-period.mapper';
+import { readCollectingAccountingPeriodStatuses } from './accounting-period-transition.policy';
 
 const accountingPeriodInclude =
   Prisma.validator<Prisma.AccountingPeriodInclude>()({
@@ -126,11 +127,7 @@ export class AccountingPeriodsService {
         tenantId: workspace.tenantId,
         ledgerId: workspace.ledgerId,
         status: {
-          in: [
-            AccountingPeriodStatus.OPEN,
-            AccountingPeriodStatus.IN_REVIEW,
-            AccountingPeriodStatus.CLOSING
-          ]
+          in: [...readCollectingAccountingPeriodStatuses()]
         }
       },
       include: accountingPeriodInclude,

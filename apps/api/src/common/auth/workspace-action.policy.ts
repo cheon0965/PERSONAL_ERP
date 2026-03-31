@@ -1,4 +1,4 @@
-﻿import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException } from '@nestjs/common';
 import type { RequiredWorkspaceContext } from './required-workspace.util';
 
 export type WorkspaceMembershipRole =
@@ -15,7 +15,8 @@ export type WorkspaceAction =
   | 'financial_statement.generate'
   | 'carry_forward.generate'
   | 'journal_entry.reverse'
-  | 'journal_entry.correct';
+  | 'journal_entry.correct'
+  | 'import_batch.upload';
 
 const workspaceActionAllowedRoles: Record<
   WorkspaceAction,
@@ -31,7 +32,8 @@ const workspaceActionAllowedRoles: Record<
   'financial_statement.generate': ['OWNER', 'MANAGER'],
   'carry_forward.generate': ['OWNER', 'MANAGER'],
   'journal_entry.reverse': ['OWNER', 'MANAGER'],
-  'journal_entry.correct': ['OWNER', 'MANAGER']
+  'journal_entry.correct': ['OWNER', 'MANAGER'],
+  'import_batch.upload': ['OWNER', 'MANAGER', 'EDITOR']
 };
 
 const workspaceActionDeniedMessages: Record<WorkspaceAction, string> = {
@@ -56,7 +58,9 @@ const workspaceActionDeniedMessages: Record<WorkspaceAction, string> = {
   'journal_entry.reverse':
     'Only owners and managers can create reversal journal entries.',
   'journal_entry.correct':
-    'Only owners and managers can create correction journal entries.'
+    'Only owners and managers can create correction journal entries.',
+  'import_batch.upload':
+    'Only owners, managers, and editors can upload import batches.'
 };
 
 export function readAllowedWorkspaceRoles(

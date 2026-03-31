@@ -1,6 +1,5 @@
 ﻿import {
   BadRequestException,
-  ConflictException,
   Injectable,
   NotFoundException
 } from '@nestjs/common';
@@ -27,12 +26,19 @@ import {
   buildReversalJournalLines,
   normalizeOptionalText
 } from './journal-entry-adjustment.policy';
+import {
+  assertJournalEntryCanBeReversed
+} from './journal-entry-transition.policy';
+import {
+  assertCollectedTransactionCanBeCorrected
+} from '../collected-transactions/public';
 
 const journalEntryItemInclude = {
   sourceCollectedTransaction: {
     select: {
       id: true,
-      title: true
+      title: true,
+      status: true
     }
   },
   lines: {
@@ -89,11 +95,7 @@ export class ReverseJournalEntryUseCase {
       throw new NotFoundException('Journal entry not found.');
     }
 
-    if (originalJournalEntry.status !== JournalEntryStatus.POSTED) {
-      throw new ConflictException(
-        'Only posted journal entries can be reversed.'
-      );
-    }
+    assertJournalEntryCanBeReversed(originalJournalEntry.status);
 
     const reversalLines = buildReversalJournalLines(
       originalJournalEntry.lines.map((line) => ({
@@ -155,10 +157,14 @@ export class ReverseJournalEntryUseCase {
         }
       });
 
-      if (originalJournalEntry.sourceCollectedTransactionId) {
+      if (originalJournalEntry.sourceCollectedTransaction) {
+        assertCollectedTransactionCanBeCorrected(
+          originalJournalEntry.sourceCollectedTransaction.status
+        );
+
         await tx.collectedTransaction.update({
           where: {
-            id: originalJournalEntry.sourceCollectedTransactionId
+            id: originalJournalEntry.sourceCollectedTransaction.id
           },
           data: {
             status: CollectedTransactionStatus.CORRECTED

@@ -46,17 +46,17 @@ docs/
 [ Asset & Coverage ] ----------- read ------> [ Insight & Planning ]
 ```
 
-| Context              | 현재 모듈                                                        | 역할                                         |
-| -------------------- | ---------------------------------------------------------------- | -------------------------------------------- |
-| Identity & Access    | `auth`, `common/auth`                                            | 로그인, 토큰, 요청 주체 인증 기준선          |
-| Ledger               | `accounts`, `categories`, `collected-transactions`               | 현재 구현의 계정/카테고리/거래 쓰기 컨텍스트 |
-| Recurring Automation | `recurring-rules`                                                | 반복규칙 정의와 반복 입력 예약               |
-| Asset & Coverage     | `vehicles`, `insurance-policies`                                 | 운영비 성격의 자산/보장 도메인               |
-| Insight & Planning   | `dashboard`, `forecast`                                          | 읽기 기반 요약/예측 조합                     |
-| Platform & Contracts | `packages/contracts`, env, Prisma, health, 공통 외부 의존성 조립 | 계약과 런타임 기반선                         |
+| Context              | 현재 모듈                                                                          | 역할                                            |
+| -------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Identity & Access    | `auth`, `common/auth`                                                              | 로그인, 토큰, 요청 주체 인증 기준선             |
+| Ledger               | `accounts`, `categories`, `import-batches`, `collected-transactions`, `plan-items` | 현재 구현의 계정/업로드/거래/계획 쓰기 컨텍스트 |
+| Recurring Automation | `recurring-rules`                                                                  | 반복규칙 정의와 반복 입력 예약                  |
+| Asset & Coverage     | `vehicles`, `insurance-policies`                                                   | 운영비 성격의 자산/보장 도메인                  |
+| Insight & Planning   | `dashboard`, `forecast`                                                            | 읽기 기반 요약/예측 조합                        |
+| Platform & Contracts | `packages/contracts`, env, Prisma, health, 공통 외부 의존성 조립                   | 계약과 런타임 기반선                            |
 
 여기서 `Ledger`는 현재 코드베이스의 컨텍스트 이름입니다.  
-현재 API 모듈명은 `collected-transactions`이고, Web feature/route는 shorthand로 `transactions`를 사용합니다.  
+현재 API 모듈명은 `collected-transactions`, `import-batches`, `plan-items`이고, Web feature/route는 shorthand로 `transactions`, `imports`, `plan-items`를 사용합니다.  
 회계 도메인의 상세 기준은 [business-logic-draft.md](./domain/business-logic-draft.md) 와 [core-entity-definition.md](./domain/core-entity-definition.md) 를 우선하며, 최종 write model은 `Ledger`, `AccountingPeriod`, `CollectedTransaction`, `JournalEntry` 중심으로 수렴합니다.
 
 허용되는 방향:

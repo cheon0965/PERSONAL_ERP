@@ -189,6 +189,31 @@ test('POST /accounting-periods opens the first period and records status history
   }
 });
 
+test('POST /accounting-periods rolls back the opened period when opening snapshot creation fails', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.failOpeningBalanceSnapshotCreate = true;
+
+    const response = await context.request('/accounting-periods', {
+      method: 'POST',
+      headers: context.authHeaders(),
+      body: {
+        month: '2026-03',
+        initializeOpeningBalance: true,
+        note: '2026년 3월 운영 시작'
+      }
+    });
+
+    assert.equal(response.status, 500);
+    assert.equal(context.state.accountingPeriods.length, 0);
+    assert.equal(context.state.openingBalanceSnapshots.length, 0);
+    assert.equal(context.state.periodStatusHistory.length, 0);
+  } finally {
+    await context.close();
+  }
+});
+
 test('GET /accounting-periods/current returns the currently open period for the active ledger', async () => {
   const context = await createRequestTestContext();
 
@@ -512,6 +537,147 @@ test('POST /accounting-periods/:id/reopen reopens the latest locked period and c
           candidate.details.periodId === 'period-reopen-1'
       )
     );
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /accounting-periods/:id/reopen blocks reopening when carry-forward outputs already exist', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push(
+      {
+        id: 'period-reopen-blocked-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        year: 2026,
+        month: 3,
+        startDate: new Date('2026-03-01T00:00:00.000Z'),
+        endDate: new Date('2026-04-01T00:00:00.000Z'),
+        status: AccountingPeriodStatus.LOCKED,
+        openedAt: new Date('2026-03-01T00:00:00.000Z'),
+        lockedAt: new Date('2026-03-31T15:00:00.000Z'),
+        createdAt: new Date('2026-03-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-03-31T15:00:00.000Z')
+      },
+      {
+        id: 'period-reopen-blocked-next',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        year: 2026,
+        month: 4,
+        startDate: new Date('2026-04-01T00:00:00.000Z'),
+        endDate: new Date('2026-05-01T00:00:00.000Z'),
+        status: AccountingPeriodStatus.OPEN,
+        openedAt: new Date('2026-04-01T00:00:00.000Z'),
+        lockedAt: null,
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-01T00:00:00.000Z')
+      }
+    );
+    context.state.periodStatusHistory.push(
+      {
+        id: 'period-history-reopen-blocked-open-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-reopen-blocked-1',
+        fromStatus: null,
+        toStatus: AccountingPeriodStatus.OPEN,
+        reason: '3월 운영 시작',
+        actorType: AuditActorType.TENANT_MEMBERSHIP,
+        actorMembershipId: 'membership-1',
+        changedAt: new Date('2026-03-01T00:00:00.000Z')
+      },
+      {
+        id: 'period-history-reopen-blocked-lock-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-reopen-blocked-1',
+        fromStatus: AccountingPeriodStatus.OPEN,
+        toStatus: AccountingPeriodStatus.LOCKED,
+        reason: '3월 마감',
+        actorType: AuditActorType.TENANT_MEMBERSHIP,
+        actorMembershipId: 'membership-1',
+        changedAt: new Date('2026-03-31T15:00:00.000Z')
+      }
+    );
+    context.state.closingSnapshots.push({
+      id: 'closing-reopen-blocked-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-reopen-blocked-1',
+      lockedAt: new Date('2026-03-31T15:00:00.000Z'),
+      totalAssetAmount: 140_000,
+      totalLiabilityAmount: 0,
+      totalEquityAmount: 140_000,
+      periodPnLAmount: 140_000,
+      createdAt: new Date('2026-03-31T15:00:00.000Z')
+    });
+    context.state.financialStatementSnapshots.push({
+      id: 'financial-reopen-blocked-bs',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-reopen-blocked-1',
+      statementKind: FinancialStatementKind.STATEMENT_OF_FINANCIAL_POSITION,
+      currency: 'KRW',
+      payload: {
+        summary: [{ label: '자산 총계', amountWon: 140_000 }],
+        sections: [],
+        notes: []
+      } as FinancialStatementPayload,
+      createdAt: new Date('2026-03-31T15:10:00.000Z'),
+      updatedAt: new Date('2026-03-31T15:10:00.000Z')
+    });
+    context.state.openingBalanceSnapshots.push({
+      id: 'opening-reopen-blocked-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      effectivePeriodId: 'period-reopen-blocked-next',
+      sourceKind: OpeningBalanceSourceKind.CARRY_FORWARD,
+      createdAt: new Date('2026-04-01T00:00:00.000Z'),
+      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+      createdByMembershipId: 'membership-1'
+    });
+    context.state.carryForwardRecords.push({
+      id: 'carry-forward-reopen-blocked-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      fromPeriodId: 'period-reopen-blocked-1',
+      toPeriodId: 'period-reopen-blocked-next',
+      sourceClosingSnapshotId: 'closing-reopen-blocked-1',
+      createdJournalEntryId: null,
+      createdAt: new Date('2026-04-01T00:00:00.000Z'),
+      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+      createdByMembershipId: 'membership-1'
+    });
+
+    const response = await context.request(
+      '/accounting-periods/period-reopen-blocked-1/reopen',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          note: '차기 이월 이후 재오픈 시도'
+        }
+      }
+    );
+
+    assert.equal(response.status, 409);
+    assert.deepEqual(response.body, {
+      statusCode: 409,
+      message: '차기 이월이 이미 생성된 운영 기간은 재오픈할 수 없습니다.',
+      error: 'Conflict'
+    });
+    assert.equal(
+      context.state.accountingPeriods.find(
+        (candidate) => candidate.id === 'period-reopen-blocked-1'
+      )?.status,
+      AccountingPeriodStatus.LOCKED
+    );
+    assert.equal(context.state.closingSnapshots.length, 1);
+    assert.equal(context.state.financialStatementSnapshots.length, 1);
+    assert.equal(context.state.carryForwardRecords.length, 1);
   } finally {
     await context.close();
   }

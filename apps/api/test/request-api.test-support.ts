@@ -7,9 +7,13 @@ import {
   AuditActorType,
   CollectedTransactionStatus,
   FinancialStatementKind,
+  ImportBatchParseStatus,
+  ImportedRowParseStatus,
+  ImportSourceKind,
   LedgerTransactionFlowKind,
   RecurrenceFrequency,
   OpeningBalanceSourceKind,
+  PlanItemStatus,
   TransactionOrigin,
   TransactionStatus,
   TransactionType
@@ -29,6 +33,7 @@ import { FinancialStatementsModule } from '../src/modules/financial-statements/f
 import { ForecastModule } from '../src/modules/forecast/forecast.module';
 import { FundingAccountsModule } from '../src/modules/funding-accounts/funding-accounts.module';
 import { HealthModule } from '../src/modules/health/health.module';
+import { ImportBatchesModule } from '../src/modules/import-batches/import-batches.module';
 import { JournalEntriesModule } from '../src/modules/journal-entries/journal-entries.module';
 import { LedgerTransactionTypesModule } from '../src/modules/ledger-transaction-types/ledger-transaction-types.module';
 import { RecurringRulesModule } from '../src/modules/recurring-rules/recurring-rules.module';
@@ -47,6 +52,8 @@ type RequestTestUser = {
 
 type RequestTestState = {
   databaseReady: boolean;
+  failOpeningBalanceSnapshotCreate: boolean;
+  simulateCollectedTransactionAlreadyPostedOnNextTransactionId: string | null;
   users: RequestTestUser[];
   tenants: Array<{
     id: string;
@@ -170,6 +177,28 @@ type RequestTestState = {
     createdByActorType: AuditActorType;
     createdByMembershipId: string | null;
   }>;
+  importBatches: Array<{
+    id: string;
+    tenantId: string;
+    ledgerId: string;
+    periodId: string | null;
+    sourceKind: ImportSourceKind;
+    fileName: string;
+    fileHash: string;
+    rowCount: number;
+    parseStatus: ImportBatchParseStatus;
+    uploadedByMembershipId: string;
+    uploadedAt: Date;
+  }>;
+  importedRows: Array<{
+    id: string;
+    batchId: string;
+    rowNumber: number;
+    rawPayload: Record<string, unknown>;
+    parseStatus: ImportedRowParseStatus;
+    parseError: string | null;
+    sourceFingerprint: string | null;
+  }>;
   accountSubjects: Array<{
     id: string;
     tenantId: string;
@@ -217,6 +246,8 @@ type RequestTestState = {
     categoryId: string | null;
     matchedPlanItemId: string | null;
     importBatchId: string | null;
+    importedRowId: string | null;
+    sourceFingerprint: string | null;
     title: string;
     occurredOn: Date;
     amount: number;
@@ -255,6 +286,22 @@ type RequestTestState = {
     endDate: Date | null;
     isActive: boolean;
     nextRunDate: Date;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+  planItems: Array<{
+    id: string;
+    tenantId: string;
+    ledgerId: string;
+    periodId: string;
+    recurringRuleId: string | null;
+    ledgerTransactionTypeId: string;
+    fundingAccountId: string;
+    categoryId: string | null;
+    title: string;
+    plannedAmount: number;
+    plannedDate: Date;
+    status: PlanItemStatus;
     createdAt: Date;
     updatedAt: Date;
   }>;
@@ -387,6 +434,8 @@ async function createRequestTestState(): Promise<RequestTestState> {
 
   return {
     databaseReady: true,
+    failOpeningBalanceSnapshotCreate: false,
+    simulateCollectedTransactionAlreadyPostedOnNextTransactionId: null,
     users: [
       {
         id: 'user-1',
@@ -512,6 +561,8 @@ async function createRequestTestState(): Promise<RequestTestState> {
     balanceSnapshotLines: [],
     financialStatementSnapshots: [],
     carryForwardRecords: [],
+    importBatches: [],
+    importedRows: [],
     accountSubjects: [
       {
         id: 'as-1-1010',
@@ -704,6 +755,8 @@ async function createRequestTestState(): Promise<RequestTestState> {
         categoryId: 'cat-1b',
         matchedPlanItemId: null,
         importBatchId: null,
+        importedRowId: null,
+        sourceFingerprint: null,
         title: 'March salary',
         occurredOn: new Date('2026-03-25T00:00:00.000Z'),
         amount: 3_000_000,
@@ -722,6 +775,8 @@ async function createRequestTestState(): Promise<RequestTestState> {
         categoryId: 'cat-1',
         matchedPlanItemId: null,
         importBatchId: null,
+        importedRowId: null,
+        sourceFingerprint: null,
         title: 'Fuel refill',
         occurredOn: new Date('2026-03-20T00:00:00.000Z'),
         amount: 84_000,
@@ -740,6 +795,8 @@ async function createRequestTestState(): Promise<RequestTestState> {
         categoryId: 'cat-2',
         matchedPlanItemId: null,
         importBatchId: null,
+        importedRowId: null,
+        sourceFingerprint: null,
         title: 'Other user expense',
         occurredOn: new Date('2026-03-18T00:00:00.000Z'),
         amount: 777_777,
@@ -834,6 +891,7 @@ async function createRequestTestState(): Promise<RequestTestState> {
         updatedAt: new Date('2026-03-01T10:00:00.000Z')
       }
     ],
+    planItems: [],
     journalEntries: [],
     insurancePolicies: [
       {
@@ -862,6 +920,58 @@ async function createRequestTestState(): Promise<RequestTestState> {
       }
     ]
   };
+}
+
+function applyOneShotTransactionSimulations(state: RequestTestState) {
+  const collectedTransactionId =
+    state.simulateCollectedTransactionAlreadyPostedOnNextTransactionId;
+
+  if (!collectedTransactionId) {
+    return;
+  }
+
+  state.simulateCollectedTransactionAlreadyPostedOnNextTransactionId = null;
+
+  const collectedTransaction = state.collectedTransactions.find(
+    (candidate) => candidate.id === collectedTransactionId
+  );
+
+  if (!collectedTransaction) {
+    return;
+  }
+
+  collectedTransaction.status = CollectedTransactionStatus.POSTED;
+  collectedTransaction.updatedAt = new Date();
+
+  const existingJournalEntry = state.journalEntries.find(
+    (candidate) =>
+      candidate.sourceCollectedTransactionId === collectedTransaction.id
+  );
+
+  if (existingJournalEntry) {
+    return;
+  }
+
+  state.journalEntries.push({
+    id: `simulated-journal-entry-${state.journalEntries.length + 1}`,
+    tenantId: collectedTransaction.tenantId,
+    ledgerId: collectedTransaction.ledgerId,
+    periodId: collectedTransaction.periodId ?? 'simulated-period',
+    entryNumber: `SIM-${String(state.journalEntries.length + 1).padStart(4, '0')}`,
+    entryDate: new Date(collectedTransaction.occurredOn),
+    sourceKind: 'COLLECTED_TRANSACTION',
+    sourceCollectedTransactionId: collectedTransaction.id,
+    reversesJournalEntryId: null,
+    correctsJournalEntryId: null,
+    correctionReason: null,
+    status: 'POSTED',
+    memo: collectedTransaction.memo,
+    createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+    createdByMembershipId: 'membership-1',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    lines: []
+  });
 }
 
 function createPrismaMock(state: RequestTestState): Record<string, unknown> {
@@ -935,6 +1045,47 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
     state.carryForwardRecords.find(
       (candidate) => candidate.fromPeriodId === fromPeriodId
     ) ?? null;
+  const findImportBatch = (importBatchId: string) =>
+    state.importBatches.find((candidate) => candidate.id === importBatchId) ??
+    null;
+  const findPlanItem = (planItemId: string) =>
+    state.planItems.find((candidate) => candidate.id === planItemId) ?? null;
+  const findCollectedTransactionByImportedRowId = (importedRowId: string) =>
+    state.collectedTransactions.find(
+      (candidate) => candidate.importedRowId === importedRowId
+    ) ?? null;
+  const resolveImportedRows = (batchId: string) =>
+    [...state.importedRows]
+      .filter((candidate) => candidate.batchId === batchId)
+      .sort((left, right) => left.rowNumber - right.rowNumber)
+      .map((candidate) => ({
+        ...candidate,
+        createdCollectedTransaction: (() => {
+          const createdCollectedTransaction =
+            findCollectedTransactionByImportedRowId(candidate.id);
+
+          return createdCollectedTransaction
+            ? { id: createdCollectedTransaction.id }
+            : null;
+        })()
+      }));
+  const projectImportBatch = (
+    candidate: RequestTestState['importBatches'][number],
+    include?: {
+      rows?: {
+        orderBy?: { rowNumber?: 'asc' | 'desc' };
+      };
+    }
+  ) => {
+    const rows = include?.rows
+      ? resolveImportedRows(candidate.id).map((row) => ({ ...row }))
+      : undefined;
+
+    return {
+      ...candidate,
+      ...(include?.rows ? { rows } : {})
+    };
+  };
 
   const projectUser = (
     user: RequestTestUser,
@@ -1012,7 +1163,7 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
     candidate: RequestTestState['journalEntries'][number],
     include?: {
       sourceCollectedTransaction?: {
-        select?: { id?: boolean; title?: boolean };
+        select?: { id?: boolean; title?: boolean; status?: boolean };
       };
       lines?: {
         include?: {
@@ -1043,6 +1194,9 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
                     : {}),
                   ...(include.sourceCollectedTransaction.select?.title
                     ? { title: sourceCollectedTransaction.title }
+                    : {}),
+                  ...(include.sourceCollectedTransaction.select?.status
+                    ? { status: sourceCollectedTransaction.status }
                     : {})
                 }
               : null
@@ -1101,7 +1255,13 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
     },
     $transaction: async <T>(
       callback: (tx: Record<string, unknown>) => Promise<T>
-    ) => callback(createPrismaMock(state)),
+    ) => {
+      applyOneShotTransactionSimulations(state);
+      const transactionState = structuredClone(state);
+      const result = await callback(createPrismaMock(transactionState));
+      Object.assign(state, transactionState);
+      return result;
+    },
     user: {
       findUnique: async (args: {
         where: { email?: string; id?: string };
@@ -1334,6 +1494,340 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
         };
       }
     },
+    importBatch: {
+      findFirst: async (args: {
+        where?: {
+          id?: string;
+          tenantId?: string;
+          ledgerId?: string;
+        };
+        include?: {
+          rows?: {
+            orderBy?: { rowNumber?: 'asc' | 'desc' };
+          };
+        };
+      }) => {
+        const items = state.importBatches
+          .filter((candidate) => {
+            const matchesId = !args.where?.id || candidate.id === args.where.id;
+            const matchesTenant =
+              !args.where?.tenantId ||
+              candidate.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId;
+
+            return matchesId && matchesTenant && matchesLedger;
+          })
+          .sort(
+            (left, right) =>
+              right.uploadedAt.getTime() - left.uploadedAt.getTime()
+          );
+
+        const candidate = items[0];
+        return candidate ? projectImportBatch(candidate, args.include) : null;
+      },
+      findMany: async (args: {
+        where?: {
+          tenantId?: string;
+          ledgerId?: string;
+        };
+        include?: {
+          rows?: {
+            orderBy?: { rowNumber?: 'asc' | 'desc' };
+          };
+        };
+        orderBy?: {
+          uploadedAt?: 'asc' | 'desc';
+        };
+      }) => {
+        const items = state.importBatches
+          .filter((candidate) => {
+            const matchesTenant =
+              !args.where?.tenantId ||
+              candidate.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId;
+
+            return matchesTenant && matchesLedger;
+          })
+          .sort(
+            (left, right) =>
+              right.uploadedAt.getTime() - left.uploadedAt.getTime()
+          );
+
+        return items.map((candidate) =>
+          projectImportBatch(candidate, args.include)
+        );
+      },
+      create: async (args: {
+        data: {
+          tenantId: string;
+          ledgerId: string;
+          periodId: string | null;
+          sourceKind: ImportSourceKind;
+          fileName: string;
+          fileHash: string;
+          rowCount: number;
+          parseStatus: ImportBatchParseStatus;
+          uploadedByMembershipId: string;
+        };
+      }) => {
+        const created = {
+          id: `import-batch-${state.importBatches.length + 1}`,
+          tenantId: args.data.tenantId,
+          ledgerId: args.data.ledgerId,
+          periodId: args.data.periodId,
+          sourceKind: args.data.sourceKind,
+          fileName: args.data.fileName,
+          fileHash: args.data.fileHash,
+          rowCount: args.data.rowCount,
+          parseStatus: args.data.parseStatus,
+          uploadedByMembershipId: args.data.uploadedByMembershipId,
+          uploadedAt: new Date()
+        };
+
+        state.importBatches.push(created);
+        return created;
+      }
+    },
+    importedRow: {
+      findFirst: async (args: {
+        where?: {
+          id?: string;
+          batchId?: string;
+          batch?: {
+            tenantId?: string;
+            ledgerId?: string;
+          };
+        };
+        select?: {
+          id?: boolean;
+          parseStatus?: boolean;
+          rawPayload?: boolean;
+          sourceFingerprint?: boolean;
+          createdCollectedTransaction?: {
+            select?: {
+              id?: boolean;
+            };
+          };
+          batch?: {
+            select?: {
+              sourceKind?: boolean;
+            };
+          };
+        };
+      }) => {
+        const candidate = state.importedRows.find((row) => {
+          const batch = findImportBatch(row.batchId);
+          const matchesId = !args.where?.id || row.id === args.where.id;
+          const matchesBatchId =
+            !args.where?.batchId || row.batchId === args.where.batchId;
+          const matchesTenant =
+            !args.where?.batch?.tenantId ||
+            batch?.tenantId === args.where.batch.tenantId;
+          const matchesLedger =
+            !args.where?.batch?.ledgerId ||
+            batch?.ledgerId === args.where.batch.ledgerId;
+
+          return matchesId && matchesBatchId && matchesTenant && matchesLedger;
+        });
+
+        if (!candidate) {
+          return null;
+        }
+
+        const batch = findImportBatch(candidate.batchId);
+        const createdCollectedTransaction =
+          findCollectedTransactionByImportedRowId(candidate.id);
+
+        if (!args.select) {
+          return {
+            ...candidate,
+            createdCollectedTransaction: createdCollectedTransaction
+              ? { id: createdCollectedTransaction.id }
+              : null,
+            batch: batch
+              ? {
+                  sourceKind: batch.sourceKind
+                }
+              : null
+          };
+        }
+
+        return {
+          ...(args.select.id ? { id: candidate.id } : {}),
+          ...(args.select.parseStatus
+            ? { parseStatus: candidate.parseStatus }
+            : {}),
+          ...(args.select.rawPayload
+            ? { rawPayload: candidate.rawPayload }
+            : {}),
+          ...(args.select.sourceFingerprint
+            ? { sourceFingerprint: candidate.sourceFingerprint }
+            : {}),
+          ...(args.select.createdCollectedTransaction
+            ? {
+                createdCollectedTransaction: createdCollectedTransaction
+                  ? {
+                      ...(args.select.createdCollectedTransaction.select?.id
+                        ? { id: createdCollectedTransaction.id }
+                        : {})
+                    }
+                  : null
+              }
+            : {}),
+          ...(args.select.batch
+            ? {
+                batch: batch
+                  ? {
+                      ...(args.select.batch.select?.sourceKind
+                        ? { sourceKind: batch.sourceKind }
+                        : {})
+                    }
+                  : null
+              }
+            : {})
+        };
+      },
+      create: async (args: {
+        data: {
+          batchId: string;
+          rowNumber: number;
+          rawPayload: Record<string, unknown>;
+          parseStatus: ImportedRowParseStatus;
+          parseError: string | null;
+          sourceFingerprint: string | null;
+        };
+      }) => {
+        const batch = findImportBatch(args.data.batchId);
+        if (!batch) {
+          throw new Error('Import batch not found');
+        }
+
+        const created = {
+          id: `imported-row-${state.importedRows.length + 1}`,
+          batchId: args.data.batchId,
+          rowNumber: args.data.rowNumber,
+          rawPayload: args.data.rawPayload,
+          parseStatus: args.data.parseStatus,
+          parseError: args.data.parseError,
+          sourceFingerprint: args.data.sourceFingerprint
+        };
+
+        state.importedRows.push(created);
+        return created;
+      }
+    },
+    planItem: {
+      findMany: async (args: {
+        where?: {
+          tenantId?: string;
+          ledgerId?: string;
+          periodId?: string;
+          status?: PlanItemStatus;
+          matchedCollectedTransaction?: {
+            is?: null;
+          };
+        };
+        select?: {
+          id?: boolean;
+          plannedAmount?: boolean;
+          plannedDate?: boolean;
+          fundingAccountId?: boolean;
+          ledgerTransactionTypeId?: boolean;
+          categoryId?: boolean;
+        };
+        orderBy?: Array<{
+          plannedDate?: 'asc' | 'desc';
+          createdAt?: 'asc' | 'desc';
+        }>;
+      }) => {
+        const items = [...state.planItems]
+          .filter((candidate) => {
+            const matchesTenant =
+              !args.where?.tenantId ||
+              candidate.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId;
+            const matchesPeriod =
+              !args.where?.periodId ||
+              candidate.periodId === args.where.periodId;
+            const matchesStatus =
+              args.where?.status === undefined ||
+              candidate.status === args.where.status;
+            const matchesUnmatched =
+              args.where?.matchedCollectedTransaction?.is !== null ||
+              !state.collectedTransactions.some(
+                (transaction) => transaction.matchedPlanItemId === candidate.id
+              );
+
+            return (
+              matchesTenant &&
+              matchesLedger &&
+              matchesPeriod &&
+              matchesStatus &&
+              matchesUnmatched
+            );
+          })
+          .sort((left, right) => {
+            const plannedDateDiff =
+              left.plannedDate.getTime() - right.plannedDate.getTime();
+            if (plannedDateDiff !== 0) {
+              return plannedDateDiff;
+            }
+
+            return left.createdAt.getTime() - right.createdAt.getTime();
+          });
+
+        return items.map((candidate) => {
+          if (!args.select) {
+            return candidate;
+          }
+
+          return {
+            ...(args.select.id ? { id: candidate.id } : {}),
+            ...(args.select.plannedAmount
+              ? { plannedAmount: candidate.plannedAmount }
+              : {}),
+            ...(args.select.plannedDate
+              ? { plannedDate: candidate.plannedDate }
+              : {}),
+            ...(args.select.fundingAccountId
+              ? { fundingAccountId: candidate.fundingAccountId }
+              : {}),
+            ...(args.select.ledgerTransactionTypeId
+              ? { ledgerTransactionTypeId: candidate.ledgerTransactionTypeId }
+              : {}),
+            ...(args.select.categoryId
+              ? { categoryId: candidate.categoryId }
+              : {})
+          };
+        });
+      },
+      update: async (args: {
+        where: {
+          id: string;
+        };
+        data: {
+          status?: PlanItemStatus;
+        };
+      }) => {
+        const candidate = findPlanItem(args.where.id);
+        if (!candidate) {
+          throw new Error('Plan item not found');
+        }
+
+        if (args.data.status) {
+          candidate.status = args.data.status;
+        }
+
+        candidate.updatedAt = new Date();
+        return candidate;
+      }
+    },
     accountingPeriod: {
       findFirst: async (args: {
         where?: {
@@ -1350,6 +1844,8 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
         };
         select?: {
           id?: boolean;
+          startDate?: boolean;
+          endDate?: boolean;
         };
         include?: {
           ledger?: {
@@ -1435,7 +1931,11 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
 
         if (args.select) {
           return {
-            ...(args.select.id ? { id: candidate.id } : {})
+            ...(args.select.id ? { id: candidate.id } : {}),
+            ...(args.select.startDate
+              ? { startDate: candidate.startDate }
+              : {}),
+            ...(args.select.endDate ? { endDate: candidate.endDate } : {})
           };
         }
 
@@ -1770,6 +2270,10 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
           sourceKind?: boolean;
         };
       }) => {
+        if (state.failOpeningBalanceSnapshotCreate) {
+          throw new Error('Opening balance snapshot create failed');
+        }
+
         const period = findAccountingPeriod(args.data.effectivePeriodId);
         if (!period) {
           throw new Error('Period not found');
@@ -2344,6 +2848,10 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
           tenantId?: string;
           ledgerId?: string;
         };
+        select?: {
+          id?: boolean;
+          name?: boolean;
+        };
       }) => {
         const account = state.accounts.find(
           (candidate) =>
@@ -2354,7 +2862,18 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
             (!args.where.ledgerId || candidate.ledgerId === args.where.ledgerId)
         );
 
-        return account ? { id: account.id } : null;
+        if (!account) {
+          return null;
+        }
+
+        if (!args.select) {
+          return account;
+        }
+
+        return {
+          ...(args.select.id ? { id: account.id } : {}),
+          ...(args.select.name ? { name: account.name } : {})
+        };
       },
       findMany: async (args: {
         where?: {
@@ -2393,6 +2912,10 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
           tenantId?: string;
           ledgerId?: string;
         };
+        select?: {
+          id?: boolean;
+          name?: boolean;
+        };
       }) => {
         const category = state.categories.find(
           (candidate) =>
@@ -2403,7 +2926,18 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
             (!args.where.ledgerId || candidate.ledgerId === args.where.ledgerId)
         );
 
-        return category ? { id: category.id } : null;
+        if (!category) {
+          return null;
+        }
+
+        if (!args.select) {
+          return category;
+        }
+
+        return {
+          ...(args.select.id ? { id: category.id } : {}),
+          ...(args.select.name ? { name: category.name } : {})
+        };
       },
       findMany: async (args: {
         where?: {
@@ -2462,6 +2996,10 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
           id?: string;
           tenantId?: string;
           ledgerId?: string;
+          sourceFingerprint?: string | null;
+        };
+        select?: {
+          id?: boolean;
         };
         include?: {
           period?: {
@@ -2502,12 +3040,26 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
               !args.where?.tenantId || item.tenantId === args.where.tenantId;
             const matchesLedger =
               !args.where?.ledgerId || item.ledgerId === args.where.ledgerId;
+            const matchesSourceFingerprint =
+              args.where?.sourceFingerprint === undefined ||
+              item.sourceFingerprint === args.where.sourceFingerprint;
 
-            return matchesId && matchesTenant && matchesLedger;
+            return (
+              matchesId &&
+              matchesTenant &&
+              matchesLedger &&
+              matchesSourceFingerprint
+            );
           }) ?? null;
 
         if (!candidate) {
           return null;
+        }
+
+        if (args.select) {
+          return {
+            ...(args.select.id ? { id: candidate.id } : {})
+          };
         }
 
         const period = candidate.periodId
@@ -2736,6 +3288,9 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
           tenantId: string;
           ledgerId: string;
           periodId?: string;
+          importBatchId?: string | null;
+          importedRowId?: string | null;
+          matchedPlanItemId?: string | null;
           ledgerTransactionTypeId: string;
           fundingAccountId: string;
           categoryId?: string;
@@ -2743,6 +3298,7 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
           occurredOn: Date;
           amount: number;
           status: CollectedTransactionStatus;
+          sourceFingerprint?: string | null;
           memo?: string;
         };
         select?: {
@@ -2785,8 +3341,10 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
           ledgerTransactionTypeId: args.data.ledgerTransactionTypeId,
           fundingAccountId: args.data.fundingAccountId,
           categoryId: args.data.categoryId ?? null,
-          matchedPlanItemId: null,
-          importBatchId: null,
+          matchedPlanItemId: args.data.matchedPlanItemId ?? null,
+          importBatchId: args.data.importBatchId ?? null,
+          importedRowId: args.data.importedRowId ?? null,
+          sourceFingerprint: args.data.sourceFingerprint ?? null,
           title: args.data.title,
           occurredOn: new Date(String(args.data.occurredOn)),
           amount: Number(args.data.amount),
@@ -2912,7 +3470,7 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
         };
         include?: {
           sourceCollectedTransaction?: {
-            select?: { id?: boolean; title?: boolean };
+            select?: { id?: boolean; title?: boolean; status?: boolean };
           };
           lines?: {
             include?: {
@@ -2963,7 +3521,7 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
         where?: { tenantId?: string; ledgerId?: string };
         include?: {
           sourceCollectedTransaction?: {
-            select?: { id?: boolean; title?: boolean };
+            select?: { id?: boolean; title?: boolean; status?: boolean };
           };
           lines?: {
             include?: {
@@ -3046,7 +3604,7 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
         };
         include?: {
           sourceCollectedTransaction?: {
-            select?: { id?: boolean; title?: boolean };
+            select?: { id?: boolean; title?: boolean; status?: boolean };
           };
           lines?: {
             include?: {
@@ -3538,6 +4096,7 @@ export async function createRequestTestContext(): Promise<RequestTestContext> {
         JournalEntriesModule,
         LedgerTransactionTypesModule,
         CollectedTransactionsModule,
+        ImportBatchesModule,
         RecurringRulesModule
       ]
     })

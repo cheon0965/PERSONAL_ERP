@@ -294,6 +294,8 @@ test('POST /collected-transactions/:id/confirm creates a journal entry and marks
       categoryId: 'cat-1',
       matchedPlanItemId: null,
       importBatchId: null,
+      importedRowId: null,
+      sourceFingerprint: null,
       title: 'Fuel refill',
       occurredOn: new Date('2026-03-03T00:00:00.000Z'),
       amount: 84000,
@@ -376,6 +378,80 @@ test('POST /collected-transactions/:id/confirm creates a journal entry and marks
   }
 });
 
+test('POST /collected-transactions/:id/confirm re-checks the transaction inside the transaction boundary before posting', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push({
+      id: 'period-open-confirm-race',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 3,
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.OPEN,
+      openedAt: new Date('2026-03-01T00:00:00.000Z'),
+      lockedAt: null,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
+
+    context.state.collectedTransactions.push({
+      id: 'ctx-confirm-race-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-open-confirm-race',
+      ledgerTransactionTypeId: 'ltt-1-expense',
+      fundingAccountId: 'acc-1',
+      categoryId: 'cat-1',
+      matchedPlanItemId: null,
+      importBatchId: null,
+      importedRowId: null,
+      sourceFingerprint: null,
+      title: 'Fuel refill',
+      occurredOn: new Date('2026-03-03T00:00:00.000Z'),
+      amount: 84000,
+      status: CollectedTransactionStatus.COLLECTED,
+      memo: 'Full tank',
+      createdAt: new Date('2026-03-03T08:00:00.000Z'),
+      updatedAt: new Date('2026-03-03T08:00:00.000Z')
+    });
+    context.state.simulateCollectedTransactionAlreadyPostedOnNextTransactionId =
+      'ctx-confirm-race-1';
+
+    const response = await context.request(
+      '/collected-transactions/ctx-confirm-race-1/confirm',
+      {
+        method: 'POST',
+        headers: context.authHeaders()
+      }
+    );
+
+    assert.equal(response.status, 409);
+    assert.deepEqual(response.body, {
+      statusCode: 409,
+      message: 'Collected transaction is already posted.',
+      error: 'Conflict'
+    });
+    assert.equal(
+      context.state.journalEntries.filter(
+        (candidate) =>
+          candidate.sourceCollectedTransactionId === 'ctx-confirm-race-1'
+      ).length,
+      1
+    );
+    assert.equal(
+      context.state.collectedTransactions.find(
+        (candidate) => candidate.id === 'ctx-confirm-race-1'
+      )?.status,
+      CollectedTransactionStatus.POSTED
+    );
+  } finally {
+    await context.close();
+  }
+});
+
 test('POST /collected-transactions/:id/confirm returns 403 when the current membership role cannot confirm', async () => {
   const context = await createRequestTestContext();
 
@@ -405,6 +481,8 @@ test('POST /collected-transactions/:id/confirm returns 403 when the current memb
       categoryId: 'cat-1',
       matchedPlanItemId: null,
       importBatchId: null,
+      importedRowId: null,
+      sourceFingerprint: null,
       title: 'Fuel refill',
       occurredOn: new Date('2026-03-03T00:00:00.000Z'),
       amount: 84000,
@@ -485,6 +563,8 @@ test('POST /journal-entries/:id/reverse creates a reversal journal entry and mar
       categoryId: 'cat-1',
       matchedPlanItemId: null,
       importBatchId: null,
+      importedRowId: null,
+      sourceFingerprint: null,
       title: 'March fuel expense',
       occurredOn: new Date('2026-03-28T00:00:00.000Z'),
       amount: 84_000,
@@ -690,6 +770,8 @@ test('POST /journal-entries/:id/correct creates a correction journal entry and m
       categoryId: 'cat-1',
       matchedPlanItemId: null,
       importBatchId: null,
+      importedRowId: null,
+      sourceFingerprint: null,
       title: 'Fuel expense to correct',
       occurredOn: new Date('2026-03-27T00:00:00.000Z'),
       amount: 84_000,

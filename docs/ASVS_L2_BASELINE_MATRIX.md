@@ -144,10 +144,10 @@
 
 ### 파일 업로드 보안
 
-- 현재 상태: 파일 업로드 기능 없음
-- 근거 파일: 현재 코드베이스
-- 판정: `N/A`
-- 다음 단계: 기능 생길 때 별도 설계
+- 현재 상태: `ImportBatch` 생성 시 UTF-8 텍스트 본문 업로드 API가 존재함. 아직 binary multipart/file storage는 없음
+- 근거 파일: `apps/api/src/modules/import-batches/*`, `apps/web/src/features/imports/*`
+- 판정: `Partial`
+- 다음 단계: 파일 크기 제한, 허용 포맷 검증, 감사/모니터링, binary upload 도입 시 저장/백신/콘텐츠 검증 설계 추가
 
 ### 외부 결제/메일/SMS 보안
 

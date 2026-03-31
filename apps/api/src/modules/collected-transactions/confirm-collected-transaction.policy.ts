@@ -1,4 +1,9 @@
+import {
+  BadRequestException,
+  InternalServerErrorException
+} from '@nestjs/common';
 import type { PostingPolicyKey } from '@prisma/client';
+import { buildJournalEntryEntryNumber } from '../journal-entries/journal-entry-adjustment.policy';
 
 const ASSET_SUBJECT_CODE = '1010';
 const LIABILITY_SUBJECT_CODE = '2010';
@@ -79,10 +84,19 @@ export function buildConfirmCollectedTransactionEntryNumber(
   month: number,
   sequence: number
 ): string {
-  return `${year}${String(month).padStart(2, '0')}-${String(sequence).padStart(
-    4,
-    '0'
-  )}`;
+  return buildJournalEntryEntryNumber(year, month, sequence);
+}
+
+export function assertConfirmJournalAccountSubjectIdsResolved(
+  subjects: ConfirmJournalAccountSubjectIds | null
+): ConfirmJournalAccountSubjectIds {
+  if (subjects) {
+    return subjects;
+  }
+
+  throw new InternalServerErrorException(
+    'Required account subjects are missing in this ledger.'
+  );
 }
 
 export function resolveConfirmCollectedTransactionJournalLines(input: {
@@ -166,4 +180,22 @@ export function resolveConfirmCollectedTransactionJournalLines(input: {
         kind: 'unsupported_policy'
       };
   }
+}
+
+export function assertConfirmJournalLinesSupported(
+  result: ResolveConfirmJournalLinesResult
+): ConfirmJournalLineDraft[] {
+  if (result.kind === 'supported') {
+    return result.lines;
+  }
+
+  if (result.kind === 'requires_counterparty_account') {
+    throw new BadRequestException(
+      'This posting policy requires a second account selection.'
+    );
+  }
+
+  throw new BadRequestException(
+    'This posting policy is not supported for collected transaction confirmation.'
+  );
 }
