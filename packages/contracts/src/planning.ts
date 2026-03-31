@@ -1,4 +1,7 @@
-﻿import type { AccountingPeriodItem } from './accounting';
+import type {
+  AccountingPeriodItem,
+  AccountingPeriodStatus
+} from './accounting';
 
 export type PlanItemStatus =
   | 'DRAFT'
@@ -51,27 +54,70 @@ export type GeneratePlanItemsResponse = PlanItemsView & {
   };
 };
 
+export type ReportingBasisStatus = 'LIVE_OPERATIONS' | 'OFFICIAL_LOCKED';
+
+export type ReportingHighlightTone = 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
+
+export type ReportingHighlightItem = {
+  label: string;
+  amountWon: number;
+  tone: ReportingHighlightTone;
+};
+
+export type ReportingTrendPoint = {
+  periodId: string;
+  monthLabel: string;
+  periodStatus: AccountingPeriodStatus;
+  incomeWon: number;
+  expenseWon: number;
+  plannedIncomeWon: number;
+  plannedExpenseWon: number;
+  periodPnLWon: number | null;
+  cashWon: number | null;
+  netWorthWon: number | null;
+  isOfficial: boolean;
+};
+
+export type ReportingOfficialComparison = {
+  periodId: string;
+  monthLabel: string;
+  officialCashWon: number;
+  officialNetWorthWon: number;
+  officialPeriodPnLWon: number;
+};
+
 export type DashboardSummary = {
-  month: string;
+  period: AccountingPeriodItem;
+  basisStatus: ReportingBasisStatus;
   actualBalanceWon: number;
   confirmedIncomeWon: number;
   confirmedExpenseWon: number;
-  remainingRecurringWon: number;
-  insuranceMonthlyWon: number;
-  vehicleMonthlyWon: number;
+  remainingPlannedIncomeWon: number;
+  remainingPlannedExpenseWon: number;
+  minimumReserveWon: number;
   expectedMonthEndBalanceWon: number;
   safetySurplusWon: number;
+  warnings: string[];
+  highlights: ReportingHighlightItem[];
+  trend: ReportingTrendPoint[];
+  officialComparison: ReportingOfficialComparison | null;
 };
 
 export type ForecastResponse = {
-  month: string;
+  period: AccountingPeriodItem;
+  basisStatus: ReportingBasisStatus;
   actualBalanceWon: number;
+  confirmedIncomeWon: number;
   expectedIncomeWon: number;
   confirmedExpenseWon: number;
-  remainingRecurringWon: number;
+  remainingPlannedExpenseWon: number;
   sinkingFundWon: number;
   minimumReserveWon: number;
   expectedMonthEndBalanceWon: number;
   safetySurplusWon: number;
+  warnings: string[];
+  highlights: ReportingHighlightItem[];
+  trend: ReportingTrendPoint[];
+  officialComparison: ReportingOfficialComparison | null;
   notes: string[];
 };

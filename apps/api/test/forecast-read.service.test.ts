@@ -1,57 +1,247 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { AccountingPeriodStatus } from '@prisma/client';
 import { ForecastReadService } from '../src/modules/forecast/forecast-read.service';
 
-test('ForecastReadService.getMonthlyForecast uses configured reserve and sinking fund values', async () => {
+test('ForecastReadService.getMonthlyForecast combines confirmed journals, remaining plans, and reserve assumptions', async () => {
   const repository = {
     getMonthlyForecastReadModel: async () => ({
-      minimumReserveWon: 450000,
-      monthlySinkingFundWon: 120000,
-      accounts: [{ balanceWon: 3180000 }],
-      transactions: [
-        { type: 'INCOME' as const, amountWon: 3200000 },
-        { type: 'EXPENSE' as const, amountWon: 1465000 }
+      targetPeriod: buildPeriod(
+        'period-2026-03',
+        2026,
+        3,
+        AccountingPeriodStatus.OPEN
+      ),
+      basisStatus: 'LIVE_OPERATIONS' as const,
+      minimumReserveWon: 450_000,
+      monthlySinkingFundWon: 120_000,
+      currentFundingBalanceWon: 3_180_000,
+      targetJournalLines: [
+        {
+          debitAmount: 0,
+          creditAmount: 3_200_000,
+          accountSubject: { subjectKind: 'INCOME' as const }
+        },
+        {
+          debitAmount: 1_465_000,
+          creditAmount: 0,
+          accountSubject: { subjectKind: 'EXPENSE' as const }
+        }
       ],
-      recurringRules: [{ amountWon: 540000 }]
+      targetPlanItems: [
+        {
+          plannedAmount: 200_000,
+          status: 'DRAFT' as const,
+          ledgerTransactionTypeId: 'ltt-income'
+        },
+        {
+          plannedAmount: 540_000,
+          status: 'MATCHED' as const,
+          ledgerTransactionTypeId: 'ltt-expense'
+        }
+      ],
+      targetClosingSnapshot: null,
+      ledgerTransactionTypes: [
+        { id: 'ltt-income', flowKind: 'INCOME' as const },
+        { id: 'ltt-expense', flowKind: 'EXPENSE' as const }
+      ],
+      comparisonPeriod: {
+        id: 'period-2026-02',
+        year: 2026,
+        month: 2,
+        status: AccountingPeriodStatus.LOCKED
+      },
+      comparisonClosingSnapshot: {
+        totalAssetAmount: 2_830_000,
+        totalLiabilityAmount: 0,
+        periodPnLAmount: 1_670_000,
+        cashBalanceWon: 2_830_000
+      },
+      trend: [
+        {
+          period: {
+            id: 'period-2026-02',
+            year: 2026,
+            month: 2,
+            status: AccountingPeriodStatus.LOCKED
+          },
+          journalLines: [
+            {
+              debitAmount: 0,
+              creditAmount: 3_180_000,
+              accountSubject: { subjectKind: 'INCOME' as const }
+            },
+            {
+              debitAmount: 1_510_000,
+              creditAmount: 0,
+              accountSubject: { subjectKind: 'EXPENSE' as const }
+            }
+          ],
+          planItems: [],
+          closingSnapshot: {
+            totalAssetAmount: 2_830_000,
+            totalLiabilityAmount: 0,
+            periodPnLAmount: 1_670_000,
+            cashBalanceWon: 2_830_000
+          }
+        },
+        {
+          period: {
+            id: 'period-2026-03',
+            year: 2026,
+            month: 3,
+            status: AccountingPeriodStatus.OPEN
+          },
+          journalLines: [
+            {
+              debitAmount: 0,
+              creditAmount: 3_200_000,
+              accountSubject: { subjectKind: 'INCOME' as const }
+            },
+            {
+              debitAmount: 1_465_000,
+              creditAmount: 0,
+              accountSubject: { subjectKind: 'EXPENSE' as const }
+            }
+          ],
+          planItems: [
+            {
+              plannedAmount: 200_000,
+              status: 'DRAFT' as const,
+              ledgerTransactionTypeId: 'ltt-income'
+            },
+            {
+              plannedAmount: 540_000,
+              status: 'MATCHED' as const,
+              ledgerTransactionTypeId: 'ltt-expense'
+            }
+          ],
+          closingSnapshot: null
+        }
+      ]
     })
   };
 
   const service = new ForecastReadService(repository as never);
-  const result = await service.getMonthlyForecast('user-1', '2026-03');
-
-  assert.deepEqual(result, {
-    month: '2026-03',
-    actualBalanceWon: 3180000,
-    expectedIncomeWon: 0,
-    confirmedExpenseWon: 1465000,
-    remainingRecurringWon: 540000,
-    sinkingFundWon: 120000,
-    minimumReserveWon: 450000,
-    expectedMonthEndBalanceWon: 2520000,
-    safetySurplusWon: 2070000,
-    notes: [
-      'Recurring income auto-forecast is not included in the MVP baseline yet.',
-      'Irregular spending buffer is modeled as a monthly sinking fund.'
-    ]
+  const result = await service.getMonthlyForecast({
+    user: buildUser(),
+    periodId: 'period-2026-03'
   });
+
+  assert.ok(result);
+  assert.equal(result.period.monthLabel, '2026-03');
+  assert.equal(result.expectedIncomeWon, 200_000);
+  assert.equal(result.remainingPlannedExpenseWon, 540_000);
+  assert.equal(result.sinkingFundWon, 120_000);
+  assert.equal(result.expectedMonthEndBalanceWon, 2_720_000);
+  assert.equal(result.safetySurplusWon, 2_270_000);
+  assert.equal(result.officialComparison?.monthLabel, '2026-02');
 });
 
 test('ForecastReadService.getMonthlyForecast falls back to default reserve assumptions when settings are missing', async () => {
   const repository = {
     getMonthlyForecastReadModel: async () => ({
+      targetPeriod: buildPeriod(
+        'period-2026-04',
+        2026,
+        4,
+        AccountingPeriodStatus.OPEN
+      ),
+      basisStatus: 'LIVE_OPERATIONS' as const,
       minimumReserveWon: null,
       monthlySinkingFundWon: null,
-      accounts: [{ balanceWon: 1000000 }],
-      transactions: [{ type: 'EXPENSE' as const, amountWon: 500000 }],
-      recurringRules: [{ amountWon: 200000 }]
+      currentFundingBalanceWon: 1_000_000,
+      targetJournalLines: [
+        {
+          debitAmount: 500_000,
+          creditAmount: 0,
+          accountSubject: { subjectKind: 'EXPENSE' as const }
+        }
+      ],
+      targetPlanItems: [
+        {
+          plannedAmount: 200_000,
+          status: 'DRAFT' as const,
+          ledgerTransactionTypeId: 'ltt-expense'
+        }
+      ],
+      targetClosingSnapshot: null,
+      ledgerTransactionTypes: [
+        { id: 'ltt-expense', flowKind: 'EXPENSE' as const }
+      ],
+      comparisonPeriod: null,
+      comparisonClosingSnapshot: null,
+      trend: []
     })
   };
 
   const service = new ForecastReadService(repository as never);
-  const result = await service.getMonthlyForecast('user-1', '2026-04');
+  const result = await service.getMonthlyForecast({
+    user: buildUser(),
+    periodId: 'period-2026-04'
+  });
 
-  assert.equal(result.sinkingFundWon, 140000);
-  assert.equal(result.minimumReserveWon, 400000);
-  assert.equal(result.expectedMonthEndBalanceWon, 660000);
-  assert.equal(result.safetySurplusWon, 260000);
+  assert.ok(result);
+  assert.equal(result.sinkingFundWon, 140_000);
+  assert.equal(result.minimumReserveWon, 400_000);
+  assert.equal(result.expectedMonthEndBalanceWon, 660_000);
+  assert.equal(result.safetySurplusWon, 260_000);
 });
+
+function buildPeriod(
+  id: string,
+  year: number,
+  month: number,
+  status: AccountingPeriodStatus
+) {
+  return {
+    id,
+    tenantId: 'tenant-1',
+    ledgerId: 'ledger-1',
+    year,
+    month,
+    startDate: new Date(
+      `${year}-${String(month).padStart(2, '0')}-01T00:00:00.000Z`
+    ),
+    endDate: new Date(
+      `${year}-${String(month + 1).padStart(2, '0')}-01T00:00:00.000Z`
+    ),
+    status,
+    openedAt: new Date(
+      `${year}-${String(month).padStart(2, '0')}-01T00:00:00.000Z`
+    ),
+    lockedAt: status === AccountingPeriodStatus.LOCKED ? new Date() : null,
+    openingBalanceSnapshot: {
+      sourceKind: 'CARRY_FORWARD' as const
+    },
+    statusHistory: []
+  };
+}
+
+function buildUser() {
+  return {
+    id: 'user-1',
+    email: 'demo@example.com',
+    name: 'Demo User',
+    currentWorkspace: {
+      tenant: {
+        id: 'tenant-1',
+        slug: 'demo-tenant',
+        name: 'Demo Workspace',
+        status: 'ACTIVE' as const
+      },
+      membership: {
+        id: 'membership-1',
+        role: 'OWNER' as const,
+        status: 'ACTIVE' as const
+      },
+      ledger: {
+        id: 'ledger-1',
+        name: '개인 장부',
+        baseCurrency: 'KRW',
+        timezone: 'Asia/Seoul',
+        status: 'ACTIVE' as const
+      }
+    }
+  };
+}

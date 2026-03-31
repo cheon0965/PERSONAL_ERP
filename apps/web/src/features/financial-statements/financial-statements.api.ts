@@ -40,6 +40,14 @@ export function buildFinancialStatementsFallbackView(
 
   return {
     period,
+    previousPeriod: null,
+    basis: {
+      openingBalanceSourceKind: period.openingBalanceSourceKind,
+      carryForwardRecordId: null,
+      sourceClosingSnapshotId: null,
+      sourcePeriodId: null,
+      sourceMonthLabel: null
+    },
     snapshots: kinds.map((statementKind, index) => ({
       id: `financial-statement-demo-${index + 1}`,
       periodId: period.id,
@@ -52,6 +60,10 @@ export function buildFinancialStatementsFallbackView(
         sections: [],
         notes: ['데모 모드에서는 공식 재무제표 스냅샷을 빈 값으로 보여줍니다.']
       }
-    }))
+    })),
+    comparison: [],
+    warnings: [
+      '데모 모드에서는 비교용 이전 잠금 기간과 이월 기준선이 비어 있습니다.'
+    ]
   };
 }

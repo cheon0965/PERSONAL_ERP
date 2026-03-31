@@ -1,76 +1,94 @@
 'use client';
 
 import AccountBalanceWalletRoundedIcon from '@mui/icons-material/AccountBalanceWalletRounded';
-import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded';
+import AutoGraphRoundedIcon from '@mui/icons-material/AutoGraphRounded';
 import ReceiptLongRoundedIcon from '@mui/icons-material/ReceiptLongRounded';
 import ShieldRoundedIcon from '@mui/icons-material/ShieldRounded';
+import { Alert, Box, Chip, Grid, Stack, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import { Box, Grid, Stack, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
-import type { GridColDef } from '@mui/x-data-grid';
 import { BarChart } from '@mui/x-charts/BarChart';
-import type { CollectedTransactionItem } from '@personal-erp/contracts';
 import { formatWon } from '@/shared/lib/format';
-import { ChartCard } from '@/shared/ui/chart-card';
-import { DataTableCard } from '@/shared/ui/data-table-card';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import { ChartCard } from '@/shared/ui/chart-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
+import { SectionCard } from '@/shared/ui/section-card';
 import { SummaryCard } from '@/shared/ui/summary-card';
-import { getCollectedTransactions } from '@/features/transactions/transactions.api';
 import { getDashboardSummary } from './dashboard.api';
-
-const transactionColumns: GridColDef<CollectedTransactionItem>[] = [
-  { field: 'businessDate', headerName: '거래일', flex: 0.8 },
-  { field: 'title', headerName: '적요', flex: 1.3 },
-  { field: 'categoryName', headerName: '카테고리', flex: 1 },
-  { field: 'fundingAccountName', headerName: '자금수단', flex: 1 },
-  {
-    field: 'amountWon',
-    headerName: '금액',
-    flex: 1,
-    valueFormatter: (value) => formatWon(Number(value))
-  }
-];
 
 export function DashboardPage() {
   const summaryQuery = useQuery({
     queryKey: ['dashboard-summary'],
-    queryFn: getDashboardSummary
-  });
-  const transactionsQuery = useQuery({
-    queryKey: ['collected-transactions'],
-    queryFn: getCollectedTransactions
+    queryFn: () => getDashboardSummary()
   });
 
   useDomainHelp({
     title: '월 운영 대시보드 개요',
     description:
-      '대시보드는 장부 전체를 직접 수정하는 화면이 아니라, 현재 운영 기간의 요약과 해석을 제공하는 화면입니다.',
+      '대시보드는 현재 운영 기간을 period-aware 읽기 모델로 요약해 보여주며, 공식 확정 수치와 운영 판단 수치를 구분해서 해석하게 돕습니다.',
     primaryEntity: '장부 / 운영 기간 (Ledger / AccountingPeriod)',
     relatedEntities: [
-      '수집 거래 (CollectedTransaction)',
+      '계획 항목 (PlanItem)',
       '전표 (JournalEntry / JournalLine)',
       '마감 스냅샷 (ClosingSnapshot)',
       '재무제표 스냅샷 (FinancialStatementSnapshot)'
     ],
-    truthSource: '공식 수치와 회계적 단일 원천은 확정 전표와 잠금 이후 스냅샷에 둡니다.',
+    truthSource:
+      '공식 수치의 단일 원천은 잠금된 기간의 ClosingSnapshot과 FinancialStatementSnapshot입니다.',
     readModelNote:
-      '현재 카드와 표는 운영 판단을 돕는 요약 화면이며, 회계 진실 자체를 직접 편집하는 화면이 아닙니다.'
+      '이 화면의 카드와 추이는 운영 판단용이며, 잠금 전 기간의 값은 공식 확정치와 다를 수 있습니다.'
   });
 
   const summary = summaryQuery.data;
-  const transactions = transactionsQuery.data ?? [];
+  const trend = [...(summary?.trend ?? [])].reverse();
+
+  if (summaryQuery.error) {
+    return (
+      <Stack spacing={appLayout.pageGap}>
+        <PageHeader
+          eyebrow="장부 운영"
+          title="월 운영 대시보드"
+          description="운영 기간 기준의 period-aware 요약 화면입니다."
+        />
+        <QueryErrorAlert
+          title="대시보드 요약 조회에 실패했습니다."
+          error={summaryQuery.error}
+        />
+      </Stack>
+    );
+  }
+
+  if (!summary) {
+    return (
+      <Stack spacing={appLayout.pageGap}>
+        <PageHeader
+          eyebrow="장부 운영"
+          title="월 운영 대시보드"
+          description="운영 기간 기준의 period-aware 요약 화면입니다."
+        />
+        <SectionCard
+          title="운영 기간이 아직 없습니다"
+          description="대시보드는 AccountingPeriod 기준 read model 위에서만 동작합니다."
+        >
+          <Typography variant="body2" color="text.secondary">
+            먼저 운영 기간을 열면 대시보드 카드와 추이를 period-aware 기준으로
+            계산합니다.
+          </Typography>
+        </SectionCard>
+      </Stack>
+    );
+  }
 
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
         eyebrow="장부 운영"
         title="월 운영 대시보드"
-        description="이 화면은 Ledger와 AccountingPeriod 기준의 읽기 모델입니다. 월 운영 판단은 여기서 빠르게 보고, 공식 회계 확정은 전표와 스냅샷을 기준으로 해석합니다."
-        primaryActionLabel="수집 거래 등록"
-        primaryActionHref="/transactions#collected-transaction-form"
+        description="현재 운영 기간의 확정 전표, 남은 계획, 최근 공식 잠금 기준을 함께 읽어 운영 판단과 공식 보고의 경계를 분명하게 보여줍니다."
+        primaryActionLabel="운영 전망 보기"
+        primaryActionHref="/forecast"
       />
 
       <Box
@@ -80,98 +98,82 @@ export function DashboardPage() {
           borderRadius: 6,
           p: appLayout.dashboardHeroPadding,
           background:
-            'linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 64, 175, 0.92) 62%, rgba(59, 130, 246, 0.86))',
+            'linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(22, 101, 52, 0.9) 58%, rgba(74, 222, 128, 0.72))',
           color: 'common.white',
-          boxShadow: '0 18px 40px rgba(15, 23, 42, 0.14)',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            inset: 'auto -10% -50% auto',
-            width: { xs: 180, md: 260 },
-            height: { xs: 180, md: 260 },
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%)'
-          }
+          boxShadow: '0 18px 40px rgba(15, 23, 42, 0.14)'
         }}
       >
-        <Grid container spacing={appLayout.dashboardHeroGap} alignItems="center">
-          <Grid size={{ xs: 12, lg: 7 }}>
-            <Stack spacing={appLayout.dashboardHeroMetricGap} sx={{ position: 'relative', zIndex: 1 }}>
-              <Typography variant="overline" sx={{ color: alpha('#ffffff', 0.72) }}>
-                운영 기간 스냅샷
-              </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: '-0.03em' }}>
-                이번 장부의 월 운영 흐름을 빠르게 점검하세요.
-              </Typography>
-              <Typography sx={{ maxWidth: 620, color: alpha('#ffffff', 0.76) }}>
-                확정 전표 기준 수입과 지출, 아직 남아 있는 계획 지출, 안전 잉여를 한 번에
-                확인할 수 있도록 핵심 수치 영역을 정리했습니다.
-              </Typography>
-            </Stack>
-          </Grid>
-
-          <Grid size={{ xs: 12, lg: 5 }}>
-            <Grid
-              container
-              spacing={appLayout.dashboardHeroMetricGap}
-              sx={{ position: 'relative', zIndex: 1 }}
+        <Stack
+          spacing={appLayout.dashboardHeroMetricGap}
+          sx={{ position: 'relative', zIndex: 1 }}
+        >
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={1.2}
+            alignItems={{ md: 'center' }}
+          >
+            <Typography
+              variant="overline"
+              sx={{ color: alpha('#ffffff', 0.72) }}
             >
-              <Grid size={{ xs: 6 }}>
-                <Box
-                  sx={{
-                    p: 1.5,
-                    borderRadius: 4,
-                    backgroundColor: alpha('#ffffff', 0.1),
-                    border: `1px solid ${alpha('#ffffff', 0.12)}`
-                  }}
-                >
-                  <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.72) }}>
-                    확정 전표 수입
-                  </Typography>
-                  <Typography variant="h6" sx={{ mt: 0.5, fontWeight: 800 }}>
-                    {formatWon(summary?.confirmedIncomeWon ?? 0)}
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid size={{ xs: 6 }}>
-                <Box
-                  sx={{
-                    p: 1.5,
-                    borderRadius: 4,
-                    backgroundColor: alpha('#ffffff', 0.1),
-                    border: `1px solid ${alpha('#ffffff', 0.12)}`
-                  }}
-                >
-                  <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.72) }}>
-                    기간말 예상
-                  </Typography>
-                  <Typography variant="h6" sx={{ mt: 0.5, fontWeight: 800 }}>
-                    {formatWon(summary?.expectedMonthEndBalanceWon ?? 0)}
-                  </Typography>
-                </Box>
-              </Grid>
-            </Grid>
-          </Grid>
-        </Grid>
+              {summary.period.monthLabel} 운영 기간
+            </Typography>
+            <Chip
+              label={readBasisStatusLabel(summary.basisStatus)}
+              size="small"
+              sx={{
+                alignSelf: 'flex-start',
+                color: '#ecfeff',
+                backgroundColor: alpha('#ffffff', 0.14),
+                border: `1px solid ${alpha('#ffffff', 0.18)}`
+              }}
+            />
+          </Stack>
+
+          <Typography
+            variant="h4"
+            sx={{ fontWeight: 800, letterSpacing: '-0.03em' }}
+          >
+            운영 숫자와 최근 공식 숫자를 같은 화면에서 분리해 확인합니다.
+          </Typography>
+
+          <Typography sx={{ maxWidth: 700, color: alpha('#ffffff', 0.78) }}>
+            현재 기간 상태는 {readPeriodStatusLabel(summary.period.status)}이며,
+            안전 잉여와 남은 계획 지출을 운영 판단 기준으로 보여줍니다.
+          </Typography>
+
+          {summary.officialComparison ? (
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+              <MetricBadge
+                label="최근 공식 순자산"
+                value={formatWon(
+                  summary.officialComparison.officialNetWorthWon
+                )}
+              />
+              <MetricBadge
+                label="최근 공식 손익"
+                value={formatWon(
+                  summary.officialComparison.officialPeriodPnLWon
+                )}
+              />
+            </Stack>
+          ) : null}
+        </Stack>
       </Box>
 
-      {summaryQuery.error ? (
-        <QueryErrorAlert title="대시보드 요약 조회에 실패했습니다." error={summaryQuery.error} />
-      ) : null}
-      {transactionsQuery.error ? (
-        <QueryErrorAlert
-          title="최근 운영 흐름 조회에 실패했습니다."
-          error={transactionsQuery.error}
-        />
-      ) : null}
+      {summary.warnings.map((warning) => (
+        <Alert key={warning} severity="warning" variant="outlined">
+          {warning}
+        </Alert>
+      ))}
 
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
           <SummaryCard
-            eyebrow="FundingAccount 기준"
+            eyebrow="운영 기준"
             title="현재 자금 잔액"
-            value={formatWon(summary?.actualBalanceWon ?? 0)}
-            subtitle="자금수단(FundingAccount) 읽기 모델을 집계한 현재 잔액입니다."
+            value={formatWon(summary.actualBalanceWon)}
+            subtitle="FundingAccount 기준 현재 잔액 또는 잠금된 기간의 공식 현금 잔액입니다."
             tone="primary"
             icon={AccountBalanceWalletRoundedIcon}
           />
@@ -180,8 +182,8 @@ export function DashboardPage() {
           <SummaryCard
             eyebrow="전표 기준"
             title="확정 전표 지출"
-            value={formatWon(summary?.confirmedExpenseWon ?? 0)}
-            subtitle="이미 JournalEntry로 확정되어 장부에 반영된 월간 지출 합계입니다."
+            value={formatWon(summary.confirmedExpenseWon)}
+            subtitle="현재 선택 기간에 POSTED 전표로 확정된 지출 합계입니다."
             tone="warning"
             icon={ReceiptLongRoundedIcon}
           />
@@ -190,18 +192,18 @@ export function DashboardPage() {
           <SummaryCard
             eyebrow="계획 기준"
             title="남은 계획 지출"
-            value={formatWon(summary?.remainingRecurringWon ?? 0)}
-            subtitle="RecurringRule과 PlanItem에서 아직 확정되지 않은 예정 지출입니다."
+            value={formatWon(summary.remainingPlannedExpenseWon)}
+            subtitle="아직 확정되지 않은 PlanItem 중 지출 방향 항목만 집계합니다."
             tone="neutral"
-            icon={AutorenewRoundedIcon}
+            icon={AutoGraphRoundedIcon}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
           <SummaryCard
-            eyebrow="안전 여력"
+            eyebrow="안전 기준"
             title="안전 잉여"
-            value={formatWon(summary?.safetySurplusWon ?? 0)}
-            subtitle="최소 예비자금을 반영한 뒤 남는 운영 여력입니다."
+            value={formatWon(summary.safetySurplusWon)}
+            subtitle={`최소 예비자금 ${formatWon(summary.minimumReserveWon)} 반영 후 남는 운영 여력입니다.`}
             tone="success"
             icon={ShieldRoundedIcon}
           />
@@ -211,43 +213,153 @@ export function DashboardPage() {
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, xl: 7 }}>
           <ChartCard
-            title="장부 월 운영 요약"
-            description="확정 전표 지출과 계획 지출, 보조 운영 비용이 어떤 비중으로 움직이는지 빠르게 확인할 수 있습니다."
+            title="최근 기간 추이"
+            description="수입, 확정 지출, 남은 계획 지출을 period-aware 기준으로 함께 보여줍니다."
             chart={
               <BarChart
                 height={320}
                 xAxis={[
                   {
                     scaleType: 'band',
-                    data: ['수입', '지출', '반복', '보험', '차량', '잉여']
+                    data: trend.map((item) => item.monthLabel)
                   }
                 ]}
                 series={[
                   {
-                    data: [
-                      summary?.confirmedIncomeWon ?? 0,
-                      summary?.confirmedExpenseWon ?? 0,
-                      summary?.remainingRecurringWon ?? 0,
-                      summary?.insuranceMonthlyWon ?? 0,
-                      summary?.vehicleMonthlyWon ?? 0,
-                      summary?.safetySurplusWon ?? 0
-                    ]
+                    label: '수입',
+                    data: trend.map((item) => item.incomeWon)
+                  },
+                  {
+                    label: '확정 지출',
+                    data: trend.map((item) => item.expenseWon)
+                  },
+                  {
+                    label: '남은 계획 지출',
+                    data: trend.map((item) => item.plannedExpenseWon)
                   }
                 ]}
               />
             }
           />
         </Grid>
+
         <Grid size={{ xs: 12, xl: 5 }}>
-          <DataTableCard
-            title="최근 확정 흐름"
-            description="수집 거래가 확정되어 장부에 반영된 최근 흐름을 요약한 읽기 모델입니다."
-            rows={transactions}
-            columns={transactionColumns}
-            height={320}
-          />
+          <SectionCard
+            title="운영 해석"
+            description="현재 카드가 운영 숫자인지, 최근 공식 잠금 숫자인지 같은 문맥에서 풀어 설명합니다."
+          >
+            <Stack spacing={1.5}>
+              {summary.highlights.map((highlight) => (
+                <Stack
+                  key={highlight.label}
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  spacing={2}
+                >
+                  <Typography variant="body2" color="text.secondary">
+                    {highlight.label}
+                  </Typography>
+                  <Chip
+                    label={formatWon(highlight.amountWon)}
+                    color={readHighlightToneColor(highlight.tone)}
+                    variant="outlined"
+                    size="small"
+                  />
+                </Stack>
+              ))}
+
+              {summary.officialComparison ? (
+                <Box
+                  sx={{
+                    mt: 1,
+                    p: 2,
+                    borderRadius: 3,
+                    backgroundColor: 'grey.50',
+                    border: '1px solid',
+                    borderColor: 'divider'
+                  }}
+                >
+                  <Typography variant="subtitle2">
+                    최근 공식 잠금 기준: {summary.officialComparison.monthLabel}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 0.75 }}
+                  >
+                    공식 현금{' '}
+                    {formatWon(summary.officialComparison.officialCashWon)}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    공식 순자산{' '}
+                    {formatWon(summary.officialComparison.officialNetWorthWon)}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    공식 손익{' '}
+                    {formatWon(summary.officialComparison.officialPeriodPnLWon)}
+                  </Typography>
+                </Box>
+              ) : null}
+            </Stack>
+          </SectionCard>
         </Grid>
       </Grid>
     </Stack>
   );
+}
+
+function MetricBadge({ label, value }: { label: string; value: string }) {
+  return (
+    <Box
+      sx={{
+        minWidth: 180,
+        p: 1.5,
+        borderRadius: 4,
+        backgroundColor: alpha('#ffffff', 0.1),
+        border: `1px solid ${alpha('#ffffff', 0.12)}`
+      }}
+    >
+      <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.72) }}>
+        {label}
+      </Typography>
+      <Typography variant="h6" sx={{ mt: 0.5, fontWeight: 800 }}>
+        {value}
+      </Typography>
+    </Box>
+  );
+}
+
+function readBasisStatusLabel(
+  basisStatus: 'LIVE_OPERATIONS' | 'OFFICIAL_LOCKED'
+) {
+  return basisStatus === 'OFFICIAL_LOCKED'
+    ? '공식 잠금 기준'
+    : '운영 판단 기준';
+}
+
+function readPeriodStatusLabel(status: string) {
+  switch (status) {
+    case 'OPEN':
+      return '열린 기간';
+    case 'IN_REVIEW':
+      return '검토 중인 기간';
+    case 'CLOSING':
+      return '마감 진행 중인 기간';
+    case 'LOCKED':
+      return '잠금된 기간';
+    default:
+      return status;
+  }
+}
+
+function readHighlightToneColor(tone: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL') {
+  switch (tone) {
+    case 'POSITIVE':
+      return 'success';
+    case 'NEGATIVE':
+      return 'warning';
+    default:
+      return 'default';
+  }
 }

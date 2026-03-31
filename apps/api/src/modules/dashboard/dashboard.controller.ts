@@ -1,5 +1,5 @@
-import { Controller, Get } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { DashboardReadService } from './dashboard-read.service';
@@ -11,7 +11,11 @@ export class DashboardController {
   constructor(private readonly dashboardReadService: DashboardReadService) {}
 
   @Get('summary')
-  getSummary(@CurrentUser() user: AuthenticatedUser) {
-    return this.dashboardReadService.getSummary(user.id);
+  @ApiQuery({ name: 'periodId', required: false })
+  getSummary(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('periodId') periodId?: string
+  ) {
+    return this.dashboardReadService.getSummary(user, periodId);
   }
 }

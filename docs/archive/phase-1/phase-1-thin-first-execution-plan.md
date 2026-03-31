@@ -496,10 +496,58 @@
 
 ### 7.5 5단계: 보고와 운영 분석 강화
 
-- 재무제표 상세 표현
-- 비교 분석
-- 추이/요약 리포트
-- 대시보드 read model 정교화
+#### 목표
+
+`ClosingSnapshot`, `FinancialStatementSnapshot`, `CarryForwardRecord`까지 연결된 코어 회계 흐름을 바탕으로, 운영용 분석 화면과 공식 보고 화면을 서로 다른 read model로 명확히 분리한다.
+
+#### 현재 구현 기준
+
+- `FinancialStatementSnapshot` 생성/조회 API와 `/financial-statements` 최소 화면이 이미 존재한다.
+- `CarryForwardRecord`와 `/carry-forwards` 화면도 존재해 “마감 -> 보고 -> 차기 이월” 공식 흐름의 뼈대는 살아 있다.
+- 반면 `dashboard`, `forecast`는 아직 `AuthenticatedUser.currentWorkspace`나 `AccountingPeriod`가 아니라 사용자 단위의 legacy `Account / Transaction / RecurringRule` 읽기 모델에 의존한다.
+- `dashboard`와 `forecast`는 여전히 고정 월(`2026-03`) 또는 단순 월 query 기준으로만 동작하고, `FinancialStatementSnapshot`과 직접 비교되는 구조가 아니다.
+- `/financial-statements`는 snapshot payload를 그대로 보여주는 최소 구현이며, 전기 대비 비교, 추이, 공식 수치 해석 보강은 아직 없다.
+
+#### 우선 보강할 공백
+
+- `dashboard`, `forecast`가 현재 phase-1 코어 회계 진실 원천인 `AccountingPeriod`, `JournalEntry`, `PlanItem`, `ClosingSnapshot`, `FinancialStatementSnapshot` 위에 서 있지 않다.
+- 운영용 수치와 공식 보고 수치가 어떤 기준으로 다르고 어떤 기준으로 같아야 하는지 계약과 화면에 충분히 드러나지 않는다.
+- `FinancialStatementsView`에는 이전 잠금 기간과의 variance, trend, insight를 표현할 비교 계약이 없다.
+- Web 보고 화면에는 현재 기간 선택, 이전 기간 비교, 추이 요약, carry-forward/closing basis 링크가 없다.
+- request API 테스트도 현재는 생성/조회 최소 경로만 검증하며, 보고 해석 계층의 비교/추이/empty state를 고정하지 않는다.
+
+#### 실행 순서
+
+1. 보고 기준선을 먼저 재정의
+   - `dashboard`, `forecast`를 사용자 개인 재무 요약이 아니라 `currentWorkspace + AccountingPeriod` 기준 read model로 재정렬한다.
+   - 운영용 숫자와 공식 숫자를 명시적으로 구분해, `dashboard/forecast`는 “운영 판단”, `financial-statements`는 “공식 보고”라는 경계를 계약과 도움말에 드러낸다.
+   - 현재 열린 기간, 최신 잠금 기간, 이전 잠금 기간을 읽는 공통 기준 함수를 정한다.
+2. 계약/read model 확장
+   - `DashboardSummary`, `ForecastResponse`에 `periodId`, `monthLabel`, `basisStatus`, `warnings`, `highlights` 같은 최소 메타데이터를 추가한다.
+   - `FinancialStatementsView`와 별도로 “현재 잠금 기간 vs 직전 잠금 기간” 비교를 담는 최소 comparison 계약을 추가한다.
+   - 추이/요약 리포트용으로 월별 `income / expense / periodPnL / netWorth / cash` series를 담는 thin contract를 정의한다.
+3. 백엔드 read layer 보강
+   - `dashboard`는 현재 열린 기간 기준의 확정 전표, 남은 `PlanItem`, 자금수단 잔액, 최소 예비자금, 적립금 설정을 조합한다.
+   - `forecast`는 선택 월 기준으로 확정 전표 실적 + 미확정 계획 + 적립금/예비자금 가정을 합산하고, 공식 잠금 기간이 있으면 비교 기준도 함께 만든다.
+   - `financial-statements`는 현재 period snapshot뿐 아니라 직전 잠금 period snapshot을 함께 읽어 variance/증감률 projector를 추가한다.
+   - carry-forward와 opening basis를 보고 read model에 연결해 “이 숫자가 어느 마감/이월에서 왔는지” 추적 가능하게 한다.
+4. Web 보고 화면 정리
+   - `/dashboard`는 현재 운영 기간 중심의 카드, 경고, 핵심 추이 요약으로 재구성하고 최근 흐름도 `CollectedTransaction`이 아니라 period-aware 읽기 값으로 맞춘다.
+   - `/forecast`는 고정 월을 제거하고 기간 선택, 가정 패널, 운영 전망과 공식 잠금 결과 비교를 한 화면에서 보여준다.
+   - `/financial-statements`는 snapshot 원문 출력에서 한 단계 나아가 전기 대비 비교 카드, 증감 요약, carry-forward/closing basis 안내를 추가한다.
+   - 필요하면 `/reports` 성격의 별도 thin 화면을 두지 말고, 우선 기존 세 화면 안에서 비교/추이 카드를 먼저 정착시킨다.
+5. 검증 고정
+   - request API 테스트에 dashboard/forecast의 workspace-period 기준 값, locked/unlocked empty state, previous-period comparison 결과를 추가한다.
+   - financial statements 테스트에 “직전 잠금 기간 없음”, “snapshot은 있으나 comparison 대상 없음”, “carry-forward 이후 비교” 경계를 포함한다.
+   - Web smoke 검증에서는 기간 선택, 비교 카드 노출, 경고 문구, 추이 요약 카드까지 최소 경로를 고정한다.
+
+#### 완료 기준
+
+- `dashboard`, `forecast`는 더 이상 legacy `Transaction` 중심 숫자가 아니라 `AccountingPeriod` 문맥 위의 회계 read model로 동작한다.
+- 운영 화면과 공식 보고 화면이 “무엇이 가정치이고 무엇이 확정치인지”를 명확히 구분해서 보여준다.
+- `financial-statements`에서 현재 잠금 기간과 직전 잠금 기간의 최소 비교가 가능하다.
+- 월별 추이/요약 리포트가 최소 1개 이상 화면에 드러나고, 어떤 기준의 수치인지 설명이 붙는다.
+- request API 테스트와 화면 smoke 경로가 비교/추이/empty state까지 함께 고정된다.
 
 ### 7.6 6단계: 후속 SaaS 확장
 

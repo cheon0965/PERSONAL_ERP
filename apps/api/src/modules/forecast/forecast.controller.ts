@@ -11,11 +11,17 @@ export class ForecastController {
   constructor(private readonly forecastReadService: ForecastReadService) {}
 
   @Get('monthly')
+  @ApiQuery({ name: 'periodId', required: false })
   @ApiQuery({ name: 'month', required: false, example: '2026-03' })
-  getMonthly(@CurrentUser() user: AuthenticatedUser, @Query('month') month?: string) {
-    return this.forecastReadService.getMonthlyForecast(
-      user.id,
-      month ?? '2026-03'
-    );
+  getMonthly(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('periodId') periodId?: string,
+    @Query('month') month?: string
+  ) {
+    return this.forecastReadService.getMonthlyForecast({
+      user,
+      periodId,
+      monthLabel: month
+    });
   }
 }
