@@ -46,7 +46,7 @@ export function CarryForwardsPage() {
     ],
     truthSource: '차기 이월은 잠금된 기간의 ClosingSnapshot과 BalanceSnapshotLine을 근거로 생성됩니다.',
     readModelNote:
-      'Round 9에서는 자산·부채·자본 계정의 잔액만 다음 월 오프닝으로 이월하고, 향후 라운드에서 생성 전표나 정교한 예외 흐름을 확장합니다.'
+      '차기 이월은 손익 계정을 직접 넘기지 않고, 잠금 시점의 자산·부채·자본 잔액만 다음 월 오프닝 기준으로 전달합니다.'
   });
 
   const lockedPeriods = React.useMemo(
@@ -96,7 +96,7 @@ export function CarryForwardsPage() {
       <PageHeader
         eyebrow="차기 이월"
         title="이월 기준 생성"
-        description="잠금된 운영 기간의 ClosingSnapshot을 다음 월 오프닝 기준으로 연결합니다. Round 9에서는 CarryForwardRecord와 OpeningBalanceSnapshot을 얇게 먼저 연결합니다."
+        description="잠금된 운영 기간의 ClosingSnapshot을 다음 월 오프닝 기준으로 연결하고, 이미 생성된 이월 결과를 함께 확인합니다."
       />
 
       {feedback ? (
@@ -146,12 +146,6 @@ export function CarryForwardsPage() {
             ))}
           </TextField>
 
-          <Alert severity="info" variant="outlined">
-            완료한 라운드: `Round 0, 1, 2, 5, 6, 7, 8`
-            {' '}| 현재 진행 중: `Round 9`
-            {' '}| 남은 라운드: `Round 3, 4`
-          </Alert>
-
           <div>
             <Button
               variant="contained"
@@ -193,7 +187,7 @@ export function CarryForwardsPage() {
           description="먼저 월 마감을 완료한 잠금된 운영 기간을 만들어 주세요."
         >
           <Typography variant="body2" color="text.secondary">
-            Round 9는 `Round 7`과 `Round 8`이 완료된 기간 위에서 동작합니다.
+            잠금된 운영 기간이 준비되면 차기 이월 생성과 조회를 진행할 수 있습니다.
           </Typography>
         </SectionCard>
       ) : view == null ? (

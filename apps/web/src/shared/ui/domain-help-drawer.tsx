@@ -95,6 +95,75 @@ export function DomainHelpDrawer() {
             </Typography>
           </Box>
 
+          {activeContext.supplementarySections?.map((section) => (
+            <Box
+              key={section.title}
+              sx={{
+                p: 2.25,
+                borderRadius: 2.5,
+                border: '1px solid',
+                borderColor: 'divider',
+                bgcolor: 'background.paper'
+              }}
+            >
+              <Stack spacing={1.5}>
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={700}>
+                    {section.title}
+                  </Typography>
+                  {section.description ? (
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 0.75, whiteSpace: 'pre-wrap' }}
+                    >
+                      {section.description}
+                    </Typography>
+                  ) : null}
+                </Box>
+
+                {section.facts?.length ? (
+                  <Stack spacing={1.25}>
+                    {section.facts.map((fact) => (
+                      <Box key={`${section.title}-${fact.label}`}>
+                        <Typography variant="caption" color="text.secondary">
+                          {fact.label}
+                        </Typography>
+                        <Typography variant="body2" sx={{ mt: 0.25, fontWeight: 600 }}>
+                          {fact.value}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                ) : null}
+
+                {section.items?.length ? (
+                  <Stack spacing={1.1}>
+                    {section.items.map((item) => (
+                      <Stack
+                        key={`${section.title}-${item}`}
+                        direction="row"
+                        spacing={1}
+                        alignItems="flex-start"
+                      >
+                        <Typography
+                          variant="body2"
+                          color="primary"
+                          sx={{ lineHeight: 1.6, fontWeight: 700 }}
+                        >
+                          •
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {item}
+                        </Typography>
+                      </Stack>
+                    ))}
+                  </Stack>
+                ) : null}
+              </Stack>
+            </Box>
+          ))}
+
           {activeContext.readModelNote && (
             <Box sx={{ p: 2, bgcolor: 'primary.main', color: 'primary.contrastText', borderRadius: 2 }}>
               <Typography variant="caption" sx={{ opacity: 0.8, display: 'block', mb: 0.5, fontWeight: 700 }}>

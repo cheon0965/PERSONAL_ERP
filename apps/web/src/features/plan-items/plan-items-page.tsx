@@ -136,7 +136,7 @@ export function PlanItemsPage() {
   useDomainHelp({
     title: '계획 항목 개요',
     description:
-      'Round 4에서는 RecurringRule을 기준으로 현재 운영 기간 안의 PlanItem을 얇게 생성합니다. PlanItem은 아직 확정 전 단계의 계획 데이터이며, 이후 수집 거래와 전표 흐름에서 실제화됩니다.',
+      'RecurringRule을 기준으로 현재 운영 기간 안의 PlanItem을 생성합니다. PlanItem은 아직 확정 전 단계의 계획 데이터이며, 이후 수집 거래와 전표 흐름에서 실제화됩니다.',
     primaryEntity: '계획 항목 (PlanItem)',
     relatedEntities: [
       '반복 규칙 (RecurringRule)',
@@ -148,7 +148,7 @@ export function PlanItemsPage() {
     truthSource:
       'PlanItem은 RecurringRule에서 파생된 계획 기준이며, 회계 확정은 이후 CollectedTransaction과 JournalEntry에서 이뤄집니다.',
     readModelNote:
-      '현재 화면은 특정 기간 안의 계획 항목을 생성하고 확인하는 Round 4 MVP 화면입니다.'
+      '현재 화면은 특정 기간 안의 계획 항목을 생성하고 상태를 검토하는 운영 화면입니다.'
   });
 
   return (
@@ -253,7 +253,7 @@ export function PlanItemsPage() {
           description="먼저 잠기지 않은 운영 기간을 준비해 주세요."
         >
           <Typography variant="body2" color="text.secondary">
-            Round 4는 운영 기간 문맥 안에서만 PlanItem을 생성합니다.
+            운영 기간이 열려 있어야 계획 항목을 생성할 수 있습니다.
           </Typography>
         </SectionCard>
       ) : (

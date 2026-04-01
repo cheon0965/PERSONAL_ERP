@@ -3,15 +3,12 @@
 import type { Route } from 'next';
 import HelpOutlineRoundedIcon from '@mui/icons-material/HelpOutlineRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
-import NotificationsRoundedIcon from '@mui/icons-material/NotificationsRounded';
-import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import {
   AppBar,
   Avatar,
   Button,
   IconButton,
   Stack,
-  TextField,
   Toolbar,
   Tooltip,
   Typography
@@ -40,21 +37,12 @@ export function Topbar() {
       }}
     >
       <Toolbar sx={{ minHeight: 72 }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" width="100%" gap={2}>
-          <TextField
-            size="small"
-            disabled
-            placeholder="전체 검색은 준비 중입니다"
-            InputProps={{
-              startAdornment: <SearchRoundedIcon fontSize="small" style={{ marginRight: 8 }} />
-            }}
-            sx={{ maxWidth: 420 }}
-          />
+        <Stack direction="row" alignItems="center" justifyContent="flex-end" width="100%" gap={2}>
           <Stack direction="row" alignItems="center" spacing={1}>
             <Tooltip title={activeContext ? '도메인 가이드 열기' : '도움말 정보가 없습니다'}>
               <span>
-                <IconButton 
-                  disabled={!activeContext} 
+                <IconButton
+                  disabled={!activeContext}
                   onClick={() => setDrawerOpen(true)}
                   color="primary"
                 >
@@ -62,9 +50,6 @@ export function Topbar() {
                 </IconButton>
               </span>
             </Tooltip>
-            <IconButton>
-              <NotificationsRoundedIcon />
-            </IconButton>
             <Stack
               direction="row"
               alignItems="center"

@@ -10,7 +10,6 @@ import {
 } from '@mui/material';
 import type {
   AccountingPeriodItem,
-  AuthenticatedUser,
   CloseAccountingPeriodResponse
 } from '@personal-erp/contracts';
 import type { GridColDef } from '@mui/x-data-grid';
@@ -20,8 +19,6 @@ import { appLayout } from '@/shared/ui/layout-metrics';
 import { SectionCard } from '@/shared/ui/section-card';
 import { StatusChip } from '@/shared/ui/status-chip';
 import type { PeriodFormInput } from './accounting-periods-page.types';
-
-type AccountingPeriodWorkspace = AuthenticatedUser['currentWorkspace'];
 
 export const periodColumns: GridColDef<AccountingPeriodItem>[] = [
   { field: 'monthLabel', headerName: '운영 월', flex: 0.8 },
@@ -50,42 +47,6 @@ export const periodColumns: GridColDef<AccountingPeriodItem>[] = [
     valueFormatter: (value) => (value ? formatDate(String(value)) : '-')
   }
 ];
-
-export function WorkspaceContextSection({
-  currentWorkspace,
-  membershipRole
-}: {
-  currentWorkspace: AccountingPeriodWorkspace | null;
-  membershipRole: string | null;
-}) {
-  return (
-    <SectionCard
-      title="현재 작업 문맥"
-      description="월 운영 시작은 현재 로그인한 사용자의 TenantMembership / Ledger 문맥 안에서만 실행됩니다."
-    >
-      <Stack spacing={1.25}>
-        <InfoRow
-          label="Tenant"
-          value={
-            currentWorkspace
-              ? `${currentWorkspace.tenant.name} (${currentWorkspace.tenant.slug})`
-              : '-'
-          }
-        />
-        <InfoRow label="Ledger" value={currentWorkspace?.ledger?.name ?? '-'} />
-        <InfoRow label="역할" value={membershipRole ?? '-'} />
-        <InfoRow
-          label="기준 통화 / 시간대"
-          value={
-            currentWorkspace?.ledger
-              ? `${currentWorkspace.ledger.baseCurrency} / ${currentWorkspace.ledger.timezone}`
-              : '-'
-          }
-        />
-      </Stack>
-    </SectionCard>
-  );
-}
 
 export function CurrentPeriodStatusSection({
   currentPeriod
@@ -362,7 +323,7 @@ export function LatestClosingSnapshotSection({
   return (
     <SectionCard
       title="최근 마감 스냅샷"
-      description="Round 7 기준으로는 가장 최근에 생성한 ClosingSnapshot 요약만 먼저 보여줍니다. 이후 Round 8에서 공식 재무제표 화면으로 확장합니다."
+      description="가장 최근에 생성한 ClosingSnapshot 요약을 바로 확인할 수 있습니다."
     >
       {latestClosingResult ? (
         <Stack spacing={appLayout.cardGap}>

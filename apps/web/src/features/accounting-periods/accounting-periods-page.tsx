@@ -38,7 +38,6 @@ import {
   LatestClosingSnapshotSection,
   OpenAccountingPeriodSection,
   PeriodLifecycleActionsSection,
-  WorkspaceContextSection,
   periodColumns
 } from './accounting-periods-page.sections';
 import {
@@ -60,11 +59,13 @@ export function AccountingPeriodsPage() {
     queryKey: accountingPeriodsQueryKey,
     queryFn: getAccountingPeriods
   });
+  const currentWorkspace = user?.currentWorkspace ?? null;
+  const membershipRole = currentWorkspace?.membership.role ?? null;
 
   useDomainHelp({
     title: '운영 기간 관리 개요',
     description:
-      '운영 기간은 모든 수집 거래, 전표 확정, 마감, 재무제표의 기준 월을 고정합니다. 이 라운드에서는 월 운영 시작과 상태 이력의 최소 경로를 먼저 연결합니다.',
+      '운영 기간은 모든 수집 거래, 전표 확정, 마감, 재무제표의 기준 월을 고정합니다. 월 운영 시작부터 잠금, 재오픈까지의 상태 흐름을 이 화면에서 관리합니다.',
     primaryEntity: '운영 기간 (AccountingPeriod)',
     relatedEntities: [
       '기간 상태 이력 (PeriodStatusHistory)',
@@ -74,8 +75,37 @@ export function AccountingPeriodsPage() {
     ],
     truthSource:
       '운영 월의 공식 시작 기준은 AccountingPeriod이며, 첫 월 시작은 OpeningBalanceSnapshot 생성 여부까지 함께 남깁니다.',
+    supplementarySections: [
+      {
+        title: '현재 작업 문맥',
+        description:
+          '월 운영 시작과 마감은 현재 로그인한 사용자의 TenantMembership / Ledger 문맥 안에서만 실행됩니다.',
+        facts: [
+          {
+            label: 'Tenant',
+            value: currentWorkspace
+              ? `${currentWorkspace.tenant.name} (${currentWorkspace.tenant.slug})`
+              : '-'
+          },
+          {
+            label: 'Ledger',
+            value: currentWorkspace?.ledger?.name ?? '-'
+          },
+          {
+            label: '권한',
+            value: membershipRole ?? '-'
+          },
+          {
+            label: '기준 통화 / 시간대',
+            value: currentWorkspace?.ledger
+              ? `${currentWorkspace.ledger.baseCurrency} / ${currentWorkspace.ledger.timezone}`
+              : '-'
+          }
+        ]
+      }
+    ],
     readModelNote:
-      '현재 목록은 기간 운영 상태를 빠르게 확인하는 읽기 모델이며, 이후 라운드에서 마감과 이월 흐름이 여기에 이어집니다.'
+      '현재 목록은 운영 기간 상태와 최근 마감 결과를 함께 확인하는 관리 화면입니다.'
   });
 
   const form = useForm<PeriodFormInput>({
@@ -87,8 +117,6 @@ export function AccountingPeriodsPage() {
     }
   });
 
-  const currentWorkspace = user?.currentWorkspace ?? null;
-  const membershipRole = currentWorkspace?.membership.role ?? null;
   const hasWorkspace = Boolean(currentWorkspace?.ledger);
   const canOpenPeriod =
     membershipRole === 'OWNER' || membershipRole === 'MANAGER';
@@ -233,7 +261,7 @@ export function AccountingPeriodsPage() {
       <PageHeader
         eyebrow="월 운영 시작"
         title="운영 기간 관리"
-        description="이 화면은 Ledger 안에서 AccountingPeriod를 열고, 첫 월에는 OpeningBalanceSnapshot을 함께 준비하는 운영 시작 화면입니다."
+        description="현재 장부의 운영 기간을 열고, 상태를 관리하며, 최근 마감 결과를 확인합니다."
         primaryActionLabel="월 운영 시작"
         primaryActionHref="#open-accounting-period-form"
       />
@@ -246,8 +274,8 @@ export function AccountingPeriodsPage() {
 
       {!hasWorkspace ? (
         <Alert severity="warning" variant="outlined">
-          현재 작업 Tenant 및 Ledger 문맥이 아직 준비되지 않았습니다. 설정
-          화면에서 작업 문맥을 먼저 확인해 주세요.
+          현재 작업 Tenant 및 Ledger 문맥이 아직 준비되지 않았습니다. 작업 문맥
+          화면에서 연결 상태를 먼저 확인해 주세요.
         </Alert>
       ) : null}
 
@@ -274,18 +302,7 @@ export function AccountingPeriodsPage() {
         </Alert>
       ) : null}
 
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, xl: 5 }}>
-          <WorkspaceContextSection
-            currentWorkspace={currentWorkspace}
-            membershipRole={membershipRole}
-          />
-        </Grid>
-
-        <Grid size={{ xs: 12, xl: 7 }}>
-          <CurrentPeriodStatusSection currentPeriod={currentPeriod} />
-        </Grid>
-      </Grid>
+      <CurrentPeriodStatusSection currentPeriod={currentPeriod} />
 
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, xl: 7 }}>

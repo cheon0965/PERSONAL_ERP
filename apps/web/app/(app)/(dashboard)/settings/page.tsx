@@ -1,9 +1,7 @@
 'use client';
 
-import { Grid, Stack, Switch, TextField, Typography } from '@mui/material';
+import { Grid, Stack, TextField, Typography } from '@mui/material';
 import { useAuthSession } from '@/shared/auth/auth-provider';
-import { accessTokenStoragePolicy } from '@/shared/auth/auth-session-store';
-import { webEnv, webRuntime } from '@/shared/config/env';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
@@ -47,9 +45,9 @@ export default function SettingsPage() {
   const currentWorkspace = user?.currentWorkspace ?? null;
 
   useDomainHelp({
-    title: '테넌트 / 장부 설정 개요',
+    title: '작업 문맥 개요',
     description:
-      '이 화면은 현재 작업 문맥을 보여주는 운영 기준 화면입니다. 실제 기간 시작, 전표 확정, 마감은 이후 라운드에서 이 문맥 위에 연결됩니다.',
+      '이 화면은 현재 로그인 사용자가 어떤 테넌트와 장부 문맥 안에서 작업하는지 보여주는 기준 화면입니다.',
     primaryEntity: '테넌트 / 멤버십 / 장부 (Tenant / TenantMembership / Ledger)',
     relatedEntities: [
       '운영 기간 (AccountingPeriod)',
@@ -57,16 +55,16 @@ export default function SettingsPage() {
       '거래유형 (TransactionType)',
       '수집 거래 (CollectedTransaction)'
     ],
-    truthSource: '지금 단계의 공식 기준은 현재 작업 TenantMembership과 Ledger를 해석하는 런타임 문맥입니다.',
-    readModelNote: '현재 화면은 기준선 확인용이며, 기간 생성과 마감 같은 실제 쓰기 기능은 후속 라운드에서 붙습니다.'
+    truthSource: '현재 작업 TenantMembership과 Ledger를 해석하는 런타임 문맥이 이 화면의 공식 기준입니다.',
+    readModelNote: '다른 운영 화면은 여기서 확인한 작업 문맥을 기준으로 데이터를 조회하고 변경합니다.'
   });
 
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
-        eyebrow="설정"
-        title="테넌트 / 장부 기준"
-        description="Round 1 기준선에서는 현재 로그인 사용자가 어떤 TenantMembership과 Ledger 문맥 안에서 작업하는지 먼저 확인합니다."
+        eyebrow="작업 문맥"
+        title="현재 작업 문맥"
+        description="현재 로그인 사용자가 어떤 TenantMembership과 Ledger 문맥 안에서 작업 중인지 확인합니다."
       />
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, lg: 6 }}>
@@ -103,7 +101,7 @@ export default function SettingsPage() {
                       currentWorkspace.membership.role
                     : '-'
                 }
-                helperText="Round 1에서는 현재 로그인 사용자의 TenantMembership을 공식 작업 주체 기준으로 봅니다."
+                helperText="현재 로그인 사용자의 TenantMembership을 공식 작업 주체 기준으로 봅니다."
                 InputProps={{ readOnly: true }}
               />
               <TextField
@@ -120,7 +118,7 @@ export default function SettingsPage() {
               <TextField
                 label="현재 장부"
                 value={currentWorkspace?.ledger?.name ?? '기본 장부 미선정'}
-                helperText="다음 Round에서는 이 장부 문맥 안에서 AccountingPeriod를 열게 됩니다."
+                helperText="이 장부 문맥 안에서 운영 기간, 수집 거래, 전표와 보고 화면이 함께 동작합니다."
                 InputProps={{ readOnly: true }}
               />
               <TextField
@@ -147,36 +145,10 @@ export default function SettingsPage() {
         </Grid>
         <Grid size={{ xs: 12, lg: 6 }}>
           <SectionCard
-            title="환경 / 세션"
-            description="개발 환경과 현재 인증 세션 상태를 함께 확인합니다."
+            title="세션 정보"
+            description="현재 인증 상태와 작업 중인 사용자를 확인합니다."
           >
             <Stack spacing={appLayout.fieldGap}>
-              <Stack
-                direction="row"
-                justifyContent="space-between"
-                alignItems="center"
-              >
-                <Stack spacing={0.5}>
-                  <Typography>데모 대체 모드</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    개발 환경에서만 `NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=true`일 때
-                    활성화됩니다.
-                  </Typography>
-                </Stack>
-                <Switch checked={webRuntime.demoFallbackEnabled} disabled />
-              </Stack>
-              <Stack spacing={0.5}>
-                <Typography>실행 환경</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {webRuntime.nodeEnv}
-                </Typography>
-              </Stack>
-              <Stack spacing={0.5}>
-                <Typography>API 기본 URL</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {webEnv.NEXT_PUBLIC_API_BASE_URL}
-                </Typography>
-              </Stack>
               <Stack spacing={0.5}>
                 <Typography>세션 상태</Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -187,12 +159,6 @@ export default function SettingsPage() {
                 <Typography>로그인 사용자</Typography>
                 <Typography variant="body2" color="text.secondary">
                   {user ? `${user.name} <${user.email}>` : '활성 세션 없음'}
-                </Typography>
-              </Stack>
-              <Stack spacing={0.5}>
-                <Typography>액세스 토큰 보관 위치</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {accessTokenStoragePolicy}
                 </Typography>
               </Stack>
             </Stack>
