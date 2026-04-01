@@ -8,9 +8,7 @@ import {
   MaxLength
 } from 'class-validator';
 
-export class OpenAccountingPeriodRequestDto
-  implements OpenAccountingPeriodRequest
-{
+export class OpenAccountingPeriodRequestDto implements OpenAccountingPeriodRequest {
   @ApiProperty({ example: '2026-03' })
   @IsString()
   @Matches(/^\d{4}-\d{2}$/, {

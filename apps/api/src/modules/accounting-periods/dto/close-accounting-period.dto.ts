@@ -2,9 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import type { CloseAccountingPeriodRequest } from '@personal-erp/contracts';
 import { IsOptional, IsString, MaxLength } from 'class-validator';
 
-export class CloseAccountingPeriodRequestDto
-  implements CloseAccountingPeriodRequest
-{
+export class CloseAccountingPeriodRequestDto implements CloseAccountingPeriodRequest {
   @ApiProperty({
     required: false,
     example: '2026년 3월 마감을 확정합니다.',

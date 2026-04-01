@@ -45,7 +45,9 @@ export function ensureRequestContext(
   request: RequestWithContext,
   response: Pick<Response, 'setHeader'>
 ): string {
-  const requestId = readRequestId(request) ?? normalizeRequestId(request.headers[REQUEST_ID_HEADER]);
+  const requestId =
+    readRequestId(request) ??
+    normalizeRequestId(request.headers[REQUEST_ID_HEADER]);
   request.requestId = requestId;
   response.setHeader(REQUEST_ID_HEADER, requestId);
   return requestId;

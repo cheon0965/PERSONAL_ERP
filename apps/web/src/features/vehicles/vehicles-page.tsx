@@ -66,7 +66,10 @@ const fuelColumns: GridColDef<VehicleFuelLogRow>[] = [
 ];
 
 export function VehiclesPage() {
-  const { data = [], error } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles });
+  const { data = [], error } = useQuery({
+    queryKey: ['vehicles'],
+    queryFn: getVehicles
+  });
   const totalMonthlyExpenseWon = data.reduce(
     (total, vehicle) => total + vehicle.monthlyExpenseWon,
     0
@@ -77,7 +80,8 @@ export function VehiclesPage() {
   const averageFuelEfficiencyKmPerLiter =
     vehiclesWithEfficiency.length > 0
       ? vehiclesWithEfficiency.reduce(
-          (total, vehicle) => total + Number(vehicle.estimatedFuelEfficiencyKmPerLiter),
+          (total, vehicle) =>
+            total + Number(vehicle.estimatedFuelEfficiencyKmPerLiter),
           0
         ) / vehiclesWithEfficiency.length
       : null;
@@ -102,7 +106,8 @@ export function VehiclesPage() {
       '자금수단 (FundingAccount)',
       '전표 (JournalEntry)'
     ],
-    truthSource: '차량과 주유 기록 자체는 회계 저장이 아니며 실제 확정은 수집 거래 분류와 전표 반영에서 이뤄집니다.',
+    truthSource:
+      '차량과 주유 기록 자체는 회계 저장이 아니며 실제 확정은 수집 거래 분류와 전표 반영에서 이뤄집니다.',
     readModelNote: '주유비와 연비는 비용 판단을 돕는 운영 지표입니다.'
   });
 
@@ -114,7 +119,9 @@ export function VehiclesPage() {
         description="차량과 주유 기록은 코어 회계 엔티티가 아니라 차량비를 더 정확하게 분류하고 검토하기 위한 운영 보조 데이터입니다."
       />
 
-      {error ? <QueryErrorAlert title="차량 정보 조회에 실패했습니다." error={error} /> : null}
+      {error ? (
+        <QueryErrorAlert title="차량 정보 조회에 실패했습니다." error={error} />
+      ) : null}
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, md: 4 }}>
           <SummaryCard
@@ -141,7 +148,10 @@ export function VehiclesPage() {
             subtitle={
               data.length > 0
                 ? data
-                    .map((vehicle) => fuelTypeLabelMap[vehicle.fuelType] ?? vehicle.fuelType)
+                    .map(
+                      (vehicle) =>
+                        fuelTypeLabelMap[vehicle.fuelType] ?? vehicle.fuelType
+                    )
                     .join(' / ')
                 : '등록된 차량이 없습니다.'
             }
@@ -185,7 +195,8 @@ export function VehiclesPage() {
 
       {data.length > 0 ? (
         <Typography variant="body2" color="text.secondary">
-          차량 데이터가 쌓이면 정비 이력과 수집 거래 분류 규칙까지 함께 연결하는 확장으로 자연스럽게 이어갈 수 있습니다.
+          차량 데이터가 쌓이면 정비 이력과 수집 거래 분류 규칙까지 함께 연결하는
+          확장으로 자연스럽게 이어갈 수 있습니다.
         </Typography>
       ) : null}
     </Stack>

@@ -5,10 +5,13 @@ import { InsurancePoliciesRepository } from './insurance-policies.repository';
 
 @Injectable()
 export class InsurancePoliciesService {
-  constructor(private readonly insurancePoliciesRepository: InsurancePoliciesRepository) {}
+  constructor(
+    private readonly insurancePoliciesRepository: InsurancePoliciesRepository
+  ) {}
 
   async findAll(userId: string): Promise<InsurancePolicyItem[]> {
-    const items = await this.insurancePoliciesRepository.findActiveByUserId(userId);
+    const items =
+      await this.insurancePoliciesRepository.findActiveByUserId(userId);
     return items.map(mapInsurancePolicyToItem);
   }
 }

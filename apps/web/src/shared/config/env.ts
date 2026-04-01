@@ -15,7 +15,8 @@ type RawWebProcessEnv = Pick<
 
 const defaultRawWebProcessEnv: RawWebProcessEnv = {
   NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
-  NEXT_PUBLIC_ENABLE_DEMO_FALLBACK: process.env.NEXT_PUBLIC_ENABLE_DEMO_FALLBACK,
+  NEXT_PUBLIC_ENABLE_DEMO_FALLBACK:
+    process.env.NEXT_PUBLIC_ENABLE_DEMO_FALLBACK,
   NODE_ENV: process.env.NODE_ENV
 };
 
@@ -42,7 +43,10 @@ export function readWebEnv(source: RawWebProcessEnv): WebEnv {
       source.NEXT_PUBLIC_API_BASE_URL,
       'NEXT_PUBLIC_API_BASE_URL'
     ),
-    NEXT_PUBLIC_ENABLE_DEMO_FALLBACK: readBooleanFlag(source.NEXT_PUBLIC_ENABLE_DEMO_FALLBACK, false)
+    NEXT_PUBLIC_ENABLE_DEMO_FALLBACK: readBooleanFlag(
+      source.NEXT_PUBLIC_ENABLE_DEMO_FALLBACK,
+      false
+    )
   };
 }
 
@@ -54,15 +58,22 @@ export function createWebRuntime(
 
   return {
     nodeEnv,
-    demoFallbackEnabled: nodeEnv !== 'production' && env.NEXT_PUBLIC_ENABLE_DEMO_FALLBACK
+    demoFallbackEnabled:
+      nodeEnv !== 'production' && env.NEXT_PUBLIC_ENABLE_DEMO_FALLBACK
   };
 }
 
 export const webEnv: WebEnv = readWebEnv(defaultRawWebProcessEnv);
 
-export const webRuntime: WebRuntime = createWebRuntime(defaultRawWebProcessEnv, webEnv);
+export const webRuntime: WebRuntime = createWebRuntime(
+  defaultRawWebProcessEnv,
+  webEnv
+);
 
-export function readBooleanFlag(value: string | undefined, defaultValue: boolean): boolean {
+export function readBooleanFlag(
+  value: string | undefined,
+  defaultValue: boolean
+): boolean {
   if (value == null || value.trim() === '') {
     return defaultValue;
   }
@@ -76,5 +87,7 @@ export function readBooleanFlag(value: string | undefined, defaultValue: boolean
     return false;
   }
 
-  throw new Error('[web env] NEXT_PUBLIC_ENABLE_DEMO_FALLBACK must be a boolean value.');
+  throw new Error(
+    '[web env] NEXT_PUBLIC_ENABLE_DEMO_FALLBACK must be a boolean value.'
+  );
 }

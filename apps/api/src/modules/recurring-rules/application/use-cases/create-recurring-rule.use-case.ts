@@ -23,7 +23,9 @@ export class CreateRecurringRuleUseCase {
     private readonly referenceOwnership: ReferenceOwnershipPort
   ) {}
 
-  async execute(command: CreateRecurringRuleCommand): Promise<RecurringRuleItem> {
+  async execute(
+    command: CreateRecurringRuleCommand
+  ): Promise<RecurringRuleItem> {
     const [fundingAccountExists, categoryExists] = await Promise.all([
       this.referenceOwnership.fundingAccountExistsInWorkspace(
         command.tenantId,

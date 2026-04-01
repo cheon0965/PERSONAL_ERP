@@ -2,9 +2,7 @@
 import type { ReverseJournalEntryRequest } from '@personal-erp/contracts';
 import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
-export class ReverseJournalEntryRequestDto
-  implements ReverseJournalEntryRequest
-{
+export class ReverseJournalEntryRequestDto implements ReverseJournalEntryRequest {
   @ApiProperty({ example: '2026-04-03' })
   @IsString()
   @Matches(/^\d{4}-\d{2}-\d{2}$/, {

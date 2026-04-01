@@ -52,7 +52,10 @@ export class CarryForwardsController {
     const workspace = requireCurrentWorkspace(user);
 
     try {
-      const response = await this.generateCarryForwardUseCase.execute(user, body);
+      const response = await this.generateCarryForwardUseCase.execute(
+        user,
+        body
+      );
 
       logWorkspaceActionSucceeded(this.securityEvents, {
         action: 'carry_forward.generate',

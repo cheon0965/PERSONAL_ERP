@@ -92,7 +92,8 @@ export function PlanItemsPage() {
   });
 
   const candidatePeriods = React.useMemo(
-    () => (periodsQuery.data ?? []).filter((period) => period.status !== 'LOCKED'),
+    () =>
+      (periodsQuery.data ?? []).filter((period) => period.status !== 'LOCKED'),
     [periodsQuery.data]
   );
 
@@ -287,7 +288,9 @@ export function PlanItemsPage() {
             <DataTableCard
               title="기간 계획 항목"
               description="RecurringRule에서 파생된 계획 항목 목록입니다. 아직 수집 거래나 전표로 확정되기 전 단계입니다."
-              rows={view?.items ?? buildPlanItemsFallbackView(selectedPeriod).items}
+              rows={
+                view?.items ?? buildPlanItemsFallbackView(selectedPeriod).items
+              }
               columns={columns}
               height={420}
             />

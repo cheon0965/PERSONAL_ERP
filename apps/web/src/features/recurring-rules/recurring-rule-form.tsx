@@ -51,12 +51,10 @@ const recurringRuleSchema = z.object({
 
 type RecurringRuleFormInput = z.infer<typeof recurringRuleSchema>;
 
-type SubmitFeedback =
-  | {
-      severity: 'success' | 'error';
-      message: string;
-    }
-  | null;
+type SubmitFeedback = {
+  severity: 'success' | 'error';
+  message: string;
+} | null;
 
 type CreateRecurringRuleMutationInput = {
   payload: CreateRecurringRuleRequest;
@@ -110,7 +108,9 @@ export function RecurringRuleForm() {
   React.useEffect(() => {
     const firstFundingAccount = fundingAccounts[0];
     if (!form.getValues('accountId') && firstFundingAccount) {
-      form.setValue('accountId', firstFundingAccount.id, { shouldValidate: true });
+      form.setValue('accountId', firstFundingAccount.id, {
+        shouldValidate: true
+      });
     }
   }, [fundingAccounts, form]);
 
@@ -254,7 +254,12 @@ export function RecurringRuleForm() {
             </TextField>
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
-            <TextField select label="카테고리" helperText="선택 사항" {...form.register('categoryId')}>
+            <TextField
+              select
+              label="카테고리"
+              helperText="선택 사항"
+              {...form.register('categoryId')}
+            >
               <MenuItem value="">카테고리 없음</MenuItem>
               {categories.map((category) => (
                 <MenuItem key={category.id} value={category.id}>
@@ -304,7 +309,12 @@ export function RecurringRuleForm() {
             />
           </Grid>
         </Grid>
-        <Button type="submit" variant="contained" disabled={isBusy} sx={{ alignSelf: 'flex-start' }}>
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={isBusy}
+          sx={{ alignSelf: 'flex-start' }}
+        >
           {mutation.isPending ? '저장 중...' : '반복 규칙 저장'}
         </Button>
       </Stack>

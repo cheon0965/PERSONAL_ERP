@@ -28,14 +28,17 @@ function readString(
   const rawValue = source[key];
   const fallback = options?.fallback;
   const minLength = options?.minLength ?? 1;
-  const value = typeof rawValue === 'string' ? rawValue.trim() : fallback?.trim();
+  const value =
+    typeof rawValue === 'string' ? rawValue.trim() : fallback?.trim();
 
   if (!value) {
     throw new Error(`[api env] ${key} is required.`);
   }
 
   if (value.length < minLength) {
-    throw new Error(`[api env] ${key} must be at least ${minLength} characters long.`);
+    throw new Error(
+      `[api env] ${key} must be at least ${minLength} characters long.`
+    );
   }
 
   return value;
@@ -86,7 +89,10 @@ function readBoolean(
   throw new Error(`[api env] ${key} must be either true or false.`);
 }
 
-function readAllowedOrigins(source: EnvSource, fallbackOrigin: string): string[] {
+function readAllowedOrigins(
+  source: EnvSource,
+  fallbackOrigin: string
+): string[] {
   const rawValue = source.CORS_ALLOWED_ORIGINS;
   const rawOrigins =
     typeof rawValue === 'string' && rawValue.trim().length > 0
@@ -134,16 +140,24 @@ export function parseApiEnv(source: EnvSource): ApiEnv {
     APP_ORIGIN: appOrigin,
     CORS_ALLOWED_ORIGINS: readAllowedOrigins(source, appOrigin),
     SWAGGER_ENABLED: readBoolean(source, 'SWAGGER_ENABLED', true),
-    JWT_ACCESS_SECRET: readString(source, 'JWT_ACCESS_SECRET', { minLength: 16 }),
-    JWT_REFRESH_SECRET: readString(source, 'JWT_REFRESH_SECRET', { minLength: 16 }),
+    JWT_ACCESS_SECRET: readString(source, 'JWT_ACCESS_SECRET', {
+      minLength: 16
+    }),
+    JWT_REFRESH_SECRET: readString(source, 'JWT_REFRESH_SECRET', {
+      minLength: 16
+    }),
     ACCESS_TOKEN_TTL: readJwtDuration(source, 'ACCESS_TOKEN_TTL'),
     REFRESH_TOKEN_TTL: readJwtDuration(source, 'REFRESH_TOKEN_TTL'),
     DATABASE_URL: readUrl(source, 'DATABASE_URL'),
-    DEMO_EMAIL: readString(source, 'DEMO_EMAIL', { fallback: 'demo@example.com' })
+    DEMO_EMAIL: readString(source, 'DEMO_EMAIL', {
+      fallback: 'demo@example.com'
+    })
   };
 }
 
-export function validateApiEnv(config: Record<string, unknown>): Record<string, unknown> {
+export function validateApiEnv(
+  config: Record<string, unknown>
+): Record<string, unknown> {
   const env = parseApiEnv(config);
 
   return {

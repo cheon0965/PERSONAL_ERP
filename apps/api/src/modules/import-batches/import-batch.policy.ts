@@ -95,8 +95,13 @@ export function parseImportBatchContent(input: {
   }
 
   const delimiter = readDelimiter(input.sourceKind, lines[0] ?? '');
-  const headerTokens = splitDelimitedLine(lines[0] ?? '', delimiter).map(normalizeHeader);
-  if (headerTokens.length === 0 || headerTokens.every((token) => token.length === 0)) {
+  const headerTokens = splitDelimitedLine(lines[0] ?? '', delimiter).map(
+    normalizeHeader
+  );
+  if (
+    headerTokens.length === 0 ||
+    headerTokens.every((token) => token.length === 0)
+  ) {
     throw new BadRequestException('헤더를 읽을 수 없습니다.');
   }
 
@@ -144,7 +149,10 @@ function parseImportedRow(input: {
 }): ParsedImportedRowDraft {
   const values = splitDelimitedLine(input.line, input.delimiter);
   const original = Object.fromEntries(
-    input.headerTokens.map((headerToken, index) => [headerToken, values[index]?.trim() ?? ''])
+    input.headerTokens.map((headerToken, index) => [
+      headerToken,
+      values[index]?.trim() ?? ''
+    ])
   );
   const occurredOnValue = readSourceValue(
     original,
@@ -228,23 +236,24 @@ export function readParsedImportedRowPayload(
     return null;
   }
 
-  return (
-    typeof parsed.occurredOn === 'string' &&
+  return typeof parsed.occurredOn === 'string' &&
     typeof parsed.title === 'string' &&
     typeof parsed.amount === 'number' &&
     normalizeDateToken(parsed.occurredOn) &&
     normalizeTextToken(parsed.title) &&
     Number.isSafeInteger(parsed.amount)
-      ? {
-          occurredOn: parsed.occurredOn,
-          title: parsed.title,
-          amount: parsed.amount
-        }
-      : null
-  );
+    ? {
+        occurredOn: parsed.occurredOn,
+        title: parsed.title,
+        amount: parsed.amount
+      }
+    : null;
 }
 
-function readDelimiter(sourceKind: ImportSourceKind, headerLine: string): string {
+function readDelimiter(
+  sourceKind: ImportSourceKind,
+  headerLine: string
+): string {
   if (sourceKind === ImportSourceKind.CARD_EXCEL) {
     return headerLine.includes('\t') ? '\t' : ',';
   }
@@ -286,7 +295,10 @@ function splitDelimitedLine(line: string, delimiter: string): string[] {
 }
 
 function normalizeHeader(value: string): string {
-  return value.trim().toLowerCase().replace(/[\s-]+/g, '_');
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
 }
 
 function readSourceValue(
@@ -353,6 +365,8 @@ function normalizeAmountToken(value: string | null): number | null {
   return amount;
 }
 
-function isRecord(value: Prisma.JsonValue | undefined): value is Record<string, Prisma.JsonValue> {
+function isRecord(
+  value: Prisma.JsonValue | undefined
+): value is Record<string, Prisma.JsonValue> {
   return value != null && typeof value === 'object' && !Array.isArray(value);
 }

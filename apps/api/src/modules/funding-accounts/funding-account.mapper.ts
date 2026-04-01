@@ -1,6 +1,9 @@
 import type { FundingAccountItem } from '@personal-erp/contracts';
 
-type AccountRecord = Pick<FundingAccountItem, 'id' | 'name' | 'type' | 'balanceWon'>;
+type AccountRecord = Pick<
+  FundingAccountItem,
+  'id' | 'name' | 'type' | 'balanceWon'
+>;
 
 export function mapFundingAccountRecordToItem(
   account: AccountRecord

@@ -35,7 +35,6 @@ import {
 } from './accounting-periods.api';
 import {
   CurrentPeriodStatusSection,
-  LatestClosingSnapshotSection,
   OpenAccountingPeriodSection,
   PeriodLifecycleActionsSection,
   periodColumns
@@ -61,6 +60,45 @@ export function AccountingPeriodsPage() {
   });
   const currentWorkspace = user?.currentWorkspace ?? null;
   const membershipRole = currentWorkspace?.membership.role ?? null;
+  const latestClosingSnapshotFacts = latestClosingResult
+    ? [
+        {
+          label: '마감 월',
+          value: latestClosingResult.period.monthLabel
+        },
+        {
+          label: '자산 합계',
+          value: formatWon(latestClosingResult.closingSnapshot.totalAssetAmount)
+        },
+        {
+          label: '부채 합계',
+          value: formatWon(
+            latestClosingResult.closingSnapshot.totalLiabilityAmount
+          )
+        },
+        {
+          label: '자본 합계',
+          value: formatWon(
+            latestClosingResult.closingSnapshot.totalEquityAmount
+          )
+        },
+        {
+          label: '당기 손익',
+          value: formatWon(latestClosingResult.closingSnapshot.periodPnLAmount)
+        }
+      ]
+    : undefined;
+  const latestClosingSnapshotItems = latestClosingResult
+    ? latestClosingResult.closingSnapshot.lines.map((line) => {
+        const fundingAccountSuffix = line.fundingAccountName
+          ? ` / ${line.fundingAccountName}`
+          : '';
+
+        return `${line.accountSubjectCode} ${line.accountSubjectName}${fundingAccountSuffix} · ${formatWon(line.balanceAmount)}`;
+      })
+    : [
+        '아직 이 세션에서 생성한 마감 스냅샷이 없습니다. 현재 열린 기간을 마감하면 요약이 도메인 가이드에 표시됩니다.'
+      ];
 
   useDomainHelp({
     title: '운영 기간 관리 개요',
@@ -102,10 +140,18 @@ export function AccountingPeriodsPage() {
               : '-'
           }
         ]
+      },
+      {
+        title: '최근 마감 스냅샷',
+        description: latestClosingResult
+          ? '가장 최근에 실행한 월 마감의 ClosingSnapshot 요약입니다.'
+          : '최근 마감 결과는 본문 대신 도메인 가이드에서 확인할 수 있습니다.',
+        facts: latestClosingSnapshotFacts,
+        items: latestClosingSnapshotItems
       }
     ],
     readModelNote:
-      '현재 목록은 운영 기간 상태와 최근 마감 결과를 함께 확인하는 관리 화면입니다.'
+      '현재 목록은 운영 기간 상태를 중심으로 확인하고, 최근 마감 상세는 도메인 가이드에서 검토하는 관리 화면입니다.'
   });
 
   const form = useForm<PeriodFormInput>({
@@ -261,7 +307,7 @@ export function AccountingPeriodsPage() {
       <PageHeader
         eyebrow="월 운영 시작"
         title="운영 기간 관리"
-        description="현재 장부의 운영 기간을 열고, 상태를 관리하며, 최근 마감 결과를 확인합니다."
+        description="현재 장부의 운영 기간을 열고 상태를 관리합니다. 최근 마감 상세는 도메인 가이드에서 확인할 수 있습니다."
         primaryActionLabel="월 운영 시작"
         primaryActionHref="#open-accounting-period-form"
       />
@@ -328,32 +374,22 @@ export function AccountingPeriodsPage() {
         </Grid>
       </Grid>
 
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, xl: 5 }}>
-          <PeriodLifecycleActionsSection
-            openPeriod={openPeriod}
-            reopenPeriod={reopenPeriod}
-            membershipRole={membershipRole}
-            canClosePeriod={canClosePeriod}
-            canReopenPeriod={canReopenPeriod}
-            hasWorkspace={hasWorkspace}
-            closeNote={closeNote}
-            reopenReason={reopenReason}
-            closePending={closeMutation.isPending}
-            reopenPending={reopenMutation.isPending}
-            onCloseNoteChange={setCloseNote}
-            onReopenReasonChange={setReopenReason}
-            onClosePeriod={handleClosePeriod}
-            onReopenPeriod={handleReopenPeriod}
-          />
-        </Grid>
-
-        <Grid size={{ xs: 12, xl: 7 }}>
-          <LatestClosingSnapshotSection
-            latestClosingResult={latestClosingResult}
-          />
-        </Grid>
-      </Grid>
+      <PeriodLifecycleActionsSection
+        openPeriod={openPeriod}
+        reopenPeriod={reopenPeriod}
+        membershipRole={membershipRole}
+        canClosePeriod={canClosePeriod}
+        canReopenPeriod={canReopenPeriod}
+        hasWorkspace={hasWorkspace}
+        closeNote={closeNote}
+        reopenReason={reopenReason}
+        closePending={closeMutation.isPending}
+        reopenPending={reopenMutation.isPending}
+        onCloseNoteChange={setCloseNote}
+        onReopenReasonChange={setReopenReason}
+        onClosePeriod={handleClosePeriod}
+        onReopenPeriod={handleReopenPeriod}
+      />
     </Stack>
   );
 }

@@ -192,5 +192,8 @@ export class CloseAccountingPeriodUseCase {
 function assertClosePermission(
   membershipRole: ReturnType<typeof requireCurrentWorkspace>['membershipRole']
 ) {
-  return assertWorkspaceActionAllowed(membershipRole, 'accounting_period.close');
+  return assertWorkspaceActionAllowed(
+    membershipRole,
+    'accounting_period.close'
+  );
 }

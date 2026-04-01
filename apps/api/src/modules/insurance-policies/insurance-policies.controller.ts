@@ -8,7 +8,9 @@ import { InsurancePoliciesService } from './insurance-policies.service';
 @ApiBearerAuth()
 @Controller('insurance-policies')
 export class InsurancePoliciesController {
-  constructor(private readonly insurancePoliciesService: InsurancePoliciesService) {}
+  constructor(
+    private readonly insurancePoliciesService: InsurancePoliciesService
+  ) {}
 
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {

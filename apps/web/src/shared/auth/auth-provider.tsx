@@ -1,10 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import type {
-  AuthenticatedUser,
-  LoginRequest
-} from '@personal-erp/contracts';
+import type { AuthenticatedUser, LoginRequest } from '@personal-erp/contracts';
 import {
   loginWithPassword,
   logoutSession,
@@ -45,11 +42,9 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
   }, []);
 
   React.useEffect(() => {
-    setUnauthorizedSessionHandler(
-      (_reason: UnauthorizedSessionReason) => {
-        applyUnauthenticatedState();
-      }
-    );
+    setUnauthorizedSessionHandler((_reason: UnauthorizedSessionReason) => {
+      applyUnauthenticatedState();
+    });
 
     return () => {
       setUnauthorizedSessionHandler(null);
@@ -104,26 +99,29 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     };
   }, [applyUnauthenticatedState, restoreSession]);
 
-  const login = React.useCallback(async (input: LoginRequest) => {
-    React.startTransition(() => {
-      setStatus('loading');
-    });
-
-    try {
-      const result = await loginWithPassword(input);
-      setStoredAccessToken(result.accessToken);
-
+  const login = React.useCallback(
+    async (input: LoginRequest) => {
       React.startTransition(() => {
-        setUser(result.user);
-        setStatus('authenticated');
+        setStatus('loading');
       });
 
-      return result.user;
-    } catch (error) {
-      applyUnauthenticatedState();
-      throw error;
-    }
-  }, [applyUnauthenticatedState]);
+      try {
+        const result = await loginWithPassword(input);
+        setStoredAccessToken(result.accessToken);
+
+        React.startTransition(() => {
+          setUser(result.user);
+          setStatus('authenticated');
+        });
+
+        return result.user;
+      } catch (error) {
+        applyUnauthenticatedState();
+        throw error;
+      }
+    },
+    [applyUnauthenticatedState]
+  );
 
   const logout = React.useCallback(async () => {
     try {

@@ -27,15 +27,25 @@ type DomainHelpStore = {
   setDrawerOpen: (open: boolean) => void;
 };
 
-const DomainHelpContext = React.createContext<DomainHelpStore | undefined>(undefined);
+const DomainHelpContext = React.createContext<DomainHelpStore | undefined>(
+  undefined
+);
 
-export function DomainHelpProvider({ children }: { children: React.ReactNode }) {
-  const [activeContext, setActiveContext] = React.useState<DomainHelpContextType | null>(null);
+export function DomainHelpProvider({
+  children
+}: {
+  children: React.ReactNode;
+}) {
+  const [activeContext, setActiveContext] =
+    React.useState<DomainHelpContextType | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
 
-  const setContext = React.useCallback((context: DomainHelpContextType | null) => {
-    setActiveContext(context);
-  }, []);
+  const setContext = React.useCallback(
+    (context: DomainHelpContextType | null) => {
+      setActiveContext(context);
+    },
+    []
+  );
 
   const setDrawerOpen = React.useCallback((open: boolean) => {
     setIsDrawerOpen(open);
@@ -56,7 +66,9 @@ export function DomainHelpProvider({ children }: { children: React.ReactNode }) 
 export function useDomainHelpStore() {
   const context = React.useContext(DomainHelpContext);
   if (context === undefined) {
-    throw new Error('useDomainHelpStore must be used within a DomainHelpProvider');
+    throw new Error(
+      'useDomainHelpStore must be used within a DomainHelpProvider'
+    );
   }
   return context;
 }

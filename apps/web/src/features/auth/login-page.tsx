@@ -38,17 +38,20 @@ type LoginFormInput = z.infer<typeof loginSchema>;
 const loginHighlights = [
   {
     title: '기본 보호 모드',
-    description: '대시보드와 업무 화면은 실제 인증 세션이 있어야만 접근할 수 있습니다.',
+    description:
+      '대시보드와 업무 화면은 실제 인증 세션이 있어야만 접근할 수 있습니다.',
     icon: SecurityRoundedIcon
   },
   {
     title: '토큰 연동 API 클라이언트',
-    description: '보호 요청은 Bearer 토큰을 자동으로 붙이고, 만료 시 복구 흐름에 연결됩니다.',
+    description:
+      '보호 요청은 Bearer 토큰을 자동으로 붙이고, 만료 시 복구 흐름에 연결됩니다.',
     icon: LockOpenRoundedIcon
   },
   {
     title: '예측 가능한 부팅 흐름',
-    description: '보호 페이지가 렌더링되기 전에 /auth/refresh로 현재 세션을 먼저 복원합니다.',
+    description:
+      '보호 페이지가 렌더링되기 전에 /auth/refresh로 현재 세션을 먼저 복원합니다.',
     icon: TaskAltRoundedIcon
   }
 ] as const;
@@ -113,7 +116,8 @@ export function LoginPage() {
                   background:
                     'linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)',
                   backgroundSize: '24px 24px',
-                  maskImage: 'linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.08))',
+                  maskImage:
+                    'linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.08))',
                   pointerEvents: 'none'
                 },
                 '&::after': {
@@ -130,9 +134,18 @@ export function LoginPage() {
                 }
               }}
             >
-              <CardContent sx={{ p: appLayout.authSurfacePadding, height: '100%' }}>
-                <Stack spacing={appLayout.authSurfaceGap} justifyContent="space-between" height="100%">
-                  <Stack spacing={appLayout.authSurfaceGap} sx={{ position: 'relative', zIndex: 1 }}>
+              <CardContent
+                sx={{ p: appLayout.authSurfacePadding, height: '100%' }}
+              >
+                <Stack
+                  spacing={appLayout.authSurfaceGap}
+                  justifyContent="space-between"
+                  height="100%"
+                >
+                  <Stack
+                    spacing={appLayout.authSurfaceGap}
+                    sx={{ position: 'relative', zIndex: 1 }}
+                  >
                     <Chip
                       label="워크스페이스 로그인"
                       sx={{
@@ -171,9 +184,10 @@ export function LoginPage() {
                           lineHeight: 1.75
                         }}
                       >
-                        로그인 이후에는 현재 사용자를 복원하고, 보호된 API 호출과 대시보드
-                        화면을 실제 워크스페이스 세션에 연결합니다. 장식보다는 운영 흐름이
-                        먼저 읽히는 ERP 경험을 목표로 구성했습니다.
+                        로그인 이후에는 현재 사용자를 복원하고, 보호된 API
+                        호출과 대시보드 화면을 실제 워크스페이스 세션에
+                        연결합니다. 장식보다는 운영 흐름이 먼저 읽히는 ERP
+                        경험을 목표로 구성했습니다.
                       </Typography>
                     </Stack>
 
@@ -188,10 +202,16 @@ export function LoginPage() {
                               border: `1px solid ${alpha('#ffffff', 0.14)}`
                             }}
                           >
-                            <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.68) }}>
+                            <Typography
+                              variant="caption"
+                              sx={{ color: alpha('#ffffff', 0.68) }}
+                            >
                               {item.label}
                             </Typography>
-                            <Typography variant="h6" sx={{ mt: 0.75, fontWeight: 800 }}>
+                            <Typography
+                              variant="h6"
+                              sx={{ mt: 0.75, fontWeight: 800 }}
+                            >
                               {item.value}
                             </Typography>
                           </Box>
@@ -200,7 +220,11 @@ export function LoginPage() {
                     </Grid>
                   </Stack>
 
-                  <Grid container spacing={appLayout.authFeatureGap} sx={{ position: 'relative', zIndex: 1 }}>
+                  <Grid
+                    container
+                    spacing={appLayout.authFeatureGap}
+                    sx={{ position: 'relative', zIndex: 1 }}
+                  >
                     {loginHighlights.map((item) => {
                       const Icon = item.icon;
 
@@ -230,10 +254,16 @@ export function LoginPage() {
                                 <Icon fontSize="small" />
                               </Box>
                               <Box>
-                                <Typography fontWeight={700}>{item.title}</Typography>
+                                <Typography fontWeight={700}>
+                                  {item.title}
+                                </Typography>
                                 <Typography
                                   variant="body2"
-                                  sx={{ mt: 0.75, color: alpha('#ffffff', 0.72), lineHeight: 1.7 }}
+                                  sx={{
+                                    mt: 0.75,
+                                    color: alpha('#ffffff', 0.72),
+                                    lineHeight: 1.7
+                                  }}
                                 >
                                   {item.description}
                                 </Typography>
@@ -270,12 +300,19 @@ export function LoginPage() {
               <CardContent sx={{ p: appLayout.authSurfacePadding }}>
                 <Stack spacing={appLayout.authSurfaceGap}>
                   <Stack spacing={appLayout.authMetricGap}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
                       <Box>
                         <Typography variant="overline" color="text.secondary">
                           인증
                         </Typography>
-                        <Typography variant="h4" sx={{ mt: 0.5, fontWeight: 800 }}>
+                        <Typography
+                          variant="h4"
+                          sx={{ mt: 0.5, fontWeight: 800 }}
+                        >
                           워크스페이스에 로그인
                         </Typography>
                       </Box>
@@ -296,9 +333,14 @@ export function LoginPage() {
                       </Box>
                     </Stack>
 
-                    <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.8 }}>
-                      액세스 토큰은 `{accessTokenStoragePolicy}` 로 보관하고, HttpOnly
-                      리프레시 쿠키를 통해 `POST /auth/refresh`로 세션을 복원합니다.
+                    <Typography
+                      variant="body1"
+                      color="text.secondary"
+                      sx={{ lineHeight: 1.8 }}
+                    >
+                      액세스 토큰은 `{accessTokenStoragePolicy}` 로 보관하고,
+                      HttpOnly 리프레시 쿠키를 통해 `POST /auth/refresh`로
+                      세션을 복원합니다.
                     </Typography>
                   </Stack>
 
@@ -322,7 +364,9 @@ export function LoginPage() {
                         router.replace(nextPath as Route);
                       } catch (error) {
                         setSubmitError(
-                          error instanceof Error ? error.message : '로그인에 실패했습니다.'
+                          error instanceof Error
+                            ? error.message
+                            : '로그인에 실패했습니다.'
                         );
                       }
                     })}
@@ -344,7 +388,12 @@ export function LoginPage() {
                         helperText={form.formState.errors.password?.message}
                         {...form.register('password')}
                       />
-                      <Button type="submit" variant="contained" size="large" disabled={isBusy}>
+                      <Button
+                        type="submit"
+                        variant="contained"
+                        size="large"
+                        disabled={isBusy}
+                      >
                         {isBusy ? '세션 확인 중...' : '로그인'}
                       </Button>
                     </Stack>
@@ -361,10 +410,15 @@ export function LoginPage() {
                     <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                       로그인 후 동작
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1, lineHeight: 1.75 }}>
-                      보호 요청은 `Authorization: Bearer &lt;token&gt;` 헤더를 사용합니다.
-                      API가 `401`을 반환하면, 클라이언트는 먼저 `POST /auth/refresh`를 시도한
-                      뒤 세션을 비우고 이 화면으로 돌아옵니다.
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 1, lineHeight: 1.75 }}
+                    >
+                      보호 요청은 `Authorization: Bearer &lt;token&gt;` 헤더를
+                      사용합니다. API가 `401`을 반환하면, 클라이언트는 먼저
+                      `POST /auth/refresh`를 시도한 뒤 세션을 비우고 이 화면으로
+                      돌아옵니다.
                     </Typography>
                   </Box>
                 </Stack>

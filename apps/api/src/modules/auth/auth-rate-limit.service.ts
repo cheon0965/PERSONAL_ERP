@@ -60,11 +60,7 @@ export class AuthRateLimitService {
     return clientIp?.trim() || 'unknown-client';
   }
 
-  private assertAllowed(
-    key: string,
-    limit: number,
-    message: string
-  ): void {
+  private assertAllowed(key: string, limit: number, message: string): void {
     const bucket = this.readBucket(key);
 
     if (bucket.count >= limit) {

@@ -40,12 +40,10 @@ const transactionSchema = z.object({
 
 type TransactionFormInput = z.infer<typeof transactionSchema>;
 
-type SubmitFeedback =
-  | {
-      severity: 'success' | 'error';
-      message: string;
-    }
-  | null;
+type SubmitFeedback = {
+  severity: 'success' | 'error';
+  message: string;
+} | null;
 
 type CreateTransactionMutationInput = {
   payload: CreateCollectedTransactionRequest;
@@ -96,7 +94,9 @@ export function TransactionForm({ currentPeriod }: TransactionFormProps) {
 
       if (!webRuntime.demoFallbackEnabled) {
         await Promise.all([
-          queryClient.invalidateQueries({ queryKey: collectedTransactionsQueryKey }),
+          queryClient.invalidateQueries({
+            queryKey: collectedTransactionsQueryKey
+          }),
           queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] })
         ]);
       }
@@ -106,7 +106,9 @@ export function TransactionForm({ currentPeriod }: TransactionFormProps) {
   React.useEffect(() => {
     const firstFundingAccount = fundingAccounts[0];
     if (!form.getValues('accountId') && firstFundingAccount) {
-      form.setValue('accountId', firstFundingAccount.id, { shouldValidate: true });
+      form.setValue('accountId', firstFundingAccount.id, {
+        shouldValidate: true
+      });
     }
   }, [fundingAccounts, form]);
 
@@ -124,10 +126,7 @@ export function TransactionForm({ currentPeriod }: TransactionFormProps) {
     const nextValue = resolveInitialBusinessDate(currentPeriod);
     const currentValue = form.getValues('businessDate');
 
-    if (
-      !currentValue ||
-      !isWithinPeriod(currentValue, currentPeriod)
-    ) {
+    if (!currentValue || !isWithinPeriod(currentValue, currentPeriod)) {
       form.setValue('businessDate', nextValue, { shouldValidate: true });
     }
   }, [currentPeriod, form]);
@@ -158,8 +157,7 @@ export function TransactionForm({ currentPeriod }: TransactionFormProps) {
         if (!isWithinPeriod(values.businessDate, currentPeriod)) {
           setFeedback({
             severity: 'error',
-            message:
-              '거래 일자는 현재 열린 운영 기간 안에 있어야 합니다.'
+            message: '거래 일자는 현재 열린 운영 기간 안에 있어야 합니다.'
           });
           return;
         }
@@ -235,12 +233,13 @@ export function TransactionForm({ currentPeriod }: TransactionFormProps) {
         ) : null}
         {!currentPeriod ? (
           <Alert severity="warning" variant="outlined">
-            현재 열린 운영 기간이 없습니다. 먼저 `월 운영` 화면에서 운영 기간을 시작해야
-            수집 거래를 등록할 수 있습니다.
+            현재 열린 운영 기간이 없습니다. 먼저 `월 운영` 화면에서 운영 기간을
+            시작해야 수집 거래를 등록할 수 있습니다.
           </Alert>
         ) : (
           <Alert severity="info" variant="outlined">
-            현재 수집 거래는 {currentPeriod.monthLabel} 운영 기간 안에서만 등록됩니다.
+            현재 수집 거래는 {currentPeriod.monthLabel} 운영 기간 안에서만
+            등록됩니다.
           </Alert>
         )}
 
@@ -342,7 +341,12 @@ export function TransactionForm({ currentPeriod }: TransactionFormProps) {
             />
           </Grid>
         </Grid>
-        <Button type="submit" variant="contained" disabled={isBusy} sx={{ alignSelf: 'flex-start' }}>
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={isBusy}
+          sx={{ alignSelf: 'flex-start' }}
+        >
           {mutation.isPending ? '저장 중...' : '수집 거래 등록'}
         </Button>
       </Stack>
@@ -350,7 +354,9 @@ export function TransactionForm({ currentPeriod }: TransactionFormProps) {
   );
 }
 
-function resolveInitialBusinessDate(currentPeriod: AccountingPeriodItem | null): string {
+function resolveInitialBusinessDate(
+  currentPeriod: AccountingPeriodItem | null
+): string {
   const today = getTodayDateInputValue();
   if (!currentPeriod) {
     return today;

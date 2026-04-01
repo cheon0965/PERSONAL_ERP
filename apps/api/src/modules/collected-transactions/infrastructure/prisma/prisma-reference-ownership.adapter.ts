@@ -3,9 +3,7 @@ import { PrismaService } from '../../../../common/prisma/prisma.service';
 import { ReferenceOwnershipPort } from '../../application/ports/reference-ownership.port';
 
 @Injectable()
-export class PrismaReferenceOwnershipAdapter
-  implements ReferenceOwnershipPort
-{
+export class PrismaReferenceOwnershipAdapter implements ReferenceOwnershipPort {
   constructor(private readonly prisma: PrismaService) {}
 
   async fundingAccountExistsInWorkspace(

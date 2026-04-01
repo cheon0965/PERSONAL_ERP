@@ -36,7 +36,10 @@ function parseEnvLine(rawLine) {
     }
   }
 
-  return [key, value.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t')];
+  return [
+    key,
+    value.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t')
+  ];
 }
 
 function readEnvFile(filePath) {
@@ -70,7 +73,8 @@ function resolveSecretDir() {
     return path.resolve(explicitSecretDir);
   }
 
-  const configuredSecretDir = readEnvFile(secretDirConfigPath).PERSONAL_ERP_SECRET_DIR?.trim();
+  const configuredSecretDir =
+    readEnvFile(secretDirConfigPath).PERSONAL_ERP_SECRET_DIR?.trim();
   if (!configuredSecretDir) {
     return null;
   }
@@ -95,7 +99,8 @@ function readSecretWebEnv() {
 const secretWebEnv = readSecretWebEnv();
 const resolvedPublicEnv = {
   NEXT_PUBLIC_API_BASE_URL:
-    process.env.NEXT_PUBLIC_API_BASE_URL ?? secretWebEnv.NEXT_PUBLIC_API_BASE_URL,
+    process.env.NEXT_PUBLIC_API_BASE_URL ??
+    secretWebEnv.NEXT_PUBLIC_API_BASE_URL,
   NEXT_PUBLIC_ENABLE_DEMO_FALLBACK:
     process.env.NEXT_PUBLIC_ENABLE_DEMO_FALLBACK ??
     secretWebEnv.NEXT_PUBLIC_ENABLE_DEMO_FALLBACK

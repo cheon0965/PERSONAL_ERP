@@ -7,10 +7,7 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { finalize, type Observable } from 'rxjs';
-import {
-  ensureRequestContext,
-  RequestWithContext
-} from './request-context';
+import { ensureRequestContext, RequestWithContext } from './request-context';
 
 function deriveModuleTag(path: string): string {
   const normalizedPath = path.replace(/^\/+/, '');
@@ -26,10 +23,7 @@ function deriveModuleTag(path: string): string {
 export class RequestContextInterceptor implements NestInterceptor {
   private readonly logger = new Logger('ApiRequest');
 
-  intercept(
-    context: ExecutionContext,
-    next: CallHandler
-  ): Observable<unknown> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     if (context.getType() !== 'http') {
       return next.handle();
     }

@@ -143,10 +143,11 @@ export class CollectedTransactionsController {
     const workspace = requireCurrentWorkspace(user);
 
     try {
-      const journalEntry = await this.confirmCollectedTransactionUseCase.execute(
-        user,
-        collectedTransactionId
-      );
+      const journalEntry =
+        await this.confirmCollectedTransactionUseCase.execute(
+          user,
+          collectedTransactionId
+        );
 
       logWorkspaceActionSucceeded(this.securityEvents, {
         action: 'collected_transaction.confirm',

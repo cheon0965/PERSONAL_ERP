@@ -4,7 +4,10 @@ type ErrorPageProps = {
   statusCode: number;
 };
 
-function readStatusCode(propsStatusCode?: number, responseStatusCode?: number): number {
+function readStatusCode(
+  propsStatusCode?: number,
+  responseStatusCode?: number
+): number {
   if (typeof propsStatusCode === 'number') {
     return propsStatusCode;
   }
@@ -17,7 +20,10 @@ function readStatusCode(propsStatusCode?: number, responseStatusCode?: number): 
 }
 
 export default function ErrorPage({ statusCode }: ErrorPageProps) {
-  const title = statusCode === 404 ? '페이지를 찾을 수 없습니다' : '서버 오류가 발생했습니다';
+  const title =
+    statusCode === 404
+      ? '페이지를 찾을 수 없습니다'
+      : '서버 오류가 발생했습니다';
   const description =
     statusCode === 404
       ? '요청하신 페이지가 없거나 더 이상 제공되지 않습니다.'
@@ -48,6 +54,9 @@ export default function ErrorPage({ statusCode }: ErrorPageProps) {
   );
 }
 
-ErrorPage.getInitialProps = ({ res, err }: NextPageContext): ErrorPageProps => ({
+ErrorPage.getInitialProps = ({
+  res,
+  err
+}: NextPageContext): ErrorPageProps => ({
   statusCode: readStatusCode(err?.statusCode, res?.statusCode)
 });

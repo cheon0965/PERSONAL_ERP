@@ -67,7 +67,11 @@ export class AuthController {
       requestId: readRequestId(request)
     });
     response.setHeader('Cache-Control', 'no-store');
-    response.cookie(REFRESH_COOKIE_NAME, result.refreshToken, getRefreshCookieOptions());
+    response.cookie(
+      REFRESH_COOKIE_NAME,
+      result.refreshToken,
+      getRefreshCookieOptions()
+    );
     return { accessToken: result.accessToken, user: result.user };
   }
 
@@ -80,15 +84,16 @@ export class AuthController {
   ) {
     this.ensureAllowedCookieOrigin(request);
     const refreshToken = this.readRequiredRefreshTokenCookie(request);
-    const result = await this.authService.refresh(
-      refreshToken,
-      {
-        clientIp: readClientIp(request),
-        requestId: readRequestId(request)
-      }
-    );
+    const result = await this.authService.refresh(refreshToken, {
+      clientIp: readClientIp(request),
+      requestId: readRequestId(request)
+    });
     response.setHeader('Cache-Control', 'no-store');
-    response.cookie(REFRESH_COOKIE_NAME, result.refreshToken, getRefreshCookieOptions());
+    response.cookie(
+      REFRESH_COOKIE_NAME,
+      result.refreshToken,
+      getRefreshCookieOptions()
+    );
     return { accessToken: result.accessToken, user: result.user };
   }
 

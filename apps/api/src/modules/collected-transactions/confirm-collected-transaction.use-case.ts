@@ -115,38 +115,39 @@ export class ConfirmCollectedTransactionUseCase {
     );
 
     const journalEntry = await this.prisma.$transaction(async (tx) => {
-      const latestCollectedTransaction = await tx.collectedTransaction.findFirst({
-        where: {
-          id: collectedTransaction.id,
-          tenantId: workspace.tenantId,
-          ledgerId: workspace.ledgerId
-        },
-        include: {
-          period: {
-            select: {
-              id: true,
-              year: true,
-              month: true,
-              status: true
-            }
+      const latestCollectedTransaction =
+        await tx.collectedTransaction.findFirst({
+          where: {
+            id: collectedTransaction.id,
+            tenantId: workspace.tenantId,
+            ledgerId: workspace.ledgerId
           },
-          fundingAccount: {
-            select: {
-              id: true
-            }
-          },
-          ledgerTransactionType: {
-            select: {
-              postingPolicyKey: true
-            }
-          },
-          postedJournalEntry: {
-            select: {
-              id: true
+          include: {
+            period: {
+              select: {
+                id: true,
+                year: true,
+                month: true,
+                status: true
+              }
+            },
+            fundingAccount: {
+              select: {
+                id: true
+              }
+            },
+            ledgerTransactionType: {
+              select: {
+                postingPolicyKey: true
+              }
+            },
+            postedJournalEntry: {
+              select: {
+                id: true
+              }
             }
           }
-        }
-      });
+        });
 
       if (!latestCollectedTransaction) {
         throw new NotFoundException('Collected transaction not found.');

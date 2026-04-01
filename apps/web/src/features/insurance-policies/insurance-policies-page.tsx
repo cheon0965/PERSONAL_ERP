@@ -47,14 +47,18 @@ export function InsurancePoliciesPage() {
     queryKey: ['insurance-policies'],
     queryFn: getInsurancePolicies
   });
-  const totalPremium = data.reduce((acc, item) => acc + item.monthlyPremiumWon, 0);
+  const totalPremium = data.reduce(
+    (acc, item) => acc + item.monthlyPremiumWon,
+    0
+  );
   const upcomingRenewalCount = data.filter((item) => {
     if (!item.renewalDate) {
       return false;
     }
 
     const diffDays =
-      (new Date(item.renewalDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+      (new Date(item.renewalDate).getTime() - Date.now()) /
+      (1000 * 60 * 60 * 24);
 
     return diffDays >= 0 && diffDays <= 60;
   }).length;
@@ -70,7 +74,8 @@ export function InsurancePoliciesPage() {
       '수집 거래 (CollectedTransaction)',
       '전표 (JournalEntry)'
     ],
-    truthSource: '보험 계약 자체는 회계 저장이 아니며 실제 회계 확정은 수집 거래와 전표에서 이뤄집니다.',
+    truthSource:
+      '보험 계약 자체는 회계 저장이 아니며 실제 회계 확정은 수집 거래와 전표에서 이뤄집니다.',
     readModelNote: '월 보험료와 갱신일은 운영 판단을 위한 보조 지표입니다.'
   });
 
@@ -81,7 +86,9 @@ export function InsurancePoliciesPage() {
         title="보험 계약"
         description="보험 계약은 코어 회계 엔티티 자체가 아니라 반복 규칙과 수집 거래를 설명하는 운영 보조 데이터로 관리합니다."
       />
-      {error ? <QueryErrorAlert title="보험 정보 조회에 실패했습니다." error={error} /> : null}
+      {error ? (
+        <QueryErrorAlert title="보험 정보 조회에 실패했습니다." error={error} />
+      ) : null}
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, md: 4 }}>
           <SummaryCard
@@ -91,7 +98,11 @@ export function InsurancePoliciesPage() {
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <SummaryCard title="계약 수" value={String(data.length)} subtitle="관리 중인 보험 계약" />
+          <SummaryCard
+            title="계약 수"
+            value={String(data.length)}
+            subtitle="관리 중인 보험 계약"
+          />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
           <SummaryCard

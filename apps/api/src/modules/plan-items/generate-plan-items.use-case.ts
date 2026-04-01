@@ -225,5 +225,4 @@ function assertGeneratePermission(
   membershipRole: ReturnType<typeof requireCurrentWorkspace>['membershipRole']
 ) {
   return assertWorkspaceActionAllowed(membershipRole, 'plan_item.generate');
-
 }

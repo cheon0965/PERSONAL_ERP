@@ -1,7 +1,4 @@
-import {
-  ValidationPipe,
-  type INestApplication
-} from '@nestjs/common';
+import { ValidationPipe, type INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import type { NextFunction, Request, Response } from 'express';

@@ -3,9 +3,24 @@ import { Box, Skeleton, Stack } from '@mui/material';
 
 export default function DashboardLoading() {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', bgcolor: 'background.default' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        bgcolor: 'background.default'
+      }}
+    >
       {/* Topbar Skeleton */}
-      <Box sx={{ height: 60, borderBottom: '1px solid #e2e8f0', p: 2, display: 'flex', alignItems: 'center' }}>
+      <Box
+        sx={{
+          height: 60,
+          borderBottom: '1px solid #e2e8f0',
+          p: 2,
+          display: 'flex',
+          alignItems: 'center'
+        }}
+      >
         <Skeleton variant="rectangular" width={200} height={28} />
         <Box sx={{ flexGrow: 1 }} />
         <Skeleton variant="circular" width={32} height={32} />

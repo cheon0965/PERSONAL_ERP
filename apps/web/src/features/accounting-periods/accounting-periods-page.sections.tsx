@@ -8,13 +8,10 @@ import {
   TextField,
   Typography
 } from '@mui/material';
-import type {
-  AccountingPeriodItem,
-  CloseAccountingPeriodResponse
-} from '@personal-erp/contracts';
+import type { AccountingPeriodItem } from '@personal-erp/contracts';
 import type { GridColDef } from '@mui/x-data-grid';
 import type { UseFormReturn } from 'react-hook-form';
-import { formatDate, formatWon } from '@/shared/lib/format';
+import { formatDate } from '@/shared/lib/format';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { SectionCard } from '@/shared/ui/section-card';
 import { StatusChip } from '@/shared/ui/status-chip';
@@ -312,79 +309,6 @@ export function PeriodLifecycleActionsSection({
         </Stack>
       </SectionCard>
     </Stack>
-  );
-}
-
-export function LatestClosingSnapshotSection({
-  latestClosingResult
-}: {
-  latestClosingResult: CloseAccountingPeriodResponse | null;
-}) {
-  return (
-    <SectionCard
-      title="최근 마감 스냅샷"
-      description="가장 최근에 생성한 ClosingSnapshot 요약을 바로 확인할 수 있습니다."
-    >
-      {latestClosingResult ? (
-        <Stack spacing={appLayout.cardGap}>
-          <Grid container spacing={appLayout.fieldGap}>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <InfoRow
-                label="마감 월"
-                value={latestClosingResult.period.monthLabel}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <InfoRow
-                label="자산 합계"
-                value={formatWon(
-                  latestClosingResult.closingSnapshot.totalAssetAmount
-                )}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <InfoRow
-                label="부채 합계"
-                value={formatWon(
-                  latestClosingResult.closingSnapshot.totalLiabilityAmount
-                )}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <InfoRow
-                label="자본 합계"
-                value={formatWon(
-                  latestClosingResult.closingSnapshot.totalEquityAmount
-                )}
-              />
-            </Grid>
-          </Grid>
-          <InfoRow
-            label="당기 손익"
-            value={formatWon(
-              latestClosingResult.closingSnapshot.periodPnLAmount
-            )}
-          />
-          <Stack spacing={1}>
-            <Typography variant="subtitle2">마감 스냅샷 라인</Typography>
-            {latestClosingResult.closingSnapshot.lines.map((line) => (
-              <Typography key={line.id} variant="body2" color="text.secondary">
-                {line.accountSubjectCode} {line.accountSubjectName}
-                {line.fundingAccountName
-                  ? ` / ${line.fundingAccountName}`
-                  : ''}{' '}
-                · {formatWon(line.balanceAmount)}
-              </Typography>
-            ))}
-          </Stack>
-        </Stack>
-      ) : (
-        <Typography variant="body2" color="text.secondary">
-          아직 이 세션에서 생성한 마감 스냅샷이 없습니다. 현재 열린 기간을
-          마감하면 요약이 여기에 표시됩니다.
-        </Typography>
-      )}
-    </SectionCard>
   );
 }
 

@@ -26,18 +26,66 @@ const DEMO_SETTINGS = {
 } as const;
 
 const DEMO_ACCOUNTS = [
-  { key: 'mainAccount', name: '주거래 통장', type: AccountType.BANK, balanceWon: 2450000, sortOrder: 1 },
-  { key: 'lifeAccount', name: '생활비 통장', type: AccountType.BANK, balanceWon: 430000, sortOrder: 2 },
-  { key: 'cardAccount', name: '신용카드', type: AccountType.CARD, balanceWon: 300000, sortOrder: 3 }
+  {
+    key: 'mainAccount',
+    name: '주거래 통장',
+    type: AccountType.BANK,
+    balanceWon: 2450000,
+    sortOrder: 1
+  },
+  {
+    key: 'lifeAccount',
+    name: '생활비 통장',
+    type: AccountType.BANK,
+    balanceWon: 430000,
+    sortOrder: 2
+  },
+  {
+    key: 'cardAccount',
+    name: '신용카드',
+    type: AccountType.CARD,
+    balanceWon: 300000,
+    sortOrder: 3
+  }
 ] as const;
 
 const DEMO_CATEGORIES = [
-  { key: 'salaryCategory', name: '급여', kind: CategoryKind.INCOME, sortOrder: 1 },
-  { key: 'foodCategory', name: '식비', kind: CategoryKind.EXPENSE, sortOrder: 2 },
-  { key: 'insuranceCategory', name: '보험', kind: CategoryKind.EXPENSE, sortOrder: 3 },
-  { key: 'fuelCategory', name: '주유', kind: CategoryKind.EXPENSE, sortOrder: 4 },
-  { key: 'telecomCategory', name: '통신비', kind: CategoryKind.EXPENSE, sortOrder: 5 },
-  { key: 'installmentCategory', name: '차량 할부', kind: CategoryKind.EXPENSE, sortOrder: 6 }
+  {
+    key: 'salaryCategory',
+    name: '급여',
+    kind: CategoryKind.INCOME,
+    sortOrder: 1
+  },
+  {
+    key: 'foodCategory',
+    name: '식비',
+    kind: CategoryKind.EXPENSE,
+    sortOrder: 2
+  },
+  {
+    key: 'insuranceCategory',
+    name: '보험',
+    kind: CategoryKind.EXPENSE,
+    sortOrder: 3
+  },
+  {
+    key: 'fuelCategory',
+    name: '주유',
+    kind: CategoryKind.EXPENSE,
+    sortOrder: 4
+  },
+  {
+    key: 'telecomCategory',
+    name: '통신비',
+    kind: CategoryKind.EXPENSE,
+    sortOrder: 5
+  },
+  {
+    key: 'installmentCategory',
+    name: '차량 할부',
+    kind: CategoryKind.EXPENSE,
+    sortOrder: 6
+  }
 ] as const;
 
 const DEMO_TRANSACTIONS = [
@@ -295,8 +343,12 @@ async function ensureDemoAccounts(
   for (const account of DEMO_ACCOUNTS) {
     const existingAccount =
       existingAccounts.find(
-        (item) => item.sortOrder === account.sortOrder && item.type === account.type
-      ) ?? existingAccounts.find((item) => item.name === account.name && item.type === account.type);
+        (item) =>
+          item.sortOrder === account.sortOrder && item.type === account.type
+      ) ??
+      existingAccounts.find(
+        (item) => item.name === account.name && item.type === account.type
+      );
 
     if (existingAccount) {
       accountIds.set(account.key, existingAccount.id);
@@ -335,13 +387,20 @@ async function ensureDemoCategories(
     select: { id: true, name: true, kind: true, sortOrder: true }
   });
 
-  const categoryIds = new Map<(typeof DEMO_CATEGORIES)[number]['key'], string>();
+  const categoryIds = new Map<
+    (typeof DEMO_CATEGORIES)[number]['key'],
+    string
+  >();
 
   for (const category of DEMO_CATEGORIES) {
     const existingCategory =
       existingCategories.find(
-        (item) => item.sortOrder === category.sortOrder && item.kind === category.kind
-      ) ?? existingCategories.find((item) => item.name === category.name && item.kind === category.kind);
+        (item) =>
+          item.sortOrder === category.sortOrder && item.kind === category.kind
+      ) ??
+      existingCategories.find(
+        (item) => item.name === category.name && item.kind === category.kind
+      );
 
     if (existingCategory) {
       categoryIds.set(category.key, existingCategory.id);
@@ -381,7 +440,9 @@ async function ensureDemoTransactions(
     const categoryId = categoryIds.get(transaction.categoryKey);
 
     if (!accountId || !categoryId) {
-      throw new Error(`Missing seed reference for transaction: ${transaction.title}`);
+      throw new Error(
+        `Missing seed reference for transaction: ${transaction.title}`
+      );
     }
 
     const existingTransaction = await prisma.transaction.findFirst({
@@ -434,7 +495,9 @@ async function ensureDemoRecurringRules(
     const categoryId = categoryIds.get(rule.categoryKey);
 
     if (!accountId || !categoryId) {
-      throw new Error(`Missing seed reference for recurring rule: ${rule.title}`);
+      throw new Error(
+        `Missing seed reference for recurring rule: ${rule.title}`
+      );
     }
 
     const existingRule = await prisma.recurringRule.findFirst({
@@ -474,7 +537,10 @@ async function ensureDemoRecurringRules(
   }
 }
 
-async function ensureDemoInsurancePolicies(userId: string, summary: SeedSummary) {
+async function ensureDemoInsurancePolicies(
+  userId: string,
+  summary: SeedSummary
+) {
   for (const policy of DEMO_INSURANCE_POLICIES) {
     const existingPolicy = await prisma.insurancePolicy.findFirst({
       where: {
@@ -590,8 +656,18 @@ async function main() {
   await ensureDemoSettings(userId, summary);
   const backbone = await ensurePhase1BackboneForUser(prisma, userId);
 
-  const accountIds = await ensureDemoAccounts(userId, backbone.tenantId, backbone.ledgerId, summary);
-  const categoryIds = await ensureDemoCategories(userId, backbone.tenantId, backbone.ledgerId, summary);
+  const accountIds = await ensureDemoAccounts(
+    userId,
+    backbone.tenantId,
+    backbone.ledgerId,
+    summary
+  );
+  const categoryIds = await ensureDemoCategories(
+    userId,
+    backbone.tenantId,
+    backbone.ledgerId,
+    summary
+  );
 
   await ensureDemoTransactions(
     userId,

@@ -1,5 +1,8 @@
 import { PrismaClient } from '@prisma/client';
-import { backfillPhase1Backbone, formatPhase1BackboneSummary } from './phase1-backbone';
+import {
+  backfillPhase1Backbone,
+  formatPhase1BackboneSummary
+} from './phase1-backbone';
 
 const prisma = new PrismaClient();
 
@@ -10,7 +13,10 @@ async function main() {
       ? process.argv[emailFlagIndex + 1]
       : undefined;
 
-  const summary = await backfillPhase1Backbone(prisma, email ? { email } : undefined);
+  const summary = await backfillPhase1Backbone(
+    prisma,
+    email ? { email } : undefined
+  );
   console.log(formatPhase1BackboneSummary(summary));
 }
 

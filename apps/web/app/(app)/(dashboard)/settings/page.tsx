@@ -48,15 +48,18 @@ export default function SettingsPage() {
     title: '작업 문맥 개요',
     description:
       '이 화면은 현재 로그인 사용자가 어떤 테넌트와 장부 문맥 안에서 작업하는지 보여주는 기준 화면입니다.',
-    primaryEntity: '테넌트 / 멤버십 / 장부 (Tenant / TenantMembership / Ledger)',
+    primaryEntity:
+      '테넌트 / 멤버십 / 장부 (Tenant / TenantMembership / Ledger)',
     relatedEntities: [
       '운영 기간 (AccountingPeriod)',
       '자금수단 (FundingAccount)',
       '거래유형 (TransactionType)',
       '수집 거래 (CollectedTransaction)'
     ],
-    truthSource: '현재 작업 TenantMembership과 Ledger를 해석하는 런타임 문맥이 이 화면의 공식 기준입니다.',
-    readModelNote: '다른 운영 화면은 여기서 확인한 작업 문맥을 기준으로 데이터를 조회하고 변경합니다.'
+    truthSource:
+      '현재 작업 TenantMembership과 Ledger를 해석하는 런타임 문맥이 이 화면의 공식 기준입니다.',
+    readModelNote:
+      '다른 운영 화면은 여기서 확인한 작업 문맥을 기준으로 데이터를 조회하고 변경합니다.'
   });
 
   return (
@@ -87,8 +90,8 @@ export default function SettingsPage() {
                 label="테넌트 상태"
                 value={
                   currentWorkspace
-                    ? tenantStatusLabelMap[currentWorkspace.tenant.status] ??
-                      currentWorkspace.tenant.status
+                    ? (tenantStatusLabelMap[currentWorkspace.tenant.status] ??
+                      currentWorkspace.tenant.status)
                     : '-'
                 }
                 InputProps={{ readOnly: true }}
@@ -97,8 +100,9 @@ export default function SettingsPage() {
                 label="멤버십 역할"
                 value={
                   currentWorkspace
-                    ? membershipRoleLabelMap[currentWorkspace.membership.role] ??
-                      currentWorkspace.membership.role
+                    ? (membershipRoleLabelMap[
+                        currentWorkspace.membership.role
+                      ] ?? currentWorkspace.membership.role)
                     : '-'
                 }
                 helperText="현재 로그인 사용자의 TenantMembership을 공식 작업 주체 기준으로 봅니다."
@@ -108,9 +112,9 @@ export default function SettingsPage() {
                 label="멤버십 상태"
                 value={
                   currentWorkspace
-                    ? membershipStatusLabelMap[
+                    ? (membershipStatusLabelMap[
                         currentWorkspace.membership.status
-                      ] ?? currentWorkspace.membership.status
+                      ] ?? currentWorkspace.membership.status)
                     : '-'
                 }
                 InputProps={{ readOnly: true }}
@@ -134,8 +138,8 @@ export default function SettingsPage() {
                 label="장부 상태"
                 value={
                   currentWorkspace?.ledger
-                    ? ledgerStatusLabelMap[currentWorkspace.ledger.status] ??
-                      currentWorkspace.ledger.status
+                    ? (ledgerStatusLabelMap[currentWorkspace.ledger.status] ??
+                      currentWorkspace.ledger.status)
                     : '-'
                 }
                 InputProps={{ readOnly: true }}
