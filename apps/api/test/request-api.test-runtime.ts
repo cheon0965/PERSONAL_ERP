@@ -1,25 +1,9 @@
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import { configureApiApp } from '../src/bootstrap/configure-api-app';
-import { ExternalDependenciesModule } from '../src/common/infrastructure/external-dependencies.module';
 import { SecurityEventLogger } from '../src/common/infrastructure/operational/security-event.logger';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { getApiEnv, resetApiEnvCache } from '../src/config/api-env';
-import { AccountSubjectsModule } from '../src/modules/account-subjects/account-subjects.module';
-import { AuthModule } from '../src/modules/auth/auth.module';
-import { AccountingPeriodsModule } from '../src/modules/accounting-periods/accounting-periods.module';
-import { CarryForwardsModule } from '../src/modules/carry-forwards/carry-forwards.module';
-import { CategoriesModule } from '../src/modules/categories/categories.module';
-import { DashboardModule } from '../src/modules/dashboard/dashboard.module';
-import { FinancialStatementsModule } from '../src/modules/financial-statements/financial-statements.module';
-import { ForecastModule } from '../src/modules/forecast/forecast.module';
-import { FundingAccountsModule } from '../src/modules/funding-accounts/funding-accounts.module';
-import { HealthModule } from '../src/modules/health/health.module';
-import { ImportBatchesModule } from '../src/modules/import-batches/import-batches.module';
-import { JournalEntriesModule } from '../src/modules/journal-entries/journal-entries.module';
-import { LedgerTransactionTypesModule } from '../src/modules/ledger-transaction-types/ledger-transaction-types.module';
-import { RecurringRulesModule } from '../src/modules/recurring-rules/recurring-rules.module';
-import { CollectedTransactionsModule } from '../src/modules/collected-transactions/collected-transactions.module';
 import { createPrismaMock } from './request-api.test-prisma-mock';
 import { createRequestTestState } from './request-api.test-state';
 import type {
@@ -160,28 +144,12 @@ export async function createRequestTestContext(): Promise<RequestTestContext> {
   try {
     const state = await createRequestTestState();
     const securityEvents: RequestTestContext['securityEvents'] = [];
+    const { AppModule } = await import('../src/app.module');
 
     // The request tests use real controllers, the real global guard, and ValidationPipe.
     // Prisma and JWT are replaced with an in-memory fixture store so the HTTP wiring stays fast.
     const moduleRef = await Test.createTestingModule({
-      imports: [
-        ExternalDependenciesModule,
-        HealthModule,
-        AuthModule,
-        AccountSubjectsModule,
-        AccountingPeriodsModule,
-        CarryForwardsModule,
-        CategoriesModule,
-        DashboardModule,
-        FinancialStatementsModule,
-        ForecastModule,
-        FundingAccountsModule,
-        JournalEntriesModule,
-        LedgerTransactionTypesModule,
-        CollectedTransactionsModule,
-        ImportBatchesModule,
-        RecurringRulesModule
-      ]
+      imports: [AppModule]
     })
       .overrideProvider(PrismaService)
       .useValue(createPrismaMock(state))

@@ -1,17 +1,17 @@
 # Personal ERP Starter
 
 개인의 월별 재무 운영을 ERP처럼 관리할 수 있도록 구성한 워크스페이스형 스타터입니다.
-실제 거래, 반복규칙, 보험, 차량비, 월말 예측을 한 구조 안에서 다루도록 설계했습니다.
+실제 거래, 반복규칙, 업로드 배치, 월 운영, 공식 보고까지 한 구조 안에서 다루도록 설계했습니다.
 
 ## 현재 상태
 
 - 프론트엔드: Next.js App Router + TypeScript + MUI
 - 백엔드: NestJS + Prisma + MySQL
 - 공용 계약 계층: `packages/contracts`
-- 인증 기본 정책: `login`, `health`를 제외한 API는 기본적으로 보호
+- 인증 기본 정책: `auth/login`, `auth/refresh`, `auth/logout`, `health`, `health/ready`를 제외한 API는 기본적으로 보호
 - Web 인증 세션: `/login`, 메모리 기반 access token 유지, `POST /auth/refresh` 기반 사용자 복원
-- 핵심 입력 흐름: 거래/반복규칙 Quick Add 폼이 실제 `POST` mutation과 목록 갱신까지 연결됨
-- 요청 단위 검증: `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `401`, `GET /auth/me`, 거래/반복규칙 DTO와 현재 접근 범위 검증 포함
+- 핵심 운영 흐름: 운영 기간 open/close/reopen, 수집 거래 생성/확정, 업로드 배치 수집, 반복규칙 -> 계획 항목 생성, 공식 재무제표/차기 이월 생성까지 연결됨
+- 요청 단위 검증: auth, reference-data, accounting-periods, collected-transactions/journal-entries, import-batches, financial-statements/carry-forwards, dashboard/forecast의 현재 workspace 접근 범위와 계약 검증 포함
 - 대표 브라우저 E2E: 보호 라우트 진입, 로그인, 세션 복원, 거래 생성 후 목록 반영까지 자동 검증
 - 운영 신호: 모든 API 응답에 `x-request-id` 헤더 부여, `GET /api/health/ready` 준비 상태 확인 지원
 - CI 보안 게이트: `CI` 워크플로 안의 보안 job에서 보안 회귀 API 테스트, runtime dependency audit, Semgrep CE, Gitleaks, 조건부 dependency review 실행

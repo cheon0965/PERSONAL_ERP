@@ -51,52 +51,183 @@
 - `POST /auth/refresh`
 - `POST /auth/logout`
 
+## 현재 구현 범위 요약
+
+- 기준/참조 조회 범위는 `auth/me`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`까지 포함합니다.
+- 운영/원장 조회 범위는 `accounting-periods`, `collected-transactions`, `journal-entries`, `plan-items`, `financial-statements`, `carry-forwards`, `import-batches`까지 포함합니다.
+- 집계/보고 조회 범위는 `dashboard/summary`, `forecast/monthly`까지 포함합니다.
+- 현재 쓰기/명령 범위는 `accounting-periods`, `collected-transactions`, `recurring-rules`, `plan-items`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`까지 확장되어 있습니다.
+- 즉, 현재 저장소의 API surface는 초기 reference-data/transactions 수준을 넘어 월 운영, 수집, 전표, 계획, 공식 보고, 차기 이월, 업로드 배치까지 포함합니다.
+
 ## 보호 엔드포인트
 
 아래 엔드포인트는 기본적으로 Bearer 토큰이 필요합니다.
 
+### 인증/기준 데이터
+
 - `GET /auth/me`
 - `GET /funding-accounts`
 - `GET /categories`
-- `GET /collected-transactions`
-- `POST /collected-transactions`
-- `GET /recurring-rules`
-- `POST /recurring-rules`
+- `GET /account-subjects`
+- `GET /ledger-transaction-types`
 - `GET /insurance-policies`
 - `GET /vehicles`
-- `GET /dashboard/summary`
-- `GET /forecast/monthly?month=YYYY-MM`
 
-## 현재 쓰기 엔드포인트
+### 월 운영/수집/전표
+
+- `GET /accounting-periods`
+- `GET /accounting-periods/current`
+- `POST /accounting-periods`
+- `POST /accounting-periods/:id/close`
+- `POST /accounting-periods/:id/reopen`
+- `GET /collected-transactions`
+- `POST /collected-transactions`
+- `POST /collected-transactions/:id/confirm`
+- `GET /import-batches`
+- `GET /import-batches/:id`
+- `POST /import-batches`
+- `POST /import-batches/:id/rows/:rowId/collect`
+- `GET /journal-entries`
+- `POST /journal-entries/:id/reverse`
+- `POST /journal-entries/:id/correct`
+
+### 계획/보고
+
+- `GET /recurring-rules`
+- `POST /recurring-rules`
+- `GET /plan-items?periodId=<id>`
+- `POST /plan-items/generate`
+- `GET /financial-statements?periodId=<id>`
+- `POST /financial-statements/generate`
+- `GET /carry-forwards?fromPeriodId=<id>`
+- `POST /carry-forwards/generate`
+- `GET /dashboard/summary?periodId=<id>`
+- `GET /forecast/monthly?periodId=<id>&month=YYYY-MM`
+
+## Web 화면 경로와 API 모듈 대응
+
+- Web `/dashboard` -> API `GET /dashboard/summary`
+- Web `/periods` -> API `/accounting-periods`
+- Web `/reference-data` -> API `/funding-accounts`, `/categories`, `/account-subjects`, `/ledger-transaction-types`
+- Web `/recurring` -> API `/recurring-rules`
+- Web `/plan-items` -> API `/plan-items`
+- Web `/transactions` -> API `/collected-transactions`
+- Web `/imports` -> API `/import-batches`
+- Web `/journal-entries` -> API `/journal-entries`
+- Web `/financial-statements` -> API `/financial-statements`
+- Web `/carry-forwards` -> API `/carry-forwards`
+- Web `/insurances` -> API `/insurance-policies`
+- Web `/vehicles` -> API `/vehicles`
+- Web `/forecast` -> API `GET /forecast/monthly`
+- Web 라우트의 shorthand 이름과 Swagger/API module 이름이 다를 수 있으며, 계약과 백엔드 모듈명은 API 경로 기준으로 봅니다.
+
+## 현재 쓰기/명령 엔드포인트
+
+### `POST /accounting-periods`
+
+- 계약: `OpenAccountingPeriodRequest -> AccountingPeriodItem`
+- 선택한 `month`의 운영 기간을 열고, 필요하면 opening balance 초기화를 시작합니다.
+
+### `POST /accounting-periods/:id/close`
+
+- 계약: `CloseAccountingPeriodRequest -> CloseAccountingPeriodResponse`
+- 운영 기간을 잠그고 closing snapshot을 생성합니다.
+- 공식 `financial-statements`와 `carry-forwards`의 선행 조건입니다.
+
+### `POST /accounting-periods/:id/reopen`
+
+- 계약: `ReopenAccountingPeriodRequest -> AccountingPeriodItem`
+- 잠금된 운영 기간을 사유와 함께 다시 엽니다.
 
 ### `POST /collected-transactions`
 
-- 요청 계약: `CreateCollectedTransactionRequest`
-- 응답 계약: `CollectedTransactionItem`
-- 현재 엔드포인트는 도메인 기준의 `CollectedTransaction -> JournalEntry` 흐름으로 가기 전 입력/수집 단계 구현에 가깝습니다.
+- 계약: `CreateCollectedTransactionRequest -> CollectedTransactionItem`
+- 현재 수집 가능한 운영 기간 안에서 수집 거래를 생성합니다.
 - 현재 API 구현 이름은 `collected-transactions`이고, Web 화면 경로는 shorthand로 `/transactions`를 사용합니다.
 - 현재 응답은 `GET /collected-transactions` 목록 아이템 shape와 동일하게 매핑됩니다.
-- 계정은 필수이며, 카테고리는 선택입니다.
-- 현재 구현에서는 인증 사용자 범위 내 참조만 허용하며, 장기 기준은 Tenant/Membership 접근 범위로 수렴합니다.
-- 상위 도메인 기준에서는 손익 성격 거래를 확정(`ReadyToPost`/전표 생성)하려면 Category 확정이 필요합니다.
+
+### `POST /collected-transactions/:id/confirm`
+
+- 계약: request body 없음 -> `JournalEntryItem`
+- 수집 거래를 확정해 `JournalEntry`를 생성합니다.
+- 연결된 `PlanItem`이 있으면 현재 구현은 해당 항목을 `CONFIRMED`로 갱신합니다.
 
 ### `POST /recurring-rules`
 
-- 요청 계약: `CreateRecurringRuleRequest`
-- 응답 계약: `RecurringRuleItem`
-- 현재 엔드포인트는 도메인 기준의 `RecurringRule -> PlanItem` 생성 흐름의 초기 입력 단계 구현입니다.
-- 현재 응답은 `GET /recurring-rules` 목록 아이템 shape와 동일하게 매핑됩니다.
-- 계정은 필수이며, 카테고리는 선택입니다.
-- 현재 구현에서는 인증 사용자 범위 내 참조만 허용하며, 장기 기준은 Tenant/Membership 접근 범위로 수렴합니다.
+- 계약: `CreateRecurringRuleRequest -> RecurringRuleItem`
+- 반복 규칙을 등록합니다.
+- 현재 엔드포인트는 도메인 기준의 `RecurringRule -> PlanItem` 생성 흐름의 입력 단계 구현입니다.
+
+### `POST /plan-items/generate`
+
+- 계약: `GeneratePlanItemsRequest -> GeneratePlanItemsResponse`
+- 선택한 운영 기간에 대해 활성 `RecurringRule`로부터 `PlanItem`을 생성합니다.
+- 같은 규칙/예정일 조합이 이미 있으면 건너뛰고, 기본 거래유형을 해석할 수 없는 규칙은 제외합니다.
+
+### `POST /import-batches`
+
+- 계약: `CreateImportBatchRequest -> ImportBatchItem`
+- 업로드 내용을 파싱해 배치와 행 단위 parse 결과를 저장합니다.
+
+### `POST /import-batches/:id/rows/:rowId/collect`
+
+- 계약: `CollectImportedRowRequest -> CollectedTransactionItem`
+- 파싱 완료된 업로드 행을 수집 거래로 승격합니다.
+- 현재 구현은 source fingerprint 기반 중복 감지, draft `PlanItem` 자동 매칭, 카테고리/상태 자동 준비를 포함합니다.
+
+### `POST /journal-entries/:id/reverse`
+
+- 계약: `ReverseJournalEntryRequest -> JournalEntryItem`
+- 기존 전표에 대한 reversal adjustment 전표를 생성합니다.
+
+### `POST /journal-entries/:id/correct`
+
+- 계약: `CorrectJournalEntryRequest -> JournalEntryItem`
+- 수정 사유와 line 입력으로 correction 전표를 생성합니다.
+
+### `POST /financial-statements/generate`
+
+- 계약: `GenerateFinancialStatementSnapshotsRequest -> FinancialStatementsView`
+- 잠금된 운영 기간과 closing snapshot이 있을 때 공식 재무제표 snapshot을 생성하거나 갱신합니다.
+
+### `POST /carry-forwards/generate`
+
+- 계약: `GenerateCarryForwardRequest -> CarryForwardView`
+- 잠금된 운영 기간의 closing snapshot을 다음 기간 opening balance snapshot으로 이월합니다.
+- 현재 구현은 `carryForwardRecord`와 opening balance snapshot 생성까지 포함하며, `createdJournalEntryId`는 아직 `null`일 수 있습니다.
+
+## 현재 구현 흐름
+
+### `accounting-periods -> collected-transactions -> journal-entries -> financial-statements -> carry-forwards`
+
+1. `POST /accounting-periods`로 운영 기간을 엽니다.
+2. `POST /collected-transactions` 또는 `POST /import-batches/:id/rows/:rowId/collect`로 현재 기간의 수집 거래를 만듭니다.
+3. `POST /collected-transactions/:id/confirm`로 수집 거래를 `JournalEntry`로 확정합니다.
+4. 필요하면 `POST /journal-entries/:id/reverse` 또는 `POST /journal-entries/:id/correct`로 전표 조정을 수행합니다.
+5. `POST /accounting-periods/:id/close`로 운영 기간을 잠그고 closing snapshot을 만듭니다.
+6. `POST /financial-statements/generate`로 잠금 기간의 공식 재무제표 snapshot을 생성합니다.
+7. `POST /carry-forwards/generate`로 다음 기간 opening balance snapshot과 carry-forward record를 생성합니다.
+8. 필요하면 `POST /accounting-periods/:id/reopen`로 잠금 기간을 다시 엽니다.
+
+### `recurring-rules -> plan-items -> collected-transactions`
+
+1. `POST /recurring-rules`로 반복 규칙을 등록합니다.
+2. `POST /plan-items/generate`로 특정 기간의 draft `PlanItem`을 생성합니다.
+3. import collect 단계에서 현재 구현은 draft `PlanItem` 자동 매칭을 수행할 수 있습니다.
+4. `POST /collected-transactions/:id/confirm`가 실행되면 매칭된 `PlanItem`은 `CONFIRMED`로 갱신됩니다.
+5. `GET /dashboard/summary`와 `GET /forecast/monthly`는 위 운영/계획 데이터를 projection한 읽기 모델이며, 직접 쓰기 흐름에 참여하지 않습니다.
 
 ## 접근 범위와 데이터 최소 노출
 
-- `GET /collected-transactions`는 현재 구현 기준으로 인증 사용자 범위 데이터만 반환합니다.
-- `GET /recurring-rules`는 현재 구현 기준으로 인증 사용자 범위 데이터만 반환합니다.
-- 상위 도메인 기준은 Tenant/Membership/Ledger 접근 범위이며, 현재 user-scoped 구현은 그 전단계입니다.
-- 두 목록 응답은 `userId`, `tenantId`, `membershipId`, `accountId`, `categoryId`, `memo` 같은 내부 접근 제어/저장 모델 필드를 직접 노출하지 않습니다.
-- `GET /dashboard/summary`와 `GET /forecast/monthly`는 집계 결과만 반환합니다.
-- 두 read endpoint는 raw read model(`accounts`, `transactions`, `recurringRules`, `settings`)을 직접 응답하지 않습니다.
+- 모든 보호 엔드포인트는 `user.currentWorkspace`에서 선택된 `tenantId`, `ledgerId`, `membershipId`, `membershipRole` 문맥을 기준으로 동작합니다.
+- 현재 구현은 단순 user-scoped 전단계가 아니라 workspace-scoped tenant/ledger 모델을 사용합니다.
+- 조회 엔드포인트는 인증된 workspace 범위 내 데이터만 반환합니다.
+- 쓰기 권한은 workspace membership role로 제어합니다.
+- `OWNER`, `MANAGER`: `accounting_period.open`, `recurring_rule.create`, `plan_item.generate`, `financial_statement.generate`, `carry_forward.generate`, `journal_entry.reverse`, `journal_entry.correct`
+- `OWNER`: `accounting_period.close`, `accounting_period.reopen`
+- `OWNER`, `MANAGER`, `EDITOR`: `collected_transaction.create`, `collected_transaction.confirm`, `import_batch.upload`
+- `CollectedTransactionItem`, `RecurringRuleItem`, `JournalEntryItem`, `PlanItemsView`, `FinancialStatementsView`, `CarryForwardView`, `DashboardSummary`, `ForecastResponse`는 raw table 전체가 아니라 API view/projection shape를 응답합니다.
+- 예외적으로 `ImportBatchItem.rows[].rawPayload`는 업로드 검수 목적상 현재 응답에 포함됩니다.
 - 접근통제 실패는 `404` 또는 `401/403`으로 처리하고, 보안 이벤트 로그와 함께 남깁니다.
 
 ## 문서화 원칙
