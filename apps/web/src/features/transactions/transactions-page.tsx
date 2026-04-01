@@ -3,10 +3,7 @@
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Grid, Stack } from '@mui/material';
-import type {
-  CollectedTransactionItem,
-  JournalEntryItem
-} from '@personal-erp/contracts';
+import type { CollectedTransactionItem } from '@personal-erp/contracts';
 import {
   currentAccountingPeriodQueryKey,
   getCurrentAccountingPeriod
