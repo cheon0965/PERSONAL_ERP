@@ -40,6 +40,38 @@ jobs:
       - name: Run tests
         run: npm run test
 
+  e2e-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run smoke E2E
+        run: npm run test:e2e:smoke
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-smoke-artifacts
+          path: |
+            apps/web/test-results
+            apps/web/playwright-report
+
   security-regression:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -131,7 +163,15 @@ jobs:
 
   CI:
     if: always()
-    needs: [validate, security-regression, audit-runtime, semgrep-ce, gitleaks]
+    needs:
+      [
+        validate,
+        e2e-smoke,
+        security-regression,
+        audit-runtime,
+        semgrep-ce,
+        gitleaks
+      ]
     runs-on: ubuntu-latest
     steps:
       - name: Check build status

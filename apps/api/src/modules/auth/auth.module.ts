@@ -5,6 +5,7 @@ import { AuthenticatedWorkspaceResolver } from '../../common/auth/authenticated-
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { AuthRateLimitService } from './auth-rate-limit.service';
 import { AuthController } from './auth.controller';
+import { AuthSessionService } from './auth-session.service';
 import { AuthService } from './auth.service';
 
 @Global()
@@ -14,6 +15,7 @@ import { AuthService } from './auth.service';
   providers: [
     AuthenticatedWorkspaceResolver,
     AuthRateLimitService,
+    AuthSessionService,
     AuthService,
     JwtAuthGuard,
     {
