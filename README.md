@@ -223,6 +223,7 @@ Personal ERP Starter는 **소규모 팀이 제한된 리소스 안에서 개발 
 - [비즈니스 로직 설계 초안](./docs/domain/business-logic-draft.md)
 - [핵심 엔티티 정의서](./docs/domain/core-entity-definition.md)
 - [아키텍처](./docs/ARCHITECTURE.md)
+- [구형 거래 모델과 신규 회계 흐름 경계](./docs/ACCOUNTING_MODEL_BOUNDARY.md)
 - [개발 가이드](./docs/DEVELOPMENT_GUIDE.md)
 - [API 개요](./docs/API.md)
 - [예외 처리와 로깅 원칙](./docs/ERROR_HANDLING_AND_LOGGING.md)

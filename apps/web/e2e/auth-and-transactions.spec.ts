@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type {
+  AccountingPeriodItem,
   AuthenticatedUser,
   CategoryItem,
   CollectedTransactionItem,
@@ -13,6 +14,34 @@ test('protects the transactions route, restores the session, and saves a transac
   const pageErrors: string[] = [];
   const transactionTitle = `E2E Transaction ${Date.now()}`;
   const businessDate = new Date().toISOString().slice(0, 10);
+  const [businessYearToken, businessMonthToken] = businessDate.split('-');
+  const currentPeriod: AccountingPeriodItem = {
+    id: 'period-demo-current',
+    year: Number(businessYearToken),
+    month: Number(businessMonthToken),
+    monthLabel: `${businessYearToken}-${businessMonthToken}`,
+    startDate: `${businessYearToken}-${businessMonthToken}-01T00:00:00.000Z`,
+    endDate: new Date(
+      Date.UTC(Number(businessYearToken), Number(businessMonthToken), 1)
+    ).toISOString(),
+    status: 'OPEN',
+    openedAt: `${businessYearToken}-${businessMonthToken}-01T00:00:00.000Z`,
+    lockedAt: null,
+    hasOpeningBalanceSnapshot: false,
+    openingBalanceSourceKind: null,
+    statusHistory: [
+      {
+        id: 'period-history-demo-open',
+        fromStatus: null,
+        toStatus: 'OPEN',
+        eventType: 'OPEN',
+        reason: 'Playwright smoke test setup',
+        actorType: 'TENANT_MEMBERSHIP',
+        actorMembershipId: 'membership-demo',
+        changedAt: `${businessYearToken}-${businessMonthToken}-01T00:00:00.000Z`
+      }
+    ]
+  };
   let sessionActive = false;
 
   const currentUser: AuthenticatedUser = {
@@ -166,6 +195,27 @@ test('protects the transactions route, restores the session, and saves a transac
       return;
     }
 
+    if (
+      path === '/api/accounting-periods/current' &&
+      request.method() === 'GET'
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(currentPeriod)
+      });
+      return;
+    }
+
+    if (path === '/api/journal-entries' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([])
+      });
+      return;
+    }
+
     if (path === '/api/collected-transactions' && request.method() === 'GET') {
       await route.fulfill({
         status: 200,
@@ -240,18 +290,24 @@ test('protects the transactions route, restores the session, and saves a transac
   await page.getByRole('button', { name: '로그인' }).click();
 
   await expect(page).toHaveURL(/\/transactions$/);
-  await expect(page.getByRole('heading', { name: '수집 거래' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 4, name: '수집 거래', exact: true })
+  ).toBeVisible();
   await expect(page.getByText('Demo User')).toBeVisible();
 
   await page.reload();
 
   await expect(page).toHaveURL(/\/transactions$/);
-  await expect(page.getByRole('heading', { name: '수집 거래' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 4, name: '수집 거래', exact: true })
+  ).toBeVisible();
   await expect(page.getByText('Demo User')).toBeVisible();
 
   await page.getByRole('textbox', { name: '적요' }).fill(transactionTitle);
   await page.getByRole('spinbutton', { name: '금액 (원)' }).fill('54321');
-  await page.getByLabel('거래일').fill(businessDate);
+  await page
+    .getByRole('textbox', { name: '거래일', exact: true })
+    .fill(businessDate);
 
   const saveButton = page.getByRole('button', { name: '수집 거래 등록' });
   await expect(saveButton).toBeEnabled();

@@ -16,9 +16,7 @@ import type {
 import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { readAllowedWorkspaceRoles } from '../../common/auth/workspace-action.policy';
-import {
-  RequestWithContext
-} from '../../common/infrastructure/operational/request-context';
+import { RequestWithContext } from '../../common/infrastructure/operational/request-context';
 import { SecurityEventLogger } from '../../common/infrastructure/operational/security-event.logger';
 import {
   logWorkspaceActionDenied,
@@ -27,6 +25,7 @@ import {
 import { CollectImportedRowRequestDto } from './dto/collect-imported-row.dto';
 import { CreateImportBatchRequestDto } from './dto/create-import-batch.dto';
 import { ImportBatchesService } from './import-batches.service';
+import { ImportedRowCollectionService } from './imported-row-collection.service';
 
 @ApiTags('import-batches')
 @ApiBearerAuth()
@@ -34,6 +33,7 @@ import { ImportBatchesService } from './import-batches.service';
 export class ImportBatchesController {
   constructor(
     private readonly importBatchesService: ImportBatchesService,
+    private readonly importedRowCollectionService: ImportedRowCollectionService,
     private readonly securityEvents: SecurityEventLogger
   ) {}
 
@@ -82,7 +82,9 @@ export class ImportBatchesController {
           request,
           workspace,
           details: {
-            requiredRoles: readAllowedWorkspaceRoles('import_batch.upload').join(','),
+            requiredRoles: readAllowedWorkspaceRoles(
+              'import_batch.upload'
+            ).join(','),
             sourceKind: dto.sourceKind
           }
         });
@@ -103,7 +105,7 @@ export class ImportBatchesController {
     const workspace = requireCurrentWorkspace(user);
 
     try {
-      const created = await this.importBatchesService.collectRow(
+      const created = await this.importedRowCollectionService.collectRow(
         user,
         importBatchId,
         importedRowId,

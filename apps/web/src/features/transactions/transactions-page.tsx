@@ -1,23 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  Alert,
-  Button,
-  Grid,
-  MenuItem,
-  Stack,
-  TextField,
-  Typography
-} from '@mui/material';
+import { Alert, Grid, Stack } from '@mui/material';
 import type {
-  AccountingPeriodItem,
   CollectedTransactionItem,
   JournalEntryItem
 } from '@personal-erp/contracts';
-import type { GridColDef } from '@mui/x-data-grid';
 import {
   currentAccountingPeriodQueryKey,
   getCurrentAccountingPeriod
@@ -26,26 +15,26 @@ import {
   getJournalEntries,
   journalEntriesQueryKey
 } from '@/features/journal-entries/journal-entries.api';
-import { formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
-import { DataTableCard } from '@/shared/ui/data-table-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { SectionCard } from '@/shared/ui/section-card';
-import { StatusChip } from '@/shared/ui/status-chip';
 import { TransactionForm } from './transaction-form';
 import {
   collectedTransactionsQueryKey,
   confirmCollectedTransaction,
   getCollectedTransactions
 } from './transactions.api';
-
-const sourceKindLabelMap: Record<string, string> = {
-  MANUAL: '직접 입력',
-  RECURRING: '반복 규칙 생성',
-  IMPORT: '파일 업로드'
-};
+import {
+  CurrentPeriodSection,
+  TransactionsFilterSection,
+  TransactionsTableSection
+} from './transactions-page.sections';
+import {
+  buildJournalEntryFallbackItem,
+  isBusinessDateWithinPeriod
+} from './transactions-page.shared';
 
 type SubmitFeedback = {
   severity: 'success' | 'error';
@@ -55,6 +44,10 @@ type SubmitFeedback = {
 export function TransactionsPage() {
   const queryClient = useQueryClient();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
+  const [keyword, setKeyword] = React.useState('');
+  const [fundingAccountName, setFundingAccountName] = React.useState('');
+  const [categoryName, setCategoryName] = React.useState('');
+
   const currentPeriodQuery = useQuery({
     queryKey: currentAccountingPeriodQueryKey,
     queryFn: getCurrentAccountingPeriod
@@ -130,9 +123,6 @@ export function TransactionsPage() {
       ? `${currentPeriod.monthLabel} 운영 기간 안의 거래를 검토하고, 아직 전표가 없는 보류 상태 거래만 확정할 수 있습니다.`
       : '아직 열린 운영 기간이 없어 수집 거래 등록과 전표 확정이 잠겨 있습니다.'
   });
-  const [keyword, setKeyword] = React.useState('');
-  const [fundingAccountName, setFundingAccountName] = React.useState('');
-  const [categoryName, setCategoryName] = React.useState('');
 
   const fundingAccountOptions = React.useMemo(
     () =>
@@ -177,96 +167,12 @@ export function TransactionsPage() {
     });
   }, [categoryName, currentPeriod, data, fundingAccountName, keyword]);
 
-  const columns = React.useMemo<GridColDef<CollectedTransactionItem>[]>(
-    () => [
-      { field: 'businessDate', headerName: '거래일', flex: 0.8 },
-      { field: 'title', headerName: '수집 거래', flex: 1.4 },
-      { field: 'fundingAccountName', headerName: '자금수단', flex: 1 },
-      { field: 'categoryName', headerName: '카테고리', flex: 1 },
-      {
-        field: 'sourceKind',
-        headerName: '수집 원천',
-        flex: 0.8,
-        valueFormatter: (value) =>
-          sourceKindLabelMap[String(value)] ?? String(value)
-      },
-      {
-        field: 'postingStatus',
-        headerName: '전표 반영 상태',
-        flex: 0.8,
-        renderCell: (params) => <StatusChip label={String(params.value)} />
-      },
-      {
-        field: 'amountWon',
-        headerName: '금액',
-        flex: 1,
-        valueFormatter: (value) => formatWon(Number(value))
-      },
-      {
-        field: 'actions',
-        headerName: '동작',
-        flex: 1.2,
-        sortable: false,
-        filterable: false,
-        renderCell: (params) => {
-          const row = params.row;
-          const linkedJournalEntry = resolveLatestLinkedJournalEntry(
-            journalEntriesById,
-            row.postedJournalEntryId
-          );
-          const isConfirming =
-            confirmMutation.isPending &&
-            confirmMutation.variables?.id === row.id;
-
-          if (row.postingStatus === 'PENDING') {
-            return (
-              <Button
-                size="small"
-                variant="contained"
-                disabled={isConfirming}
-                onClick={() => {
-                  setFeedback(null);
-                  void confirmMutation.mutateAsync(row);
-                }}
-              >
-                {isConfirming ? '확정 중...' : '전표 확정'}
-              </Button>
-            );
-          }
-
-          if (linkedJournalEntry) {
-            return (
-              <Button
-                size="small"
-                component={Link}
-                href={`/journal-entries?entryId=${linkedJournalEntry.id}`}
-              >
-                {linkedJournalEntry.entryNumber}
-              </Button>
-            );
-          }
-
-          if (row.postedJournalEntryId) {
-            return (
-              <Button
-                size="small"
-                component={Link}
-                href={`/journal-entries?entryId=${row.postedJournalEntryId}`}
-              >
-                {row.postedJournalEntryNumber ?? '전표 보기'}
-              </Button>
-            );
-          }
-
-          return (
-            <Typography variant="body2" color="text.secondary">
-              -
-            </Typography>
-          );
-        }
-      }
-    ],
-    [confirmMutation, journalEntriesById]
+  const handleConfirmTransaction = React.useCallback(
+    (transaction: CollectedTransactionItem) => {
+      setFeedback(null);
+      void confirmMutation.mutateAsync(transaction);
+    },
+    [confirmMutation]
   );
 
   return (
@@ -302,121 +208,30 @@ export function TransactionsPage() {
           error={journalEntriesQuery.error}
         />
       ) : null}
-      <SectionCard
-        title="현재 운영 기간"
-        description="수집 거래 입력과 전표 확정은 현재 열린 운영 기간 문맥 안에서만 진행됩니다."
-      >
-        {currentPeriod ? (
-          <Grid container spacing={appLayout.fieldGap} alignItems="center">
-            <Grid size={{ xs: 12, md: 3 }}>
-              <Stack spacing={0.5}>
-                <Typography variant="caption" color="text.secondary">
-                  상태
-                </Typography>
-                <div>
-                  <StatusChip label={currentPeriod.status} />
-                </div>
-              </Stack>
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <Stack spacing={0.5}>
-                <Typography variant="caption" color="text.secondary">
-                  운영 월
-                </Typography>
-                <Typography variant="body1">
-                  {currentPeriod.monthLabel}
-                </Typography>
-              </Stack>
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Stack spacing={0.5}>
-                <Typography variant="caption" color="text.secondary">
-                  허용 거래일 범위
-                </Typography>
-                <Typography variant="body1">
-                  {currentPeriod.startDate.slice(0, 10)} ~{' '}
-                  {currentPeriod.endDate.slice(0, 10)}
-                </Typography>
-              </Stack>
-            </Grid>
-          </Grid>
-        ) : (
-          <Typography variant="body2" color="text.secondary">
-            현재 열린 운영 기간이 없습니다. 먼저 `월 운영` 화면에서 대상 월을
-            시작해 주세요.
-          </Typography>
-        )}
-      </SectionCard>
 
-      <SectionCard
-        title="필터"
-        description={
-          currentPeriod
-            ? `${currentPeriod.monthLabel} 운영 기간의 수집 거래를 검색어, 자금수단, 카테고리 기준으로 좁혀 볼 수 있습니다.`
-            : '운영 기간이 열리면 해당 기간의 수집 거래를 필터링할 수 있습니다.'
-        }
-      >
-        <Grid container spacing={appLayout.fieldGap}>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <TextField
-              label="검색어"
-              size="small"
-              value={keyword}
-              onChange={(event) => {
-                setKeyword(event.target.value);
-              }}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <TextField
-              select
-              label="자금수단"
-              size="small"
-              value={fundingAccountName}
-              onChange={(event) => {
-                setFundingAccountName(event.target.value);
-              }}
-            >
-              <MenuItem value="">전체</MenuItem>
-              {fundingAccountOptions.map((option) => (
-                <MenuItem key={option} value={option}>
-                  {option}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <TextField
-              select
-              label="카테고리"
-              size="small"
-              value={categoryName}
-              onChange={(event) => {
-                setCategoryName(event.target.value);
-              }}
-            >
-              <MenuItem value="">전체</MenuItem>
-              {categoryOptions.map((option) => (
-                <MenuItem key={option} value={option}>
-                  {option}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-        </Grid>
-      </SectionCard>
+      <CurrentPeriodSection currentPeriod={currentPeriod} />
+
+      <TransactionsFilterSection
+        currentPeriod={currentPeriod}
+        keyword={keyword}
+        fundingAccountName={fundingAccountName}
+        categoryName={categoryName}
+        fundingAccountOptions={fundingAccountOptions}
+        categoryOptions={categoryOptions}
+        onKeywordChange={setKeyword}
+        onFundingAccountChange={setFundingAccountName}
+        onCategoryChange={setCategoryName}
+      />
 
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, xl: 8 }}>
-          <DataTableCard
-            title="수집 거래 목록"
-            description={
-              currentPeriod
-                ? `${currentPeriod.monthLabel} 운영 기간 안의 수집 거래를 확인하고, 보류 상태 거래를 전표로 확정할 수 있습니다.`
-                : '현재 열린 운영 기간이 없으므로 목록이 비어 있습니다.'
-            }
-            rows={currentPeriod ? filteredTransactions : []}
-            columns={columns}
+          <TransactionsTableSection
+            currentPeriod={currentPeriod}
+            rows={filteredTransactions}
+            journalEntriesById={journalEntriesById}
+            confirmPending={confirmMutation.isPending}
+            confirmingTransactionId={confirmMutation.variables?.id}
+            onConfirm={handleConfirmTransaction}
           />
         </Grid>
         <Grid size={{ xs: 12, xl: 4 }}>
@@ -436,65 +251,4 @@ export function TransactionsPage() {
       </Grid>
     </Stack>
   );
-}
-
-function resolveLatestLinkedJournalEntry(
-  journalEntriesById: Map<string, JournalEntryItem>,
-  journalEntryId: string | null
-): JournalEntryItem | null {
-  if (!journalEntryId) {
-    return null;
-  }
-
-  let current = journalEntriesById.get(journalEntryId) ?? null;
-  const visited = new Set<string>();
-
-  while (current && !visited.has(current.id)) {
-    visited.add(current.id);
-
-    const nextId =
-      current.correctionEntryIds?.at(-1) ??
-      current.reversedByJournalEntryId ??
-      null;
-
-    if (!nextId) {
-      return current;
-    }
-
-    const next = journalEntriesById.get(nextId) ?? null;
-    if (!next) {
-      return current;
-    }
-
-    current = next;
-  }
-
-  return current;
-}
-
-function isBusinessDateWithinPeriod(
-  businessDate: string,
-  currentPeriod: AccountingPeriodItem
-): boolean {
-  const businessTime = Date.parse(`${businessDate}T00:00:00.000Z`);
-  const startTime = Date.parse(currentPeriod.startDate);
-  const endTime = Date.parse(currentPeriod.endDate);
-
-  return businessTime >= startTime && businessTime < endTime;
-}
-
-function buildJournalEntryFallbackItem(
-  transaction: CollectedTransactionItem
-): JournalEntryItem {
-  return {
-    id: `je-demo-${transaction.id}`,
-    entryNumber: 'DEMO',
-    entryDate: `${transaction.businessDate}T00:00:00.000Z`,
-    status: 'POSTED',
-    sourceKind: 'COLLECTED_TRANSACTION',
-    memo: transaction.title,
-    sourceCollectedTransactionId: transaction.id,
-    sourceCollectedTransactionTitle: transaction.title,
-    lines: []
-  };
 }
