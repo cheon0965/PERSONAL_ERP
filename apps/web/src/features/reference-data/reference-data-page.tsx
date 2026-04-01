@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Grid, Stack, Typography } from '@mui/material';
+import { Grid, Stack } from '@mui/material';
 import type {
   AccountSubjectItem,
   CategoryItem,
@@ -16,7 +16,6 @@ import { DataTableCard } from '@/shared/ui/data-table-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
-import { SectionCard } from '@/shared/ui/section-card';
 import {
   accountSubjectsQueryKey,
   categoriesQueryKey,
@@ -76,6 +75,7 @@ export function ReferenceDataPage() {
     queryKey: ledgerTransactionTypesQueryKey,
     queryFn: getLedgerTransactionTypes
   });
+  const currentWorkspace = user?.currentWorkspace ?? null;
 
   useDomainHelp({
     title: '기준 데이터와 참조 입력',
@@ -90,11 +90,43 @@ export function ReferenceDataPage() {
     ],
     truthSource:
       '현재 작업 Tenant / Ledger 문맥 안의 활성 기준 데이터만 참조 입력에 사용합니다.',
+    supplementarySections: [
+      {
+        title: '현재 작업 문맥',
+        description:
+          '기준 데이터는 로그인한 사용자의 현재 TenantMembership / Ledger 문맥 안에서만 조회됩니다.',
+        facts: [
+          {
+            label: 'Tenant',
+            value: currentWorkspace
+              ? `${currentWorkspace.tenant.name} (${currentWorkspace.tenant.slug})`
+              : '-'
+          },
+          {
+            label: 'Ledger',
+            value: currentWorkspace?.ledger?.name ?? '-'
+          },
+          {
+            label: '권한',
+            value: currentWorkspace?.membership.role ?? '-'
+          }
+        ]
+      },
+      {
+        title: '참조 입력 원칙',
+        description:
+          '화면별 입력 폼은 여기서 조회되는 활성 기준 데이터만 선택지로 사용합니다.',
+        items: [
+          '수집 거래와 반복 규칙 폼은 이 화면에서 보이는 공식 기준 데이터만 사용합니다.',
+          '입력 화면은 기준 데이터의 식별자와 정책 키를 참조하며, 임의 텍스트를 기준값으로 확정하지 않습니다.',
+          '이 화면은 입력 기준을 검토하고 운영 문맥을 확인하기 위한 읽기 중심 화면입니다.'
+        ]
+      }
+    ],
     readModelNote:
-      '이번 라운드에서는 읽기와 확인 경로를 먼저 고정하고, 이후 라운드에서 관리 기능을 점진적으로 확장합니다.'
+      '이 화면은 각 입력 폼에서 참조하는 활성 기준 데이터를 확인하는 읽기 화면입니다.'
   });
 
-  const currentWorkspace = user?.currentWorkspace ?? null;
   const queryErrors = [
     fundingAccountsQuery.error,
     categoriesQuery.error,
@@ -107,7 +139,7 @@ export function ReferenceDataPage() {
       <PageHeader
         eyebrow="기준 데이터"
         title="기준 데이터와 참조 입력"
-        description="현재 작업 Ledger 안에서 사용하는 자금수단, 카테고리, 계정과목, 거래유형을 공식 조회 기준으로 고정합니다."
+        description="현재 작업 Ledger 안에서 사용하는 활성 기준 데이터를 조회합니다."
       />
 
       {queryErrors.length > 0 ? (
@@ -116,49 +148,6 @@ export function ReferenceDataPage() {
           error={queryErrors[0]}
         />
       ) : null}
-
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <SectionCard
-            title="현재 작업 문맥"
-            description="기준 데이터는 로그인한 사용자의 현재 TenantMembership / Ledger 문맥 안에서만 조회됩니다."
-          >
-            <Stack spacing={1}>
-              <InfoRow
-                label="Tenant"
-                value={
-                  currentWorkspace
-                    ? `${currentWorkspace.tenant.name} (${currentWorkspace.tenant.slug})`
-                    : '-'
-                }
-              />
-              <InfoRow
-                label="Ledger"
-                value={currentWorkspace?.ledger?.name ?? '-'}
-              />
-              <InfoRow
-                label="권한"
-                value={currentWorkspace?.membership.role ?? '-'}
-              />
-            </Stack>
-          </SectionCard>
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <SectionCard
-            title="Round 3 기준"
-            description="이번 라운드의 목표는 기준 데이터 조회와 참조 입력 기준선을 잠그는 것입니다."
-          >
-            <Stack spacing={1}>
-              <Typography variant="body2" color="text.secondary">
-                수집 거래와 반복 규칙 폼은 이 화면에서 보이는 공식 기준 데이터만 사용합니다.
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                기준 데이터의 깊은 CRUD는 이후 라운드에서 점진적으로 확장합니다.
-              </Typography>
-            </Stack>
-          </SectionCard>
-        </Grid>
-      </Grid>
 
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, xl: 6 }}>
@@ -201,23 +190,6 @@ export function ReferenceDataPage() {
           />
         </Grid>
       </Grid>
-    </Stack>
-  );
-}
-
-function InfoRow({
-  label,
-  value
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <Stack spacing={0.5}>
-      <Typography variant="caption" color="text.secondary">
-        {label}
-      </Typography>
-      <Typography variant="body1">{value}</Typography>
     </Stack>
   );
 }

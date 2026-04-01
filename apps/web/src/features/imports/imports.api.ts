@@ -254,7 +254,7 @@ function parseFallbackRows(
         id: `imported-row-demo-${sourceKind}-${candidate.rowNumber}-${Date.now()}`,
         rowNumber: candidate.rowNumber,
         parseStatus: isParsed ? 'PARSED' : 'FAILED',
-        parseError: isParsed ? null : 'thin-first 데모 파서가 행을 읽지 못했습니다.',
+        parseError: isParsed ? null : '파서가 행을 읽지 못했습니다.',
         sourceFingerprint: isParsed ? `sf:v1:fallback-${candidate.rowNumber}` : null,
         createdCollectedTransactionId: null,
         rawPayload: {

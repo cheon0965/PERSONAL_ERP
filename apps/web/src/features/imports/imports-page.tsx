@@ -440,7 +440,7 @@ export function ImportsPage() {
         <Grid size={{ xs: 12, xl: 4 }}>
           <SectionCard
             title="새 업로드 배치"
-            description="thin-first 단계에서는 UTF-8 텍스트 본문을 그대로 붙여 넣어 ImportBatch와 ImportedRow를 만듭니다."
+            description="UTF-8 텍스트 본문을 그대로 붙여 넣어 ImportBatch와 ImportedRow를 생성합니다."
           >
             <Stack spacing={appLayout.fieldGap}>
               <TextField

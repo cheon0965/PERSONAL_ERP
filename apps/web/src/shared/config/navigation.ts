@@ -3,7 +3,6 @@ import AutoGraphRoundedIcon from '@mui/icons-material/AutoGraphRounded';
 import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded';
 import CalendarMonthRoundedIcon from '@mui/icons-material/CalendarMonthRounded';
 import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
-import DesignServicesRoundedIcon from '@mui/icons-material/DesignServicesRounded';
 import DirectionsCarRoundedIcon from '@mui/icons-material/DirectionsCarRounded';
 import HealthAndSafetyRoundedIcon from '@mui/icons-material/HealthAndSafetyRounded';
 import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded';
@@ -36,10 +35,5 @@ export const navigationItems = [
   { label: '보험 계약', href: '/insurances', icon: HealthAndSafetyRoundedIcon },
   { label: '차량 운영', href: '/vehicles', icon: DirectionsCarRoundedIcon },
   { label: '기간 전망', href: '/forecast', icon: AutoGraphRoundedIcon },
-  {
-    label: '디자인 시스템',
-    href: '/design-system',
-    icon: DesignServicesRoundedIcon
-  },
-  { label: '설정', href: '/settings', icon: SettingsRoundedIcon }
+  { label: '작업 문맥', href: '/settings', icon: SettingsRoundedIcon }
 ] as const;

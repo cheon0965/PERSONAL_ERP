@@ -105,7 +105,7 @@ export function TransactionsPage() {
   useDomainHelp({
     title: '수집 거래 개요',
     description:
-      '수집 거래는 회계적 진실의 최종 원천이 아니라, 현재 운영 기간 안에서 검토되고 전표로 이어지는 중간 단계입니다. 이번 라운드부터는 보류 상태 수집 거래를 직접 JournalEntry로 확정할 수 있습니다.',
+      '수집 거래는 회계적 진실의 최종 원천이 아니라, 현재 운영 기간 안에서 검토되고 전표로 이어지는 중간 단계입니다. 보류 상태 거래는 이 화면에서 직접 JournalEntry로 확정할 수 있습니다.',
     primaryEntity: '수집 거래 (CollectedTransaction)',
     relatedEntities: [
       '운영 기간 (AccountingPeriod)',
@@ -177,7 +177,7 @@ export function TransactionsPage() {
       <PageHeader
         eyebrow="수집/확정"
         title="수집 거래"
-        description="현재 열린 AccountingPeriod 안에서 수집 거래를 입력하고, 보류 상태 거래를 최소 전표로 확정하는 화면입니다. 이번 단계에서는 수입/지출 거래 1건을 전표 1건으로 연결하는 얇은 흐름에 집중합니다."
+        description="현재 열린 AccountingPeriod 안에서 수집 거래를 입력하고, 보류 상태 거래를 전표로 확정하는 화면입니다."
         primaryActionLabel="수집 거래 등록"
         primaryActionHref="#collected-transaction-form"
       />

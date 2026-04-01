@@ -9,6 +9,15 @@ export type DomainHelpContextType = {
   relatedEntities: string[];
   truthSource: string;
   readModelNote?: string;
+  supplementarySections?: {
+    title: string;
+    description?: string;
+    facts?: Array<{
+      label: string;
+      value: string;
+    }>;
+    items?: string[];
+  }[];
 };
 
 type DomainHelpStore = {
