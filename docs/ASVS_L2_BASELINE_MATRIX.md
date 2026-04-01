@@ -44,7 +44,7 @@
 
 ### 접근통제
 
-- 현재 상태: 전역 guard, 사용자 소유권 검증, 목록/집계 응답의 사용자 범위 분리
+- 현재 상태: 전역 guard, workspace 기반 tenant/ledger/membership role 검증, 목록/집계 응답의 current workspace 범위 분리
 - 근거 파일:
   `apps/api/src/common/auth/jwt-auth.guard.ts`
   `apps/api/src/modules/collected-transactions/application/use-cases/create-collected-transaction.use-case.ts`
@@ -146,7 +146,7 @@
 
 - 현재 상태: `ImportBatch` 생성 시 UTF-8 텍스트 본문 업로드 API가 존재함. 아직 binary multipart/file storage는 없음
 - 근거 파일: `apps/api/src/modules/import-batches/*`, `apps/web/src/features/imports/*`
-- 판정: `Partial`
+- 판정: `부분 적용`
 - 다음 단계: 파일 크기 제한, 허용 포맷 검증, 감사/모니터링, binary upload 도입 시 저장/백신/콘텐츠 검증 설계 추가
 
 ### 외부 결제/메일/SMS 보안
@@ -166,7 +166,7 @@
 ## 현재 단계에서 이미 강한 부분
 
 1. DTO validation과 요청 단위 API 테스트가 비교적 잘 갖춰져 있다.
-2. 사용자 소유권 검증이 핵심 쓰기 흐름과 읽기 응답 분리에 모두 반영되어 있다.
+2. workspace 접근통제가 핵심 쓰기 흐름과 읽기 응답 분리에 모두 반영되어 있다.
 3. 환경변수 검증과 example 문서가 있다.
 4. request-id와 readiness 같은 운영 신호가 있다.
 5. 브라우저 E2E, API 테스트, Prisma 대표 통합 테스트 경로가 역할별로 분리되어 있다.
@@ -174,7 +174,7 @@
 ## P5 완료 반영
 
 - 접근통제는 현재 범위에서 `부분 적용`이 아니라 `적용`으로 본다.
-- 근거는 `GET /collected-transactions`, `GET /recurring-rules`, `GET /dashboard/summary`, `GET /forecast/monthly`에 대한 요청 단위 API 테스트에서 현재 사용자 범위만 반환하고 내부 소유권 필드를 노출하지 않음을 검증한 점이다.
+- 근거는 `GET /collected-transactions`, `GET /recurring-rules`, `GET /dashboard/summary`, `GET /forecast/monthly`에 대한 요청 단위 API 테스트에서 current workspace 범위만 반환하고 내부 접근 제어 필드를 노출하지 않음을 검증한 점이다.
 - 데이터 보호는 여전히 `부분 적용`으로 두되, 현재 범위에서는 브라우저 저장소 토큰 제거, `no-store`, 최소 응답 shape, 집계 전용 read 응답까지는 반영된 상태로 본다.
 
 ## 관련 문서

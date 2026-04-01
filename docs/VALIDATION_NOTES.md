@@ -45,11 +45,24 @@
 - 인증 세션 생성/회전/로그아웃
 - 보호 라우트의 `401`
 - `GET /auth/me`
-- `POST /collected-transactions`
-  DTO validation, 현재 구현의 인증 사용자 접근 범위 내 계정/카테고리 검증, 생성 응답 shape
+- `GET /funding-accounts`, `GET /categories`, `GET /account-subjects`, `GET /ledger-transaction-types`
+  현재 workspace/ledger 기준 활성 참조 데이터만 반환하는지 검증
+- `GET /accounting-periods`, `GET /accounting-periods/current`, `POST /accounting-periods`, `POST /accounting-periods/:id/close`, `POST /accounting-periods/:id/reopen`
+  기간 open/close/reopen, snapshot 생성/정리, role 기반 접근통제를 검증
+- `GET /collected-transactions`, `POST /collected-transactions`, `POST /collected-transactions/:id/confirm`
+  DTO validation, 현재 workspace 접근 범위 내 참조 검증, 생성/확정 응답 shape와 전표 연계를 검증
+- `GET /journal-entries`, `POST /journal-entries/:id/reverse`, `POST /journal-entries/:id/correct`
+  최근 전표 조회, reverse/correct 조정 흐름, role 기반 접근통제를 검증
 - `POST /recurring-rules`
-  DTO validation, 현재 구현의 인증 사용자 접근 범위 내 계정/카테고리 검증, 생성 응답 shape
+  DTO validation, 현재 workspace 접근 범위 내 계정/카테고리 검증, 생성 응답 shape
+- 계획 항목 생성 정책과 service/view 조합
 - 거래/반복규칙 use-case 생성 로직
+- `GET /import-batches`, `GET /import-batches/:id`, `POST /import-batches`, `POST /import-batches/:id/rows/:rowId/collect`
+  UTF-8 텍스트 업로드 파싱, row collect, duplicate fingerprint 처리, role 기반 접근통제를 검증
+- `POST /financial-statements/generate`, `GET /financial-statements`
+  잠금 기간 공식 snapshot 생성/조회와 비교 view 조합을 검증
+- `POST /carry-forwards/generate`, `GET /carry-forwards`
+  closing snapshot 기반 차기 이월 생성과 조회를 검증
 - 대시보드 요약 계산
 - 예측 잔액 계산
 - `GET /health`, `GET /health/ready`
@@ -59,15 +72,15 @@
 - allowlist 밖 origin의 cookie-auth 요청 차단(`403 Origin not allowed`)
 - 로그인 실패, refresh 재사용, bearer 누락, scope 거부, readiness 실패에 대한 보안 이벤트 로그 기록
 - `collected-transactions` Prisma 통합 테스트
-  실제 MySQL 기준으로 현재 구현의 접근 범위 확인, 생성, 조회 정렬과 인증 사용자 스코프를 대표 검증
+  실제 MySQL 기준으로 현재 workspace 접근 범위 확인, 생성, 조회 정렬과 current ledger 스코프를 대표 검증
 - `GET /collected-transactions`
-  현재 구현 기준 인증 사용자 범위만 반환하는지, 내부 접근 제어 필드를 노출하지 않는지 검증
+  현재 구현 기준 current workspace 범위만 반환하는지, 내부 접근 제어 필드를 노출하지 않는지 검증
 - `GET /recurring-rules`
-  현재 구현 기준 인증 사용자 범위만 반환하는지, 내부 접근 제어 필드를 노출하지 않는지 검증
+  현재 구현 기준 current workspace 범위만 반환하는지, 내부 접근 제어 필드를 노출하지 않는지 검증
 - `GET /dashboard/summary`
-  다른 사용자 데이터가 집계에 섞이지 않고 raw read model을 노출하지 않는지 검증
+  다른 workspace/ledger 데이터가 집계에 섞이지 않고 raw read model을 노출하지 않는지 검증
 - `GET /forecast/monthly`
-  현재 구현 기준 인증 사용자 집계만 사용하고 month query를 그대로 반영하는지 검증
+  현재 구현 기준 current workspace 집계만 사용하고 month query를 그대로 반영하는지 검증
 
 ### Web
 

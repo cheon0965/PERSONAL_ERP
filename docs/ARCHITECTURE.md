@@ -46,17 +46,17 @@ docs/
 [ Asset & Coverage ] ----------- read ------> [ Insight & Planning ]
 ```
 
-| Context              | 현재 모듈                                                                          | 역할                                            |
-| -------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------- |
-| Identity & Access    | `auth`, `common/auth`                                                              | 로그인, 토큰, 요청 주체 인증 기준선             |
-| Ledger               | `accounts`, `categories`, `import-batches`, `collected-transactions`, `plan-items` | 현재 구현의 계정/업로드/거래/계획 쓰기 컨텍스트 |
-| Recurring Automation | `recurring-rules`                                                                  | 반복규칙 정의와 반복 입력 예약                  |
-| Asset & Coverage     | `vehicles`, `insurance-policies`                                                   | 운영비 성격의 자산/보장 도메인                  |
-| Insight & Planning   | `dashboard`, `forecast`                                                            | 읽기 기반 요약/예측 조합                        |
-| Platform & Contracts | `packages/contracts`, env, Prisma, health, 공통 외부 의존성 조립                   | 계약과 런타임 기반선                            |
+| Context              | 현재 모듈                                                                                                                                                                                                       | 역할                                                           |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Identity & Access    | `auth`, `common/auth`                                                                                                                                                                                           | 로그인, 토큰, 요청 주체 인증 기준선                            |
+| Ledger               | `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `accounting-periods`, `collected-transactions`, `journal-entries`, `import-batches`, `financial-statements`, `carry-forwards` | 기준 데이터, 월 운영, 수집/전표, 공식 보고, 차기 이월 컨텍스트 |
+| Recurring Automation | `recurring-rules`, `plan-items`                                                                                                                                                                                 | 반복규칙 정의와 기간별 계획 항목 생성/정합성                   |
+| Asset & Coverage     | `vehicles`, `insurance-policies`                                                                                                                                                                                | 운영비 성격의 자산/보장 도메인                                 |
+| Insight & Planning   | `dashboard`, `forecast`                                                                                                                                                                                         | 읽기 기반 요약/예측 조합                                       |
+| Platform & Contracts | `packages/contracts`, env, Prisma, health, 공통 외부 의존성 조립                                                                                                                                                | 계약과 런타임 기반선                                           |
 
 여기서 `Ledger`는 현재 코드베이스의 컨텍스트 이름입니다.  
-현재 API 모듈명은 `collected-transactions`, `import-batches`, `plan-items`이고, Web feature/route는 shorthand로 `transactions`, `imports`, `plan-items`를 사용합니다.  
+현재 API 모듈명은 `accounting-periods`, `collected-transactions`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`, `recurring-rules`, `plan-items` 등이고, Web feature/route는 shorthand로 `periods`, `transactions`, `imports`, `recurring`, `insurances` 같은 화면 경로를 함께 사용합니다.  
 회계 도메인의 상세 기준은 [business-logic-draft.md](./domain/business-logic-draft.md) 와 [core-entity-definition.md](./domain/core-entity-definition.md) 를 우선하며, 최종 write model은 `Ledger`, `AccountingPeriod`, `CollectedTransaction`, `JournalEntry` 중심으로 수렴합니다.
 
 허용되는 방향:
@@ -137,10 +137,10 @@ Insight Context: controller -> read service -> read repository -> projection
 
 ## 6. 인증과 접근 경계
 
-- `health`, `auth/login`을 제외한 API는 기본적으로 보호됩니다.
-- 컨트롤러는 인증된 요청 주체 컨텍스트를 받고, 도메인 write 흐름에서는 이를 `tenantId`, `TenantMembership`, `ActorRef` 기준으로 해석해야 합니다.
-- 현재 일부 구현과 검증은 auth user 범위를 직접 사용하지만, 상위 비즈니스 기준은 Tenant/Ledger 경계 안의 접근 판정입니다.
-- 계좌, 카테고리, 장부, 기간 등 참조 대상은 최종적으로 tenant/ledger 접근 범위 안에서 검증합니다.
+- `health`, `health/ready`, `auth/login`, `auth/refresh`, `auth/logout`을 제외한 API는 기본적으로 보호됩니다.
+- 컨트롤러와 서비스는 인증된 `user.currentWorkspace`를 받고, 도메인 write 흐름에서는 이를 `tenantId`, `ledgerId`, `TenantMembership`, `ActorRef` 기준으로 해석해야 합니다.
+- 현재 HTTP surface와 요청 단위 검증은 user-scoped 전단계가 아니라 workspace-scoped tenant/ledger 접근 판정을 기준으로 유지합니다.
+- 계좌, 카테고리, 장부, 기간, 업로드 배치, 전표 등 참조 대상은 tenant/ledger 접근 범위 안에서 검증합니다.
 
 ## 7. 환경변수 정책
 
