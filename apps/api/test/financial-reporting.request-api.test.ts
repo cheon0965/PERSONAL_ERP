@@ -145,7 +145,16 @@ test('POST /financial-statements/generate creates official statement snapshots f
 
     assert.equal(response.status, 201);
     assert.equal(body.period.id, 'period-report-1');
+    assert.equal(body.previousPeriod, null);
+    assert.equal(body.basis.openingBalanceSourceKind, null);
     assert.equal(body.snapshots.length, 4);
+    assert.equal(body.comparison.length, 4);
+    assert.equal(
+      body.warnings.includes(
+        '직전 잠금 기간이 없어 전기 대비 비교는 비어 있습니다.'
+      ),
+      true
+    );
     assert.equal(context.state.financialStatementSnapshots.length, 4);
     assert.deepEqual(statementKinds, [
       'STATEMENT_OF_FINANCIAL_POSITION',
@@ -176,47 +185,173 @@ test('GET /financial-statements returns stored official statement snapshots for 
   const context = await createRequestTestContext();
 
   try {
-    context.state.accountingPeriods.push({
-      id: 'period-report-view-1',
+    context.state.accountingPeriods.push(
+      {
+        id: 'period-report-view-prev',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        year: 2026,
+        month: 3,
+        startDate: new Date('2026-03-01T00:00:00.000Z'),
+        endDate: new Date('2026-04-01T00:00:00.000Z'),
+        status: AccountingPeriodStatus.LOCKED,
+        openedAt: new Date('2026-03-01T00:00:00.000Z'),
+        lockedAt: new Date('2026-03-31T15:00:00.000Z'),
+        createdAt: new Date('2026-03-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-03-31T15:00:00.000Z')
+      },
+      {
+        id: 'period-report-view-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        year: 2026,
+        month: 4,
+        startDate: new Date('2026-04-01T00:00:00.000Z'),
+        endDate: new Date('2026-05-01T00:00:00.000Z'),
+        status: AccountingPeriodStatus.LOCKED,
+        openedAt: new Date('2026-04-01T00:00:00.000Z'),
+        lockedAt: new Date('2026-04-30T15:00:00.000Z'),
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-30T15:00:00.000Z')
+      }
+    );
+    context.state.periodStatusHistory.push(
+      {
+        id: 'period-history-report-view-prev-open',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-report-view-prev',
+        fromStatus: null,
+        toStatus: AccountingPeriodStatus.OPEN,
+        eventType: 'OPEN',
+        reason: '3월 운영 시작',
+        actorType: AuditActorType.TENANT_MEMBERSHIP,
+        actorMembershipId: 'membership-1',
+        changedAt: new Date('2026-03-01T00:00:00.000Z')
+      },
+      {
+        id: 'period-history-report-view-prev-lock',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-report-view-prev',
+        fromStatus: AccountingPeriodStatus.OPEN,
+        toStatus: AccountingPeriodStatus.LOCKED,
+        eventType: 'LOCK',
+        reason: '3월 마감',
+        actorType: AuditActorType.TENANT_MEMBERSHIP,
+        actorMembershipId: 'membership-1',
+        changedAt: new Date('2026-03-31T15:00:00.000Z')
+      },
+      {
+        id: 'period-history-report-view-open-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-report-view-1',
+        fromStatus: null,
+        toStatus: AccountingPeriodStatus.OPEN,
+        eventType: 'OPEN',
+        reason: '4월 운영 시작',
+        actorType: AuditActorType.TENANT_MEMBERSHIP,
+        actorMembershipId: 'membership-1',
+        changedAt: new Date('2026-04-01T00:00:00.000Z')
+      },
+      {
+        id: 'period-history-report-view-lock-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-report-view-1',
+        fromStatus: AccountingPeriodStatus.OPEN,
+        toStatus: AccountingPeriodStatus.LOCKED,
+        eventType: 'LOCK',
+        reason: '4월 마감',
+        actorType: AuditActorType.TENANT_MEMBERSHIP,
+        actorMembershipId: 'membership-1',
+        changedAt: new Date('2026-04-30T15:00:00.000Z')
+      }
+    );
+    context.state.openingBalanceSnapshots.push({
+      id: 'opening-report-view-1',
       tenantId: 'tenant-1',
       ledgerId: 'ledger-1',
-      year: 2026,
-      month: 4,
-      startDate: new Date('2026-04-01T00:00:00.000Z'),
-      endDate: new Date('2026-05-01T00:00:00.000Z'),
-      status: AccountingPeriodStatus.LOCKED,
-      openedAt: new Date('2026-04-01T00:00:00.000Z'),
-      lockedAt: new Date('2026-04-30T15:00:00.000Z'),
+      effectivePeriodId: 'period-report-view-1',
+      sourceKind: OpeningBalanceSourceKind.CARRY_FORWARD,
       createdAt: new Date('2026-04-01T00:00:00.000Z'),
-      updatedAt: new Date('2026-04-30T15:00:00.000Z')
+      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+      createdByMembershipId: 'membership-1'
     });
-    context.state.periodStatusHistory.push({
-      id: 'period-history-report-view-open-1',
+    context.state.carryForwardRecords.push({
+      id: 'carry-forward-report-view-1',
       tenantId: 'tenant-1',
       ledgerId: 'ledger-1',
-      periodId: 'period-report-view-1',
-      fromStatus: null,
-      toStatus: AccountingPeriodStatus.OPEN,
-      eventType: 'OPEN',
-      reason: '4월 운영 시작',
-      actorType: AuditActorType.TENANT_MEMBERSHIP,
-      actorMembershipId: 'membership-1',
-      changedAt: new Date('2026-04-01T00:00:00.000Z')
-    });
-    context.state.periodStatusHistory.push({
-      id: 'period-history-report-view-lock-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      periodId: 'period-report-view-1',
-      fromStatus: AccountingPeriodStatus.OPEN,
-      toStatus: AccountingPeriodStatus.LOCKED,
-      eventType: 'LOCK',
-      reason: '4월 마감',
-      actorType: AuditActorType.TENANT_MEMBERSHIP,
-      actorMembershipId: 'membership-1',
-      changedAt: new Date('2026-04-30T15:00:00.000Z')
+      fromPeriodId: 'period-report-view-prev',
+      toPeriodId: 'period-report-view-1',
+      sourceClosingSnapshotId: 'closing-report-view-prev',
+      createdJournalEntryId: null,
+      createdAt: new Date('2026-04-01T00:00:00.000Z'),
+      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+      createdByMembershipId: 'membership-1'
     });
     context.state.financialStatementSnapshots.push(
+      {
+        id: 'financial-view-prev-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-report-view-prev',
+        statementKind: FinancialStatementKind.STATEMENT_OF_FINANCIAL_POSITION,
+        currency: 'KRW',
+        payload: {
+          summary: [{ label: '자산 합계', amountWon: 2_880_000 }],
+          sections: [],
+          notes: []
+        },
+        createdAt: new Date('2026-03-31T15:10:00.000Z'),
+        updatedAt: new Date('2026-03-31T15:10:00.000Z')
+      },
+      {
+        id: 'financial-view-prev-2',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-report-view-prev',
+        statementKind: FinancialStatementKind.MONTHLY_PROFIT_AND_LOSS,
+        currency: 'KRW',
+        payload: {
+          summary: [{ label: '당기 손익', amountWon: 90_000 }],
+          sections: [],
+          notes: []
+        },
+        createdAt: new Date('2026-03-31T15:10:00.000Z'),
+        updatedAt: new Date('2026-03-31T15:10:00.000Z')
+      },
+      {
+        id: 'financial-view-prev-3',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-report-view-prev',
+        statementKind: FinancialStatementKind.CASH_FLOW_SUMMARY,
+        currency: 'KRW',
+        payload: {
+          summary: [{ label: '순현금흐름', amountWon: 90_000 }],
+          sections: [],
+          notes: []
+        },
+        createdAt: new Date('2026-03-31T15:10:00.000Z'),
+        updatedAt: new Date('2026-03-31T15:10:00.000Z')
+      },
+      {
+        id: 'financial-view-prev-4',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-report-view-prev',
+        statementKind: FinancialStatementKind.NET_WORTH_MOVEMENT,
+        currency: 'KRW',
+        payload: {
+          summary: [{ label: '기말 순자산', amountWon: 2_970_000 }],
+          sections: [],
+          notes: []
+        },
+        createdAt: new Date('2026-03-31T15:10:00.000Z'),
+        updatedAt: new Date('2026-03-31T15:10:00.000Z')
+      },
       {
         id: 'financial-view-1',
         tenantId: 'tenant-1',
@@ -291,12 +426,22 @@ test('GET /financial-statements returns stored official statement snapshots for 
     assert.equal(response.status, 200);
     assert.equal(body.period.id, 'period-report-view-1');
     assert.equal(body.period.monthLabel, '2026-04');
+    assert.equal(body.previousPeriod?.monthLabel, '2026-03');
+    assert.equal(body.basis.openingBalanceSourceKind, 'CARRY_FORWARD');
+    assert.equal(
+      body.basis.carryForwardRecordId,
+      'carry-forward-report-view-1'
+    );
+    assert.equal(body.basis.sourceMonthLabel, '2026-03');
     assert.equal(body.snapshots.length, 4);
+    assert.equal(body.comparison.length, 4);
+    assert.equal(body.comparison[0]?.metrics[0]?.deltaWon, 120_000);
     assert.equal(
       body.snapshots[0]?.statementKind,
       'STATEMENT_OF_FINANCIAL_POSITION'
     );
     assert.equal(body.snapshots[3]?.statementKind, 'NET_WORTH_MOVEMENT');
+    assert.deepEqual(body.warnings, []);
   } finally {
     await context.close();
   }

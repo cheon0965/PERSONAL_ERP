@@ -156,13 +156,38 @@ export type FinancialStatementSnapshotItem = {
   createdAt: string;
 };
 
+export type FinancialStatementComparisonMetricItem = {
+  label: string;
+  currentAmountWon: number;
+  previousAmountWon: number | null;
+  deltaWon: number | null;
+  deltaRate: number | null;
+};
+
+export type FinancialStatementComparisonItem = {
+  statementKind: FinancialStatementKind;
+  metrics: FinancialStatementComparisonMetricItem[];
+};
+
+export type FinancialStatementBasisItem = {
+  openingBalanceSourceKind: OpeningBalanceSourceKind | null;
+  carryForwardRecordId: string | null;
+  sourceClosingSnapshotId: string | null;
+  sourcePeriodId: string | null;
+  sourceMonthLabel: string | null;
+};
+
 export type GenerateFinancialStatementSnapshotsRequest = {
   periodId: string;
 };
 
 export type FinancialStatementsView = {
   period: AccountingPeriodItem;
+  previousPeriod: AccountingPeriodItem | null;
+  basis: FinancialStatementBasisItem;
   snapshots: FinancialStatementSnapshotItem[];
+  comparison: FinancialStatementComparisonItem[];
+  warnings: string[];
 };
 
 export type GenerateFinancialStatementSnapshotsResponse =

@@ -2787,6 +2787,7 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
           tenantId?: string;
           ledgerId?: string;
           fromPeriodId?: string;
+          toPeriodId?: string;
         };
       }) => {
         const fromPeriodMatch = args.where?.fromPeriodId
@@ -2814,8 +2815,16 @@ function createPrismaMock(state: RequestTestState): Record<string, unknown> {
             const matchesFromPeriod =
               !args.where?.fromPeriodId ||
               candidate.fromPeriodId === args.where.fromPeriodId;
+            const matchesToPeriod =
+              !args.where?.toPeriodId ||
+              candidate.toPeriodId === args.where.toPeriodId;
 
-            return matchesTenant && matchesLedger && matchesFromPeriod;
+            return (
+              matchesTenant &&
+              matchesLedger &&
+              matchesFromPeriod &&
+              matchesToPeriod
+            );
           }) ?? null
         );
       },

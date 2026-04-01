@@ -1,45 +1,120 @@
 import type { DashboardSummary } from '@personal-erp/contracts';
+import { mapAccountingPeriodRecordToItem } from '../accounting-periods/accounting-period.mapper';
+import {
+  buildOperationalHighlights,
+  buildTrendPoint,
+  summarizeJournalLines,
+  summarizeRemainingPlanItems
+} from '../reporting/reporting-metrics';
 import type { DashboardSummaryReadModel } from './dashboard-read.repository';
 
-const DEFAULT_MINIMUM_RESERVE_WON = 400000;
-const CURRENT_MONTH = '2026-03';
+const DEFAULT_MINIMUM_RESERVE_WON = 400_000;
 
 export function projectDashboardSummary(
   readModel: DashboardSummaryReadModel
 ): DashboardSummary {
-  const actualBalanceWon = readModel.accounts.reduce((sum, item) => sum + item.balanceWon, 0);
-  const confirmedIncomeWon = readModel.transactions
-    .filter((item) => item.type === 'INCOME')
-    .reduce((sum, item) => sum + item.amountWon, 0);
-  const confirmedExpenseWon = readModel.transactions
-    .filter((item) => item.type === 'EXPENSE')
-    .reduce((sum, item) => sum + item.amountWon, 0);
-  const remainingRecurringWon = readModel.recurringRules.reduce(
-    (sum, item) => sum + item.amountWon,
-    0
-  );
-  const insuranceMonthlyWon = readModel.insurancePolicies.reduce(
-    (sum, item) => sum + item.monthlyPremiumWon,
-    0
-  );
-  const vehicleMonthlyWon = readModel.vehicles.reduce(
-    (sum, item) => sum + item.monthlyExpenseWon,
-    0
-  );
-  const expectedMonthEndBalanceWon = actualBalanceWon - remainingRecurringWon;
-  const safetySurplusWon =
-    expectedMonthEndBalanceWon -
-    (readModel.minimumReserveWon ?? DEFAULT_MINIMUM_RESERVE_WON);
+  const minimumReserveWon =
+    readModel.minimumReserveWon ?? DEFAULT_MINIMUM_RESERVE_WON;
+  const confirmed = summarizeJournalLines(readModel.targetJournalLines);
+  const remainingPlan = summarizeRemainingPlanItems({
+    planItems: readModel.targetPlanItems,
+    ledgerTransactionTypes: readModel.ledgerTransactionTypes
+  });
+  const actualBalanceWon =
+    readModel.basisStatus === 'OFFICIAL_LOCKED'
+      ? (readModel.targetClosingSnapshot?.cashBalanceWon ??
+        readModel.currentFundingBalanceWon)
+      : readModel.currentFundingBalanceWon;
+  const expectedMonthEndBalanceWon =
+    actualBalanceWon +
+    remainingPlan.plannedIncomeWon -
+    remainingPlan.plannedExpenseWon;
+  const safetySurplusWon = expectedMonthEndBalanceWon - minimumReserveWon;
+  const comparisonPeriod = readModel.comparisonPeriod;
+  const comparisonMonthLabel = comparisonPeriod
+    ? `${comparisonPeriod.year}-${String(comparisonPeriod.month).padStart(2, '0')}`
+    : null;
 
   return {
-    month: CURRENT_MONTH,
+    period: mapAccountingPeriodRecordToItem(readModel.targetPeriod),
+    basisStatus: readModel.basisStatus,
     actualBalanceWon,
-    confirmedIncomeWon,
-    confirmedExpenseWon,
-    remainingRecurringWon,
-    insuranceMonthlyWon,
-    vehicleMonthlyWon,
+    confirmedIncomeWon: confirmed.incomeWon,
+    confirmedExpenseWon: confirmed.expenseWon,
+    remainingPlannedIncomeWon: remainingPlan.plannedIncomeWon,
+    remainingPlannedExpenseWon: remainingPlan.plannedExpenseWon,
+    minimumReserveWon,
     expectedMonthEndBalanceWon,
-    safetySurplusWon
+    safetySurplusWon,
+    warnings: buildWarnings(readModel),
+    highlights: buildOperationalHighlights({
+      expectedMonthEndBalanceWon,
+      safetySurplusWon,
+      plannedExpenseWon: remainingPlan.plannedExpenseWon,
+      officialComparisonNetWorthWon: readModel.comparisonClosingSnapshot
+        ? readModel.comparisonClosingSnapshot.totalAssetAmount -
+          readModel.comparisonClosingSnapshot.totalLiabilityAmount
+        : null
+    }),
+    trend: readModel.trend.map((item) => {
+      const metrics = summarizeJournalLines(item.journalLines);
+      const plans = summarizeRemainingPlanItems({
+        planItems: item.planItems,
+        ledgerTransactionTypes: readModel.ledgerTransactionTypes
+      });
+
+      return buildTrendPoint({
+        periodId: item.period.id,
+        monthLabel: `${item.period.year}-${String(item.period.month).padStart(2, '0')}`,
+        periodStatus: item.period.status,
+        incomeWon: metrics.incomeWon,
+        expenseWon: metrics.expenseWon,
+        plannedIncomeWon: plans.plannedIncomeWon,
+        plannedExpenseWon: plans.plannedExpenseWon,
+        actualBalanceWon:
+          item.period.id === readModel.targetPeriod.id
+            ? actualBalanceWon
+            : (item.closingSnapshot?.cashBalanceWon ?? null),
+        closingSnapshot: item.closingSnapshot
+      });
+    }),
+    officialComparison:
+      comparisonPeriod && readModel.comparisonClosingSnapshot
+        ? {
+            periodId: comparisonPeriod.id,
+            monthLabel: comparisonMonthLabel ?? comparisonPeriod.id,
+            officialCashWon: readModel.comparisonClosingSnapshot.cashBalanceWon,
+            officialNetWorthWon:
+              readModel.comparisonClosingSnapshot.totalAssetAmount -
+              readModel.comparisonClosingSnapshot.totalLiabilityAmount,
+            officialPeriodPnLWon:
+              readModel.comparisonClosingSnapshot.periodPnLAmount
+          }
+        : null
   };
+}
+
+function buildWarnings(readModel: DashboardSummaryReadModel) {
+  const warnings: string[] = [];
+  const monthLabel = `${readModel.targetPeriod.year}-${String(readModel.targetPeriod.month).padStart(2, '0')}`;
+
+  if (readModel.basisStatus === 'LIVE_OPERATIONS') {
+    warnings.push(
+      `${monthLabel}은(는) 아직 잠금 전 운영 기간이라 공식 재무제표와는 구분해서 해석합니다.`
+    );
+  }
+
+  if (!readModel.comparisonPeriod || !readModel.comparisonClosingSnapshot) {
+    warnings.push(
+      '비교할 이전 잠금 기간이 없어 공식 비교 수치는 아직 비어 있습니다.'
+    );
+  }
+
+  if (readModel.targetPlanItems.length === 0) {
+    warnings.push(
+      '현재 기간에 남아 있는 계획 항목이 없어 운영 전망은 확정 전표 중심으로 계산합니다.'
+    );
+  }
+
+  return warnings;
 }
