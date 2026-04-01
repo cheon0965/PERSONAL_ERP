@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Grid, Stack } from '@mui/material';
+import { Alert, Stack } from '@mui/material';
 import type { CollectedTransactionItem } from '@personal-erp/contracts';
 import {
   currentAccountingPeriodQueryKey,
@@ -13,10 +13,10 @@ import {
   journalEntriesQueryKey
 } from '@/features/journal-entries/journal-entries.api';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import { FormDrawer } from '@/shared/ui/form-drawer';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
-import { SectionCard } from '@/shared/ui/section-card';
 import { TransactionForm } from './transaction-form';
 import {
   collectedTransactionsQueryKey,
@@ -44,6 +44,7 @@ export function TransactionsPage() {
   const [keyword, setKeyword] = React.useState('');
   const [fundingAccountName, setFundingAccountName] = React.useState('');
   const [categoryName, setCategoryName] = React.useState('');
+  const [isCreateDrawerOpen, setCreateDrawerOpen] = React.useState(false);
 
   const currentPeriodQuery = useQuery({
     queryKey: currentAccountingPeriodQueryKey,
@@ -179,7 +180,7 @@ export function TransactionsPage() {
         title="수집 거래"
         description="현재 열린 AccountingPeriod 안에서 수집 거래를 입력하고, 보류 상태 거래를 전표로 확정하는 화면입니다."
         primaryActionLabel="수집 거래 등록"
-        primaryActionHref="#collected-transaction-form"
+        primaryActionOnClick={() => setCreateDrawerOpen(true)}
       />
 
       {feedback ? (
@@ -220,32 +221,27 @@ export function TransactionsPage() {
         onCategoryChange={setCategoryName}
       />
 
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, xl: 8 }}>
-          <TransactionsTableSection
-            currentPeriod={currentPeriod}
-            rows={filteredTransactions}
-            journalEntriesById={journalEntriesById}
-            confirmPending={confirmMutation.isPending}
-            confirmingTransactionId={confirmMutation.variables?.id}
-            onConfirm={handleConfirmTransaction}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, xl: 4 }}>
-          <div id="collected-transaction-form">
-            <SectionCard
-              title="수집 거래 등록"
-              description={
-                currentPeriod
-                  ? `${currentPeriod.monthLabel} 운영 기간 범위 안의 거래만 직접 등록할 수 있습니다.`
-                  : '운영 기간이 열린 뒤에만 수집 거래를 등록할 수 있습니다.'
-              }
-            >
-              <TransactionForm currentPeriod={currentPeriod} />
-            </SectionCard>
-          </div>
-        </Grid>
-      </Grid>
+      <TransactionsTableSection
+        currentPeriod={currentPeriod}
+        rows={filteredTransactions}
+        journalEntriesById={journalEntriesById}
+        confirmPending={confirmMutation.isPending}
+        confirmingTransactionId={confirmMutation.variables?.id}
+        onConfirm={handleConfirmTransaction}
+      />
+
+      <FormDrawer
+        open={isCreateDrawerOpen}
+        onClose={() => setCreateDrawerOpen(false)}
+        title="수집 거래 등록"
+        description={
+          currentPeriod
+            ? `${currentPeriod.monthLabel} 운영 기간 범위 안의 거래만 직접 등록할 수 있습니다.`
+            : '운영 기간이 열린 뒤에만 수집 거래를 등록할 수 있습니다.'
+        }
+      >
+        <TransactionForm currentPeriod={currentPeriod} />
+      </FormDrawer>
     </Stack>
   );
 }

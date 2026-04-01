@@ -1,17 +1,18 @@
 'use client';
 
+import * as React from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { Button, Grid, Stack } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import type { RecurringRuleItem } from '@personal-erp/contracts';
 import { formatDate, formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { DataTableCard } from '@/shared/ui/data-table-card';
+import { FormDrawer } from '@/shared/ui/form-drawer';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
-import { SectionCard } from '@/shared/ui/section-card';
 import { StatusChip } from '@/shared/ui/status-chip';
 import { RecurringRuleForm } from './recurring-rule-form';
 import { getRecurringRules, recurringRulesQueryKey } from './recurring-rules.api';
@@ -54,6 +55,7 @@ const columns: GridColDef<RecurringRuleItem>[] = [
 ];
 
 export function RecurringRulesPage() {
+  const [isCreateDrawerOpen, setCreateDrawerOpen] = React.useState(false);
   const { data = [], error } = useQuery({
     queryKey: recurringRulesQueryKey,
     queryFn: getRecurringRules
@@ -84,7 +86,7 @@ export function RecurringRulesPage() {
         title="반복 규칙"
         description="RecurringRule은 PlanItem 생성 기준이며, 실제 수집 거래와 전표와는 분리된 계획 엔티티입니다."
         primaryActionLabel="반복 규칙 등록"
-        primaryActionHref="#recurring-rule-form"
+        primaryActionOnClick={() => setCreateDrawerOpen(true)}
       />
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
@@ -100,26 +102,21 @@ export function RecurringRulesPage() {
         />
       ) : null}
 
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, xl: 8 }}>
-          <DataTableCard
-            title="계획 생성 규칙"
-            description="각 규칙은 미래 PlanItem을 만드는 기준입니다. 실제 거래와 전표는 별도 흐름에서 확정됩니다."
-            rows={data}
-            columns={columns}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, xl: 4 }}>
-          <div id="recurring-rule-form">
-            <SectionCard
-              title="반복 규칙 등록"
-              description="계획 생성 기준을 바로 추가하고, 이후 PlanItem과 실제 확정 흐름으로 연결합니다."
-            >
-              <RecurringRuleForm />
-            </SectionCard>
-          </div>
-        </Grid>
-      </Grid>
+      <DataTableCard
+        title="계획 생성 규칙"
+        description="각 규칙은 미래 PlanItem을 만드는 기준입니다. 실제 거래와 전표는 별도 흐름에서 확정됩니다."
+        rows={data}
+        columns={columns}
+      />
+
+      <FormDrawer
+        open={isCreateDrawerOpen}
+        onClose={() => setCreateDrawerOpen(false)}
+        title="반복 규칙 등록"
+        description="계획 생성 기준을 추가하고, 이후 PlanItem과 실제 확정 흐름으로 연결합니다."
+      >
+        <RecurringRuleForm />
+      </FormDrawer>
     </Stack>
   );
 }
