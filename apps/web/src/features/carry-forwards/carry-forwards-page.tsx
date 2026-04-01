@@ -2,7 +2,14 @@
 
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import {
+  Alert,
+  Button,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography
+} from '@mui/material';
 import type { AccountingPeriodItem } from '@personal-erp/contracts';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { formatDate, formatWon } from '@/shared/lib/format';
@@ -44,13 +51,15 @@ export function CarryForwardsPage() {
       '오프닝 잔액 스냅샷 (OpeningBalanceSnapshot)',
       '운영 기간 (AccountingPeriod)'
     ],
-    truthSource: '차기 이월은 잠금된 기간의 ClosingSnapshot과 BalanceSnapshotLine을 근거로 생성됩니다.',
+    truthSource:
+      '차기 이월은 잠금된 기간의 ClosingSnapshot과 BalanceSnapshotLine을 근거로 생성됩니다.',
     readModelNote:
       '차기 이월은 손익 계정을 직접 넘기지 않고, 잠금 시점의 자산·부채·자본 잔액만 다음 월 오프닝 기준으로 전달합니다.'
   });
 
   const lockedPeriods = React.useMemo(
-    () => (periodsQuery.data ?? []).filter((period) => period.status === 'LOCKED'),
+    () =>
+      (periodsQuery.data ?? []).filter((period) => period.status === 'LOCKED'),
     [periodsQuery.data]
   );
 
@@ -88,7 +97,8 @@ export function CarryForwardsPage() {
   });
 
   const membershipRole = user?.currentWorkspace?.membership.role ?? null;
-  const canGenerate = membershipRole === 'OWNER' || membershipRole === 'MANAGER';
+  const canGenerate =
+    membershipRole === 'OWNER' || membershipRole === 'MANAGER';
   const view = carryForwardQuery.data;
 
   return (
@@ -187,7 +197,8 @@ export function CarryForwardsPage() {
           description="먼저 월 마감을 완료한 잠금된 운영 기간을 만들어 주세요."
         >
           <Typography variant="body2" color="text.secondary">
-            잠금된 운영 기간이 준비되면 차기 이월 생성과 조회를 진행할 수 있습니다.
+            잠금된 운영 기간이 준비되면 차기 이월 생성과 조회를 진행할 수
+            있습니다.
           </Typography>
         </SectionCard>
       ) : view == null ? (
@@ -196,7 +207,8 @@ export function CarryForwardsPage() {
           description="선택한 잠금 기간에 대해 CarryForwardRecord가 아직 생성되지 않았습니다."
         >
           <Typography variant="body2" color="text.secondary">
-            {selectedPeriod.monthLabel} 기간을 기준으로 차기 이월 생성을 실행해 주세요.
+            {selectedPeriod.monthLabel} 기간을 기준으로 차기 이월 생성을 실행해
+            주세요.
           </Typography>
         </SectionCard>
       ) : (
@@ -213,7 +225,8 @@ export function CarryForwardsPage() {
                 대상 운영 기간 상태: {view.targetPeriod.status}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                오프닝 스냅샷 기준: {view.targetOpeningBalanceSnapshot.sourceKind}
+                오프닝 스냅샷 기준:{' '}
+                {view.targetOpeningBalanceSnapshot.sourceKind}
               </Typography>
             </Stack>
           </SectionCard>
@@ -224,13 +237,16 @@ export function CarryForwardsPage() {
           >
             <Stack spacing={1}>
               <Typography variant="body2" color="text.secondary">
-                자산 합계: {formatWon(view.sourceClosingSnapshot.totalAssetAmount)}
+                자산 합계:{' '}
+                {formatWon(view.sourceClosingSnapshot.totalAssetAmount)}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                부채 합계: {formatWon(view.sourceClosingSnapshot.totalLiabilityAmount)}
+                부채 합계:{' '}
+                {formatWon(view.sourceClosingSnapshot.totalLiabilityAmount)}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                자본 합계: {formatWon(view.sourceClosingSnapshot.totalEquityAmount)}
+                자본 합계:{' '}
+                {formatWon(view.sourceClosingSnapshot.totalEquityAmount)}
               </Typography>
             </Stack>
           </SectionCard>
@@ -242,10 +258,16 @@ export function CarryForwardsPage() {
             <Stack spacing={1}>
               {view.targetOpeningBalanceSnapshot.lines.length > 0 ? (
                 view.targetOpeningBalanceSnapshot.lines.map((line) => (
-                  <Typography key={line.id} variant="body2" color="text.secondary">
+                  <Typography
+                    key={line.id}
+                    variant="body2"
+                    color="text.secondary"
+                  >
                     {line.accountSubjectCode} {line.accountSubjectName}
-                    {line.fundingAccountName ? ` / ${line.fundingAccountName}` : ''}
-                    {' '}| {formatWon(line.balanceAmount)}
+                    {line.fundingAccountName
+                      ? ` / ${line.fundingAccountName}`
+                      : ''}{' '}
+                    | {formatWon(line.balanceAmount)}
                   </Typography>
                 ))
               ) : (

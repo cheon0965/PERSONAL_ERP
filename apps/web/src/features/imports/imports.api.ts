@@ -172,7 +172,9 @@ export function buildImportBatchFallbackItem(
   input: CreateImportBatchRequest
 ): ImportBatchItem {
   const rows = parseFallbackRows(input.sourceKind, input.content);
-  const parsedRowCount = rows.filter((row) => row.parseStatus === 'PARSED').length;
+  const parsedRowCount = rows.filter(
+    (row) => row.parseStatus === 'PARSED'
+  ).length;
 
   return {
     id: `import-batch-demo-${Date.now()}`,
@@ -244,7 +246,9 @@ function parseFallbackRows(
       const title = String(
         raw.title ?? raw.description ?? raw.merchant ?? raw.memo ?? ''
       ).trim();
-      const amount = Number(String(raw.amount ?? raw.approved_amount ?? '').replace(/,/g, ''));
+      const amount = Number(
+        String(raw.amount ?? raw.approved_amount ?? '').replace(/,/g, '')
+      );
       const isParsed =
         /^\d{4}-\d{2}-\d{2}$/.test(occurredOn) &&
         title.length > 0 &&
@@ -255,7 +259,9 @@ function parseFallbackRows(
         rowNumber: candidate.rowNumber,
         parseStatus: isParsed ? 'PARSED' : 'FAILED',
         parseError: isParsed ? null : '파서가 행을 읽지 못했습니다.',
-        sourceFingerprint: isParsed ? `sf:v1:fallback-${candidate.rowNumber}` : null,
+        sourceFingerprint: isParsed
+          ? `sf:v1:fallback-${candidate.rowNumber}`
+          : null,
         createdCollectedTransactionId: null,
         rawPayload: {
           original: raw,
@@ -273,32 +279,29 @@ function splitLine(line: string): string[] {
   return line.includes('\t') ? line.split('\t') : line.split(',');
 }
 
-function readParsedRow(
-  row: ImportBatchItem['rows'][number]
-): {
+function readParsedRow(row: ImportBatchItem['rows'][number]): {
   occurredOn: string;
   title: string;
   amount: number;
 } | null {
-  const parsed = isObjectRecord(row.rawPayload) && isObjectRecord(row.rawPayload.parsed)
-    ? row.rawPayload.parsed
-    : null;
+  const parsed =
+    isObjectRecord(row.rawPayload) && isObjectRecord(row.rawPayload.parsed)
+      ? row.rawPayload.parsed
+      : null;
 
   if (!parsed || typeof parsed !== 'object') {
     return null;
   }
 
-  return (
-    typeof parsed.occurredOn === 'string' &&
+  return typeof parsed.occurredOn === 'string' &&
     typeof parsed.title === 'string' &&
     typeof parsed.amount === 'number'
-      ? {
-          occurredOn: parsed.occurredOn,
-          title: parsed.title,
-          amount: parsed.amount
-        }
-      : null
-  );
+    ? {
+        occurredOn: parsed.occurredOn,
+        title: parsed.title,
+        amount: parsed.amount
+      }
+    : null;
 }
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {

@@ -44,7 +44,8 @@ export function mapImportBatchRecordToItem(
       parseStatus: row.parseStatus,
       parseError: row.parseError,
       sourceFingerprint: row.sourceFingerprint,
-      createdCollectedTransactionId: row.createdCollectedTransaction?.id ?? null,
+      createdCollectedTransactionId:
+        row.createdCollectedTransaction?.id ?? null,
       rawPayload: normalizeRawPayload(row.rawPayload)
     }))
   };

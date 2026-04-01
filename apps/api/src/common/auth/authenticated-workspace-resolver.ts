@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import type { AuthenticatedUser, AuthenticatedWorkspace } from '@personal-erp/contracts';
+import type {
+  AuthenticatedUser,
+  AuthenticatedWorkspace
+} from '@personal-erp/contracts';
 import type {
   LedgerStatus,
   TenantMembershipRole,

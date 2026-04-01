@@ -1,11 +1,16 @@
 import type { InsurancePolicyItem } from '@personal-erp/contracts';
 
-type InsurancePolicyRecord = Omit<InsurancePolicyItem, 'renewalDate' | 'maturityDate'> & {
+type InsurancePolicyRecord = Omit<
+  InsurancePolicyItem,
+  'renewalDate' | 'maturityDate'
+> & {
   renewalDate: Date | null;
   maturityDate: Date | null;
 };
 
-export function mapInsurancePolicyToItem(item: InsurancePolicyRecord): InsurancePolicyItem {
+export function mapInsurancePolicyToItem(
+  item: InsurancePolicyRecord
+): InsurancePolicyItem {
   return {
     id: item.id,
     provider: item.provider,

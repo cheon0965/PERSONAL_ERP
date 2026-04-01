@@ -39,7 +39,14 @@ export function DomainHelpDrawer() {
         }
       }}
     >
-      <Box sx={{ p: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <Box
+        sx={{
+          p: 3,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}
+      >
         <Stack direction="row" spacing={1} alignItems="center">
           <HelpOutlineRoundedIcon color="primary" />
           <Typography variant="h6" fontWeight={700}>
@@ -56,10 +63,19 @@ export function DomainHelpDrawer() {
       <Box sx={{ p: 3, overflowY: 'auto' }}>
         <Stack spacing={4}>
           <Box>
-            <Typography variant="subtitle2" color="primary" fontWeight={700} gutterBottom>
+            <Typography
+              variant="subtitle2"
+              color="primary"
+              fontWeight={700}
+              gutterBottom
+            >
               {activeContext.title || '화면 개요'}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ whiteSpace: 'pre-wrap' }}
+            >
               {activeContext.description}
             </Typography>
           </Box>
@@ -67,7 +83,17 @@ export function DomainHelpDrawer() {
           <Divider />
 
           <Box>
-            <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ display: 'block', mb: 1, textTransform: 'uppercase', letterSpacing: 1 }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              fontWeight={700}
+              sx={{
+                display: 'block',
+                mb: 1,
+                textTransform: 'uppercase',
+                letterSpacing: 1
+              }}
+            >
               대표 엔티티
             </Typography>
             <Typography variant="body1" fontWeight={700}>
@@ -76,21 +102,56 @@ export function DomainHelpDrawer() {
           </Box>
 
           <Box>
-            <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ display: 'block', mb: 1, textTransform: 'uppercase', letterSpacing: 1 }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              fontWeight={700}
+              sx={{
+                display: 'block',
+                mb: 1,
+                textTransform: 'uppercase',
+                letterSpacing: 1
+              }}
+            >
               함께 보는 엔티티
             </Typography>
             <Stack direction="row" flexWrap="wrap" gap={1}>
               {activeContext.relatedEntities.map((entity) => (
-                <Chip key={entity} label={entity} variant="outlined" size="small" sx={{ borderRadius: 1 }} />
+                <Chip
+                  key={entity}
+                  label={entity}
+                  variant="outlined"
+                  size="small"
+                  sx={{ borderRadius: 1 }}
+                />
               ))}
             </Stack>
           </Box>
 
           <Box>
-            <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ display: 'block', mb: 1, textTransform: 'uppercase', letterSpacing: 1 }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              fontWeight={700}
+              sx={{
+                display: 'block',
+                mb: 1,
+                textTransform: 'uppercase',
+                letterSpacing: 1
+              }}
+            >
               회계 확정 기준
             </Typography>
-            <Typography variant="body2" sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+            <Typography
+              variant="body2"
+              sx={{
+                p: 2,
+                bgcolor: 'action.hover',
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'divider'
+              }}
+            >
               {activeContext.truthSource}
             </Typography>
           </Box>
@@ -129,7 +190,10 @@ export function DomainHelpDrawer() {
                         <Typography variant="caption" color="text.secondary">
                           {fact.label}
                         </Typography>
-                        <Typography variant="body2" sx={{ mt: 0.25, fontWeight: 600 }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ mt: 0.25, fontWeight: 600 }}
+                        >
                           {fact.value}
                         </Typography>
                       </Box>
@@ -165,8 +229,23 @@ export function DomainHelpDrawer() {
           ))}
 
           {activeContext.readModelNote && (
-            <Box sx={{ p: 2, bgcolor: 'primary.main', color: 'primary.contrastText', borderRadius: 2 }}>
-              <Typography variant="caption" sx={{ opacity: 0.8, display: 'block', mb: 0.5, fontWeight: 700 }}>
+            <Box
+              sx={{
+                p: 2,
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+                borderRadius: 2
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{
+                  opacity: 0.8,
+                  display: 'block',
+                  mb: 0.5,
+                  fontWeight: 700
+                }}
+              >
                 주의 사항 / 참고
               </Typography>
               <Typography variant="body2">
@@ -177,9 +256,18 @@ export function DomainHelpDrawer() {
         </Stack>
       </Box>
 
-      <Box sx={{ mt: 'auto', p: 3, bgcolor: 'action.hover', borderTop: '1px solid', borderColor: 'divider' }}>
+      <Box
+        sx={{
+          mt: 'auto',
+          p: 3,
+          bgcolor: 'action.hover',
+          borderTop: '1px solid',
+          borderColor: 'divider'
+        }}
+      >
         <Typography variant="caption" color="text.secondary">
-          본 가이드는 Personal ERP의 도메인 설계 원칙을 준수합니다. 비즈니스 로직과 화면의 정합성이 궁금하실 때 언제든 열어보세요.
+          본 가이드는 Personal ERP의 도메인 설계 원칙을 준수합니다. 비즈니스
+          로직과 화면의 정합성이 궁금하실 때 언제든 열어보세요.
         </Typography>
       </Box>
     </Drawer>

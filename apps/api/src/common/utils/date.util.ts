@@ -3,7 +3,12 @@ export function parseMonthRange(month: string) {
   const year = Number(yearRaw);
   const monthValue = Number(monthRaw);
 
-  if (!Number.isInteger(year) || !Number.isInteger(monthValue) || monthValue < 1 || monthValue > 12) {
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(monthValue) ||
+    monthValue < 1 ||
+    monthValue > 12
+  ) {
     throw new Error(`Invalid month format: "${month}". Expected YYYY-MM.`);
   }
 

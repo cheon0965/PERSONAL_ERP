@@ -15,7 +15,10 @@ import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { StatusChip } from '@/shared/ui/status-chip';
 import { RecurringRuleForm } from './recurring-rule-form';
-import { getRecurringRules, recurringRulesQueryKey } from './recurring-rules.api';
+import {
+  getRecurringRules,
+  recurringRulesQueryKey
+} from './recurring-rules.api';
 
 const frequencyLabelMap: Record<string, string> = {
   WEEKLY: '매주',
@@ -50,7 +53,9 @@ const columns: GridColDef<RecurringRuleItem>[] = [
     field: 'isActive',
     headerName: '규칙 상태',
     flex: 0.7,
-    renderCell: (params) => <StatusChip label={params.value ? '활성' : '중지'} />
+    renderCell: (params) => (
+      <StatusChip label={params.value ? '활성' : '중지'} />
+    )
   }
 ];
 
@@ -96,10 +101,7 @@ export function RecurringRulesPage() {
       </Stack>
 
       {error ? (
-        <QueryErrorAlert
-          title="반복 규칙 조회에 실패했습니다."
-          error={error}
-        />
+        <QueryErrorAlert title="반복 규칙 조회에 실패했습니다." error={error} />
       ) : null}
 
       <DataTableCard

@@ -83,7 +83,8 @@ export function buildCarryForwardFallback(
 }
 
 function readNextPeriod(sourcePeriod: AccountingPeriodItem) {
-  const year = sourcePeriod.month === 12 ? sourcePeriod.year + 1 : sourcePeriod.year;
+  const year =
+    sourcePeriod.month === 12 ? sourcePeriod.year + 1 : sourcePeriod.year;
   const month = sourcePeriod.month === 12 ? 1 : sourcePeriod.month + 1;
 
   return {

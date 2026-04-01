@@ -89,7 +89,9 @@ function isHttpsOrigin(origin: string): boolean {
   return new URL(origin).protocol === 'https:';
 }
 
-function resolveBrowserOrigin(request: Pick<Request, 'headers'>): string | null {
+function resolveBrowserOrigin(
+  request: Pick<Request, 'headers'>
+): string | null {
   const origin = readOriginHeader(request.headers.origin);
   if (origin) {
     return origin;

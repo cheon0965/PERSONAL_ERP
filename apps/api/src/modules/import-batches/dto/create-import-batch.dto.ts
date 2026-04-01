@@ -16,7 +16,8 @@ export class CreateImportBatchRequestDto implements CreateImportBatchRequest {
 
   @ApiProperty({
     example: 'date,title,amount\n2026-03-02,Coffee,4800',
-    description: 'thin-first 단계에서는 UTF-8 텍스트 본문으로 업로드 내용을 전달합니다.'
+    description:
+      'thin-first 단계에서는 UTF-8 텍스트 본문으로 업로드 내용을 전달합니다.'
   })
   @IsString()
   @MinLength(1)

@@ -49,10 +49,7 @@ export function resolvePlanItemAutoMatch(input: {
         truncateUtcDay(input.collected.occurredOn).getTime()
     );
 
-    return (
-      diffDays <=
-      planItemMatchDateToleranceDays * 24 * 60 * 60 * 1000
-    );
+    return diffDays <= planItemMatchDateToleranceDays * 24 * 60 * 60 * 1000;
   });
   if (dateCandidates.length === 0) {
     return {

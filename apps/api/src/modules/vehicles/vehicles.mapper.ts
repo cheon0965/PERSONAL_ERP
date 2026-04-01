@@ -7,7 +7,10 @@ type FuelLogRecord = Omit<FuelLogItem, 'filledOn' | 'liters'> & {
   liters: DecimalLike;
 };
 
-type VehicleRecord = Omit<VehicleItem, 'estimatedFuelEfficiencyKmPerLiter' | 'fuelLogs'> & {
+type VehicleRecord = Omit<
+  VehicleItem,
+  'estimatedFuelEfficiencyKmPerLiter' | 'fuelLogs'
+> & {
   estimatedFuelEfficiencyKmPerLiter: DecimalLike | null;
   fuelLogs: FuelLogRecord[];
 };

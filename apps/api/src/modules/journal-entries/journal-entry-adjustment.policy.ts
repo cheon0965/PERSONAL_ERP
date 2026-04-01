@@ -38,7 +38,9 @@ export function buildJournalEntryDate(entryDate: string): Date {
   return new Date(`${entryDate}T00:00:00.000Z`);
 }
 
-export function normalizeOptionalText(value: string | null | undefined): string | null {
+export function normalizeOptionalText(
+  value: string | null | undefined
+): string | null {
   const normalized = value?.trim();
   return normalized ? normalized : null;
 }
@@ -49,7 +51,9 @@ export function buildReversalJournalLines(
   return lines.map((line, index) => ({
     lineNumber: index + 1,
     accountSubjectId: line.accountSubjectId,
-    ...(line.fundingAccountId ? { fundingAccountId: line.fundingAccountId } : {}),
+    ...(line.fundingAccountId
+      ? { fundingAccountId: line.fundingAccountId }
+      : {}),
     debitAmount: line.creditAmount,
     creditAmount: line.debitAmount,
     ...(line.description ? { description: line.description } : {})
@@ -65,7 +69,9 @@ export function normalizeJournalAdjustmentLines(
     return {
       lineNumber: index + 1,
       accountSubjectId: line.accountSubjectId,
-      ...(line.fundingAccountId ? { fundingAccountId: line.fundingAccountId } : {}),
+      ...(line.fundingAccountId
+        ? { fundingAccountId: line.fundingAccountId }
+        : {}),
       debitAmount: line.debitAmount,
       creditAmount: line.creditAmount,
       ...(description ? { description } : {})
@@ -84,7 +90,10 @@ export function assertBalancedJournalAdjustmentLines(
   let totalCredit = 0;
 
   for (const line of lines) {
-    if (!Number.isInteger(line.debitAmount) || !Number.isInteger(line.creditAmount)) {
+    if (
+      !Number.isInteger(line.debitAmount) ||
+      !Number.isInteger(line.creditAmount)
+    ) {
       throw new Error('Journal line amounts must be integers.');
     }
 

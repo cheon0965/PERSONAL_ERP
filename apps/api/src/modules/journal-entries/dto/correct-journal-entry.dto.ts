@@ -43,9 +43,7 @@ class CorrectJournalEntryLineInputDto implements CorrectJournalEntryLineInput {
   description?: string;
 }
 
-export class CorrectJournalEntryRequestDto
-  implements CorrectJournalEntryRequest
-{
+export class CorrectJournalEntryRequestDto implements CorrectJournalEntryRequest {
   @ApiProperty({ example: '2026-04-04' })
   @IsString()
   @Matches(/^\d{4}-\d{2}-\d{2}$/, {

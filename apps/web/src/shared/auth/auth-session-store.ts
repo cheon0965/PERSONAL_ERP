@@ -2,9 +2,7 @@ export type UnauthorizedSessionReason =
   | 'missing_access_token'
   | 'unauthorized_response';
 
-type UnauthorizedSessionHandler = (
-  reason: UnauthorizedSessionReason
-) => void;
+type UnauthorizedSessionHandler = (reason: UnauthorizedSessionReason) => void;
 
 type RefreshSessionHandler = () => Promise<string | null>;
 

@@ -3,9 +3,7 @@ import type { CollectImportedRowRequest } from '@personal-erp/contracts';
 import { TransactionType } from '@prisma/client';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 
-export class CollectImportedRowRequestDto
-  implements CollectImportedRowRequest
-{
+export class CollectImportedRowRequestDto implements CollectImportedRowRequest {
   @ApiProperty({ enum: TransactionType })
   @IsEnum(TransactionType)
   type!: TransactionType;

@@ -101,6 +101,11 @@ export const appTheme = createTheme(
           }
         }
       },
+      MuiMenu: {
+        defaultProps: {
+          disableScrollLock: true
+        }
+      },
       MuiTextField: {
         defaultProps: {
           fullWidth: true

@@ -33,9 +33,7 @@ export function AuthGuard({ children }: React.PropsWithChildren) {
     }
 
     const nextPath = pathname?.startsWith('/') ? pathname : '/dashboard';
-    router.replace(
-      `/login?next=${encodeURIComponent(nextPath)}` as Route
-    );
+    router.replace(`/login?next=${encodeURIComponent(nextPath)}` as Route);
   }, [pathname, router, status]);
 
   if (status !== 'authenticated') {

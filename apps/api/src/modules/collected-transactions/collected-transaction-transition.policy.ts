@@ -27,17 +27,11 @@ const allowedCollectedTransactionTransitions = new Map<
   ],
   [
     CollectedTransactionStatus.READY_TO_POST,
-    [
-      CollectedTransactionStatus.POSTED,
-      CollectedTransactionStatus.LOCKED
-    ]
+    [CollectedTransactionStatus.POSTED, CollectedTransactionStatus.LOCKED]
   ],
   [
     CollectedTransactionStatus.POSTED,
-    [
-      CollectedTransactionStatus.CORRECTED,
-      CollectedTransactionStatus.LOCKED
-    ]
+    [CollectedTransactionStatus.CORRECTED, CollectedTransactionStatus.LOCKED]
   ],
   [CollectedTransactionStatus.CORRECTED, [CollectedTransactionStatus.LOCKED]],
   [CollectedTransactionStatus.LOCKED, []]
@@ -80,7 +74,8 @@ function assertCollectedTransactionStatusTransition(
   toStatus: CollectedTransactionStatus,
   message: string
 ): void {
-  const allowedTransitions = allowedCollectedTransactionTransitions.get(fromStatus);
+  const allowedTransitions =
+    allowedCollectedTransactionTransitions.get(fromStatus);
   if (allowedTransitions?.includes(toStatus)) {
     return;
   }

@@ -22,11 +22,15 @@ export default function GlobalError({
           }}
         >
           <section style={{ maxWidth: '32rem', textAlign: 'center' }}>
-            <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700 }}>500</p>
+            <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700 }}>
+              500
+            </p>
             <h1 style={{ margin: '0.5rem 0 0', fontSize: '2rem' }}>
               서버 오류가 발생했습니다
             </h1>
-            <p style={{ margin: '1rem 0 0', lineHeight: 1.6, color: '#52606d' }}>
+            <p
+              style={{ margin: '1rem 0 0', lineHeight: 1.6, color: '#52606d' }}
+            >
               {error.message || '페이지를 준비하는 중 문제가 발생했습니다.'}
             </p>
             <button

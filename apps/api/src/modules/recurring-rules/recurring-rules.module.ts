@@ -32,10 +32,7 @@ import { RecurringRulesController } from './recurring-rules.controller';
         recurringRuleStore: RecurringRuleStorePort,
         referenceOwnership: ReferenceOwnershipPort
       ) =>
-        new CreateRecurringRuleUseCase(
-          recurringRuleStore,
-          referenceOwnership
-        ),
+        new CreateRecurringRuleUseCase(recurringRuleStore, referenceOwnership),
       inject: [RecurringRuleStorePort, ReferenceOwnershipPort]
     }
   ]

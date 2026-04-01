@@ -1,6 +1,8 @@
 import { getApiEnv } from '../../config/api-env';
 
-export type JwtExpiresIn = number | `${number}${'ms' | 's' | 'm' | 'h' | 'd' | 'w' | 'y'}`;
+export type JwtExpiresIn =
+  | number
+  | `${number}${'ms' | 's' | 'm' | 'h' | 'd' | 'w' | 'y'}`;
 
 const JWT_DURATION_TO_MS = {
   ms: 1,
@@ -12,7 +14,10 @@ const JWT_DURATION_TO_MS = {
   y: 365 * 24 * 60 * 60 * 1000
 } as const;
 
-export function resolveJwtExpiresIn(value: string | undefined, fallback: JwtExpiresIn): JwtExpiresIn {
+export function resolveJwtExpiresIn(
+  value: string | undefined,
+  fallback: JwtExpiresIn
+): JwtExpiresIn {
   const normalized = value?.trim();
   if (!normalized) {
     return fallback;

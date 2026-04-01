@@ -12,7 +12,10 @@ export function AppShell({ children }: React.PropsWithChildren) {
       <SidebarNav />
       <Topbar />
       <DomainHelpDrawer />
-      <Box component="main" sx={{ ml: { lg: `${sidebarWidth}px` }, py: appLayout.mainPaddingY }}>
+      <Box
+        component="main"
+        sx={{ ml: { lg: `${sidebarWidth}px` }, py: appLayout.mainPaddingY }}
+      >
         <Container maxWidth="xl">{children}</Container>
       </Box>
     </Box>

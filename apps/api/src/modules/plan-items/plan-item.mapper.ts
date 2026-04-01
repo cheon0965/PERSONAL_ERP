@@ -42,7 +42,8 @@ export function mapPlanItemRecordToItem(record: PlanItemRecord): PlanItemItem {
     ledgerTransactionTypeName: record.ledgerTransactionType.name,
     fundingAccountName: record.fundingAccount.name,
     categoryName: record.category?.name ?? '-',
-    matchedCollectedTransactionId: record.matchedCollectedTransaction?.id ?? null,
+    matchedCollectedTransactionId:
+      record.matchedCollectedTransaction?.id ?? null,
     postedJournalEntryId: record.postedJournalEntry?.id ?? null
   };
 }

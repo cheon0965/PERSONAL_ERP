@@ -39,14 +39,11 @@ const workspaceActionAllowedRoles: Record<
 const workspaceActionDeniedMessages: Record<WorkspaceAction, string> = {
   'accounting_period.open':
     'Only owners and managers can open accounting periods.',
-  'accounting_period.close':
-    'Only owners can close accounting periods.',
-  'accounting_period.reopen':
-    'Only owners can reopen accounting periods.',
+  'accounting_period.close': 'Only owners can close accounting periods.',
+  'accounting_period.reopen': 'Only owners can reopen accounting periods.',
   'recurring_rule.create':
     'Only owners and managers can create recurring rules.',
-  'plan_item.generate':
-    'Only owners and managers can generate plan items.',
+  'plan_item.generate': 'Only owners and managers can generate plan items.',
   'collected_transaction.create':
     'Only owners, managers, and editors can create collected transactions.',
   'collected_transaction.confirm':

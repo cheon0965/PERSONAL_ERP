@@ -157,7 +157,11 @@ export function SummaryCard({
           </Typography>
 
           {subtitle ? (
-            <Typography variant="body2" color="text.secondary" sx={{ minHeight: 40 }}>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ minHeight: 40 }}
+            >
               {subtitle}
             </Typography>
           ) : null}

@@ -74,7 +74,8 @@ async function requestAuthJson<TResponse>(
   const responseBody = await readResponseBody(response);
   if (!response.ok) {
     const message =
-      readErrorMessage(responseBody) ?? `요청에 실패했습니다: ${response.status}`;
+      readErrorMessage(responseBody) ??
+      `요청에 실패했습니다: ${response.status}`;
 
     if (response.status === 401) {
       throw new UnauthorizedRequestError(message, responseBody);

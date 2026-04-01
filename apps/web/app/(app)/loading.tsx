@@ -10,7 +10,12 @@ export default function AppLoading() {
       spacing={3}
       sx={{ background: '#f5f7fb' }}
     >
-      <CircularProgress size={40} thickness={4} color="primary" sx={{ opacity: 0.8 }} />
+      <CircularProgress
+        size={40}
+        thickness={4}
+        color="primary"
+        sx={{ opacity: 0.8 }}
+      />
       <Typography variant="body2" color="text.secondary" fontWeight={500}>
         앱 초기화 중입니다...
       </Typography>

@@ -181,29 +181,33 @@ function formatYearMonth(date: Date) {
   return `${year}-${month}`;
 }
 
-async function resolveOpenedFromYearMonth(prisma: PrismaClient, user: BackboneUser) {
-  const [firstTransaction, firstRecurringRule, firstAccount, firstCategory] = await Promise.all([
-    prisma.transaction.findFirst({
-      where: { userId: user.id },
-      orderBy: { businessDate: 'asc' },
-      select: { businessDate: true }
-    }),
-    prisma.recurringRule.findFirst({
-      where: { userId: user.id },
-      orderBy: { startDate: 'asc' },
-      select: { startDate: true }
-    }),
-    prisma.account.findFirst({
-      where: { userId: user.id },
-      orderBy: { createdAt: 'asc' },
-      select: { createdAt: true }
-    }),
-    prisma.category.findFirst({
-      where: { userId: user.id },
-      orderBy: { createdAt: 'asc' },
-      select: { createdAt: true }
-    })
-  ]);
+async function resolveOpenedFromYearMonth(
+  prisma: PrismaClient,
+  user: BackboneUser
+) {
+  const [firstTransaction, firstRecurringRule, firstAccount, firstCategory] =
+    await Promise.all([
+      prisma.transaction.findFirst({
+        where: { userId: user.id },
+        orderBy: { businessDate: 'asc' },
+        select: { businessDate: true }
+      }),
+      prisma.recurringRule.findFirst({
+        where: { userId: user.id },
+        orderBy: { startDate: 'asc' },
+        select: { startDate: true }
+      }),
+      prisma.account.findFirst({
+        where: { userId: user.id },
+        orderBy: { createdAt: 'asc' },
+        select: { createdAt: true }
+      }),
+      prisma.category.findFirst({
+        where: { userId: user.id },
+        orderBy: { createdAt: 'asc' },
+        select: { createdAt: true }
+      })
+    ]);
 
   const candidates = [
     user.createdAt,
@@ -213,11 +217,17 @@ async function resolveOpenedFromYearMonth(prisma: PrismaClient, user: BackboneUs
     firstCategory?.createdAt
   ].filter((value): value is Date => Boolean(value));
 
-  const earliest = new Date(Math.min(...candidates.map((value) => value.getTime())));
+  const earliest = new Date(
+    Math.min(...candidates.map((value) => value.getTime()))
+  );
   return formatYearMonth(earliest);
 }
 
-async function ensureBaseMasters(prisma: PrismaClient, tenantId: string, ledgerId: string) {
+async function ensureBaseMasters(
+  prisma: PrismaClient,
+  tenantId: string,
+  ledgerId: string
+) {
   for (const subject of DEFAULT_ACCOUNT_SUBJECTS) {
     await prisma.accountSubject.upsert({
       where: {
@@ -286,24 +296,25 @@ async function backfillLegacyData(
   ledgerId: string,
   summary: Phase1BackboneSummary
 ) {
-  const [accounts, categories, transactions, recurringRules] = await Promise.all([
-    prisma.account.updateMany({
-      where: { userId },
-      data: { tenantId, ledgerId }
-    }),
-    prisma.category.updateMany({
-      where: { userId },
-      data: { tenantId, ledgerId }
-    }),
-    prisma.transaction.updateMany({
-      where: { userId },
-      data: { tenantId, ledgerId }
-    }),
-    prisma.recurringRule.updateMany({
-      where: { userId },
-      data: { tenantId, ledgerId }
-    })
-  ]);
+  const [accounts, categories, transactions, recurringRules] =
+    await Promise.all([
+      prisma.account.updateMany({
+        where: { userId },
+        data: { tenantId, ledgerId }
+      }),
+      prisma.category.updateMany({
+        where: { userId },
+        data: { tenantId, ledgerId }
+      }),
+      prisma.transaction.updateMany({
+        where: { userId },
+        data: { tenantId, ledgerId }
+      }),
+      prisma.recurringRule.updateMany({
+        where: { userId },
+        data: { tenantId, ledgerId }
+      })
+    ]);
 
   summary.legacyRowsBackfilled.accounts += accounts.count;
   summary.legacyRowsBackfilled.categories += categories.count;
@@ -343,7 +354,9 @@ async function backfillLegacyData(
       code = 'TRANSFER_BASIC';
     }
 
-    const ledgerTransactionTypeId = code ? transactionTypeByCode.get(code) : undefined;
+    const ledgerTransactionTypeId = code
+      ? transactionTypeByCode.get(code)
+      : undefined;
     if (!ledgerTransactionTypeId) {
       continue;
     }
@@ -399,7 +412,10 @@ async function ensureTenantAndLedger(
       }
     });
     summary.membershipsCreated += 1;
-  } else if (membership.role !== TenantMembershipRole.OWNER || membership.status !== TenantMembershipStatus.ACTIVE) {
+  } else if (
+    membership.role !== TenantMembershipRole.OWNER ||
+    membership.status !== TenantMembershipStatus.ACTIVE
+  ) {
     membership = await prisma.tenantMembership.update({
       where: { id: membership.id },
       data: {
@@ -434,7 +450,10 @@ async function ensureTenantAndLedger(
     summary.ledgersCreated += 1;
   }
 
-  if (tenant.defaultLedgerId !== ledger.id || tenant.status !== TenantStatus.ACTIVE) {
+  if (
+    tenant.defaultLedgerId !== ledger.id ||
+    tenant.status !== TenantStatus.ACTIVE
+  ) {
     tenant = await prisma.tenant.update({
       where: { id: tenant.id },
       data: {
@@ -478,7 +497,13 @@ export async function ensurePhase1BackboneForUser(
   const backbone = await ensureTenantAndLedger(prisma, user, summary);
 
   await ensureBaseMasters(prisma, backbone.tenantId, backbone.ledgerId);
-  await backfillLegacyData(prisma, user.id, backbone.tenantId, backbone.ledgerId, summary);
+  await backfillLegacyData(
+    prisma,
+    user.id,
+    backbone.tenantId,
+    backbone.ledgerId,
+    summary
+  );
 
   summary.usersProcessed += 1;
 

@@ -9,7 +9,11 @@ type SectionCardProps = {
   children: React.ReactNode;
 };
 
-export function SectionCard({ title, description, children }: SectionCardProps) {
+export function SectionCard({
+  title,
+  description,
+  children
+}: SectionCardProps) {
   return (
     <Card>
       <CardContent sx={{ p: appLayout.cardPadding }}>

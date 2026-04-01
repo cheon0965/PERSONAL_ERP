@@ -59,9 +59,16 @@ export function SidebarNav() {
             <Link
               key={item.href}
               href={item.href}
-              style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+              style={{
+                textDecoration: 'none',
+                color: 'inherit',
+                display: 'block'
+              }}
             >
-              <ListItemButton selected={selected} sx={{ borderRadius: 3, mb: 0.5 }}>
+              <ListItemButton
+                selected={selected}
+                sx={{ borderRadius: 3, mb: 0.5 }}
+              >
                 <ListItemIcon sx={{ minWidth: 40 }}>
                   <Icon color={selected ? 'primary' : 'inherit'} />
                 </ListItemIcon>

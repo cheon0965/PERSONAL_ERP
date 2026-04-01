@@ -45,7 +45,9 @@ export class CreateCollectedTransactionUseCase {
     });
 
     if (missingReference) {
-      throw new MissingOwnedCollectedTransactionReferenceError(missingReference);
+      throw new MissingOwnedCollectedTransactionReferenceError(
+        missingReference
+      );
     }
 
     const transaction = await this.collectedTransactionStore.createInWorkspace({

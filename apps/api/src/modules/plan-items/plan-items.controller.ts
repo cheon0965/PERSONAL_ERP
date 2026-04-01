@@ -76,9 +76,8 @@ export class PlanItemsController {
           workspace,
           details: {
             periodId: body.periodId,
-            requiredRoles: readAllowedWorkspaceRoles('plan_item.generate').join(
-              ','
-            )
+            requiredRoles:
+              readAllowedWorkspaceRoles('plan_item.generate').join(',')
           }
         });
       }

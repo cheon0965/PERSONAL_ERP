@@ -25,5 +25,8 @@ export const mockInsurancePolicies: InsurancePolicyItem[] = [
 ];
 
 export function getInsurancePolicies() {
-  return fetchJson<InsurancePolicyItem[]>('/insurance-policies', mockInsurancePolicies);
+  return fetchJson<InsurancePolicyItem[]>(
+    '/insurance-policies',
+    mockInsurancePolicies
+  );
 }

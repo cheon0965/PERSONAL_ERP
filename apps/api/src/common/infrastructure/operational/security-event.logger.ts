@@ -38,7 +38,9 @@ export class SecurityEventLogger {
       })
       .join(' ');
 
-    const message = detailText ? `event=${event} ${detailText}` : `event=${event}`;
+    const message = detailText
+      ? `event=${event} ${detailText}`
+      : `event=${event}`;
     this.logger[level](message);
   }
 }

@@ -37,9 +37,19 @@ export function Topbar() {
       }}
     >
       <Toolbar sx={{ minHeight: 72 }}>
-        <Stack direction="row" alignItems="center" justifyContent="flex-end" width="100%" gap={2}>
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="flex-end"
+          width="100%"
+          gap={2}
+        >
           <Stack direction="row" alignItems="center" spacing={1}>
-            <Tooltip title={activeContext ? '도메인 가이드 열기' : '도움말 정보가 없습니다'}>
+            <Tooltip
+              title={
+                activeContext ? '도메인 가이드 열기' : '도움말 정보가 없습니다'
+              }
+            >
               <span>
                 <IconButton
                   disabled={!activeContext}
@@ -56,7 +66,11 @@ export function Topbar() {
               spacing={1}
               sx={{ pl: 1, borderLeft: '1px solid', borderColor: 'divider' }}
             >
-              <Stack spacing={0} textAlign="right" sx={{ display: { xs: 'none', md: 'flex' } }}>
+              <Stack
+                spacing={0}
+                textAlign="right"
+                sx={{ display: { xs: 'none', md: 'flex' } }}
+              >
                 <Typography variant="body2" fontWeight={700}>
                   {user?.name ?? '워크스페이스 사용자'}
                 </Typography>

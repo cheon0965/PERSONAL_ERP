@@ -106,7 +106,8 @@ export async function fetchJsonWithConfig<T>(
     }
 
     const allowDemoFallback =
-      options.allowDemoFallback ?? (options.method == null || options.method === 'GET');
+      options.allowDemoFallback ??
+      (options.method == null || options.method === 'GET');
 
     if (config.demoFallbackEnabled && allowDemoFallback) {
       const warnMsg = '[personal-erp] 데모 폴백 데이터를 사용했습니다: ' + path;
@@ -176,7 +177,10 @@ async function sendRequest<T>(
   if (!response.ok) {
     throw new ApiRequestError(
       response.status,
-      buildApiErrorMessage(responseBody, `요청에 실패했습니다: ${response.status}`),
+      buildApiErrorMessage(
+        responseBody,
+        `요청에 실패했습니다: ${response.status}`
+      ),
       responseBody
     );
   }

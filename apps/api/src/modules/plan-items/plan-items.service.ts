@@ -1,8 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type {
-  AuthenticatedUser,
-  PlanItemsView
-} from '@personal-erp/contracts';
+import type { AuthenticatedUser, PlanItemsView } from '@personal-erp/contracts';
 import { AccountingPeriodStatus, Prisma } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { PrismaService } from '../../common/prisma/prisma.service';

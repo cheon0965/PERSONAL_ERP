@@ -51,7 +51,11 @@ export function FormDrawer({
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="h6">{title}</Typography>
           {description ? (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mt: 0.75 }}
+            >
               {description}
             </Typography>
           ) : null}

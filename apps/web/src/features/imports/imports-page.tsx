@@ -54,12 +54,10 @@ const sourceKindOptions: Array<{ value: ImportSourceKind; label: string }> = [
   { value: 'CARD_EXCEL', label: '카드 엑셀' }
 ];
 
-type FeedbackState =
-  | {
-      severity: 'success' | 'error';
-      message: string;
-    }
-  | null;
+type FeedbackState = {
+  severity: 'success' | 'error';
+  message: string;
+} | null;
 
 type ImportedRowTableItem = ImportBatchItem['rows'][number] & {
   occurredOn: string;
@@ -70,7 +68,9 @@ type ImportedRowTableItem = ImportBatchItem['rows'][number] & {
 export function ImportsPage() {
   const queryClient = useQueryClient();
   const [feedback, setFeedback] = React.useState<FeedbackState>(null);
-  const [selectedBatchId, setSelectedBatchId] = React.useState<string | null>(null);
+  const [selectedBatchId, setSelectedBatchId] = React.useState<string | null>(
+    null
+  );
   const [selectedRowId, setSelectedRowId] = React.useState<string | null>(null);
   const [isUploadDrawerOpen, setUploadDrawerOpen] = React.useState(false);
   const [isCollectDrawerOpen, setCollectDrawerOpen] = React.useState(false);
@@ -79,12 +79,13 @@ export function ImportsPage() {
     fileName: 'march-manual.csv',
     content: ['date,title,amount', '2026-03-12,Coffee beans,19800'].join('\n')
   });
-  const [collectForm, setCollectForm] = React.useState<CollectImportedRowRequest>({
-    type: 'EXPENSE',
-    fundingAccountId: '',
-    categoryId: '',
-    memo: ''
-  });
+  const [collectForm, setCollectForm] =
+    React.useState<CollectImportedRowRequest>({
+      type: 'EXPENSE',
+      fundingAccountId: '',
+      categoryId: '',
+      memo: ''
+    });
 
   const currentPeriodQuery = useQuery({
     queryKey: currentAccountingPeriodQueryKey,
@@ -109,7 +110,9 @@ export function ImportsPage() {
   );
   const selectedBatch = React.useMemo(
     () =>
-      batches.find((candidate) => candidate.id === selectedBatchId) ?? batches[0] ?? null,
+      batches.find((candidate) => candidate.id === selectedBatchId) ??
+      batches[0] ??
+      null,
     [batches, selectedBatchId]
   );
   const selectedBatchRows = React.useMemo<ImportedRowTableItem[]>(
@@ -223,7 +226,9 @@ export function ImportsPage() {
             )?.name ?? '선택 자금수단',
           categoryName:
             categoriesQuery.data?.find(
-              (candidate) => candidate.id === normalizeOptionalValue(input.request.categoryId)
+              (candidate) =>
+                candidate.id ===
+                normalizeOptionalValue(input.request.categoryId)
             )?.name ?? '-'
         })
       ),
@@ -237,7 +242,9 @@ export function ImportsPage() {
       setSelectedRowId(null);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: importBatchesQueryKey }),
-        queryClient.invalidateQueries({ queryKey: collectedTransactionsQueryKey })
+        queryClient.invalidateQueries({
+          queryKey: collectedTransactionsQueryKey
+        })
       ]);
     },
     onError: (error) => {
@@ -265,7 +272,8 @@ export function ImportsPage() {
         headerName: '원천',
         flex: 0.8,
         valueFormatter: (value) =>
-          sourceKindOptions.find((option) => option.value === value)?.label ?? String(value)
+          sourceKindOptions.find((option) => option.value === value)?.label ??
+          String(value)
       },
       {
         field: 'parseStatus',
@@ -413,7 +421,9 @@ export function ImportsPage() {
               <Typography variant="caption" color="text.secondary">
                 운영 월
               </Typography>
-              <Typography variant="body1">{currentPeriod.monthLabel}</Typography>
+              <Typography variant="body1">
+                {currentPeriod.monthLabel}
+              </Typography>
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
               <Typography variant="caption" color="text.secondary">
@@ -442,7 +452,11 @@ export function ImportsPage() {
       />
 
       <DataTableCard
-        title={selectedBatch ? `${selectedBatch.fileName} ImportedRow` : 'ImportedRow'}
+        title={
+          selectedBatch
+            ? `${selectedBatch.fileName} ImportedRow`
+            : 'ImportedRow'
+        }
         description={
           selectedBatch
             ? `${selectedBatch.fileName}의 행을 검토하고, 정상 파싱 행만 수집 거래로 승격할 수 있습니다.`
@@ -540,7 +554,9 @@ export function ImportsPage() {
               </Typography>
               <Typography variant="body2">
                 {selectedRow.occurredOn} /{' '}
-                {selectedRow.amount == null ? '-' : formatWon(selectedRow.amount)}
+                {selectedRow.amount == null
+                  ? '-'
+                  : formatWon(selectedRow.amount)}
               </Typography>
             </div>
             <div>
@@ -648,7 +664,9 @@ export function ImportsPage() {
                 });
               }}
             >
-              {collectImportedRowMutation.isPending ? '승격 중...' : '수집 거래로 승격'}
+              {collectImportedRowMutation.isPending
+                ? '승격 중...'
+                : '수집 거래로 승격'}
             </Button>
             {!currentPeriod ? (
               <Alert severity="info" variant="outlined">
@@ -666,16 +684,15 @@ export function ImportsPage() {
   );
 }
 
-function readParsedRowPreview(
-  row: ImportBatchItem['rows'][number]
-): {
+function readParsedRowPreview(row: ImportBatchItem['rows'][number]): {
   occurredOn: string;
   title: string;
   amount: number;
 } | null {
-  const parsed = isObjectRecord(row.rawPayload) && isObjectRecord(row.rawPayload.parsed)
-    ? row.rawPayload.parsed
-    : null;
+  const parsed =
+    isObjectRecord(row.rawPayload) && isObjectRecord(row.rawPayload.parsed)
+      ? row.rawPayload.parsed
+      : null;
 
   if (
     !parsed ||
