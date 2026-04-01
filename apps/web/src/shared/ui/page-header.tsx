@@ -10,6 +10,7 @@ type PageHeaderProps = {
   description: string;
   primaryActionLabel?: string;
   primaryActionHref?: string;
+  primaryActionOnClick?: () => void;
 };
 
 export function PageHeader({
@@ -17,7 +18,8 @@ export function PageHeader({
   title,
   description,
   primaryActionLabel,
-  primaryActionHref
+  primaryActionHref,
+  primaryActionOnClick
 }: PageHeaderProps) {
   return (
     <Stack
@@ -44,10 +46,16 @@ export function PageHeader({
         </Typography>
       </Box>
 
-      {primaryActionLabel && primaryActionHref ? (
-        <Button component={Link} href={primaryActionHref} variant="contained">
-          {primaryActionLabel}
-        </Button>
+      {primaryActionLabel && (primaryActionHref || primaryActionOnClick) ? (
+        primaryActionHref ? (
+          <Button component={Link} href={primaryActionHref} variant="contained">
+            {primaryActionLabel}
+          </Button>
+        ) : (
+          <Button variant="contained" onClick={primaryActionOnClick}>
+            {primaryActionLabel}
+          </Button>
+        )
       ) : null}
     </Stack>
   );

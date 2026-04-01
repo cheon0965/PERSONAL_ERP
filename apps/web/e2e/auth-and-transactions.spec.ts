@@ -303,13 +303,20 @@ test('protects the transactions route, restores the session, and saves a transac
   ).toBeVisible();
   await expect(page.getByText('Demo User')).toBeVisible();
 
+  await page.getByRole('button', { name: '수집 거래 등록' }).click();
+  await expect(
+    page.getByRole('heading', { level: 6, name: '수집 거래 등록' })
+  ).toBeVisible();
+
   await page.getByRole('textbox', { name: '적요' }).fill(transactionTitle);
   await page.getByRole('spinbutton', { name: '금액 (원)' }).fill('54321');
   await page
     .getByRole('textbox', { name: '거래일', exact: true })
     .fill(businessDate);
 
-  const saveButton = page.getByRole('button', { name: '수집 거래 등록' });
+  const saveButton = page
+    .locator('form')
+    .getByRole('button', { name: '수집 거래 등록' });
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
 
