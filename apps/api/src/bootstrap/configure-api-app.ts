@@ -39,8 +39,10 @@ export function configureApiApp(
 
   if (env.SWAGGER_ENABLED) {
     const swaggerConfig = new DocumentBuilder()
-      .setTitle('Personal ERP API')
-      .setDescription('Personal cash-flow ERP starter API')
+      .setTitle('Owner ERP API')
+      .setDescription(
+        'Monthly operations ERP starter API for sole proprietors and small businesses'
+      )
       .setVersion('0.1.0')
       .addBearerAuth()
       .build();

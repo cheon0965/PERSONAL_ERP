@@ -168,9 +168,9 @@ export function LoginPage() {
                           lineHeight: 1.06
                         }}
                       >
-                        Personal ERP는
+                        Owner ERP는
                         <br />
-                        실무형 재무 운영 화면으로
+                        사업 운영 화면으로
                         <br />
                         바로 진입합니다.
                       </Typography>
@@ -186,8 +186,9 @@ export function LoginPage() {
                       >
                         로그인 이후에는 현재 사용자를 복원하고, 보호된 API
                         호출과 대시보드 화면을 실제 워크스페이스 세션에
-                        연결합니다. 장식보다는 운영 흐름이 먼저 읽히는 ERP
-                        경험을 목표로 구성했습니다.
+                        연결합니다. 장식보다는 월 운영, 거래 검토, 마감
+                        흐름이 먼저 읽히는 1인 사업자·소상공인용 ERP 경험을
+                        목표로 구성했습니다.
                       </Typography>
                     </Stack>
 

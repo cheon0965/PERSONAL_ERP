@@ -37,6 +37,8 @@ C:\secrets\personal-erp\web.env
 - 셸이나 CI에서 직접 주입한 환경변수가 가장 우선합니다.
 - 그다음은 `PERSONAL_ERP_SECRET_DIR`가 가리키는 SECRET 파일입니다.
 - 마지막으로 API는 `apps/api/.env`, Web은 `apps/web/.env.local` fallback을 허용합니다.
+- `docker-compose.yml`의 MySQL 계정은 `npm run db:up`을 바로 실행하기 위한 폐기 가능한 로컬 개발 전용 bootstrap 기본값입니다.
+- 위 bootstrap 값은 shared/staging/production secret로 재사용하지 않습니다.
 
 예시 파일:
 
@@ -83,7 +85,7 @@ C:\secrets\personal-erp\web.env
 - `CORS_ALLOWED_ORIGINS`
   브라우저 요청을 허용할 origin allowlist입니다. 여러 값을 쓸 때는 쉼표로 구분합니다.
 - `SWAGGER_ENABLED`
-  `/api/docs` 노출 여부를 제어합니다. 운영에서는 `false`를 검토합니다.
+  `/api/docs` 노출 여부를 제어합니다. 기본값은 `false`이며, 로컬에서만 명시적으로 `true`를 넣어 여는 편이 안전합니다.
 
 로컬 개발 예시:
 
@@ -132,7 +134,7 @@ DATABASE_URL=mysql://<username>:<password>@<host>:<port>/<database>
 현재 로컬 Docker 기준 예시:
 
 ```env
-DATABASE_URL=mysql://erp_user:erp_password_local_2026@localhost:3306/personal_erp
+DATABASE_URL=mysql://erp_user:local_erp_not_for_prod@localhost:3306/personal_erp
 ```
 
 운영 서버 예시:
@@ -145,6 +147,7 @@ DATABASE_URL=mysql://erp_user:StrongPassword123!@10.0.0.25:3306/personal_erp
 
 - 비밀번호에 `@`, `:`, `/`, `?`, `#` 같은 문자가 있으면 URL 인코딩이 필요합니다.
 - 로컬 Docker 계정과 운영 DB 계정은 분리하는 편이 안전합니다.
+- 기존 로컬 Docker volume이 예전 기본값으로 이미 초기화되었다면 새 기본값을 쓰기 전에 로컬 MySQL volume을 다시 만들어야 합니다.
 
 ### 4순위. JWT 시크릿과 토큰 만료시간 확인
 
@@ -209,7 +212,7 @@ JWT_ACCESS_SECRET=replace-with-a-long-random-string
 JWT_REFRESH_SECRET=replace-with-another-long-random-string
 ACCESS_TOKEN_TTL=15m
 REFRESH_TOKEN_TTL=7d
-DATABASE_URL=mysql://erp_user:erp_password_local_2026@localhost:3306/personal_erp
+DATABASE_URL=mysql://erp_user:local_erp_not_for_prod@localhost:3306/personal_erp
 DEMO_EMAIL=demo@example.com
 ```
 
@@ -295,7 +298,7 @@ npm run start --workspace @personal-erp/web
 - 로컬 개발용 DB 계정과 운영 DB 계정을 동일하게 사용하지 않습니다.
 - `NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=true`로 운영하지 않습니다.
 - 외부 SECRET 폴더의 실제 비밀 파일을 저장소에 복사해 커밋하지 않습니다.
-- 운영 서버에서 개발용 Docker MySQL 기본 비밀번호를 재사용하지 않습니다.
+- 운영 서버에서 `docker-compose.yml`의 로컬 개발용 MySQL bootstrap 기본값을 재사용하지 않습니다.
 - 같은 JWT 시크릿을 여러 환경에서 재사용하지 않는 편이 좋습니다.
 
 ## 9. 검증 코드 위치

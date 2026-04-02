@@ -18,7 +18,7 @@
 ## Base URL
 
 - API Prefix: `/api`
-- Swagger: `/api/docs` (`SWAGGER_ENABLED=true`일 때)
+- Swagger: `/api/docs` (`SWAGGER_ENABLED=true`일 때, 기본값 `false`)
 
 ## 공통 운영 메타데이터
 
@@ -81,7 +81,10 @@
 - `POST /accounting-periods/:id/close`
 - `POST /accounting-periods/:id/reopen`
 - `GET /collected-transactions`
+- `GET /collected-transactions/:id`
 - `POST /collected-transactions`
+- `PATCH /collected-transactions/:id`
+- `DELETE /collected-transactions/:id`
 - `POST /collected-transactions/:id/confirm`
 - `GET /import-batches`
 - `GET /import-batches/:id`
@@ -94,7 +97,10 @@
 ### 계획/보고
 
 - `GET /recurring-rules`
+- `GET /recurring-rules/:id`
 - `POST /recurring-rules`
+- `PATCH /recurring-rules/:id`
+- `DELETE /recurring-rules/:id`
 - `GET /plan-items?periodId=<id>`
 - `POST /plan-items/generate`
 - `GET /financial-statements?periodId=<id>`
@@ -146,6 +152,24 @@
 - 현재 API 구현 이름은 `collected-transactions`이고, Web 화면 경로는 shorthand로 `/transactions`를 사용합니다.
 - 현재 응답은 `GET /collected-transactions` 목록 아이템 shape와 동일하게 매핑됩니다.
 
+### `GET /collected-transactions/:id`
+
+- 계약: response `CollectedTransactionDetailItem`
+- 특정 수집 거래의 상세 값을 읽습니다.
+- 현재 Web 드로어 수정 흐름은 이 상세 응답을 기준으로 초기값을 채웁니다.
+
+### `PATCH /collected-transactions/:id`
+
+- 계약: `UpdateCollectedTransactionRequest -> CollectedTransactionItem`
+- 보류 상태(`PENDING`)의 수집 거래를 수정합니다.
+- 현재 운영 기간 안의 거래일만 허용하며, 이미 전표로 확정된 거래는 수정할 수 없습니다.
+
+### `DELETE /collected-transactions/:id`
+
+- 계약: response body 없음 (`204 No Content`)
+- 보류 상태(`PENDING`)의 수집 거래를 삭제합니다.
+- 이미 전표로 이어진 거래는 삭제 대신 전표 정정/반전 흐름으로 처리해야 합니다.
+
 ### `POST /collected-transactions/:id/confirm`
 
 - 계약: request body 없음 -> `JournalEntryItem`
@@ -157,6 +181,24 @@
 - 계약: `CreateRecurringRuleRequest -> RecurringRuleItem`
 - 반복 규칙을 등록합니다.
 - 현재 엔드포인트는 도메인 기준의 `RecurringRule -> PlanItem` 생성 흐름의 입력 단계 구현입니다.
+
+### `GET /recurring-rules/:id`
+
+- 계약: response `RecurringRuleDetailItem`
+- 특정 반복 규칙의 상세 값을 읽습니다.
+- 현재 Web 드로어 수정 흐름은 이 상세 응답을 기준으로 초기값을 채웁니다.
+
+### `PATCH /recurring-rules/:id`
+
+- 계약: `UpdateRecurringRuleRequest -> RecurringRuleItem`
+- 반복 규칙의 제목, 금액, 주기, 기준 계정을 수정합니다.
+- 수정 결과는 이후 생성되는 `PlanItem` 기준에 반영됩니다.
+
+### `DELETE /recurring-rules/:id`
+
+- 계약: response body 없음 (`204 No Content`)
+- 반복 규칙을 삭제하고 이후 자동 생성 기준에서 제외합니다.
+- 현재 구현은 이미 생성된 `PlanItem` 자체를 삭제하지 않고, 규칙 참조만 분리합니다.
 
 ### `POST /plan-items/generate`
 
@@ -202,26 +244,29 @@
 
 1. `POST /accounting-periods`로 운영 기간을 엽니다.
 2. `POST /collected-transactions` 또는 `POST /import-batches/:id/rows/:rowId/collect`로 현재 기간의 수집 거래를 만듭니다.
-3. `POST /collected-transactions/:id/confirm`로 수집 거래를 `JournalEntry`로 확정합니다.
-4. 필요하면 `POST /journal-entries/:id/reverse` 또는 `POST /journal-entries/:id/correct`로 전표 조정을 수행합니다.
-5. `POST /accounting-periods/:id/close`로 운영 기간을 잠그고 closing snapshot을 만듭니다.
-6. `POST /financial-statements/generate`로 잠금 기간의 공식 재무제표 snapshot을 생성합니다.
-7. `POST /carry-forwards/generate`로 다음 기간 opening balance snapshot과 carry-forward record를 생성합니다.
-8. 필요하면 `POST /accounting-periods/:id/reopen`로 잠금 기간을 다시 엽니다.
+3. 필요하면 `GET/PATCH/DELETE /collected-transactions/:id`로 보류 상태 수집 거래를 상세 조회, 수정, 삭제합니다.
+4. `POST /collected-transactions/:id/confirm`로 수집 거래를 `JournalEntry`로 확정합니다.
+5. 필요하면 `POST /journal-entries/:id/reverse` 또는 `POST /journal-entries/:id/correct`로 전표 조정을 수행합니다.
+6. `POST /accounting-periods/:id/close`로 운영 기간을 잠그고 closing snapshot을 만듭니다.
+7. `POST /financial-statements/generate`로 잠금 기간의 공식 재무제표 snapshot을 생성합니다.
+8. `POST /carry-forwards/generate`로 다음 기간 opening balance snapshot과 carry-forward record를 생성합니다.
+9. 필요하면 `POST /accounting-periods/:id/reopen`로 잠금 기간을 다시 엽니다.
 
 ### `recurring-rules -> plan-items -> collected-transactions`
 
 1. `POST /recurring-rules`로 반복 규칙을 등록합니다.
-2. `POST /plan-items/generate`로 특정 기간의 draft `PlanItem`을 생성합니다.
-3. import collect 단계에서 현재 구현은 draft `PlanItem` 자동 매칭을 수행할 수 있습니다.
-4. `POST /collected-transactions/:id/confirm`가 실행되면 매칭된 `PlanItem`은 `CONFIRMED`로 갱신됩니다.
-5. `GET /dashboard/summary`와 `GET /forecast/monthly`는 위 운영/계획 데이터를 projection한 읽기 모델이며, 직접 쓰기 흐름에 참여하지 않습니다.
+2. 필요하면 `GET/PATCH/DELETE /recurring-rules/:id`로 기존 반복 규칙을 상세 조회, 수정, 삭제합니다.
+3. `POST /plan-items/generate`로 특정 기간의 draft `PlanItem`을 생성합니다.
+4. import collect 단계에서 현재 구현은 draft `PlanItem` 자동 매칭을 수행할 수 있습니다.
+5. `POST /collected-transactions/:id/confirm`가 실행되면 매칭된 `PlanItem`은 `CONFIRMED`로 갱신됩니다.
+6. `GET /dashboard/summary`와 `GET /forecast/monthly`는 위 운영/계획 데이터를 projection한 읽기 모델이며, 직접 쓰기 흐름에 참여하지 않습니다.
 
 ## 접근 범위와 데이터 최소 노출
 
 - 모든 보호 엔드포인트는 `user.currentWorkspace`에서 선택된 `tenantId`, `ledgerId`, `membershipId`, `membershipRole` 문맥을 기준으로 동작합니다.
 - 현재 구현은 단순 user-scoped 전단계가 아니라 workspace-scoped tenant/ledger 모델을 사용합니다.
 - 조회 엔드포인트는 인증된 workspace 범위 내 데이터만 반환합니다.
+- `insurance-policies`, `vehicles`도 개인 고정 데이터가 아니라 현재 workspace/ledger 기준 운영 보조 자산 데이터만 반환합니다.
 - 쓰기 권한은 workspace membership role로 제어합니다.
 - `OWNER`, `MANAGER`: `accounting_period.open`, `recurring_rule.create`, `plan_item.generate`, `financial_statement.generate`, `carry_forward.generate`, `journal_entry.reverse`, `journal_entry.correct`
 - `OWNER`: `accounting_period.close`, `accounting_period.reopen`

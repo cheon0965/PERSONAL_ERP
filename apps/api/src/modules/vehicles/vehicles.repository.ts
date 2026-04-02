@@ -5,9 +5,9 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 export class VehiclesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAllByUserId(userId: string) {
+  findAllInWorkspace(tenantId: string, ledgerId: string) {
     return this.prisma.vehicle.findMany({
-      where: { userId },
+      where: { tenantId, ledgerId },
       include: { fuelLogs: { orderBy: { filledOn: 'asc' } } },
       orderBy: { createdAt: 'asc' }
     });

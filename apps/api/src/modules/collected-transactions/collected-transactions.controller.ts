@@ -1,15 +1,20 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
+  HttpCode,
+  HttpStatus,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Req
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type {
+  CollectedTransactionDetailItem,
   CollectedTransactionItem,
   JournalEntryItem
 } from '@personal-erp/contracts';
@@ -31,10 +36,14 @@ import {
   logWorkspaceActionSucceeded
 } from '../../common/infrastructure/operational/workspace-action.audit';
 import { AccountingPeriodsService } from '../accounting-periods/accounting-periods.service';
+import { DeleteCollectedTransactionUseCase } from './application/use-cases/delete-collected-transaction.use-case';
+import { GetCollectedTransactionDetailUseCase } from './application/use-cases/get-collected-transaction-detail.use-case';
 import { CreateCollectedTransactionUseCase } from './application/use-cases/create-collected-transaction.use-case';
 import { ListCollectedTransactionsUseCase } from './application/use-cases/list-collected-transactions.use-case';
+import { UpdateCollectedTransactionUseCase } from './application/use-cases/update-collected-transaction.use-case';
 import { ConfirmCollectedTransactionUseCase } from './confirm-collected-transaction.use-case';
 import { CreateCollectedTransactionRequestDto } from './dto/create-collected-transaction.dto';
+import { UpdateCollectedTransactionRequestDto } from './dto/update-collected-transaction.dto';
 import { MissingOwnedCollectedTransactionReferenceError } from './domain/collected-transaction-policy';
 
 @ApiTags('collected-transactions')
@@ -43,7 +52,10 @@ import { MissingOwnedCollectedTransactionReferenceError } from './domain/collect
 export class CollectedTransactionsController {
   constructor(
     private readonly listCollectedTransactionsUseCase: ListCollectedTransactionsUseCase,
+    private readonly getCollectedTransactionDetailUseCase: GetCollectedTransactionDetailUseCase,
     private readonly createCollectedTransactionUseCase: CreateCollectedTransactionUseCase,
+    private readonly updateCollectedTransactionUseCase: UpdateCollectedTransactionUseCase,
+    private readonly deleteCollectedTransactionUseCase: DeleteCollectedTransactionUseCase,
     private readonly confirmCollectedTransactionUseCase: ConfirmCollectedTransactionUseCase,
     private readonly accountingPeriodsService: AccountingPeriodsService,
     private readonly securityEvents: SecurityEventLogger
@@ -59,6 +71,27 @@ export class CollectedTransactionsController {
       tenantId: workspace.tenantId,
       ledgerId: workspace.ledgerId
     });
+  }
+
+  @Get(':id')
+  async findOne(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') collectedTransactionId: string
+  ): Promise<CollectedTransactionDetailItem> {
+    const workspace = requireCurrentWorkspace(user);
+    const transaction = await this.getCollectedTransactionDetailUseCase.execute(
+      {
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId
+      },
+      collectedTransactionId
+    );
+
+    if (!transaction) {
+      throw new NotFoundException('Collected transaction not found');
+    }
+
+    return transaction;
   }
 
   @Post()
@@ -128,6 +161,158 @@ export class CollectedTransactionsController {
           resource: `collected_transaction_${error.reference}`
         });
         throw new NotFoundException(error.message);
+      }
+
+      throw error;
+    }
+  }
+
+  @Patch(':id')
+  async update(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') collectedTransactionId: string,
+    @Body() dto: UpdateCollectedTransactionRequestDto
+  ): Promise<CollectedTransactionItem> {
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      assertWorkspaceActionAllowed(
+        workspace.membershipRole,
+        'collected_transaction.update'
+      );
+
+      const currentPeriod =
+        await this.accountingPeriodsService.assertCollectingDateAllowed(
+          user,
+          dto.businessDate
+        );
+
+      const updated = await this.updateCollectedTransactionUseCase.execute({
+        collectedTransactionId,
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId,
+        periodId: currentPeriod.id,
+        title: dto.title,
+        type: dto.type,
+        amountWon: dto.amountWon,
+        businessDate: dto.businessDate,
+        fundingAccountId: dto.fundingAccountId,
+        categoryId: dto.categoryId,
+        memo: dto.memo
+      });
+
+      if (!updated) {
+        throw new NotFoundException('Collected transaction not found');
+      }
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'collected_transaction.update',
+        request,
+        workspace,
+        details: {
+          collectedTransactionId: updated.id,
+          periodId: currentPeriod.id
+        }
+      });
+
+      return updated;
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'collected_transaction.update',
+          request,
+          workspace,
+          details: {
+            collectedTransactionId,
+            requiredRoles: readAllowedWorkspaceRoles(
+              'collected_transaction.update'
+            ).join(',')
+          }
+        });
+      }
+
+      if (error instanceof MissingOwnedCollectedTransactionReferenceError) {
+        this.securityEvents.warn('authorization.scope_denied', {
+          requestId: readRequestId(request),
+          path: readRequestPath(request),
+          userId: user.id,
+          resource: `collected_transaction_${error.reference}`
+        });
+        throw new NotFoundException(error.message);
+      }
+
+      throw error;
+    }
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async delete(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') collectedTransactionId: string
+  ): Promise<void> {
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      assertWorkspaceActionAllowed(
+        workspace.membershipRole,
+        'collected_transaction.delete'
+      );
+
+      const existing = await this.getCollectedTransactionDetailUseCase.execute(
+        {
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId
+        },
+        collectedTransactionId
+      );
+
+      if (!existing) {
+        throw new NotFoundException('Collected transaction not found');
+      }
+
+      const currentPeriod =
+        await this.accountingPeriodsService.assertCollectingDateAllowed(
+          user,
+          existing.businessDate
+        );
+
+      const deleted = await this.deleteCollectedTransactionUseCase.execute(
+        {
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId
+        },
+        collectedTransactionId
+      );
+
+      if (!deleted) {
+        throw new NotFoundException('Collected transaction not found');
+      }
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'collected_transaction.delete',
+        request,
+        workspace,
+        details: {
+          collectedTransactionId,
+          periodId: currentPeriod.id
+        }
+      });
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'collected_transaction.delete',
+          request,
+          workspace,
+          details: {
+            collectedTransactionId,
+            requiredRoles: readAllowedWorkspaceRoles(
+              'collected_transaction.delete'
+            ).join(',')
+          }
+        });
       }
 
       throw error;

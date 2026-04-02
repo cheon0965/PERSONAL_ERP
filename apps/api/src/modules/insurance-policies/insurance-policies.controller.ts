@@ -14,6 +14,6 @@ export class InsurancePoliciesController {
 
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {
-    return this.insurancePoliciesService.findAll(user.id);
+    return this.insurancePoliciesService.findAll(user);
   }
 }

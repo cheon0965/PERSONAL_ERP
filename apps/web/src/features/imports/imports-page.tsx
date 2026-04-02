@@ -169,19 +169,19 @@ export function ImportsPage() {
   useDomainHelp({
     title: '업로드 배치 개요',
     description:
-      '업로드 배치는 원본 파일과 파싱 결과를 보존하는 수집 경계입니다. 정상 행만 명시적으로 CollectedTransaction으로 승격하며, 유일한 계획 항목이 맞으면 category 보완과 READY_TO_POST까지 자동 준비됩니다.',
-    primaryEntity: '업로드 배치 (ImportBatch)',
+      '업로드 배치는 원본 파일과 파싱 결과를 보존하는 수집 경계입니다. 정상 행만 명시적으로 수집 거래로 올리며, 맞는 계획 항목이 하나뿐이면 거래 분류 보완과 전표 준비 상태까지 자동으로 이어집니다.',
+    primaryEntity: '업로드 배치',
     relatedEntities: [
-      '원본 행 (ImportedRow)',
-      '수집 거래 (CollectedTransaction)',
-      '계획 항목 (PlanItem)',
-      '운영 기간 (AccountingPeriod)'
+      '업로드 행',
+      '수집 거래',
+      '계획 항목',
+      '운영 월'
     ],
     truthSource:
-      'ImportBatch는 파싱/후보 수집 경계이고, 실제 회계 확정은 JournalEntry에서 이루어집니다.',
+      '업로드 배치는 파싱과 후보 수집 단계이며, 실제 회계 확정은 전표에서 이루어집니다.',
     readModelNote: currentPeriodQuery.data
-      ? `${currentPeriodQuery.data.monthLabel} 운영 기간이 열려 있어 승격된 행을 바로 READY_TO_POST까지 자동 준비할 수 있습니다.`
-      : '현재 열린 운영 기간이 없으면 업로드는 가능하지만 ImportedRow 승격은 막힙니다.'
+      ? `${currentPeriodQuery.data.monthLabel} 운영 월이 열려 있어 승격된 행을 바로 전표 준비 상태까지 자동으로 정리할 수 있습니다.`
+      : '현재 열린 운영 월이 없으면 업로드는 가능하지만 업로드 행 승격은 막힙니다.'
   });
 
   const createImportBatchMutation = useMutation({
@@ -233,11 +233,11 @@ export function ImportsPage() {
         })
       ),
     onSuccess: async () => {
-      setFeedback({
-        severity: 'success',
-        message:
-          '선택한 ImportedRow를 수집 거래로 승격했습니다. 조건이 맞는 경우 category 보완과 READY_TO_POST도 함께 처리했습니다.'
-      });
+        setFeedback({
+          severity: 'success',
+          message:
+            '선택한 업로드 행을 수집 거래로 올렸습니다. 조건이 맞는 경우 거래 분류 보완과 전표 준비도 함께 처리했습니다.'
+        });
       setCollectDrawerOpen(false);
       setSelectedRowId(null);
       await Promise.all([
@@ -248,14 +248,14 @@ export function ImportsPage() {
       ]);
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : 'ImportedRow를 수집 거래로 승격하지 못했습니다.'
-      });
-    }
+        setFeedback({
+          severity: 'error',
+          message:
+            error instanceof Error
+              ? error.message
+              : '업로드 행을 수집 거래로 올리지 못했습니다.'
+        });
+      }
   });
 
   const batchColumns = React.useMemo<GridColDef<ImportBatchItem>[]>(
@@ -380,7 +380,7 @@ export function ImportsPage() {
       <PageHeader
         eyebrow="업로드/자동화"
         title="업로드 배치"
-        description="원본 파일을 ImportBatch로 남기고, 정상 파싱 행만 명시적으로 수집 거래로 승격하는 운영 화면입니다. 유일한 계획 항목이 맞으면 category 보완과 READY_TO_POST까지 자동으로 준비합니다."
+        description="원본 파일을 업로드 배치로 남기고, 정상 파싱 행만 선택적으로 수집 거래로 올리는 화면입니다. 맞는 계획 항목이 하나뿐이면 거래 분류 보완과 전표 준비까지 자동으로 이어집니다."
         primaryActionLabel="업로드 배치 등록"
         primaryActionOnClick={() => setUploadDrawerOpen(true)}
       />
@@ -405,7 +405,7 @@ export function ImportsPage() {
 
       <SectionCard
         title="현재 운영 기간"
-        description="배치 생성은 언제든 가능하지만, ImportedRow 승격과 자동 준비는 현재 열린 운영 기간 안에서만 처리됩니다."
+        description="배치 생성은 언제든 가능하지만, 업로드 행 승격과 자동 준비는 현재 열린 운영 월 안에서만 처리됩니다."
       >
         {currentPeriod ? (
           <Grid container spacing={appLayout.fieldGap}>
@@ -445,7 +445,7 @@ export function ImportsPage() {
 
       <DataTableCard
         title="업로드 배치 목록"
-        description="최근 업로드 배치를 확인하고, 선택한 배치의 ImportedRow를 바로 검토할 수 있습니다."
+        description="최근 업로드 배치를 확인하고, 선택한 배치의 업로드 행을 바로 검토할 수 있습니다."
         rows={batches}
         columns={batchColumns}
         height={360}
@@ -454,8 +454,8 @@ export function ImportsPage() {
       <DataTableCard
         title={
           selectedBatch
-            ? `${selectedBatch.fileName} ImportedRow`
-            : 'ImportedRow'
+            ? `${selectedBatch.fileName} 업로드 행`
+            : '업로드 행'
         }
         description={
           selectedBatch
@@ -471,7 +471,7 @@ export function ImportsPage() {
         open={isUploadDrawerOpen}
         onClose={() => setUploadDrawerOpen(false)}
         title="새 업로드 배치"
-        description="UTF-8 텍스트 본문을 그대로 붙여 넣어 ImportBatch와 ImportedRow를 생성합니다."
+        description="UTF-8 텍스트 본문을 그대로 붙여 넣어 업로드 배치와 업로드 행을 생성합니다."
       >
         <Stack spacing={appLayout.fieldGap}>
           <TextField
@@ -536,7 +536,7 @@ export function ImportsPage() {
         open={isCollectDrawerOpen}
         onClose={() => setCollectDrawerOpen(false)}
         title="행 승격"
-        description="선택한 ImportedRow를 CollectedTransaction으로 올립니다. 유일한 계획 항목이 맞으면 category 보완과 READY_TO_POST가 자동으로 적용됩니다."
+        description="선택한 업로드 행을 수집 거래로 올립니다. 맞는 계획 항목이 하나뿐이면 거래 분류 보완과 전표 준비 상태가 자동으로 적용됩니다."
       >
         {selectedRow ? (
           <Stack spacing={appLayout.fieldGap}>
@@ -561,7 +561,7 @@ export function ImportsPage() {
             </div>
             <div>
               <Typography variant="caption" color="text.secondary">
-                fingerprint
+                원본 식별값
               </Typography>
               <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
                 {selectedRow.sourceFingerprint ?? '-'}
@@ -617,7 +617,7 @@ export function ImportsPage() {
                   categoryId: event.target.value
                 }));
               }}
-              helperText="비워 두면 유일한 계획 항목이 맞는 경우 category를 자동 보완합니다."
+              helperText="비워 두면 맞는 계획 항목이 하나뿐인 경우 거래 분류를 자동으로 보완합니다."
             >
               <MenuItem value="">자동 보완 허용</MenuItem>
               {(categoriesQuery.data ?? []).map((category) => (

@@ -45,14 +45,14 @@ export function CarryForwardsPage() {
     title: '차기 이월 개요',
     description:
       '이 화면은 마감 결과를 다음 월 시작 기준으로 넘기는 공식 이월 화면입니다. 재무제표와 달리, 다음 운영 월의 오프닝 잔액이 실제로 어떻게 만들어졌는지까지 함께 고정합니다.',
-    primaryEntity: '이월 기록 (CarryForwardRecord)',
+    primaryEntity: '차기 이월 기록',
     relatedEntities: [
-      '마감 스냅샷 (ClosingSnapshot)',
-      '오프닝 잔액 스냅샷 (OpeningBalanceSnapshot)',
-      '운영 기간 (AccountingPeriod)'
+      '월 마감 스냅샷',
+      '다음 월 기초 잔액',
+      '운영 기간'
     ],
     truthSource:
-      '차기 이월은 잠금된 기간의 ClosingSnapshot과 BalanceSnapshotLine을 근거로 생성됩니다.',
+      '차기 이월은 잠금된 기간의 마감 결과와 잔액 라인을 근거로 생성됩니다.',
     readModelNote:
       '차기 이월은 손익 계정을 직접 넘기지 않고, 잠금 시점의 자산·부채·자본 잔액만 다음 월 오프닝 기준으로 전달합니다.'
   });
@@ -106,7 +106,7 @@ export function CarryForwardsPage() {
       <PageHeader
         eyebrow="차기 이월"
         title="이월 기준 생성"
-        description="잠금된 운영 기간의 ClosingSnapshot을 다음 월 오프닝 기준으로 연결하고, 이미 생성된 이월 결과를 함께 확인합니다."
+        description="잠금된 운영 기간의 마감 결과를 다음 월 시작 기준으로 연결하고, 이미 생성된 이월 결과를 함께 확인합니다."
       />
 
       {feedback ? (
@@ -204,7 +204,7 @@ export function CarryForwardsPage() {
       ) : view == null ? (
         <SectionCard
           title="차기 이월이 아직 없습니다"
-          description="선택한 잠금 기간에 대해 CarryForwardRecord가 아직 생성되지 않았습니다."
+          description="선택한 잠금 기간에 대해 차기 이월 기록이 아직 생성되지 않았습니다."
         >
           <Typography variant="body2" color="text.secondary">
             {selectedPeriod.monthLabel} 기간을 기준으로 차기 이월 생성을 실행해
@@ -215,18 +215,18 @@ export function CarryForwardsPage() {
         <Stack spacing={appLayout.sectionGap}>
           <SectionCard
             title="이월 개요"
-            description={`${view.sourcePeriod.monthLabel} 마감 결과가 ${view.targetPeriod.monthLabel} 오프닝 기준으로 연결되었습니다.`}
+            description={`${view.sourcePeriod.monthLabel} 마감 결과가 ${view.targetPeriod.monthLabel} 기초 잔액 기준으로 연결되었습니다.`}
           >
             <Stack spacing={appLayout.cardGap}>
               <Typography variant="body2" color="text.secondary">
                 이월 생성 시각: {formatDate(view.carryForwardRecord.createdAt)}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                대상 운영 기간 상태: {view.targetPeriod.status}
+                대상 운영 기간 상태: {readPeriodStatusLabel(view.targetPeriod.status)}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                오프닝 스냅샷 기준:{' '}
-                {view.targetOpeningBalanceSnapshot.sourceKind}
+                기초 잔액 기준:{' '}
+                {readOpeningSourceLabel(view.targetOpeningBalanceSnapshot.sourceKind)}
               </Typography>
             </Stack>
           </SectionCard>
@@ -253,7 +253,7 @@ export function CarryForwardsPage() {
 
           <SectionCard
             title="다음 월 오프닝 라인"
-            description="현재 1차 구현에서는 CarryForward 대상 계정의 잔액을 그대로 OpeningBalanceSnapshot 라인으로 생성합니다."
+            description="현재 구현에서는 이월 대상 계정의 잔액을 그대로 다음 월 기초 잔액 라인으로 생성합니다."
           >
             <Stack spacing={1}>
               {view.targetOpeningBalanceSnapshot.lines.length > 0 ? (
@@ -281,4 +281,28 @@ export function CarryForwardsPage() {
       )}
     </Stack>
   );
+}
+
+function readPeriodStatusLabel(status: string) {
+  switch (status) {
+    case 'OPEN':
+      return '진행 중';
+    case 'IN_REVIEW':
+      return '검토 중';
+    case 'LOCKED':
+      return '잠금';
+    default:
+      return status;
+  }
+}
+
+function readOpeningSourceLabel(sourceKind: string) {
+  switch (sourceKind) {
+    case 'INITIAL_SETUP':
+      return '초기 설정';
+    case 'CARRY_FORWARD':
+      return '차기 이월';
+    default:
+      return sourceKind;
+  }
 }

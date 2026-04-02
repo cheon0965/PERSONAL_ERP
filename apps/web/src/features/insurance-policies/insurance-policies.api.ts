@@ -5,7 +5,7 @@ export const mockInsurancePolicies: InsurancePolicyItem[] = [
   {
     id: 'ins-1',
     provider: '삼성화재',
-    productName: '자동차 보험',
+    productName: '업무용 차량 보험',
     monthlyPremiumWon: 98000,
     paymentDay: 25,
     cycle: 'MONTHLY',
@@ -14,8 +14,8 @@ export const mockInsurancePolicies: InsurancePolicyItem[] = [
   },
   {
     id: 'ins-2',
-    provider: '메리츠',
-    productName: '치아 보험',
+    provider: 'DB손해보험',
+    productName: '영업배상 책임보험',
     monthlyPremiumWon: 43000,
     paymentDay: 25,
     cycle: 'MONTHLY',

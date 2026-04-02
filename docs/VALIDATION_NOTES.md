@@ -36,6 +36,8 @@
 
 - 로컬 기본 검증은 `check:quick`와 `test`가 맡고, CI는 여기에 보안 게이트를 추가해 회귀를 막습니다.
 - `npm run audit:runtime`은 네트워크가 필요한 명령이라 로컬보다 CI 결과를 기본 증적으로 봅니다.
+- `semgrep-ce`는 build 산출물, test 산출물, migration, 운영 보조 script만 제외하고 애플리케이션 코드는 스캔 대상으로 둡니다.
+- 따라서 Web의 공통 인증 fetch 경계인 `apps/web/src/shared/api/fetch-json.ts`도 Semgrep 제외 대상이 아닙니다.
 
 ## 현재 테스트 범위
 
@@ -45,8 +47,8 @@
 - 인증 세션 생성/회전/로그아웃
 - 보호 라우트의 `401`
 - `GET /auth/me`
-- `GET /funding-accounts`, `GET /categories`, `GET /account-subjects`, `GET /ledger-transaction-types`
-  현재 workspace/ledger 기준 활성 참조 데이터만 반환하는지 검증
+- `GET /funding-accounts`, `GET /categories`, `GET /account-subjects`, `GET /ledger-transaction-types`, `GET /insurance-policies`, `GET /vehicles`
+  현재 workspace/ledger 기준 활성 참조 데이터와 운영 보조 자산 데이터만 반환하는지 검증
 - `GET /accounting-periods`, `GET /accounting-periods/current`, `POST /accounting-periods`, `POST /accounting-periods/:id/close`, `POST /accounting-periods/:id/reopen`
   기간 open/close/reopen, snapshot 생성/정리, role 기반 접근통제를 검증
 - `GET /collected-transactions`, `POST /collected-transactions`, `POST /collected-transactions/:id/confirm`

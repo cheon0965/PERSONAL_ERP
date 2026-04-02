@@ -101,10 +101,10 @@ export function VehiclesPage() {
       '차량 화면은 운영 판단과 분류를 돕는 보조 영역입니다. 공식 회계 확정은 수집 거래와 전표에서 이뤄집니다.',
     primaryEntity: '차량 운영 보조 데이터',
     relatedEntities: [
-      '수집 거래 (CollectedTransaction)',
-      '카테고리 (Category)',
-      '자금수단 (FundingAccount)',
-      '전표 (JournalEntry)'
+      '수집 거래',
+      '거래 분류',
+      '입출금 계정',
+      '전표'
     ],
     truthSource:
       '차량과 주유 기록 자체는 회계 저장이 아니며 실제 확정은 수집 거래 분류와 전표 반영에서 이뤄집니다.',
@@ -116,7 +116,7 @@ export function VehiclesPage() {
       <PageHeader
         eyebrow="보조 운영 영역"
         title="차량 운영"
-        description="차량과 주유 기록은 코어 회계 엔티티가 아니라 차량비를 더 정확하게 분류하고 검토하기 위한 운영 보조 데이터입니다."
+        description="차량과 주유 기록은 핵심 회계 데이터가 아니라 차량비를 더 정확하게 분류하고 검토하기 위한 운영 보조 데이터입니다."
       />
 
       {error ? (

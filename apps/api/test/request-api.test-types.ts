@@ -243,6 +243,8 @@ export type RequestTestState = {
   transactions: Array<{
     id: string;
     userId: string;
+    tenantId: string;
+    ledgerId: string;
     title: string;
     type: TransactionType;
     amountWon: number;
@@ -325,13 +327,38 @@ export type RequestTestState = {
   insurancePolicies: Array<{
     id: string;
     userId: string;
+    tenantId: string;
+    ledgerId: string;
+    provider: string;
+    productName: string;
     monthlyPremiumWon: number;
+    paymentDay: number;
+    cycle: 'MONTHLY' | 'YEARLY';
+    renewalDate: Date | null;
+    maturityDate: Date | null;
     isActive: boolean;
   }>;
   vehicles: Array<{
     id: string;
     userId: string;
+    tenantId: string;
+    ledgerId: string;
+    name: string;
+    manufacturer: string | null;
+    fuelType: 'GASOLINE' | 'DIESEL' | 'LPG' | 'HYBRID' | 'ELECTRIC';
+    initialOdometerKm: number;
     monthlyExpenseWon: number;
+    estimatedFuelEfficiencyKmPerLiter: number | null;
+    createdAt: Date;
+    fuelLogs: Array<{
+      id: string;
+      filledOn: Date;
+      odometerKm: number;
+      liters: number;
+      amountWon: number;
+      unitPriceWon: number;
+      isFullTank: boolean;
+    }>;
   }>;
 };
 

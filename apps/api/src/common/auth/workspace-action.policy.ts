@@ -9,8 +9,12 @@ export type WorkspaceAction =
   | 'accounting_period.close'
   | 'accounting_period.reopen'
   | 'recurring_rule.create'
+  | 'recurring_rule.update'
+  | 'recurring_rule.delete'
   | 'plan_item.generate'
   | 'collected_transaction.create'
+  | 'collected_transaction.update'
+  | 'collected_transaction.delete'
   | 'collected_transaction.confirm'
   | 'financial_statement.generate'
   | 'carry_forward.generate'
@@ -26,8 +30,12 @@ const workspaceActionAllowedRoles: Record<
   'accounting_period.close': ['OWNER'],
   'accounting_period.reopen': ['OWNER'],
   'recurring_rule.create': ['OWNER', 'MANAGER'],
+  'recurring_rule.update': ['OWNER', 'MANAGER'],
+  'recurring_rule.delete': ['OWNER', 'MANAGER'],
   'plan_item.generate': ['OWNER', 'MANAGER'],
   'collected_transaction.create': ['OWNER', 'MANAGER', 'EDITOR'],
+  'collected_transaction.update': ['OWNER', 'MANAGER', 'EDITOR'],
+  'collected_transaction.delete': ['OWNER', 'MANAGER', 'EDITOR'],
   'collected_transaction.confirm': ['OWNER', 'MANAGER', 'EDITOR'],
   'financial_statement.generate': ['OWNER', 'MANAGER'],
   'carry_forward.generate': ['OWNER', 'MANAGER'],
@@ -43,9 +51,17 @@ const workspaceActionDeniedMessages: Record<WorkspaceAction, string> = {
   'accounting_period.reopen': 'Only owners can reopen accounting periods.',
   'recurring_rule.create':
     'Only owners and managers can create recurring rules.',
+  'recurring_rule.update':
+    'Only owners and managers can update recurring rules.',
+  'recurring_rule.delete':
+    'Only owners and managers can delete recurring rules.',
   'plan_item.generate': 'Only owners and managers can generate plan items.',
   'collected_transaction.create':
     'Only owners, managers, and editors can create collected transactions.',
+  'collected_transaction.update':
+    'Only owners, managers, and editors can update collected transactions.',
+  'collected_transaction.delete':
+    'Only owners, managers, and editors can delete collected transactions.',
   'collected_transaction.confirm':
     'Only owners, managers, and editors can confirm collected transactions.',
   'financial_statement.generate':

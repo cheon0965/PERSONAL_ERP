@@ -137,17 +137,17 @@ export function PlanItemsPage() {
   useDomainHelp({
     title: '계획 항목 개요',
     description:
-      'RecurringRule을 기준으로 현재 운영 기간 안의 PlanItem을 생성합니다. PlanItem은 아직 확정 전 단계의 계획 데이터이며, 이후 수집 거래와 전표 흐름에서 실제화됩니다.',
-    primaryEntity: '계획 항목 (PlanItem)',
+      '반복 규칙을 기준으로 현재 운영 월 안의 계획 항목을 생성합니다. 계획 항목은 아직 확정 전 단계의 운영 계획이며, 이후 수집 거래와 전표 흐름에서 실제화됩니다.',
+    primaryEntity: '계획 항목',
     relatedEntities: [
-      '반복 규칙 (RecurringRule)',
-      '운영 기간 (AccountingPeriod)',
-      '거래 유형 (TransactionType)',
-      '수집 거래 (CollectedTransaction)',
-      '전표 (JournalEntry)'
+      '반복 규칙',
+      '운영 월',
+      '거래 유형',
+      '수집 거래',
+      '전표'
     ],
     truthSource:
-      'PlanItem은 RecurringRule에서 파생된 계획 기준이며, 회계 확정은 이후 CollectedTransaction과 JournalEntry에서 이뤄집니다.',
+      '계획 항목은 반복 규칙에서 파생된 계획 기준이며, 회계 확정은 이후 수집 거래와 전표에서 이뤄집니다.',
     readModelNote:
       '현재 화면은 특정 기간 안의 계획 항목을 생성하고 상태를 검토하는 운영 화면입니다.'
   });
@@ -157,7 +157,7 @@ export function PlanItemsPage() {
       <PageHeader
         eyebrow="계획 계층"
         title="계획 항목"
-        description="반복 규칙을 현재 운영 기간의 PlanItem으로 생성하고, 계획 상태와 예상 금액을 확인합니다. 아직 회계 확정은 아니며 이후 수집 거래와 전표로 이어집니다."
+        description="반복 규칙을 현재 운영 월의 계획 항목으로 생성하고, 계획 상태와 예상 금액을 확인합니다. 아직 회계 확정은 아니며 이후 수집 거래와 전표로 이어집니다."
       />
 
       {feedback ? (
@@ -242,7 +242,7 @@ export function PlanItemsPage() {
 
           {!canGenerate ? (
             <Alert severity="info" variant="outlined">
-              계획 항목 생성은 Owner, Manager, Editor만 실행할 수 있습니다.
+              계획 항목 생성은 소유자, 관리자, 편집자만 실행할 수 있습니다.
             </Alert>
           ) : null}
         </Stack>
@@ -262,7 +262,7 @@ export function PlanItemsPage() {
           <Grid size={{ xs: 12, md: 4 }}>
             <SectionCard
               title="계획 요약"
-              description="현재 선택한 기간의 PlanItem 상태 집계입니다."
+              description="현재 선택한 월의 계획 항목 상태 집계입니다."
             >
               <Stack spacing={1.25}>
                 <SummaryRow
@@ -274,11 +274,11 @@ export function PlanItemsPage() {
                   value={formatWon(view?.summary.totalPlannedAmount ?? 0)}
                 />
                 <SummaryRow
-                  label="Draft / Matched / Confirmed"
+                  label="초안 / 연결됨 / 확정됨"
                   value={`${view?.summary.draftCount ?? 0} / ${view?.summary.matchedCount ?? 0} / ${view?.summary.confirmedCount ?? 0}`}
                 />
                 <SummaryRow
-                  label="Skipped / Expired"
+                  label="제외 / 만료"
                   value={`${view?.summary.skippedCount ?? 0} / ${view?.summary.expiredCount ?? 0}`}
                 />
               </Stack>
@@ -287,7 +287,7 @@ export function PlanItemsPage() {
           <Grid size={{ xs: 12, md: 8 }}>
             <DataTableCard
               title="기간 계획 항목"
-              description="RecurringRule에서 파생된 계획 항목 목록입니다. 아직 수집 거래나 전표로 확정되기 전 단계입니다."
+              description="반복 규칙에서 파생된 계획 항목 목록입니다. 아직 수집 거래나 전표로 확정되기 전 단계입니다."
               rows={
                 view?.items ?? buildPlanItemsFallbackView(selectedPeriod).items
               }

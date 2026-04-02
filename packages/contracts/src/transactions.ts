@@ -24,6 +24,21 @@ export type CollectedTransactionItem = {
   postedJournalEntryNumber: string | null;
 };
 
+export type CollectedTransactionDetailItem = {
+  id: string;
+  businessDate: string;
+  title: string;
+  type: CollectedTransactionType;
+  amountWon: number;
+  fundingAccountId: string;
+  categoryId: string | null;
+  memo: string | null;
+  sourceKind: CollectedTransactionSourceKind;
+  postingStatus: CollectedTransactionPostingStatus;
+  postedJournalEntryId: string | null;
+  postedJournalEntryNumber: string | null;
+};
+
 export type CreateCollectedTransactionRequest = {
   title: string;
   type: CollectedTransactionType;
@@ -33,6 +48,9 @@ export type CreateCollectedTransactionRequest = {
   categoryId?: string;
   memo?: string;
 };
+
+export type UpdateCollectedTransactionRequest =
+  CreateCollectedTransactionRequest;
 
 export type JournalEntryStatus = 'POSTED' | 'REVERSED' | 'SUPERSEDED';
 

@@ -104,29 +104,29 @@ export function AccountingPeriodsPage() {
     title: '운영 기간 관리 개요',
     description:
       '운영 기간은 모든 수집 거래, 전표 확정, 마감, 재무제표의 기준 월을 고정합니다. 월 운영 시작부터 잠금, 재오픈까지의 상태 흐름을 이 화면에서 관리합니다.',
-    primaryEntity: '운영 기간 (AccountingPeriod)',
+    primaryEntity: '운영 기간',
     relatedEntities: [
-      '기간 상태 이력 (PeriodStatusHistory)',
-      '오프닝 잔액 스냅샷 (OpeningBalanceSnapshot)',
-      '장부 (Ledger)',
-      '테넌트 멤버십 (TenantMembership)'
+      '기간 상태 이력',
+      '기초 잔액 기준',
+      '사업 장부',
+      '사용자 권한'
     ],
     truthSource:
-      '운영 월의 공식 시작 기준은 AccountingPeriod이며, 첫 월 시작은 OpeningBalanceSnapshot 생성 여부까지 함께 남깁니다.',
+      '운영 월의 공식 시작 기준은 운영 기간이며, 첫 월 시작은 기초 잔액 생성 여부까지 함께 남깁니다.',
     supplementarySections: [
       {
         title: '현재 작업 문맥',
         description:
-          '월 운영 시작과 마감은 현재 로그인한 사용자의 TenantMembership / Ledger 문맥 안에서만 실행됩니다.',
+          '월 운영 시작과 마감은 현재 로그인한 사용자의 사업 장부 문맥 안에서만 실행됩니다.',
         facts: [
           {
-            label: 'Tenant',
+            label: '사업장',
             value: currentWorkspace
               ? `${currentWorkspace.tenant.name} (${currentWorkspace.tenant.slug})`
               : '-'
           },
           {
-            label: 'Ledger',
+            label: '장부',
             value: currentWorkspace?.ledger?.name ?? '-'
           },
           {
@@ -144,7 +144,7 @@ export function AccountingPeriodsPage() {
       {
         title: '최근 마감 스냅샷',
         description: latestClosingResult
-          ? '가장 최근에 실행한 월 마감의 ClosingSnapshot 요약입니다.'
+          ? '가장 최근에 실행한 월 마감 요약입니다.'
           : '최근 마감 결과는 본문 대신 도메인 가이드에서 확인할 수 있습니다.',
         facts: latestClosingSnapshotFacts,
         items: latestClosingSnapshotItems
@@ -307,7 +307,7 @@ export function AccountingPeriodsPage() {
       <PageHeader
         eyebrow="월 운영 시작"
         title="운영 기간 관리"
-        description="현재 장부의 운영 기간을 열고 상태를 관리합니다. 최근 마감 상세는 도메인 가이드에서 확인할 수 있습니다."
+        description="현재 사업 장부의 운영 기간을 열고 상태를 관리합니다. 최근 마감 상세는 도메인 가이드에서 확인할 수 있습니다."
         primaryActionLabel="월 운영 시작"
         primaryActionHref="#open-accounting-period-form"
       />
@@ -320,15 +320,15 @@ export function AccountingPeriodsPage() {
 
       {!hasWorkspace ? (
         <Alert severity="warning" variant="outlined">
-          현재 작업 Tenant 및 Ledger 문맥이 아직 준비되지 않았습니다. 작업 문맥
+          현재 작업 사업장과 장부 문맥이 아직 준비되지 않았습니다. 작업 문맥
           화면에서 연결 상태를 먼저 확인해 주세요.
         </Alert>
       ) : null}
 
       {!canOpenPeriod && hasWorkspace ? (
         <Alert severity="info" variant="outlined">
-          월 운영 시작은 Owner 또는 Manager만 실행할 수 있습니다. 현재 역할은{' '}
-          {membershipRole} 입니다.
+          월 운영 시작은 소유자 또는 관리자만 실행할 수 있습니다. 현재 역할은{' '}
+          {readMembershipRoleLabel(membershipRole)} 입니다.
         </Alert>
       ) : null}
 
@@ -354,7 +354,7 @@ export function AccountingPeriodsPage() {
         <Grid size={{ xs: 12, xl: 7 }}>
           <DataTableCard
             title="운영 기간 목록"
-            description="현재 Ledger에 생성된 운영 기간과 오프닝 준비 여부를 최신 월 순서로 확인합니다."
+            description="현재 사업 장부에 생성된 운영 기간과 기초 잔액 준비 여부를 최신 월 순서로 확인합니다."
             rows={periods}
             columns={periodColumns}
             height={360}
@@ -401,4 +401,19 @@ async function invalidateAccountingPeriodQueries(queryClient: QueryClient) {
   await queryClient.invalidateQueries({
     queryKey: currentAccountingPeriodQueryKey
   });
+}
+
+function readMembershipRoleLabel(role: string | null) {
+  switch (role) {
+    case 'OWNER':
+      return '소유자';
+    case 'MANAGER':
+      return '관리자';
+    case 'EDITOR':
+      return '편집자';
+    case 'VIEWER':
+      return '조회자';
+    default:
+      return role ?? '-';
+  }
 }

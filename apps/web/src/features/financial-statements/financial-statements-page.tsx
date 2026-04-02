@@ -50,15 +50,15 @@ export function FinancialStatementsPage() {
     title: '재무제표 스냅샷 개요',
     description:
       '이 화면은 잠금된 기간의 공식 보고 스냅샷과 직전 잠금 기간 비교, 이월 기준선을 함께 보여줍니다.',
-    primaryEntity: '재무제표 스냅샷 (FinancialStatementSnapshot)',
+    primaryEntity: '공식 재무제표',
     relatedEntities: [
-      '운영 기간 (AccountingPeriod)',
-      '마감 스냅샷 (ClosingSnapshot)',
-      '이월 기록 (CarryForwardRecord)',
-      '기초 잔액 스냅샷 (OpeningBalanceSnapshot)'
+      '운영 월',
+      '월 마감 스냅샷',
+      '차기 이월 기록',
+      '기초 잔액 기준'
     ],
     truthSource:
-      '공식 재무제표는 잠금된 기간의 ClosingSnapshot과 JournalEntry를 근거로 생성되며, opening basis는 carry-forward 또는 초기 설정을 따릅니다.',
+      '공식 재무제표는 잠금된 기간의 마감 결과와 전표를 근거로 생성되며, 기초 잔액은 차기 이월 또는 초기 설정을 따릅니다.',
     readModelNote:
       '대시보드와 전망은 운영 판단용이지만, 이 화면은 공식 저장된 결과와 전기 대비 비교를 위한 보고 계층입니다.'
   });
@@ -110,8 +110,8 @@ export function FinancialStatementsPage() {
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
         eyebrow="공식 보고"
-        title="재무제표 스냅샷"
-        description="잠금된 운영 기간의 공식 FinancialStatementSnapshot과 전기 대비 비교, 이월 기준선을 함께 확인합니다."
+        title="재무제표"
+        description="잠금된 운영 월의 공식 재무제표와 전기 대비 비교, 기초 잔액 기준선을 함께 확인합니다."
       />
 
       {feedback ? (
@@ -208,7 +208,7 @@ export function FinancialStatementsPage() {
       ) : view == null || view.snapshots.length === 0 ? (
         <SectionCard
           title="공식 스냅샷이 아직 없습니다"
-          description="잠금된 기간은 있지만, 아직 FinancialStatementSnapshot이 생성되지 않았습니다."
+          description="잠금된 기간은 있지만, 아직 공식 재무제표가 생성되지 않았습니다."
         >
           <Typography variant="body2" color="text.secondary">
             {selectedPeriod.monthLabel} 기간에 대해 공식 재무제표 생성을 실행해
@@ -266,18 +266,18 @@ export function FinancialStatementsPage() {
           >
             <Stack spacing={1}>
               <Typography variant="body2" color="text.secondary">
-                Opening source:{' '}
+                기초 잔액 출처:{' '}
                 {readOpeningSourceLabel(view.basis.openingBalanceSourceKind)}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                CarryForwardRecord: {view.basis.carryForwardRecordId ?? '없음'}
+                차기 이월 기록: {view.basis.carryForwardRecordId ?? '없음'}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Source closing snapshot:{' '}
+                기준 마감 스냅샷:{' '}
                 {view.basis.sourceClosingSnapshotId ?? '없음'}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Source period: {view.basis.sourceMonthLabel ?? '없음'}
+                기준 월: {view.basis.sourceMonthLabel ?? '없음'}
               </Typography>
             </Stack>
           </SectionCard>
@@ -391,7 +391,7 @@ export function FinancialStatementsPage() {
 function readStatementKindLabel(statementKind: FinancialStatementKind) {
   switch (statementKind) {
     case 'STATEMENT_OF_FINANCIAL_POSITION':
-      return '개인 재산상태표';
+      return '사업 재무상태표';
     case 'MONTHLY_PROFIT_AND_LOSS':
       return '월간 손익보고서';
     case 'CASH_FLOW_SUMMARY':

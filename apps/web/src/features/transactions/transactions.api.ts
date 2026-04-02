@@ -1,23 +1,29 @@
 import type {
+  CollectedTransactionDetailItem,
   CollectedTransactionItem,
   CreateCollectedTransactionRequest,
-  JournalEntryItem
+  JournalEntryItem,
+  UpdateCollectedTransactionRequest
 } from '@personal-erp/contracts';
-import { fetchJson, postJson } from '@/shared/api/fetch-json';
+import { deleteJson, fetchJson, patchJson, postJson } from '@/shared/api/fetch-json';
 
 export const collectedTransactionsQueryKey = [
   'collected-transactions'
 ] as const;
 
+export const collectedTransactionDetailQueryKey = (
+  collectedTransactionId: string
+) => ['collected-transactions', collectedTransactionId] as const;
+
 export const mockCollectedTransactions: CollectedTransactionItem[] = [
   {
     id: 'txn-1',
     businessDate: '2026-03-01',
-    title: '3월 급여',
+    title: '3월 스마트스토어 매출',
     type: 'INCOME',
     amountWon: 3200000,
-    fundingAccountName: '주거래 통장',
-    categoryName: '급여',
+    fundingAccountName: '사업 운영 통장',
+    categoryName: '매출 입금',
     sourceKind: 'MANUAL',
     postingStatus: 'POSTED',
     postedJournalEntryId: 'je-demo-1',
@@ -26,24 +32,24 @@ export const mockCollectedTransactions: CollectedTransactionItem[] = [
   {
     id: 'txn-2',
     businessDate: '2026-03-03',
-    title: '주유',
+    title: '배송 차량 주유',
     type: 'EXPENSE',
     amountWon: 84000,
-    fundingAccountName: '생활비 통장',
-    categoryName: '주유',
+    fundingAccountName: '비용 예비 통장',
+    categoryName: '배송 차량 유지비',
     sourceKind: 'MANUAL',
-    postingStatus: 'CORRECTED',
-    postedJournalEntryId: 'je-demo-2',
-    postedJournalEntryNumber: '202603-0002'
+    postingStatus: 'PENDING',
+    postedJournalEntryId: null,
+    postedJournalEntryNumber: null
   },
   {
     id: 'txn-3',
     businessDate: '2026-03-10',
-    title: '휴대폰 요금 이체',
+    title: 'POS/인터넷 요금 자동이체',
     type: 'EXPENSE',
     amountWon: 75000,
-    fundingAccountName: '주거래 통장',
-    categoryName: '통신비',
+    fundingAccountName: '사업 운영 통장',
+    categoryName: '통신·POS 비용',
     sourceKind: 'RECURRING',
     postingStatus: 'POSTED',
     postedJournalEntryId: 'je-demo-3',
@@ -52,22 +58,91 @@ export const mockCollectedTransactions: CollectedTransactionItem[] = [
   {
     id: 'txn-4',
     businessDate: '2026-03-12',
-    title: '장보기',
+    title: '포장재 구매',
     type: 'EXPENSE',
     amountWon: 126000,
-    fundingAccountName: '생활비 통장',
-    categoryName: '식비',
+    fundingAccountName: '비용 예비 통장',
+    categoryName: '원재료비',
     sourceKind: 'MANUAL',
-    postingStatus: 'POSTED',
-    postedJournalEntryId: 'je-demo-4',
-    postedJournalEntryNumber: '202603-0004'
+    postingStatus: 'PENDING',
+    postedJournalEntryId: null,
+    postedJournalEntryNumber: null
   }
 ];
+
+const mockCollectedTransactionDetails: Record<
+  string,
+  CollectedTransactionDetailItem
+> = {
+  'txn-1': {
+    id: 'txn-1',
+    businessDate: '2026-03-01',
+    title: '3월 스마트스토어 매출',
+    type: 'INCOME',
+    amountWon: 3200000,
+    fundingAccountId: 'acc-1',
+    categoryId: 'cat-1',
+    memo: null,
+    sourceKind: 'MANUAL',
+    postingStatus: 'POSTED',
+    postedJournalEntryId: 'je-demo-1',
+    postedJournalEntryNumber: '202603-0001'
+  },
+  'txn-2': {
+    id: 'txn-2',
+    businessDate: '2026-03-03',
+    title: '배송 차량 주유',
+    type: 'EXPENSE',
+    amountWon: 84000,
+    fundingAccountId: 'acc-2',
+    categoryId: 'cat-4',
+    memo: '업무용 차량 만충',
+    sourceKind: 'MANUAL',
+    postingStatus: 'PENDING',
+    postedJournalEntryId: null,
+    postedJournalEntryNumber: null
+  },
+  'txn-3': {
+    id: 'txn-3',
+    businessDate: '2026-03-10',
+    title: 'POS/인터넷 요금 자동이체',
+    type: 'EXPENSE',
+    amountWon: 75000,
+    fundingAccountId: 'acc-1',
+    categoryId: 'cat-5',
+    memo: '정기 운영비 자동이체',
+    sourceKind: 'RECURRING',
+    postingStatus: 'POSTED',
+    postedJournalEntryId: 'je-demo-3',
+    postedJournalEntryNumber: '202603-0003'
+  },
+  'txn-4': {
+    id: 'txn-4',
+    businessDate: '2026-03-12',
+    title: '포장재 구매',
+    type: 'EXPENSE',
+    amountWon: 126000,
+    fundingAccountId: 'acc-2',
+    categoryId: 'cat-2',
+    memo: '포장 박스 및 소모품 보충',
+    sourceKind: 'MANUAL',
+    postingStatus: 'PENDING',
+    postedJournalEntryId: null,
+    postedJournalEntryNumber: null
+  }
+};
 
 export function getCollectedTransactions() {
   return fetchJson<CollectedTransactionItem[]>(
     '/collected-transactions',
     mockCollectedTransactions
+  );
+}
+
+export function getCollectedTransactionDetail(collectedTransactionId: string) {
+  return fetchJson<CollectedTransactionDetailItem>(
+    `/collected-transactions/${collectedTransactionId}`,
+    resolveCollectedTransactionDetailFallback(collectedTransactionId)
   );
 }
 
@@ -79,6 +154,25 @@ export function createCollectedTransaction(
     '/collected-transactions',
     input,
     fallback
+  );
+}
+
+export function updateCollectedTransaction(
+  collectedTransactionId: string,
+  input: UpdateCollectedTransactionRequest,
+  fallback: CollectedTransactionItem
+) {
+  return patchJson<CollectedTransactionItem, UpdateCollectedTransactionRequest>(
+    `/collected-transactions/${collectedTransactionId}`,
+    input,
+    fallback
+  );
+}
+
+export function deleteCollectedTransaction(collectedTransactionId: string) {
+  return deleteJson<null>(
+    `/collected-transactions/${collectedTransactionId}`,
+    null
   );
 }
 
@@ -98,20 +192,25 @@ export function buildCollectedTransactionFallbackItem(
   context: {
     fundingAccountName: string;
     categoryName?: string;
+    id?: string;
+    sourceKind?: CollectedTransactionItem['sourceKind'];
+    postingStatus?: CollectedTransactionItem['postingStatus'];
+    postedJournalEntryId?: string | null;
+    postedJournalEntryNumber?: string | null;
   }
 ): CollectedTransactionItem {
   return {
-    id: `txn-demo-${Date.now()}`,
+    id: context.id ?? `txn-demo-${Date.now()}`,
     businessDate: input.businessDate,
     title: input.title,
     type: input.type,
     amountWon: input.amountWon,
     fundingAccountName: context.fundingAccountName,
     categoryName: context.categoryName ?? '-',
-    sourceKind: 'MANUAL',
-    postingStatus: 'PENDING',
-    postedJournalEntryId: null,
-    postedJournalEntryNumber: null
+    sourceKind: context.sourceKind ?? 'MANUAL',
+    postingStatus: context.postingStatus ?? 'PENDING',
+    postedJournalEntryId: context.postedJournalEntryId ?? null,
+    postedJournalEntryNumber: context.postedJournalEntryNumber ?? null
   };
 }
 
@@ -123,4 +222,39 @@ export function mergeCollectedTransactionItem(
     created,
     ...(current ?? []).filter((item) => item.id !== created.id)
   ].sort((left, right) => right.businessDate.localeCompare(left.businessDate));
+}
+
+export function removeCollectedTransactionItem(
+  current: CollectedTransactionItem[] | undefined,
+  collectedTransactionId: string
+): CollectedTransactionItem[] {
+  return (current ?? []).filter((item) => item.id !== collectedTransactionId);
+}
+
+function resolveCollectedTransactionDetailFallback(
+  collectedTransactionId: string
+): CollectedTransactionDetailItem {
+  const mockDetail = mockCollectedTransactionDetails[collectedTransactionId];
+  if (mockDetail) {
+    return mockDetail;
+  }
+
+  const base = mockCollectedTransactions.find(
+    (item) => item.id === collectedTransactionId
+  );
+
+  return {
+    id: collectedTransactionId,
+    businessDate: base?.businessDate ?? '2026-03-01',
+    title: base?.title ?? '수집 거래',
+    type: base?.type ?? 'EXPENSE',
+    amountWon: base?.amountWon ?? 0,
+    fundingAccountId: 'acc-1',
+    categoryId: null,
+    memo: null,
+    sourceKind: base?.sourceKind ?? 'MANUAL',
+    postingStatus: base?.postingStatus ?? 'PENDING',
+    postedJournalEntryId: base?.postedJournalEntryId ?? null,
+    postedJournalEntryNumber: base?.postedJournalEntryNumber ?? null
+  };
 }

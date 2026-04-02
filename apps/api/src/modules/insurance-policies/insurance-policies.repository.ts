@@ -5,9 +5,9 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 export class InsurancePoliciesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findActiveByUserId(userId: string) {
+  findActiveInWorkspace(tenantId: string, ledgerId: string) {
     return this.prisma.insurancePolicy.findMany({
-      where: { userId, isActive: true },
+      where: { tenantId, ledgerId, isActive: true },
       orderBy: [{ paymentDay: 'asc' }, { provider: 'asc' }]
     });
   }

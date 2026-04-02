@@ -1,9 +1,14 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
+  HttpCode,
+  HttpStatus,
   NotFoundException,
+  Param,
+  Patch,
   Post,
   Req
 } from '@nestjs/common';
@@ -25,10 +30,14 @@ import {
   logWorkspaceActionDenied,
   logWorkspaceActionSucceeded
 } from '../../common/infrastructure/operational/workspace-action.audit';
+import { DeleteRecurringRuleUseCase } from './application/use-cases/delete-recurring-rule.use-case';
+import { GetRecurringRuleDetailUseCase } from './application/use-cases/get-recurring-rule-detail.use-case';
 import { CreateRecurringRuleUseCase } from './application/use-cases/create-recurring-rule.use-case';
 import { ListRecurringRulesUseCase } from './application/use-cases/list-recurring-rules.use-case';
+import { UpdateRecurringRuleUseCase } from './application/use-cases/update-recurring-rule.use-case';
 import { MissingOwnedRecurringRuleReferenceError } from './domain/recurring-rule-policy';
 import { CreateRecurringRuleDto } from './dto/create-recurring-rule.dto';
+import { UpdateRecurringRuleDto } from './dto/update-recurring-rule.dto';
 
 @ApiTags('recurring-rules')
 @ApiBearerAuth()
@@ -36,7 +45,10 @@ import { CreateRecurringRuleDto } from './dto/create-recurring-rule.dto';
 export class RecurringRulesController {
   constructor(
     private readonly listRecurringRulesUseCase: ListRecurringRulesUseCase,
+    private readonly getRecurringRuleDetailUseCase: GetRecurringRuleDetailUseCase,
     private readonly createRecurringRuleUseCase: CreateRecurringRuleUseCase,
+    private readonly updateRecurringRuleUseCase: UpdateRecurringRuleUseCase,
+    private readonly deleteRecurringRuleUseCase: DeleteRecurringRuleUseCase,
     private readonly securityEvents: SecurityEventLogger
   ) {}
 
@@ -48,6 +60,25 @@ export class RecurringRulesController {
       tenantId: workspace.tenantId,
       ledgerId: workspace.ledgerId
     });
+  }
+
+  @Get(':id')
+  async findOne(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') recurringRuleId: string
+  ) {
+    const workspace = requireCurrentWorkspace(user);
+    const rule = await this.getRecurringRuleDetailUseCase.execute({
+      tenantId: workspace.tenantId,
+      ledgerId: workspace.ledgerId,
+      recurringRuleId
+    });
+
+    if (!rule) {
+      throw new NotFoundException('Recurring rule not found');
+    }
+
+    return rule;
   }
 
   @Post()
@@ -103,6 +134,123 @@ export class RecurringRulesController {
           resource: `recurring_rule_${error.reference}`
         });
         throw new NotFoundException(error.message);
+      }
+
+      throw error;
+    }
+  }
+
+  @Patch(':id')
+  async update(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') recurringRuleId: string,
+    @Body() dto: UpdateRecurringRuleDto
+  ) {
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      assertWorkspaceActionAllowed(
+        workspace.membershipRole,
+        'recurring_rule.update'
+      );
+
+      const updated = await this.updateRecurringRuleUseCase.execute({
+        recurringRuleId,
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId,
+        ...dto
+      });
+
+      if (!updated) {
+        throw new NotFoundException('Recurring rule not found');
+      }
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'recurring_rule.update',
+        request,
+        workspace,
+        details: {
+          recurringRuleId: updated.id
+        }
+      });
+
+      return updated;
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'recurring_rule.update',
+          request,
+          workspace,
+          details: {
+            recurringRuleId,
+            requiredRoles: readAllowedWorkspaceRoles(
+              'recurring_rule.update'
+            ).join(',')
+          }
+        });
+      }
+
+      if (error instanceof MissingOwnedRecurringRuleReferenceError) {
+        this.securityEvents.warn('authorization.scope_denied', {
+          requestId: readRequestId(request),
+          path: readRequestPath(request),
+          userId: user.id,
+          resource: `recurring_rule_${error.reference}`
+        });
+        throw new NotFoundException(error.message);
+      }
+
+      throw error;
+    }
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async delete(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') recurringRuleId: string
+  ): Promise<void> {
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      assertWorkspaceActionAllowed(
+        workspace.membershipRole,
+        'recurring_rule.delete'
+      );
+
+      const deleted = await this.deleteRecurringRuleUseCase.execute({
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId,
+        recurringRuleId
+      });
+
+      if (!deleted) {
+        throw new NotFoundException('Recurring rule not found');
+      }
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'recurring_rule.delete',
+        request,
+        workspace,
+        details: {
+          recurringRuleId
+        }
+      });
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'recurring_rule.delete',
+          request,
+          workspace,
+          details: {
+            recurringRuleId,
+            requiredRoles: readAllowedWorkspaceRoles(
+              'recurring_rule.delete'
+            ).join(',')
+          }
+        });
       }
 
       throw error;

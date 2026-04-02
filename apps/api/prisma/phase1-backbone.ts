@@ -137,6 +137,8 @@ export type Phase1BackboneSummary = {
     categories: number;
     transactions: number;
     recurringRules: number;
+    insurancePolicies: number;
+    vehicles: number;
   };
 };
 
@@ -150,7 +152,9 @@ function createSummary(): Phase1BackboneSummary {
       accounts: 0,
       categories: 0,
       transactions: 0,
-      recurringRules: 0
+      recurringRules: 0,
+      insurancePolicies: 0,
+      vehicles: 0
     }
   };
 }
@@ -171,7 +175,7 @@ function buildTenantSlug(user: BackboneUser) {
 }
 
 function buildTenantName(user: BackboneUser) {
-  const base = user.name.trim() || user.email.split('@')[0] || '개인';
+  const base = user.name.trim() || user.email.split('@')[0] || '사업';
   return `${base} 워크스페이스`.slice(0, 191);
 }
 
@@ -296,7 +300,14 @@ async function backfillLegacyData(
   ledgerId: string,
   summary: Phase1BackboneSummary
 ) {
-  const [accounts, categories, transactions, recurringRules] =
+  const [
+    accounts,
+    categories,
+    transactions,
+    recurringRules,
+    insurancePolicies,
+    vehicles
+  ] =
     await Promise.all([
       prisma.account.updateMany({
         where: { userId },
@@ -313,6 +324,14 @@ async function backfillLegacyData(
       prisma.recurringRule.updateMany({
         where: { userId },
         data: { tenantId, ledgerId }
+      }),
+      prisma.insurancePolicy.updateMany({
+        where: { userId },
+        data: { tenantId, ledgerId }
+      }),
+      prisma.vehicle.updateMany({
+        where: { userId },
+        data: { tenantId, ledgerId }
       })
     ]);
 
@@ -320,6 +339,8 @@ async function backfillLegacyData(
   summary.legacyRowsBackfilled.categories += categories.count;
   summary.legacyRowsBackfilled.transactions += transactions.count;
   summary.legacyRowsBackfilled.recurringRules += recurringRules.count;
+  summary.legacyRowsBackfilled.insurancePolicies += insurancePolicies.count;
+  summary.legacyRowsBackfilled.vehicles += vehicles.count;
 
   const transactionTypeByCode = new Map(
     (
@@ -545,6 +566,8 @@ export function formatPhase1BackboneSummary(summary: Phase1BackboneSummary) {
     `  - accounts backfilled: ${summary.legacyRowsBackfilled.accounts}`,
     `  - categories backfilled: ${summary.legacyRowsBackfilled.categories}`,
     `  - transactions backfilled: ${summary.legacyRowsBackfilled.transactions}`,
-    `  - recurring rules backfilled: ${summary.legacyRowsBackfilled.recurringRules}`
+    `  - recurring rules backfilled: ${summary.legacyRowsBackfilled.recurringRules}`,
+    `  - insurance policies backfilled: ${summary.legacyRowsBackfilled.insurancePolicies}`,
+    `  - vehicles backfilled: ${summary.legacyRowsBackfilled.vehicles}`
   ].join('\n');
 }

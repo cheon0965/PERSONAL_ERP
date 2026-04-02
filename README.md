@@ -1,7 +1,8 @@
-# Personal ERP Starter
+# Owner ERP Starter
 
-개인의 월별 재무 운영을 ERP처럼 관리할 수 있도록 구성한 워크스페이스형 스타터입니다.
+1인 사업자와 소상공인이 월별 재무 운영 사이클을 ERP처럼 관리할 수 있도록 구성한 워크스페이스형 스타터입니다.
 실제 거래, 반복규칙, 업로드 배치, 월 운영, 공식 보고까지 한 구조 안에서 다루도록 설계했습니다.
+저장소와 패키지 식별자에는 기존 `personal-erp` 이름이 남아 있지만, 제품 설명과 화면 문구는 1인 사업자·소상공인용 월별 재무운영 ERP starter 기준으로 정리합니다.
 
 ## 현재 상태
 
@@ -89,6 +90,10 @@ npm install
 npm run db:up
 ```
 
+`npm run db:up`는 [docker-compose.yml](./docker-compose.yml)에 정의된 폐기 가능한 로컬 개발 전용 MySQL bootstrap 기본값을 사용합니다.
+이 값은 로컬 단일 개발자 환경에서 바로 실행되도록 둔 고정 기본값이며, shared/staging/production 자격정보로 재사용하지 않습니다.
+기존 로컬 volume을 이전 기본값으로 이미 초기화했다면, 새 기본값을 쓰려면 로컬 MySQL volume을 한 번 비우고 다시 올려야 합니다.
+
 ### 5. 마이그레이션과 시드 실행
 
 ```bash
@@ -115,7 +120,7 @@ npm run dev
 - `api.env`의 `CORS_ALLOWED_ORIGINS`
   브라우저 요청을 허용할 origin allowlist입니다. 비워두면 `APP_ORIGIN` 하나만 사용합니다.
 - `api.env`의 `SWAGGER_ENABLED`
-  `/api/docs` 노출 여부를 제어하는 토글입니다.
+  `/api/docs` 노출 여부를 제어하는 토글이며 기본값은 `false`입니다.
 
 로컬 예시:
 
@@ -159,7 +164,8 @@ personal-erp-starter/
 
 ## 아키텍처 요약
 
-Personal ERP Starter는 **소규모 팀이 제한된 리소스 안에서 개발 속도, 데이터 안정성, 그리고 확장 가능성의 균형을 맞추기 위해 설계한 TypeScript 기반 모듈러 모놀리스**입니다.
+Owner ERP Starter는 **1인 사업자와 소상공인이 제한된 리소스 안에서도 월별 재무 운영, 거래 확정, 마감, 공식 보고를 안정적으로 이어갈 수 있도록 설계한 TypeScript 기반 월별 재무운영 ERP starter 지향 모듈러 모놀리스**입니다.
+즉, 범용 소상공인 ERP 전반보다는 월별 재무운영 사이클을 끝까지 닫는 흐름에 초점을 맞춥니다.
 
 ### 왜 이런 구조를 선택했나
 
@@ -186,6 +192,7 @@ Personal ERP Starter는 **소규모 팀이 제한된 리소스 안에서 개발 
 - DB 스키마 변경은 `prisma migrate dev` 기준으로 migration 파일을 남깁니다.
 - Web은 `app -> features -> shared` 경계를 유지합니다.
 - 비밀값은 저장소 밖 SECRET 폴더에서 관리하고, 저장소에는 경로 설정만 남깁니다.
+- 단, `docker-compose.yml`의 MySQL 계정은 `npm run db:up` 즉시 실행을 위한 폐기 가능한 로컬 개발 전용 bootstrap 값이며 운영 secret 대체제가 아닙니다.
 - demo fallback은 기본적으로 끄고, 로컬 개발에서만 명시적으로 켭니다.
 - PR 전에는 최소 `npm run check:quick`와 `npm run test`를 실행합니다.
 - 포트폴리오용 압축본은 clean working tree 기준으로 `.git`, `node_modules`, `dist`, `playwright-report`, `test-results`를 제외하고 만듭니다.

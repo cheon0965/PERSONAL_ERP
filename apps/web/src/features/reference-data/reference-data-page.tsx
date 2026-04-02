@@ -80,30 +80,30 @@ export function ReferenceDataPage() {
   useDomainHelp({
     title: '기준 데이터와 참조 입력',
     description:
-      'FundingAccount, Category, AccountSubject, LedgerTransactionType는 기간 운영, 수집 거래 입력, 전표 확정, 마감 보고에 공통으로 쓰이는 공식 기준 데이터입니다.',
-    primaryEntity: '기준 데이터 (Reference Data)',
+      '입출금 계정, 거래 분류, 계정과목, 거래 유형은 월 운영, 거래 입력, 전표 확정, 마감 보고에 공통으로 쓰이는 공식 기준 데이터입니다.',
+    primaryEntity: '기준 데이터',
     relatedEntities: [
-      '자금수단 (FundingAccount)',
-      '카테고리 (Category)',
-      '계정과목 (AccountSubject)',
-      '거래유형 (LedgerTransactionType)'
+      '입출금 계정',
+      '거래 분류',
+      '계정과목',
+      '거래 유형'
     ],
     truthSource:
-      '현재 작업 Tenant / Ledger 문맥 안의 활성 기준 데이터만 참조 입력에 사용합니다.',
+      '현재 작업 문맥의 활성 기준 데이터만 각 입력 화면의 공식 선택지로 사용합니다.',
     supplementarySections: [
       {
         title: '현재 작업 문맥',
         description:
-          '기준 데이터는 로그인한 사용자의 현재 TenantMembership / Ledger 문맥 안에서만 조회됩니다.',
+          '기준 데이터는 로그인한 사용자의 현재 사업 장부 문맥 안에서만 조회됩니다.',
         facts: [
           {
-            label: 'Tenant',
+            label: '사업장',
             value: currentWorkspace
               ? `${currentWorkspace.tenant.name} (${currentWorkspace.tenant.slug})`
               : '-'
           },
           {
-            label: 'Ledger',
+            label: '장부',
             value: currentWorkspace?.ledger?.name ?? '-'
           },
           {
@@ -139,7 +139,7 @@ export function ReferenceDataPage() {
       <PageHeader
         eyebrow="기준 데이터"
         title="기준 데이터와 참조 입력"
-        description="현재 작업 Ledger 안에서 사용하는 활성 기준 데이터를 조회합니다."
+        description="현재 사업 장부에서 사용하는 활성 기준 데이터를 한 번에 확인합니다."
       />
 
       {queryErrors.length > 0 ? (
@@ -153,7 +153,7 @@ export function ReferenceDataPage() {
         <Grid size={{ xs: 12, xl: 6 }}>
           <DataTableCard
             title="자금수단"
-            description="수집 거래와 반복 규칙 입력 시 선택하는 FundingAccount 목록입니다."
+            description="거래 입력과 반복 규칙에서 입출금 계정으로 선택하는 기준 목록입니다."
             rows={fundingAccountsQuery.data ?? []}
             columns={fundingAccountColumns}
             height={320}
@@ -162,7 +162,7 @@ export function ReferenceDataPage() {
         <Grid size={{ xs: 12, xl: 6 }}>
           <DataTableCard
             title="카테고리"
-            description="수입/지출/이체 분류에 사용하는 Category 목록입니다."
+            description="수입, 지출, 이체를 분류할 때 사용하는 기준 목록입니다."
             rows={categoriesQuery.data ?? []}
             columns={categoryColumns}
             height={320}
@@ -174,7 +174,7 @@ export function ReferenceDataPage() {
         <Grid size={{ xs: 12, xl: 6 }}>
           <DataTableCard
             title="계정과목"
-            description="JournalLine과 BalanceSnapshotLine이 참조하는 공식 AccountSubject 목록입니다."
+            description="전표 라인과 마감 잔액 계산에서 공통으로 쓰는 공식 계정과목입니다."
             rows={accountSubjectsQuery.data ?? []}
             columns={accountSubjectColumns}
             height={360}
@@ -183,7 +183,7 @@ export function ReferenceDataPage() {
         <Grid size={{ xs: 12, xl: 6 }}>
           <DataTableCard
             title="거래유형"
-            description="CollectedTransaction과 PlanItem이 참조하는 LedgerTransactionType 목록입니다."
+            description="계획 항목과 수집 거래가 공통으로 참조하는 사업 거래 유형입니다."
             rows={ledgerTransactionTypesQuery.data ?? []}
             columns={ledgerTransactionTypeColumns}
             height={360}

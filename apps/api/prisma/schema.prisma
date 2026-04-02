@@ -250,6 +250,8 @@ model Tenant {
   categories               Category[]            @relation("TenantCategories")
   recurringRules           RecurringRule[]       @relation("TenantRecurringRules")
   legacyTransactions       Transaction[]         @relation("TenantLegacyTransactions")
+  insurancePolicies        InsurancePolicy[]
+  vehicles                 Vehicle[]
   periods                  AccountingPeriod[]
   periodStatusHistory      PeriodStatusHistory[]
   accountSubjects          AccountSubject[]
@@ -299,6 +301,8 @@ model Ledger {
   categories              Category[]            @relation("LedgerCategories")
   recurringRules          RecurringRule[]       @relation("LedgerRecurringRules")
   legacyTransactions      Transaction[]         @relation("LedgerLegacyTransactions")
+  insurancePolicies       InsurancePolicy[]
+  vehicles                Vehicle[]
   periods                 AccountingPeriod[]
   periodStatusHistory     PeriodStatusHistory[]
   accountSubjects         AccountSubject[]
@@ -344,8 +348,8 @@ model UserSetting {
 model Account {
   id                    String              @id @default(cuid())
   userId                String
-  tenantId              String?
-  ledgerId              String?
+  tenantId              String
+  ledgerId              String
   name                  String
   type                  AccountType
   balanceWon            Int                 @default(0)
@@ -354,8 +358,8 @@ model Account {
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
   user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant                Tenant?             @relation("TenantAccounts", fields: [tenantId], references: [id], onDelete: SetNull)
-  ledger                Ledger?             @relation("LedgerAccounts", fields: [ledgerId], references: [id], onDelete: SetNull)
+  tenant                Tenant              @relation("TenantAccounts", fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                Ledger              @relation("LedgerAccounts", fields: [ledgerId], references: [id], onDelete: Cascade)
   transactions          Transaction[]
   recurringRules        RecurringRule[]
   planItems             PlanItem[]
@@ -370,8 +374,8 @@ model Account {
 model Category {
   id                    String               @id @default(cuid())
   userId                String
-  tenantId              String?
-  ledgerId              String?
+  tenantId              String
+  ledgerId              String
   name                  String
   kind                  CategoryKind
   sortOrder             Int                  @default(0)
@@ -379,8 +383,8 @@ model Category {
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
   user                  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant                Tenant?              @relation("TenantCategories", fields: [tenantId], references: [id], onDelete: SetNull)
-  ledger                Ledger?              @relation("LedgerCategories", fields: [ledgerId], references: [id], onDelete: SetNull)
+  tenant                Tenant               @relation("TenantCategories", fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                Ledger               @relation("LedgerCategories", fields: [ledgerId], references: [id], onDelete: Cascade)
   transactions          Transaction[]
   recurringRules        RecurringRule[]
   planItems             PlanItem[]
@@ -393,8 +397,8 @@ model Category {
 model Transaction {
   id           String            @id @default(cuid())
   userId       String
-  tenantId     String?
-  ledgerId     String?
+  tenantId     String
+  ledgerId     String
   title        String
   type         TransactionType
   amountWon    Int
@@ -407,8 +411,8 @@ model Transaction {
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
   user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant       Tenant?           @relation("TenantLegacyTransactions", fields: [tenantId], references: [id], onDelete: SetNull)
-  ledger       Ledger?           @relation("LedgerLegacyTransactions", fields: [ledgerId], references: [id], onDelete: SetNull)
+  tenant       Tenant            @relation("TenantLegacyTransactions", fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger       Ledger            @relation("LedgerLegacyTransactions", fields: [ledgerId], references: [id], onDelete: Cascade)
   account      Account           @relation(fields: [accountId], references: [id], onDelete: Restrict)
   category     Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
@@ -420,8 +424,8 @@ model Transaction {
 model RecurringRule {
   id                      String                 @id @default(cuid())
   userId                  String
-  tenantId                String?
-  ledgerId                String?
+  tenantId                String
+  ledgerId                String
   accountId               String
   categoryId              String?
   ledgerTransactionTypeId String?
@@ -436,8 +440,8 @@ model RecurringRule {
   createdAt               DateTime               @default(now())
   updatedAt               DateTime               @updatedAt
   user                    User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant                  Tenant?                @relation("TenantRecurringRules", fields: [tenantId], references: [id], onDelete: SetNull)
-  ledger                  Ledger?                @relation("LedgerRecurringRules", fields: [ledgerId], references: [id], onDelete: SetNull)
+  tenant                  Tenant                 @relation("TenantRecurringRules", fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                  Ledger                 @relation("LedgerRecurringRules", fields: [ledgerId], references: [id], onDelete: Cascade)
   account                 Account                @relation(fields: [accountId], references: [id], onDelete: Restrict)
   category                Category?              @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   ledgerTransactionType   LedgerTransactionType? @relation(fields: [ledgerTransactionTypeId], references: [id], onDelete: SetNull)
@@ -788,6 +792,8 @@ model CarryForwardRecord {
 model InsurancePolicy {
   id                String         @id @default(cuid())
   userId            String
+  tenantId          String
+  ledgerId          String
   provider          String
   productName       String
   monthlyPremiumWon Int
@@ -799,13 +805,18 @@ model InsurancePolicy {
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant            Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger            Ledger         @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
 
   @@index([userId, isActive])
+  @@index([tenantId, ledgerId, isActive])
 }
 
 model Vehicle {
   id                                String    @id @default(cuid())
   userId                            String
+  tenantId                          String
+  ledgerId                          String
   name                              String
   manufacturer                      String?
   fuelType                          FuelType
@@ -815,9 +826,12 @@ model Vehicle {
   createdAt                         DateTime  @default(now())
   updatedAt                         DateTime  @updatedAt
   user                              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant                            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                            Ledger    @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
   fuelLogs                          FuelLog[]
 
   @@index([userId, name])
+  @@index([tenantId, ledgerId, name])
 }
 
 model FuelLog {

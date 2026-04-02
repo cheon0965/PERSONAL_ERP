@@ -52,6 +52,56 @@ export async function postJson<TResponse, TRequest>(
   );
 }
 
+export async function patchJson<TResponse, TRequest>(
+  path: string,
+  body: TRequest,
+  fallback: TResponse
+): Promise<TResponse> {
+  return fetchJsonWithConfig(
+    path,
+    fallback,
+    {
+      apiBaseUrl: API_BASE_URL,
+      demoFallbackEnabled: webRuntime.demoFallbackEnabled,
+      fetchImpl: browserFetch,
+      getAccessToken: getStoredAccessToken,
+      refreshAccessToken: refreshStoredAccessToken,
+      onUnauthorized: () => {
+        handleUnauthorizedSession('unauthorized_response');
+      }
+    },
+    {
+      requireAuth: true,
+      method: 'PATCH',
+      body
+    }
+  );
+}
+
+export async function deleteJson<TResponse>(
+  path: string,
+  fallback: TResponse
+): Promise<TResponse> {
+  return fetchJsonWithConfig(
+    path,
+    fallback,
+    {
+      apiBaseUrl: API_BASE_URL,
+      demoFallbackEnabled: webRuntime.demoFallbackEnabled,
+      fetchImpl: browserFetch,
+      getAccessToken: getStoredAccessToken,
+      refreshAccessToken: refreshStoredAccessToken,
+      onUnauthorized: () => {
+        handleUnauthorizedSession('unauthorized_response');
+      }
+    },
+    {
+      requireAuth: true,
+      method: 'DELETE'
+    }
+  );
+}
+
 type FetchJsonConfig = {
   apiBaseUrl: string;
   demoFallbackEnabled: boolean;
@@ -110,8 +160,11 @@ export async function fetchJsonWithConfig<T>(
       (options.method == null || options.method === 'GET');
 
     if (config.demoFallbackEnabled && allowDemoFallback) {
-      const warnMsg = '[personal-erp] 데모 폴백 데이터를 사용했습니다: ' + path;
-      console.warn(warnMsg, error);
+      console.warn(
+        '[personal-erp] 데모 폴백 데이터를 사용했습니다.',
+        path,
+        error
+      );
       return fallback;
     }
 

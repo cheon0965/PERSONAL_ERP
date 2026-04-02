@@ -266,7 +266,7 @@ export function DomainHelpDrawer() {
         }}
       >
         <Typography variant="caption" color="text.secondary">
-          본 가이드는 Personal ERP의 도메인 설계 원칙을 준수합니다. 비즈니스
+          본 가이드는 Owner ERP의 도메인 설계 원칙을 준수합니다. 비즈니스
           로직과 화면의 정합성이 궁금하실 때 언제든 열어보세요.
         </Typography>
       </Box>

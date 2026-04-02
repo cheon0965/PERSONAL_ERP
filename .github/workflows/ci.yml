@@ -123,6 +123,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Keep generated outputs and migration history out of the scan, but keep
+      # application auth/fetch boundaries inside the Semgrep scope.
       - name: Run Semgrep CE scan
         run: >-
           docker run --rm
@@ -138,7 +140,6 @@ jobs:
           --exclude .test-dist
           --exclude apps/api/prisma/migrations
           --exclude scripts
-          --exclude apps/web/src/shared/api
 
   gitleaks:
     runs-on: ubuntu-latest

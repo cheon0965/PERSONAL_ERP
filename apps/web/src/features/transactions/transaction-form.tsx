@@ -6,8 +6,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Grid, MenuItem, Stack, TextField } from '@mui/material';
 import type {
   AccountingPeriodItem,
+  CollectedTransactionDetailItem,
   CollectedTransactionItem,
-  CreateCollectedTransactionRequest
+  UpdateCollectedTransactionRequest
 } from '@personal-erp/contracts';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -23,38 +24,54 @@ import { appLayout } from '@/shared/ui/layout-metrics';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import {
   buildCollectedTransactionFallbackItem,
+  collectedTransactionDetailQueryKey,
   collectedTransactionsQueryKey,
   createCollectedTransaction,
-  mergeCollectedTransactionItem
+  mergeCollectedTransactionItem,
+  updateCollectedTransaction
 } from './transactions.api';
 
 const transactionSchema = z.object({
   title: z.string().trim().min(2, '제목은 2자 이상이어야 합니다.'),
   amountWon: z.coerce.number().int().positive('금액은 0보다 커야 합니다.'),
   businessDate: z.string().min(1, '거래일을 입력해 주세요.'),
-  type: z.enum(['INCOME', 'EXPENSE']),
+  type: z.enum(['INCOME', 'EXPENSE', 'TRANSFER']),
   accountId: z.string().min(1, '자금수단을 선택해 주세요.'),
   categoryId: z.string(),
   memo: z.string().max(500, '메모는 500자 이하여야 합니다.')
 });
 
 type TransactionFormInput = z.infer<typeof transactionSchema>;
+type TransactionFormMode = 'create' | 'edit';
 
 type SubmitFeedback = {
   severity: 'success' | 'error';
   message: string;
 } | null;
 
-type CreateTransactionMutationInput = {
-  payload: CreateCollectedTransactionRequest;
+type SaveTransactionMutationInput = {
+  mode: TransactionFormMode;
+  collectedTransactionId?: string;
+  payload: UpdateCollectedTransactionRequest;
   fallback: CollectedTransactionItem;
 };
 
 type TransactionFormProps = {
   currentPeriod: AccountingPeriodItem | null;
+  mode?: TransactionFormMode;
+  initialTransaction?: CollectedTransactionDetailItem | null;
+  onCompleted?: (
+    transaction: CollectedTransactionItem,
+    mode: TransactionFormMode
+  ) => void;
 };
 
-export function TransactionForm({ currentPeriod }: TransactionFormProps) {
+export function TransactionForm({
+  currentPeriod,
+  mode = 'create',
+  initialTransaction = null,
+  onCompleted
+}: TransactionFormProps) {
   const queryClient = useQueryClient();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const { data: fundingAccounts = [], error: fundingAccountsError } = useQuery({
@@ -84,21 +101,43 @@ export function TransactionForm({ currentPeriod }: TransactionFormProps) {
   );
 
   const mutation = useMutation({
-    mutationFn: ({ payload, fallback }: CreateTransactionMutationInput) =>
-      createCollectedTransaction(payload, fallback),
-    onSuccess: async (created) => {
+    mutationFn: ({
+      mode: nextMode,
+      collectedTransactionId,
+      payload,
+      fallback
+    }: SaveTransactionMutationInput) => {
+      if (nextMode === 'edit' && collectedTransactionId) {
+        return updateCollectedTransaction(collectedTransactionId, payload, fallback);
+      }
+
+      return createCollectedTransaction(payload, fallback);
+    },
+    onSuccess: async (saved, variables) => {
       queryClient.setQueryData<CollectedTransactionItem[]>(
         collectedTransactionsQueryKey,
-        (current) => mergeCollectedTransactionItem(current, created)
+        (current) => mergeCollectedTransactionItem(current, saved)
       );
 
       if (!webRuntime.demoFallbackEnabled) {
-        await Promise.all([
+        const invalidations = [
           queryClient.invalidateQueries({
             queryKey: collectedTransactionsQueryKey
           }),
           queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] })
-        ]);
+        ];
+
+        if (variables.mode === 'edit' && variables.collectedTransactionId) {
+          invalidations.push(
+            queryClient.invalidateQueries({
+              queryKey: collectedTransactionDetailQueryKey(
+                variables.collectedTransactionId
+              )
+            })
+          );
+        }
+
+        await Promise.all(invalidations);
       }
     }
   });
@@ -123,6 +162,25 @@ export function TransactionForm({ currentPeriod }: TransactionFormProps) {
   }, [filteredCategories, form]);
 
   React.useEffect(() => {
+    setFeedback(null);
+
+    if (mode === 'edit' && initialTransaction) {
+      form.reset(mapDetailToFormInput(initialTransaction));
+      return;
+    }
+
+    form.reset({
+      title: '',
+      amountWon: 0,
+      businessDate: resolveInitialBusinessDate(currentPeriod),
+      type: 'EXPENSE',
+      accountId: '',
+      categoryId: '',
+      memo: ''
+    });
+  }, [currentPeriod, form, initialTransaction, mode]);
+
+  React.useEffect(() => {
     const nextValue = resolveInitialBusinessDate(currentPeriod);
     const currentValue = form.getValues('businessDate');
 
@@ -132,13 +190,15 @@ export function TransactionForm({ currentPeriod }: TransactionFormProps) {
   }, [currentPeriod, form]);
 
   const referenceError = fundingAccountsError ?? categoriesError;
-  const canCreateInPeriod = Boolean(currentPeriod);
+  const canSaveInPeriod = Boolean(currentPeriod);
   const isBusy =
     mutation.isPending ||
     form.formState.isSubmitting ||
     fundingAccounts.length === 0 ||
     Boolean(referenceError) ||
-    !canCreateInPeriod;
+    !canSaveInPeriod ||
+    (mode === 'edit' && !initialTransaction);
+  const submitLabel = mode === 'edit' ? '수집 거래 수정' : '수집 거래 등록';
 
   return (
     <form
@@ -149,7 +209,15 @@ export function TransactionForm({ currentPeriod }: TransactionFormProps) {
           setFeedback({
             severity: 'error',
             message:
-              '현재 열린 운영 기간이 없어 수집 거래를 등록할 수 없습니다. 먼저 월 운영을 시작해 주세요.'
+              '현재 열린 운영 기간이 없어 수집 거래를 저장할 수 없습니다. 먼저 월 운영을 시작해 주세요.'
+          });
+          return;
+        }
+
+        if (mode === 'edit' && !initialTransaction) {
+          setFeedback({
+            severity: 'error',
+            message: '수정할 수집 거래 상세 정보를 아직 불러오지 못했습니다.'
           });
           return;
         }
@@ -168,7 +236,7 @@ export function TransactionForm({ currentPeriod }: TransactionFormProps) {
         if (!selectedFundingAccount) {
           setFeedback({
             severity: 'error',
-            message: '수집 거래를 등록하기 전에 자금수단을 선택해 주세요.'
+            message: '수집 거래를 저장하기 전에 자금수단을 선택해 주세요.'
           });
           return;
         }
@@ -176,7 +244,7 @@ export function TransactionForm({ currentPeriod }: TransactionFormProps) {
         const selectedCategory = filteredCategories.find(
           (category) => category.id === values.categoryId
         );
-        const payload: CreateCollectedTransactionRequest = {
+        const payload: UpdateCollectedTransactionRequest = {
           title: values.title.trim(),
           type: values.type,
           amountWon: values.amountWon,
@@ -187,26 +255,45 @@ export function TransactionForm({ currentPeriod }: TransactionFormProps) {
         };
 
         try {
-          await mutation.mutateAsync({
+          const saved = await mutation.mutateAsync({
+            mode,
+            collectedTransactionId: initialTransaction?.id,
             payload,
             fallback: buildCollectedTransactionFallbackItem(payload, {
+              id: initialTransaction?.id,
               fundingAccountName: selectedFundingAccount.name,
-              categoryName: selectedCategory?.name
+              categoryName: selectedCategory?.name,
+              sourceKind: initialTransaction?.sourceKind,
+              postingStatus: initialTransaction?.postingStatus,
+              postedJournalEntryId: initialTransaction?.postedJournalEntryId,
+              postedJournalEntryNumber:
+                initialTransaction?.postedJournalEntryNumber
             })
           });
 
-          form.reset({
-            title: '',
-            amountWon: 0,
-            businessDate: resolveInitialBusinessDate(currentPeriod),
-            type: values.type,
-            accountId: values.accountId,
-            categoryId: '',
-            memo: ''
-          });
+          if (onCompleted) {
+            onCompleted(saved, mode);
+            return;
+          }
+
+          if (mode === 'create') {
+            form.reset({
+              title: '',
+              amountWon: 0,
+              businessDate: resolveInitialBusinessDate(currentPeriod),
+              type: values.type,
+              accountId: values.accountId,
+              categoryId: '',
+              memo: ''
+            });
+          }
+
           setFeedback({
             severity: 'success',
-            message: '수집 거래를 등록했고 목록을 새로고침했습니다.'
+            message:
+              mode === 'edit'
+                ? '수집 거래를 수정했고 목록을 새로고침했습니다.'
+                : '수집 거래를 등록했고 목록을 새로고침했습니다.'
           });
         } catch (error) {
           setFeedback({
@@ -214,7 +301,9 @@ export function TransactionForm({ currentPeriod }: TransactionFormProps) {
             message:
               error instanceof Error
                 ? error.message
-                : '수집 거래를 등록하지 못했습니다.'
+                : mode === 'edit'
+                  ? '수집 거래를 수정하지 못했습니다.'
+                  : '수집 거래를 등록하지 못했습니다.'
           });
         }
       })}
@@ -234,12 +323,16 @@ export function TransactionForm({ currentPeriod }: TransactionFormProps) {
         {!currentPeriod ? (
           <Alert severity="warning" variant="outlined">
             현재 열린 운영 기간이 없습니다. 먼저 `월 운영` 화면에서 운영 기간을
-            시작해야 수집 거래를 등록할 수 있습니다.
+            시작해야 수집 거래를 저장할 수 있습니다.
+          </Alert>
+        ) : mode === 'edit' ? (
+          <Alert severity="info" variant="outlined">
+            {currentPeriod.monthLabel} 운영 기간 안의 보류 상태 거래만 수정할 수
+            있습니다.
           </Alert>
         ) : (
           <Alert severity="info" variant="outlined">
-            현재 수집 거래는 {currentPeriod.monthLabel} 운영 기간 안에서만
-            등록됩니다.
+            현재 수집 거래는 {currentPeriod.monthLabel} 운영 기간 안에서만 등록됩니다.
           </Alert>
         )}
 
@@ -287,6 +380,7 @@ export function TransactionForm({ currentPeriod }: TransactionFormProps) {
             >
               <MenuItem value="EXPENSE">지출</MenuItem>
               <MenuItem value="INCOME">수입</MenuItem>
+              <MenuItem value="TRANSFER">이체</MenuItem>
             </TextField>
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
@@ -317,7 +411,7 @@ export function TransactionForm({ currentPeriod }: TransactionFormProps) {
               disabled={!currentPeriod || filteredCategories.length === 0}
               helperText={
                 filteredCategories.length === 0
-                  ? '선택한 거래 유형에 맞는 카테고리가 없습니다.'
+                  ? '선택한 거래 유형에 맞는 카테고리가 없으면 비워 둘 수 있습니다.'
                   : '선택 사항'
               }
               {...form.register('categoryId')}
@@ -347,11 +441,25 @@ export function TransactionForm({ currentPeriod }: TransactionFormProps) {
           disabled={isBusy}
           sx={{ alignSelf: 'flex-start' }}
         >
-          {mutation.isPending ? '저장 중...' : '수집 거래 등록'}
+          {mutation.isPending ? '저장 중...' : submitLabel}
         </Button>
       </Stack>
     </form>
   );
+}
+
+function mapDetailToFormInput(
+  transaction: CollectedTransactionDetailItem
+): TransactionFormInput {
+  return {
+    title: transaction.title,
+    amountWon: transaction.amountWon,
+    businessDate: transaction.businessDate,
+    type: transaction.type,
+    accountId: transaction.fundingAccountId,
+    categoryId: transaction.categoryId ?? '',
+    memo: transaction.memo ?? ''
+  };
 }
 
 function resolveInitialBusinessDate(

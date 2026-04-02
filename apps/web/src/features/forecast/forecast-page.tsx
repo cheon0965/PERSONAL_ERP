@@ -60,16 +60,16 @@ export function ForecastPage() {
   useDomainHelp({
     title: '기간 운영 전망 개요',
     description:
-      '전망 화면은 AccountingPeriod 기준으로 확정 전표, 남은 계획, 적립 가정을 한 자리에서 비교하는 운영 판단용 화면입니다.',
-    primaryEntity: '운영 기간 (AccountingPeriod)',
+      '전망 화면은 선택한 운영 월을 기준으로 확정 전표, 남은 계획, 적립 가정을 한 자리에서 비교하는 운영 판단용 화면입니다.',
+    primaryEntity: '운영 월',
     relatedEntities: [
-      '계획 항목 (PlanItem)',
-      '전표 (JournalEntry)',
-      '마감 스냅샷 (ClosingSnapshot)',
-      '재무제표 스냅샷 (FinancialStatementSnapshot)'
+      '계획 항목',
+      '전표',
+      '월 마감 스냅샷',
+      '공식 재무제표'
     ],
     truthSource:
-      '잠금된 기간의 공식 기준은 ClosingSnapshot 및 FinancialStatementSnapshot이며, 전망은 그 이전 운영 해석 계층입니다.',
+      '잠금된 기간의 공식 기준은 월 마감 결과와 공식 재무제표이며, 전망은 그 이전 운영 해석 계층입니다.',
     readModelNote:
       '잠금 전 기간에서는 전망 수치가 공식 확정치보다 앞서 움직일 수 있으므로 경고와 비교 카드를 함께 봐야 합니다.'
   });
@@ -79,7 +79,7 @@ export function ForecastPage() {
       <PageHeader
         eyebrow="기간 운영"
         title="기간 운영 전망"
-        description="선택한 운영 기간의 확정 전표와 남은 계획을 함께 읽어 예상 기간말 잔액과 안전 여력을 계산합니다."
+        description="선택한 운영 월의 확정 전표와 남은 계획을 함께 읽어 예상 월말 잔액과 안전 여력을 계산합니다."
       />
 
       {periodsQuery.error ? (
@@ -98,7 +98,7 @@ export function ForecastPage() {
 
       <SectionCard
         title="전망 대상 선택"
-        description="전망은 특정 AccountingPeriod를 기준으로 계산됩니다."
+        description="전망은 선택한 운영 월을 기준으로 계산됩니다."
       >
         <TextField
           select
@@ -123,16 +123,16 @@ export function ForecastPage() {
       {!selectedPeriod ? (
         <SectionCard
           title="표시할 운영 기간이 없습니다"
-          description="전망 화면은 AccountingPeriod가 하나 이상 있어야 동작합니다."
+          description="전망 화면은 운영 월이 하나 이상 있어야 동작합니다."
         >
           <Typography variant="body2" color="text.secondary">
-            먼저 운영 기간을 열어 두면 period-aware 전망을 계산할 수 있습니다.
+            먼저 운영 기간을 열어 두면 현재 운영 월 기준 전망을 계산할 수 있습니다.
           </Typography>
         </SectionCard>
       ) : forecast == null ? (
         <SectionCard
           title="전망 데이터가 없습니다"
-          description="선택한 운영 기간의 읽기 모델을 아직 만들 수 없습니다."
+          description="선택한 운영 월의 전망 데이터를 아직 만들 수 없습니다."
         >
           <Typography variant="body2" color="text.secondary">
             이 기간에 전표나 계획 항목이 아직 없거나, 기간 자체가 아직 준비되지
