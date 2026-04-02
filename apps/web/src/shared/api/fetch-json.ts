@@ -160,8 +160,11 @@ export async function fetchJsonWithConfig<T>(
       (options.method == null || options.method === 'GET');
 
     if (config.demoFallbackEnabled && allowDemoFallback) {
-      const warnMsg = '[personal-erp] 데모 폴백 데이터를 사용했습니다: ' + path;
-      console.warn(warnMsg, error);
+      console.warn(
+        '[personal-erp] 데모 폴백 데이터를 사용했습니다.',
+        path,
+        error
+      );
       return fallback;
     }
 
