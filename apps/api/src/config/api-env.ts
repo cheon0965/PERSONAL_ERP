@@ -139,7 +139,7 @@ export function parseApiEnv(source: EnvSource): ApiEnv {
     PORT: readPort(source),
     APP_ORIGIN: appOrigin,
     CORS_ALLOWED_ORIGINS: readAllowedOrigins(source, appOrigin),
-    SWAGGER_ENABLED: readBoolean(source, 'SWAGGER_ENABLED', true),
+    SWAGGER_ENABLED: readBoolean(source, 'SWAGGER_ENABLED', false),
     JWT_ACCESS_SECRET: readString(source, 'JWT_ACCESS_SECRET', {
       minLength: 16
     }),

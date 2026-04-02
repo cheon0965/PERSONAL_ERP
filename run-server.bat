@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
-title Personal ERP - Server Launcher
+title Owner ERP - Server Launcher
 
 set "MODE=dev"
 set "BUILD_FIRST=0"
@@ -14,7 +14,7 @@ set "DEMO_SEED_SCRIPT=db:seed"
 set "EXIT_CODE=0"
 
 echo ============================================
-echo   Personal ERP - Server Launcher
+echo   Owner ERP - Server Launcher
 echo ============================================
 echo.
 
@@ -129,8 +129,8 @@ if /i "%MODE%"=="dev" (
   echo.
   echo        API and Web will run in separate Command Prompt windows.
   echo.
-  start "Personal ERP API (Dev)" cmd.exe /k "cd /d ""%~dp0"" && npm.cmd run dev --workspace @personal-erp/api"
-  start "Personal ERP Web (Dev)" cmd.exe /k "cd /d ""%~dp0"" && npm.cmd run dev --workspace @personal-erp/web"
+  start "Owner ERP API (Dev)" cmd.exe /k "cd /d ""%~dp0"" && npm.cmd run dev --workspace @personal-erp/api"
+  start "Owner ERP Web (Dev)" cmd.exe /k "cd /d ""%~dp0"" && npm.cmd run dev --workspace @personal-erp/web"
   echo [OK] Development server windows launched.
 ) else (
   echo [INFO] Launching production server windows...
@@ -138,8 +138,8 @@ if /i "%MODE%"=="dev" (
   echo.
   echo        API and Web will run in separate Command Prompt windows.
   echo.
-  start "Personal ERP API (Prod)" cmd.exe /k "cd /d ""%~dp0"" && npm.cmd run start --workspace @personal-erp/api"
-  start "Personal ERP Web (Prod)" cmd.exe /k "cd /d ""%~dp0"" && npm.cmd run start --workspace @personal-erp/web"
+  start "Owner ERP API (Prod)" cmd.exe /k "cd /d ""%~dp0"" && npm.cmd run start --workspace @personal-erp/api"
+  start "Owner ERP Web (Prod)" cmd.exe /k "cd /d ""%~dp0"" && npm.cmd run start --workspace @personal-erp/web"
   echo [OK] Production server windows launched.
 )
 exit /b 0

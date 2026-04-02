@@ -519,7 +519,7 @@
 #### 실행 순서
 
 1. 보고 기준선을 먼저 재정의
-   - `dashboard`, `forecast`를 사용자 개인 재무 요약이 아니라 `currentWorkspace + AccountingPeriod` 기준 read model로 재정렬한다.
+   - `dashboard`, `forecast`를 단순 요약 화면이 아니라 `currentWorkspace + AccountingPeriod` 기준의 사업 운영 read model로 재정렬한다.
    - 운영용 숫자와 공식 숫자를 명시적으로 구분해, `dashboard/forecast`는 “운영 판단”, `financial-statements`는 “공식 보고”라는 경계를 계약과 도움말에 드러낸다.
    - 현재 열린 기간, 최신 잠금 기간, 이전 잠금 기간을 읽는 공통 기준 함수를 정한다.
 2. 계약/read model 확장

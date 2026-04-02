@@ -462,7 +462,12 @@ export function createPrismaMock(
     ...createTransactionsJournalPrismaMock(context),
     transaction: {
       findMany: async (args: {
-        where?: { userId?: string; status?: TransactionStatus };
+        where?: {
+          userId?: string;
+          tenantId?: string;
+          ledgerId?: string;
+          status?: TransactionStatus;
+        };
         include?: { account?: boolean; category?: boolean };
         select?: { type?: boolean; amountWon?: boolean };
         orderBy?: Array<{
@@ -474,9 +479,13 @@ export function createPrismaMock(
         let items = state.transactions.filter((candidate) => {
           const matchesUser =
             !args.where?.userId || candidate.userId === args.where.userId;
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
           const matchesStatus =
             !args.where?.status || candidate.status === args.where.status;
-          return matchesUser && matchesStatus;
+          return matchesUser && matchesTenant && matchesLedger && matchesStatus;
         });
 
         items = sortTransactions(items);
@@ -515,6 +524,8 @@ export function createPrismaMock(
         const created = {
           id: `txn-${state.transactions.length + 1}`,
           userId: String(args.data.userId),
+          tenantId: String(args.data.tenantId),
+          ledgerId: String(args.data.ledgerId),
           title: String(args.data.title),
           type: args.data.type as TransactionType,
           amountWon: Number(args.data.amountWon),
@@ -536,6 +547,98 @@ export function createPrismaMock(
       }
     },
     recurringRule: {
+      findFirst: async (args: {
+        where?: {
+          id?: string;
+          userId?: string;
+          tenantId?: string;
+          ledgerId?: string;
+          isActive?: boolean;
+        };
+        include?: { account?: boolean; category?: boolean };
+        select?: {
+          id?: boolean;
+          title?: boolean;
+          accountId?: boolean;
+          categoryId?: boolean;
+          amountWon?: boolean;
+          frequency?: boolean;
+          dayOfMonth?: boolean;
+          startDate?: boolean;
+          endDate?: boolean;
+          nextRunDate?: boolean;
+          isActive?: boolean;
+        };
+      }) => {
+        const candidate =
+          state.recurringRules.find((item) => {
+            const matchesId = !args.where?.id || item.id === args.where.id;
+            const matchesUser =
+              !args.where?.userId || item.userId === args.where.userId;
+            const matchesTenant =
+              !args.where?.tenantId || item.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId || item.ledgerId === args.where.ledgerId;
+            const matchesActive =
+              args.where?.isActive === undefined ||
+              item.isActive === args.where.isActive;
+
+            return (
+              matchesId &&
+              matchesUser &&
+              matchesTenant &&
+              matchesLedger &&
+              matchesActive
+            );
+          }) ?? null;
+
+        if (!candidate) {
+          return null;
+        }
+
+        if (args.select) {
+          return {
+            ...(args.select.id ? { id: candidate.id } : {}),
+            ...(args.select.title ? { title: candidate.title } : {}),
+            ...(args.select.accountId
+              ? { accountId: candidate.accountId }
+              : {}),
+            ...(args.select.categoryId
+              ? { categoryId: candidate.categoryId }
+              : {}),
+            ...(args.select.amountWon
+              ? { amountWon: candidate.amountWon }
+              : {}),
+            ...(args.select.frequency
+              ? { frequency: candidate.frequency }
+              : {}),
+            ...(args.select.dayOfMonth
+              ? { dayOfMonth: candidate.dayOfMonth }
+              : {}),
+            ...(args.select.startDate
+              ? { startDate: candidate.startDate }
+              : {}),
+            ...(args.select.endDate ? { endDate: candidate.endDate } : {}),
+            ...(args.select.nextRunDate
+              ? { nextRunDate: candidate.nextRunDate }
+              : {}),
+            ...(args.select.isActive ? { isActive: candidate.isActive } : {})
+          };
+        }
+
+        const account = resolveAccount(candidate.accountId);
+        const category = resolveCategory(candidate.categoryId);
+
+        if (args.include) {
+          return {
+            ...candidate,
+            account: args.include.account ? account : undefined,
+            category: args.include.category ? category : undefined
+          };
+        }
+
+        return candidate;
+      },
       findMany: async (args: {
         where?: {
           userId?: string;
@@ -618,20 +721,138 @@ export function createPrismaMock(
           account,
           category
         };
+      },
+      update: async (args: {
+        where: { id: string };
+        data: {
+          accountId?: string;
+          categoryId?: string;
+          title?: string;
+          amountWon?: number;
+          frequency?: RecurrenceFrequency;
+          dayOfMonth?: number;
+          startDate?: Date;
+          endDate?: Date | null;
+          isActive?: boolean;
+          nextRunDate?: Date;
+        };
+        include?: { account?: boolean; category?: boolean };
+      }) => {
+        const candidate = state.recurringRules.find(
+          (item) => item.id === args.where.id
+        );
+
+        if (!candidate) {
+          throw new Error('Recurring rule not found');
+        }
+
+        if (args.data.accountId) {
+          candidate.accountId = args.data.accountId;
+        }
+        if (args.data.categoryId) {
+          candidate.categoryId = args.data.categoryId;
+        }
+        if (args.data.title) {
+          candidate.title = args.data.title;
+        }
+        if (args.data.amountWon !== undefined) {
+          candidate.amountWon = Number(args.data.amountWon);
+        }
+        if (args.data.frequency) {
+          candidate.frequency = args.data.frequency;
+        }
+        if (args.data.dayOfMonth !== undefined) {
+          candidate.dayOfMonth = args.data.dayOfMonth;
+        }
+        if (args.data.startDate) {
+          candidate.startDate = new Date(String(args.data.startDate));
+        }
+        if ('endDate' in args.data) {
+          candidate.endDate = args.data.endDate
+            ? new Date(String(args.data.endDate))
+            : null;
+        }
+        if (args.data.isActive !== undefined) {
+          candidate.isActive = args.data.isActive;
+        }
+        if (args.data.nextRunDate) {
+          candidate.nextRunDate = new Date(String(args.data.nextRunDate));
+        }
+        candidate.updatedAt = new Date();
+
+        const account = resolveAccount(candidate.accountId);
+        const category = resolveCategory(candidate.categoryId);
+
+        if (args.include) {
+          return {
+            ...candidate,
+            account: args.include.account ? account : undefined,
+            category: args.include.category ? category : undefined
+          };
+        }
+
+        return candidate;
+      },
+      deleteMany: async (args: {
+        where?: {
+          id?: string;
+          tenantId?: string;
+          ledgerId?: string;
+        };
+      }) => {
+        const deletedIds = state.recurringRules
+          .filter((candidate) => {
+            const matchesId = !args.where?.id || candidate.id === args.where.id;
+            const matchesTenant =
+              !args.where?.tenantId ||
+              candidate.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId;
+
+            return matchesId && matchesTenant && matchesLedger;
+          })
+          .map((candidate) => candidate.id);
+
+        if (deletedIds.length === 0) {
+          return { count: 0 };
+        }
+
+        state.recurringRules = state.recurringRules.filter(
+          (candidate) => !deletedIds.includes(candidate.id)
+        );
+        state.planItems = state.planItems.map((candidate) =>
+          deletedIds.includes(candidate.recurringRuleId ?? '')
+            ? { ...candidate, recurringRuleId: null, updatedAt: new Date() }
+            : candidate
+        );
+
+        return {
+          count: deletedIds.length
+        };
       }
     },
     insurancePolicy: {
       findMany: async (args: {
-        where?: { userId?: string; isActive?: boolean };
+        where?: {
+          userId?: string;
+          tenantId?: string;
+          ledgerId?: string;
+          isActive?: boolean;
+        };
         select?: { monthlyPremiumWon?: boolean };
       }) => {
         const items = state.insurancePolicies.filter((candidate) => {
           const matchesUser =
             !args.where?.userId || candidate.userId === args.where.userId;
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
           const matchesActive =
             args.where?.isActive === undefined ||
             candidate.isActive === args.where.isActive;
-          return matchesUser && matchesActive;
+          return matchesUser && matchesTenant && matchesLedger && matchesActive;
         });
 
         if (args.select?.monthlyPremiumWon) {
@@ -645,13 +866,24 @@ export function createPrismaMock(
     },
     vehicle: {
       findMany: async (args: {
-        where?: { userId?: string };
+        where?: {
+          userId?: string;
+          tenantId?: string;
+          ledgerId?: string;
+        };
+        include?: { fuelLogs?: { orderBy?: { filledOn?: 'asc' | 'desc' } } };
         select?: { monthlyExpenseWon?: boolean };
       }) => {
-        const items = state.vehicles.filter(
-          (candidate) =>
-            !args.where?.userId || candidate.userId === args.where.userId
-        );
+        const items = state.vehicles.filter((candidate) => {
+          const matchesUser =
+            !args.where?.userId || candidate.userId === args.where.userId;
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+
+          return matchesUser && matchesTenant && matchesLedger;
+        });
 
         if (args.select?.monthlyExpenseWon) {
           return items.map((candidate) => ({
@@ -659,7 +891,15 @@ export function createPrismaMock(
           }));
         }
 
-        return items;
+        return items.map((candidate) => ({
+          ...candidate,
+          fuelLogs: args.include?.fuelLogs
+            ? [...candidate.fuelLogs].sort(
+                (left, right) =>
+                  left.filledOn.getTime() - right.filledOn.getTime()
+              )
+            : candidate.fuelLogs
+        }));
       }
     }
   };

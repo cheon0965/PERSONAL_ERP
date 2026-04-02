@@ -16,9 +16,9 @@ export const mockJournalEntries: JournalEntryItem[] = [
     entryDate: '2026-03-01T00:00:00.000Z',
     status: 'POSTED',
     sourceKind: 'COLLECTED_TRANSACTION',
-    memo: '3월 급여',
+    memo: '3월 스마트스토어 매출',
     sourceCollectedTransactionId: 'txn-1',
-    sourceCollectedTransactionTitle: '3월 급여',
+    sourceCollectedTransactionTitle: '3월 스마트스토어 매출',
     reversesJournalEntryId: null,
     reversesJournalEntryNumber: null,
     reversedByJournalEntryId: null,
@@ -36,10 +36,10 @@ export const mockJournalEntries: JournalEntryItem[] = [
         lineNumber: 1,
         accountSubjectCode: '1010',
         accountSubjectName: '보통예금',
-        fundingAccountName: '주거래 통장',
+        fundingAccountName: '사업 운영 통장',
         debitAmount: 3200000,
         creditAmount: 0,
-        description: '3월 급여'
+        description: '3월 스마트스토어 매출'
       },
       {
         id: 'jel-demo-2',
@@ -49,7 +49,7 @@ export const mockJournalEntries: JournalEntryItem[] = [
         fundingAccountName: null,
         debitAmount: 0,
         creditAmount: 3200000,
-        description: '3월 급여'
+        description: '3월 스마트스토어 매출'
       }
     ]
   },
@@ -59,9 +59,9 @@ export const mockJournalEntries: JournalEntryItem[] = [
     entryDate: '2026-03-03T00:00:00.000Z',
     status: 'SUPERSEDED',
     sourceKind: 'COLLECTED_TRANSACTION',
-    memo: '주유',
+    memo: '배송 차량 주유',
     sourceCollectedTransactionId: 'txn-2',
-    sourceCollectedTransactionTitle: '주유',
+    sourceCollectedTransactionTitle: '배송 차량 주유',
     reversesJournalEntryId: null,
     reversesJournalEntryNumber: null,
     reversedByJournalEntryId: null,
@@ -82,17 +82,17 @@ export const mockJournalEntries: JournalEntryItem[] = [
         fundingAccountName: null,
         debitAmount: 84000,
         creditAmount: 0,
-        description: '주유'
+        description: '배송 차량 주유'
       },
       {
         id: 'jel-demo-2-2',
         lineNumber: 2,
         accountSubjectCode: '1010',
         accountSubjectName: '보통예금',
-        fundingAccountName: '생활비 통장',
+        fundingAccountName: '비용 예비 통장',
         debitAmount: 0,
         creditAmount: 84000,
-        description: '주유'
+        description: '배송 차량 주유'
       }
     ]
   },
@@ -102,7 +102,7 @@ export const mockJournalEntries: JournalEntryItem[] = [
     entryDate: '2026-04-04T00:00:00.000Z',
     status: 'POSTED',
     sourceKind: 'MANUAL_ADJUSTMENT',
-    memo: '카드 승인 금액 확인 후 정정',
+    memo: '주유 영수증 확인 후 정정',
     sourceCollectedTransactionId: null,
     sourceCollectedTransactionTitle: null,
     reversesJournalEntryId: null,
@@ -113,7 +113,7 @@ export const mockJournalEntries: JournalEntryItem[] = [
     correctsJournalEntryNumber: '202603-0002',
     correctionEntryIds: [],
     correctionEntryNumbers: [],
-    correctionReason: '카드 승인 금액 확인 후 정정',
+    correctionReason: '주유 영수증 확인 후 정정',
     createdByActorType: 'TENANT_MEMBERSHIP',
     createdByMembershipId: 'membership-demo',
     lines: [
@@ -125,17 +125,17 @@ export const mockJournalEntries: JournalEntryItem[] = [
         fundingAccountName: null,
         debitAmount: 95000,
         creditAmount: 0,
-        description: '정정 주유'
+        description: '정정 배송 차량 주유'
       },
       {
         id: 'jel-demo-2-c1-2',
         lineNumber: 2,
         accountSubjectCode: '1010',
         accountSubjectName: '보통예금',
-        fundingAccountName: '생활비 통장',
+        fundingAccountName: '비용 예비 통장',
         debitAmount: 0,
         creditAmount: 95000,
-        description: '정정 주유'
+        description: '정정 배송 차량 주유'
       }
     ]
   }

@@ -12,6 +12,6 @@ export class VehiclesController {
 
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {
-    return this.vehiclesService.findAll(user.id);
+    return this.vehiclesService.findAll(user);
   }
 }

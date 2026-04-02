@@ -155,3 +155,65 @@ test('GET /ledger-transaction-types returns active transaction types for the cur
     await context.close();
   }
 });
+
+test('GET /insurance-policies returns active policies for the current workspace ledger', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/insurance-policies', {
+      headers: context.authHeaders()
+    });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body, [
+      {
+        id: 'policy-1',
+        provider: '삼성화재',
+        productName: '업무용 차량 보험',
+        monthlyPremiumWon: 42_000,
+        paymentDay: 25,
+        cycle: 'MONTHLY',
+        renewalDate: '2026-11-01',
+        maturityDate: null
+      }
+    ]);
+  } finally {
+    await context.close();
+  }
+});
+
+test('GET /vehicles returns only vehicles for the current workspace ledger', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/vehicles', {
+      headers: context.authHeaders()
+    });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body, [
+      {
+        id: 'vehicle-1',
+        name: '배송 밴',
+        manufacturer: 'Hyundai',
+        fuelType: 'DIESEL',
+        initialOdometerKm: 58_200,
+        monthlyExpenseWon: 130_000,
+        estimatedFuelEfficiencyKmPerLiter: 11.2,
+        fuelLogs: [
+          {
+            id: 'fuel-1',
+            filledOn: '2026-03-05',
+            odometerKm: 58_480,
+            liters: 42.5,
+            amountWon: 72_000,
+            unitPriceWon: 1694,
+            isFullTank: true
+          }
+        ]
+      }
+    ]);
+  } finally {
+    await context.close();
+  }
+});

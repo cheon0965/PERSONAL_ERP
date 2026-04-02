@@ -31,8 +31,8 @@ export function CurrentPeriodSection({
 }) {
   return (
     <SectionCard
-      title="현재 운영 기간"
-      description="수집 거래 입력과 전표 확정은 현재 열린 운영 기간 문맥 안에서만 진행됩니다."
+      title="현재 운영 월"
+      description="수집 거래 입력과 전표 확정은 현재 열린 운영 월 안에서만 진행됩니다."
     >
       {currentPeriod ? (
         <Grid container spacing={appLayout.fieldGap} alignItems="center">
@@ -100,14 +100,14 @@ export function TransactionsFilterSection({
   onCategoryChange: (value: string) => void;
 }) {
   return (
-    <SectionCard
-      title="필터"
-      description={
-        currentPeriod
-          ? `${currentPeriod.monthLabel} 운영 기간의 수집 거래를 검색어, 자금수단, 카테고리 기준으로 좁혀 볼 수 있습니다.`
-          : '운영 기간이 열리면 해당 기간의 수집 거래를 필터링할 수 있습니다.'
-      }
-    >
+      <SectionCard
+        title="필터"
+        description={
+          currentPeriod
+            ? `${currentPeriod.monthLabel} 운영 월의 수집 거래를 검색어, 자금수단, 카테고리 기준으로 좁혀 볼 수 있습니다.`
+            : '운영 월이 열리면 해당 월의 수집 거래를 필터링할 수 있습니다.'
+        }
+      >
       <Grid container spacing={appLayout.fieldGap}>
         <Grid size={{ xs: 12, md: 4 }}>
           <TextField
@@ -166,7 +166,9 @@ export function TransactionsTableSection({
   journalEntriesById,
   confirmPending,
   confirmingTransactionId,
-  onConfirm
+  onConfirm,
+  onEdit,
+  onDelete
 }: {
   currentPeriod: AccountingPeriodItem | null;
   rows: CollectedTransactionItem[];
@@ -174,6 +176,8 @@ export function TransactionsTableSection({
   confirmPending: boolean;
   confirmingTransactionId: string | undefined;
   onConfirm: (transaction: CollectedTransactionItem) => void;
+  onEdit: (transaction: CollectedTransactionItem) => void;
+  onDelete: (transaction: CollectedTransactionItem) => void;
 }) {
   const columns = React.useMemo<GridColDef<CollectedTransactionItem>[]>(
     () => [
@@ -203,7 +207,7 @@ export function TransactionsTableSection({
       {
         field: 'actions',
         headerName: '동작',
-        flex: 1.2,
+        flex: 2,
         sortable: false,
         filterable: false,
         renderCell: (params) => {
@@ -217,16 +221,36 @@ export function TransactionsTableSection({
 
           if (row.postingStatus === 'PENDING') {
             return (
-              <Button
-                size="small"
-                variant="contained"
-                disabled={isConfirming}
-                onClick={() => {
-                  onConfirm(row);
-                }}
-              >
-                {isConfirming ? '확정 중...' : '전표 확정'}
-              </Button>
+              <Stack direction="row" spacing={1}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => {
+                    onEdit(row);
+                  }}
+                >
+                  수정
+                </Button>
+                <Button
+                  size="small"
+                  color="error"
+                  onClick={() => {
+                    onDelete(row);
+                  }}
+                >
+                  삭제
+                </Button>
+                <Button
+                  size="small"
+                  variant="contained"
+                  disabled={isConfirming}
+                  onClick={() => {
+                    onConfirm(row);
+                  }}
+                >
+                  {isConfirming ? '확정 중...' : '전표 확정'}
+                </Button>
+              </Stack>
             );
           }
 
@@ -262,7 +286,14 @@ export function TransactionsTableSection({
         }
       }
     ],
-    [confirmPending, confirmingTransactionId, journalEntriesById, onConfirm]
+    [
+      confirmPending,
+      confirmingTransactionId,
+      journalEntriesById,
+      onConfirm,
+      onDelete,
+      onEdit
+    ]
   );
 
   return (
@@ -270,8 +301,8 @@ export function TransactionsTableSection({
       title="수집 거래 목록"
       description={
         currentPeriod
-          ? `${currentPeriod.monthLabel} 운영 기간 안의 수집 거래를 확인하고, 보류 상태 거래를 전표로 확정할 수 있습니다.`
-          : '현재 열린 운영 기간이 없으므로 목록이 비어 있습니다.'
+          ? `${currentPeriod.monthLabel} 운영 월 안의 수집 거래를 확인하고, 보류 상태 거래를 수정하거나 삭제하고 전표로 확정할 수 있습니다.`
+          : '현재 열린 운영 월이 없으므로 목록이 비어 있습니다.'
       }
       rows={currentPeriod ? rows : []}
       columns={columns}

@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
+import type { CollectedTransactionPostingStatus } from '@personal-erp/contracts';
 import {
   AccountingPeriodStatus,
   CollectedTransactionStatus
@@ -59,6 +60,26 @@ export function assertCollectedTransactionCanBeConfirmed(input: {
   );
 }
 
+export function assertCollectedTransactionCanBeUpdated(input: {
+  postingStatus: CollectedTransactionPostingStatus;
+  postedJournalEntryId: string | null;
+}): void {
+  assertPendingCollectedTransactionMutationAllowed(
+    input,
+    'Only pending collected transactions can be updated.'
+  );
+}
+
+export function assertCollectedTransactionCanBeDeleted(input: {
+  postingStatus: CollectedTransactionPostingStatus;
+  postedJournalEntryId: string | null;
+}): void {
+  assertPendingCollectedTransactionMutationAllowed(
+    input,
+    'Only pending collected transactions can be deleted.'
+  );
+}
+
 export function assertCollectedTransactionCanBeCorrected(
   currentStatus: CollectedTransactionStatus
 ): void {
@@ -67,6 +88,24 @@ export function assertCollectedTransactionCanBeCorrected(
     CollectedTransactionStatus.CORRECTED,
     'Only posted collected transactions can be corrected.'
   );
+}
+
+function assertPendingCollectedTransactionMutationAllowed(
+  input: {
+    postingStatus: CollectedTransactionPostingStatus;
+    postedJournalEntryId: string | null;
+  },
+  message: string
+): void {
+  if (input.postedJournalEntryId) {
+    throw new ConflictException(
+      'Posted collected transactions must be adjusted through journal entries.'
+    );
+  }
+
+  if (input.postingStatus !== 'PENDING') {
+    throw new ConflictException(message);
+  }
 }
 
 function assertCollectedTransactionStatusTransition(

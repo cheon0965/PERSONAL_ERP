@@ -62,7 +62,7 @@ test('protects the transactions route, restores the session, and saves a transac
       },
       ledger: {
         id: 'ledger-demo',
-        name: '개인 장부',
+        name: '사업 장부',
         baseCurrency: 'KRW',
         timezone: 'Asia/Seoul',
         status: 'ACTIVE'
@@ -73,13 +73,13 @@ test('protects the transactions route, restores the session, and saves a transac
   const fundingAccounts: FundingAccountItem[] = [
     {
       id: 'acc-main',
-      name: 'Main Checking',
+      name: '사업 운영 통장',
       type: 'BANK',
       balanceWon: 2_450_000
     },
     {
-      id: 'acc-living',
-      name: 'Living Expenses',
+      id: 'acc-reserve',
+      name: '비용 예비 통장',
       type: 'BANK',
       balanceWon: 430_000
     }
@@ -87,13 +87,13 @@ test('protects the transactions route, restores the session, and saves a transac
 
   const categories: CategoryItem[] = [
     {
-      id: 'cat-food',
-      name: '식비',
+      id: 'cat-materials',
+      name: '원재료비',
       kind: 'EXPENSE'
     },
     {
-      id: 'cat-salary',
-      name: '급여',
+      id: 'cat-sales',
+      name: '매출 입금',
       kind: 'INCOME'
     }
   ];
@@ -102,11 +102,11 @@ test('protects the transactions route, restores the session, and saves a transac
     {
       id: 'txn-seeded-1',
       businessDate: '2026-03-12',
-      title: '초기 지출',
+      title: '포장재 구매',
       type: 'EXPENSE',
       amountWon: 126_000,
-      fundingAccountName: '생활비 통장',
-      categoryName: '식비',
+      fundingAccountName: '비용 예비 통장',
+      categoryName: '원재료비',
       sourceKind: 'MANUAL',
       postingStatus: 'POSTED',
       postedJournalEntryId: 'je-seeded-1',
@@ -245,7 +245,7 @@ test('protects the transactions route, restores the session, and saves a transac
         fundingAccountName,
         categoryName,
         sourceKind: 'MANUAL',
-        postingStatus: 'POSTED',
+        postingStatus: 'PENDING',
         postedJournalEntryId: null,
         postedJournalEntryNumber: null
       };
@@ -256,6 +256,22 @@ test('protects the transactions route, restores the session, and saves a transac
         status: 201,
         contentType: 'application/json',
         body: JSON.stringify(createdItem)
+      });
+      return;
+    }
+
+    if (
+      path.startsWith('/api/collected-transactions/') &&
+      request.method() === 'DELETE'
+    ) {
+      const collectedTransactionId = path.split('/').at(-1);
+      transactions = transactions.filter(
+        (candidate) => candidate.id !== collectedTransactionId
+      );
+
+      await route.fulfill({
+        status: 204,
+        body: ''
       });
       return;
     }
@@ -321,7 +337,25 @@ test('protects the transactions route, restores the session, and saves a transac
   await saveButton.click();
 
   await expect(
-    page.getByText('수집 거래를 등록했고 목록을 새로고침했습니다.')
+    page.getByText(`${transactionTitle} 수집 거래를 등록했습니다.`)
   ).toBeVisible();
-  await expect(page.getByText(transactionTitle)).toBeVisible();
+  await expect(
+    page.getByRole('gridcell', { name: transactionTitle, exact: true })
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: '삭제' }).click();
+  await expect(
+    page.getByRole('heading', { name: '수집 거래 삭제' })
+  ).toBeVisible();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: '삭제', exact: true })
+    .click();
+
+  await expect(
+    page.getByText(`${transactionTitle} 수집 거래를 삭제했습니다.`)
+  ).toBeVisible();
+  await expect(
+    page.getByRole('gridcell', { name: transactionTitle, exact: true })
+  ).toHaveCount(0);
 });

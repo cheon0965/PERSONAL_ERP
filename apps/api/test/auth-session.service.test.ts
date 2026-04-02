@@ -109,7 +109,7 @@ test('AuthSessionService.issueSession returns tokens and user for a valid identi
             },
             ledger: {
               id: 'ledger-1',
-              name: '개인 장부',
+              name: '사업 장부',
               baseCurrency: 'KRW',
               timezone: 'Asia/Seoul',
               status: 'ACTIVE'
@@ -157,7 +157,7 @@ test('AuthSessionService.issueSession returns tokens and user for a valid identi
       },
       ledger: {
         id: 'ledger-1',
-        name: '개인 장부',
+        name: '사업 장부',
         baseCurrency: 'KRW',
         timezone: 'Asia/Seoul',
         status: 'ACTIVE'

@@ -78,7 +78,7 @@ export async function createRequestTestState(): Promise<RequestTestState> {
       {
         id: 'ledger-1',
         tenantId: 'tenant-1',
-        name: '개인 장부',
+        name: '사업 장부',
         baseCurrency: 'KRW',
         timezone: 'Asia/Seoul',
         status: 'ACTIVE',
@@ -392,6 +392,8 @@ export async function createRequestTestState(): Promise<RequestTestState> {
       {
         id: 'txn-seed-1',
         userId: 'user-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
         title: 'March salary',
         type: TransactionType.INCOME,
         amountWon: 3_000_000,
@@ -407,6 +409,8 @@ export async function createRequestTestState(): Promise<RequestTestState> {
       {
         id: 'txn-seed-2',
         userId: 'user-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
         title: 'Fuel refill',
         type: TransactionType.EXPENSE,
         amountWon: 84_000,
@@ -422,6 +426,8 @@ export async function createRequestTestState(): Promise<RequestTestState> {
       {
         id: 'txn-seed-3',
         userId: 'user-2',
+        tenantId: 'tenant-2',
+        ledgerId: 'ledger-2',
         title: 'Other user expense',
         type: TransactionType.EXPENSE,
         amountWon: 777_777,
@@ -479,13 +485,29 @@ export async function createRequestTestState(): Promise<RequestTestState> {
       {
         id: 'policy-1',
         userId: 'user-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        provider: '삼성화재',
+        productName: '업무용 차량 보험',
         monthlyPremiumWon: 42_000,
+        paymentDay: 25,
+        cycle: 'MONTHLY',
+        renewalDate: new Date('2026-11-01T00:00:00.000Z'),
+        maturityDate: null,
         isActive: true
       },
       {
         id: 'policy-2',
         userId: 'user-2',
+        tenantId: 'tenant-2',
+        ledgerId: 'ledger-2',
+        provider: 'DB손해보험',
+        productName: '사업장 화재 보험',
         monthlyPremiumWon: 250_000,
+        paymentDay: 20,
+        cycle: 'MONTHLY',
+        renewalDate: new Date('2026-10-15T00:00:00.000Z'),
+        maturityDate: null,
         isActive: true
       }
     ],
@@ -493,12 +515,40 @@ export async function createRequestTestState(): Promise<RequestTestState> {
       {
         id: 'vehicle-1',
         userId: 'user-1',
-        monthlyExpenseWon: 130_000
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        name: '배송 밴',
+        manufacturer: 'Hyundai',
+        fuelType: 'DIESEL',
+        initialOdometerKm: 58_200,
+        monthlyExpenseWon: 130_000,
+        estimatedFuelEfficiencyKmPerLiter: 11.2,
+        createdAt: new Date('2026-03-01T08:00:00.000Z'),
+        fuelLogs: [
+          {
+            id: 'fuel-1',
+            filledOn: new Date('2026-03-05T00:00:00.000Z'),
+            odometerKm: 58_480,
+            liters: 42.5,
+            amountWon: 72_000,
+            unitPriceWon: 1694,
+            isFullTank: true
+          }
+        ]
       },
       {
         id: 'vehicle-2',
         userId: 'user-2',
-        monthlyExpenseWon: 410_000
+        tenantId: 'tenant-2',
+        ledgerId: 'ledger-2',
+        name: '기타 차량',
+        manufacturer: 'Kia',
+        fuelType: 'GASOLINE',
+        initialOdometerKm: 12_000,
+        monthlyExpenseWon: 410_000,
+        estimatedFuelEfficiencyKmPerLiter: 9.4,
+        createdAt: new Date('2026-03-02T08:00:00.000Z'),
+        fuelLogs: []
       }
     ]
   };

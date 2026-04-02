@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import type { InsurancePolicyItem } from '@personal-erp/contracts';
+import type {
+  AuthenticatedUser,
+  InsurancePolicyItem
+} from '@personal-erp/contracts';
+import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { mapInsurancePolicyToItem } from './insurance-policies.mapper';
 import { InsurancePoliciesRepository } from './insurance-policies.repository';
 
@@ -9,9 +13,13 @@ export class InsurancePoliciesService {
     private readonly insurancePoliciesRepository: InsurancePoliciesRepository
   ) {}
 
-  async findAll(userId: string): Promise<InsurancePolicyItem[]> {
+  async findAll(user: AuthenticatedUser): Promise<InsurancePolicyItem[]> {
+    const workspace = requireCurrentWorkspace(user);
     const items =
-      await this.insurancePoliciesRepository.findActiveByUserId(userId);
+      await this.insurancePoliciesRepository.findActiveInWorkspace(
+        workspace.tenantId,
+        workspace.ledgerId
+      );
     return items.map(mapInsurancePolicyToItem);
   }
 }

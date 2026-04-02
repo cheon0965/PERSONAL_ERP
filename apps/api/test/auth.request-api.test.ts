@@ -41,7 +41,7 @@ test('POST /auth/login returns access token and a refresh cookie for valid crede
         },
         ledger: {
           id: 'ledger-1',
-          name: '개인 장부',
+          name: '사업 장부',
           baseCurrency: 'KRW',
           timezone: 'Asia/Seoul',
           status: 'ACTIVE'
@@ -532,7 +532,7 @@ test('GET /auth/me returns the authenticated user', async () => {
         },
         ledger: {
           id: 'ledger-1',
-          name: '개인 장부',
+          name: '사업 장부',
           baseCurrency: 'KRW',
           timezone: 'Asia/Seoul',
           status: 'ACTIVE'

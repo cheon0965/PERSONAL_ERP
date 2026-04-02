@@ -1,15 +1,20 @@
 version: '3.9'
 
+# Local developer-only MySQL bootstrap container.
+# The credentials below are intentionally disposable defaults so `npm run db:up`
+# works out of the box on a single developer machine. Never reuse them for any
+# shared, staging, or production environment.
+
 services:
   mysql:
     image: mysql:8.4
     container_name: personal-erp-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: local_root_not_for_prod
       MYSQL_DATABASE: personal_erp
       MYSQL_USER: erp_user
-      MYSQL_PASSWORD: erp_password_local_2026
+      MYSQL_PASSWORD: local_erp_not_for_prod
       TZ: Asia/Seoul
     ports:
       - '3306:3306'
@@ -22,7 +27,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'mysqladmin ping -h localhost -u erp_user -perp_password_local_2026 --silent'
+          'mysqladmin ping -h localhost -u erp_user -plocal_erp_not_for_prod --silent'
         ]
       interval: 10s
       timeout: 5s

@@ -4,12 +4,12 @@ import { fetchJson } from '@/shared/api/fetch-json';
 export const mockVehicles: VehicleItem[] = [
   {
     id: 'veh-1',
-    name: 'G80 3.3',
-    manufacturer: 'Genesis',
-    fuelType: 'GASOLINE',
+    name: '포터2 배송차량',
+    manufacturer: 'Hyundai',
+    fuelType: 'DIESEL',
     initialOdometerKm: 128000,
     monthlyExpenseWon: 286000,
-    estimatedFuelEfficiencyKmPerLiter: 8.9,
+    estimatedFuelEfficiencyKmPerLiter: 10.8,
     fuelLogs: [
       {
         id: 'fuel-1',

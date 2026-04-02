@@ -5,8 +5,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Grid, MenuItem, Stack, TextField } from '@mui/material';
 import type {
-  CreateRecurringRuleRequest,
-  RecurringRuleItem
+  RecurringRuleDetailItem,
+  RecurringRuleItem,
+  UpdateRecurringRuleRequest
 } from '@personal-erp/contracts';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -24,7 +25,9 @@ import {
   buildRecurringRuleFallbackItem,
   createRecurringRule,
   mergeRecurringRuleItem,
-  recurringRulesQueryKey
+  recurringRuleDetailQueryKey,
+  recurringRulesQueryKey,
+  updateRecurringRule
 } from './recurring-rules.api';
 
 const optionalDayOfMonthSchema = z.preprocess(
@@ -50,18 +53,34 @@ const recurringRuleSchema = z.object({
 });
 
 type RecurringRuleFormInput = z.infer<typeof recurringRuleSchema>;
+type RecurringRuleFormMode = 'create' | 'edit';
 
 type SubmitFeedback = {
   severity: 'success' | 'error';
   message: string;
 } | null;
 
-type CreateRecurringRuleMutationInput = {
-  payload: CreateRecurringRuleRequest;
+type SaveRecurringRuleMutationInput = {
+  mode: RecurringRuleFormMode;
+  recurringRuleId?: string;
+  payload: UpdateRecurringRuleRequest;
   fallback: RecurringRuleItem;
 };
 
-export function RecurringRuleForm() {
+type RecurringRuleFormProps = {
+  mode?: RecurringRuleFormMode;
+  initialRule?: RecurringRuleDetailItem | null;
+  onCompleted?: (
+    recurringRule: RecurringRuleItem,
+    mode: RecurringRuleFormMode
+  ) => void;
+};
+
+export function RecurringRuleForm({
+  mode = 'create',
+  initialRule = null,
+  onCompleted
+}: RecurringRuleFormProps) {
   const queryClient = useQueryClient();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const { data: fundingAccounts = [], error: fundingAccountsError } = useQuery({
@@ -88,19 +107,39 @@ export function RecurringRuleForm() {
   });
 
   const mutation = useMutation({
-    mutationFn: ({ payload, fallback }: CreateRecurringRuleMutationInput) =>
-      createRecurringRule(payload, fallback),
-    onSuccess: async (created) => {
+    mutationFn: ({
+      mode: nextMode,
+      recurringRuleId,
+      payload,
+      fallback
+    }: SaveRecurringRuleMutationInput) => {
+      if (nextMode === 'edit' && recurringRuleId) {
+        return updateRecurringRule(recurringRuleId, payload, fallback);
+      }
+
+      return createRecurringRule(payload, fallback);
+    },
+    onSuccess: async (saved, variables) => {
       queryClient.setQueryData<RecurringRuleItem[]>(
         recurringRulesQueryKey,
-        (current) => mergeRecurringRuleItem(current, created)
+        (current) => mergeRecurringRuleItem(current, saved)
       );
 
       if (!webRuntime.demoFallbackEnabled) {
-        await Promise.all([
+        const invalidations = [
           queryClient.invalidateQueries({ queryKey: recurringRulesQueryKey }),
           queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] })
-        ]);
+        ];
+
+        if (variables.mode === 'edit' && variables.recurringRuleId) {
+          invalidations.push(
+            queryClient.invalidateQueries({
+              queryKey: recurringRuleDetailQueryKey(variables.recurringRuleId)
+            })
+          );
+        }
+
+        await Promise.all(invalidations);
       }
     }
   });
@@ -114,17 +153,48 @@ export function RecurringRuleForm() {
     }
   }, [fundingAccounts, form]);
 
+  React.useEffect(() => {
+    setFeedback(null);
+
+    if (mode === 'edit' && initialRule) {
+      form.reset(mapDetailToFormInput(initialRule));
+      return;
+    }
+
+    form.reset({
+      title: '',
+      accountId: '',
+      categoryId: '',
+      amountWon: 0,
+      frequency: 'MONTHLY',
+      dayOfMonth: 10,
+      startDate: getTodayDateInputValue(),
+      endDate: '',
+      status: 'ACTIVE'
+    });
+  }, [form, initialRule, mode]);
+
   const referenceError = fundingAccountsError ?? categoriesError;
   const isBusy =
     mutation.isPending ||
     form.formState.isSubmitting ||
     fundingAccounts.length === 0 ||
-    Boolean(referenceError);
+    Boolean(referenceError) ||
+    (mode === 'edit' && !initialRule);
+  const submitLabel = mode === 'edit' ? '반복 규칙 수정' : '반복 규칙 저장';
 
   return (
     <form
       onSubmit={form.handleSubmit(async (values) => {
         setFeedback(null);
+
+        if (mode === 'edit' && !initialRule) {
+          setFeedback({
+            severity: 'error',
+            message: '수정할 반복 규칙 상세 정보를 아직 불러오지 못했습니다.'
+          });
+          return;
+        }
 
         const selectedFundingAccount = fundingAccounts.find(
           (fundingAccount) => fundingAccount.id === values.accountId
@@ -140,7 +210,7 @@ export function RecurringRuleForm() {
         const selectedCategory = categories.find(
           (category) => category.id === values.categoryId
         );
-        const payload: CreateRecurringRuleRequest = {
+        const payload: UpdateRecurringRuleRequest = {
           title: values.title.trim(),
           fundingAccountId: values.accountId,
           categoryId: values.categoryId || undefined,
@@ -153,28 +223,44 @@ export function RecurringRuleForm() {
         };
 
         try {
-          await mutation.mutateAsync({
+          const saved = await mutation.mutateAsync({
+            mode,
+            recurringRuleId: initialRule?.id,
             payload,
             fallback: buildRecurringRuleFallbackItem(payload, {
+              id: initialRule?.id,
               fundingAccountName: selectedFundingAccount.name,
-              categoryName: selectedCategory?.name
+              categoryName: selectedCategory?.name,
+              nextRunDate: initialRule?.nextRunDate ?? payload.startDate,
+              isActive: payload.isActive
             })
           });
 
-          form.reset({
-            title: '',
-            accountId: values.accountId,
-            categoryId: '',
-            amountWon: 0,
-            frequency: values.frequency,
-            dayOfMonth: values.dayOfMonth,
-            startDate: getTodayDateInputValue(),
-            endDate: '',
-            status: values.status
-          });
+          if (onCompleted) {
+            onCompleted(saved, mode);
+            return;
+          }
+
+          if (mode === 'create') {
+            form.reset({
+              title: '',
+              accountId: values.accountId,
+              categoryId: '',
+              amountWon: 0,
+              frequency: values.frequency,
+              dayOfMonth: values.dayOfMonth,
+              startDate: getTodayDateInputValue(),
+              endDate: '',
+              status: values.status
+            });
+          }
+
           setFeedback({
             severity: 'success',
-            message: '반복 규칙을 저장했고 계획 기준 목록을 새로고침했습니다.'
+            message:
+              mode === 'edit'
+                ? '반복 규칙을 수정했고 계획 기준 목록을 새로고침했습니다.'
+                : '반복 규칙을 저장했고 계획 기준 목록을 새로고침했습니다.'
           });
         } catch (error) {
           setFeedback({
@@ -182,7 +268,9 @@ export function RecurringRuleForm() {
             message:
               error instanceof Error
                 ? error.message
-                : '반복 규칙을 저장하지 못했습니다.'
+                : mode === 'edit'
+                  ? '반복 규칙을 수정하지 못했습니다.'
+                  : '반복 규칙을 저장하지 못했습니다.'
           });
         }
       })}
@@ -199,6 +287,11 @@ export function RecurringRuleForm() {
             {feedback.message}
           </Alert>
         ) : null}
+        <Alert severity="info" variant="outlined">
+          {mode === 'edit'
+            ? '기존 반복 규칙 기준을 수정하면 이후 계획 생성 기준이 함께 바뀝니다.'
+            : '반복 규칙은 계획 항목 생성 기준이며, 실제 수집 거래나 전표를 직접 만들지는 않습니다.'}
+        </Alert>
 
         <Grid container spacing={appLayout.fieldGap}>
           <Grid size={{ xs: 12, md: 6 }}>
@@ -315,9 +408,25 @@ export function RecurringRuleForm() {
           disabled={isBusy}
           sx={{ alignSelf: 'flex-start' }}
         >
-          {mutation.isPending ? '저장 중...' : '반복 규칙 저장'}
+          {mutation.isPending ? '저장 중...' : submitLabel}
         </Button>
       </Stack>
     </form>
   );
+}
+
+function mapDetailToFormInput(
+  recurringRule: RecurringRuleDetailItem
+): RecurringRuleFormInput {
+  return {
+    title: recurringRule.title,
+    accountId: recurringRule.fundingAccountId,
+    categoryId: recurringRule.categoryId ?? '',
+    amountWon: recurringRule.amountWon,
+    frequency: recurringRule.frequency,
+    dayOfMonth: recurringRule.dayOfMonth ?? undefined,
+    startDate: recurringRule.startDate,
+    endDate: recurringRule.endDate ?? '',
+    status: recurringRule.isActive ? 'ACTIVE' : 'PAUSED'
+  };
 }

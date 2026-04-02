@@ -13,6 +13,7 @@ import {
   assertAccountingPeriodCanBeReopenedWithoutDependents
 } from '../src/modules/accounting-periods/accounting-period-transition.policy';
 import {
+  assertCollectedTransactionCanBeDeleted,
   assertCollectedTransactionCanBeConfirmed,
   assertCollectedTransactionCanBeCorrected
 } from '../src/modules/collected-transactions/collected-transaction-transition.policy';
@@ -83,6 +84,12 @@ test('collected transaction transition policy allows confirmable and correctable
     })
   );
   assert.doesNotThrow(() =>
+    assertCollectedTransactionCanBeDeleted({
+      postingStatus: 'PENDING',
+      postedJournalEntryId: null
+    })
+  );
+  assert.doesNotThrow(() =>
     assertCollectedTransactionCanBeCorrected(CollectedTransactionStatus.POSTED)
   );
 });
@@ -99,6 +106,18 @@ test('collected transaction transition policy rejects locked period and invalid 
       error instanceof BadRequestException &&
       error.message ===
         'Collected transaction in a locked period cannot be confirmed.'
+  );
+
+  await assert.rejects(
+    async () =>
+      assertCollectedTransactionCanBeDeleted({
+        postingStatus: CollectedTransactionStatus.POSTED,
+        postedJournalEntryId: 'je-1'
+      }),
+    (error: unknown) =>
+      error instanceof ConflictException &&
+      error.message ===
+        'Posted collected transactions must be adjusted through journal entries.'
   );
 
   await assert.rejects(

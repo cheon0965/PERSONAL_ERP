@@ -28,21 +28,21 @@ const DEMO_SETTINGS = {
 const DEMO_ACCOUNTS = [
   {
     key: 'mainAccount',
-    name: '주거래 통장',
+    name: '사업 운영 통장',
     type: AccountType.BANK,
     balanceWon: 2450000,
     sortOrder: 1
   },
   {
-    key: 'lifeAccount',
-    name: '생활비 통장',
+    key: 'reserveAccount',
+    name: '비용 예비 통장',
     type: AccountType.BANK,
     balanceWon: 430000,
     sortOrder: 2
   },
   {
     key: 'cardAccount',
-    name: '신용카드',
+    name: '사업용 카드',
     type: AccountType.CARD,
     balanceWon: 300000,
     sortOrder: 3
@@ -51,38 +51,38 @@ const DEMO_ACCOUNTS = [
 
 const DEMO_CATEGORIES = [
   {
-    key: 'salaryCategory',
-    name: '급여',
+    key: 'salesCategory',
+    name: '매출 입금',
     kind: CategoryKind.INCOME,
     sortOrder: 1
   },
   {
-    key: 'foodCategory',
-    name: '식비',
+    key: 'materialCategory',
+    name: '원재료비',
     kind: CategoryKind.EXPENSE,
     sortOrder: 2
   },
   {
     key: 'insuranceCategory',
-    name: '보험',
+    name: '사업 보험료',
     kind: CategoryKind.EXPENSE,
     sortOrder: 3
   },
   {
     key: 'fuelCategory',
-    name: '주유',
+    name: '배송 차량 유지비',
     kind: CategoryKind.EXPENSE,
     sortOrder: 4
   },
   {
-    key: 'telecomCategory',
-    name: '통신비',
+    key: 'utilitiesCategory',
+    name: '통신·POS 비용',
     kind: CategoryKind.EXPENSE,
     sortOrder: 5
   },
   {
-    key: 'installmentCategory',
-    name: '차량 할부',
+    key: 'packagingCategory',
+    name: '포장재/소모품',
     kind: CategoryKind.EXPENSE,
     sortOrder: 6
   }
@@ -90,42 +90,42 @@ const DEMO_CATEGORIES = [
 
 const DEMO_TRANSACTIONS = [
   {
-    title: '3월 급여',
+    title: '3월 스마트스토어 매출',
     type: TransactionType.INCOME,
     amountWon: 3200000,
     businessDate: new Date('2026-03-01T00:00:00.000Z'),
     accountKey: 'mainAccount',
-    categoryKey: 'salaryCategory',
+    categoryKey: 'salesCategory',
     origin: TransactionOrigin.MANUAL,
     status: TransactionStatus.POSTED
   },
   {
-    title: '차량 주유',
+    title: '배송 차량 주유',
     type: TransactionType.EXPENSE,
     amountWon: 84000,
     businessDate: new Date('2026-03-03T00:00:00.000Z'),
-    accountKey: 'lifeAccount',
+    accountKey: 'reserveAccount',
     categoryKey: 'fuelCategory',
     origin: TransactionOrigin.MANUAL,
     status: TransactionStatus.POSTED
   },
   {
-    title: '통신비 자동이체',
+    title: 'POS/인터넷 요금 자동이체',
     type: TransactionType.EXPENSE,
     amountWon: 75000,
     businessDate: new Date('2026-03-10T00:00:00.000Z'),
     accountKey: 'mainAccount',
-    categoryKey: 'telecomCategory',
+    categoryKey: 'utilitiesCategory',
     origin: TransactionOrigin.RECURRING,
     status: TransactionStatus.POSTED
   },
   {
-    title: '장보기',
+    title: '포장재 구매',
     type: TransactionType.EXPENSE,
     amountWon: 126000,
     businessDate: new Date('2026-03-12T00:00:00.000Z'),
-    accountKey: 'lifeAccount',
-    categoryKey: 'foodCategory',
+    accountKey: 'reserveAccount',
+    categoryKey: 'packagingCategory',
     origin: TransactionOrigin.MANUAL,
     status: TransactionStatus.POSTED
   }
@@ -133,27 +133,27 @@ const DEMO_TRANSACTIONS = [
 
 const DEMO_RECURRING_RULES = [
   {
-    title: '통신비',
+    title: 'POS/인터넷 요금',
     amountWon: 75000,
     frequency: RecurrenceFrequency.MONTHLY,
     dayOfMonth: 10,
     startDate: new Date('2026-01-10T00:00:00.000Z'),
     nextRunDate: new Date('2026-04-10T00:00:00.000Z'),
     accountKey: 'mainAccount',
-    categoryKey: 'telecomCategory'
+    categoryKey: 'utilitiesCategory'
   },
   {
-    title: '차량 할부',
+    title: '정기 소모품 보충',
     amountWon: 280000,
     frequency: RecurrenceFrequency.MONTHLY,
     dayOfMonth: 3,
     startDate: new Date('2026-01-03T00:00:00.000Z'),
     nextRunDate: new Date('2026-04-03T00:00:00.000Z'),
     accountKey: 'mainAccount',
-    categoryKey: 'installmentCategory'
+    categoryKey: 'packagingCategory'
   },
   {
-    title: '자동차 보험료',
+    title: '업무용 차량 보험료',
     amountWon: 98000,
     frequency: RecurrenceFrequency.MONTHLY,
     dayOfMonth: 25,
@@ -163,7 +163,7 @@ const DEMO_RECURRING_RULES = [
     categoryKey: 'insuranceCategory'
   },
   {
-    title: '치아 보험료',
+    title: '영업배상 책임보험료',
     amountWon: 43000,
     frequency: RecurrenceFrequency.MONTHLY,
     dayOfMonth: 25,
@@ -177,7 +177,7 @@ const DEMO_RECURRING_RULES = [
 const DEMO_INSURANCE_POLICIES = [
   {
     provider: '삼성화재',
-    productName: '자동차 보험',
+    productName: '업무용 차량 보험',
     monthlyPremiumWon: 98000,
     paymentDay: 25,
     cycle: InsuranceCycle.MONTHLY,
@@ -185,8 +185,8 @@ const DEMO_INSURANCE_POLICIES = [
     isActive: true
   },
   {
-    provider: '메리츠',
-    productName: '치아 보험',
+    provider: 'DB손해보험',
+    productName: '영업배상 책임보험',
     monthlyPremiumWon: 43000,
     paymentDay: 25,
     cycle: InsuranceCycle.MONTHLY,
@@ -196,12 +196,12 @@ const DEMO_INSURANCE_POLICIES = [
 ] as const;
 
 const DEMO_VEHICLE = {
-  name: 'G80 3.3',
-  manufacturer: 'Genesis',
-  fuelType: FuelType.GASOLINE,
+  name: '포터2 배송차량',
+  manufacturer: 'Hyundai',
+  fuelType: FuelType.DIESEL,
   initialOdometerKm: 128000,
   monthlyExpenseWon: 286000,
-  estimatedFuelEfficiencyKmPerLiter: '8.90'
+  estimatedFuelEfficiencyKmPerLiter: '10.80'
 } as const;
 
 const DEMO_FUEL_LOGS = [
@@ -334,7 +334,7 @@ async function ensureDemoAccounts(
   summary: SeedSummary
 ) {
   const existingAccounts = await prisma.account.findMany({
-    where: { userId },
+    where: { tenantId, ledgerId },
     select: { id: true, name: true, type: true, sortOrder: true }
   });
 
@@ -383,7 +383,7 @@ async function ensureDemoCategories(
   summary: SeedSummary
 ) {
   const existingCategories = await prisma.category.findMany({
-    where: { userId },
+    where: { tenantId, ledgerId },
     select: { id: true, name: true, kind: true, sortOrder: true }
   });
 
@@ -447,7 +447,8 @@ async function ensureDemoTransactions(
 
     const existingTransaction = await prisma.transaction.findFirst({
       where: {
-        userId,
+        tenantId,
+        ledgerId,
         type: transaction.type,
         amountWon: transaction.amountWon,
         businessDate: transaction.businessDate,
@@ -502,7 +503,8 @@ async function ensureDemoRecurringRules(
 
     const existingRule = await prisma.recurringRule.findFirst({
       where: {
-        userId,
+        tenantId,
+        ledgerId,
         accountId,
         amountWon: rule.amountWon,
         frequency: rule.frequency,
@@ -539,12 +541,15 @@ async function ensureDemoRecurringRules(
 
 async function ensureDemoInsurancePolicies(
   userId: string,
+  tenantId: string,
+  ledgerId: string,
   summary: SeedSummary
 ) {
   for (const policy of DEMO_INSURANCE_POLICIES) {
     const existingPolicy = await prisma.insurancePolicy.findFirst({
       where: {
-        userId,
+        tenantId,
+        ledgerId,
         monthlyPremiumWon: policy.monthlyPremiumWon,
         paymentDay: policy.paymentDay,
         cycle: policy.cycle
@@ -560,6 +565,8 @@ async function ensureDemoInsurancePolicies(
     await prisma.insurancePolicy.create({
       data: {
         userId,
+        tenantId,
+        ledgerId,
         provider: policy.provider,
         productName: policy.productName,
         monthlyPremiumWon: policy.monthlyPremiumWon,
@@ -574,10 +581,16 @@ async function ensureDemoInsurancePolicies(
   }
 }
 
-async function ensureDemoVehicle(userId: string, summary: SeedSummary) {
+async function ensureDemoVehicle(
+  userId: string,
+  tenantId: string,
+  ledgerId: string,
+  summary: SeedSummary
+) {
   const existingVehicle = await prisma.vehicle.findFirst({
     where: {
-      userId,
+      tenantId,
+      ledgerId,
       name: DEMO_VEHICLE.name
     },
     select: { id: true }
@@ -591,6 +604,8 @@ async function ensureDemoVehicle(userId: string, summary: SeedSummary) {
   const createdVehicle = await prisma.vehicle.create({
     data: {
       userId,
+      tenantId,
+      ledgerId,
       ...DEMO_VEHICLE
     },
     select: { id: true }
@@ -685,9 +700,19 @@ async function main() {
     categoryIds,
     summary
   );
-  await ensureDemoInsurancePolicies(userId, summary);
+  await ensureDemoInsurancePolicies(
+    userId,
+    backbone.tenantId,
+    backbone.ledgerId,
+    summary
+  );
 
-  const vehicleId = await ensureDemoVehicle(userId, summary);
+  const vehicleId = await ensureDemoVehicle(
+    userId,
+    backbone.tenantId,
+    backbone.ledgerId,
+    summary
+  );
   await ensureDemoFuelLogs(vehicleId, summary);
   await ensurePhase1BackboneForUser(prisma, userId);
 

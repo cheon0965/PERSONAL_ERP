@@ -74,13 +74,13 @@ export function JournalEntriesPage() {
     title: '전표 조회 개요',
     description:
       '전표는 회계적 진실의 단일 원천입니다. 이 화면에서는 확정된 전표 라인을 검토하고, 현재 열린 운영 기간 안에서 필요한 반전 또는 정정 전표를 추가로 생성합니다.',
-    primaryEntity: '전표 (JournalEntry)',
+    primaryEntity: '전표',
     relatedEntities: [
-      '전표 라인 (JournalLine)',
-      '수집 거래 (CollectedTransaction)',
-      '계정과목 (AccountSubject)',
-      '자금수단 (FundingAccount)',
-      '운영 기간 (AccountingPeriod)'
+      '전표 라인',
+      '수집 거래',
+      '계정과목',
+      '입출금 계정',
+      '운영 월'
     ],
     truthSource:
       '월 운영 중 확정된 거래는 반드시 전표로 이어지고, 이후 마감과 보고는 이 전표를 기준으로 진행됩니다.'
@@ -92,7 +92,7 @@ export function JournalEntriesPage() {
         <PageHeader
           eyebrow="전표"
           title="전표 조회"
-          description="확정된 JournalEntry와 JournalLine을 검토하고, 현재 열린 운영 기간 안에서 반전 전표와 정정 전표를 추가로 생성하는 화면입니다."
+          description="확정된 전표와 전표 라인을 검토하고, 현재 열린 운영 월 안에서 반전 전표와 정정 전표를 추가로 생성하는 화면입니다."
         />
 
         {feedback ? (

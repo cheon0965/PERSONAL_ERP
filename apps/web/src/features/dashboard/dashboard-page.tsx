@@ -27,16 +27,16 @@ export function DashboardPage() {
   useDomainHelp({
     title: '월 운영 대시보드 개요',
     description:
-      '대시보드는 현재 운영 기간을 period-aware 읽기 모델로 요약해 보여주며, 공식 확정 수치와 운영 판단 수치를 구분해서 해석하게 돕습니다.',
-    primaryEntity: '장부 / 운영 기간 (Ledger / AccountingPeriod)',
+      '대시보드는 현재 운영 월을 기준으로 사업 현황을 요약해 보여주며, 공식 확정 수치와 운영 판단 수치를 구분해서 해석하게 돕습니다.',
+    primaryEntity: '사업 장부 / 운영 월',
     relatedEntities: [
-      '계획 항목 (PlanItem)',
-      '전표 (JournalEntry / JournalLine)',
-      '마감 스냅샷 (ClosingSnapshot)',
-      '재무제표 스냅샷 (FinancialStatementSnapshot)'
+      '계획 항목',
+      '전표와 전표 라인',
+      '월 마감 스냅샷',
+      '공식 재무제표'
     ],
     truthSource:
-      '공식 수치의 단일 원천은 잠금된 기간의 ClosingSnapshot과 FinancialStatementSnapshot입니다.',
+      '공식 수치의 단일 원천은 마감 완료된 월의 마감 스냅샷과 공식 재무제표입니다.',
     readModelNote:
       '이 화면의 카드와 추이는 운영 판단용이며, 잠금 전 기간의 값은 공식 확정치와 다를 수 있습니다.'
   });
@@ -50,7 +50,7 @@ export function DashboardPage() {
         <PageHeader
           eyebrow="장부 운영"
           title="월 운영 대시보드"
-          description="운영 기간 기준의 period-aware 요약 화면입니다."
+          description="현재 운영 월을 기준으로 사업 현황을 요약해 보여주는 화면입니다."
         />
         <QueryErrorAlert
           title="대시보드 요약 조회에 실패했습니다."
@@ -66,14 +66,14 @@ export function DashboardPage() {
         <PageHeader
           eyebrow="장부 운영"
           title="월 운영 대시보드"
-          description="운영 기간 기준의 period-aware 요약 화면입니다."
+          description="현재 운영 월을 기준으로 사업 현황을 요약해 보여주는 화면입니다."
         />
         <SectionCard
           title="운영 기간이 아직 없습니다"
-          description="대시보드는 AccountingPeriod 기준 read model 위에서만 동작합니다."
+          description="대시보드는 열린 운영 월이 있어야 계산됩니다."
         >
           <Typography variant="body2" color="text.secondary">
-            먼저 운영 기간을 열면 대시보드 카드와 추이를 period-aware 기준으로
+            먼저 월 운영을 시작하면 대시보드 카드와 추이를 현재 운영 월 기준으로
             계산합니다.
           </Typography>
         </SectionCard>
@@ -86,7 +86,7 @@ export function DashboardPage() {
       <PageHeader
         eyebrow="장부 운영"
         title="월 운영 대시보드"
-        description="현재 운영 기간의 확정 전표, 남은 계획, 최근 공식 잠금 기준을 함께 읽어 운영 판단과 공식 보고의 경계를 분명하게 보여줍니다."
+        description="현재 운영 월의 확정 전표, 남은 계획, 최근 공식 잠금 기준을 함께 읽어 운영 판단과 공식 보고의 경계를 분명하게 보여줍니다."
         primaryActionLabel="운영 전망 보기"
         primaryActionHref="/forecast"
       />
@@ -173,7 +173,7 @@ export function DashboardPage() {
             eyebrow="운영 기준"
             title="현재 자금 잔액"
             value={formatWon(summary.actualBalanceWon)}
-            subtitle="FundingAccount 기준 현재 잔액 또는 잠금된 기간의 공식 현금 잔액입니다."
+            subtitle="입출금 계정 기준 현재 잔액 또는 마감된 월의 공식 현금 잔액입니다."
             tone="primary"
             icon={AccountBalanceWalletRoundedIcon}
           />
@@ -183,7 +183,7 @@ export function DashboardPage() {
             eyebrow="전표 기준"
             title="확정 전표 지출"
             value={formatWon(summary.confirmedExpenseWon)}
-            subtitle="현재 선택 기간에 POSTED 전표로 확정된 지출 합계입니다."
+            subtitle="현재 선택한 월에 확정 처리된 전표 지출 합계입니다."
             tone="warning"
             icon={ReceiptLongRoundedIcon}
           />
@@ -193,7 +193,7 @@ export function DashboardPage() {
             eyebrow="계획 기준"
             title="남은 계획 지출"
             value={formatWon(summary.remainingPlannedExpenseWon)}
-            subtitle="아직 확정되지 않은 PlanItem 중 지출 방향 항목만 집계합니다."
+            subtitle="아직 실제 거래나 전표로 이어지지 않은 계획 지출만 집계합니다."
             tone="neutral"
             icon={AutoGraphRoundedIcon}
           />
@@ -214,7 +214,7 @@ export function DashboardPage() {
         <Grid size={{ xs: 12, xl: 7 }}>
           <ChartCard
             title="최근 기간 추이"
-            description="수입, 확정 지출, 남은 계획 지출을 period-aware 기준으로 함께 보여줍니다."
+            description="수입, 확정 지출, 남은 계획 지출을 현재 운영 월 기준으로 함께 보여줍니다."
             chart={
               <BarChart
                 height={320}

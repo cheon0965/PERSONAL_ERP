@@ -1,4 +1,9 @@
-import { InternalServerErrorException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  InternalServerErrorException,
+  Injectable,
+  NotFoundException
+} from '@nestjs/common';
 import type {
   CollectedTransactionPostingStatus,
   CollectedTransactionSourceKind,
@@ -6,13 +11,20 @@ import type {
 } from '@personal-erp/contracts';
 import {
   CollectedTransactionStatus,
-  LedgerTransactionFlowKind
+  LedgerTransactionFlowKind,
+  Prisma
 } from '@prisma/client';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
+import {
+  assertCollectedTransactionCanBeDeleted,
+  assertCollectedTransactionCanBeUpdated
+} from '../../collected-transaction-transition.policy';
 import type {
   CollectedTransactionWorkspaceScope,
   CreateCollectedTransactionRecord,
-  StoredCollectedTransaction
+  StoredCollectedTransaction,
+  StoredCollectedTransactionDetail,
+  UpdateCollectedTransactionRecord
 } from '../../application/ports/collected-transaction-store.port';
 import { CollectedTransactionStorePort } from '../../application/ports/collected-transaction-store.port';
 
@@ -39,6 +51,12 @@ type CollectedTransactionRecord = {
   };
 };
 
+type CollectedTransactionDetailRecord = CollectedTransactionRecord & {
+  fundingAccountId: string;
+  categoryId: string | null;
+  memo: string | null;
+};
+
 @Injectable()
 export class PrismaCollectedTransactionStoreAdapter implements CollectedTransactionStorePort {
   constructor(private readonly prisma: PrismaService) {}
@@ -51,36 +69,7 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
         tenantId: workspace.tenantId,
         ledgerId: workspace.ledgerId
       },
-      select: {
-        id: true,
-        occurredOn: true,
-        title: true,
-        amount: true,
-        status: true,
-        importBatchId: true,
-        matchedPlanItemId: true,
-        postedJournalEntry: {
-          select: {
-            id: true,
-            entryNumber: true
-          }
-        },
-        fundingAccount: {
-          select: {
-            name: true
-          }
-        },
-        category: {
-          select: {
-            name: true
-          }
-        },
-        ledgerTransactionType: {
-          select: {
-            flowKind: true
-          }
-        }
-      },
+      select: buildCollectedTransactionSelect(),
       orderBy: [{ occurredOn: 'desc' }, { createdAt: 'desc' }],
       take: 100
     });
@@ -88,11 +77,29 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
     return transactions.map(mapCollectedTransactionRecordToStoredTransaction);
   }
 
+  async findByIdInWorkspace(
+    workspace: CollectedTransactionWorkspaceScope,
+    collectedTransactionId: string
+  ): Promise<StoredCollectedTransactionDetail | null> {
+    const transaction = await this.prisma.collectedTransaction.findFirst({
+      where: {
+        id: collectedTransactionId,
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId
+      },
+      select: buildCollectedTransactionDetailSelect()
+    });
+
+    return transaction
+      ? mapCollectedTransactionRecordToStoredTransactionDetail(transaction)
+      : null;
+  }
+
   async createInWorkspace(
     record: CreateCollectedTransactionRecord
   ): Promise<StoredCollectedTransaction> {
     const ledgerTransactionTypeId =
-      await this.findLedgerTransactionTypeId(record);
+      await this.findLedgerTransactionTypeId(record.tenantId, record.ledgerId, record.type);
 
     const created = await this.prisma.collectedTransaction.create({
       data: {
@@ -108,50 +115,200 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
         status: CollectedTransactionStatus.COLLECTED,
         memo: record.memo
       },
-      select: {
-        id: true,
-        occurredOn: true,
-        title: true,
-        amount: true,
-        status: true,
-        importBatchId: true,
-        matchedPlanItemId: true,
-        postedJournalEntry: {
-          select: {
-            id: true,
-            entryNumber: true
-          }
-        },
-        fundingAccount: {
-          select: {
-            name: true
-          }
-        },
-        category: {
-          select: {
-            name: true
-          }
-        },
-        ledgerTransactionType: {
-          select: {
-            flowKind: true
-          }
-        }
-      }
+      select: buildCollectedTransactionSelect()
     });
 
     return mapCollectedTransactionRecordToStoredTransaction(created);
   }
 
+  async updateInWorkspace(
+    workspace: CollectedTransactionWorkspaceScope,
+    record: UpdateCollectedTransactionRecord
+  ): Promise<StoredCollectedTransaction> {
+    return this.prisma.$transaction(async (tx) => {
+      const current = await tx.collectedTransaction.findFirst({
+        where: {
+          id: record.id,
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId
+        },
+        select: {
+          status: true,
+          postedJournalEntry: {
+            select: {
+              id: true
+            }
+          }
+        }
+      });
+
+      if (!current) {
+        throw new NotFoundException('Collected transaction not found');
+      }
+
+      assertCollectedTransactionCanBeUpdated({
+        postingStatus: mapCollectedTransactionPostingStatus(current.status),
+        postedJournalEntryId: current.postedJournalEntry?.id ?? null
+      });
+
+      const ledgerTransactionTypeId = await this.findLedgerTransactionTypeIdInClient(
+        tx,
+        workspace.tenantId,
+        workspace.ledgerId,
+        record.type
+      );
+
+      const result = await tx.collectedTransaction.updateMany({
+        where: {
+          id: record.id,
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId,
+          status: {
+            in: [
+              CollectedTransactionStatus.COLLECTED,
+              CollectedTransactionStatus.REVIEWED,
+              CollectedTransactionStatus.READY_TO_POST
+            ]
+          }
+        },
+        data: {
+          periodId: record.periodId,
+          ledgerTransactionTypeId,
+          fundingAccountId: record.fundingAccountId,
+          categoryId: record.categoryId,
+          title: record.title,
+          occurredOn: record.businessDate,
+          amount: record.amountWon,
+          memo: record.memo
+        }
+      });
+
+      if (result.count === 0) {
+        const latest = await tx.collectedTransaction.findFirst({
+          where: {
+            id: record.id,
+            tenantId: workspace.tenantId,
+            ledgerId: workspace.ledgerId
+          },
+          select: {
+            status: true,
+            postedJournalEntry: {
+              select: {
+                id: true
+              }
+            }
+          }
+        });
+
+        if (!latest) {
+          throw new NotFoundException('Collected transaction not found');
+        }
+
+        assertCollectedTransactionCanBeUpdated({
+          postingStatus: mapCollectedTransactionPostingStatus(latest.status),
+          postedJournalEntryId: latest.postedJournalEntry?.id ?? null
+        });
+
+        throw new ConflictException(
+          'Collected transaction could not be updated in the current state.'
+        );
+      }
+
+      const updated = await tx.collectedTransaction.findFirst({
+        where: {
+          id: record.id,
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId
+        },
+        select: buildCollectedTransactionSelect()
+      });
+
+      if (!updated) {
+        throw new NotFoundException('Collected transaction not found');
+      }
+
+      return mapCollectedTransactionRecordToStoredTransaction(updated);
+    });
+  }
+
+  async deleteInWorkspace(
+    workspace: CollectedTransactionWorkspaceScope,
+    collectedTransactionId: string
+  ): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      const result = await tx.collectedTransaction.deleteMany({
+        where: {
+          id: collectedTransactionId,
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId,
+          status: {
+            in: [
+              CollectedTransactionStatus.COLLECTED,
+              CollectedTransactionStatus.REVIEWED,
+              CollectedTransactionStatus.READY_TO_POST
+            ]
+          }
+        }
+      });
+
+      if (result.count > 0) {
+        return true;
+      }
+
+      const latest = await tx.collectedTransaction.findFirst({
+        where: {
+          id: collectedTransactionId,
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId
+        },
+        select: {
+          status: true,
+          postedJournalEntry: {
+            select: {
+              id: true
+            }
+          }
+        }
+      });
+
+      if (!latest) {
+        return false;
+      }
+
+      assertCollectedTransactionCanBeDeleted({
+        postingStatus: mapCollectedTransactionPostingStatus(latest.status),
+        postedJournalEntryId: latest.postedJournalEntry?.id ?? null
+      });
+
+      return false;
+    });
+  }
+
   private async findLedgerTransactionTypeId(
-    record: CreateCollectedTransactionRecord
+    tenantId: string,
+    ledgerId: string,
+    type: CollectedTransactionType
+  ): Promise<string> {
+    return this.findLedgerTransactionTypeIdInClient(
+      this.prisma,
+      tenantId,
+      ledgerId,
+      type
+    );
+  }
+
+  private async findLedgerTransactionTypeIdInClient(
+    client: Pick<Prisma.TransactionClient, 'ledgerTransactionType'>,
+    tenantId: string,
+    ledgerId: string,
+    type: CollectedTransactionType
   ): Promise<string> {
     const ledgerTransactionType =
-      await this.prisma.ledgerTransactionType.findFirst({
+      await client.ledgerTransactionType.findFirst({
         where: {
-          tenantId: record.tenantId,
-          ledgerId: record.ledgerId,
-          code: mapCollectedTransactionTypeToLedgerTransactionCode(record.type),
+          tenantId,
+          ledgerId,
+          code: mapCollectedTransactionTypeToLedgerTransactionCode(type),
           isActive: true
         },
         select: {
@@ -167,6 +324,48 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
 
     return ledgerTransactionType.id;
   }
+}
+
+function buildCollectedTransactionSelect() {
+  return {
+    id: true,
+    occurredOn: true,
+    title: true,
+    amount: true,
+    status: true,
+    importBatchId: true,
+    matchedPlanItemId: true,
+    postedJournalEntry: {
+      select: {
+        id: true,
+        entryNumber: true
+      }
+    },
+    fundingAccount: {
+      select: {
+        name: true
+      }
+    },
+    category: {
+      select: {
+        name: true
+      }
+    },
+    ledgerTransactionType: {
+      select: {
+        flowKind: true
+      }
+    }
+  } as const;
+}
+
+function buildCollectedTransactionDetailSelect() {
+  return {
+    ...buildCollectedTransactionSelect(),
+    fundingAccountId: true,
+    categoryId: true,
+    memo: true
+  } as const;
 }
 
 function mapCollectedTransactionRecordToStoredTransaction(
@@ -193,6 +392,19 @@ function mapCollectedTransactionRecordToStoredTransaction(
     postedJournalEntryId: transaction.postedJournalEntry?.id ?? null,
     postedJournalEntryNumber:
       transaction.postedJournalEntry?.entryNumber ?? null
+  };
+}
+
+function mapCollectedTransactionRecordToStoredTransactionDetail(
+  transaction: CollectedTransactionDetailRecord
+): StoredCollectedTransactionDetail {
+  const base = mapCollectedTransactionRecordToStoredTransaction(transaction);
+
+  return {
+    ...base,
+    fundingAccountId: transaction.fundingAccountId,
+    categoryId: transaction.categoryId,
+    memo: transaction.memo
   };
 }
 

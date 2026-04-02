@@ -61,9 +61,17 @@ test(
         }
       });
 
+      const ownerBackbone = await ensurePhase1BackboneForUser(prisma, owner.id);
+      const outsiderBackbone = await ensurePhase1BackboneForUser(
+        prisma,
+        outsider.id
+      );
+
       const ownerAccount = await prisma.account.create({
         data: {
           userId: owner.id,
+          tenantId: ownerBackbone.tenantId,
+          ledgerId: ownerBackbone.ledgerId,
           name: 'Integration Main Account',
           type: AccountType.BANK,
           balanceWon: 500000,
@@ -73,6 +81,8 @@ test(
       const outsiderAccount = await prisma.account.create({
         data: {
           userId: outsider.id,
+          tenantId: outsiderBackbone.tenantId,
+          ledgerId: outsiderBackbone.ledgerId,
           name: 'Integration Outsider Account',
           type: AccountType.BANK,
           balanceWon: 200000,
@@ -82,6 +92,8 @@ test(
       const ownerCategory = await prisma.category.create({
         data: {
           userId: owner.id,
+          tenantId: ownerBackbone.tenantId,
+          ledgerId: ownerBackbone.ledgerId,
           name: 'Integration Fuel',
           kind: CategoryKind.EXPENSE,
           sortOrder: 1
@@ -90,17 +102,13 @@ test(
       const outsiderCategory = await prisma.category.create({
         data: {
           userId: outsider.id,
+          tenantId: outsiderBackbone.tenantId,
+          ledgerId: outsiderBackbone.ledgerId,
           name: 'Integration Outsider Category',
           kind: CategoryKind.EXPENSE,
           sortOrder: 1
         }
       });
-
-      const ownerBackbone = await ensurePhase1BackboneForUser(prisma, owner.id);
-      const outsiderBackbone = await ensurePhase1BackboneForUser(
-        prisma,
-        outsider.id
-      );
 
       const ownerPeriod = await prisma.accountingPeriod.create({
         data: {

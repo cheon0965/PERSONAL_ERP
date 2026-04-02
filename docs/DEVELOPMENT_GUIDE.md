@@ -9,6 +9,9 @@
 5. `npm run db:seed`
 6. `npm run dev`
 
+`npm run db:up`는 [docker-compose.yml](../docker-compose.yml) 의 폐기 가능한 로컬 개발 전용 MySQL bootstrap 기본값을 사용합니다.
+이 값은 shared/staging/production secret로 재사용하지 않습니다.
+
 작업 전후 기본 검증:
 
 ```bash

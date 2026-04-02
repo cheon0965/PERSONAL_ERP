@@ -21,10 +21,10 @@ const tenantStatusLabelMap: Record<string, string> = {
 };
 
 const membershipRoleLabelMap: Record<string, string> = {
-  OWNER: 'Owner',
-  MANAGER: 'Manager',
-  EDITOR: 'Editor',
-  VIEWER: 'Viewer'
+  OWNER: '소유자',
+  MANAGER: '관리자',
+  EDITOR: '편집자',
+  VIEWER: '조회자'
 };
 
 const membershipStatusLabelMap: Record<string, string> = {
@@ -47,17 +47,16 @@ export default function SettingsPage() {
   useDomainHelp({
     title: '작업 문맥 개요',
     description:
-      '이 화면은 현재 로그인 사용자가 어떤 테넌트와 장부 문맥 안에서 작업하는지 보여주는 기준 화면입니다.',
-    primaryEntity:
-      '테넌트 / 멤버십 / 장부 (Tenant / TenantMembership / Ledger)',
+      '이 화면은 현재 로그인 사용자가 어떤 사업장과 장부 문맥 안에서 작업하는지 보여주는 기준 화면입니다.',
+    primaryEntity: '사업장 / 권한 / 장부',
     relatedEntities: [
-      '운영 기간 (AccountingPeriod)',
-      '자금수단 (FundingAccount)',
-      '거래유형 (TransactionType)',
-      '수집 거래 (CollectedTransaction)'
+      '운영 기간',
+      '입출금 계정',
+      '거래 유형',
+      '수집 거래'
     ],
     truthSource:
-      '현재 작업 TenantMembership과 Ledger를 해석하는 런타임 문맥이 이 화면의 공식 기준입니다.',
+      '현재 작업 권한과 장부를 해석하는 런타임 문맥이 이 화면의 공식 기준입니다.',
     readModelNote:
       '다른 운영 화면은 여기서 확인한 작업 문맥을 기준으로 데이터를 조회하고 변경합니다.'
   });
@@ -67,27 +66,27 @@ export default function SettingsPage() {
       <PageHeader
         eyebrow="작업 문맥"
         title="현재 작업 문맥"
-        description="현재 로그인 사용자가 어떤 TenantMembership과 Ledger 문맥 안에서 작업 중인지 확인합니다."
+        description="현재 로그인 사용자가 어떤 사업장과 장부 문맥 안에서 작업 중인지 확인합니다."
       />
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, lg: 6 }}>
           <SectionCard
             title="현재 작업 문맥"
-            description="이 사용자가 지금 어떤 테넌트와 장부를 기준으로 동작하는지 확인합니다."
+            description="이 사용자가 지금 어떤 사업장과 장부를 기준으로 동작하는지 확인합니다."
           >
             <Stack spacing={appLayout.fieldGap}>
               <TextField
-                label="테넌트 이름"
-                value={currentWorkspace?.tenant.name ?? '연결된 테넌트 없음'}
+                label="사업장 이름"
+                value={currentWorkspace?.tenant.name ?? '연결된 사업장 없음'}
                 InputProps={{ readOnly: true }}
               />
               <TextField
-                label="테넌트 슬러그"
+                label="사업장 슬러그"
                 value={currentWorkspace?.tenant.slug ?? '-'}
                 InputProps={{ readOnly: true }}
               />
               <TextField
-                label="테넌트 상태"
+                label="사업장 상태"
                 value={
                   currentWorkspace
                     ? (tenantStatusLabelMap[currentWorkspace.tenant.status] ??
@@ -105,7 +104,7 @@ export default function SettingsPage() {
                       ] ?? currentWorkspace.membership.role)
                     : '-'
                 }
-                helperText="현재 로그인 사용자의 TenantMembership을 공식 작업 주체 기준으로 봅니다."
+                helperText="현재 로그인 사용자의 권한을 공식 작업 주체 기준으로 봅니다."
                 InputProps={{ readOnly: true }}
               />
               <TextField
@@ -122,7 +121,7 @@ export default function SettingsPage() {
               <TextField
                 label="현재 장부"
                 value={currentWorkspace?.ledger?.name ?? '기본 장부 미선정'}
-                helperText="이 장부 문맥 안에서 운영 기간, 수집 거래, 전표와 보고 화면이 함께 동작합니다."
+                helperText="이 장부 문맥 안에서 운영 기간, 수집 거래, 전표, 보고 화면이 함께 동작합니다."
                 InputProps={{ readOnly: true }}
               />
               <TextField

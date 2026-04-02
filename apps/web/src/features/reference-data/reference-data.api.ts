@@ -21,17 +21,17 @@ export const ledgerTransactionTypesQueryKey = [
 ] as const;
 
 export const mockFundingAccounts: FundingAccountItem[] = [
-  { id: 'acc-1', name: '주거래 통장', type: 'BANK', balanceWon: 2_450_000 },
-  { id: 'acc-2', name: '생활비 통장', type: 'BANK', balanceWon: 430_000 },
-  { id: 'acc-3', name: '주사용 카드', type: 'CARD', balanceWon: 300_000 }
+  { id: 'acc-1', name: '사업 운영 통장', type: 'BANK', balanceWon: 2_450_000 },
+  { id: 'acc-2', name: '비용 예비 통장', type: 'BANK', balanceWon: 430_000 },
+  { id: 'acc-3', name: '사업용 카드', type: 'CARD', balanceWon: 300_000 }
 ];
 
 export const mockCategories: CategoryItem[] = [
-  { id: 'cat-1', name: '급여', kind: 'INCOME' },
-  { id: 'cat-2', name: '식비', kind: 'EXPENSE' },
-  { id: 'cat-3', name: '보험', kind: 'EXPENSE' },
-  { id: 'cat-4', name: '주유', kind: 'EXPENSE' },
-  { id: 'cat-5', name: '통신비', kind: 'EXPENSE' }
+  { id: 'cat-1', name: '매출 입금', kind: 'INCOME' },
+  { id: 'cat-2', name: '원재료비', kind: 'EXPENSE' },
+  { id: 'cat-3', name: '사업 보험료', kind: 'EXPENSE' },
+  { id: 'cat-4', name: '배송 차량 유지비', kind: 'EXPENSE' },
+  { id: 'cat-5', name: '통신·POS 비용', kind: 'EXPENSE' }
 ];
 
 export const mockAccountSubjects: AccountSubjectItem[] = [

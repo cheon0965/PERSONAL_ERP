@@ -27,7 +27,7 @@ export const periodColumns: GridColDef<AccountingPeriodItem>[] = [
   },
   {
     field: 'hasOpeningBalanceSnapshot',
-    headerName: '오프닝',
+    headerName: '기초 잔액',
     flex: 0.9,
     valueGetter: (_value, row) => readOpeningBalanceSource(row)
   },
@@ -69,7 +69,7 @@ export function CurrentPeriodStatusSection({
             </Grid>
             <Grid size={{ xs: 12, md: 4 }}>
               <InfoRow
-                label="오프닝 스냅샷"
+                label="기초 잔액 기준"
                 value={readOpeningBalanceSource(currentPeriod)}
               />
             </Grid>
@@ -127,7 +127,7 @@ export function OpenAccountingPeriodSection({
     <div id="open-accounting-period-form">
       <SectionCard
         title="월 운영 시작"
-        description="첫 월은 오프닝 잔액 스냅샷을 함께 생성하고, 이후 월은 이전 기간 잠금 이후에만 열 수 있습니다."
+        description="첫 월은 기초 잔액 기준을 함께 만들고, 이후 월은 이전 기간 잠금 이후에만 열 수 있습니다."
       >
         <form onSubmit={onSubmit}>
           <Stack spacing={appLayout.cardGap}>
@@ -137,7 +137,7 @@ export function OpenAccountingPeriodSection({
               error={Boolean(form.formState.errors.month)}
               helperText={
                 form.formState.errors.month?.message ??
-                '현재 Ledger에 대해 열 운영 월을 선택합니다.'
+                '현재 사업 장부에 대해 열 운영 월을 선택합니다.'
               }
               {...form.register('month')}
             />
@@ -157,8 +157,8 @@ export function OpenAccountingPeriodSection({
               }
               label={
                 isFirstPeriod
-                  ? '첫 월 운영 시작과 함께 오프닝 잔액 스냅샷 생성'
-                  : '첫 월 이후에는 오프닝 잔액 직접 생성을 허용하지 않음'
+                  ? '첫 월 운영 시작과 함께 기초 잔액 기준 생성'
+                  : '첫 월 이후에는 기초 잔액 직접 생성을 허용하지 않음'
               }
             />
             <TextField
@@ -222,7 +222,7 @@ export function PeriodLifecycleActionsSection({
     <Stack spacing={appLayout.sectionGap}>
       <SectionCard
         title="월 마감"
-        description="현재 열린 운영 기간을 잠그고 ClosingSnapshot과 BalanceSnapshotLine을 생성합니다. 얇은 1차 구현에서는 전표가 한 건 이상 존재하는 기간만 마감할 수 있습니다."
+        description="현재 열린 운영 기간을 잠그고 월 마감 결과와 잔액 라인을 생성합니다. 현재 구현에서는 전표가 한 건 이상 존재하는 기간만 마감할 수 있습니다."
       >
         <Stack spacing={appLayout.cardGap}>
           <InfoRow
@@ -233,7 +233,7 @@ export function PeriodLifecycleActionsSection({
           />
           <InfoRow
             label="권한"
-            value={canClosePeriod ? 'Owner' : (membershipRole ?? '-')}
+            value={canClosePeriod ? '소유자' : readMembershipRoleLabel(membershipRole)}
           />
           <TextField
             label="마감 메모"
@@ -277,7 +277,9 @@ export function PeriodLifecycleActionsSection({
           />
           <InfoRow
             label="권한"
-            value={canReopenPeriod ? 'Owner' : (membershipRole ?? '-')}
+            value={
+              canReopenPeriod ? '소유자' : readMembershipRoleLabel(membershipRole)
+            }
           />
           <TextField
             label="재오픈 사유"
@@ -318,7 +320,7 @@ function readOpeningBalanceSource(period: AccountingPeriodItem) {
   }
 
   return period.openingBalanceSourceKind === 'INITIAL_SETUP'
-    ? '초기 셋업'
+    ? '초기 설정'
     : '이월';
 }
 
@@ -340,6 +342,21 @@ function getAccountingPeriodEventLabel(
       return '강제 잠금';
     default:
       return eventType;
+  }
+}
+
+function readMembershipRoleLabel(role: string | null) {
+  switch (role) {
+    case 'OWNER':
+      return '소유자';
+    case 'MANAGER':
+      return '관리자';
+    case 'EDITOR':
+      return '편집자';
+    case 'VIEWER':
+      return '조회자';
+    default:
+      return role ?? '-';
   }
 }
 

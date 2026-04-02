@@ -27,6 +27,31 @@ export function createTransactionsJournalPrismaMock(
 
   return {
     collectedTransaction: {
+      findUnique: async (args: {
+        where: { id: string };
+        select?: {
+          tenantId?: boolean;
+          ledgerId?: boolean;
+        };
+      }) => {
+        const candidate =
+          state.collectedTransactions.find(
+            (item) => item.id === args.where.id
+          ) ?? null;
+
+        if (!candidate) {
+          return null;
+        }
+
+        if (!args.select) {
+          return candidate;
+        }
+
+        return {
+          ...(args.select.tenantId ? { tenantId: candidate.tenantId } : {}),
+          ...(args.select.ledgerId ? { ledgerId: candidate.ledgerId } : {})
+        };
+      },
       findFirst: async (args: {
         where?: {
           id?: string;
@@ -36,6 +61,46 @@ export function createTransactionsJournalPrismaMock(
         };
         select?: {
           id?: boolean;
+          occurredOn?: boolean;
+          title?: boolean;
+          amount?: boolean;
+          status?: boolean;
+          importBatchId?: boolean;
+          matchedPlanItemId?: boolean;
+          fundingAccountId?: boolean;
+          categoryId?: boolean;
+          memo?: boolean;
+          period?: {
+            select?: {
+              id?: boolean;
+              year?: boolean;
+              month?: boolean;
+              status?: boolean;
+            };
+          };
+          fundingAccount?: {
+            select?: {
+              id?: boolean;
+              name?: boolean;
+            };
+          };
+          category?: {
+            select?: {
+              name?: boolean;
+            };
+          };
+          ledgerTransactionType?: {
+            select?: {
+              flowKind?: boolean;
+              postingPolicyKey?: boolean;
+            };
+          };
+          postedJournalEntry?: {
+            select?: {
+              id?: boolean;
+              entryNumber?: boolean;
+            };
+          };
         };
         include?: {
           period?: {
@@ -92,12 +157,6 @@ export function createTransactionsJournalPrismaMock(
           return null;
         }
 
-        if (args.select) {
-          return {
-            ...(args.select.id ? { id: candidate.id } : {})
-          };
-        }
-
         const period = candidate.periodId
           ? findAccountingPeriod(candidate.periodId)
           : null;
@@ -105,12 +164,117 @@ export function createTransactionsJournalPrismaMock(
         const category = candidate.categoryId
           ? resolveCategory(candidate.categoryId)
           : null;
-        const _ledgerTransactionType = resolveLedgerTransactionType(
+        const ledgerTransactionType = resolveLedgerTransactionType(
           candidate.ledgerTransactionTypeId
         );
         const postedJournalEntry = resolveJournalEntryByCollectedTransaction(
           candidate.id
         );
+        const postingPolicyKey =
+          candidate.ledgerTransactionTypeId === 'ltt-1-income'
+            ? 'INCOME_BASIC'
+            : candidate.ledgerTransactionTypeId === 'ltt-1-transfer'
+              ? 'TRANSFER_BASIC'
+              : 'EXPENSE_BASIC';
+
+        if (args.select) {
+          return {
+            ...(args.select.id ? { id: candidate.id } : {}),
+            ...(args.select.occurredOn
+              ? { occurredOn: candidate.occurredOn }
+              : {}),
+            ...(args.select.title ? { title: candidate.title } : {}),
+            ...(args.select.amount ? { amount: candidate.amount } : {}),
+            ...(args.select.status ? { status: candidate.status } : {}),
+            ...(args.select.importBatchId
+              ? { importBatchId: candidate.importBatchId }
+              : {}),
+            ...(args.select.matchedPlanItemId
+              ? { matchedPlanItemId: candidate.matchedPlanItemId }
+              : {}),
+            ...(args.select.fundingAccountId
+              ? { fundingAccountId: candidate.fundingAccountId }
+              : {}),
+            ...(args.select.categoryId
+              ? { categoryId: candidate.categoryId }
+              : {}),
+            ...(args.select.memo ? { memo: candidate.memo } : {}),
+            ...(args.select.period
+              ? {
+                  period: period
+                    ? {
+                        ...(args.select.period.select?.id
+                          ? { id: period.id }
+                          : {}),
+                        ...(args.select.period.select?.year
+                          ? { year: period.year }
+                          : {}),
+                        ...(args.select.period.select?.month
+                          ? { month: period.month }
+                          : {}),
+                        ...(args.select.period.select?.status
+                          ? { status: period.status }
+                          : {})
+                      }
+                    : null
+                }
+              : {}),
+            ...(args.select.fundingAccount
+              ? {
+                  fundingAccount: {
+                    ...(args.select.fundingAccount.select?.id
+                      ? { id: fundingAccount?.id ?? '' }
+                      : {}),
+                    ...(args.select.fundingAccount.select?.name
+                      ? { name: fundingAccount?.name ?? '' }
+                      : {})
+                  }
+                }
+              : {}),
+            ...(args.select.category
+              ? {
+                  category: category
+                    ? {
+                        ...(args.select.category.select?.name
+                          ? { name: category.name }
+                          : {})
+                      }
+                    : null
+                }
+              : {}),
+            ...(args.select.ledgerTransactionType
+              ? {
+                  ledgerTransactionType: {
+                    ...(args.select.ledgerTransactionType.select?.flowKind
+                      ? {
+                          flowKind:
+                            ledgerTransactionType?.flowKind ??
+                            LedgerTransactionFlowKind.EXPENSE
+                        }
+                      : {}),
+                    ...(args.select.ledgerTransactionType.select
+                      ?.postingPolicyKey
+                      ? { postingPolicyKey }
+                      : {})
+                  }
+                }
+              : {}),
+            ...(args.select.postedJournalEntry
+              ? {
+                  postedJournalEntry: postedJournalEntry
+                    ? {
+                        ...(args.select.postedJournalEntry.select?.id
+                          ? { id: postedJournalEntry.id }
+                          : {}),
+                        ...(args.select.postedJournalEntry.select?.entryNumber
+                          ? { entryNumber: postedJournalEntry.entryNumber }
+                          : {})
+                      }
+                    : null
+                }
+              : {})
+          };
+        }
 
         if (!args.include) {
           return candidate;
@@ -166,15 +330,7 @@ export function createTransactionsJournalPrismaMock(
                 ledgerTransactionType: {
                   ...(args.include.ledgerTransactionType.select
                     ?.postingPolicyKey
-                    ? {
-                        postingPolicyKey:
-                          candidate.ledgerTransactionTypeId === 'ltt-1-income'
-                            ? 'INCOME_BASIC'
-                            : candidate.ledgerTransactionTypeId ===
-                                'ltt-1-transfer'
-                              ? 'TRANSFER_BASIC'
-                              : 'EXPENSE_BASIC'
-                      }
+                    ? { postingPolicyKey }
                     : {})
                 }
               }
@@ -463,7 +619,39 @@ export function createTransactionsJournalPrismaMock(
       update: async (args: {
         where: { id: string };
         data: {
+          periodId?: string | null;
+          ledgerTransactionTypeId?: string;
+          fundingAccountId?: string;
+          categoryId?: string | null;
+          title?: string;
+          occurredOn?: Date;
+          amount?: number;
           status?: CollectedTransactionStatus;
+          memo?: string | null;
+        };
+        select?: {
+          id?: boolean;
+          occurredOn?: boolean;
+          title?: boolean;
+          amount?: boolean;
+          status?: boolean;
+          importBatchId?: boolean;
+          matchedPlanItemId?: boolean;
+          postedJournalEntry?: {
+            select?: {
+              id?: boolean;
+              entryNumber?: boolean;
+            };
+          };
+          fundingAccount?: {
+            select?: { name?: boolean };
+          };
+          category?: {
+            select?: { name?: boolean };
+          };
+          ledgerTransactionType?: {
+            select?: { flowKind?: boolean };
+          };
         };
       }) => {
         const candidate = state.collectedTransactions.find(
@@ -474,12 +662,222 @@ export function createTransactionsJournalPrismaMock(
           throw new Error('Collected transaction not found');
         }
 
+        if ('periodId' in args.data) {
+          candidate.periodId = args.data.periodId ?? null;
+        }
+        if (args.data.ledgerTransactionTypeId) {
+          candidate.ledgerTransactionTypeId = args.data.ledgerTransactionTypeId;
+        }
+        if (args.data.fundingAccountId) {
+          candidate.fundingAccountId = args.data.fundingAccountId;
+        }
+        if ('categoryId' in args.data) {
+          candidate.categoryId = args.data.categoryId ?? null;
+        }
+        if (args.data.title) {
+          candidate.title = args.data.title;
+        }
+        if (args.data.occurredOn) {
+          candidate.occurredOn = new Date(String(args.data.occurredOn));
+        }
+        if (args.data.amount !== undefined) {
+          candidate.amount = Number(args.data.amount);
+        }
         if (args.data.status) {
           candidate.status = args.data.status;
         }
+        if ('memo' in args.data) {
+          candidate.memo = args.data.memo ?? null;
+        }
         candidate.updatedAt = new Date();
 
-        return candidate;
+        if (!args.select) {
+          return candidate;
+        }
+
+        const fundingAccount = resolveAccount(candidate.fundingAccountId);
+        const category = candidate.categoryId
+          ? resolveCategory(candidate.categoryId)
+          : null;
+        const ledgerTransactionType = resolveLedgerTransactionType(
+          candidate.ledgerTransactionTypeId
+        );
+        const postedJournalEntry = resolveJournalEntryByCollectedTransaction(
+          candidate.id
+        );
+
+        return {
+          ...(args.select.id ? { id: candidate.id } : {}),
+          ...(args.select.occurredOn
+            ? { occurredOn: candidate.occurredOn }
+            : {}),
+          ...(args.select.title ? { title: candidate.title } : {}),
+          ...(args.select.amount ? { amount: candidate.amount } : {}),
+          ...(args.select.status ? { status: candidate.status } : {}),
+          ...(args.select.importBatchId
+            ? { importBatchId: candidate.importBatchId }
+            : {}),
+          ...(args.select.matchedPlanItemId
+            ? { matchedPlanItemId: candidate.matchedPlanItemId }
+            : {}),
+          ...(args.select.postedJournalEntry
+            ? {
+                postedJournalEntry: postedJournalEntry
+                  ? {
+                      ...(args.select.postedJournalEntry.select?.id
+                        ? { id: postedJournalEntry.id }
+                        : {}),
+                      ...(args.select.postedJournalEntry.select?.entryNumber
+                        ? { entryNumber: postedJournalEntry.entryNumber }
+                        : {})
+                    }
+                  : null
+              }
+            : {}),
+          ...(args.select.fundingAccount
+            ? {
+                fundingAccount: {
+                  ...(args.select.fundingAccount.select?.name
+                    ? { name: fundingAccount?.name ?? '' }
+                    : {})
+                }
+              }
+            : {}),
+          ...(args.select.category
+            ? {
+                category: category
+                  ? {
+                      ...(args.select.category.select?.name
+                        ? { name: category.name }
+                        : {})
+                    }
+                  : null
+              }
+            : {}),
+          ...(args.select.ledgerTransactionType
+            ? {
+                ledgerTransactionType: {
+                  ...(args.select.ledgerTransactionType.select?.flowKind
+                    ? {
+                        flowKind:
+                          ledgerTransactionType?.flowKind ??
+                          LedgerTransactionFlowKind.EXPENSE
+                      }
+                    : {})
+                }
+              }
+            : {})
+        };
+      },
+      updateMany: async (args: {
+        where?: {
+          id?: string;
+          tenantId?: string;
+          ledgerId?: string;
+          status?: {
+            in?: CollectedTransactionStatus[];
+          };
+        };
+        data: {
+          periodId?: string | null;
+          ledgerTransactionTypeId?: string;
+          fundingAccountId?: string;
+          categoryId?: string | null;
+          title?: string;
+          occurredOn?: Date;
+          amount?: number;
+          status?: CollectedTransactionStatus;
+          memo?: string | null;
+        };
+      }) => {
+        let updatedCount = 0;
+
+        state.collectedTransactions.forEach((candidate) => {
+          const matchesId = !args.where?.id || candidate.id === args.where.id;
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesStatus =
+            !args.where?.status?.in ||
+            args.where.status.in.includes(candidate.status);
+
+          if (!(matchesId && matchesTenant && matchesLedger && matchesStatus)) {
+            return;
+          }
+
+          if ('periodId' in args.data) {
+            candidate.periodId = args.data.periodId ?? null;
+          }
+          if (args.data.ledgerTransactionTypeId) {
+            candidate.ledgerTransactionTypeId =
+              args.data.ledgerTransactionTypeId;
+          }
+          if (args.data.fundingAccountId) {
+            candidate.fundingAccountId = args.data.fundingAccountId;
+          }
+          if ('categoryId' in args.data) {
+            candidate.categoryId = args.data.categoryId ?? null;
+          }
+          if (args.data.title) {
+            candidate.title = args.data.title;
+          }
+          if (args.data.occurredOn) {
+            candidate.occurredOn = new Date(String(args.data.occurredOn));
+          }
+          if (args.data.amount !== undefined) {
+            candidate.amount = Number(args.data.amount);
+          }
+          if (args.data.status) {
+            candidate.status = args.data.status;
+          }
+          if ('memo' in args.data) {
+            candidate.memo = args.data.memo ?? null;
+          }
+          candidate.updatedAt = new Date();
+          updatedCount += 1;
+        });
+
+        return {
+          count: updatedCount
+        };
+      },
+      deleteMany: async (args: {
+        where?: {
+          id?: string;
+          tenantId?: string;
+          ledgerId?: string;
+          status?: {
+            in?: CollectedTransactionStatus[];
+          };
+        };
+      }) => {
+        const beforeCount = state.collectedTransactions.length;
+        state.collectedTransactions = state.collectedTransactions.filter(
+          (candidate) => {
+            const matchesId = !args.where?.id || candidate.id === args.where.id;
+            const matchesTenant =
+              !args.where?.tenantId ||
+              candidate.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId;
+            const matchesStatus =
+              !args.where?.status?.in ||
+              args.where.status.in.includes(candidate.status);
+
+            return !(
+              matchesId &&
+              matchesTenant &&
+              matchesLedger &&
+              matchesStatus
+            );
+          }
+        );
+
+        return {
+          count: beforeCount - state.collectedTransactions.length
+        };
       }
     },
     journalEntry: {
