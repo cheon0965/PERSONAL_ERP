@@ -13,9 +13,7 @@ const demoPasswordHashPromise = argon2.hash('Demo1234!');
 
 export async function createRequestTestState(): Promise<RequestTestState> {
   const passwordHash = await demoPasswordHashPromise;
-  const activeSessionExpiresAt = new Date(
-    Date.now() + 7 * 24 * 60 * 60 * 1000
-  );
+  const activeSessionExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
   return {
     databaseReady: true,
