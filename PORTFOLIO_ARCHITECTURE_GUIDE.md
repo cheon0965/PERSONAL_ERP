@@ -1,11 +1,11 @@
-# Owner ERP Starter Portfolio Architecture Guide
+# PERSONAL_ERP Portfolio Architecture Guide
 
 ## 이 문서는 무엇인가
 
 이 문서는 이 프로젝트의 작업 목록을 적어두는 TODO 문서가 아니다.
 이 프로젝트가 어떤 목적을 가진 포트폴리오인지, 왜 이런 판단을 했는지, 그리고 현재 코드가 그 목적에 얼마나 잘 맞는지를 설명하는 아키텍처 안내서다.
 
-짧게 말하면 이 프로젝트는 `실무형 모듈러 모놀리스`를 기반으로 하고, `핵심 도메인에만 선택적으로 clean/hexagonal 성향`을 적용한 1인 사업자·소상공인용 월별 재무운영 ERP starter 포트폴리오다.
+짧게 말하면 이 프로젝트는 `실무형 모듈러 모놀리스`를 기반으로 하고, `핵심 도메인에만 선택적으로 clean/hexagonal 성향`을 적용한 1인 사업자·소상공인용 월별 재무 운영 시스템 포트폴리오다.
 
 ## 초보자용 3줄 요약
 
@@ -316,7 +316,7 @@ controller -> use-case -> port -> adapter
 
 ## 포트폴리오에서 이렇게 설명하면 좋다
 
-- 이 프로젝트는 Next.js, NestJS, Prisma, MySQL 기반의 1인 사업자·소상공인용 월별 재무운영 ERP starter다.
+- 이 프로젝트는 Next.js, NestJS, Prisma, MySQL 기반의 1인 사업자·소상공인용 월별 재무 운영 시스템이다.
 - 기본 구조는 모듈러 모놀리스이며, Web/API 계약은 `packages/contracts`로 통합했다.
 - 모든 모듈을 같은 방식으로 과하게 추상화하지 않고, 핵심 쓰기 모델인 `Collected Transactions`와 `Recurring Rules`에만 use-case/port/adapter 경계를 도입했다.
 - DI는 외부 기술 경계에만 최소한으로 적용했고, 내부 helper와 mapper는 순수 함수로 유지했다.
@@ -324,7 +324,7 @@ controller -> use-case -> port -> adapter
 
 ## 현재 단계 결론
 
-2026-03-27 기준으로 이 프로젝트는 다음 상태로 보는 것이 가장 정확하다.
+2026-04-03 기준으로 이 프로젝트는 다음 상태로 보는 것이 가장 정확하다.
 
 - MSA-ready P0 `Context Map와 금지선`: 완료
 - MSA-ready P1 `Module Public API / Internal Implementation 경계`: 완료

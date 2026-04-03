@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException
 } from '@nestjs/common';
@@ -17,6 +18,7 @@ import { requireCurrentWorkspace } from '../../common/auth/required-workspace.ut
 import { readWorkspaceCreatedByActorRef } from '../../common/auth/workspace-actor-ref.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { AccountingPeriodsService } from '../accounting-periods/accounting-periods.service';
 import { mapJournalEntryRecordToItem } from '../journal-entries/journal-entry-item.mapper';
 import {
   assertConfirmJournalAccountSubjectIdsResolved,
@@ -30,7 +32,10 @@ import { assertCollectedTransactionCanBeConfirmed } from './collected-transactio
 
 @Injectable()
 export class ConfirmCollectedTransactionUseCase {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly accountingPeriodsService: AccountingPeriodsService
+  ) {}
 
   async execute(
     user: AuthenticatedUser,
@@ -167,6 +172,14 @@ export class ConfirmCollectedTransactionUseCase {
           latestCollectedTransaction.postedJournalEntry?.id ?? null
       });
 
+      const writablePeriod =
+        await this.accountingPeriodsService.claimJournalWritePeriodInTransaction(
+          tx,
+          workspace.tenantId,
+          workspace.ledgerId,
+          latestPeriod.id
+        );
+
       const journalLines = assertConfirmJournalLinesSupported(
         resolveConfirmCollectedTransactionJournalLines({
           postingPolicyKey:
@@ -178,17 +191,80 @@ export class ConfirmCollectedTransactionUseCase {
         })
       );
 
+      const claimedCollectedTransaction = await tx.collectedTransaction.updateMany(
+        {
+          where: {
+            id: latestCollectedTransaction.id,
+            tenantId: workspace.tenantId,
+            ledgerId: workspace.ledgerId,
+            status: {
+              in: [latestCollectedTransaction.status]
+            }
+          },
+          data: {
+            status: CollectedTransactionStatus.POSTED
+          }
+        }
+      );
+
+      if (claimedCollectedTransaction.count !== 1) {
+        const currentCollectedTransaction =
+          await tx.collectedTransaction.findFirst({
+            where: {
+              id: collectedTransaction.id,
+              tenantId: workspace.tenantId,
+              ledgerId: workspace.ledgerId
+            },
+            include: {
+              period: {
+                select: {
+                  id: true,
+                  year: true,
+                  month: true,
+                  status: true
+                }
+              },
+              postedJournalEntry: {
+                select: {
+                  id: true
+                }
+              }
+            }
+          });
+
+        if (!currentCollectedTransaction) {
+          throw new NotFoundException('Collected transaction not found.');
+        }
+
+        if (!currentCollectedTransaction.period) {
+          throw new BadRequestException(
+            'Collected transaction is not linked to an accounting period.'
+          );
+        }
+
+        assertCollectedTransactionCanBeConfirmed({
+          status: currentCollectedTransaction.status,
+          periodStatus: currentCollectedTransaction.period.status,
+          postedJournalEntryId:
+            currentCollectedTransaction.postedJournalEntry?.id ?? null
+        });
+
+        throw new ConflictException(
+          'Collected transaction changed during confirmation. Please retry.'
+        );
+      }
+
       const existingCount = await tx.journalEntry.count({
         where: {
           tenantId: workspace.tenantId,
           ledgerId: workspace.ledgerId,
-          periodId: latestPeriod.id
+          periodId: writablePeriod.id
         }
       });
 
       const entryNumber = buildConfirmCollectedTransactionEntryNumber(
-        latestPeriod.year,
-        latestPeriod.month,
+        writablePeriod.year,
+        writablePeriod.month,
         existingCount + 1
       );
 
@@ -196,7 +272,7 @@ export class ConfirmCollectedTransactionUseCase {
         data: {
           tenantId: workspace.tenantId,
           ledgerId: workspace.ledgerId,
-          periodId: latestPeriod.id,
+          periodId: writablePeriod.id,
           entryNumber,
           entryDate: latestCollectedTransaction.occurredOn,
           sourceKind: JournalEntrySourceKind.COLLECTED_TRANSACTION,
@@ -237,19 +313,10 @@ export class ConfirmCollectedTransactionUseCase {
         }
       });
 
-      await tx.collectedTransaction.update({
-        where: {
-          id: latestCollectedTransaction.id
-        },
-        data: {
-          status: CollectedTransactionStatus.POSTED
-        }
-      });
-
-      if (collectedTransaction.matchedPlanItemId) {
+      if (latestCollectedTransaction.matchedPlanItemId) {
         await tx.planItem.update({
           where: {
-            id: collectedTransaction.matchedPlanItemId
+            id: latestCollectedTransaction.matchedPlanItemId
           },
           data: {
             status: PlanItemStatus.CONFIRMED

@@ -2,7 +2,7 @@
 
 ## 목적
 
-이 문서는 현재 `personal-erp-starter` 프로젝트를 `OWASP ASVS Level 2` 관점에서 빠르게 점검하기 위한 기준표입니다.
+이 문서는 현재 `PERSONAL_ERP` 프로젝트를 `OWASP ASVS Level 2` 관점에서 빠르게 점검하기 위한 기준표입니다.
 
 역할은 세 가지입니다.
 

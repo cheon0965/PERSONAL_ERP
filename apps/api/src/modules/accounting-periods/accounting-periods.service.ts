@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable
+} from '@nestjs/common';
 import type {
   AccountingPeriodItem,
   AuthenticatedUser
@@ -118,6 +122,74 @@ export class AccountingPeriodsService {
     return currentPeriod;
   }
 
+  async claimJournalWritePeriodInTransaction(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    ledgerId: string,
+    periodId: string
+  ): Promise<{
+    id: string;
+    tenantId: string;
+    ledgerId: string;
+    year: number;
+    month: number;
+    startDate: Date;
+    endDate: Date;
+    status: AccountingPeriodStatus;
+  }> {
+    const period = await tx.accountingPeriod.findFirst({
+      where: {
+        id: periodId,
+        tenantId,
+        ledgerId
+      }
+    });
+
+    if (!period) {
+      throw new BadRequestException(
+        '전표를 기록할 운영 기간을 찾을 수 없습니다.'
+      );
+    }
+
+    assertJournalWritePeriodClaimable(period.status);
+
+    const claimedPeriod = await tx.accountingPeriod.updateMany({
+      where: {
+        id: period.id,
+        tenantId,
+        ledgerId,
+        status: period.status
+      },
+      data: {
+        status: period.status
+      }
+    });
+
+    if (claimedPeriod.count === 1) {
+      return period;
+    }
+
+    const latestPeriod = await tx.accountingPeriod.findFirst({
+      where: {
+        id: periodId,
+        tenantId,
+        ledgerId
+      }
+    });
+
+    if (!latestPeriod) {
+      throw new BadRequestException(
+        '전표를 기록할 운영 기간을 찾을 수 없습니다.'
+      );
+    }
+
+    assertJournalWritePeriodClaimable(latestPeriod.status);
+
+    throw new ConflictException(
+      '운영 기간 상태가 변경되어 전표를 기록하지 못했습니다. 다시 시도해 주세요.'
+    );
+  }
+
   private async findCurrentPeriodRecord(
     user: AuthenticatedUser
   ): Promise<AccountingPeriodRecord | null> {
@@ -135,4 +207,19 @@ export class AccountingPeriodsService {
       orderBy: [{ year: 'desc' }, { month: 'desc' }]
     });
   }
+}
+
+function assertJournalWritePeriodClaimable(
+  status: AccountingPeriodStatus
+): void {
+  if (
+    status === AccountingPeriodStatus.OPEN ||
+    status === AccountingPeriodStatus.IN_REVIEW
+  ) {
+    return;
+  }
+
+  throw new BadRequestException(
+    '현재 운영 기간이 마감 중이거나 잠겨 있어 전표를 기록할 수 없습니다.'
+  );
 }

@@ -2,7 +2,7 @@
 
 ## 문서 목적
 
-이 문서는 현재 Web 화면을 기준으로 Owner ERP Starter의 월별 재무운영 메인 흐름을 빠르게 이해하기 위한 가이드다.
+이 문서는 현재 Web 화면을 기준으로 PERSONAL_ERP의 월별 재무 운영 메인 흐름을 빠르게 이해하기 위한 가이드다.
 
 - 도메인 규칙의 상위 기준은 `docs/domain/business-logic-draft.md`와 `docs/domain/core-entity-definition.md`를 우선한다.
 - 이 문서는 그 도메인 규칙이 실제 화면에서 어떤 순서로 보이고, 사용자가 어떤 흐름으로 따라가면 되는지 설명하는 운영용 안내서다.

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException
 } from '@nestjs/common';
@@ -109,46 +110,130 @@ export class ReverseJournalEntryUseCase {
         input.entryDate
       );
 
-    const originalJournalEntry = await this.prisma.journalEntry.findFirst({
-      where: {
-        id: journalEntryId,
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId
-      },
-      include: journalEntryItemInclude
-    });
-
-    if (!originalJournalEntry) {
-      throw new NotFoundException('Journal entry not found.');
-    }
-
-    assertJournalEntryCanBeReversed(originalJournalEntry.status);
-
-    const reversalLines = buildReversalJournalLines(
-      originalJournalEntry.lines.map((line) => ({
-        accountSubjectId: line.accountSubjectId,
-        fundingAccountId: line.fundingAccountId,
-        debitAmount: line.debitAmount,
-        creditAmount: line.creditAmount,
-        description: line.description
-      }))
-    );
-
-    try {
-      assertBalancedJournalAdjustmentLines(reversalLines);
-    } catch (error) {
-      throw new BadRequestException(readAdjustmentErrorMessage(error));
-    }
-
     const reason = normalizeOptionalText(input.reason);
-    const memo = reason ?? `Reversal of ${originalJournalEntry.entryNumber}`;
 
     const createdJournalEntry = await this.prisma.$transaction(async (tx) => {
+      const writablePeriod =
+        await this.accountingPeriodsService.claimJournalWritePeriodInTransaction(
+          tx,
+          workspace.tenantId,
+          workspace.ledgerId,
+          targetPeriod.id
+        );
+
+      const originalJournalEntry = await tx.journalEntry.findFirst({
+        where: {
+          id: journalEntryId,
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId
+        },
+        include: journalEntryItemInclude
+      });
+
+      if (!originalJournalEntry) {
+        throw new NotFoundException('Journal entry not found.');
+      }
+
+      assertJournalEntryCanBeReversed(originalJournalEntry.status);
+
+      const reversalLines = buildReversalJournalLines(
+        originalJournalEntry.lines.map((line) => ({
+          accountSubjectId: line.accountSubjectId,
+          fundingAccountId: line.fundingAccountId,
+          debitAmount: line.debitAmount,
+          creditAmount: line.creditAmount,
+          description: line.description
+        }))
+      );
+
+      try {
+        assertBalancedJournalAdjustmentLines(reversalLines);
+      } catch (error) {
+        throw new BadRequestException(readAdjustmentErrorMessage(error));
+      }
+
+      const claimedOriginalJournalEntry = await tx.journalEntry.updateMany({
+        where: {
+          id: originalJournalEntry.id,
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId,
+          status: {
+            in: [originalJournalEntry.status]
+          }
+        },
+        data: {
+          status: JournalEntryStatus.REVERSED
+        }
+      });
+
+      if (claimedOriginalJournalEntry.count !== 1) {
+        const currentJournalEntry = await tx.journalEntry.findFirst({
+          where: {
+            id: journalEntryId,
+            tenantId: workspace.tenantId,
+            ledgerId: workspace.ledgerId
+          }
+        });
+
+        if (!currentJournalEntry) {
+          throw new NotFoundException('Journal entry not found.');
+        }
+
+        assertJournalEntryCanBeReversed(currentJournalEntry.status);
+
+        throw new ConflictException(
+          'Journal entry changed during reversal. Please retry.'
+        );
+      }
+
+      if (originalJournalEntry.sourceCollectedTransaction) {
+        const claimedCollectedTransaction =
+          await tx.collectedTransaction.updateMany({
+            where: {
+              id: originalJournalEntry.sourceCollectedTransaction.id,
+              tenantId: workspace.tenantId,
+              ledgerId: workspace.ledgerId,
+              status: {
+                in: [originalJournalEntry.sourceCollectedTransaction.status]
+              }
+            },
+            data: {
+              status: CollectedTransactionStatus.CORRECTED
+            }
+          });
+
+        if (claimedCollectedTransaction.count !== 1) {
+          const currentCollectedTransaction =
+            await tx.collectedTransaction.findFirst({
+              where: {
+                id: originalJournalEntry.sourceCollectedTransaction.id,
+                tenantId: workspace.tenantId,
+                ledgerId: workspace.ledgerId
+              },
+              select: {
+                status: true
+              }
+            });
+
+          if (!currentCollectedTransaction) {
+            throw new NotFoundException('Collected transaction not found.');
+          }
+
+          assertCollectedTransactionCanBeCorrected(
+            currentCollectedTransaction.status
+          );
+
+          throw new ConflictException(
+            'Collected transaction changed during reversal. Please retry.'
+          );
+        }
+      }
+
       const existingCount = await tx.journalEntry.count({
         where: {
           tenantId: workspace.tenantId,
           ledgerId: workspace.ledgerId,
-          periodId: targetPeriod.id
+          periodId: writablePeriod.id
         }
       });
 
@@ -156,16 +241,16 @@ export class ReverseJournalEntryUseCase {
         data: {
           tenantId: workspace.tenantId,
           ledgerId: workspace.ledgerId,
-          periodId: targetPeriod.id,
+          periodId: writablePeriod.id,
           entryNumber: buildJournalEntryEntryNumber(
-            targetPeriod.year,
-            targetPeriod.month,
+            writablePeriod.year,
+            writablePeriod.month,
             existingCount + 1
           ),
           entryDate: buildJournalEntryDate(input.entryDate),
           sourceKind: JournalEntrySourceKind.MANUAL_ADJUSTMENT,
           status: JournalEntryStatus.POSTED,
-          memo,
+          memo: reason ?? `Reversal of ${originalJournalEntry.entryNumber}`,
           reversesJournalEntryId: originalJournalEntry.id,
           ...createdByActorRef,
           lines: {
@@ -174,30 +259,6 @@ export class ReverseJournalEntryUseCase {
         },
         include: journalEntryItemInclude
       });
-
-      await tx.journalEntry.update({
-        where: {
-          id: originalJournalEntry.id
-        },
-        data: {
-          status: JournalEntryStatus.REVERSED
-        }
-      });
-
-      if (originalJournalEntry.sourceCollectedTransaction) {
-        assertCollectedTransactionCanBeCorrected(
-          originalJournalEntry.sourceCollectedTransaction.status
-        );
-
-        await tx.collectedTransaction.update({
-          where: {
-            id: originalJournalEntry.sourceCollectedTransaction.id
-          },
-          data: {
-            status: CollectedTransactionStatus.CORRECTED
-          }
-        });
-      }
 
       return created;
     });

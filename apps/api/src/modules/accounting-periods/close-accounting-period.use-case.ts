@@ -56,109 +56,161 @@ export class CloseAccountingPeriodUseCase {
       throw new NotFoundException('마감할 운영 기간을 찾을 수 없습니다.');
     }
 
-    assertAccountingPeriodCanBeClosed(period.status);
-
-    const existingClosingSnapshot =
-      await this.prisma.closingSnapshot.findUnique({
-        where: {
-          periodId: period.id
-        },
-        select: {
-          id: true
-        }
-      });
-
-    if (existingClosingSnapshot) {
-      throw new ConflictException('이미 마감 스냅샷이 생성된 운영 기간입니다.');
-    }
-
-    const journalLines = await this.prisma.journalLine.findMany({
-      where: {
-        journalEntry: {
-          tenantId: workspace.tenantId,
-          ledgerId: workspace.ledgerId,
-          periodId: period.id,
-          status: JournalEntryStatus.POSTED
-        }
-      },
-      include: {
-        accountSubject: {
-          select: {
-            id: true,
-            code: true,
-            name: true,
-            subjectKind: true
-          }
-        },
-        fundingAccount: {
-          select: {
-            id: true,
-            name: true
-          }
-        }
-      }
-    });
-
-    if (journalLines.length === 0) {
-      throw new BadRequestException(
-        '마감할 전표가 아직 없어 운영 기간을 잠글 수 없습니다.'
-      );
-    }
-
-    const closingLineDrafts = aggregateClosingSnapshotLines(journalLines);
-    const totals = summarizeClosingSnapshot(closingLineDrafts);
     const lockedAt = new Date();
     const reason = normalizeOptionalText(input.note);
 
-    const closingSnapshot = await this.prisma.$transaction(async (tx) => {
-      const createdSnapshot = await tx.closingSnapshot.create({
-        data: {
-          tenantId: workspace.tenantId,
-          ledgerId: workspace.ledgerId,
-          periodId: period.id,
-          lockedAt,
-          totalAssetAmount: totals.totalAssetAmount,
-          totalLiabilityAmount: totals.totalLiabilityAmount,
-          totalEquityAmount: totals.totalEquityAmount,
-          periodPnLAmount: totals.periodPnLAmount
+    const { closingSnapshot, closingLineDrafts } = await this.prisma.$transaction(
+      async (tx) => {
+        const currentPeriod = await tx.accountingPeriod.findFirst({
+          where: {
+            id: period.id,
+            tenantId: workspace.tenantId,
+            ledgerId: workspace.ledgerId
+          }
+        });
+
+        if (!currentPeriod) {
+          throw new NotFoundException('마감할 운영 기간을 찾을 수 없습니다.');
         }
-      });
 
-      await tx.balanceSnapshotLine.createMany({
-        data: closingLineDrafts.map((line) => ({
-          snapshotKind: BalanceSnapshotKind.CLOSING,
-          closingSnapshotId: createdSnapshot.id,
-          accountSubjectId: line.accountSubjectId,
-          fundingAccountId: line.fundingAccountId,
-          balanceAmount: line.balanceAmount
-        }))
-      });
+        assertAccountingPeriodCanBeClosed(currentPeriod.status);
 
-      await tx.accountingPeriod.update({
-        where: {
-          id: period.id
-        },
-        data: {
-          status: AccountingPeriodStatus.LOCKED,
-          lockedAt
+        const claimedPeriod = await tx.accountingPeriod.updateMany({
+          where: {
+            id: currentPeriod.id,
+            tenantId: workspace.tenantId,
+            ledgerId: workspace.ledgerId,
+            status: currentPeriod.status
+          },
+          data: {
+            status: AccountingPeriodStatus.CLOSING
+          }
+        });
+
+        if (claimedPeriod.count !== 1) {
+          const latestPeriod = await tx.accountingPeriod.findFirst({
+            where: {
+              id: period.id,
+              tenantId: workspace.tenantId,
+              ledgerId: workspace.ledgerId
+            }
+          });
+
+          if (!latestPeriod) {
+            throw new NotFoundException('마감할 운영 기간을 찾을 수 없습니다.');
+          }
+
+          assertAccountingPeriodCanBeClosed(latestPeriod.status);
+
+          throw new ConflictException(
+            '운영 기간 상태가 변경되어 마감을 완료하지 못했습니다. 다시 시도해 주세요.'
+          );
         }
-      });
 
-      await tx.periodStatusHistory.create({
-        data: {
-          tenantId: workspace.tenantId,
-          ledgerId: workspace.ledgerId,
-          periodId: period.id,
-          fromStatus: period.status,
-          toStatus: AccountingPeriodStatus.LOCKED,
-          eventType: AccountingPeriodEventType.LOCK,
-          reason,
-          ...actorRef
+        const existingClosingSnapshot =
+          await tx.closingSnapshot.findUnique({
+            where: {
+              periodId: currentPeriod.id
+            },
+            select: {
+              id: true
+            }
+          });
+
+        if (existingClosingSnapshot) {
+          throw new ConflictException(
+            '이미 마감 스냅샷이 생성된 운영 기간입니다.'
+          );
         }
-      });
 
-      return createdSnapshot;
-    });
+        const journalLines = await tx.journalLine.findMany({
+          where: {
+            journalEntry: {
+              tenantId: workspace.tenantId,
+              ledgerId: workspace.ledgerId,
+              periodId: currentPeriod.id,
+              status: JournalEntryStatus.POSTED
+            }
+          },
+          include: {
+            accountSubject: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+                subjectKind: true
+              }
+            },
+            fundingAccount: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        });
+
+        if (journalLines.length === 0) {
+          throw new BadRequestException(
+            '마감할 전표가 아직 없어 운영 기간을 잠글 수 없습니다.'
+          );
+        }
+
+        const closingLineDrafts = aggregateClosingSnapshotLines(journalLines);
+        const totals = summarizeClosingSnapshot(closingLineDrafts);
+
+        const createdSnapshot = await tx.closingSnapshot.create({
+          data: {
+            tenantId: workspace.tenantId,
+            ledgerId: workspace.ledgerId,
+            periodId: currentPeriod.id,
+            lockedAt,
+            totalAssetAmount: totals.totalAssetAmount,
+            totalLiabilityAmount: totals.totalLiabilityAmount,
+            totalEquityAmount: totals.totalEquityAmount,
+            periodPnLAmount: totals.periodPnLAmount
+          }
+        });
+
+        await tx.balanceSnapshotLine.createMany({
+          data: closingLineDrafts.map((line) => ({
+            snapshotKind: BalanceSnapshotKind.CLOSING,
+            closingSnapshotId: createdSnapshot.id,
+            accountSubjectId: line.accountSubjectId,
+            fundingAccountId: line.fundingAccountId,
+            balanceAmount: line.balanceAmount
+          }))
+        });
+
+        await tx.accountingPeriod.update({
+          where: {
+            id: currentPeriod.id
+          },
+          data: {
+            status: AccountingPeriodStatus.LOCKED,
+            lockedAt
+          }
+        });
+
+        await tx.periodStatusHistory.create({
+          data: {
+            tenantId: workspace.tenantId,
+            ledgerId: workspace.ledgerId,
+            periodId: currentPeriod.id,
+            fromStatus: currentPeriod.status,
+            toStatus: AccountingPeriodStatus.LOCKED,
+            eventType: AccountingPeriodEventType.LOCK,
+            reason,
+            ...actorRef
+          }
+        });
+
+        return {
+          closingSnapshot: createdSnapshot,
+          closingLineDrafts
+        };
+      }
+    );
 
     const refreshedPeriod =
       await this.accountingPeriodsService.findPeriodByIdInWorkspace(

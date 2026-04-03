@@ -266,7 +266,7 @@
 - 모든 보호 엔드포인트는 `user.currentWorkspace`에서 선택된 `tenantId`, `ledgerId`, `membershipId`, `membershipRole` 문맥을 기준으로 동작합니다.
 - 현재 구현은 단순 user-scoped 전단계가 아니라 workspace-scoped tenant/ledger 모델을 사용합니다.
 - 조회 엔드포인트는 인증된 workspace 범위 내 데이터만 반환합니다.
-- `insurance-policies`, `vehicles`도 개인 고정 데이터가 아니라 현재 workspace/ledger 기준 운영 보조 자산 데이터만 반환합니다.
+- `insurance-policies`, `vehicles`도 개인 생활용 고정 데이터가 아니라 현재 workspace/ledger 기준 사업 운영 보조 자산 데이터만 반환합니다.
 - 쓰기 권한은 workspace membership role로 제어합니다.
 - `OWNER`, `MANAGER`: `accounting_period.open`, `recurring_rule.create`, `plan_item.generate`, `financial_statement.generate`, `carry_forward.generate`, `journal_entry.reverse`, `journal_entry.correct`
 - `OWNER`: `accounting_period.close`, `accounting_period.reopen`

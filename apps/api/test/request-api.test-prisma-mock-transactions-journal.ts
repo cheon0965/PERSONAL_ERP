@@ -1095,6 +1095,70 @@ export function createTransactionsJournalPrismaMock(
         candidate.updatedAt = new Date();
 
         return candidate;
+      },
+      updateMany: async (args: {
+        where?: {
+          id?: string;
+          tenantId?: string;
+          ledgerId?: string;
+          status?:
+            | 'POSTED'
+            | 'REVERSED'
+            | 'SUPERSEDED'
+            | {
+                in?: Array<'POSTED' | 'REVERSED' | 'SUPERSEDED'>;
+              };
+        };
+        data: {
+          status?: 'POSTED' | 'REVERSED' | 'SUPERSEDED';
+          reversesJournalEntryId?: string | null;
+          correctsJournalEntryId?: string | null;
+          correctionReason?: string | null;
+        };
+      }) => {
+        let updatedCount = 0;
+
+        state.journalEntries.forEach((candidate) => {
+          const matchesId = !args.where?.id || candidate.id === args.where.id;
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesStatus =
+            args.where?.status === undefined
+              ? true
+              : typeof args.where.status === 'string'
+                ? candidate.status === args.where.status
+                : !args.where.status.in ||
+                  args.where.status.in.includes(candidate.status);
+
+          if (!(matchesId && matchesTenant && matchesLedger && matchesStatus)) {
+            return;
+          }
+
+          if (args.data.status) {
+            candidate.status = args.data.status;
+          }
+
+          if ('reversesJournalEntryId' in args.data) {
+            candidate.reversesJournalEntryId = args.data.reversesJournalEntryId;
+          }
+
+          if ('correctsJournalEntryId' in args.data) {
+            candidate.correctsJournalEntryId = args.data.correctsJournalEntryId;
+          }
+
+          if ('correctionReason' in args.data) {
+            candidate.correctionReason = args.data.correctionReason;
+          }
+
+          candidate.updatedAt = new Date();
+          updatedCount += 1;
+        });
+
+        return {
+          count: updatedCount
+        };
       }
     },
 

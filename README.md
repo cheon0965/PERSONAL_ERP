@@ -1,8 +1,9 @@
-# Owner ERP Starter
+# PERSONAL_ERP Starter
 
 1인 사업자와 소상공인이 월별 재무 운영 사이클을 ERP처럼 관리할 수 있도록 구성한 워크스페이스형 스타터입니다.
 실제 거래, 반복규칙, 업로드 배치, 월 운영, 공식 보고까지 한 구조 안에서 다루도록 설계했습니다.
-저장소와 패키지 식별자에는 기존 `personal-erp` 이름이 남아 있지만, 제품 설명과 화면 문구는 1인 사업자·소상공인용 월별 재무운영 ERP starter 기준으로 정리합니다.
+프로젝트 이름은 `PERSONAL_ERP`이며, README 상단의 `Starter` 표기는 아직 진행 중인 현재 단계와 프로젝트 성격을 설명하기 위한 표현입니다.
+저장소/패키지 식별자와 환경 변수 키는 기존 identifier 규칙에 맞춰 `personal-erp`, `PERSONAL_ERP_*` 형태를 계속 사용합니다.
 
 ## 현재 상태
 
@@ -153,7 +154,7 @@ npm run db:deploy
 ## 워크스페이스 구조
 
 ```text
-personal-erp-starter/
+PERSONAL_ERP/
   apps/
     api/        # NestJS API
     web/        # Next.js Web
@@ -164,7 +165,7 @@ personal-erp-starter/
 
 ## 아키텍처 요약
 
-Owner ERP Starter는 **1인 사업자와 소상공인이 제한된 리소스 안에서도 월별 재무 운영, 거래 확정, 마감, 공식 보고를 안정적으로 이어갈 수 있도록 설계한 TypeScript 기반 월별 재무운영 ERP starter 지향 모듈러 모놀리스**입니다.
+PERSONAL_ERP는 **1인 사업자와 소상공인이 제한된 리소스 안에서도 월별 재무 운영, 거래 확정, 마감, 공식 보고를 안정적으로 이어갈 수 있도록 설계한 TypeScript 기반 워크스페이스형 월별 재무 운영 시스템**입니다.
 즉, 범용 소상공인 ERP 전반보다는 월별 재무운영 사이클을 끝까지 닫는 흐름에 초점을 맞춥니다.
 
 ### 왜 이런 구조를 선택했나
