@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException
 } from '@nestjs/common';
@@ -11,7 +12,8 @@ import type {
 import {
   CollectedTransactionStatus,
   JournalEntrySourceKind,
-  JournalEntryStatus
+  JournalEntryStatus,
+  Prisma
 } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { readWorkspaceCreatedByActorRef } from '../../common/auth/workspace-actor-ref.util';
@@ -123,34 +125,119 @@ export class CorrectJournalEntryUseCase {
         input.entryDate
       );
 
-    const originalJournalEntry = await this.prisma.journalEntry.findFirst({
-      where: {
-        id: journalEntryId,
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId
-      },
-      include: journalEntryItemInclude
-    });
-
-    if (!originalJournalEntry) {
-      throw new NotFoundException('Journal entry not found.');
-    }
-
-    assertJournalEntryCanBeCorrected(originalJournalEntry.status);
-
-    await assertJournalAdjustmentReferencesExist(
-      this.prisma,
-      workspace.tenantId,
-      workspace.ledgerId,
-      normalizedLines
-    );
-
     const createdJournalEntry = await this.prisma.$transaction(async (tx) => {
+      const writablePeriod =
+        await this.accountingPeriodsService.claimJournalWritePeriodInTransaction(
+          tx,
+          workspace.tenantId,
+          workspace.ledgerId,
+          targetPeriod.id
+        );
+
+      const originalJournalEntry = await tx.journalEntry.findFirst({
+        where: {
+          id: journalEntryId,
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId
+        },
+        include: journalEntryItemInclude
+      });
+
+      if (!originalJournalEntry) {
+        throw new NotFoundException('Journal entry not found.');
+      }
+
+      assertJournalEntryCanBeCorrected(originalJournalEntry.status);
+
+      await assertJournalAdjustmentReferencesExist(
+        tx,
+        workspace.tenantId,
+        workspace.ledgerId,
+        normalizedLines
+      );
+
+      const claimedOriginalJournalEntry = await tx.journalEntry.updateMany({
+        where: {
+          id: originalJournalEntry.id,
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId,
+          status: {
+            in: [originalJournalEntry.status]
+          }
+        },
+        data: {
+          status: JournalEntryStatus.SUPERSEDED
+        }
+      });
+
+      if (claimedOriginalJournalEntry.count !== 1) {
+        const currentJournalEntry = await tx.journalEntry.findFirst({
+          where: {
+            id: journalEntryId,
+            tenantId: workspace.tenantId,
+            ledgerId: workspace.ledgerId
+          }
+        });
+
+        if (!currentJournalEntry) {
+          throw new NotFoundException('Journal entry not found.');
+        }
+
+        assertJournalEntryCanBeCorrected(currentJournalEntry.status);
+
+        throw new ConflictException(
+          'Journal entry changed during correction. Please retry.'
+        );
+      }
+
+      if (originalJournalEntry.sourceCollectedTransaction) {
+        const claimedCollectedTransaction =
+          await tx.collectedTransaction.updateMany({
+            where: {
+              id: originalJournalEntry.sourceCollectedTransaction.id,
+              tenantId: workspace.tenantId,
+              ledgerId: workspace.ledgerId,
+              status: {
+                in: [originalJournalEntry.sourceCollectedTransaction.status]
+              }
+            },
+            data: {
+              status: CollectedTransactionStatus.CORRECTED
+            }
+          });
+
+        if (claimedCollectedTransaction.count !== 1) {
+          const currentCollectedTransaction =
+            await tx.collectedTransaction.findFirst({
+              where: {
+                id: originalJournalEntry.sourceCollectedTransaction.id,
+                tenantId: workspace.tenantId,
+                ledgerId: workspace.ledgerId
+              },
+              select: {
+                status: true
+              }
+            });
+
+          if (!currentCollectedTransaction) {
+            throw new NotFoundException('Collected transaction not found.');
+          }
+
+          assertCollectedTransactionCanBeCorrected(
+            currentCollectedTransaction.status
+          );
+
+          throw new ConflictException(
+            'Collected transaction changed during correction. Please retry.'
+          );
+        }
+      }
+
       const existingCount = await tx.journalEntry.count({
         where: {
           tenantId: workspace.tenantId,
           ledgerId: workspace.ledgerId,
-          periodId: targetPeriod.id
+          periodId: writablePeriod.id
         }
       });
 
@@ -158,10 +245,10 @@ export class CorrectJournalEntryUseCase {
         data: {
           tenantId: workspace.tenantId,
           ledgerId: workspace.ledgerId,
-          periodId: targetPeriod.id,
+          periodId: writablePeriod.id,
           entryNumber: buildJournalEntryEntryNumber(
-            targetPeriod.year,
-            targetPeriod.month,
+            writablePeriod.year,
+            writablePeriod.month,
             existingCount + 1
           ),
           entryDate: buildJournalEntryDate(input.entryDate),
@@ -178,30 +265,6 @@ export class CorrectJournalEntryUseCase {
         include: journalEntryItemInclude
       });
 
-      await tx.journalEntry.update({
-        where: {
-          id: originalJournalEntry.id
-        },
-        data: {
-          status: JournalEntryStatus.SUPERSEDED
-        }
-      });
-
-      if (originalJournalEntry.sourceCollectedTransaction) {
-        assertCollectedTransactionCanBeCorrected(
-          originalJournalEntry.sourceCollectedTransaction.status
-        );
-
-        await tx.collectedTransaction.update({
-          where: {
-            id: originalJournalEntry.sourceCollectedTransaction.id
-          },
-          data: {
-            status: CollectedTransactionStatus.CORRECTED
-          }
-        });
-      }
-
       return created;
     });
 
@@ -210,7 +273,7 @@ export class CorrectJournalEntryUseCase {
 }
 
 async function assertJournalAdjustmentReferencesExist(
-  prisma: PrismaService,
+  prisma: PrismaService | Prisma.TransactionClient,
   tenantId: string,
   ledgerId: string,
   lines: JournalAdjustmentLineDraft[]

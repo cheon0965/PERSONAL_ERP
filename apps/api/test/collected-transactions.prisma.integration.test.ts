@@ -242,7 +242,9 @@ test(
         fundingAccountName: 'Integration Main Account',
         categoryName: 'Integration Fuel',
         sourceKind: 'MANUAL',
-        postingStatus: 'PENDING'
+        postingStatus: 'PENDING',
+        postedJournalEntryId: null,
+        postedJournalEntryNumber: null
       });
 
       const transactions = await listTransactionsUseCase.execute({

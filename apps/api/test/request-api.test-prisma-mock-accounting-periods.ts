@@ -349,6 +349,54 @@ export function createAccountingPeriodsPrismaMock(
 
         candidate.updatedAt = new Date();
         return candidate;
+      },
+      updateMany: async (args: {
+        where?: {
+          id?: string;
+          tenantId?: string;
+          ledgerId?: string;
+          status?: AccountingPeriodStatus | { in?: AccountingPeriodStatus[] };
+        };
+        data: {
+          status?: AccountingPeriodStatus;
+          lockedAt?: Date | null;
+        };
+      }) => {
+        let updatedCount = 0;
+
+        state.accountingPeriods.forEach((candidate) => {
+          const matchesId = !args.where?.id || candidate.id === args.where.id;
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesStatus =
+            args.where?.status === undefined
+              ? true
+              : typeof args.where.status === 'string'
+                ? candidate.status === args.where.status
+                : !args.where.status.in ||
+                  args.where.status.in.includes(candidate.status);
+
+          if (!(matchesId && matchesTenant && matchesLedger && matchesStatus)) {
+            return;
+          }
+
+          if (args.data.status !== undefined) {
+            candidate.status = args.data.status;
+          }
+
+          if (args.data.lockedAt !== undefined) {
+            candidate.lockedAt = args.data.lockedAt;
+          }
+
+          candidate.updatedAt = new Date();
+          updatedCount += 1;
+        });
+
+        return {
+          count: updatedCount
+        };
       }
     },
     periodStatusHistory: {

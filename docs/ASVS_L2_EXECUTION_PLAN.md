@@ -2,7 +2,7 @@
 
 ## 목적
 
-이 문서는 현재 `personal-erp-starter` 프로젝트를 최종적으로 `OWASP ASVS Level 2`에 가깝게 끌어올리기 위한 실행계획입니다.
+이 문서는 현재 `PERSONAL_ERP` 프로젝트를 최종적으로 `OWASP ASVS Level 2`에 가깝게 끌어올리기 위한 실행계획입니다.
 
 이 계획의 목표는 세 가지입니다.
 
