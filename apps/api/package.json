@@ -8,7 +8,7 @@
     "start": "node ../../scripts/run-with-root-env.cjs node dist/apps/api/src/main.js",
     "lint": "eslint src prisma test --ext .ts --max-warnings=0",
     "typecheck": "tsc --noEmit --incremental false -p tsconfig.test.json",
-    "clean:test-dist": "powershell -NoProfile -Command \"Remove-Item -LiteralPath '.test-dist' -Recurse -Force -ErrorAction SilentlyContinue\"",
+    "clean:test-dist": "node -e \"require('node:fs').rmSync('.test-dist', { recursive: true, force: true })\"",
     "compile:test": "tsc -p tsconfig.test-run.json",
     "test": "npm run clean:test-dist && npm run compile:test && node --test --test-concurrency=1 --test-isolation=none .test-dist/apps/api/test/*.test.js",
     "test:prisma": "node ../../scripts/run-with-root-env.cjs node ../../scripts/run-api-prisma-integration.cjs",
