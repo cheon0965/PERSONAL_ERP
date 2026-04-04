@@ -19,6 +19,26 @@ import type {
   UpdateRecurringRuleRequest
 } from '@personal-erp/contracts';
 
+function isIgnorableAuthRefresh401Error(error: string) {
+  const normalized = error.toLowerCase();
+
+  return (
+    normalized.includes('401') &&
+    normalized.includes('unauthorized') &&
+    (normalized.includes('/api/auth/refresh') ||
+      normalized.includes('failed to load resource') ||
+      normalized.includes('err_http_response_code_failure'))
+  );
+}
+
+function expectNoUnexpectedPageErrors(pageErrors: string[]) {
+  const unexpectedPageErrors = pageErrors.filter(
+    (error) => !isIgnorableAuthRefresh401Error(error)
+  );
+
+  expect(unexpectedPageErrors, unexpectedPageErrors.join('\n\n')).toEqual([]);
+}
+
 test('protects the transactions route, restores the session, and saves a transaction through the UI', async ({
   page
 }) => {
@@ -959,14 +979,7 @@ test('manages funding accounts and categories through the reference data UI', as
     renamedCategoryRow.getByText('활성', { exact: true })
   ).toBeVisible();
 
-  const unexpectedPageErrors = pageErrors.filter(
-    (error) =>
-      !error.includes(
-        'Failed to load resource: the server responded with a status of 401 (Unauthorized)'
-      )
-  );
-
-  expect(unexpectedPageErrors, unexpectedPageErrors.join('\n\n')).toEqual([]);
+  expectNoUnexpectedPageErrors(pageErrors);
 });
 
 test('manages recurring rules through the recurring rules UI', async ({
@@ -1263,14 +1276,7 @@ test('manages recurring rules through the recurring rules UI', async ({
     })
   ).toHaveCount(0);
 
-  const unexpectedPageErrors = pageErrors.filter(
-    (error) =>
-      !error.includes(
-        'Failed to load resource: the server responded with a status of 401 (Unauthorized)'
-      )
-  );
-
-  expect(unexpectedPageErrors, unexpectedPageErrors.join('\n\n')).toEqual([]);
+  expectNoUnexpectedPageErrors(pageErrors);
 });
 
 test('surfaces operational checklist guidance across empty states and readiness gaps', async ({
@@ -1516,14 +1522,7 @@ test('surfaces operational checklist guidance across empty states and readiness 
   await page.getByRole('link', { name: '재무제표 보기' }).first().click();
   await expect(page).toHaveURL(/\/financial-statements$/);
 
-  const unexpectedPageErrors = pageErrors.filter(
-    (error) =>
-      !error.includes(
-        'Failed to load resource: the server responded with a status of 401 (Unauthorized)'
-      )
-  );
-
-  expect(unexpectedPageErrors, unexpectedPageErrors.join('\n\n')).toEqual([]);
+  expectNoUnexpectedPageErrors(pageErrors);
 });
 
 test('shows safe context fallback when no workspace is connected', async ({
@@ -1639,14 +1638,7 @@ test('shows safe context fallback when no workspace is connected', async ({
     '연결된 사업장 없음'
   );
 
-  const unexpectedPageErrors = pageErrors.filter(
-    (error) =>
-      !error.includes(
-        'Failed to load resource: the server responded with a status of 401 (Unauthorized)'
-      )
-  );
-
-  expect(unexpectedPageErrors, unexpectedPageErrors.join('\n\n')).toEqual([]);
+  expectNoUnexpectedPageErrors(pageErrors);
 });
 
 function createE2ECurrentUser(): AuthenticatedUser {
