@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Grid, MenuItem, Stack, TextField } from '@mui/material';
@@ -8,20 +9,27 @@ import type {
   AccountingPeriodItem,
   CollectedTransactionDetailItem,
   CollectedTransactionItem,
+  FundingAccountItem,
   UpdateCollectedTransactionRequest
 } from '@personal-erp/contracts';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
+  categoriesManagementQueryKey,
   categoriesQueryKey,
+  fundingAccountsManagementQueryKey,
   fundingAccountsQueryKey,
   getCategories,
-  getFundingAccounts
+  getFundingAccounts,
+  getReferenceDataReadiness,
+  referenceDataReadinessQueryKey
 } from '@/features/reference-data/reference-data.api';
+import { ReferenceDataReadinessAlert } from '@/features/reference-data/reference-data-readiness';
 import { webRuntime } from '@/shared/config/env';
 import { getTodayDateInputValue } from '@/shared/lib/date-input';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
+import { resolveStatusLabel } from '@/shared/ui/status-chip';
 import {
   buildCollectedTransactionFallbackItem,
   collectedTransactionDetailQueryKey,
@@ -30,6 +38,7 @@ import {
   mergeCollectedTransactionItem,
   updateCollectedTransaction
 } from './transactions.api';
+import { resolveManualCollectedTransactionPostingStatus } from './transaction-workflow';
 
 const transactionSchema = z.object({
   title: z.string().trim().min(2, '제목은 2자 이상이어야 합니다.'),
@@ -74,13 +83,26 @@ export function TransactionForm({
 }: TransactionFormProps) {
   const queryClient = useQueryClient();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
+  const includeInactiveCategories =
+    mode === 'edit' && Boolean(initialTransaction?.categoryId);
+  const includeInactiveFundingAccounts =
+    mode === 'edit' && Boolean(initialTransaction?.fundingAccountId);
   const { data: fundingAccounts = [], error: fundingAccountsError } = useQuery({
-    queryKey: fundingAccountsQueryKey,
-    queryFn: getFundingAccounts
+    queryKey: includeInactiveFundingAccounts
+      ? fundingAccountsManagementQueryKey
+      : fundingAccountsQueryKey,
+    queryFn: () =>
+      getFundingAccounts({ includeInactive: includeInactiveFundingAccounts })
   });
   const { data: categories = [], error: categoriesError } = useQuery({
-    queryKey: categoriesQueryKey,
-    queryFn: getCategories
+    queryKey: includeInactiveCategories
+      ? categoriesManagementQueryKey
+      : categoriesQueryKey,
+    queryFn: () => getCategories({ includeInactive: includeInactiveCategories })
+  });
+  const referenceDataReadinessQuery = useQuery({
+    queryKey: referenceDataReadinessQueryKey,
+    queryFn: getReferenceDataReadiness
   });
   const form = useForm<TransactionFormInput>({
     resolver: zodResolver(transactionSchema),
@@ -95,9 +117,33 @@ export function TransactionForm({
     }
   });
   const selectedType = form.watch('type');
+  const selectedFundingAccountId = form.watch('accountId');
+  const selectedCategoryId = form.watch('categoryId');
+  const availableFundingAccounts = React.useMemo(
+    () =>
+      fundingAccounts.filter(
+        (fundingAccount) =>
+          fundingAccount.status === 'ACTIVE' ||
+          fundingAccount.id === selectedFundingAccountId
+      ),
+    [fundingAccounts, selectedFundingAccountId]
+  );
   const filteredCategories = React.useMemo(
-    () => categories.filter((category) => category.kind === selectedType),
-    [categories, selectedType]
+    () =>
+      categories.filter(
+        (category) =>
+          category.kind === selectedType &&
+          (category.isActive || category.id === selectedCategoryId)
+      ),
+    [categories, selectedCategoryId, selectedType]
+  );
+  const predictedStatus = React.useMemo(
+    () =>
+      resolveManualCollectedTransactionPostingStatus({
+        type: selectedType,
+        categoryId: selectedCategoryId
+      }),
+    [selectedCategoryId, selectedType]
   );
 
   const mutation = useMutation({
@@ -108,7 +154,11 @@ export function TransactionForm({
       fallback
     }: SaveTransactionMutationInput) => {
       if (nextMode === 'edit' && collectedTransactionId) {
-        return updateCollectedTransaction(collectedTransactionId, payload, fallback);
+        return updateCollectedTransaction(
+          collectedTransactionId,
+          payload,
+          fallback
+        );
       }
 
       return createCollectedTransaction(payload, fallback);
@@ -143,19 +193,19 @@ export function TransactionForm({
   });
 
   React.useEffect(() => {
-    const firstFundingAccount = fundingAccounts[0];
+    const firstFundingAccount = availableFundingAccounts[0];
     if (!form.getValues('accountId') && firstFundingAccount) {
       form.setValue('accountId', firstFundingAccount.id, {
         shouldValidate: true
       });
     }
-  }, [fundingAccounts, form]);
+  }, [availableFundingAccounts, form]);
 
   React.useEffect(() => {
-    const selectedCategoryId = form.getValues('categoryId');
+    const currentCategoryId = form.getValues('categoryId');
     if (
-      selectedCategoryId &&
-      !filteredCategories.some((category) => category.id === selectedCategoryId)
+      currentCategoryId &&
+      !filteredCategories.some((category) => category.id === currentCategoryId)
     ) {
       form.setValue('categoryId', '');
     }
@@ -194,7 +244,7 @@ export function TransactionForm({
   const isBusy =
     mutation.isPending ||
     form.formState.isSubmitting ||
-    fundingAccounts.length === 0 ||
+    availableFundingAccounts.length === 0 ||
     Boolean(referenceError) ||
     !canSaveInPeriod ||
     (mode === 'edit' && !initialTransaction);
@@ -230,7 +280,7 @@ export function TransactionForm({
           return;
         }
 
-        const selectedFundingAccount = fundingAccounts.find(
+        const selectedFundingAccount = availableFundingAccounts.find(
           (fundingAccount) => fundingAccount.id === values.accountId
         );
         if (!selectedFundingAccount) {
@@ -292,8 +342,8 @@ export function TransactionForm({
             severity: 'success',
             message:
               mode === 'edit'
-                ? '수집 거래를 수정했고 목록을 새로고침했습니다.'
-                : '수집 거래를 등록했고 목록을 새로고침했습니다.'
+                ? `수집 거래를 수정했고 ${resolveStatusLabel(saved.postingStatus)} 상태로 반영했습니다.`
+                : `수집 거래를 등록했고 ${resolveStatusLabel(saved.postingStatus)} 상태로 반영했습니다.`
           });
         } catch (error) {
           setFeedback({
@@ -309,6 +359,10 @@ export function TransactionForm({
       })}
     >
       <Stack spacing={appLayout.cardGap}>
+        <ReferenceDataReadinessAlert
+          readiness={referenceDataReadinessQuery.data ?? null}
+          context="transaction-entry"
+        />
         {referenceError ? (
           <QueryErrorAlert
             title="자금수단 또는 카테고리 조회에 실패했습니다."
@@ -327,14 +381,33 @@ export function TransactionForm({
           </Alert>
         ) : mode === 'edit' ? (
           <Alert severity="info" variant="outlined">
-            {currentPeriod.monthLabel} 운영 기간 안의 보류 상태 거래만 수정할 수
-            있습니다.
+            {currentPeriod.monthLabel} 운영 기간 안의 미확정 거래만 수정할 수
+            있습니다. 현재 입력 기준 저장 시{' '}
+            {resolveStatusLabel(predictedStatus)} 상태로 반영됩니다.
           </Alert>
         ) : (
           <Alert severity="info" variant="outlined">
-            현재 수집 거래는 {currentPeriod.monthLabel} 운영 기간 안에서만 등록됩니다.
+            현재 수집 거래는 {currentPeriod.monthLabel} 운영 기간 안에서만
+            등록됩니다. 저장 시 {resolveStatusLabel(predictedStatus)} 상태로
+            반영됩니다.
           </Alert>
         )}
+        {availableFundingAccounts.length === 0 ? (
+          <Alert severity="warning" variant="outlined">
+            사용할 수 있는 자금수단이 아직 없습니다.{' '}
+            <Button component={Link} href="/reference-data" size="small">
+              기준 데이터 확인
+            </Button>
+          </Alert>
+        ) : null}
+        {selectedType !== 'TRANSFER' && filteredCategories.length === 0 ? (
+          <Alert severity="warning" variant="outlined">
+            선택한 거래 성격에 맞는 카테고리가 아직 없습니다.{' '}
+            <Button component={Link} href="/reference-data" size="small">
+              기준 데이터 확인
+            </Button>
+          </Alert>
+        ) : null}
 
         <Grid container spacing={appLayout.fieldGap}>
           <Grid size={{ xs: 12, md: 6 }}>
@@ -387,19 +460,19 @@ export function TransactionForm({
             <TextField
               select
               label="자금수단"
-              disabled={!currentPeriod || fundingAccounts.length === 0}
+              disabled={!currentPeriod || availableFundingAccounts.length === 0}
               error={Boolean(form.formState.errors.accountId)}
               helperText={
                 form.formState.errors.accountId?.message ??
-                (fundingAccounts.length === 0
+                (availableFundingAccounts.length === 0
                   ? '사용할 수 있는 자금수단이 아직 없습니다.'
                   : ' ')
               }
               {...form.register('accountId')}
             >
-              {fundingAccounts.map((fundingAccount) => (
+              {availableFundingAccounts.map((fundingAccount) => (
                 <MenuItem key={fundingAccount.id} value={fundingAccount.id}>
-                  {fundingAccount.name}
+                  {readFundingAccountOptionLabel(fundingAccount)}
                 </MenuItem>
               ))}
             </TextField>
@@ -412,7 +485,7 @@ export function TransactionForm({
               helperText={
                 filteredCategories.length === 0
                   ? '선택한 거래 유형에 맞는 카테고리가 없으면 비워 둘 수 있습니다.'
-                  : '선택 사항'
+                  : '이체는 카테고리 없이 전표 준비 상태가 됩니다. 손익 거래는 카테고리가 비어 있으면 검토 상태로 남습니다.'
               }
               {...form.register('categoryId')}
             >
@@ -460,6 +533,17 @@ function mapDetailToFormInput(
     categoryId: transaction.categoryId ?? '',
     memo: transaction.memo ?? ''
   };
+}
+
+function readFundingAccountOptionLabel(fundingAccount: FundingAccountItem) {
+  switch (fundingAccount.status) {
+    case 'INACTIVE':
+      return `${fundingAccount.name} (비활성)`;
+    case 'CLOSED':
+      return `${fundingAccount.name} (종료)`;
+    default:
+      return fundingAccount.name;
+  }
 }
 
 function resolveInitialBusinessDate(

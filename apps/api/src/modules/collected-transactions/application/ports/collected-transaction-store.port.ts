@@ -20,6 +20,8 @@ export type StoredCollectedTransaction = {
   } | null;
   postedJournalEntryId: string | null;
   postedJournalEntryNumber: string | null;
+  matchedPlanItemId: string | null;
+  matchedPlanItemTitle: string | null;
 };
 
 export type StoredCollectedTransactionDetail = {
@@ -35,6 +37,8 @@ export type StoredCollectedTransactionDetail = {
   status: CollectedTransactionPostingStatus;
   postedJournalEntryId: string | null;
   postedJournalEntryNumber: string | null;
+  matchedPlanItemId: string | null;
+  matchedPlanItemTitle: string | null;
 };
 
 export type CollectedTransactionWorkspaceScope = {

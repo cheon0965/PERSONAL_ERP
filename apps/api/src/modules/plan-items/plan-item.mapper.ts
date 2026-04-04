@@ -23,9 +23,12 @@ type PlanItemRecord = {
   } | null;
   matchedCollectedTransaction: {
     id: string;
+    title: string;
+    status: PlanItemItem['matchedCollectedTransactionStatus'];
   } | null;
   postedJournalEntry: {
     id: string;
+    entryNumber: string;
   } | null;
 };
 
@@ -44,7 +47,12 @@ export function mapPlanItemRecordToItem(record: PlanItemRecord): PlanItemItem {
     categoryName: record.category?.name ?? '-',
     matchedCollectedTransactionId:
       record.matchedCollectedTransaction?.id ?? null,
-    postedJournalEntryId: record.postedJournalEntry?.id ?? null
+    matchedCollectedTransactionTitle:
+      record.matchedCollectedTransaction?.title ?? null,
+    matchedCollectedTransactionStatus:
+      record.matchedCollectedTransaction?.status ?? null,
+    postedJournalEntryId: record.postedJournalEntry?.id ?? null,
+    postedJournalEntryNumber: record.postedJournalEntry?.entryNumber ?? null
   };
 }
 

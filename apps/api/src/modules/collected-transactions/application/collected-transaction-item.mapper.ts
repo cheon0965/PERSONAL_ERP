@@ -21,7 +21,9 @@ export function mapCollectedTransactionToItem(
     sourceKind: transaction.origin,
     postingStatus: transaction.status,
     postedJournalEntryId: transaction.postedJournalEntryId,
-    postedJournalEntryNumber: transaction.postedJournalEntryNumber
+    postedJournalEntryNumber: transaction.postedJournalEntryNumber,
+    matchedPlanItemId: transaction.matchedPlanItemId ?? null,
+    matchedPlanItemTitle: transaction.matchedPlanItemTitle ?? null
   };
 }
 
@@ -40,6 +42,8 @@ export function mapCollectedTransactionToDetailItem(
     sourceKind: transaction.origin,
     postingStatus: transaction.status,
     postedJournalEntryId: transaction.postedJournalEntryId,
-    postedJournalEntryNumber: transaction.postedJournalEntryNumber
+    postedJournalEntryNumber: transaction.postedJournalEntryNumber,
+    matchedPlanItemId: transaction.matchedPlanItemId ?? null,
+    matchedPlanItemTitle: transaction.matchedPlanItemTitle ?? null
   };
 }

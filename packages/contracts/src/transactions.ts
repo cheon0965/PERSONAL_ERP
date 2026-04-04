@@ -5,10 +5,12 @@ export type CollectedTransactionType = 'INCOME' | 'EXPENSE' | 'TRANSFER';
 export type CollectedTransactionSourceKind = 'MANUAL' | 'RECURRING' | 'IMPORT';
 
 export type CollectedTransactionPostingStatus =
+  | 'COLLECTED'
+  | 'REVIEWED'
+  | 'READY_TO_POST'
   | 'POSTED'
-  | 'PENDING'
   | 'CORRECTED'
-  | 'CANCELLED';
+  | 'LOCKED';
 
 export type CollectedTransactionItem = {
   id: string;
@@ -22,6 +24,8 @@ export type CollectedTransactionItem = {
   postingStatus: CollectedTransactionPostingStatus;
   postedJournalEntryId: string | null;
   postedJournalEntryNumber: string | null;
+  matchedPlanItemId: string | null;
+  matchedPlanItemTitle: string | null;
 };
 
 export type CollectedTransactionDetailItem = {
@@ -37,6 +41,8 @@ export type CollectedTransactionDetailItem = {
   postingStatus: CollectedTransactionPostingStatus;
   postedJournalEntryId: string | null;
   postedJournalEntryNumber: string | null;
+  matchedPlanItemId: string | null;
+  matchedPlanItemTitle: string | null;
 };
 
 export type CreateCollectedTransactionRequest = {

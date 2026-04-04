@@ -15,7 +15,7 @@ type ConfirmActionDialogProps = {
   description: string;
   confirmLabel?: string;
   pendingLabel?: string;
-  confirmColor?: 'error' | 'primary';
+  confirmColor?: 'error' | 'primary' | 'warning';
   busy?: boolean;
   onClose: () => void;
   onConfirm: () => void;

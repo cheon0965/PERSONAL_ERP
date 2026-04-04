@@ -17,8 +17,10 @@ export function mapCreatedCollectedTransactionToItem(
     fundingAccountName: transaction.fundingAccount.name,
     categoryName: transaction.category?.name ?? '-',
     sourceKind: 'IMPORT',
-    postingStatus: 'PENDING',
+    postingStatus: transaction.status,
     postedJournalEntryId: null,
-    postedJournalEntryNumber: null
+    postedJournalEntryNumber: null,
+    matchedPlanItemId: transaction.matchedPlanItem?.id ?? null,
+    matchedPlanItemTitle: transaction.matchedPlanItem?.title ?? null
   };
 }

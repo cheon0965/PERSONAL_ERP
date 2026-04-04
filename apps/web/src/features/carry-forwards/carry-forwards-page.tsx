@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
 import {
   Alert,
   Button,
@@ -100,6 +101,29 @@ export function CarryForwardsPage() {
   const canGenerate =
     membershipRole === 'OWNER' || membershipRole === 'MANAGER';
   const view = carryForwardQuery.data;
+  const handleGenerateCarryForward = React.useCallback(async () => {
+    if (!selectedPeriod) {
+      return;
+    }
+
+    setFeedback(null);
+
+    try {
+      const result = await mutation.mutateAsync(selectedPeriod);
+      setFeedback({
+        severity: 'success',
+        message: `${result.sourcePeriod.monthLabel} 마감 결과를 ${result.targetPeriod.monthLabel} 오프닝 기준으로 이월했습니다.`
+      });
+    } catch (error) {
+      setFeedback({
+        severity: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : '차기 이월을 생성하지 못했습니다.'
+      });
+    }
+  }, [mutation, selectedPeriod]);
 
   return (
     <Stack spacing={appLayout.pageGap}>
@@ -161,29 +185,7 @@ export function CarryForwardsPage() {
               variant="contained"
               color="inherit"
               disabled={!selectedPeriod || !canGenerate || mutation.isPending}
-              onClick={async () => {
-                if (!selectedPeriod) {
-                  return;
-                }
-
-                setFeedback(null);
-
-                try {
-                  const result = await mutation.mutateAsync(selectedPeriod);
-                  setFeedback({
-                    severity: 'success',
-                    message: `${result.sourcePeriod.monthLabel} 마감 결과를 ${result.targetPeriod.monthLabel} 오프닝 기준으로 이월했습니다.`
-                  });
-                } catch (error) {
-                  setFeedback({
-                    severity: 'error',
-                    message:
-                      error instanceof Error
-                        ? error.message
-                        : '차기 이월을 생성하지 못했습니다.'
-                  });
-                }
-              }}
+              onClick={handleGenerateCarryForward}
             >
               {mutation.isPending ? '차기 이월 생성 중...' : '차기 이월 생성'}
             </Button>
@@ -196,20 +198,67 @@ export function CarryForwardsPage() {
           title="표시할 차기 이월이 없습니다"
           description="먼저 월 마감을 완료한 잠금된 운영 기간을 만들어 주세요."
         >
-          <Typography variant="body2" color="text.secondary">
-            잠금된 운영 기간이 준비되면 차기 이월 생성과 조회를 진행할 수
-            있습니다.
-          </Typography>
+          <Stack spacing={1.5}>
+            <Typography variant="body2" color="text.secondary">
+              잠금된 운영 기간이 준비되면 차기 이월 생성과 조회를 진행할 수
+              있습니다.
+            </Typography>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              useFlexGap
+              flexWrap="wrap"
+            >
+              <Button component={Link} href="/periods" variant="contained">
+                운영 월 보기
+              </Button>
+              <Button
+                component={Link}
+                href="/financial-statements"
+                variant="outlined"
+              >
+                재무제표 보기
+              </Button>
+            </Stack>
+          </Stack>
         </SectionCard>
       ) : view == null ? (
         <SectionCard
           title="차기 이월이 아직 없습니다"
           description="선택한 잠금 기간에 대해 차기 이월 기록이 아직 생성되지 않았습니다."
         >
-          <Typography variant="body2" color="text.secondary">
-            {selectedPeriod.monthLabel} 기간을 기준으로 차기 이월 생성을 실행해
-            주세요.
-          </Typography>
+          <Stack spacing={1.5}>
+            <Typography variant="body2" color="text.secondary">
+              {selectedPeriod.monthLabel} 기간을 기준으로 차기 이월 생성을 실행해
+              주세요.
+            </Typography>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              useFlexGap
+              flexWrap="wrap"
+            >
+              {canGenerate ? (
+                <Button
+                  variant="contained"
+                  color="inherit"
+                  onClick={handleGenerateCarryForward}
+                  disabled={mutation.isPending}
+                >
+                  {mutation.isPending
+                    ? '차기 이월 생성 중...'
+                    : '이 화면에서 바로 생성'}
+                </Button>
+              ) : null}
+              <Button
+                component={Link}
+                href="/financial-statements"
+                variant="outlined"
+              >
+                재무제표 보기
+              </Button>
+            </Stack>
+          </Stack>
         </SectionCard>
       ) : (
         <Stack spacing={appLayout.sectionGap}>

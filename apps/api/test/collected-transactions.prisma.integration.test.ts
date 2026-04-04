@@ -242,7 +242,7 @@ test(
         fundingAccountName: 'Integration Main Account',
         categoryName: 'Integration Fuel',
         sourceKind: 'MANUAL',
-        postingStatus: 'PENDING',
+        postingStatus: 'READY_TO_POST',
         postedJournalEntryId: null,
         postedJournalEntryNumber: null
       });

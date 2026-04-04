@@ -15,6 +15,11 @@ import type {
   OpenAccountingPeriodRequest
 } from '@personal-erp/contracts';
 import { useForm } from 'react-hook-form';
+import {
+  getReferenceDataReadiness,
+  referenceDataReadinessQueryKey
+} from '@/features/reference-data/reference-data.api';
+import { ReferenceDataReadinessAlert } from '@/features/reference-data/reference-data-readiness';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { getTodayMonthInputValue } from '@/shared/lib/date-input';
 import { formatWon } from '@/shared/lib/format';
@@ -57,6 +62,10 @@ export function AccountingPeriodsPage() {
   const { data: periods = [], error } = useQuery({
     queryKey: accountingPeriodsQueryKey,
     queryFn: getAccountingPeriods
+  });
+  const referenceDataReadinessQuery = useQuery({
+    queryKey: referenceDataReadinessQueryKey,
+    queryFn: getReferenceDataReadiness
   });
   const currentWorkspace = user?.currentWorkspace ?? null;
   const membershipRole = currentWorkspace?.membership.role ?? null;
@@ -331,6 +340,10 @@ export function AccountingPeriodsPage() {
           {readMembershipRoleLabel(membershipRole)} 입니다.
         </Alert>
       ) : null}
+      <ReferenceDataReadinessAlert
+        readiness={referenceDataReadinessQuery.data ?? null}
+        context="monthly-operation"
+      />
 
       {feedback ? (
         <Alert severity={feedback.severity} variant="outlined">

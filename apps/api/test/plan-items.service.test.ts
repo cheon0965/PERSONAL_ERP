@@ -93,7 +93,10 @@ test('GeneratePlanItemsUseCase generates plan items for recurring rules inside t
     fundingAccountName: '주거래 통장',
     categoryName: '통신비',
     matchedCollectedTransactionId: null,
-    postedJournalEntryId: null
+    matchedCollectedTransactionTitle: null,
+    matchedCollectedTransactionStatus: null,
+    postedJournalEntryId: null,
+    postedJournalEntryNumber: null
   });
 });
 

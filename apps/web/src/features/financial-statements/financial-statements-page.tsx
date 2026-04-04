@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
 import {
   Alert,
   Button,
@@ -105,6 +106,29 @@ export function FinancialStatementsPage() {
   const canGenerate =
     membershipRole === 'OWNER' || membershipRole === 'MANAGER';
   const view = statementsQuery.data;
+  const handleGenerateSnapshot = React.useCallback(async () => {
+    if (!selectedPeriod) {
+      return;
+    }
+
+    setFeedback(null);
+
+    try {
+      const result = await mutation.mutateAsync(selectedPeriod);
+      setFeedback({
+        severity: 'success',
+        message: `${result.period.monthLabel} 공식 재무제표 스냅샷을 생성했습니다.`
+      });
+    } catch (error) {
+      setFeedback({
+        severity: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : '재무제표 스냅샷을 생성하지 못했습니다.'
+      });
+    }
+  }, [mutation, selectedPeriod]);
 
   return (
     <Stack spacing={appLayout.pageGap}>
@@ -165,29 +189,7 @@ export function FinancialStatementsPage() {
             <Button
               variant="contained"
               color="inherit"
-              onClick={async () => {
-                if (!selectedPeriod) {
-                  return;
-                }
-
-                setFeedback(null);
-
-                try {
-                  const result = await mutation.mutateAsync(selectedPeriod);
-                  setFeedback({
-                    severity: 'success',
-                    message: `${result.period.monthLabel} 공식 재무제표 스냅샷을 생성했습니다.`
-                  });
-                } catch (error) {
-                  setFeedback({
-                    severity: 'error',
-                    message:
-                      error instanceof Error
-                        ? error.message
-                        : '재무제표 스냅샷을 생성하지 못했습니다.'
-                  });
-                }
-              }}
+              onClick={handleGenerateSnapshot}
               disabled={!selectedPeriod || !canGenerate || mutation.isPending}
             >
               {mutation.isPending ? '스냅샷 생성 중...' : '공식 재무제표 생성'}
@@ -201,19 +203,58 @@ export function FinancialStatementsPage() {
           title="표시할 재무제표가 없습니다"
           description="먼저 월 마감을 완료해 잠금된 운영 기간을 만들어 주세요."
         >
-          <Typography variant="body2" color="text.secondary">
-            재무제표 스냅샷은 잠금된 기간 위에서만 동작합니다.
-          </Typography>
+          <Stack spacing={1.5}>
+            <Typography variant="body2" color="text.secondary">
+              재무제표 스냅샷은 잠금된 기간 위에서만 동작합니다.
+            </Typography>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              useFlexGap
+              flexWrap="wrap"
+            >
+              <Button component={Link} href="/periods" variant="contained">
+                운영 월 보기
+              </Button>
+              <Button component={Link} href="/journal-entries" variant="outlined">
+                전표 보기
+              </Button>
+            </Stack>
+          </Stack>
         </SectionCard>
       ) : view == null || view.snapshots.length === 0 ? (
         <SectionCard
           title="공식 스냅샷이 아직 없습니다"
           description="잠금된 기간은 있지만, 아직 공식 재무제표가 생성되지 않았습니다."
         >
-          <Typography variant="body2" color="text.secondary">
-            {selectedPeriod.monthLabel} 기간에 대해 공식 재무제표 생성을 실행해
-            주세요.
-          </Typography>
+          <Stack spacing={1.5}>
+            <Typography variant="body2" color="text.secondary">
+              {selectedPeriod.monthLabel} 기간에 대해 공식 재무제표 생성을 실행해
+              주세요.
+            </Typography>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              useFlexGap
+              flexWrap="wrap"
+            >
+              {canGenerate ? (
+                <Button
+                  variant="contained"
+                  color="inherit"
+                  onClick={handleGenerateSnapshot}
+                  disabled={mutation.isPending}
+                >
+                  {mutation.isPending
+                    ? '스냅샷 생성 중...'
+                    : '이 화면에서 바로 생성'}
+                </Button>
+              ) : null}
+              <Button component={Link} href="/periods" variant="outlined">
+                운영 월 보기
+              </Button>
+            </Stack>
+          </Stack>
         </SectionCard>
       ) : (
         <Stack spacing={appLayout.sectionGap}>

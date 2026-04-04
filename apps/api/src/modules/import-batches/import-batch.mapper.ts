@@ -1,5 +1,9 @@
 import type { ImportBatchItem } from '@personal-erp/contracts';
 import { Prisma } from '@prisma/client';
+import {
+  buildImportedRowCollectionSummary,
+  mapLedgerTransactionFlowKindToCollectedTransactionType
+} from './imported-row-auto-preparation-summary';
 
 export const importBatchRecordInclude =
   Prisma.validator<Prisma.ImportBatchInclude>()({
@@ -7,7 +11,26 @@ export const importBatchRecordInclude =
       include: {
         createdCollectedTransaction: {
           select: {
-            id: true
+            id: true,
+            title: true,
+            status: true,
+            matchedPlanItem: {
+              select: {
+                id: true,
+                title: true
+              }
+            },
+            ledgerTransactionType: {
+              select: {
+                flowKind: true
+              }
+            },
+            category: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
           }
         }
       },
@@ -46,6 +69,26 @@ export function mapImportBatchRecordToItem(
       sourceFingerprint: row.sourceFingerprint,
       createdCollectedTransactionId:
         row.createdCollectedTransaction?.id ?? null,
+      collectionSummary: row.createdCollectedTransaction
+        ? buildImportedRowCollectionSummary({
+            createdCollectedTransactionId: row.createdCollectedTransaction.id,
+            createdCollectedTransactionTitle:
+              row.createdCollectedTransaction.title,
+            createdCollectedTransactionStatus:
+              row.createdCollectedTransaction.status,
+            type: mapLedgerTransactionFlowKindToCollectedTransactionType(
+              row.createdCollectedTransaction.ledgerTransactionType.flowKind
+            ),
+            matchedPlanItemId:
+              row.createdCollectedTransaction.matchedPlanItem?.id ?? null,
+            matchedPlanItemTitle:
+              row.createdCollectedTransaction.matchedPlanItem?.title ?? null,
+            effectiveCategoryId:
+              row.createdCollectedTransaction.category?.id ?? null,
+            effectiveCategoryName:
+              row.createdCollectedTransaction.category?.name ?? null
+          })
+        : null,
       rawPayload: normalizeRawPayload(row.rawPayload)
     }))
   };

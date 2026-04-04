@@ -210,6 +210,8 @@ export type RequestTestState = {
     name: string;
     type?: 'BANK' | 'CASH' | 'CARD';
     balanceWon: number;
+    sortOrder?: number;
+    status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
   }>;
   categories: Array<{
     id: string;

@@ -112,6 +112,9 @@ API나 공유 계약이 바뀌면 아래 순서를 같은 PR 안에서 닫습니
 npm run check:quick
 ```
 
+- Windows에서 `core.autocrlf=true` checkout을 쓰면 Prettier EOL 차이로 `check:quick`가 CI와 다르게 보일 수 있습니다.
+- CI와 같은 LF 기준 포맷 확인이 필요하면 `npm run format:check -- --end-of-line auto`를 함께 봅니다.
+
 테스트 포함 검증:
 
 ```bash
@@ -121,10 +124,12 @@ npm run test
 대표 심화 검증:
 
 ```bash
+npm run test:e2e:smoke:build
 npm run test:e2e
 npm run test:prisma
 ```
 
+- `npm run test:e2e:smoke:build`는 `next build` 결과물을 기준으로 대표 브라우저 smoke를 다시 확인하는 CI 정렬용 검증입니다.
 - `npm run test:e2e`는 브라우저 사용자 흐름 대표 검증입니다.
 - `npm run test:prisma`는 실제 MySQL 경계를 보는 대표 통합 검증입니다.
 - 둘 다 기본 개발 루프와 분리된 선택 실행입니다.

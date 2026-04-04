@@ -282,6 +282,7 @@ npm run start --workspace @personal-erp/web
 - `DATABASE_URL` 접속 정보 확인
 - `NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=false` 확인
 - `npm run build` 성공 확인
+- Web 라우트, 인증 복원, Next.js build 경로를 건드렸다면 `npm run test:e2e:smoke:build` 확인
 - 필요 시 `npm run db:deploy` 준비
 
 ### 배포 후
@@ -289,7 +290,7 @@ npm run start --workspace @personal-erp/web
 - API 접속 확인: `http://<server>:4000/api/health`
 - Web 접속 확인
 - 로그인 동작 확인
-- Swagger 확인: `http://<server>:4000/api/docs`
+- `SWAGGER_ENABLED=true`인 경우에만 Swagger 확인: `http://<server>:4000/api/docs`
 - DB 연결 확인
 - CORS 오류 여부 확인
 

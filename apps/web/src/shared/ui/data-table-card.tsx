@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import { Card, CardContent, Stack, Typography } from '@mui/material';
 import { appLayout } from './layout-metrics';
@@ -7,6 +8,7 @@ import { appLayout } from './layout-metrics';
 type DataTableCardProps<T extends { id: string }> = {
   title: string;
   description?: string;
+  actions?: ReactNode;
   rows: T[];
   columns: GridColDef<T>[];
   height?: number;
@@ -15,6 +17,7 @@ type DataTableCardProps<T extends { id: string }> = {
 export function DataTableCard<T extends { id: string }>({
   title,
   description,
+  actions,
   rows,
   columns,
   height = 440
@@ -23,18 +26,26 @@ export function DataTableCard<T extends { id: string }>({
     <Card>
       <CardContent sx={{ p: appLayout.cardPadding }}>
         <Stack spacing={appLayout.cardGap}>
-          <div>
-            <Typography variant="h6">{title}</Typography>
-            {description ? (
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mt: appLayout.cardDescriptionOffset }}
-              >
-                {description}
-              </Typography>
-            ) : null}
-          </div>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={1}
+            justifyContent="space-between"
+            alignItems={{ xs: 'flex-start', sm: 'center' }}
+          >
+            <div>
+              <Typography variant="h6">{title}</Typography>
+              {description ? (
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: appLayout.cardDescriptionOffset }}
+                >
+                  {description}
+                </Typography>
+              ) : null}
+            </div>
+            {actions ? <div>{actions}</div> : null}
+          </Stack>
           <div style={{ width: '100%', height }}>
             <DataGrid
               rows={rows}

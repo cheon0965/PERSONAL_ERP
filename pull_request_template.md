@@ -11,7 +11,8 @@
 - [ ] `npm run check:quick`
 - [ ] `npm run test`
 - [ ] 인증/세션, CORS, 보안 헤더를 건드렸다면 `npm run test:security:api`를 확인했습니다.
-- [ ] 의존성이나 lockfile을 바꿨다면 `npm run audit:runtime` 또는 CI `dependency-review` 결과를 확인했습니다.
+- [ ] 의존성이나 lockfile을 바꿨다면 `npm run audit:runtime` 또는 CI `audit-runtime` 결과를 확인했습니다.
+- [ ] Web 라우트, 인증 복원, Next.js build 경로를 건드렸다면 `npm run test:e2e:smoke:build` 또는 동등한 브라우저 검증을 확인했습니다.
 - [ ] 동작 확인 방법, 스크린샷, 또는 요청 예시를 본문에 남겼습니다.
 - [ ] 실행하지 못한 검증이 있다면 이유를 아래에 적었습니다.
 

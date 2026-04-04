@@ -20,6 +20,7 @@ import type { CorrectJournalEntryRequest } from '@personal-erp/contracts';
 import { useFieldArray, useForm } from 'react-hook-form';
 import {
   accountSubjectsQueryKey,
+  fundingAccountsManagementQueryKey,
   fundingAccountsQueryKey,
   getAccountSubjects,
   getFundingAccounts
@@ -54,21 +55,39 @@ export function CorrectJournalEntryDialogContent({
 }: JournalEntryAdjustmentContentProps) {
   const queryClient = useQueryClient();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
+  const referencedFundingAccountNames = React.useMemo(
+    () =>
+      new Set(
+        entry.lines
+          .map((line) => line.fundingAccountName)
+          .filter((value): value is string => Boolean(value))
+      ),
+    [entry.lines]
+  );
+  const includeInactiveFundingAccounts = referencedFundingAccountNames.size > 0;
   const accountSubjectsQuery = useQuery({
     queryKey: accountSubjectsQueryKey,
     queryFn: getAccountSubjects
   });
   const fundingAccountsQuery = useQuery({
-    queryKey: fundingAccountsQueryKey,
-    queryFn: getFundingAccounts
+    queryKey: includeInactiveFundingAccounts
+      ? fundingAccountsManagementQueryKey
+      : fundingAccountsQueryKey,
+    queryFn: () =>
+      getFundingAccounts({ includeInactive: includeInactiveFundingAccounts })
   });
   const accountSubjects = React.useMemo(
     () => accountSubjectsQuery.data ?? [],
     [accountSubjectsQuery.data]
   );
   const fundingAccounts = React.useMemo(
-    () => fundingAccountsQuery.data ?? [],
-    [fundingAccountsQuery.data]
+    () =>
+      (fundingAccountsQuery.data ?? []).filter(
+        (fundingAccount) =>
+          fundingAccount.status === 'ACTIVE' ||
+          referencedFundingAccountNames.has(fundingAccount.name)
+      ),
+    [fundingAccountsQuery.data, referencedFundingAccountNames]
   );
   const defaultValues = React.useMemo(
     () =>

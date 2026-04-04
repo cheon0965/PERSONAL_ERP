@@ -1,12 +1,15 @@
 'use client';
 
 import type {
+  CollectImportedRowPreview,
   CollectImportedRowRequest,
-  CollectedTransactionItem,
+  CollectImportedRowResponse,
   CreateImportBatchRequest,
   ImportBatchItem,
-  ImportSourceKind
+  ImportSourceKind,
+  ImportedRowAutoPreparationSummary
 } from '@personal-erp/contracts';
+import { resolveImportedCollectedTransactionPostingStatus } from '@/features/transactions/transaction-workflow';
 import { fetchJson, postJson } from '@/shared/api/fetch-json';
 
 export const importBatchesQueryKey = ['import-batches'] as const;
@@ -30,6 +33,7 @@ export const mockImportBatches: ImportBatchItem[] = [
         parseError: null,
         sourceFingerprint: 'sf:v1:demo-row-1',
         createdCollectedTransactionId: null,
+        collectionSummary: null,
         rawPayload: {
           original: {
             date: '2026-03-12',
@@ -50,6 +54,20 @@ export const mockImportBatches: ImportBatchItem[] = [
         parseError: null,
         sourceFingerprint: 'sf:v1:demo-row-2',
         createdCollectedTransactionId: 'txn-demo-imported-1',
+        collectionSummary: {
+          createdCollectedTransactionId: 'txn-demo-imported-1',
+          createdCollectedTransactionTitle: 'Lunch',
+          createdCollectedTransactionStatus: 'READY_TO_POST',
+          autoPreparation: buildFallbackAutoPreparationSummary({
+            type: 'EXPENSE',
+            requestedCategoryId: null,
+            matchedPlanItemId: 'plan-item-demo-lunch',
+            matchedPlanItemTitle: '점심 예산',
+            effectiveCategoryId: 'cat-demo-meal',
+            effectiveCategoryName: '식비',
+            hasDuplicateSourceFingerprint: false
+          })
+        },
         rawPayload: {
           original: {
             date: '2026-03-14',
@@ -70,6 +88,7 @@ export const mockImportBatches: ImportBatchItem[] = [
         parseError: 'date 값이 올바르지 않습니다.',
         sourceFingerprint: null,
         createdCollectedTransactionId: null,
+        collectionSummary: null,
         rawPayload: {
           original: {
             date: 'not-a-date',
@@ -103,6 +122,7 @@ export const mockImportBatches: ImportBatchItem[] = [
         parseError: null,
         sourceFingerprint: 'sf:v1:demo-row-4',
         createdCollectedTransactionId: null,
+        collectionSummary: null,
         rawPayload: {
           original: {
             date: '2026-03-18',
@@ -123,6 +143,7 @@ export const mockImportBatches: ImportBatchItem[] = [
         parseError: null,
         sourceFingerprint: 'sf:v1:demo-row-5',
         createdCollectedTransactionId: null,
+        collectionSummary: null,
         rawPayload: {
           original: {
             date: '2026-03-19',
@@ -155,13 +176,26 @@ export function createImportBatch(
   );
 }
 
+export function previewImportedRowCollection(
+  importBatchId: string,
+  importedRowId: string,
+  input: CollectImportedRowRequest,
+  fallback: CollectImportedRowPreview
+) {
+  return postJson<CollectImportedRowPreview, CollectImportedRowRequest>(
+    `/import-batches/${importBatchId}/rows/${importedRowId}/collect-preview`,
+    input,
+    fallback
+  );
+}
+
 export function collectImportedRow(
   importBatchId: string,
   importedRowId: string,
   input: CollectImportedRowRequest,
-  fallback: CollectedTransactionItem
+  fallback: CollectImportedRowResponse
 ) {
-  return postJson<CollectedTransactionItem, CollectImportedRowRequest>(
+  return postJson<CollectImportedRowResponse, CollectImportedRowRequest>(
     `/import-batches/${importBatchId}/rows/${importedRowId}/collect`,
     input,
     fallback
@@ -195,26 +229,134 @@ export function buildImportBatchFallbackItem(
   };
 }
 
-export function buildImportedCollectedFallbackItem(input: {
+export function buildImportedCollectedFallbackPreview(input: {
   request: CollectImportedRowRequest;
   row: ImportBatchItem['rows'][number];
+  fundingAccountId: string;
   fundingAccountName: string;
-  categoryName?: string;
-}): CollectedTransactionItem {
+  requestedCategoryId?: string;
+  requestedCategoryName?: string;
+}): CollectImportedRowPreview {
   const parsed = readParsedRow(input.row);
+  const effectiveCategoryName = normalizeOptionalText(
+    input.requestedCategoryName
+  );
+  const effectiveCategoryId = normalizeOptionalText(input.requestedCategoryId);
 
   return {
-    id: `txn-demo-import-${Date.now()}`,
-    businessDate: parsed?.occurredOn ?? new Date().toISOString().slice(0, 10),
+    importedRowId: input.row.id,
+    occurredOn: parsed?.occurredOn ?? new Date().toISOString().slice(0, 10),
     title: parsed?.title ?? `업로드 행 ${input.row.rowNumber}`,
-    type: input.request.type,
     amountWon: parsed?.amount ?? 0,
+    fundingAccountId: input.fundingAccountId,
     fundingAccountName: input.fundingAccountName,
-    categoryName: input.categoryName ?? '-',
-    sourceKind: 'IMPORT',
-    postingStatus: 'PENDING',
-    postedJournalEntryId: null,
-    postedJournalEntryNumber: null
+    type: input.request.type,
+    requestedCategoryId: effectiveCategoryId,
+    requestedCategoryName: effectiveCategoryName,
+    autoPreparation: buildFallbackAutoPreparationSummary({
+      type: input.request.type,
+      requestedCategoryId: effectiveCategoryId,
+      matchedPlanItemId: null,
+      matchedPlanItemTitle: null,
+      effectiveCategoryId,
+      effectiveCategoryName,
+      hasDuplicateSourceFingerprint: false
+    })
+  };
+}
+
+export function buildImportedCollectedFallbackResponse(input: {
+  request: CollectImportedRowRequest;
+  row: ImportBatchItem['rows'][number];
+  fundingAccountId: string;
+  fundingAccountName: string;
+  requestedCategoryId?: string;
+  requestedCategoryName?: string;
+}): CollectImportedRowResponse {
+  const preview = buildImportedCollectedFallbackPreview(input);
+
+  return {
+    collectedTransaction: {
+      id: `txn-demo-import-${Date.now()}`,
+      businessDate: preview.occurredOn,
+      title: preview.title,
+      type: preview.type,
+      amountWon: preview.amountWon,
+      fundingAccountName: preview.fundingAccountName,
+      categoryName: preview.autoPreparation.effectiveCategoryName ?? '-',
+      sourceKind: 'IMPORT',
+      postingStatus: preview.autoPreparation.nextWorkflowStatus,
+      postedJournalEntryId: null,
+      postedJournalEntryNumber: null,
+      matchedPlanItemId: preview.autoPreparation.matchedPlanItemId,
+      matchedPlanItemTitle: preview.autoPreparation.matchedPlanItemTitle
+    },
+    preview
+  };
+}
+
+function buildFallbackAutoPreparationSummary(input: {
+  type: CollectImportedRowRequest['type'];
+  requestedCategoryId: string | null;
+  matchedPlanItemId: string | null;
+  matchedPlanItemTitle: string | null;
+  effectiveCategoryId: string | null;
+  effectiveCategoryName: string | null;
+  hasDuplicateSourceFingerprint: boolean;
+}): ImportedRowAutoPreparationSummary {
+  const nextWorkflowStatus = resolveImportedCollectedTransactionPostingStatus({
+    type: input.type,
+    categoryName: input.effectiveCategoryName
+  });
+  const decisionReasons: string[] = [];
+
+  if (input.hasDuplicateSourceFingerprint) {
+    decisionReasons.push(
+      '같은 원본 식별값이 이미 있어 중복 후보로 보류합니다.'
+    );
+  }
+
+  if (input.matchedPlanItemTitle) {
+    decisionReasons.push(
+      `계획 항목 "${input.matchedPlanItemTitle}"과 연결합니다.`
+    );
+  } else {
+    decisionReasons.push('자동으로 연결할 단일 계획 항목을 찾지 못했습니다.');
+  }
+
+  if (input.requestedCategoryId && input.effectiveCategoryName) {
+    decisionReasons.push(
+      `선택한 카테고리 "${input.effectiveCategoryName}"를 그대로 적용합니다.`
+    );
+  } else if (input.effectiveCategoryName) {
+    decisionReasons.push(
+      `카테고리 "${input.effectiveCategoryName}"를 적용합니다.`
+    );
+  } else {
+    decisionReasons.push('카테고리가 비어 있어 추가 검토가 필요합니다.');
+  }
+
+  if (nextWorkflowStatus === 'READY_TO_POST') {
+    decisionReasons.push(
+      input.type === 'TRANSFER' && !input.effectiveCategoryName
+        ? '이체 거래라 카테고리 없이도 전표 준비 상태로 올립니다.'
+        : '즉시 전표 준비 상태로 올립니다.'
+    );
+  } else if (nextWorkflowStatus === 'REVIEWED') {
+    decisionReasons.push('카테고리 보완 전까지 검토 상태로 저장합니다.');
+  } else {
+    decisionReasons.push('중복 후보라 수집 단계로 남깁니다.');
+  }
+
+  return {
+    matchedPlanItemId: input.matchedPlanItemId,
+    matchedPlanItemTitle: input.matchedPlanItemTitle,
+    effectiveCategoryId: input.effectiveCategoryId,
+    effectiveCategoryName: input.effectiveCategoryName,
+    nextWorkflowStatus,
+    hasDuplicateSourceFingerprint: input.hasDuplicateSourceFingerprint,
+    allowPlanItemMatch: !input.hasDuplicateSourceFingerprint,
+    decisionReasons
   };
 }
 
@@ -258,11 +400,12 @@ function parseFallbackRows(
         id: `imported-row-demo-${sourceKind}-${candidate.rowNumber}-${Date.now()}`,
         rowNumber: candidate.rowNumber,
         parseStatus: isParsed ? 'PARSED' : 'FAILED',
-        parseError: isParsed ? null : '파서가 행을 읽지 못했습니다.',
+        parseError: isParsed ? null : '파서가 행을 읽을 수 없습니다.',
         sourceFingerprint: isParsed
           ? `sf:v1:fallback-${candidate.rowNumber}`
           : null,
         createdCollectedTransactionId: null,
+        collectionSummary: null,
         rawPayload: {
           original: raw,
           parsed: {
@@ -302,6 +445,11 @@ function readParsedRow(row: ImportBatchItem['rows'][number]): {
         amount: parsed.amount
       }
     : null;
+}
+
+function normalizeOptionalText(value: string | undefined): string | null {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
 }
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {

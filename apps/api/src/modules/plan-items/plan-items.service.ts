@@ -61,12 +61,15 @@ const planItemViewInclude = Prisma.validator<Prisma.PlanItemInclude>()({
   },
   matchedCollectedTransaction: {
     select: {
-      id: true
+      id: true,
+      title: true,
+      status: true
     }
   },
   postedJournalEntry: {
     select: {
-      id: true
+      id: true,
+      entryNumber: true
     }
   }
 });

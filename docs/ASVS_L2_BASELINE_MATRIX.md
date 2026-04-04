@@ -119,7 +119,7 @@
 
 ### 보안 검증/CI
 
-- 현재 상태: `CI` 워크플로에 validate, security-regression, audit-runtime, Semgrep CE, Gitleaks, dependency review 존재
+- 현재 상태: `CI` 워크플로에 validate, e2e-smoke, security-regression, audit-runtime, Semgrep CE, Gitleaks 존재
 - 근거 파일:
   `.github/workflows/ci.yml`
   `package.json`
@@ -159,7 +159,7 @@
 ## 현재 단계에서 가장 큰 갭
 
 1. 운영 HTTPS/HSTS와 Swagger 토글을 실제 배포 값으로 다시 확인해야 한다.
-2. CI 보안 job의 첫 GitHub 통과 증적과 required check 연결을 운영 기준으로 다시 확인해야 한다.
+2. CI job의 첫 GitHub 통과 증적과 required check 연결, `audit-runtime` 잔여 `high` 취약점 예외 판단을 운영 기준으로 다시 확인해야 한다.
 3. 보안 이벤트는 남기기 시작했지만 외부 감사 저장소나 장기 보관 정책은 아직 없다.
 4. `npm run test:prisma`가 실제 테스트 DB에 안정적으로 붙는 환경을 고정해야 한다.
 

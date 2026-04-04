@@ -14,7 +14,6 @@ const allowedCollectedTransactionTransitions = new Map<
     [
       CollectedTransactionStatus.REVIEWED,
       CollectedTransactionStatus.READY_TO_POST,
-      CollectedTransactionStatus.POSTED,
       CollectedTransactionStatus.LOCKED
     ]
   ],
@@ -22,7 +21,6 @@ const allowedCollectedTransactionTransitions = new Map<
     CollectedTransactionStatus.REVIEWED,
     [
       CollectedTransactionStatus.READY_TO_POST,
-      CollectedTransactionStatus.POSTED,
       CollectedTransactionStatus.LOCKED
     ]
   ],
@@ -66,7 +64,7 @@ export function assertCollectedTransactionCanBeUpdated(input: {
 }): void {
   assertPendingCollectedTransactionMutationAllowed(
     input,
-    'Only pending collected transactions can be updated.'
+    'Only unposted collected transactions can be updated.'
   );
 }
 
@@ -76,7 +74,7 @@ export function assertCollectedTransactionCanBeDeleted(input: {
 }): void {
   assertPendingCollectedTransactionMutationAllowed(
     input,
-    'Only pending collected transactions can be deleted.'
+    'Only unposted collected transactions can be deleted.'
   );
 }
 
@@ -103,9 +101,19 @@ function assertPendingCollectedTransactionMutationAllowed(
     );
   }
 
-  if (input.postingStatus !== 'PENDING') {
+  if (!isUnpostedCollectedTransactionPostingStatus(input.postingStatus)) {
     throw new ConflictException(message);
   }
+}
+
+function isUnpostedCollectedTransactionPostingStatus(
+  status: CollectedTransactionPostingStatus
+): status is 'COLLECTED' | 'REVIEWED' | 'READY_TO_POST' {
+  return (
+    status === 'COLLECTED' ||
+    status === 'REVIEWED' ||
+    status === 'READY_TO_POST'
+  );
 }
 
 function assertCollectedTransactionStatusTransition(
