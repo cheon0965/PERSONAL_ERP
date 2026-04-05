@@ -19,6 +19,8 @@ import type {
   UpdateRecurringRuleRequest
 } from '@personal-erp/contracts';
 
+const e2eApiRoutePattern = '**/api/**';
+
 function expectNoPageErrors(pageErrors: string[]) {
   expect(pageErrors, pageErrors.join('\n\n')).toEqual([]);
 }
@@ -235,7 +237,7 @@ test('@smoke protects the transactions route, restores the session, and saves a 
     pageErrors.push(error.stack ?? error.message);
   });
 
-  await page.route('http://localhost:4000/api/**', async (route) => {
+  await page.route(e2eApiRoutePattern, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     const path = url.pathname;
@@ -524,7 +526,7 @@ test('manages funding accounts and categories through the reference data UI', as
     pageErrors.push(error.stack ?? error.message);
   });
 
-  await page.route('http://localhost:4000/api/**', async (route) => {
+  await page.route(e2eApiRoutePattern, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     const path = url.pathname;
@@ -987,7 +989,7 @@ test('manages recurring rules through the recurring rules UI', async ({
     pageErrors.push(error.stack ?? error.message);
   });
 
-  await page.route('http://localhost:4000/api/**', async (route) => {
+  await page.route(e2eApiRoutePattern, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     const path = url.pathname;
@@ -1286,7 +1288,7 @@ test('@smoke surfaces operational checklist guidance across empty states and rea
     pageErrors.push(error.stack ?? error.message);
   });
 
-  await page.route('http://localhost:4000/api/**', async (route) => {
+  await page.route(e2eApiRoutePattern, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     const path = url.pathname;
@@ -1523,7 +1525,7 @@ test('@smoke shows safe context fallback when no workspace is connected', async 
     pageErrors.push(error.stack ?? error.message);
   });
 
-  await page.route('http://localhost:4000/api/**', async (route) => {
+  await page.route(e2eApiRoutePattern, async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
 
