@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "@personal-erp/contracts",
   "version": "0.1.0",
   "private": true,
@@ -11,7 +11,8 @@
     "./transactions": "./src/transactions.ts",
     "./recurring": "./src/recurring.ts",
     "./planning": "./src/planning.ts",
-    "./assets": "./src/assets.ts"
+    "./assets": "./src/assets.ts",
+    "./imports": "./src/imports.ts"
   },
   "types": "./src/index.ts",
   "scripts": {

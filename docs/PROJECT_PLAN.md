@@ -40,11 +40,11 @@
 - 전표 조회/reverse/correct
 - 재무제표 조회/generate
 - 차기 이월 조회/generate
-- 보험 조회
-- 차량 조회
+- 보험 조회/생성/수정
+- 차량 조회/생성/수정
 - 대시보드 요약
 - 월별 예측
-- 디자인 시스템 샘플 페이지
+- 디자인 시스템 공통 컴포넌트와 대시보드형 화면 패턴
 
 ## 문서 역할 경계
 
@@ -53,10 +53,10 @@
 
 ## 다음 중기 우선순위
 
-1. 보험/차량 도메인의 쓰기 흐름 확장
-2. `audit-runtime` 잔여 `high` 취약점 대응 또는 예외 판정
-3. `npm run test:prisma` 환경 고정과 실DB 대표 검증 확대
-4. 문서와 Swagger 드리프트를 줄이는 자동 점검 보강
+1. 차량 연료 이력 read/write 분리와 `/vehicles` 응답 슬림화
+2. 운영 HTTPS/HSTS/Swagger 배포 리허설과 보안 증적 정리
+3. Docker 기반 로컬 CI 재현성 보강
+4. `PRISMA_INTEGRATION_DATABASE_URL` GitHub secret 등록과 첫 `prisma-integration` 통과 증적 확보
 
 ## 범위 밖 항목
 

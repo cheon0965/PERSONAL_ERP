@@ -53,10 +53,10 @@
 
 ## 현재 구현 범위 요약
 
-- 기준/참조 범위는 조회 `auth/me`, `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`와 자금수단/카테고리 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`까지 포함합니다.
+- 기준/참조 범위는 조회 `auth/me`, `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/차량 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
 - 운영/원장 조회 범위는 `accounting-periods`, `collected-transactions`, `journal-entries`, `plan-items`, `financial-statements`, `carry-forwards`, `import-batches`까지 포함합니다.
 - 집계/보고 조회 범위는 `dashboard/summary`, `forecast/monthly`까지 포함합니다.
-- 현재 쓰기/명령 범위는 `accounting-periods`, `collected-transactions`, `recurring-rules`, `plan-items`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`까지 확장되어 있습니다.
+- 현재 쓰기/명령 범위는 `funding-accounts`, `categories`, `insurance-policies`, `vehicles`, `vehicle maintenance logs`, `accounting-periods`, `collected-transactions`, `recurring-rules`, `plan-items`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`까지 확장되어 있습니다.
 - 즉, 현재 저장소의 API surface는 초기 reference-data/transactions 수준을 넘어 월 운영, 수집, 전표, 계획, 공식 보고, 차기 이월, 업로드 배치까지 포함합니다.
 
 ## 보호 엔드포인트
@@ -76,7 +76,14 @@
 - `GET /account-subjects`
 - `GET /ledger-transaction-types`
 - `GET /insurance-policies`
+- `POST /insurance-policies`
+- `PATCH /insurance-policies/:id`
 - `GET /vehicles`
+- `GET /vehicles/maintenance-logs`
+- `POST /vehicles`
+- `PATCH /vehicles/:id`
+- `POST /vehicles/:id/maintenance-logs`
+- `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`
 
 ### 월 운영/수집/전표
 
@@ -195,6 +202,63 @@
 - 계약: `UpdateCategoryRequest -> CategoryItem`
 - 현재 작업 문맥의 Owner/Manager만 카테고리 이름 변경과 활성/비활성 전환을 수행할 수 있습니다.
 - 현재 범위는 `kind` 변경과 하드 삭제를 지원하지 않습니다.
+
+### `GET /insurance-policies`
+
+- 계약: response `InsurancePolicyItem[]`
+- 현재 작업 문맥 기준 활성 보험 계약만 반환합니다.
+- `?includeInactive=true`를 주면 비활성 보험 계약까지 함께 반환합니다.
+
+### `POST /insurance-policies`
+
+- 계약: `CreateInsurancePolicyRequest -> InsurancePolicyItem`
+- 현재 작업 문맥의 Owner/Manager만 새 보험 계약을 생성할 수 있습니다.
+- 현재 범위는 `provider`, `productName`, `monthlyPremiumWon`, `paymentDay`, `cycle`, `renewalDate`, `maturityDate`, `isActive`까지의 운영 보조 필드 관리로 한정합니다.
+
+### `PATCH /insurance-policies/:id`
+
+- 계약: `UpdateInsurancePolicyRequest -> InsurancePolicyItem`
+- 현재 작업 문맥의 Owner/Manager만 보험 계약 기준 필드와 활성/비활성 상태를 수정할 수 있습니다.
+- 현재 범위는 하드 삭제를 지원하지 않으며, 비활성 계약도 `?includeInactive=true` 목록과 수정 흐름에서 계속 관리할 수 있습니다.
+
+### `GET /vehicles`
+
+- 계약: response `VehicleItem[]`
+- 현재 작업 문맥 기준 차량 기본 정보와 연결된 주유 기록을 함께 반환합니다.
+- 현재 1차 범위는 차량 기본 정보 관리와 운영비/연비 보조 지표 조회까지로 한정합니다.
+- 이 shape은 차량 1차 CRUD를 닫기 위한 과도기 응답이며, 세부 분리 기준은 `docs/VEHICLE_OPERATIONS_MODEL_PLAN.md`를 따릅니다.
+
+### `POST /vehicles`
+
+- 계약: `CreateVehicleRequest -> VehicleItem`
+- 현재 작업 문맥의 Owner/Manager만 새 차량 기본 정보를 생성할 수 있습니다.
+- 현재 범위는 `name`, `manufacturer`, `fuelType`, `initialOdometerKm`, `monthlyExpenseWon`, `estimatedFuelEfficiencyKmPerLiter`까지의 운영 보조 필드 관리로 한정하며 연료 이력 생성은 별도 단계로 분리합니다.
+- 다음 단계부터 차량 세부 운영 이력은 차량 기본 정보 계약과 분리해 확장합니다.
+
+### `PATCH /vehicles/:id`
+
+- 계약: `UpdateVehicleRequest -> VehicleItem`
+- 현재 작업 문맥의 Owner/Manager만 차량 기본 정보를 수정할 수 있습니다.
+- 현재 범위는 기존 주유 기록을 유지한 채 기본 필드만 조정하며, 차량 세부 운영 이력과 하드 삭제는 지원하지 않습니다.
+- 즉, 현재 수정 흐름은 차량 프로필 관리에만 집중하고, 연료/정비 이력은 별도 운영 모델로 분리하는 방향을 기준으로 삼습니다.
+
+### `GET /vehicles/maintenance-logs`
+
+- 계약: response `VehicleMaintenanceLogItem[]`
+- 현재 작업 문맥 기준 차량 정비 이력을 workspace 범위로 모아 반환합니다.
+- 정비 이력은 차량 기본 정보 응답과 분리된 별도 운영 기록 모델이며, 차량명은 read model 편의를 위해 함께 내려갑니다.
+
+### `POST /vehicles/:id/maintenance-logs`
+
+- 계약: `CreateVehicleMaintenanceLogRequest -> VehicleMaintenanceLogItem`
+- 현재 작업 문맥의 Owner/Manager만 특정 차량에 정비 이력을 추가할 수 있습니다.
+- 현재 범위는 `performedOn`, `odometerKm`, `category`, `vendor`, `description`, `amountWon`, `memo`까지의 최소 운영 기록 필드만 지원합니다.
+
+### `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`
+
+- 계약: `UpdateVehicleMaintenanceLogRequest -> VehicleMaintenanceLogItem`
+- 현재 작업 문맥의 Owner/Manager만 특정 차량의 정비 이력을 수정할 수 있습니다.
+- 현재 범위는 정비 이력 수정만 지원하며, 삭제와 회계 자동 매칭은 후속 단계로 남겨 둡니다.
 
 ### `POST /collected-transactions`
 
@@ -329,7 +393,7 @@
 - 조회 엔드포인트는 인증된 workspace 범위 내 데이터만 반환합니다.
 - `insurance-policies`, `vehicles`도 개인 생활용 고정 데이터가 아니라 현재 workspace/ledger 기준 사업 운영 보조 자산 데이터만 반환합니다.
 - 쓰기 권한은 workspace membership role로 제어합니다.
-- `OWNER`, `MANAGER`: `accounting_period.open`, `recurring_rule.create`, `plan_item.generate`, `financial_statement.generate`, `carry_forward.generate`, `journal_entry.reverse`, `journal_entry.correct`
+- `OWNER`, `MANAGER`: `funding_account.create`, `funding_account.update`, `category.create`, `category.update`, `insurance_policy.create`, `insurance_policy.update`, `vehicle.create`, `vehicle.update`, `accounting_period.open`, `recurring_rule.create`, `plan_item.generate`, `financial_statement.generate`, `carry_forward.generate`, `journal_entry.reverse`, `journal_entry.correct`
 - `OWNER`: `accounting_period.close`, `accounting_period.reopen`
 - `OWNER`, `MANAGER`, `EDITOR`: `collected_transaction.create`, `collected_transaction.confirm`, `import_batch.upload`
 - `CollectedTransactionItem`, `RecurringRuleItem`, `JournalEntryItem`, `PlanItemsView`, `FinancialStatementsView`, `CarryForwardView`, `DashboardSummary`, `ForecastResponse`는 raw table 전체가 아니라 API view/projection shape를 응답합니다.

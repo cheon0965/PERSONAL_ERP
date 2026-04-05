@@ -362,6 +362,25 @@ export type RequestTestState = {
       isFullTank: boolean;
     }>;
   }>;
+  vehicleMaintenanceLogs: Array<{
+    id: string;
+    vehicleId: string;
+    performedOn: Date;
+    odometerKm: number;
+    category:
+      | 'INSPECTION'
+      | 'REPAIR'
+      | 'CONSUMABLE'
+      | 'TIRE'
+      | 'ACCIDENT'
+      | 'OTHER';
+    vendor: string | null;
+    description: string;
+    amountWon: number;
+    memo: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
 };
 
 export type RequestOptions = {

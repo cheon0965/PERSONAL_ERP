@@ -82,8 +82,10 @@
 
 - 최소 실행 기준: `npm run check:quick`
 - PR 전 권장 기준: `npm run test`
+- `npm run check:quick`에는 `npm run docs:check`가 포함되며, 문서의 `npm run` 표기와 `docs/API.md`, `docs/VALIDATION_NOTES.md`의 Web/API surface가 실제 라우트와 controller 기반 Swagger surface와 맞는지 함께 확인합니다.
 - 인증/세션, CORS, 보안 헤더, 브라우저/API 경계 정책을 바꿨다면 `npm run test:security:api`를 같이 봅니다.
 - `package.json` 또는 lockfile을 바꿨다면 `npm run audit:runtime`와 CI `audit-runtime` 결과를 같이 확인합니다.
+- 남아 있는 runtime advisory 상세를 다시 볼 때는 `npm run audit:runtime:full`을 사용합니다.
 - 브라우저 흐름을 건드리면 `npm run test:e2e`를 추가로 봅니다.
 - Next.js build 결과물, 공용 라우팅, 인증 복원, 운영 체크리스트 smoke에 영향을 줄 수 있다면 `npm run test:e2e:smoke:build`를 추가로 봅니다.
 - Prisma/MySQL 경계를 건드리면 `npm run test:prisma`를 대표 심화 검증으로 사용합니다.

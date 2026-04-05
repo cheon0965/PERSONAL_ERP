@@ -137,6 +137,28 @@ DATABASE_URL=mysql://<username>:<password>@<host>:<port>/<database>
 DATABASE_URL=mysql://erp_user:local_erp_not_for_prod@localhost:3306/personal_erp
 ```
 
+`npm run test:prisma`용 전용 연결 대상은 아래 키를 기준으로 분리합니다.
+
+```env
+PRISMA_INTEGRATION_DATABASE_URL=mysql://erp_user:local_erp_not_for_prod@localhost:3306/personal_erp
+```
+
+적용 규칙:
+
+- `npm run test:prisma`는 `PRISMA_INTEGRATION_DATABASE_URL`을 먼저 봅니다.
+- 로컬/수동 실행에서는 이 값이 없으면 `DATABASE_URL`로 fallback 합니다.
+- CI에서는 `PRISMA_INTEGRATION_DATABASE_URL`이 없으면 `DATABASE_URL`로 fallback 하지 않습니다.
+- 가능하면 전용 테스트 DB를 따로 두고, 아직 준비되지 않았다면 같은 로컬 bootstrap DB로 시작해도 됩니다.
+- 이 값을 production DB로 가리키게 두지 않습니다.
+
+### 3-1. GitHub Actions shared test DB secret
+
+- `.github/workflows/ci.yml`의 `prisma-integration` job이 `secrets.PRISMA_INTEGRATION_DATABASE_URL`를 읽습니다.
+- 저장소 또는 조직 secret 이름은 코드와 동일하게 `PRISMA_INTEGRATION_DATABASE_URL`로 맞춥니다.
+- secret이 설정된 workflow run에서는 `npm run test:prisma`가 실제 MySQL 경계 시나리오를 수행합니다.
+- secret이 없는 workflow run에서는 CI가 `DATABASE_URL`로 우회하지 않고, 명시적인 skip 이유를 출력한 뒤 성공 종료합니다.
+- 이 secret은 shared test DB 또는 CI 전용 DB를 가리켜야 하며 production DB를 가리키면 안 됩니다.
+
 운영 서버 예시:
 
 ```env
@@ -213,6 +235,7 @@ JWT_REFRESH_SECRET=replace-with-another-long-random-string
 ACCESS_TOKEN_TTL=15m
 REFRESH_TOKEN_TTL=7d
 DATABASE_URL=mysql://erp_user:local_erp_not_for_prod@localhost:3306/personal_erp
+PRISMA_INTEGRATION_DATABASE_URL=mysql://erp_user:local_erp_not_for_prod@localhost:3306/personal_erp
 DEMO_EMAIL=demo@example.com
 ```
 
@@ -297,6 +320,7 @@ npm run start --workspace @personal-erp/web
 ## 8. 운영에서 피해야 할 설정
 
 - 로컬 개발용 DB 계정과 운영 DB 계정을 동일하게 사용하지 않습니다.
+- `PRISMA_INTEGRATION_DATABASE_URL`을 production DB에 연결하지 않습니다.
 - `NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=true`로 운영하지 않습니다.
 - 외부 SECRET 폴더의 실제 비밀 파일을 저장소에 복사해 커밋하지 않습니다.
 - 운영 서버에서 `docker-compose.yml`의 로컬 개발용 MySQL bootstrap 기본값을 재사용하지 않습니다.

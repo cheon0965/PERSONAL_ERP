@@ -1,17 +1,247 @@
-import { Controller, Get } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+  Req
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
+import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
+import {
+  assertWorkspaceActionAllowed,
+  readAllowedWorkspaceRoles
+} from '../../common/auth/workspace-action.policy';
+import type { RequestWithContext } from '../../common/infrastructure/operational/request-context';
+import { SecurityEventLogger } from '../../common/infrastructure/operational/security-event.logger';
+import {
+  logWorkspaceActionDenied,
+  logWorkspaceActionSucceeded
+} from '../../common/infrastructure/operational/workspace-action.audit';
+import { CreateVehicleDto } from './dto/create-vehicle.dto';
+import { CreateVehicleMaintenanceLogDto } from './dto/create-vehicle-maintenance-log.dto';
+import { UpdateVehicleDto } from './dto/update-vehicle.dto';
+import { UpdateVehicleMaintenanceLogDto } from './dto/update-vehicle-maintenance-log.dto';
 import { VehiclesService } from './vehicles.service';
 
 @ApiTags('vehicles')
 @ApiBearerAuth()
 @Controller('vehicles')
 export class VehiclesController {
-  constructor(private readonly vehiclesService: VehiclesService) {}
+  constructor(
+    private readonly vehiclesService: VehiclesService,
+    private readonly securityEvents: SecurityEventLogger
+  ) {}
 
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.vehiclesService.findAll(user);
+  }
+
+  @Get('maintenance-logs')
+  findMaintenanceLogs(@CurrentUser() user: AuthenticatedUser) {
+    return this.vehiclesService.findMaintenanceLogs(user);
+  }
+
+  @Post()
+  async create(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateVehicleDto
+  ) {
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      assertWorkspaceActionAllowed(workspace.membershipRole, 'vehicle.create');
+
+      const created = await this.vehiclesService.create(user, dto);
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'vehicle.create',
+        request,
+        workspace,
+        details: {
+          vehicleId: created.id
+        }
+      });
+
+      return created;
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'vehicle.create',
+          request,
+          workspace,
+          details: {
+            requiredRoles: readAllowedWorkspaceRoles('vehicle.create').join(',')
+          }
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  @Patch(':id')
+  async update(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') vehicleId: string,
+    @Body() dto: UpdateVehicleDto
+  ) {
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      assertWorkspaceActionAllowed(workspace.membershipRole, 'vehicle.update');
+
+      const updated = await this.vehiclesService.update(user, vehicleId, dto);
+
+      if (!updated) {
+        throw new NotFoundException('Vehicle not found');
+      }
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'vehicle.update',
+        request,
+        workspace,
+        details: {
+          vehicleId: updated.id
+        }
+      });
+
+      return updated;
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'vehicle.update',
+          request,
+          workspace,
+          details: {
+            vehicleId,
+            requiredRoles: readAllowedWorkspaceRoles('vehicle.update').join(',')
+          }
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  @Post(':id/maintenance-logs')
+  async createMaintenanceLog(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') vehicleId: string,
+    @Body() dto: CreateVehicleMaintenanceLogDto
+  ) {
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      assertWorkspaceActionAllowed(
+        workspace.membershipRole,
+        'vehicle_maintenance.create'
+      );
+
+      const created = await this.vehiclesService.createMaintenanceLog(
+        user,
+        vehicleId,
+        dto
+      );
+
+      if (!created) {
+        throw new NotFoundException('Vehicle not found');
+      }
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'vehicle_maintenance.create',
+        request,
+        workspace,
+        details: {
+          vehicleId,
+          maintenanceLogId: created.id
+        }
+      });
+
+      return created;
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'vehicle_maintenance.create',
+          request,
+          workspace,
+          details: {
+            vehicleId,
+            requiredRoles: readAllowedWorkspaceRoles(
+              'vehicle_maintenance.create'
+            ).join(',')
+          }
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  @Patch(':vehicleId/maintenance-logs/:maintenanceLogId')
+  async updateMaintenanceLog(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('vehicleId') vehicleId: string,
+    @Param('maintenanceLogId') maintenanceLogId: string,
+    @Body() dto: UpdateVehicleMaintenanceLogDto
+  ) {
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      assertWorkspaceActionAllowed(
+        workspace.membershipRole,
+        'vehicle_maintenance.update'
+      );
+
+      const updated = await this.vehiclesService.updateMaintenanceLog(
+        user,
+        vehicleId,
+        maintenanceLogId,
+        dto
+      );
+
+      if (!updated) {
+        throw new NotFoundException('Vehicle maintenance log not found');
+      }
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'vehicle_maintenance.update',
+        request,
+        workspace,
+        details: {
+          vehicleId,
+          maintenanceLogId: updated.id
+        }
+      });
+
+      return updated;
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'vehicle_maintenance.update',
+          request,
+          workspace,
+          details: {
+            vehicleId,
+            maintenanceLogId,
+            requiredRoles: readAllowedWorkspaceRoles(
+              'vehicle_maintenance.update'
+            ).join(',')
+          }
+        });
+      }
+
+      throw error;
+    }
   }
 }

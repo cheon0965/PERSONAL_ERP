@@ -9,6 +9,12 @@ export type WorkspaceAction =
   | 'funding_account.update'
   | 'category.create'
   | 'category.update'
+  | 'insurance_policy.create'
+  | 'insurance_policy.update'
+  | 'vehicle.create'
+  | 'vehicle.update'
+  | 'vehicle_maintenance.create'
+  | 'vehicle_maintenance.update'
   | 'accounting_period.open'
   | 'accounting_period.close'
   | 'accounting_period.reopen'
@@ -34,6 +40,12 @@ const workspaceActionAllowedRoles: Record<
   'funding_account.update': ['OWNER', 'MANAGER'],
   'category.create': ['OWNER', 'MANAGER'],
   'category.update': ['OWNER', 'MANAGER'],
+  'insurance_policy.create': ['OWNER', 'MANAGER'],
+  'insurance_policy.update': ['OWNER', 'MANAGER'],
+  'vehicle.create': ['OWNER', 'MANAGER'],
+  'vehicle.update': ['OWNER', 'MANAGER'],
+  'vehicle_maintenance.create': ['OWNER', 'MANAGER'],
+  'vehicle_maintenance.update': ['OWNER', 'MANAGER'],
   'accounting_period.open': ['OWNER', 'MANAGER'],
   'accounting_period.close': ['OWNER'],
   'accounting_period.reopen': ['OWNER'],
@@ -59,6 +71,16 @@ const workspaceActionDeniedMessages: Record<WorkspaceAction, string> = {
     'Only owners and managers can update funding accounts.',
   'category.create': 'Only owners and managers can create categories.',
   'category.update': 'Only owners and managers can update categories.',
+  'insurance_policy.create':
+    'Only owners and managers can create insurance policies.',
+  'insurance_policy.update':
+    'Only owners and managers can update insurance policies.',
+  'vehicle.create': 'Only owners and managers can create vehicles.',
+  'vehicle.update': 'Only owners and managers can update vehicles.',
+  'vehicle_maintenance.create':
+    'Only owners and managers can create vehicle maintenance logs.',
+  'vehicle_maintenance.update':
+    'Only owners and managers can update vehicle maintenance logs.',
   'accounting_period.open':
     'Only owners and managers can open accounting periods.',
   'accounting_period.close': 'Only owners can close accounting periods.',

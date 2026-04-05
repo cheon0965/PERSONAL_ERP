@@ -57,6 +57,15 @@ enum FuelType {
   ELECTRIC
 }
 
+enum VehicleMaintenanceCategory {
+  INSPECTION
+  REPAIR
+  CONSUMABLE
+  TIRE
+  ACCIDENT
+  OTHER
+}
+
 enum TenantStatus {
   TRIAL
   ACTIVE
@@ -227,7 +236,7 @@ model User {
   settings           UserSetting?
   accounts           Account[]
   categories         Category[]
-  transactions       Transaction[]
+  legacyTransactions LegacyTransaction[]
   recurringRules     RecurringRule[]
   insurancePolicies  InsurancePolicy[]
   vehicles           Vehicle[]
@@ -249,7 +258,7 @@ model Tenant {
   accounts                 Account[]             @relation("TenantAccounts")
   categories               Category[]            @relation("TenantCategories")
   recurringRules           RecurringRule[]       @relation("TenantRecurringRules")
-  legacyTransactions       Transaction[]         @relation("TenantLegacyTransactions")
+  legacyTransactions       LegacyTransaction[]   @relation("TenantLegacyTransactions")
   insurancePolicies        InsurancePolicy[]
   vehicles                 Vehicle[]
   periods                  AccountingPeriod[]
@@ -300,7 +309,7 @@ model Ledger {
   accounts                Account[]             @relation("LedgerAccounts")
   categories              Category[]            @relation("LedgerCategories")
   recurringRules          RecurringRule[]       @relation("LedgerRecurringRules")
-  legacyTransactions      Transaction[]         @relation("LedgerLegacyTransactions")
+  legacyTransactions      LegacyTransaction[]   @relation("LedgerLegacyTransactions")
   insurancePolicies       InsurancePolicy[]
   vehicles                Vehicle[]
   periods                 AccountingPeriod[]
@@ -360,7 +369,7 @@ model Account {
   user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenant                Tenant              @relation("TenantAccounts", fields: [tenantId], references: [id], onDelete: Cascade)
   ledger                Ledger              @relation("LedgerAccounts", fields: [ledgerId], references: [id], onDelete: Cascade)
-  transactions          Transaction[]
+  legacyTransactions    LegacyTransaction[]
   recurringRules        RecurringRule[]
   planItems             PlanItem[]
   collectedTransactions CollectedTransaction[]
@@ -385,7 +394,7 @@ model Category {
   user                  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenant                Tenant               @relation("TenantCategories", fields: [tenantId], references: [id], onDelete: Cascade)
   ledger                Ledger               @relation("LedgerCategories", fields: [ledgerId], references: [id], onDelete: Cascade)
-  transactions          Transaction[]
+  legacyTransactions    LegacyTransaction[]
   recurringRules        RecurringRule[]
   planItems             PlanItem[]
   collectedTransactions CollectedTransaction[]
@@ -394,7 +403,9 @@ model Category {
   @@index([tenantId, ledgerId, kind, sortOrder])
 }
 
-model Transaction {
+// Legacy bridge model mapped to the existing `Transaction` table.
+// Do not add new write/read flows here; use CollectedTransaction and JournalEntry.
+model LegacyTransaction {
   id           String            @id @default(cuid())
   userId       String
   tenantId     String
@@ -419,6 +430,7 @@ model Transaction {
   @@index([userId, businessDate])
   @@index([userId, type, businessDate])
   @@index([tenantId, ledgerId, businessDate])
+  @@map("Transaction")
 }
 
 model RecurringRule {
@@ -829,6 +841,7 @@ model Vehicle {
   tenant                            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   ledger                            Ledger    @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
   fuelLogs                          FuelLog[]
+  maintenanceLogs                   VehicleMaintenanceLog[]
 
   @@index([userId, name])
   @@index([tenantId, ledgerId, name])
@@ -848,4 +861,21 @@ model FuelLog {
   vehicle      Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 
   @@index([vehicleId, filledOn])
+}
+
+model VehicleMaintenanceLog {
+  id          String                     @id @default(cuid())
+  vehicleId   String
+  performedOn DateTime
+  odometerKm  Int
+  category    VehicleMaintenanceCategory
+  vendor      String?
+  description String
+  amountWon   Int
+  memo        String?                    @db.Text
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
+  vehicle     Vehicle                    @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId, performedOn])
 }

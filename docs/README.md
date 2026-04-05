@@ -19,11 +19,13 @@
 - `ARCHITECTURE.md`: 워크스페이스 구조와 컨텍스트 경계
 - `SCREEN_FLOW_GUIDE.md`: 현재 화면 기준 운영 흐름과 추천 진행 순서
 - `ACCOUNTING_MODEL_BOUNDARY.md`: 레거시 `Transaction`과 신규 회계 흐름 경계 및 제거 로드맵
+- `VEHICLE_OPERATIONS_MODEL_PLAN.md`: 차량 기본 정보와 연료/정비 운영 이력 분리 설계
 - `DEVELOPMENT_GUIDE.md`: 구현 순서와 문서 동기화 절차
 - `OPERATIONS_CHECKLIST.md`: 배포와 운영 점검 절차
 - `ERROR_HANDLING_AND_LOGGING.md`: 예외 처리와 최소 로깅 기준
 - `VALIDATION_NOTES.md`: 실제 검증 범위와 남은 공백
 - `PROJECT_PLAN.md`: 중기 제품 로드맵
+- `ALIGNMENT_PATCH_EXECUTION_PLAN.md`: 현재 정합성 점검 결과 기반 실제 개선 패치 우선순위와 실행 계획
 - `ASVS_L2_EXECUTION_PLAN.md`: 보안 기준 실행 계획
 - `ASVS_L2_BASELINE_MATRIX.md`: 보안 기준선과 근거 매트릭스
 - `FALLBACK_POLICY.md`: 데모 fallback 사용 기준

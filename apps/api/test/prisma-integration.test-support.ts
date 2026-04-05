@@ -7,12 +7,15 @@ import { configureApiApp } from '../src/bootstrap/configure-api-app';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { getApiEnv, resetApiEnvCache } from '../src/config/api-env';
 import { ensurePhase1BackboneForUser } from '../prisma/phase1-backbone';
+import {
+  getPrismaIntegrationMissingDatabaseMessage,
+  getPrismaIntegrationUnreachableMessage,
+  resolvePrismaIntegrationDatabaseEnv,
+  shouldRunPrismaIntegration
+} from './prisma-integration-env';
 
 const integrationPassword = 'Integration1234!';
 const integrationPasswordHashPromise = argon2.hash(integrationPassword);
-
-export const shouldRunPrismaIntegration =
-  process.env.RUN_PRISMA_INTEGRATION === '1';
 
 type ApiRequestOptions = {
   method?: string;
@@ -65,24 +68,20 @@ export async function createRealApiPrismaIntegrationContext(
     return null;
   }
 
-  const databaseUrl = process.env.DATABASE_URL?.trim();
-  if (!databaseUrl) {
-    t.skip(
-      'Skipping Prisma integration test because DATABASE_URL is not configured.'
-    );
+  const resolvedDatabaseEnv = resolvePrismaIntegrationDatabaseEnv();
+  if (!resolvedDatabaseEnv.databaseUrl) {
+    t.skip(getPrismaIntegrationMissingDatabaseMessage());
     return null;
   }
 
-  const restoreEnv = setRealApiEnv(databaseUrl);
+  const restoreEnv = setRealApiEnv(resolvedDatabaseEnv.databaseUrl);
   const connectivityProbe = new PrismaService();
 
   try {
     await connectivityProbe.$connect();
   } catch {
     restoreEnv();
-    t.skip(
-      'Skipping Prisma integration test because DATABASE_URL is not reachable from this environment.'
-    );
+    t.skip(getPrismaIntegrationUnreachableMessage(resolvedDatabaseEnv));
     return null;
   } finally {
     await safeDisconnect(connectivityProbe);
