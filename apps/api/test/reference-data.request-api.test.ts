@@ -1133,18 +1133,7 @@ test('GET /vehicles returns only vehicles for the current workspace ledger', asy
         fuelType: 'DIESEL',
         initialOdometerKm: 58_200,
         monthlyExpenseWon: 130_000,
-        estimatedFuelEfficiencyKmPerLiter: 11.2,
-        fuelLogs: [
-          {
-            id: 'fuel-1',
-            filledOn: '2026-03-05',
-            odometerKm: 58_480,
-            liters: 42.5,
-            amountWon: 72_000,
-            unitPriceWon: 1694,
-            isFullTank: true
-          }
-        ]
+        estimatedFuelEfficiencyKmPerLiter: 11.2
       }
     ]);
   } finally {
@@ -1177,8 +1166,7 @@ test('POST /vehicles creates a vehicle for the current workspace when the member
       fuelType: 'HYBRID',
       initialOdometerKm: 12_400,
       monthlyExpenseWon: 215_000,
-      estimatedFuelEfficiencyKmPerLiter: 14.8,
-      fuelLogs: []
+      estimatedFuelEfficiencyKmPerLiter: 14.8
     });
 
     const createdVehicle = context.state.vehicles.find(
@@ -1248,18 +1236,7 @@ test('PATCH /vehicles/:id updates vehicle basic information for the current work
       fuelType: 'DIESEL',
       initialOdometerKm: 58_500,
       monthlyExpenseWon: 164_000,
-      estimatedFuelEfficiencyKmPerLiter: 12.1,
-      fuelLogs: [
-        {
-          id: 'fuel-1',
-          filledOn: '2026-03-05',
-          odometerKm: 58_480,
-          liters: 42.5,
-          amountWon: 72_000,
-          unitPriceWon: 1694,
-          isFullTank: true
-        }
-      ]
+      estimatedFuelEfficiencyKmPerLiter: 12.1
     });
 
     const updatedVehicle = context.state.vehicles.find(
@@ -1294,6 +1271,168 @@ test('PATCH /vehicles/:id returns 403 when the current membership cannot update 
         initialOdometerKm: 58_500,
         monthlyExpenseWon: 164_000,
         estimatedFuelEfficiencyKmPerLiter: 12.1
+      }
+    });
+
+    assert.equal(response.status, 403);
+  } finally {
+    await context.close();
+  }
+});
+
+test('GET /vehicles/fuel-logs returns only fuel logs for the current workspace ledger', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.vehicles[1]!.fuelLogs.push({
+      id: 'fuel-2',
+      filledOn: new Date('2026-03-21T00:00:00.000Z'),
+      odometerKm: 12_640,
+      liters: 31.4,
+      amountWon: 58_000,
+      unitPriceWon: 1847,
+      isFullTank: false
+    });
+
+    const response = await context.request('/vehicles/fuel-logs', {
+      headers: context.authHeaders()
+    });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body, [
+      {
+        id: 'fuel-1',
+        vehicleId: 'vehicle-1',
+        vehicleName: '배송 밴',
+        filledOn: '2026-03-05',
+        odometerKm: 58_480,
+        liters: 42.5,
+        amountWon: 72_000,
+        unitPriceWon: 1694,
+        isFullTank: true
+      }
+    ]);
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /vehicles/:id/fuel-logs creates a fuel log for the current workspace vehicle', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/vehicles/vehicle-1/fuel-logs', {
+      method: 'POST',
+      headers: context.authHeaders(),
+      body: {
+        filledOn: '2026-03-25',
+        odometerKm: 58_940,
+        liters: 39.8,
+        amountWon: 70_200,
+        unitPriceWon: 1764,
+        isFullTank: true
+      }
+    });
+
+    assert.equal(response.status, 201);
+    assert.deepEqual(response.body, {
+      id: 'fuel-generated-2',
+      vehicleId: 'vehicle-1',
+      vehicleName: '배송 밴',
+      filledOn: '2026-03-25',
+      odometerKm: 58_940,
+      liters: 39.8,
+      amountWon: 70_200,
+      unitPriceWon: 1764,
+      isFullTank: true
+    });
+
+    assert.deepEqual(
+      context.state.vehicles
+        .find((candidate) => candidate.id === 'vehicle-1')
+        ?.fuelLogs.at(-1),
+      {
+        id: 'fuel-generated-2',
+        filledOn: new Date('2026-03-25T00:00:00.000Z'),
+        odometerKm: 58_940,
+        liters: 39.8,
+        amountWon: 70_200,
+        unitPriceWon: 1764,
+        isFullTank: true
+      }
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId updates a fuel log for the current workspace vehicle', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request(
+      '/vehicles/vehicle-1/fuel-logs/fuel-1',
+      {
+        method: 'PATCH',
+        headers: context.authHeaders(),
+        body: {
+          filledOn: '2026-03-06',
+          odometerKm: 58_520,
+          liters: 43.1,
+          amountWon: 73_400,
+          unitPriceWon: 1703,
+          isFullTank: false
+        }
+      }
+    );
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body, {
+      id: 'fuel-1',
+      vehicleId: 'vehicle-1',
+      vehicleName: '배송 밴',
+      filledOn: '2026-03-06',
+      odometerKm: 58_520,
+      liters: 43.1,
+      amountWon: 73_400,
+      unitPriceWon: 1703,
+      isFullTank: false
+    });
+
+    const updatedFuelLog = context.state.vehicles
+      .find((candidate) => candidate.id === 'vehicle-1')
+      ?.fuelLogs.find((candidate) => candidate.id === 'fuel-1');
+    assert.ok(updatedFuelLog);
+    assert.equal(
+      updatedFuelLog.filledOn.toISOString(),
+      '2026-03-06T00:00:00.000Z'
+    );
+    assert.equal(updatedFuelLog.odometerKm, 58_520);
+    assert.equal(updatedFuelLog.liters, 43.1);
+    assert.equal(updatedFuelLog.amountWon, 73_400);
+    assert.equal(updatedFuelLog.unitPriceWon, 1703);
+    assert.equal(updatedFuelLog.isFullTank, false);
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /vehicles/:id/fuel-logs returns 403 when the current membership cannot create fuel logs', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.memberships[0]!.role = 'EDITOR';
+
+    const response = await context.request('/vehicles/vehicle-1/fuel-logs', {
+      method: 'POST',
+      headers: context.authHeaders(),
+      body: {
+        filledOn: '2026-03-25',
+        odometerKm: 58_940,
+        liters: 39.8,
+        amountWon: 70_200,
+        unitPriceWon: 1764,
+        isFullTank: true
       }
     });
 

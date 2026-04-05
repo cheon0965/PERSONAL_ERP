@@ -6,14 +6,18 @@ import {
 import type {
   AuthenticatedUser,
   CreateVehicleRequest,
+  CreateVehicleFuelLogRequest,
   CreateVehicleMaintenanceLogRequest,
+  UpdateVehicleFuelLogRequest,
   UpdateVehicleMaintenanceLogRequest,
   UpdateVehicleRequest,
+  VehicleFuelLogItem,
   VehicleItem,
   VehicleMaintenanceLogItem
 } from '@personal-erp/contracts';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import {
+  mapVehicleFuelLogToItem,
   mapVehicleMaintenanceLogToItem,
   mapVehicleToItem
 } from './vehicles.mapper';
@@ -88,6 +92,79 @@ export class VehiclesService {
     return mapVehicleToItem(updated);
   }
 
+  async findFuelLogs(user: AuthenticatedUser): Promise<VehicleFuelLogItem[]> {
+    const workspace = requireCurrentWorkspace(user);
+    const items = await this.vehiclesRepository.findFuelLogsInWorkspace(
+      workspace.tenantId,
+      workspace.ledgerId
+    );
+
+    return items.map(mapVehicleFuelLogToItem);
+  }
+
+  async createFuelLog(
+    user: AuthenticatedUser,
+    vehicleId: string,
+    input: CreateVehicleFuelLogRequest
+  ): Promise<VehicleFuelLogItem | null> {
+    const workspace = requireCurrentWorkspace(user);
+    const vehicle = await this.vehiclesRepository.findByIdInWorkspace(
+      vehicleId,
+      workspace.tenantId,
+      workspace.ledgerId
+    );
+
+    if (!vehicle) {
+      return null;
+    }
+
+    const normalizedInput = normalizeFuelLogInput(input, vehicle);
+    const created = await this.vehiclesRepository.createFuelLogForVehicle(
+      vehicleId,
+      normalizedInput
+    );
+
+    return mapVehicleFuelLogToItem(created);
+  }
+
+  async updateFuelLog(
+    user: AuthenticatedUser,
+    vehicleId: string,
+    fuelLogId: string,
+    input: UpdateVehicleFuelLogRequest
+  ): Promise<VehicleFuelLogItem | null> {
+    const workspace = requireCurrentWorkspace(user);
+    const vehicle = await this.vehiclesRepository.findByIdInWorkspace(
+      vehicleId,
+      workspace.tenantId,
+      workspace.ledgerId
+    );
+
+    if (!vehicle) {
+      return null;
+    }
+
+    const existingFuelLog =
+      await this.vehiclesRepository.findFuelLogInWorkspace(
+        fuelLogId,
+        vehicleId,
+        workspace.tenantId,
+        workspace.ledgerId
+      );
+
+    if (!existingFuelLog) {
+      return null;
+    }
+
+    const normalizedInput = normalizeFuelLogInput(input, vehicle);
+    const updated = await this.vehiclesRepository.updateFuelLog(
+      fuelLogId,
+      normalizedInput
+    );
+
+    return mapVehicleFuelLogToItem(updated);
+  }
+
   async findMaintenanceLogs(
     user: AuthenticatedUser
   ): Promise<VehicleMaintenanceLogItem[]> {
@@ -117,10 +194,11 @@ export class VehiclesService {
     }
 
     const normalizedInput = normalizeMaintenanceLogInput(input, vehicle);
-    const created = await this.vehiclesRepository.createMaintenanceLogForVehicle(
-      vehicleId,
-      normalizedInput
-    );
+    const created =
+      await this.vehiclesRepository.createMaintenanceLogForVehicle(
+        vehicleId,
+        normalizedInput
+      );
 
     return mapVehicleMaintenanceLogToItem(created);
   }
@@ -233,8 +311,49 @@ function normalizeOptionalPositiveNumber(value?: number | null) {
   return value;
 }
 
+function normalizeFuelLogInput(
+  input: CreateVehicleFuelLogRequest | UpdateVehicleFuelLogRequest,
+  vehicle: {
+    initialOdometerKm: number;
+  }
+) {
+  const filledOn = normalizeRequiredDateOnlyString(
+    input.filledOn,
+    '주유일을 입력해 주세요.'
+  );
+
+  if (input.odometerKm < vehicle.initialOdometerKm) {
+    throw new BadRequestException(
+      '주유 주행거리는 차량 초기 주행거리보다 작을 수 없습니다.'
+    );
+  }
+
+  if (!Number.isFinite(input.liters) || input.liters <= 0) {
+    throw new BadRequestException('주유량은 0보다 커야 합니다.');
+  }
+
+  if (!Number.isFinite(input.amountWon) || input.amountWon < 0) {
+    throw new BadRequestException('주유 금액은 0 이상이어야 합니다.');
+  }
+
+  if (!Number.isFinite(input.unitPriceWon) || input.unitPriceWon < 0) {
+    throw new BadRequestException('리터당 단가는 0 이상이어야 합니다.');
+  }
+
+  return {
+    filledOn,
+    odometerKm: input.odometerKm,
+    liters: input.liters,
+    amountWon: input.amountWon,
+    unitPriceWon: input.unitPriceWon,
+    isFullTank: input.isFullTank
+  };
+}
+
 function normalizeMaintenanceLogInput(
-  input: CreateVehicleMaintenanceLogRequest | UpdateVehicleMaintenanceLogRequest,
+  input:
+    | CreateVehicleMaintenanceLogRequest
+    | UpdateVehicleMaintenanceLogRequest,
   vehicle: {
     initialOdometerKm: number;
   }

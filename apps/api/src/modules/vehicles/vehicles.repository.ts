@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type {
   CreateVehicleRequest,
+  CreateVehicleFuelLogRequest,
   CreateVehicleMaintenanceLogRequest,
   UpdateVehicleRequest
 } from '@personal-erp/contracts';
@@ -13,7 +14,6 @@ export class VehiclesRepository {
   findAllInWorkspace(tenantId: string, ledgerId: string) {
     return this.prisma.vehicle.findMany({
       where: { tenantId, ledgerId },
-      include: { fuelLogs: { orderBy: { filledOn: 'asc' } } },
       orderBy: [{ createdAt: 'asc' }, { name: 'asc' }]
     });
   }
@@ -24,9 +24,6 @@ export class VehiclesRepository {
         id: vehicleId,
         tenantId,
         ledgerId
-      },
-      include: {
-        fuelLogs: { orderBy: { filledOn: 'asc' } }
       }
     });
   }
@@ -49,9 +46,6 @@ export class VehiclesRepository {
         monthlyExpenseWon: input.monthlyExpenseWon,
         estimatedFuelEfficiencyKmPerLiter:
           input.estimatedFuelEfficiencyKmPerLiter
-      },
-      include: {
-        fuelLogs: { orderBy: { filledOn: 'asc' } }
       }
     });
   }
@@ -69,9 +63,105 @@ export class VehiclesRepository {
         monthlyExpenseWon: input.monthlyExpenseWon,
         estimatedFuelEfficiencyKmPerLiter:
           input.estimatedFuelEfficiencyKmPerLiter
+      }
+    });
+  }
+
+  findFuelLogsInWorkspace(tenantId: string, ledgerId: string) {
+    return this.prisma.fuelLog.findMany({
+      where: {
+        vehicle: {
+          is: {
+            tenantId,
+            ledgerId
+          }
+        }
       },
       include: {
-        fuelLogs: { orderBy: { filledOn: 'asc' } }
+        vehicle: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      },
+      orderBy: [{ filledOn: 'desc' }, { createdAt: 'desc' }]
+    });
+  }
+
+  findFuelLogInWorkspace(
+    fuelLogId: string,
+    vehicleId: string,
+    tenantId: string,
+    ledgerId: string
+  ) {
+    return this.prisma.fuelLog.findFirst({
+      where: {
+        id: fuelLogId,
+        vehicleId,
+        vehicle: {
+          is: {
+            tenantId,
+            ledgerId
+          }
+        }
+      },
+      include: {
+        vehicle: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    });
+  }
+
+  createFuelLogForVehicle(
+    vehicleId: string,
+    input: CreateVehicleFuelLogRequest
+  ) {
+    return this.prisma.fuelLog.create({
+      data: {
+        vehicleId,
+        filledOn: new Date(`${input.filledOn}T00:00:00.000Z`),
+        odometerKm: input.odometerKm,
+        liters: input.liters,
+        amountWon: input.amountWon,
+        unitPriceWon: input.unitPriceWon,
+        isFullTank: input.isFullTank
+      },
+      include: {
+        vehicle: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    });
+  }
+
+  updateFuelLog(fuelLogId: string, input: CreateVehicleFuelLogRequest) {
+    return this.prisma.fuelLog.update({
+      where: {
+        id: fuelLogId
+      },
+      data: {
+        filledOn: new Date(`${input.filledOn}T00:00:00.000Z`),
+        odometerKm: input.odometerKm,
+        liters: input.liters,
+        amountWon: input.amountWon,
+        unitPriceWon: input.unitPriceWon,
+        isFullTank: input.isFullTank
+      },
+      include: {
+        vehicle: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
       }
     });
   }

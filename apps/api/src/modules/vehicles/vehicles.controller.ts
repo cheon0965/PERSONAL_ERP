@@ -23,8 +23,10 @@ import {
   logWorkspaceActionDenied,
   logWorkspaceActionSucceeded
 } from '../../common/infrastructure/operational/workspace-action.audit';
+import { CreateVehicleFuelLogDto } from './dto/create-vehicle-fuel-log.dto';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { CreateVehicleMaintenanceLogDto } from './dto/create-vehicle-maintenance-log.dto';
+import { UpdateVehicleFuelLogDto } from './dto/update-vehicle-fuel-log.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import { UpdateVehicleMaintenanceLogDto } from './dto/update-vehicle-maintenance-log.dto';
 import { VehiclesService } from './vehicles.service';
@@ -41,6 +43,11 @@ export class VehiclesController {
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.vehiclesService.findAll(user);
+  }
+
+  @Get('fuel-logs')
+  findFuelLogs(@CurrentUser() user: AuthenticatedUser) {
+    return this.vehiclesService.findFuelLogs(user);
   }
 
   @Get('maintenance-logs')
@@ -124,6 +131,119 @@ export class VehiclesController {
           details: {
             vehicleId,
             requiredRoles: readAllowedWorkspaceRoles('vehicle.update').join(',')
+          }
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  @Post(':id/fuel-logs')
+  async createFuelLog(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') vehicleId: string,
+    @Body() dto: CreateVehicleFuelLogDto
+  ) {
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      assertWorkspaceActionAllowed(
+        workspace.membershipRole,
+        'vehicle_fuel.create'
+      );
+
+      const created = await this.vehiclesService.createFuelLog(
+        user,
+        vehicleId,
+        dto
+      );
+
+      if (!created) {
+        throw new NotFoundException('Vehicle not found');
+      }
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'vehicle_fuel.create',
+        request,
+        workspace,
+        details: {
+          vehicleId,
+          fuelLogId: created.id
+        }
+      });
+
+      return created;
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'vehicle_fuel.create',
+          request,
+          workspace,
+          details: {
+            vehicleId,
+            requiredRoles: readAllowedWorkspaceRoles(
+              'vehicle_fuel.create'
+            ).join(',')
+          }
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  @Patch(':vehicleId/fuel-logs/:fuelLogId')
+  async updateFuelLog(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('vehicleId') vehicleId: string,
+    @Param('fuelLogId') fuelLogId: string,
+    @Body() dto: UpdateVehicleFuelLogDto
+  ) {
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      assertWorkspaceActionAllowed(
+        workspace.membershipRole,
+        'vehicle_fuel.update'
+      );
+
+      const updated = await this.vehiclesService.updateFuelLog(
+        user,
+        vehicleId,
+        fuelLogId,
+        dto
+      );
+
+      if (!updated) {
+        throw new NotFoundException('Vehicle fuel log not found');
+      }
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'vehicle_fuel.update',
+        request,
+        workspace,
+        details: {
+          vehicleId,
+          fuelLogId: updated.id
+        }
+      });
+
+      return updated;
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'vehicle_fuel.update',
+          request,
+          workspace,
+          details: {
+            vehicleId,
+            fuelLogId,
+            requiredRoles: readAllowedWorkspaceRoles(
+              'vehicle_fuel.update'
+            ).join(',')
           }
         });
       }

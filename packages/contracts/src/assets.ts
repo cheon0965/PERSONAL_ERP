@@ -49,6 +49,11 @@ export type FuelLogItem = {
   isFullTank: boolean;
 };
 
+export type VehicleFuelLogItem = FuelLogItem & {
+  vehicleId: string;
+  vehicleName: string;
+};
+
 export type VehicleMaintenanceLogItem = {
   id: string;
   vehicleId: string;
@@ -70,7 +75,6 @@ export type VehicleItem = {
   initialOdometerKm: number;
   monthlyExpenseWon: number;
   estimatedFuelEfficiencyKmPerLiter: number | null;
-  fuelLogs?: FuelLogItem[];
 };
 
 export type CreateVehicleRequest = {
@@ -83,6 +87,17 @@ export type CreateVehicleRequest = {
 };
 
 export type UpdateVehicleRequest = CreateVehicleRequest;
+
+export type CreateVehicleFuelLogRequest = {
+  filledOn: string;
+  odometerKm: number;
+  liters: number;
+  amountWon: number;
+  unitPriceWon: number;
+  isFullTank: boolean;
+};
+
+export type UpdateVehicleFuelLogRequest = CreateVehicleFuelLogRequest;
 
 export type CreateVehicleMaintenanceLogRequest = {
   performedOn: string;

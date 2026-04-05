@@ -12,20 +12,20 @@
 
 ## 현재 상태와 문제
 
-현재 구현은 차량 1차 CRUD와 정비 이력 1차를 닫는 데는 충분하지만, 다음 구조 분리 단계로 가기에는 결합이 남아 있다.
+현재 구현은 차량 1차 CRUD, 연료 이력 분리 1차, 정비 이력 1차를 닫는 데는 충분하지만, 다음 구조 분리 단계로 가기에는 운영 요약 결합이 남아 있다.
 
-- `packages/contracts/src/assets.ts`의 `VehicleItem`은 차량 기본 정보와 `fuelLogs`를 함께 담고 있다.
-- `apps/api/prisma/schema.prisma`의 `Vehicle`은 `monthlyExpenseWon`, `estimatedFuelEfficiencyKmPerLiter`, `fuelLogs`를 함께 가진다.
-- `GET /vehicles`는 현재 차량 기본 정보와 연결된 주유 기록을 한 번에 반환한다.
-- Web `/vehicles` 화면도 차량 등록/수정, 월 운영비 차트, 최근 주유 기록 표를 같은 쿼리 결과에 의존한다.
-- 반면 정비 이력은 이제 별도 계약, 별도 API, 별도 쿼리로 분리된 상태다.
+- `packages/contracts/src/assets.ts`의 `VehicleItem`은 이제 차량 기본 정보만 담고, 연료 이력은 `VehicleFuelLogItem`으로 분리됐다.
+- `GET /vehicles`와 `GET /vehicles/fuel-logs`, `GET /vehicles/maintenance-logs`는 이미 별도 계약과 쿼리로 나뉘어 있다.
+- 다만 `apps/api/prisma/schema.prisma`의 `Vehicle`은 아직 `monthlyExpenseWon`, `estimatedFuelEfficiencyKmPerLiter` 같은 운영 보조 지표를 함께 가진다.
+- Web `/vehicles` 화면도 상단 운영 요약 카드와 차트가 아직 `Vehicle` 기본 정보 응답에 기대고 있다.
+- 즉, 운영 이력 분리는 1차 완료됐지만 운영 요약 read model은 아직 완전히 분리되지 않았다.
 
 이 구조는 “차량 관리 화면을 빨리 usable 하게 만든다”는 목적에는 맞지만, 다음 단계에서 아래 문제가 생긴다.
 
-- 차량 기본 정보 수정과 연료 기록 편집이 같은 응답 shape에 묶인다.
-- `/vehicles` 응답이 커지고, 연료 이력 조회 요구가 늘수록 차량 목록 API 책임이 불분명해진다.
+- 차량 기본 정보 write model과 월 운영비/연비 같은 요약 지표의 책임이 아직 한 모델에 남아 있다.
+- `/vehicles` 응답은 가벼워졌지만, 운영 요약이 늘수록 `Vehicle` 기본 프로필 API가 다시 비대해질 여지가 있다.
 - `monthlyExpenseWon` 같은 값이 원천 입력인지 집계 결과인지 경계가 흐려진다.
-- 즉, 운영 이력 분리는 시작됐지만 연료 이력은 아직 차량 기본 응답에 남아 있어 분리가 반쯤만 끝난 상태다.
+- 즉, 연료/정비 운영 이력 분리는 닫혔고, 남은 핵심 과제는 운영 요약 모델을 분리하는 것이다.
 
 ## 목표 경계
 
@@ -141,10 +141,11 @@
 
 현재 상태 메모:
 
+- 2026-04-05 기준 `VehicleItem.fuelLogs` 제거, `GET /vehicles/fuel-logs`, `POST /vehicles/:id/fuel-logs`, `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`, Web `/vehicles` 연료 기록 생성/수정 흐름까지 반영 완료
 - 2026-04-05 기준 `GET /vehicles/maintenance-logs`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`, Web `/vehicles` 정비 기록 생성/수정 흐름까지 반영 완료
-- 따라서 현재 남은 우선 구조 과제는 정비 이력 추가가 아니라 연료 이력 분리와 `/vehicles` 응답 슬림화다.
+- 따라서 현재 남은 우선 구조 과제는 연료/정비 이력 추가가 아니라 운영 요약 모델 정리다.
 
-### Phase 3. 운영 요약 모델 정리
+### Phase 3. 운영 요약 모델 정리 [`완료`]
 
 연료/정비 이력이 분리되면 summary projection을 정리한다.
 
@@ -153,7 +154,11 @@
 - 최근 정비 상태
 - 필요 시 보험/수집 거래와 연결된 보조 요약
 
-이 단계가 끝나면 `monthlyExpenseWon`은 `Vehicle` 기본 모델에서 제거할 수 있는 후보가 된다.
+현재 상태 메모:
+
+- 2026-04-05 기준 `monthlyExpenseWon` 전환 기준을 고정하고, `VehicleOperatingSummary` read model로의 수렴 방향을 구현에 반영 완료
+- `Vehicle` 기본 write model에서 `monthlyExpenseWon`은 이제 "전환 예정 필드"로 명시되었고, Web/API 모두 summary projection을 향하도록 맞췄다.
+- 이 단계가 끝나면 `monthlyExpenseWon`은 `Vehicle` 기본 모델에서 제거할 수 있는 후보가 된다.
 
 ## 계약과 스키마에 대한 결정
 
@@ -210,10 +215,10 @@
 
 ## 바로 다음 구현 우선순위
 
-이 문서 기준으로 다음 실제 저장소 우선순위는 `차량 연료 이력 read/write 분리와 /vehicles 응답 슬림화`다.
+이 문서 기준으로 다음 실제 저장소 우선순위는 `차량 운영 요약 모델 정리와 monthlyExpenseWon 전환 기준 고정`이다.
 
-정비 이력 Phase 1은 이미 구현되었고, 다음 단계는 연료 이력 분리와 운영 요약 정리다.
+연료 이력 분리와 정비 이력 Phase 1은 이미 구현되었고, 다음 단계는 운영 요약 정리다.
 
 ## 한 줄 결정
 
-차량 도메인은 이제 `Vehicle 기본 정보`와 `연료/정비 운영 이력`, `운영 요약`을 분리하는 방향으로 고정하며, 다음 구현은 연료 이력 분리부터 시작한다.
+차량 도메인은 이제 `Vehicle 기본 정보`와 `연료/정비 운영 이력`, `운영 요약`을 분리하는 방향으로 고정하며, 다음 구현은 운영 요약 모델 정리부터 시작한다.

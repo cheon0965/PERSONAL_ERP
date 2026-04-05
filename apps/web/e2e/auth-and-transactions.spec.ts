@@ -10,6 +10,7 @@ import type {
   CreateFundingAccountRequest,
   CreateInsurancePolicyRequest,
   CreateRecurringRuleRequest,
+  CreateVehicleFuelLogRequest,
   CreateVehicleMaintenanceLogRequest,
   CreateVehicleRequest,
   FundingAccountItem,
@@ -22,8 +23,10 @@ import type {
   UpdateFundingAccountRequest,
   UpdateInsurancePolicyRequest,
   UpdateRecurringRuleRequest,
+  UpdateVehicleFuelLogRequest,
   UpdateVehicleMaintenanceLogRequest,
   UpdateVehicleRequest,
+  VehicleFuelLogItem,
   VehicleItem,
   VehicleMaintenanceLogItem
 } from '@personal-erp/contracts';
@@ -1488,11 +1491,14 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
   const unhandledApiRequests: string[] = [];
   const newVehicleName = `E2E 차량 ${Date.now()}`;
   const renamedVehicleName = `${newVehicleName} 수정`;
+  const newFuelAmountWon = 76_431;
+  const updatedFuelAmountWon = 81_234;
   const newMaintenanceDescription = `엔진오일 교체 ${Date.now()}`;
   const renamedMaintenanceDescription = `${newMaintenanceDescription} 완료`;
   const currentUser = createE2ECurrentUser();
   let sessionActive = false;
   let vehicles = createE2EVehicles();
+  let fuelLogs = createE2EVehicleFuelLogs();
   let maintenanceLogs = createE2EVehicleMaintenanceLogs();
 
   page.on('pageerror', (error) => {
@@ -1563,8 +1569,7 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
     if (path === '/api/vehicles' && request.method() === 'POST') {
       const payload = request.postDataJSON() as CreateVehicleRequest;
       const created = buildVehicleItemFromPayload(payload, {
-        id: `vehicle-e2e-${Date.now()}`,
-        fuelLogs: []
+        id: `vehicle-e2e-${Date.now()}`
       });
 
       vehicles = mergeVehiclesForE2E(vehicles, created);
@@ -1573,6 +1578,66 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
         status: 201,
         contentType: 'application/json',
         body: JSON.stringify(created)
+      });
+      return;
+    }
+
+    if (path === '/api/vehicles/fuel-logs' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(fuelLogs)
+      });
+      return;
+    }
+
+    if (
+      /^\/api\/vehicles\/[^/]+\/fuel-logs$/.test(path) &&
+      request.method() === 'POST'
+    ) {
+      const pathSegments = path.split('/').filter(Boolean);
+      const vehicleId = pathSegments[2] ?? '';
+      const payload = request.postDataJSON() as CreateVehicleFuelLogRequest;
+      const vehicle =
+        vehicles.find((candidate) => candidate.id === vehicleId) ?? null;
+      const created = buildVehicleFuelLogItemFromPayload(payload, {
+        id: `fuel-e2e-${Date.now()}`,
+        vehicleId,
+        vehicleName: vehicle?.name ?? '알 수 없는 차량'
+      });
+
+      fuelLogs = mergeVehicleFuelLogsForE2E(fuelLogs, created);
+
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify(created)
+      });
+      return;
+    }
+
+    if (
+      /^\/api\/vehicles\/[^/]+\/fuel-logs\/[^/]+$/.test(path) &&
+      request.method() === 'PATCH'
+    ) {
+      const pathSegments = path.split('/').filter(Boolean);
+      const vehicleId = pathSegments[2] ?? '';
+      const fuelLogId = pathSegments[4] ?? '';
+      const payload = request.postDataJSON() as UpdateVehicleFuelLogRequest;
+      const currentFuelLog =
+        fuelLogs.find((fuelLog) => fuelLog.id === fuelLogId) ?? null;
+      const updated = buildVehicleFuelLogItemFromPayload(payload, {
+        id: fuelLogId,
+        vehicleId,
+        vehicleName: currentFuelLog?.vehicleName ?? '알 수 없는 차량'
+      });
+
+      fuelLogs = mergeVehicleFuelLogsForE2E(fuelLogs, updated);
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(updated)
       });
       return;
     }
@@ -1653,14 +1718,19 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
     if (/^\/api\/vehicles\/[^/]+$/.test(path) && request.method() === 'PATCH') {
       const vehicleId = path.split('/').at(-1) ?? '';
       const payload = request.postDataJSON() as UpdateVehicleRequest;
-      const currentVehicle =
-        vehicles.find((vehicle) => vehicle.id === vehicleId) ?? null;
       const updated = buildVehicleItemFromPayload(payload, {
-        id: vehicleId,
-        fuelLogs: currentVehicle?.fuelLogs ?? []
+        id: vehicleId
       });
 
       vehicles = mergeVehiclesForE2E(vehicles, updated);
+      fuelLogs = fuelLogs.map((fuelLog) =>
+        fuelLog.vehicleId === vehicleId
+          ? {
+              ...fuelLog,
+              vehicleName: updated.name
+            }
+          : fuelLog
+      );
       maintenanceLogs = maintenanceLogs.map((maintenanceLog) =>
         maintenanceLog.vehicleId === vehicleId
           ? {
@@ -1743,6 +1813,60 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
   const renamedVehicleRow = page.getByRole('row', {
     name: new RegExp(renamedVehicleName)
   });
+  await renamedVehicleRow.getByRole('button', { name: '연료 기록' }).click();
+  await expect(
+    page.getByRole('heading', { name: '연료 기록 추가' })
+  ).toBeVisible();
+  const fuelForm = page.locator('form').last();
+  await fuelForm.getByLabel('주유일').fill('2026-03-27');
+  await fuelForm.getByLabel('주유 시점 주행거리 (km)').fill('58910');
+  await fuelForm.getByLabel('주유량 (L)').fill('44.2');
+  await fuelForm.getByLabel('주유 금액 (원)').fill(String(newFuelAmountWon));
+  await fuelForm.getByLabel('리터당 단가 (원)').fill('1729');
+  await fuelForm.getByRole('button', { name: '연료 기록 저장' }).click();
+
+  await expect(
+    page.getByText(`${renamedVehicleName} 연료 기록을 추가했습니다.`)
+  ).toBeVisible();
+  const createdFuelRow = page.getByRole('row', {
+    name: new RegExp(`${renamedVehicleName}.*76,431`)
+  });
+  await expect(createdFuelRow).toBeVisible();
+  await expect(
+    createdFuelRow.getByRole('gridcell', {
+      name: '₩76,431',
+      exact: true
+    })
+  ).toBeVisible();
+
+  await createdFuelRow.getByRole('button', { name: '수정' }).click();
+  await expect(
+    page.getByRole('heading', { name: '연료 기록 수정' })
+  ).toBeVisible();
+  const fuelEditForm = page.locator('form').last();
+  await fuelEditForm.getByLabel('주유일').fill('2026-03-28');
+  await fuelEditForm
+    .getByLabel('주유 금액 (원)')
+    .fill(String(updatedFuelAmountWon));
+  await fuelEditForm
+    .getByRole('checkbox', { name: '가득 주유 / 완충 기록' })
+    .uncheck();
+  await fuelEditForm.getByRole('button', { name: '연료 기록 수정' }).click();
+
+  await expect(
+    page.getByText(`${renamedVehicleName} 연료 기록을 수정했습니다.`)
+  ).toBeVisible();
+  const updatedFuelRow = page.getByRole('row', {
+    name: new RegExp(`${renamedVehicleName}.*81,234`)
+  });
+  await expect(updatedFuelRow).toBeVisible();
+  await expect(
+    updatedFuelRow.getByRole('gridcell', {
+      name: '₩81,234',
+      exact: true
+    })
+  ).toBeVisible();
+
   await renamedVehicleRow.getByRole('button', { name: '정비 기록' }).click();
   await expect(
     page.getByRole('heading', { name: '정비 기록 추가' })
@@ -2322,18 +2446,23 @@ function createE2EVehicles(): VehicleItem[] {
       fuelType: 'DIESEL',
       initialOdometerKm: 58_200,
       monthlyExpenseWon: 130_000,
-      estimatedFuelEfficiencyKmPerLiter: 11.2,
-      fuelLogs: [
-        {
-          id: 'fuel-seed-1',
-          filledOn: '2026-03-05',
-          odometerKm: 58_480,
-          liters: 42.5,
-          amountWon: 72_000,
-          unitPriceWon: 1694,
-          isFullTank: true
-        }
-      ]
+      estimatedFuelEfficiencyKmPerLiter: 11.2
+    }
+  ];
+}
+
+function createE2EVehicleFuelLogs(): VehicleFuelLogItem[] {
+  return [
+    {
+      id: 'fuel-seed-1',
+      vehicleId: 'vehicle-seed-1',
+      vehicleName: '배송 밴',
+      filledOn: '2026-03-05',
+      odometerKm: 58_480,
+      liters: 42.5,
+      amountWon: 72_000,
+      unitPriceWon: 1694,
+      isFullTank: true
     }
   ];
 }
@@ -2488,7 +2617,6 @@ function buildVehicleItemFromPayload(
   payload: CreateVehicleRequest | UpdateVehicleRequest,
   input: {
     id: string;
-    fuelLogs: VehicleItem['fuelLogs'];
   }
 ): VehicleItem {
   return {
@@ -2499,8 +2627,7 @@ function buildVehicleItemFromPayload(
     initialOdometerKm: payload.initialOdometerKm,
     monthlyExpenseWon: payload.monthlyExpenseWon,
     estimatedFuelEfficiencyKmPerLiter:
-      payload.estimatedFuelEfficiencyKmPerLiter ?? null,
-    fuelLogs: input.fuelLogs ?? []
+      payload.estimatedFuelEfficiencyKmPerLiter ?? null
   };
 }
 
@@ -2520,6 +2647,48 @@ function mergeVehiclesForE2E(current: VehicleItem[], nextItem: VehicleItem) {
       }
 
       return left.initialOdometerKm - right.initialOdometerKm;
+    }
+  );
+}
+
+function buildVehicleFuelLogItemFromPayload(
+  payload: CreateVehicleFuelLogRequest | UpdateVehicleFuelLogRequest,
+  input: {
+    id: string;
+    vehicleId: string;
+    vehicleName: string;
+  }
+): VehicleFuelLogItem {
+  return {
+    id: input.id,
+    vehicleId: input.vehicleId,
+    vehicleName: input.vehicleName,
+    filledOn: payload.filledOn,
+    odometerKm: payload.odometerKm,
+    liters: payload.liters,
+    amountWon: payload.amountWon,
+    unitPriceWon: payload.unitPriceWon,
+    isFullTank: payload.isFullTank
+  };
+}
+
+function mergeVehicleFuelLogsForE2E(
+  current: VehicleFuelLogItem[],
+  nextItem: VehicleFuelLogItem
+) {
+  return [nextItem, ...current.filter((item) => item.id !== nextItem.id)].sort(
+    (left, right) => {
+      const filledOnDiff = right.filledOn.localeCompare(left.filledOn);
+      if (filledOnDiff !== 0) {
+        return filledOnDiff;
+      }
+
+      const odometerDiff = right.odometerKm - left.odometerKm;
+      if (odometerDiff !== 0) {
+        return odometerDiff;
+      }
+
+      return left.vehicleName.localeCompare(right.vehicleName);
     }
   );
 }

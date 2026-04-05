@@ -53,7 +53,7 @@
 
 ## 다음 중기 우선순위
 
-1. 차량 연료 이력 read/write 분리와 `/vehicles` 응답 슬림화
+1. 차량 운영 요약 모델 정리와 `monthlyExpenseWon` 전환 기준 고정
 2. 운영 HTTPS/HSTS/Swagger 배포 리허설과 보안 증적 정리
 3. Docker 기반 로컬 CI 재현성 보강
 4. `PRISMA_INTEGRATION_DATABASE_URL` GitHub secret 등록과 첫 `prisma-integration` 통과 증적 확보

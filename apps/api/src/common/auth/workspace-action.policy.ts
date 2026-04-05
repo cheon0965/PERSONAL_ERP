@@ -13,6 +13,8 @@ export type WorkspaceAction =
   | 'insurance_policy.update'
   | 'vehicle.create'
   | 'vehicle.update'
+  | 'vehicle_fuel.create'
+  | 'vehicle_fuel.update'
   | 'vehicle_maintenance.create'
   | 'vehicle_maintenance.update'
   | 'accounting_period.open'
@@ -44,6 +46,8 @@ const workspaceActionAllowedRoles: Record<
   'insurance_policy.update': ['OWNER', 'MANAGER'],
   'vehicle.create': ['OWNER', 'MANAGER'],
   'vehicle.update': ['OWNER', 'MANAGER'],
+  'vehicle_fuel.create': ['OWNER', 'MANAGER'],
+  'vehicle_fuel.update': ['OWNER', 'MANAGER'],
   'vehicle_maintenance.create': ['OWNER', 'MANAGER'],
   'vehicle_maintenance.update': ['OWNER', 'MANAGER'],
   'accounting_period.open': ['OWNER', 'MANAGER'],
@@ -77,6 +81,10 @@ const workspaceActionDeniedMessages: Record<WorkspaceAction, string> = {
     'Only owners and managers can update insurance policies.',
   'vehicle.create': 'Only owners and managers can create vehicles.',
   'vehicle.update': 'Only owners and managers can update vehicles.',
+  'vehicle_fuel.create':
+    'Only owners and managers can create vehicle fuel logs.',
+  'vehicle_fuel.update':
+    'Only owners and managers can update vehicle fuel logs.',
   'vehicle_maintenance.create':
     'Only owners and managers can create vehicle maintenance logs.',
   'vehicle_maintenance.update':
