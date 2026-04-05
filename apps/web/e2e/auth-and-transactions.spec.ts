@@ -19,30 +19,19 @@ import type {
   UpdateRecurringRuleRequest
 } from '@personal-erp/contracts';
 
-function isIgnorableAuthRefresh401Error(error: string) {
-  const normalized = error.toLowerCase();
-
-  return (
-    normalized.includes('401') &&
-    normalized.includes('unauthorized') &&
-    (normalized.includes('/api/auth/refresh') ||
-      normalized.includes('failed to load resource') ||
-      normalized.includes('err_http_response_code_failure'))
-  );
+function expectNoPageErrors(pageErrors: string[]) {
+  expect(pageErrors, pageErrors.join('\n\n')).toEqual([]);
 }
 
-function expectNoUnexpectedPageErrors(pageErrors: string[]) {
-  const unexpectedPageErrors = pageErrors.filter(
-    (error) => !isIgnorableAuthRefresh401Error(error)
-  );
-
-  expect(unexpectedPageErrors, unexpectedPageErrors.join('\n\n')).toEqual([]);
+function expectNoUnhandledApiRequests(unhandledApiRequests: string[]) {
+  expect(unhandledApiRequests, unhandledApiRequests.join('\n\n')).toEqual([]);
 }
 
 test('protects the transactions route, restores the session, and saves a transaction through the UI', async ({
   page
 }) => {
   const pageErrors: string[] = [];
+  const unhandledApiRequests: string[] = [];
   const transactionTitle = `E2E Transaction ${Date.now()}`;
   const businessDate = new Date().toISOString().slice(0, 10);
   const [businessYearToken, businessMonthToken] = businessDate.split('-');
@@ -246,12 +235,6 @@ test('protects the transactions route, restores the session, and saves a transac
     pageErrors.push(error.stack ?? error.message);
   });
 
-  page.on('console', (message) => {
-    if (message.type() === 'error') {
-      pageErrors.push(message.text());
-    }
-  });
-
   await page.route('http://localhost:4000/api/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -418,11 +401,14 @@ test('protects the transactions route, restores the session, and saves a transac
       return;
     }
 
+    const requestSignature = `${request.method()} ${path}`;
+    unhandledApiRequests.push(requestSignature);
+
     await route.fulfill({
       status: 404,
       contentType: 'application/json',
       body: JSON.stringify({
-        message: `Unhandled E2E route: ${request.method()} ${path}`
+        message: `Unhandled E2E route: ${requestSignature}`
       })
     });
   });
@@ -513,12 +499,16 @@ test('protects the transactions route, restores the session, and saves a transac
   await expect(
     page.getByRole('gridcell', { name: transactionTitle, exact: true })
   ).toHaveCount(0);
+
+  expectNoUnhandledApiRequests(unhandledApiRequests);
+  expectNoPageErrors(pageErrors);
 });
 
 test('manages funding accounts and categories through the reference data UI', async ({
   page
 }) => {
   const pageErrors: string[] = [];
+  const unhandledApiRequests: string[] = [];
   const newFundingAccountName = `E2E 자금수단 ${Date.now()}`;
   const renamedFundingAccountName = `${newFundingAccountName} 수정`;
   const newCategoryName = `E2E 카테고리 ${Date.now()}`;
@@ -532,12 +522,6 @@ test('manages funding accounts and categories through the reference data UI', as
 
   page.on('pageerror', (error) => {
     pageErrors.push(error.stack ?? error.message);
-  });
-
-  page.on('console', (message) => {
-    if (message.type() === 'error') {
-      pageErrors.push(message.text());
-    }
   });
 
   await page.route('http://localhost:4000/api/**', async (route) => {
@@ -771,11 +755,14 @@ test('manages funding accounts and categories through the reference data UI', as
       return;
     }
 
+    const requestSignature = `${request.method()} ${path}`;
+    unhandledApiRequests.push(requestSignature);
+
     await route.fulfill({
       status: 404,
       contentType: 'application/json',
       body: JSON.stringify({
-        message: `Unhandled E2E route: ${request.method()} ${path}`
+        message: `Unhandled E2E route: ${requestSignature}`
       })
     });
   });
@@ -979,13 +966,15 @@ test('manages funding accounts and categories through the reference data UI', as
     renamedCategoryRow.getByText('활성', { exact: true })
   ).toBeVisible();
 
-  expectNoUnexpectedPageErrors(pageErrors);
+  expectNoUnhandledApiRequests(unhandledApiRequests);
+  expectNoPageErrors(pageErrors);
 });
 
 test('manages recurring rules through the recurring rules UI', async ({
   page
 }) => {
   const pageErrors: string[] = [];
+  const unhandledApiRequests: string[] = [];
   const newRecurringRuleTitle = `E2E 반복 규칙 ${Date.now()}`;
   const renamedRecurringRuleTitle = `${newRecurringRuleTitle} 수정`;
   const currentUser = createE2ECurrentUser();
@@ -996,12 +985,6 @@ test('manages recurring rules through the recurring rules UI', async ({
 
   page.on('pageerror', (error) => {
     pageErrors.push(error.stack ?? error.message);
-  });
-
-  page.on('console', (message) => {
-    if (message.type() === 'error') {
-      pageErrors.push(message.text());
-    }
   });
 
   await page.route('http://localhost:4000/api/**', async (route) => {
@@ -1185,11 +1168,14 @@ test('manages recurring rules through the recurring rules UI', async ({
       return;
     }
 
+    const requestSignature = `${request.method()} ${path}`;
+    unhandledApiRequests.push(requestSignature);
+
     await route.fulfill({
       status: 404,
       contentType: 'application/json',
       body: JSON.stringify({
-        message: `Unhandled E2E route: ${request.method()} ${path}`
+        message: `Unhandled E2E route: ${requestSignature}`
       })
     });
   });
@@ -1276,13 +1262,15 @@ test('manages recurring rules through the recurring rules UI', async ({
     })
   ).toHaveCount(0);
 
-  expectNoUnexpectedPageErrors(pageErrors);
+  expectNoUnhandledApiRequests(unhandledApiRequests);
+  expectNoPageErrors(pageErrors);
 });
 
 test('surfaces operational checklist guidance across empty states and readiness gaps', async ({
   page
 }) => {
   const pageErrors: string[] = [];
+  const unhandledApiRequests: string[] = [];
   const currentUser = createE2ECurrentUser();
   const fundingAccounts: FundingAccountItem[] = [];
   const categories: CategoryItem[] = [];
@@ -1296,12 +1284,6 @@ test('surfaces operational checklist guidance across empty states and readiness 
 
   page.on('pageerror', (error) => {
     pageErrors.push(error.stack ?? error.message);
-  });
-
-  page.on('console', (message) => {
-    if (message.type() === 'error') {
-      pageErrors.push(message.text());
-    }
   });
 
   await page.route('http://localhost:4000/api/**', async (route) => {
@@ -1456,11 +1438,14 @@ test('surfaces operational checklist guidance across empty states and readiness 
       return;
     }
 
+    const requestSignature = `${request.method()} ${path}`;
+    unhandledApiRequests.push(requestSignature);
+
     await route.fulfill({
       status: 404,
       contentType: 'application/json',
       body: JSON.stringify({
-        message: `Unhandled E2E route: ${request.method()} ${path}`
+        message: `Unhandled E2E route: ${requestSignature}`
       })
     });
   });
@@ -1522,24 +1507,20 @@ test('surfaces operational checklist guidance across empty states and readiness 
   await page.getByRole('link', { name: '재무제표 보기' }).first().click();
   await expect(page).toHaveURL(/\/financial-statements$/);
 
-  expectNoUnexpectedPageErrors(pageErrors);
+  expectNoUnhandledApiRequests(unhandledApiRequests);
+  expectNoPageErrors(pageErrors);
 });
 
 test('shows safe context fallback when no workspace is connected', async ({
   page
 }) => {
   const pageErrors: string[] = [];
+  const unhandledApiRequests: string[] = [];
   const currentUser = createE2ECurrentUserWithoutWorkspace();
   let sessionActive = false;
 
   page.on('pageerror', (error) => {
     pageErrors.push(error.stack ?? error.message);
-  });
-
-  page.on('console', (message) => {
-    if (message.type() === 'error') {
-      pageErrors.push(message.text());
-    }
   });
 
   await page.route('http://localhost:4000/api/**', async (route) => {
@@ -1603,11 +1584,14 @@ test('shows safe context fallback when no workspace is connected', async ({
       return;
     }
 
+    const requestSignature = `${request.method()} ${path}`;
+    unhandledApiRequests.push(requestSignature);
+
     await route.fulfill({
       status: 404,
       contentType: 'application/json',
       body: JSON.stringify({
-        message: `Unhandled E2E route: ${request.method()} ${path}`
+        message: `Unhandled E2E route: ${requestSignature}`
       })
     });
   });
@@ -1638,7 +1622,8 @@ test('shows safe context fallback when no workspace is connected', async ({
     '연결된 사업장 없음'
   );
 
-  expectNoUnexpectedPageErrors(pageErrors);
+  expectNoUnhandledApiRequests(unhandledApiRequests);
+  expectNoPageErrors(pageErrors);
 });
 
 function createE2ECurrentUser(): AuthenticatedUser {
