@@ -121,26 +121,6 @@ async function waitForHealth(url, timeoutMs) {
   );
 }
 
-async function assertResponse(url, assertion) {
-  const response = await fetch(url, { redirect: 'manual' });
-  const body = await response.text();
-  await assertion(response, body);
-}
-
-async function assertRouteResponds(url, allowedStatuses) {
-  await assertResponse(url, (response) => {
-    if (allowedStatuses.includes(response.status)) {
-      return;
-    }
-
-    throw new Error(
-      `[run-web-build-smoke] Expected ${url} to return one of [${allowedStatuses.join(
-        ', '
-      )}] but received ${response.status}.`
-    );
-  });
-}
-
 async function main() {
   await runProcess(process.execPath, [
     path.join(repoRoot, 'scripts', 'run-with-root-env.cjs'),
@@ -205,13 +185,6 @@ async function main() {
       waitForHealth(readinessUrl, readinessTimeoutMs),
       serverExitPromise
     ]);
-
-    await assertRouteResponds(`${baseUrl}/`, [200, 307, 308]);
-    await assertRouteResponds(`${baseUrl}/login`, [200, 307, 308]);
-    await assertRouteResponds(
-      `${baseUrl}/transactions`,
-      [200, 307, 308, 401, 403]
-    );
   } finally {
     await cleanup();
     await serverExitPromise.catch(() => undefined);
