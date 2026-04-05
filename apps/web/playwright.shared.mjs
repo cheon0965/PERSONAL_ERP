@@ -16,9 +16,11 @@ export function buildPlaywrightConfig(input) {
   const port = String(input.port);
   const baseURL = `http://localhost:${port}`;
   const command =
-    input.serverMode === 'start'
-      ? `node ../../scripts/run-with-root-env.cjs next start --port ${port}`
-      : `node ../../scripts/run-with-root-env.cjs next dev --port ${port}`;
+    input.serverMode === 'start-inproc'
+      ? `node ../../scripts/run-with-root-env.cjs node ../../scripts/start-web-prod-inproc.cjs --port ${port}`
+      : input.serverMode === 'start'
+        ? `node ../../scripts/run-with-root-env.cjs next start --port ${port}`
+        : `node ../../scripts/run-with-root-env.cjs next dev --port ${port}`;
 
   return {
     testDir: './e2e',

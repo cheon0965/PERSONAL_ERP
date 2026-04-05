@@ -3,7 +3,7 @@ import { buildPlaywrightConfig } from './playwright.shared.mjs';
 
 export default defineConfig(
   buildPlaywrightConfig({
-    serverMode: 'start',
+    serverMode: 'start-inproc',
     port: 3100,
     reuseExistingServer: false
   })
