@@ -1,10 +1,19 @@
 'use client';
 
+import Link from 'next/link';
 import AccountBalanceWalletRoundedIcon from '@mui/icons-material/AccountBalanceWalletRounded';
 import AutoGraphRoundedIcon from '@mui/icons-material/AutoGraphRounded';
 import ReceiptLongRoundedIcon from '@mui/icons-material/ReceiptLongRounded';
 import ShieldRoundedIcon from '@mui/icons-material/ShieldRounded';
-import { Alert, Box, Chip, Grid, Stack, Typography } from '@mui/material';
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  Grid,
+  Stack,
+  Typography
+} from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart } from '@mui/x-charts/BarChart';
@@ -72,10 +81,29 @@ export function DashboardPage() {
           title="운영 기간이 아직 없습니다"
           description="대시보드는 열린 운영 월이 있어야 계산됩니다."
         >
-          <Typography variant="body2" color="text.secondary">
-            먼저 월 운영을 시작하면 대시보드 카드와 추이를 현재 운영 월 기준으로
-            계산합니다.
-          </Typography>
+          <Stack spacing={1.5}>
+            <Typography variant="body2" color="text.secondary">
+              먼저 월 운영을 시작하면 대시보드 카드와 추이를 현재 운영 월 기준으로
+              계산합니다.
+            </Typography>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              useFlexGap
+              flexWrap="wrap"
+            >
+              <Button component={Link} href="/periods" variant="contained">
+                운영 월 보기
+              </Button>
+              <Button
+                component={Link}
+                href="/reference-data"
+                variant="outlined"
+              >
+                기준 데이터 보기
+              </Button>
+            </Stack>
+          </Stack>
         </SectionCard>
       </Stack>
     );

@@ -145,6 +145,7 @@ test('GET /import-batches returns only the current workspace batches in reverse 
             parseError: null,
             sourceFingerprint: null,
             createdCollectedTransactionId: null,
+            collectionSummary: null,
             rawPayload: {
               original: {
                 date: '2026-03-10',
@@ -165,6 +166,7 @@ test('GET /import-batches returns only the current workspace batches in reverse 
             parseError: 'date 값이 올바르지 않습니다.',
             sourceFingerprint: null,
             createdCollectedTransactionId: null,
+            collectionSummary: null,
             rawPayload: {
               original: {
                 date: 'not-a-date',
@@ -198,6 +200,7 @@ test('GET /import-batches returns only the current workspace batches in reverse 
             parseError: null,
             sourceFingerprint: null,
             createdCollectedTransactionId: null,
+            collectionSummary: null,
             rawPayload: {
               original: {
                 date: '2026-03-02',
@@ -305,6 +308,7 @@ test('GET /import-batches/:id returns the batch detail with imported rows', asyn
           parseError: null,
           sourceFingerprint: null,
           createdCollectedTransactionId: null,
+          collectionSummary: null,
           rawPayload: {
             original: {
               approved_at: '2026-03-13',
@@ -325,6 +329,7 @@ test('GET /import-batches/:id returns the batch detail with imported rows', asyn
           parseError: null,
           sourceFingerprint: null,
           createdCollectedTransactionId: null,
+          collectionSummary: null,
           rawPayload: {
             original: {
               approved_at: '2026-03-14',
@@ -402,6 +407,7 @@ test('POST /import-batches creates an import batch and imported rows from UTF-8 
         parseError: null,
         sourceFingerprint: firstFingerprint,
         createdCollectedTransactionId: null,
+        collectionSummary: null,
         rawPayload: {
           original: {
             date: '2026-03-02',
@@ -422,6 +428,7 @@ test('POST /import-batches creates an import batch and imported rows from UTF-8 
         parseError: null,
         sourceFingerprint: secondFingerprint,
         createdCollectedTransactionId: null,
+        collectionSummary: null,
         rawPayload: {
           original: {
             date: '2026-03-03',
@@ -483,6 +490,125 @@ test('POST /import-batches returns 403 when the current membership role cannot u
           candidate.details.membershipRole === 'VIEWER'
       )
     );
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /import-batches/:id/rows/:rowId/collect-preview returns the automatic preparation summary before promotion', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push({
+      id: 'period-open-import-collect',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 3,
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.OPEN,
+      openedAt: new Date('2026-03-01T00:00:00.000Z'),
+      lockedAt: null,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
+    context.state.importBatches.push({
+      id: 'import-batch-collect',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: null,
+      sourceKind: ImportSourceKind.MANUAL_UPLOAD,
+      fileName: 'collect-me.csv',
+      fileHash: 'hash-collect',
+      rowCount: 1,
+      parseStatus: ImportBatchParseStatus.COMPLETED,
+      uploadedByMembershipId: 'membership-1',
+      uploadedAt: new Date('2026-03-10T00:00:00.000Z')
+    });
+    context.state.planItems.push({
+      id: 'plan-item-collect-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-open-import-collect',
+      recurringRuleId: null,
+      ledgerTransactionTypeId: 'ltt-1-expense',
+      fundingAccountId: 'acc-1',
+      categoryId: 'cat-1',
+      title: 'Coffee beans budget',
+      plannedAmount: 19800,
+      plannedDate: new Date('2026-03-11T00:00:00.000Z'),
+      status: PlanItemStatus.DRAFT,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
+    context.state.importedRows.push({
+      id: 'imported-row-collect-1',
+      batchId: 'import-batch-collect',
+      rowNumber: 2,
+      rawPayload: {
+        original: {
+          date: '2026-03-12',
+          title: 'Coffee beans',
+          amount: '19800'
+        },
+        parsed: {
+          occurredOn: '2026-03-12',
+          title: 'Coffee beans',
+          amount: 19800
+        }
+      },
+      parseStatus: ImportedRowParseStatus.PARSED,
+      parseError: null,
+      sourceFingerprint: buildSourceFingerprint({
+        sourceKind: ImportSourceKind.MANUAL_UPLOAD,
+        occurredOn: '2026-03-12',
+        amount: 19800,
+        description: 'Coffee beans',
+        sourceOrigin: null
+      })
+    });
+
+    const response = await context.request(
+      '/import-batches/import-batch-collect/rows/imported-row-collect-1/collect-preview',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          type: TransactionType.EXPENSE,
+          fundingAccountId: 'acc-1',
+          memo: 'Imported from upload'
+        }
+      }
+    );
+
+    assert.equal(response.status, 201);
+    assert.deepEqual(response.body, {
+      importedRowId: 'imported-row-collect-1',
+      occurredOn: '2026-03-12',
+      title: 'Coffee beans',
+      amountWon: 19800,
+      fundingAccountId: 'acc-1',
+      fundingAccountName: 'Main checking',
+      type: TransactionType.EXPENSE,
+      requestedCategoryId: null,
+      requestedCategoryName: null,
+      autoPreparation: {
+        matchedPlanItemId: 'plan-item-collect-1',
+        matchedPlanItemTitle: 'Coffee beans budget',
+        effectiveCategoryId: 'cat-1',
+        effectiveCategoryName: 'Fuel',
+        nextWorkflowStatus: 'READY_TO_POST',
+        hasDuplicateSourceFingerprint: false,
+        allowPlanItemMatch: true,
+        decisionReasons: [
+          '계획 항목 "Coffee beans budget"과 연결합니다.',
+          '계획 항목 기준으로 "Fuel" 카테고리를 보완합니다.',
+          '즉시 전표 준비 상태로 올립니다.'
+        ]
+      }
+    });
+    assert.equal(context.state.collectedTransactions.length, 3);
   } finally {
     await context.close();
   }
@@ -577,17 +703,46 @@ test('POST /import-batches/:id/rows/:rowId/collect creates a collected transacti
 
     assert.equal(response.status, 201);
     assert.deepEqual(response.body, {
-      id: 'ctx-4',
-      businessDate: '2026-03-12',
-      title: 'Coffee beans',
-      type: TransactionType.EXPENSE,
-      amountWon: 19800,
-      fundingAccountName: 'Main checking',
-      categoryName: 'Fuel',
-      sourceKind: 'IMPORT',
-      postingStatus: 'PENDING',
-      postedJournalEntryId: null,
-      postedJournalEntryNumber: null
+      collectedTransaction: {
+        id: 'ctx-4',
+        businessDate: '2026-03-12',
+        title: 'Coffee beans',
+        type: TransactionType.EXPENSE,
+        amountWon: 19800,
+        fundingAccountName: 'Main checking',
+        categoryName: 'Fuel',
+        sourceKind: 'IMPORT',
+        postingStatus: 'READY_TO_POST',
+        postedJournalEntryId: null,
+        postedJournalEntryNumber: null,
+        matchedPlanItemId: 'plan-item-collect-1',
+        matchedPlanItemTitle: 'Coffee beans budget'
+      },
+      preview: {
+        importedRowId: 'imported-row-collect-1',
+        occurredOn: '2026-03-12',
+        title: 'Coffee beans',
+        amountWon: 19800,
+        fundingAccountId: 'acc-1',
+        fundingAccountName: 'Main checking',
+        type: TransactionType.EXPENSE,
+        requestedCategoryId: null,
+        requestedCategoryName: null,
+        autoPreparation: {
+          matchedPlanItemId: 'plan-item-collect-1',
+          matchedPlanItemTitle: 'Coffee beans budget',
+          effectiveCategoryId: 'cat-1',
+          effectiveCategoryName: 'Fuel',
+          nextWorkflowStatus: 'READY_TO_POST',
+          hasDuplicateSourceFingerprint: false,
+          allowPlanItemMatch: true,
+          decisionReasons: [
+            '계획 항목 "Coffee beans budget"과 연결합니다.',
+            '계획 항목 기준으로 "Fuel" 카테고리를 보완합니다.',
+            '즉시 전표 준비 상태로 올립니다.'
+          ]
+        }
+      }
     });
     assert.equal(context.state.collectedTransactions.length, 4);
     assert.deepEqual(context.state.collectedTransactions.at(-1), {

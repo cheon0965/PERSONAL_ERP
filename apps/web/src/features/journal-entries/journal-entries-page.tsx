@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, Box, Button, Divider, Stack, Typography } from '@mui/material';
 import type { JournalEntryItem } from '@personal-erp/contracts';
@@ -119,7 +120,15 @@ export function JournalEntriesPage() {
             전표는 이 기간 안의 일자로만 생성할 수 있습니다.
           </Alert>
         ) : (
-          <Alert severity="warning" variant="outlined">
+          <Alert
+            severity="warning"
+            variant="outlined"
+            action={
+              <Button component={Link} href="/periods" size="small">
+                운영 월 확인
+              </Button>
+            }
+          >
             현재 열린 운영 기간이 없어 반전/정정 전표 버튼이 잠겨 있습니다.
           </Alert>
         )}
@@ -129,10 +138,25 @@ export function JournalEntriesPage() {
             title="최근 전표가 없습니다"
             description="수집 거래를 전표로 확정하면 이 화면에서 최근 전표와 라인을 바로 확인할 수 있습니다."
           >
-            <Typography variant="body2" color="text.secondary">
-              아직 확정된 전표가 없습니다. 수집 거래 화면에서 보류 상태의 거래를
-              선택해 전표 확정을 진행해 주세요.
-            </Typography>
+            <Stack spacing={1.5}>
+              <Typography variant="body2" color="text.secondary">
+                아직 확정된 전표가 없습니다. 수집 거래 화면에서 전표 준비
+                상태의 거래를 선택해 전표 확정을 진행해 주세요.
+              </Typography>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={1}
+                useFlexGap
+                flexWrap="wrap"
+              >
+                <Button component={Link} href="/transactions" variant="contained">
+                  수집 거래 보기
+                </Button>
+                <Button component={Link} href="/periods" variant="outlined">
+                  운영 월 보기
+                </Button>
+              </Stack>
+            </Stack>
           </SectionCard>
         ) : (
           <Stack spacing={appLayout.sectionGap}>

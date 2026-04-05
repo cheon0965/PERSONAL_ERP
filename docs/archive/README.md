@@ -9,3 +9,7 @@
 ## 하위 폴더
 
 - `phase-1/`: 1차 설계와 실행 기준 문서
+
+## 아카이브 문서
+
+- `BUSINESS_FLOW_IMPROVEMENT_EXECUTION_PLAN.md`: 현재 범위 완료 후 보관한 메인 비즈니스 흐름 개선 실행 계획 및 반영 현황

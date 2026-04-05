@@ -53,7 +53,7 @@
 
 ## 현재 구현 범위 요약
 
-- 기준/참조 조회 범위는 `auth/me`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`까지 포함합니다.
+- 기준/참조 범위는 조회 `auth/me`, `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`와 자금수단/카테고리 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`까지 포함합니다.
 - 운영/원장 조회 범위는 `accounting-periods`, `collected-transactions`, `journal-entries`, `plan-items`, `financial-statements`, `carry-forwards`, `import-batches`까지 포함합니다.
 - 집계/보고 조회 범위는 `dashboard/summary`, `forecast/monthly`까지 포함합니다.
 - 현재 쓰기/명령 범위는 `accounting-periods`, `collected-transactions`, `recurring-rules`, `plan-items`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`까지 확장되어 있습니다.
@@ -66,8 +66,13 @@
 ### 인증/기준 데이터
 
 - `GET /auth/me`
+- `GET /reference-data/readiness`
 - `GET /funding-accounts`
+- `POST /funding-accounts`
+- `PATCH /funding-accounts/:id`
 - `GET /categories`
+- `POST /categories`
+- `PATCH /categories/:id`
 - `GET /account-subjects`
 - `GET /ledger-transaction-types`
 - `GET /insurance-policies`
@@ -89,6 +94,7 @@
 - `GET /import-batches`
 - `GET /import-batches/:id`
 - `POST /import-batches`
+- `POST /import-batches/:id/rows/:rowId/collect-preview`
 - `POST /import-batches/:id/rows/:rowId/collect`
 - `GET /journal-entries`
 - `POST /journal-entries/:id/reverse`
@@ -114,7 +120,7 @@
 
 - Web `/dashboard` -> API `GET /dashboard/summary`
 - Web `/periods` -> API `/accounting-periods`
-- Web `/reference-data` -> API `/funding-accounts`, `/categories`, `/account-subjects`, `/ledger-transaction-types`
+- Web `/reference-data` -> API `/reference-data/readiness`, `/funding-accounts`, `/categories`, `/account-subjects`, `/ledger-transaction-types`
 - Web `/recurring` -> API `/recurring-rules`
 - Web `/plan-items` -> API `/plan-items`
 - Web `/transactions` -> API `/collected-transactions`
@@ -145,12 +151,58 @@
 - 계약: `ReopenAccountingPeriodRequest -> AccountingPeriodItem`
 - 잠금된 운영 기간을 사유와 함께 다시 엽니다.
 
+### `GET /reference-data/readiness`
+
+- 계약: response `ReferenceDataReadinessSummary`
+- 현재 작업 문맥 기준으로 자금수단, 수입/지출 카테고리, 계정과목, 거래유형 readiness를 서버에서 판정합니다.
+- 현재 구현은 기준 데이터 ownership를 `사용자 준비 책임`과 `system-managed`로 구분해 함께 돌려줍니다.
+- 현재 `inProductEditEnabled`는 자금수단과 수입/지출 카테고리가 모두 `true`이며, 계정과목/거래유형은 `false`로 유지됩니다.
+
+### `GET /funding-accounts`
+
+- 계약: response `FundingAccountItem[]`
+- 현재 작업 문맥 기준 활성 자금수단만 반환합니다.
+- `?includeInactive=true`를 주면 비활성/종료 자금수단까지 함께 반환합니다.
+
+### `POST /funding-accounts`
+
+- 계약: `CreateFundingAccountRequest -> FundingAccountItem`
+- 현재 작업 문맥의 Owner/Manager만 새 자금수단을 생성할 수 있습니다.
+- 현재 범위는 `name`, `type` 생성과 활성 상태 기본값(`ACTIVE`), 초기 잔액 `0원`까지로 한정합니다.
+
+### `PATCH /funding-accounts/:id`
+
+- 계약: `UpdateFundingAccountRequest -> FundingAccountItem`
+- 현재 작업 문맥의 Owner/Manager만 자금수단 이름 변경과 `ACTIVE/INACTIVE/CLOSED` 상태 전환을 수행할 수 있습니다.
+- 현재 범위에서 `CLOSED` 전환은 `INACTIVE -> CLOSED`일 때만 허용합니다.
+- `CLOSED` 자금수단은 기존 거래/반복 규칙 기록 보존용 읽기 전용 상태로 유지하며, 현재 범위에서는 다시 수정하거나 재활성화할 수 없습니다.
+- 현재 범위는 `type` 변경, 잔액 직접 수정, 하드 삭제를 지원하지 않습니다.
+
+### `GET /categories`
+
+- 계약: response `CategoryItem[]`
+- 현재 작업 문맥 기준 활성 카테고리만 반환합니다.
+- `?includeInactive=true`를 주면 비활성 카테고리까지 함께 반환합니다.
+
+### `POST /categories`
+
+- 계약: `CreateCategoryRequest -> CategoryItem`
+- 현재 작업 문맥의 Owner/Manager만 새 카테고리를 생성할 수 있습니다.
+- 현재 범위는 `name`, `kind` 생성과 활성 상태 기본값(`true`)까지로 한정합니다.
+
+### `PATCH /categories/:id`
+
+- 계약: `UpdateCategoryRequest -> CategoryItem`
+- 현재 작업 문맥의 Owner/Manager만 카테고리 이름 변경과 활성/비활성 전환을 수행할 수 있습니다.
+- 현재 범위는 `kind` 변경과 하드 삭제를 지원하지 않습니다.
+
 ### `POST /collected-transactions`
 
 - 계약: `CreateCollectedTransactionRequest -> CollectedTransactionItem`
 - 현재 수집 가능한 운영 기간 안에서 수집 거래를 생성합니다.
 - 현재 API 구현 이름은 `collected-transactions`이고, Web 화면 경로는 shorthand로 `/transactions`를 사용합니다.
 - 현재 응답은 `GET /collected-transactions` 목록 아이템 shape와 동일하게 매핑됩니다.
+- 기준 데이터 readiness가 부족한 경우에도 현재 구현은 저장 요청 자체를 일괄 차단하지는 않지만, Web은 `reference-data/readiness`를 기준으로 준비 부족 안내와 이동 링크를 함께 노출합니다.
 
 ### `GET /collected-transactions/:id`
 
@@ -161,13 +213,13 @@
 ### `PATCH /collected-transactions/:id`
 
 - 계약: `UpdateCollectedTransactionRequest -> CollectedTransactionItem`
-- 보류 상태(`PENDING`)의 수집 거래를 수정합니다.
+- 미확정 상태(`COLLECTED`, `REVIEWED`, `READY_TO_POST`)의 수집 거래를 수정합니다.
 - 현재 운영 기간 안의 거래일만 허용하며, 이미 전표로 확정된 거래는 수정할 수 없습니다.
 
 ### `DELETE /collected-transactions/:id`
 
 - 계약: response body 없음 (`204 No Content`)
-- 보류 상태(`PENDING`)의 수집 거래를 삭제합니다.
+- 미확정 상태(`COLLECTED`, `REVIEWED`, `READY_TO_POST`)의 수집 거래를 삭제합니다.
 - 이미 전표로 이어진 거래는 삭제 대신 전표 정정/반전 흐름으로 처리해야 합니다.
 
 ### `POST /collected-transactions/:id/confirm`
@@ -210,11 +262,19 @@
 
 - 계약: `CreateImportBatchRequest -> ImportBatchItem`
 - 업로드 내용을 파싱해 배치와 행 단위 parse 결과를 저장합니다.
+- 현재 row read model은 이미 승격된 행이면 수집 거래 상태, 연결된 계획 항목, 적용 카테고리 요약까지 함께 돌려줍니다.
+
+### `POST /import-batches/:id/rows/:rowId/collect-preview`
+
+- 계약: `CollectImportedRowRequest -> CollectImportedRowPreview`
+- 파싱 완료된 업로드 행을 실제 승격 전에 평가합니다.
+- 현재 구현은 계획 항목 자동 매칭 후보, 적용 카테고리, 예상 다음 상태, duplicate fingerprint 보류 여부, 설명용 decision reason 목록을 함께 반환합니다.
 
 ### `POST /import-batches/:id/rows/:rowId/collect`
 
-- 계약: `CollectImportedRowRequest -> CollectedTransactionItem`
+- 계약: `CollectImportedRowRequest -> CollectImportedRowResponse`
 - 파싱 완료된 업로드 행을 수집 거래로 승격합니다.
+- 현재 응답은 생성된 `CollectedTransactionItem`뿐 아니라, 같은 요청 기준의 자동 판정 preview도 함께 돌려줍니다.
 - 현재 구현은 source fingerprint 기반 중복 감지, draft `PlanItem` 자동 매칭, 카테고리/상태 자동 준비를 포함합니다.
 
 ### `POST /journal-entries/:id/reverse`
@@ -244,7 +304,7 @@
 
 1. `POST /accounting-periods`로 운영 기간을 엽니다.
 2. `POST /collected-transactions` 또는 `POST /import-batches/:id/rows/:rowId/collect`로 현재 기간의 수집 거래를 만듭니다.
-3. 필요하면 `GET/PATCH/DELETE /collected-transactions/:id`로 보류 상태 수집 거래를 상세 조회, 수정, 삭제합니다.
+3. 필요하면 `GET/PATCH/DELETE /collected-transactions/:id`로 미확정(`COLLECTED`, `REVIEWED`, `READY_TO_POST`) 수집 거래를 상세 조회, 수정, 삭제합니다.
 4. `POST /collected-transactions/:id/confirm`로 수집 거래를 `JournalEntry`로 확정합니다.
 5. 필요하면 `POST /journal-entries/:id/reverse` 또는 `POST /journal-entries/:id/correct`로 전표 조정을 수행합니다.
 6. `POST /accounting-periods/:id/close`로 운영 기간을 잠그고 closing snapshot을 만듭니다.
@@ -257,9 +317,10 @@
 1. `POST /recurring-rules`로 반복 규칙을 등록합니다.
 2. 필요하면 `GET/PATCH/DELETE /recurring-rules/:id`로 기존 반복 규칙을 상세 조회, 수정, 삭제합니다.
 3. `POST /plan-items/generate`로 특정 기간의 draft `PlanItem`을 생성합니다.
-4. import collect 단계에서 현재 구현은 draft `PlanItem` 자동 매칭을 수행할 수 있습니다.
-5. `POST /collected-transactions/:id/confirm`가 실행되면 매칭된 `PlanItem`은 `CONFIRMED`로 갱신됩니다.
-6. `GET /dashboard/summary`와 `GET /forecast/monthly`는 위 운영/계획 데이터를 projection한 읽기 모델이며, 직접 쓰기 흐름에 참여하지 않습니다.
+4. 현재 `PlanItemsView.items[]`는 매칭된 수집 거래 ID/제목/상태와 생성된 전표 ID/번호까지 함께 실어 보냅니다.
+5. import collect 단계에서 현재 구현은 `collect-preview`와 `collect` 모두에서 draft `PlanItem` 자동 매칭을 수행할 수 있습니다.
+6. `POST /collected-transactions/:id/confirm`가 실행되면 매칭된 `PlanItem`은 `CONFIRMED`로 갱신됩니다.
+7. `GET /dashboard/summary`와 `GET /forecast/monthly`는 위 운영/계획 데이터를 projection한 읽기 모델이며, 직접 쓰기 흐름에 참여하지 않습니다.
 
 ## 접근 범위와 데이터 최소 노출
 

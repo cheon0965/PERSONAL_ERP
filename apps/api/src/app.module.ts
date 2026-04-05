@@ -21,6 +21,7 @@ import { InsurancePoliciesModule } from './modules/insurance-policies/insurance-
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { DashboardModule } from './modules/dashboard/public';
 import { ForecastModule } from './modules/forecast/public';
+import { ReferenceDataReadinessModule } from './modules/reference-data-readiness/reference-data-readiness.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { ForecastModule } from './modules/forecast/public';
     ExternalDependenciesModule,
     HealthModule,
     AuthModule,
+    ReferenceDataReadinessModule,
     AccountSubjectsModule,
     FundingAccountsModule,
     CategoriesModule,

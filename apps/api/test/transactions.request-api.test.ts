@@ -31,7 +31,9 @@ test('GET /collected-transactions returns only the current user collected transa
         sourceKind: 'MANUAL',
         postingStatus: 'POSTED',
         postedJournalEntryId: null,
-        postedJournalEntryNumber: null
+        postedJournalEntryNumber: null,
+        matchedPlanItemId: null,
+        matchedPlanItemTitle: null
       },
       {
         id: 'ctx-seed-2',
@@ -44,7 +46,9 @@ test('GET /collected-transactions returns only the current user collected transa
         sourceKind: 'MANUAL',
         postingStatus: 'POSTED',
         postedJournalEntryId: null,
-        postedJournalEntryNumber: null
+        postedJournalEntryNumber: null,
+        matchedPlanItemId: null,
+        matchedPlanItemTitle: null
       }
     ]);
     assert.equal(
@@ -268,9 +272,11 @@ test('POST /collected-transactions returns the created collected transaction ite
       fundingAccountName: 'Main checking',
       categoryName: 'Fuel',
       sourceKind: 'MANUAL',
-      postingStatus: 'PENDING',
+      postingStatus: 'READY_TO_POST',
       postedJournalEntryId: null,
-      postedJournalEntryNumber: null
+      postedJournalEntryNumber: null,
+      matchedPlanItemId: null,
+      matchedPlanItemTitle: null
     });
     assert.equal(context.state.collectedTransactions.length, 4);
     assert.ok(
@@ -314,7 +320,9 @@ test('GET /collected-transactions/:id returns the collected transaction detail w
       sourceKind: 'MANUAL',
       postingStatus: 'POSTED',
       postedJournalEntryId: null,
-      postedJournalEntryNumber: null
+      postedJournalEntryNumber: null,
+      matchedPlanItemId: null,
+      matchedPlanItemTitle: null
     });
     assert.equal(
       'tenantId' in (response.body as Record<string, unknown>),
@@ -362,7 +370,7 @@ test('PATCH /collected-transactions/:id updates a pending collected transaction 
       title: 'Fuel refill',
       occurredOn: new Date('2026-03-03T00:00:00.000Z'),
       amount: 84_000,
-      status: CollectedTransactionStatus.COLLECTED,
+      status: CollectedTransactionStatus.READY_TO_POST,
       memo: 'Full tank',
       createdAt: new Date('2026-03-03T08:00:00.000Z'),
       updatedAt: new Date('2026-03-03T08:00:00.000Z')
@@ -395,9 +403,11 @@ test('PATCH /collected-transactions/:id updates a pending collected transaction 
       fundingAccountName: 'Main checking',
       categoryName: 'Utilities',
       sourceKind: 'MANUAL',
-      postingStatus: 'PENDING',
+      postingStatus: 'READY_TO_POST',
       postedJournalEntryId: null,
-      postedJournalEntryNumber: null
+      postedJournalEntryNumber: null,
+      matchedPlanItemId: null,
+      matchedPlanItemTitle: null
     });
     assert.deepEqual(
       context.state.collectedTransactions.find(
@@ -418,7 +428,7 @@ test('PATCH /collected-transactions/:id updates a pending collected transaction 
         title: 'Fuel refill adjusted',
         occurredOn: new Date('2026-03-04T00:00:00.000Z'),
         amount: 91_000,
-        status: CollectedTransactionStatus.COLLECTED,
+        status: CollectedTransactionStatus.READY_TO_POST,
         memo: 'Adjusted after receipt review',
         createdAt: new Date('2026-03-03T08:00:00.000Z'),
         updatedAt: context.state.collectedTransactions.find(
@@ -477,7 +487,7 @@ test('PATCH /collected-transactions/:id returns 403 when the current membership 
       title: 'Fuel refill',
       occurredOn: new Date('2026-03-03T00:00:00.000Z'),
       amount: 84_000,
-      status: CollectedTransactionStatus.COLLECTED,
+      status: CollectedTransactionStatus.READY_TO_POST,
       memo: 'Full tank',
       createdAt: new Date('2026-03-03T08:00:00.000Z'),
       updatedAt: new Date('2026-03-03T08:00:00.000Z')
@@ -557,7 +567,7 @@ test('PATCH /collected-transactions/:id returns 409 for already posted collected
     assert.equal(response.status, 409);
     assert.deepEqual(response.body, {
       statusCode: 409,
-      message: 'Only pending collected transactions can be updated.',
+      message: 'Only unposted collected transactions can be updated.',
       error: 'Conflict'
     });
   } finally {
@@ -598,7 +608,7 @@ test('PATCH /collected-transactions/:id re-checks the transaction inside the tra
       title: 'Fuel refill draft',
       occurredOn: new Date('2026-03-03T00:00:00.000Z'),
       amount: 84_000,
-      status: CollectedTransactionStatus.COLLECTED,
+      status: CollectedTransactionStatus.READY_TO_POST,
       memo: 'Before race',
       createdAt: new Date('2026-03-03T08:00:00.000Z'),
       updatedAt: new Date('2026-03-03T08:00:00.000Z')
@@ -815,7 +825,7 @@ test('DELETE /collected-transactions/:id returns 409 for already posted collecte
     assert.equal(response.status, 409);
     assert.deepEqual(response.body, {
       statusCode: 409,
-      message: 'Only pending collected transactions can be deleted.',
+      message: 'Only unposted collected transactions can be deleted.',
       error: 'Conflict'
     });
   } finally {
@@ -856,7 +866,7 @@ test('DELETE /collected-transactions/:id re-checks the transaction inside the tr
       title: 'Fuel refill draft',
       occurredOn: new Date('2026-03-05T00:00:00.000Z'),
       amount: 84_000,
-      status: CollectedTransactionStatus.COLLECTED,
+      status: CollectedTransactionStatus.READY_TO_POST,
       memo: 'Draft entry',
       createdAt: new Date('2026-03-05T08:00:00.000Z'),
       updatedAt: new Date('2026-03-05T08:00:00.000Z')
@@ -929,7 +939,7 @@ test('POST /collected-transactions/:id/confirm creates a journal entry and marks
       title: 'Fuel refill',
       occurredOn: new Date('2026-03-03T00:00:00.000Z'),
       amount: 84000,
-      status: CollectedTransactionStatus.COLLECTED,
+      status: CollectedTransactionStatus.READY_TO_POST,
       memo: 'Full tank',
       createdAt: new Date('2026-03-03T08:00:00.000Z'),
       updatedAt: new Date('2026-03-03T08:00:00.000Z')
@@ -1053,7 +1063,7 @@ test('POST /collected-transactions/:id/confirm re-checks the transaction inside 
       title: 'Fuel refill',
       occurredOn: new Date('2026-03-03T00:00:00.000Z'),
       amount: 84000,
-      status: CollectedTransactionStatus.COLLECTED,
+      status: CollectedTransactionStatus.READY_TO_POST,
       memo: 'Full tank',
       createdAt: new Date('2026-03-03T08:00:00.000Z'),
       updatedAt: new Date('2026-03-03T08:00:00.000Z')
@@ -1127,7 +1137,7 @@ test('POST /collected-transactions/:id/confirm returns 403 when the current memb
       title: 'Fuel refill',
       occurredOn: new Date('2026-03-03T00:00:00.000Z'),
       amount: 84000,
-      status: CollectedTransactionStatus.COLLECTED,
+      status: CollectedTransactionStatus.READY_TO_POST,
       memo: 'Full tank',
       createdAt: new Date('2026-03-03T08:00:00.000Z'),
       updatedAt: new Date('2026-03-03T08:00:00.000Z')

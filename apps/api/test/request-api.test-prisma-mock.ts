@@ -111,6 +111,7 @@ export function createPrismaMock(
         };
         select?: {
           id?: boolean;
+          title?: boolean;
           plannedAmount?: boolean;
           plannedDate?: boolean;
           fundingAccountId?: boolean;
@@ -167,6 +168,7 @@ export function createPrismaMock(
 
           return {
             ...(args.select.id ? { id: candidate.id } : {}),
+            ...(args.select.title ? { title: candidate.title } : {}),
             ...(args.select.plannedAmount
               ? { plannedAmount: candidate.plannedAmount }
               : {}),
@@ -312,24 +314,53 @@ export function createPrismaMock(
     account: {
       findFirst: async (args: {
         where: {
-          id: string;
+          id?: string;
           userId?: string;
           tenantId?: string;
           ledgerId?: string;
+          status?: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+        };
+        orderBy?: {
+          sortOrder?: 'asc' | 'desc';
         };
         select?: {
           id?: boolean;
           name?: boolean;
+          sortOrder?: boolean;
         };
       }) => {
-        const account = state.accounts.find(
-          (candidate) =>
-            candidate.id === args.where.id &&
-            (!args.where.userId || candidate.userId === args.where.userId) &&
-            (!args.where.tenantId ||
-              candidate.tenantId === args.where.tenantId) &&
-            (!args.where.ledgerId || candidate.ledgerId === args.where.ledgerId)
-        );
+        const account =
+          [...state.accounts]
+            .filter((candidate) => {
+              const matchesId =
+                !args.where.id || candidate.id === args.where.id;
+              const matchesUser =
+                !args.where.userId || candidate.userId === args.where.userId;
+              const matchesTenant =
+                !args.where.tenantId ||
+                candidate.tenantId === args.where.tenantId;
+              const matchesLedger =
+                !args.where.ledgerId ||
+                candidate.ledgerId === args.where.ledgerId;
+              const matchesStatus =
+                !args.where.status || candidate.status === args.where.status;
+
+              return (
+                matchesId &&
+                matchesUser &&
+                matchesTenant &&
+                matchesLedger &&
+                matchesStatus
+              );
+            })
+            .sort((left, right) => {
+              if (!args.orderBy?.sortOrder) {
+                return 0;
+              }
+
+              const diff = (left.sortOrder ?? 0) - (right.sortOrder ?? 0);
+              return args.orderBy.sortOrder === 'asc' ? diff : -diff;
+            })[0] ?? null;
 
         if (!account) {
           return null;
@@ -341,7 +372,10 @@ export function createPrismaMock(
 
         return {
           ...(args.select.id ? { id: account.id } : {}),
-          ...(args.select.name ? { name: account.name } : {})
+          ...(args.select.name ? { name: account.name } : {}),
+          ...(args.select.sortOrder
+            ? { sortOrder: account.sortOrder ?? 0 }
+            : {})
         };
       },
       findMany: async (args: {
@@ -352,17 +386,66 @@ export function createPrismaMock(
           status?: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
         };
         select?: { balanceWon?: boolean };
+        orderBy?: Array<{
+          status?: 'asc' | 'desc';
+          sortOrder?: 'asc' | 'desc';
+          name?: 'asc' | 'desc';
+        }>;
       }) => {
-        const items = state.accounts.filter((candidate) => {
-          const matchesUser =
-            !args.where?.userId || candidate.userId === args.where.userId;
-          const matchesTenant =
-            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
-          const matchesLedger =
-            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+        const statusOrder = {
+          ACTIVE: 0,
+          INACTIVE: 1,
+          CLOSED: 2
+        } as const;
+        const items = state.accounts
+          .filter((candidate) => {
+            const matchesUser =
+              !args.where?.userId || candidate.userId === args.where.userId;
+            const matchesTenant =
+              !args.where?.tenantId ||
+              candidate.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId;
+            const matchesStatus =
+              !args.where?.status || candidate.status === args.where.status;
 
-          return matchesUser && matchesTenant && matchesLedger;
-        });
+            return (
+              matchesUser && matchesTenant && matchesLedger && matchesStatus
+            );
+          })
+          .sort((left, right) => {
+            for (const order of args.orderBy ?? []) {
+              if (order.status) {
+                const diff =
+                  statusOrder[left.status] - statusOrder[right.status];
+                if (diff !== 0) {
+                  return order.status === 'asc' ? diff : -diff;
+                }
+              }
+
+              if (order.sortOrder) {
+                const diff = (left.sortOrder ?? 0) - (right.sortOrder ?? 0);
+                if (diff !== 0) {
+                  return order.sortOrder === 'asc' ? diff : -diff;
+                }
+              }
+
+              if (order.name) {
+                const diff = left.name.localeCompare(right.name);
+                if (diff !== 0) {
+                  return order.name === 'asc' ? diff : -diff;
+                }
+              }
+            }
+
+            const sortDiff = (left.sortOrder ?? 0) - (right.sortOrder ?? 0);
+            if (sortDiff !== 0) {
+              return sortDiff;
+            }
+
+            return left.name.localeCompare(right.name);
+          });
 
         if (args.select?.balanceWon) {
           return items.map((candidate) => ({
@@ -371,28 +454,85 @@ export function createPrismaMock(
         }
 
         return items;
+      },
+      create: async (args: {
+        data: {
+          userId: string;
+          tenantId: string;
+          ledgerId: string;
+          name: string;
+          type: 'BANK' | 'CASH' | 'CARD';
+          sortOrder?: number;
+        };
+      }) => {
+        const created = {
+          id: `acc-generated-${state.accounts.length + 1}`,
+          userId: args.data.userId,
+          tenantId: args.data.tenantId,
+          ledgerId: args.data.ledgerId,
+          name: args.data.name,
+          type: args.data.type,
+          balanceWon: 0,
+          sortOrder: args.data.sortOrder ?? 0,
+          status: 'ACTIVE' as const
+        };
+
+        state.accounts.push(created);
+        return created;
+      },
+      update: async (args: {
+        where: { id: string };
+        data: {
+          name?: string;
+          status?: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+        };
+      }) => {
+        const account = state.accounts.find(
+          (candidate) => candidate.id === args.where.id
+        );
+
+        if (!account) {
+          throw new Error('Funding account not found');
+        }
+
+        if (args.data.name !== undefined) {
+          account.name = args.data.name;
+        }
+        if (args.data.status !== undefined) {
+          account.status = args.data.status;
+        }
+
+        return account;
       }
     },
     category: {
       findFirst: async (args: {
         where: {
-          id: string;
+          id?: string;
           userId?: string;
           tenantId?: string;
           ledgerId?: string;
+          kind?: 'INCOME' | 'EXPENSE' | 'TRANSFER';
+          isActive?: boolean;
         };
         select?: {
           id?: boolean;
           name?: boolean;
+          kind?: boolean;
+          isActive?: boolean;
         };
       }) => {
         const category = state.categories.find(
           (candidate) =>
-            candidate.id === args.where.id &&
+            (!args.where.id || candidate.id === args.where.id) &&
             (!args.where.userId || candidate.userId === args.where.userId) &&
             (!args.where.tenantId ||
               candidate.tenantId === args.where.tenantId) &&
-            (!args.where.ledgerId || candidate.ledgerId === args.where.ledgerId)
+            (!args.where.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId) &&
+            (!args.where.kind || candidate.kind === args.where.kind) &&
+            (args.where.isActive === undefined ||
+              candidate.isActive === args.where.isActive)
         );
 
         if (!category) {
@@ -405,20 +545,29 @@ export function createPrismaMock(
 
         return {
           ...(args.select.id ? { id: category.id } : {}),
-          ...(args.select.name ? { name: category.name } : {})
+          ...(args.select.name ? { name: category.name } : {}),
+          ...(args.select.kind ? { kind: category.kind } : {}),
+          ...(args.select.isActive ? { isActive: category.isActive } : {})
         };
       },
       findMany: async (args: {
         where?: {
+          id?: string;
           userId?: string;
           tenantId?: string;
           ledgerId?: string;
           kind?: 'INCOME' | 'EXPENSE' | 'TRANSFER';
           isActive?: boolean;
         };
+        orderBy?: Array<{
+          isActive?: 'asc' | 'desc';
+          kind?: 'asc' | 'desc';
+          name?: 'asc' | 'desc';
+        }>;
       }) => {
         return state.categories
           .filter((candidate) => {
+            const matchesId = !args.where?.id || candidate.id === args.where.id;
             const matchesUser =
               !args.where?.userId || candidate.userId === args.where.userId;
             const matchesTenant =
@@ -434,6 +583,7 @@ export function createPrismaMock(
               candidate.isActive === args.where.isActive;
 
             return (
+              matchesId &&
               matchesUser &&
               matchesTenant &&
               matchesLedger &&
@@ -442,13 +592,39 @@ export function createPrismaMock(
             );
           })
           .sort((left, right) => {
-            if (left.kind !== right.kind) {
-              const categoryKindOrder = {
-                INCOME: 0,
-                EXPENSE: 1,
-                TRANSFER: 2
-              } as const;
+            const categoryKindOrder = {
+              INCOME: 0,
+              EXPENSE: 1,
+              TRANSFER: 2
+            } as const;
 
+            for (const order of args.orderBy ?? []) {
+              if (order.isActive) {
+                const activeDiff =
+                  Number(right.isActive) - Number(left.isActive);
+                if (activeDiff !== 0) {
+                  return order.isActive === 'asc' ? -activeDiff : activeDiff;
+                }
+              }
+
+              if (order.kind) {
+                const kindDiff =
+                  categoryKindOrder[left.kind ?? 'EXPENSE'] -
+                  categoryKindOrder[right.kind ?? 'EXPENSE'];
+                if (kindDiff !== 0) {
+                  return order.kind === 'asc' ? kindDiff : -kindDiff;
+                }
+              }
+
+              if (order.name) {
+                const nameDiff = left.name.localeCompare(right.name);
+                if (nameDiff !== 0) {
+                  return order.name === 'asc' ? nameDiff : -nameDiff;
+                }
+              }
+            }
+
+            if (left.kind !== right.kind) {
               return (
                 categoryKindOrder[left.kind ?? 'EXPENSE'] -
                 categoryKindOrder[right.kind ?? 'EXPENSE']
@@ -457,6 +633,52 @@ export function createPrismaMock(
 
             return left.name.localeCompare(right.name);
           });
+      },
+      create: async (args: {
+        data: {
+          userId: string;
+          tenantId: string;
+          ledgerId: string;
+          name: string;
+          kind: 'INCOME' | 'EXPENSE' | 'TRANSFER';
+        };
+      }) => {
+        const created = {
+          id: `cat-generated-${state.categories.length + 1}`,
+          userId: args.data.userId,
+          tenantId: args.data.tenantId,
+          ledgerId: args.data.ledgerId,
+          name: args.data.name,
+          kind: args.data.kind,
+          isActive: true
+        };
+
+        state.categories.push(created);
+        return created;
+      },
+      update: async (args: {
+        where: { id: string };
+        data: {
+          name?: string;
+          isActive?: boolean;
+        };
+      }) => {
+        const category = state.categories.find(
+          (candidate) => candidate.id === args.where.id
+        );
+
+        if (!category) {
+          throw new Error('Category not found');
+        }
+
+        if (args.data.name !== undefined) {
+          category.name = args.data.name;
+        }
+        if (args.data.isActive !== undefined) {
+          category.isActive = args.data.isActive;
+        }
+
+        return category;
       }
     },
     ...createTransactionsJournalPrismaMock(context),

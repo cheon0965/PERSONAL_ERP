@@ -92,9 +92,44 @@ export function createRequestPrismaMockContext(state: RequestTestState) {
         createdCollectedTransaction: (() => {
           const createdCollectedTransaction =
             findCollectedTransactionByImportedRowId(candidate.id);
+          const matchedPlanItem =
+            createdCollectedTransaction?.matchedPlanItemId != null
+              ? findPlanItem(createdCollectedTransaction.matchedPlanItemId)
+              : null;
+          const category =
+            createdCollectedTransaction?.categoryId != null
+              ? resolveCategory(createdCollectedTransaction.categoryId)
+              : null;
+          const ledgerTransactionType =
+            createdCollectedTransaction?.ledgerTransactionTypeId != null
+              ? resolveLedgerTransactionType(
+                  createdCollectedTransaction.ledgerTransactionTypeId
+                )
+              : null;
 
           return createdCollectedTransaction
-            ? { id: createdCollectedTransaction.id }
+            ? {
+                id: createdCollectedTransaction.id,
+                title: createdCollectedTransaction.title,
+                status: createdCollectedTransaction.status,
+                matchedPlanItem: matchedPlanItem
+                  ? {
+                      id: matchedPlanItem.id,
+                      title: matchedPlanItem.title
+                    }
+                  : null,
+                ledgerTransactionType: ledgerTransactionType
+                  ? {
+                      flowKind: ledgerTransactionType.flowKind
+                    }
+                  : null,
+                category: category
+                  ? {
+                      id: category.id,
+                      name: category.name
+                    }
+                  : null
+              }
             : null;
         })()
       }));

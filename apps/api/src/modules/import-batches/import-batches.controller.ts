@@ -10,7 +10,8 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type {
   AuthenticatedUser,
-  CollectedTransactionItem,
+  CollectImportedRowPreview,
+  CollectImportedRowResponse,
   ImportBatchItem
 } from '@personal-erp/contracts';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
@@ -94,6 +95,21 @@ export class ImportBatchesController {
     }
   }
 
+  @Post(':id/rows/:rowId/collect-preview')
+  async previewCollectRow(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') importBatchId: string,
+    @Param('rowId') importedRowId: string,
+    @Body() dto: CollectImportedRowRequestDto
+  ): Promise<CollectImportedRowPreview> {
+    return this.importedRowCollectionService.previewRow(
+      user,
+      importBatchId,
+      importedRowId,
+      dto
+    );
+  }
+
   @Post(':id/rows/:rowId/collect')
   async collectRow(
     @Req() request: RequestWithContext,
@@ -101,7 +117,7 @@ export class ImportBatchesController {
     @Param('id') importBatchId: string,
     @Param('rowId') importedRowId: string,
     @Body() dto: CollectImportedRowRequestDto
-  ): Promise<CollectedTransactionItem> {
+  ): Promise<CollectImportedRowResponse> {
     const workspace = requireCurrentWorkspace(user);
 
     try {
@@ -119,7 +135,7 @@ export class ImportBatchesController {
         details: {
           importBatchId,
           importedRowId,
-          collectedTransactionId: created.id
+          collectedTransactionId: created.collectedTransaction.id
         }
       });
 

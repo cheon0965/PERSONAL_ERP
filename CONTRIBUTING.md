@@ -50,7 +50,7 @@
 - `transactions`, `recurring-rules`는 `controller -> use-case -> port -> adapter` 경계를 사용합니다.
 - `dashboard`, `forecast`는 `controller -> read service -> read repository -> projection` 흐름을 사용합니다.
 - 공용 계약은 `packages/contracts`를 단일 소스로 사용합니다.
-- 사용자 경계가 필요한 데이터는 항상 `userId` 기준으로 다룹니다.
+- 사용자 경계가 필요한 데이터는 `user.currentWorkspace`와 `tenantId` / `ledgerId` / `membershipRole` 기준으로 다룹니다.
 - `dashboard`, `forecast`는 읽기/조합 컨텍스트로 보고, `transactions`, `recurring-rules`의 쓰기 규칙을 직접 소유하지 않습니다.
 - 다른 모듈의 `repository`, `adapter`, `controller`를 직접 import하는 방식은 기본 규칙으로 사용하지 않습니다.
 - `transactions`, `recurring-rules`, `dashboard`, `forecast`를 모듈 밖에서 참조할 때는 각 모듈의 `public.ts`만 공식 진입점으로 사용합니다.
@@ -83,8 +83,9 @@
 - 최소 실행 기준: `npm run check:quick`
 - PR 전 권장 기준: `npm run test`
 - 인증/세션, CORS, 보안 헤더, 브라우저/API 경계 정책을 바꿨다면 `npm run test:security:api`를 같이 봅니다.
-- `package.json` 또는 lockfile을 바꿨다면 `npm run audit:runtime`와 PR의 `dependency-review` 결과를 같이 확인합니다.
+- `package.json` 또는 lockfile을 바꿨다면 `npm run audit:runtime`와 CI `audit-runtime` 결과를 같이 확인합니다.
 - 브라우저 흐름을 건드리면 `npm run test:e2e`를 추가로 봅니다.
+- Next.js build 결과물, 공용 라우팅, 인증 복원, 운영 체크리스트 smoke에 영향을 줄 수 있다면 `npm run test:e2e:smoke:build`를 추가로 봅니다.
 - Prisma/MySQL 경계를 건드리면 `npm run test:prisma`를 대표 심화 검증으로 사용합니다.
 - 인증, 소유권 검증, 월말 계산 로직을 건드리면 관련 테스트를 같이 수정합니다.
 

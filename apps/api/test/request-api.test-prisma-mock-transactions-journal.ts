@@ -16,6 +16,7 @@ export function createTransactionsJournalPrismaMock(
     state,
     sortCollectedTransactions,
     findAccountingPeriod,
+    findPlanItem,
     resolveAccount,
     resolveCategory,
     resolveLedgerTransactionType,
@@ -67,6 +68,12 @@ export function createTransactionsJournalPrismaMock(
           status?: boolean;
           importBatchId?: boolean;
           matchedPlanItemId?: boolean;
+          matchedPlanItem?: {
+            select?: {
+              id?: boolean;
+              title?: boolean;
+            };
+          };
           fundingAccountId?: boolean;
           categoryId?: boolean;
           memo?: boolean;
@@ -167,6 +174,9 @@ export function createTransactionsJournalPrismaMock(
         const ledgerTransactionType = resolveLedgerTransactionType(
           candidate.ledgerTransactionTypeId
         );
+        const matchedPlanItem = candidate.matchedPlanItemId
+          ? findPlanItem(candidate.matchedPlanItemId)
+          : null;
         const postedJournalEntry = resolveJournalEntryByCollectedTransaction(
           candidate.id
         );
@@ -191,6 +201,20 @@ export function createTransactionsJournalPrismaMock(
               : {}),
             ...(args.select.matchedPlanItemId
               ? { matchedPlanItemId: candidate.matchedPlanItemId }
+              : {}),
+            ...(args.select.matchedPlanItem
+              ? {
+                  matchedPlanItem: matchedPlanItem
+                    ? {
+                        ...(args.select.matchedPlanItem.select?.id
+                          ? { id: matchedPlanItem.id }
+                          : {}),
+                        ...(args.select.matchedPlanItem.select?.title
+                          ? { title: matchedPlanItem.title }
+                          : {})
+                      }
+                    : null
+                }
               : {}),
             ...(args.select.fundingAccountId
               ? { fundingAccountId: candidate.fundingAccountId }
@@ -358,6 +382,12 @@ export function createTransactionsJournalPrismaMock(
           status?: boolean;
           importBatchId?: boolean;
           matchedPlanItemId?: boolean;
+          matchedPlanItem?: {
+            select?: {
+              id?: boolean;
+              title?: boolean;
+            };
+          };
           postedJournalEntry?: {
             select?: {
               id?: boolean;
@@ -403,6 +433,9 @@ export function createTransactionsJournalPrismaMock(
           const ledgerTransactionType = resolveLedgerTransactionType(
             candidate.ledgerTransactionTypeId
           );
+          const matchedPlanItem = candidate.matchedPlanItemId
+            ? findPlanItem(candidate.matchedPlanItemId)
+            : null;
           const postedJournalEntry = resolveJournalEntryByCollectedTransaction(
             candidate.id
           );
@@ -424,6 +457,20 @@ export function createTransactionsJournalPrismaMock(
               : {}),
             ...(args.select.matchedPlanItemId
               ? { matchedPlanItemId: candidate.matchedPlanItemId }
+              : {}),
+            ...(args.select.matchedPlanItem
+              ? {
+                  matchedPlanItem: matchedPlanItem
+                    ? {
+                        ...(args.select.matchedPlanItem.select?.id
+                          ? { id: matchedPlanItem.id }
+                          : {}),
+                        ...(args.select.matchedPlanItem.select?.title
+                          ? { title: matchedPlanItem.title }
+                          : {})
+                      }
+                    : null
+                }
               : {}),
             ...(args.select.postedJournalEntry
               ? {
@@ -501,6 +548,12 @@ export function createTransactionsJournalPrismaMock(
           status?: boolean;
           importBatchId?: boolean;
           matchedPlanItemId?: boolean;
+          matchedPlanItem?: {
+            select?: {
+              id?: boolean;
+              title?: boolean;
+            };
+          };
           postedJournalEntry?: {
             select?: {
               id?: boolean;
@@ -554,6 +607,9 @@ export function createTransactionsJournalPrismaMock(
         const postedJournalEntry = resolveJournalEntryByCollectedTransaction(
           created.id
         );
+        const matchedPlanItem = created.matchedPlanItemId
+          ? findPlanItem(created.matchedPlanItemId)
+          : null;
 
         return {
           ...(args.select.id ? { id: created.id } : {}),
@@ -566,6 +622,20 @@ export function createTransactionsJournalPrismaMock(
             : {}),
           ...(args.select.matchedPlanItemId
             ? { matchedPlanItemId: created.matchedPlanItemId }
+            : {}),
+          ...(args.select.matchedPlanItem
+            ? {
+                matchedPlanItem: matchedPlanItem
+                  ? {
+                      ...(args.select.matchedPlanItem.select?.id
+                        ? { id: matchedPlanItem.id }
+                        : {}),
+                      ...(args.select.matchedPlanItem.select?.title
+                        ? { title: matchedPlanItem.title }
+                        : {})
+                    }
+                  : null
+              }
             : {}),
           ...(args.select.postedJournalEntry
             ? {
@@ -637,6 +707,12 @@ export function createTransactionsJournalPrismaMock(
           status?: boolean;
           importBatchId?: boolean;
           matchedPlanItemId?: boolean;
+          matchedPlanItem?: {
+            select?: {
+              id?: boolean;
+              title?: boolean;
+            };
+          };
           postedJournalEntry?: {
             select?: {
               id?: boolean;
@@ -702,6 +778,9 @@ export function createTransactionsJournalPrismaMock(
         const ledgerTransactionType = resolveLedgerTransactionType(
           candidate.ledgerTransactionTypeId
         );
+        const matchedPlanItem = candidate.matchedPlanItemId
+          ? findPlanItem(candidate.matchedPlanItemId)
+          : null;
         const postedJournalEntry = resolveJournalEntryByCollectedTransaction(
           candidate.id
         );
@@ -719,6 +798,20 @@ export function createTransactionsJournalPrismaMock(
             : {}),
           ...(args.select.matchedPlanItemId
             ? { matchedPlanItemId: candidate.matchedPlanItemId }
+            : {}),
+          ...(args.select.matchedPlanItem
+            ? {
+                matchedPlanItem: matchedPlanItem
+                  ? {
+                      ...(args.select.matchedPlanItem.select?.id
+                        ? { id: matchedPlanItem.id }
+                        : {}),
+                      ...(args.select.matchedPlanItem.select?.title
+                        ? { title: matchedPlanItem.title }
+                        : {})
+                    }
+                  : null
+              }
             : {}),
           ...(args.select.postedJournalEntry
             ? {

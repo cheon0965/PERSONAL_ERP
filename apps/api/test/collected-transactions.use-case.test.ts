@@ -33,7 +33,7 @@ test('CreateCollectedTransactionUseCase executes ownership checks before persist
         ...record,
         businessDate: new Date('2026-03-03T00:00:00.000Z'),
         origin: 'MANUAL',
-        status: 'POSTED',
+        status: 'READY_TO_POST',
         postedJournalEntryId: null,
         postedJournalEntryNumber: null,
         account: { name: 'Main checking' },
@@ -75,9 +75,11 @@ test('CreateCollectedTransactionUseCase executes ownership checks before persist
     fundingAccountName: 'Main checking',
     categoryName: 'Fuel',
     sourceKind: 'MANUAL',
-    postingStatus: 'POSTED',
+    postingStatus: 'READY_TO_POST',
     postedJournalEntryId: null,
-    postedJournalEntryNumber: null
+    postedJournalEntryNumber: null,
+    matchedPlanItemId: null,
+    matchedPlanItemTitle: null
   });
 });
 
@@ -169,7 +171,9 @@ test('ListCollectedTransactionsUseCase maps stored collected transactions into t
       sourceKind: 'MANUAL',
       postingStatus: 'POSTED',
       postedJournalEntryId: null,
-      postedJournalEntryNumber: null
+      postedJournalEntryNumber: null,
+      matchedPlanItemId: null,
+      matchedPlanItemTitle: null
     }
   ]);
 });
@@ -188,7 +192,7 @@ const updateCollectedTransactionCommand = {
   memo: 'Adjusted after receipt review'
 };
 
-test('UpdateCollectedTransactionUseCase updates only pending collected transactions and maps the shared response shape', async () => {
+test('UpdateCollectedTransactionUseCase updates only unposted collected transactions and maps the shared response shape', async () => {
   const storeCalls: Array<Record<string, unknown>> = [];
   const transactionStore = {
     findRecentInWorkspace: async () => [],
@@ -202,7 +206,7 @@ test('UpdateCollectedTransactionUseCase updates only pending collected transacti
       categoryId: 'cat-1',
       memo: 'Full tank',
       origin: 'MANUAL',
-      status: 'PENDING',
+      status: 'READY_TO_POST',
       postedJournalEntryId: null,
       postedJournalEntryNumber: null
     }),
@@ -221,7 +225,7 @@ test('UpdateCollectedTransactionUseCase updates only pending collected transacti
         type: TransactionType.EXPENSE,
         amountWon: 91000,
         origin: 'MANUAL',
-        status: 'PENDING',
+        status: 'READY_TO_POST',
         postedJournalEntryId: null,
         postedJournalEntryNumber: null,
         account: { name: 'Main checking' },
@@ -262,9 +266,11 @@ test('UpdateCollectedTransactionUseCase updates only pending collected transacti
     fundingAccountName: 'Main checking',
     categoryName: 'Fuel',
     sourceKind: 'MANUAL',
-    postingStatus: 'PENDING',
+    postingStatus: 'READY_TO_POST',
     postedJournalEntryId: null,
-    postedJournalEntryNumber: null
+    postedJournalEntryNumber: null,
+    matchedPlanItemId: null,
+    matchedPlanItemTitle: null
   });
 });
 
@@ -307,12 +313,12 @@ test('UpdateCollectedTransactionUseCase rejects already posted collected transac
   );
 });
 
-test('DeleteCollectedTransactionUseCase deletes a pending collected transaction', async () => {
+test('DeleteCollectedTransactionUseCase deletes an unposted collected transaction', async () => {
   const storeCalls: Array<Record<string, unknown>> = [];
   const transactionStore = {
     findByIdInWorkspace: async () => ({
       id: 'txn-1',
-      status: 'PENDING',
+      status: 'READY_TO_POST',
       postedJournalEntryId: null
     }),
     deleteInWorkspace: async (

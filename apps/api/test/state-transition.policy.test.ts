@@ -17,6 +17,7 @@ import {
   assertCollectedTransactionCanBeConfirmed,
   assertCollectedTransactionCanBeCorrected
 } from '../src/modules/collected-transactions/collected-transaction-transition.policy';
+import { resolveManualCollectedTransactionStatus } from '../src/modules/collected-transactions/manual-collected-transaction-status.policy';
 import {
   assertJournalEntryCanBeCorrected,
   assertJournalEntryCanBeReversed
@@ -85,7 +86,7 @@ test('collected transaction transition policy allows confirmable and correctable
   );
   assert.doesNotThrow(() =>
     assertCollectedTransactionCanBeDeleted({
-      postingStatus: 'PENDING',
+      postingStatus: 'READY_TO_POST',
       postedJournalEntryId: null
     })
   );
@@ -128,6 +129,44 @@ test('collected transaction transition policy rejects locked period and invalid 
     (error: unknown) =>
       error instanceof ConflictException &&
       error.message === 'Only posted collected transactions can be corrected.'
+  );
+});
+
+test('collected transaction transition policy rejects confirmation before the ready-to-post stage', async () => {
+  await assert.rejects(
+    async () =>
+      assertCollectedTransactionCanBeConfirmed({
+        status: CollectedTransactionStatus.REVIEWED,
+        periodStatus: AccountingPeriodStatus.OPEN,
+        postedJournalEntryId: null
+      }),
+    (error: unknown) =>
+      error instanceof ConflictException &&
+      error.message ===
+        'Collected transaction in current status cannot be confirmed.'
+  );
+});
+
+test('manual collected transaction status policy classifies direct input transactions by type and category readiness', () => {
+  assert.equal(
+    resolveManualCollectedTransactionStatus({
+      type: 'TRANSFER'
+    }),
+    CollectedTransactionStatus.READY_TO_POST
+  );
+  assert.equal(
+    resolveManualCollectedTransactionStatus({
+      type: 'EXPENSE',
+      categoryId: 'cat-1'
+    }),
+    CollectedTransactionStatus.READY_TO_POST
+  );
+  assert.equal(
+    resolveManualCollectedTransactionStatus({
+      type: 'EXPENSE',
+      categoryId: null
+    }),
+    CollectedTransactionStatus.REVIEWED
   );
 });
 

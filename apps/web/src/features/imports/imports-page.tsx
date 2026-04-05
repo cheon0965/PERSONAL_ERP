@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
+  Box,
   Button,
   Grid,
   MenuItem,
@@ -13,7 +14,9 @@ import {
   Typography
 } from '@mui/material';
 import type {
+  CollectImportedRowPreview,
   CollectImportedRowRequest,
+  CollectImportedRowResponse,
   CreateImportBatchRequest,
   ImportBatchItem,
   ImportSourceKind
@@ -27,8 +30,11 @@ import {
   categoriesQueryKey,
   fundingAccountsQueryKey,
   getCategories,
-  getFundingAccounts
+  getFundingAccounts,
+  getReferenceDataReadiness,
+  referenceDataReadinessQueryKey
 } from '@/features/reference-data/reference-data.api';
+import { ReferenceDataReadinessAlert } from '@/features/reference-data/reference-data-readiness';
 import { collectedTransactionsQueryKey } from '@/features/transactions/transactions.api';
 import { formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
@@ -38,14 +44,16 @@ import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { SectionCard } from '@/shared/ui/section-card';
-import { StatusChip } from '@/shared/ui/status-chip';
+import { resolveStatusLabel, StatusChip } from '@/shared/ui/status-chip';
 import {
   buildImportBatchFallbackItem,
-  buildImportedCollectedFallbackItem,
+  buildImportedCollectedFallbackPreview,
+  buildImportedCollectedFallbackResponse,
   collectImportedRow,
   createImportBatch,
   getImportBatches,
-  importBatchesQueryKey
+  importBatchesQueryKey,
+  previewImportedRowCollection
 } from './imports.api';
 
 const sourceKindOptions: Array<{ value: ImportSourceKind; label: string }> = [
@@ -97,11 +105,15 @@ export function ImportsPage() {
   });
   const fundingAccountsQuery = useQuery({
     queryKey: fundingAccountsQueryKey,
-    queryFn: getFundingAccounts
+    queryFn: () => getFundingAccounts()
   });
   const categoriesQuery = useQuery({
     queryKey: categoriesQueryKey,
-    queryFn: getCategories
+    queryFn: () => getCategories()
+  });
+  const referenceDataReadinessQuery = useQuery({
+    queryKey: referenceDataReadinessQueryKey,
+    queryFn: getReferenceDataReadiness
   });
 
   const batches = React.useMemo(
@@ -136,6 +148,30 @@ export function ImportsPage() {
       null,
     [selectedBatchRows, selectedRowId]
   );
+  const normalizedCollectRequest = React.useMemo<CollectImportedRowRequest>(
+    () => ({
+      ...collectForm,
+      categoryId: normalizeOptionalValue(collectForm.categoryId),
+      memo: normalizeOptionalValue(collectForm.memo)
+    }),
+    [collectForm]
+  );
+  const selectedFundingAccount = React.useMemo(
+    () =>
+      (fundingAccountsQuery.data ?? []).find(
+        (candidate) => candidate.id === normalizedCollectRequest.fundingAccountId
+      ) ?? null,
+    [fundingAccountsQuery.data, normalizedCollectRequest.fundingAccountId]
+  );
+  const selectedCategory = React.useMemo(
+    () =>
+      normalizedCollectRequest.categoryId
+        ? (categoriesQuery.data ?? []).find(
+            (candidate) => candidate.id === normalizedCollectRequest.categoryId
+          ) ?? null
+        : null,
+    [categoriesQuery.data, normalizedCollectRequest.categoryId]
+  );
 
   React.useEffect(() => {
     if (!selectedBatch && selectedBatchId !== null) {
@@ -169,7 +205,7 @@ export function ImportsPage() {
   useDomainHelp({
     title: '업로드 배치 개요',
     description:
-      '업로드 배치는 원본 파일과 파싱 결과를 보존하는 수집 경계입니다. 정상 행만 명시적으로 수집 거래로 올리며, 맞는 계획 항목이 하나뿐이면 거래 분류 보완과 전표 준비 상태까지 자동으로 이어집니다.',
+      '업로드 배치는 원본 파일과 파싱 결과를 보존하는 수집 경계입니다. 정상 행만 명시적으로 수집 거래로 올리며, 승격 전에도 자동 판정 근거를 먼저 확인할 수 있습니다.',
     primaryEntity: '업로드 배치',
     relatedEntities: [
       '업로드 행',
@@ -180,8 +216,8 @@ export function ImportsPage() {
     truthSource:
       '업로드 배치는 파싱과 후보 수집 단계이며, 실제 회계 확정은 전표에서 이루어집니다.',
     readModelNote: currentPeriodQuery.data
-      ? `${currentPeriodQuery.data.monthLabel} 운영 월이 열려 있어 승격된 행을 바로 전표 준비 상태까지 자동으로 정리할 수 있습니다.`
-      : '현재 열린 운영 월이 없으면 업로드는 가능하지만 업로드 행 승격은 막힙니다.'
+      ? `${currentPeriodQuery.data.monthLabel} 운영 월이 열려 있어 승격 전에 자동 판정 근거를 확인하고 바로 수집 거래로 올릴 수 있습니다.`
+      : '현재 열린 운영 월이 없으면 업로드는 가능하지만 업로드 행 승격과 자동 판정 preview는 막힙니다.'
   });
 
   const createImportBatchMutation = useMutation({
@@ -207,6 +243,44 @@ export function ImportsPage() {
       });
     }
   });
+
+  const currentPeriod = currentPeriodQuery.data ?? null;
+  const selectedRowCanCollect =
+    Boolean(currentPeriod) &&
+    Boolean(selectedBatch) &&
+    Boolean(selectedRow) &&
+    selectedRow?.parseStatus === 'PARSED' &&
+    !selectedRow?.createdCollectedTransactionId;
+  const collectPreviewQuery = useQuery({
+    queryKey: [
+      'import-row-collect-preview',
+      selectedBatch?.id ?? null,
+      selectedRow?.id ?? null,
+      normalizedCollectRequest.type,
+      normalizedCollectRequest.fundingAccountId,
+      normalizedCollectRequest.categoryId ?? null
+    ],
+    queryFn: () =>
+      previewImportedRowCollection(
+        selectedBatch!.id,
+        selectedRow!.id,
+        normalizedCollectRequest,
+        buildImportedCollectedFallbackPreview({
+          request: normalizedCollectRequest,
+          row: selectedRow!,
+          fundingAccountId: selectedFundingAccount?.id ?? '',
+          fundingAccountName: selectedFundingAccount?.name ?? '선택 자금수단',
+          requestedCategoryId: normalizedCollectRequest.categoryId,
+          requestedCategoryName: selectedCategory?.name
+        })
+      ),
+    enabled:
+      isCollectDrawerOpen &&
+      Boolean(currentPeriod) &&
+      Boolean(selectedBatch) &&
+      Boolean(selectedRowCanCollect) &&
+      Boolean(normalizedCollectRequest.fundingAccountId)
+  });
   const collectImportedRowMutation = useMutation({
     mutationFn: (input: {
       importBatchId: string;
@@ -217,27 +291,20 @@ export function ImportsPage() {
         input.importBatchId,
         input.importedRow.id,
         input.request,
-        buildImportedCollectedFallbackItem({
+        buildImportedCollectedFallbackResponse({
           request: input.request,
           row: input.importedRow,
-          fundingAccountName:
-            fundingAccountsQuery.data?.find(
-              (candidate) => candidate.id === input.request.fundingAccountId
-            )?.name ?? '선택 자금수단',
-          categoryName:
-            categoriesQuery.data?.find(
-              (candidate) =>
-                candidate.id ===
-                normalizeOptionalValue(input.request.categoryId)
-            )?.name ?? '-'
+          fundingAccountId: selectedFundingAccount?.id ?? '',
+          fundingAccountName: selectedFundingAccount?.name ?? '선택 자금수단',
+          requestedCategoryId: input.request.categoryId,
+          requestedCategoryName: selectedCategory?.name
         })
       ),
-    onSuccess: async () => {
-        setFeedback({
-          severity: 'success',
-          message:
-            '선택한 업로드 행을 수집 거래로 올렸습니다. 조건이 맞는 경우 거래 분류 보완과 전표 준비도 함께 처리했습니다.'
-        });
+    onSuccess: async (created) => {
+      setFeedback({
+        severity: 'success',
+        message: buildCollectSuccessMessage(created)
+      });
       setCollectDrawerOpen(false);
       setSelectedRowId(null);
       await Promise.all([
@@ -248,14 +315,14 @@ export function ImportsPage() {
       ]);
     },
     onError: (error) => {
-        setFeedback({
-          severity: 'error',
-          message:
-            error instanceof Error
-              ? error.message
-              : '업로드 행을 수집 거래로 올리지 못했습니다.'
-        });
-      }
+      setFeedback({
+        severity: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : '업로드 행을 수집 거래로 올리지 못했습니다.'
+      });
+    }
   });
 
   const batchColumns = React.useMemo<GridColDef<ImportBatchItem>[]>(
@@ -329,58 +396,27 @@ export function ImportsPage() {
       {
         field: 'createdCollectedTransactionId',
         headerName: '승격 상태',
-        flex: 1,
-        renderCell: (params) => {
-          const row = params.row;
-
-          if (row.createdCollectedTransactionId) {
-            return (
-              <Button size="small" component={Link} href="/transactions">
-                생성됨
-              </Button>
-            );
-          }
-
-          if (row.parseStatus !== 'PARSED') {
-            return (
-              <Typography variant="body2" color="error.main">
-                오류 보류
-              </Typography>
-            );
-          }
-
-          return (
-            <Button
-              size="small"
-              variant={selectedRow?.id === row.id ? 'contained' : 'text'}
-              onClick={() => {
-                setSelectedRowId(row.id);
-                setCollectDrawerOpen(true);
-              }}
-            >
-              승격 준비
-            </Button>
-          );
-        }
+        flex: 1.4,
+        sortable: false,
+        renderCell: (params) =>
+          renderImportedRowStatusCell(params.row, {
+            selectedRow,
+            onPrepare: () => {
+              setSelectedRowId(params.row.id);
+              setCollectDrawerOpen(true);
+            }
+          })
       }
     ],
     [selectedRow]
   );
-
-  const currentPeriod = currentPeriodQuery.data ?? null;
-  const selectedRowCanCollect =
-    Boolean(currentPeriod) &&
-    Boolean(selectedBatch) &&
-    Boolean(selectedRow) &&
-    selectedRow?.parseStatus === 'PARSED' &&
-    !selectedRow?.createdCollectedTransactionId;
 
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
         eyebrow="업로드/자동화"
         title="업로드 배치"
-        description="원본 파일을 업로드 배치로 남기고, 정상 파싱 행만 선택적으로 수집 거래로 올리는 화면입니다. 맞는 계획 항목이 하나뿐이면 거래 분류 보완과 전표 준비까지 자동으로 이어집니다."
+        description="원본 파일을 업로드 배치로 남기고, 정상 파싱 행만 선택적으로 수집 거래로 올리는 화면입니다. 승격 전에 자동 판정 근거를 확인하고, 승격 뒤에는 실제 연결 결과를 다시 추적할 수 있습니다."
         primaryActionLabel="업로드 배치 등록"
         primaryActionOnClick={() => setUploadDrawerOpen(true)}
       />
@@ -405,7 +441,7 @@ export function ImportsPage() {
 
       <SectionCard
         title="현재 운영 기간"
-        description="배치 생성은 언제든 가능하지만, 업로드 행 승격과 자동 준비는 현재 열린 운영 월 안에서만 처리됩니다."
+        description="배치 생성은 언제든 가능하지만, 업로드 행 승격과 자동 준비 preview는 현재 열린 운영 월 안에서만 처리됩니다."
       >
         {currentPeriod ? (
           <Grid container spacing={appLayout.fieldGap}>
@@ -443,6 +479,11 @@ export function ImportsPage() {
         )}
       </SectionCard>
 
+      <ReferenceDataReadinessAlert
+        readiness={referenceDataReadinessQuery.data ?? null}
+        context="import-collection"
+      />
+
       <DataTableCard
         title="업로드 배치 목록"
         description="최근 업로드 배치를 확인하고, 선택한 배치의 업로드 행을 바로 검토할 수 있습니다."
@@ -452,14 +493,10 @@ export function ImportsPage() {
       />
 
       <DataTableCard
-        title={
-          selectedBatch
-            ? `${selectedBatch.fileName} 업로드 행`
-            : '업로드 행'
-        }
+        title={selectedBatch ? `${selectedBatch.fileName} 업로드 행` : '업로드 행'}
         description={
           selectedBatch
-            ? `${selectedBatch.fileName}의 행을 검토하고, 정상 파싱 행만 수집 거래로 승격할 수 있습니다.`
+            ? `${selectedBatch.fileName}의 행을 검토하고, 승격 전 preview와 승격 후 실제 연결 결과를 함께 확인할 수 있습니다.`
             : '먼저 업로드 배치를 선택해 주세요.'
         }
         rows={selectedBatchRows}
@@ -536,10 +573,14 @@ export function ImportsPage() {
         open={isCollectDrawerOpen}
         onClose={() => setCollectDrawerOpen(false)}
         title="행 승격"
-        description="선택한 업로드 행을 수집 거래로 올립니다. 맞는 계획 항목이 하나뿐이면 거래 분류 보완과 전표 준비 상태가 자동으로 적용됩니다."
+        description="선택한 업로드 행을 수집 거래로 올리기 전에, 계획 항목 매칭·카테고리 보완·다음 상태를 먼저 확인합니다."
       >
         {selectedRow ? (
           <Stack spacing={appLayout.fieldGap}>
+            <ReferenceDataReadinessAlert
+              readiness={referenceDataReadinessQuery.data ?? null}
+              context="import-collection"
+            />
             <div>
               <Typography variant="caption" color="text.secondary">
                 선택 행
@@ -554,9 +595,7 @@ export function ImportsPage() {
               </Typography>
               <Typography variant="body2">
                 {selectedRow.occurredOn} /{' '}
-                {selectedRow.amount == null
-                  ? '-'
-                  : formatWon(selectedRow.amount)}
+                {selectedRow.amount == null ? '-' : formatWon(selectedRow.amount)}
               </Typography>
             </div>
             <div>
@@ -639,13 +678,49 @@ export function ImportsPage() {
                 }));
               }}
             />
+
+            <Box
+              sx={{
+                px: appLayout.cardPadding,
+                py: { xs: 1.25, md: 1.5 },
+                borderRadius: 2,
+                bgcolor: 'background.default',
+                border: (theme) => `1px solid ${theme.palette.divider}`
+              }}
+            >
+              <Stack spacing={1.25}>
+                <Typography variant="subtitle2">자동 판정 요약</Typography>
+                {!currentPeriod ? (
+                  <Typography variant="body2" color="text.secondary">
+                    현재 열린 운영 기간이 없어 자동 판정 preview를 계산할 수 없습니다.
+                  </Typography>
+                ) : collectPreviewQuery.isLoading ? (
+                  <Typography variant="body2" color="text.secondary">
+                    현재 입력값 기준으로 자동 판정 결과를 계산하고 있습니다.
+                  </Typography>
+                ) : collectPreviewQuery.error ? (
+                  <Alert severity="warning" variant="outlined">
+                    {collectPreviewQuery.error instanceof Error
+                      ? collectPreviewQuery.error.message
+                      : '자동 판정 preview를 불러오지 못했습니다.'}
+                  </Alert>
+                ) : collectPreviewQuery.data ? (
+                  <CollectPreviewSummary preview={collectPreviewQuery.data} />
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    거래 유형과 자금수단을 선택하면 자동 판정 preview를 표시합니다.
+                  </Typography>
+                )}
+              </Stack>
+            </Box>
+
             <Button
               variant="contained"
               disabled={
                 collectImportedRowMutation.isPending ||
                 !selectedBatch ||
                 !selectedRowCanCollect ||
-                collectForm.fundingAccountId.length === 0
+                normalizedCollectRequest.fundingAccountId.length === 0
               }
               onClick={() => {
                 if (!selectedBatch || !selectedRow) {
@@ -656,11 +731,7 @@ export function ImportsPage() {
                 void collectImportedRowMutation.mutateAsync({
                   importBatchId: selectedBatch.id,
                   importedRow: selectedRow,
-                  request: {
-                    ...collectForm,
-                    categoryId: normalizeOptionalValue(collectForm.categoryId),
-                    memo: normalizeOptionalValue(collectForm.memo)
-                  }
+                  request: normalizedCollectRequest
                 });
               }}
             >
@@ -682,6 +753,124 @@ export function ImportsPage() {
       </FormDrawer>
     </Stack>
   );
+}
+
+function CollectPreviewSummary({
+  preview
+}: {
+  preview: CollectImportedRowPreview;
+}) {
+  return (
+    <Stack spacing={1}>
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={appLayout.fieldGap}
+      >
+        <SummaryBlock
+          label="예상 다음 상태"
+          content={<StatusChip label={preview.autoPreparation.nextWorkflowStatus} />}
+        />
+        <SummaryBlock
+          label="매칭 계획 항목"
+          content={
+            <Typography variant="body2">
+              {preview.autoPreparation.matchedPlanItemTitle ?? '자동 매칭 없음'}
+            </Typography>
+          }
+        />
+        <SummaryBlock
+          label="적용 카테고리"
+          content={
+            <Typography variant="body2">
+              {preview.autoPreparation.effectiveCategoryName ?? '미확정'}
+            </Typography>
+          }
+        />
+      </Stack>
+      {preview.autoPreparation.hasDuplicateSourceFingerprint ? (
+        <Alert severity="warning" variant="outlined">
+          같은 원본 식별값이 이미 있어 자동 확정을 보류합니다.
+        </Alert>
+      ) : null}
+      <Stack spacing={0.5}>
+        {preview.autoPreparation.decisionReasons.map((reason) => (
+          <Typography
+            key={`${preview.importedRowId}-${reason}`}
+            variant="body2"
+            color="text.secondary"
+          >
+            - {reason}
+          </Typography>
+        ))}
+      </Stack>
+    </Stack>
+  );
+}
+
+function SummaryBlock({
+  label,
+  content
+}: {
+  label: string;
+  content: React.ReactNode;
+}) {
+  return (
+    <Stack spacing={0.4} flex={1}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      {content}
+    </Stack>
+  );
+}
+
+function renderImportedRowStatusCell(
+  row: ImportedRowTableItem,
+  input: {
+    selectedRow: ImportedRowTableItem | null;
+    onPrepare: () => void;
+  }
+) {
+  if (row.collectionSummary) {
+    return (
+      <Stack direction="row" spacing={1} alignItems="center">
+        <StatusChip label={row.collectionSummary.createdCollectedTransactionStatus} />
+        <Button
+          size="small"
+          component={Link}
+          href={`/transactions?transactionId=${row.collectionSummary.createdCollectedTransactionId}`}
+        >
+          보기
+        </Button>
+      </Stack>
+    );
+  }
+
+  if (row.parseStatus !== 'PARSED') {
+    return (
+      <Typography variant="body2" color="error.main">
+        오류 보류
+      </Typography>
+    );
+  }
+
+  return (
+    <Button
+      size="small"
+      variant={input.selectedRow?.id === row.id ? 'contained' : 'text'}
+      onClick={input.onPrepare}
+    >
+      승격 준비
+    </Button>
+  );
+}
+
+function buildCollectSuccessMessage(result: CollectImportedRowResponse): string {
+  const summary = result.preview.autoPreparation;
+  const leadingReason = summary.decisionReasons[0];
+  const trailingReason = summary.decisionReasons[summary.decisionReasons.length - 1];
+
+  return `${result.collectedTransaction.title} 행을 수집 거래로 올렸습니다. ${resolveStatusLabel(result.collectedTransaction.postingStatus)} 상태이며, ${leadingReason} ${trailingReason}`;
 }
 
 function readParsedRowPreview(row: ImportBatchItem['rows'][number]): {

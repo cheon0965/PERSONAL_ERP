@@ -5,6 +5,10 @@ export type WorkspaceMembershipRole =
   RequiredWorkspaceContext['membershipRole'];
 
 export type WorkspaceAction =
+  | 'funding_account.create'
+  | 'funding_account.update'
+  | 'category.create'
+  | 'category.update'
   | 'accounting_period.open'
   | 'accounting_period.close'
   | 'accounting_period.reopen'
@@ -26,6 +30,10 @@ const workspaceActionAllowedRoles: Record<
   WorkspaceAction,
   readonly WorkspaceMembershipRole[]
 > = {
+  'funding_account.create': ['OWNER', 'MANAGER'],
+  'funding_account.update': ['OWNER', 'MANAGER'],
+  'category.create': ['OWNER', 'MANAGER'],
+  'category.update': ['OWNER', 'MANAGER'],
   'accounting_period.open': ['OWNER', 'MANAGER'],
   'accounting_period.close': ['OWNER'],
   'accounting_period.reopen': ['OWNER'],
@@ -45,6 +53,12 @@ const workspaceActionAllowedRoles: Record<
 };
 
 const workspaceActionDeniedMessages: Record<WorkspaceAction, string> = {
+  'funding_account.create':
+    'Only owners and managers can create funding accounts.',
+  'funding_account.update':
+    'Only owners and managers can update funding accounts.',
+  'category.create': 'Only owners and managers can create categories.',
+  'category.update': 'Only owners and managers can update categories.',
   'accounting_period.open':
     'Only owners and managers can open accounting periods.',
   'accounting_period.close': 'Only owners can close accounting periods.',

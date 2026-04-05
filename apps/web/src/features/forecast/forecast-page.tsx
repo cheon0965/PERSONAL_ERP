@@ -1,8 +1,10 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import {
   Alert,
+  Button,
   Chip,
   Grid,
   List,
@@ -125,19 +127,45 @@ export function ForecastPage() {
           title="표시할 운영 기간이 없습니다"
           description="전망 화면은 운영 월이 하나 이상 있어야 동작합니다."
         >
-          <Typography variant="body2" color="text.secondary">
-            먼저 운영 기간을 열어 두면 현재 운영 월 기준 전망을 계산할 수 있습니다.
-          </Typography>
+          <Stack spacing={1.5}>
+            <Typography variant="body2" color="text.secondary">
+              먼저 운영 기간을 열어 두면 현재 운영 월 기준 전망을 계산할 수
+              있습니다.
+            </Typography>
+            <div>
+              <Button component={Link} href="/periods" variant="contained">
+                운영 월 열기
+              </Button>
+            </div>
+          </Stack>
         </SectionCard>
       ) : forecast == null ? (
         <SectionCard
           title="전망 데이터가 없습니다"
           description="선택한 운영 월의 전망 데이터를 아직 만들 수 없습니다."
         >
-          <Typography variant="body2" color="text.secondary">
-            이 기간에 전표나 계획 항목이 아직 없거나, 기간 자체가 아직 준비되지
-            않았을 수 있습니다.
-          </Typography>
+          <Stack spacing={1.5}>
+            <Typography variant="body2" color="text.secondary">
+              이 기간에 전표나 계획 항목이 아직 없거나, 기간 자체가 아직
+              준비되지 않았을 수 있습니다.
+            </Typography>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              useFlexGap
+              flexWrap="wrap"
+            >
+              <Button component={Link} href="/plan-items" variant="contained">
+                계획 항목 보기
+              </Button>
+              <Button component={Link} href="/journal-entries" variant="outlined">
+                전표 보기
+              </Button>
+              <Button component={Link} href="/periods" variant="text">
+                운영 월 보기
+              </Button>
+            </Stack>
+          </Stack>
         </SectionCard>
       ) : (
         <Stack spacing={appLayout.sectionGap}>

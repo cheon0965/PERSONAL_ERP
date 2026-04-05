@@ -6,6 +6,9 @@ const colorMap: Record<
   string,
   'default' | 'success' | 'warning' | 'error' | 'primary' | 'info'
 > = {
+  COLLECTED: 'warning',
+  REVIEWED: 'info',
+  READY_TO_POST: 'primary',
   POSTED: 'success',
   CORRECTED: 'info',
   REVERSED: 'warning',
@@ -21,6 +24,9 @@ const colorMap: Record<
 };
 
 const labelMap: Record<string, string> = {
+  COLLECTED: '수집됨',
+  REVIEWED: '검토됨',
+  READY_TO_POST: '전표 준비',
   POSTED: '확정',
   CORRECTED: '정정됨',
   REVERSED: '반전됨',
@@ -35,10 +41,14 @@ const labelMap: Record<string, string> = {
   PAUSED: '일시중지'
 };
 
+export function resolveStatusLabel(label: string): string {
+  return labelMap[label] ?? label;
+}
+
 export function StatusChip({ label }: { label: string }) {
   return (
     <Chip
-      label={labelMap[label] ?? label}
+      label={resolveStatusLabel(label)}
       color={colorMap[label] ?? 'default'}
       size="small"
     />

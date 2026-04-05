@@ -6,13 +6,26 @@ export const createdCollectedTransactionSelect =
     occurredOn: true,
     title: true,
     amount: true,
+    status: true,
+    matchedPlanItem: {
+      select: {
+        id: true,
+        title: true
+      }
+    },
     fundingAccount: {
       select: {
         name: true
       }
     },
+    ledgerTransactionType: {
+      select: {
+        flowKind: true
+      }
+    },
     category: {
       select: {
+        id: true,
         name: true
       }
     }
@@ -58,6 +71,7 @@ export type CollectingPeriodRecord = Prisma.AccountingPeriodGetPayload<{
 
 export type DraftPlanItemCandidate = {
   id: string;
+  title: string;
   plannedAmount: number;
   plannedDate: Date;
   fundingAccountId: string;

@@ -6,8 +6,9 @@ import {
 } from '@nestjs/common';
 import type {
   AuthenticatedUser,
+  CollectImportedRowPreview,
   CollectImportedRowRequest,
-  CollectedTransactionItem
+  CollectImportedRowResponse
 } from '@personal-erp/contracts';
 import { PlanItemStatus, Prisma } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
@@ -16,6 +17,10 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { AccountingPeriodsService } from '../accounting-periods/accounting-periods.service';
 import { readCollectingAccountingPeriodStatuses } from '../accounting-periods/accounting-period-transition.policy';
 import { resolveImportedRowAutoPreparation } from './imported-row-auto-preparation.policy';
+import {
+  buildCollectImportedRowPreview,
+  buildImportedRowAutoPreparationSummary
+} from './imported-row-auto-preparation-summary';
 import { mapCreatedCollectedTransactionToItem } from './imported-row-collection.mapper';
 import {
   assertImportedRowCanBeCollected,
@@ -36,6 +41,26 @@ import {
 
 type WorkspaceContext = ReturnType<typeof requireCurrentWorkspace>;
 type PrismaClientLike = PrismaService | Prisma.TransactionClient;
+type RowCollectionAssessment = {
+  occurredOn: Date;
+  normalizedRow: {
+    occurredOn: string;
+    title: string;
+    amount: number;
+  };
+  ledgerTransactionTypeId: string;
+  fundingAccount: {
+    id: string;
+    name: string;
+  };
+  matchedPlanItem: DraftPlanItemCandidate | null;
+  effectiveCategory: {
+    id: string;
+    name: string;
+  } | null;
+  sourceFingerprint: string;
+  preview: CollectImportedRowPreview;
+};
 
 @Injectable()
 export class ImportedRowCollectionService {
@@ -49,7 +74,7 @@ export class ImportedRowCollectionService {
     importBatchId: string,
     importedRowId: string,
     input: CollectImportedRowRequest
-  ): Promise<CollectedTransactionItem> {
+  ): Promise<CollectImportedRowResponse> {
     const workspace = requireCurrentWorkspace(user);
     assertWorkspaceActionAllowed(
       workspace.membershipRole,
@@ -69,7 +94,7 @@ export class ImportedRowCollectionService {
         parsedRow.occurredOn
       );
 
-    const created = await this.prisma.$transaction((tx) =>
+    return this.prisma.$transaction((tx) =>
       this.collectRowInTransaction({
         tx,
         workspace,
@@ -79,8 +104,43 @@ export class ImportedRowCollectionService {
         currentPeriodId: currentPeriod.id
       })
     );
+  }
 
-    return mapCreatedCollectedTransactionToItem(created, input.type);
+  async previewRow(
+    user: AuthenticatedUser,
+    importBatchId: string,
+    importedRowId: string,
+    input: CollectImportedRowRequest
+  ): Promise<CollectImportedRowPreview> {
+    const workspace = requireCurrentWorkspace(user);
+    assertWorkspaceActionAllowed(
+      workspace.membershipRole,
+      'collected_transaction.create'
+    );
+
+    const importedRow = await this.readCollectableImportedRow(
+      this.prisma,
+      workspace,
+      importBatchId,
+      importedRowId
+    );
+    const parsedRow = readNormalizedImportedRow(importedRow);
+    const currentPeriod =
+      await this.accountingPeriodsService.assertCollectingDateAllowed(
+        user,
+        parsedRow.occurredOn
+      );
+
+    const assessment = await this.evaluateRowCollection({
+      client: this.prisma,
+      workspace,
+      importBatchId,
+      importedRowId,
+      input,
+      currentPeriodId: currentPeriod.id
+    });
+
+    return assessment.preview;
   }
 
   private async collectRowInTransaction(input: {
@@ -90,16 +150,68 @@ export class ImportedRowCollectionService {
     importedRowId: string;
     input: CollectImportedRowRequest;
     currentPeriodId: string;
-  }): Promise<CreatedCollectedTransactionRecord> {
+  }): Promise<CollectImportedRowResponse> {
+    const assessment = await this.evaluateRowCollection({
+      client: input.tx,
+      workspace: input.workspace,
+      importBatchId: input.importBatchId,
+      importedRowId: input.importedRowId,
+      input: input.input,
+      currentPeriodId: input.currentPeriodId
+    });
+    const matchedPlanItemId =
+      assessment.preview.autoPreparation.allowPlanItemMatch &&
+      assessment.matchedPlanItem
+        ? assessment.matchedPlanItem.id
+        : null;
+    const createdCollectedTransaction =
+      await this.createCollectedTransactionRecord({
+        tx: input.tx,
+        workspace: input.workspace,
+        importBatchId: input.importBatchId,
+        importedRowId: input.importedRowId,
+        periodId: input.currentPeriodId,
+        matchedPlanItemId,
+        ledgerTransactionTypeId: assessment.ledgerTransactionTypeId,
+        fundingAccountId: assessment.fundingAccount.id,
+        categoryId: assessment.effectiveCategory?.id ?? null,
+        title: assessment.normalizedRow.title,
+        occurredOn: assessment.occurredOn,
+        amount: assessment.normalizedRow.amount,
+        status: assessment.preview.autoPreparation
+          .nextWorkflowStatus as Prisma.CollectedTransactionCreateInput['status'],
+        sourceFingerprint: assessment.sourceFingerprint,
+        memo: input.input.memo
+      });
+
+    await this.markPlanItemMatched(input.tx, matchedPlanItemId);
+
+    return {
+      collectedTransaction: mapCreatedCollectedTransactionToItem(
+        createdCollectedTransaction,
+        input.input.type
+      ),
+      preview: assessment.preview
+    };
+  }
+
+  private async evaluateRowCollection(input: {
+    client: PrismaClientLike;
+    workspace: WorkspaceContext;
+    importBatchId: string;
+    importedRowId: string;
+    input: CollectImportedRowRequest;
+    currentPeriodId: string;
+  }): Promise<RowCollectionAssessment> {
     const row = await this.readCollectableImportedRow(
-      input.tx,
+      input.client,
       input.workspace,
       input.importBatchId,
       input.importedRowId
     );
     const normalizedRow = readNormalizedImportedRow(row);
     const currentCollectingPeriod = await this.readCurrentCollectingPeriod(
-      input.tx,
+      input.client,
       input.workspace,
       input.currentPeriodId
     );
@@ -108,23 +220,23 @@ export class ImportedRowCollectionService {
       currentCollectingPeriod
     );
     const fundingAccount = await this.readFundingAccount(
-      input.tx,
+      input.client,
       input.workspace,
       input.input.fundingAccountId
     );
-    const ledgerTransactionType = await this.readLedgerTransactionType(
-      input.tx,
+    const ledgerTransactionTypeId = await this.readLedgerTransactionTypeId(
+      input.client,
       input.workspace,
       input.input.type
     );
     const matchedPlanItem = await this.readMatchedPlanItemCandidate(
-      input.tx,
+      input.client,
       input.workspace,
       currentCollectingPeriod.id,
       normalizedRow.amount,
       occurredOn,
       fundingAccount.id,
-      ledgerTransactionType.id,
+      ledgerTransactionTypeId,
       input.input.categoryId ?? null
     );
     const sourceFingerprint = resolveCollectedSourceFingerprint({
@@ -136,7 +248,7 @@ export class ImportedRowCollectionService {
     });
     const hasDuplicateSourceFingerprint =
       await this.hasDuplicateSourceFingerprint(
-        input.tx,
+        input.client,
         input.workspace,
         sourceFingerprint
       );
@@ -146,37 +258,47 @@ export class ImportedRowCollectionService {
       matchedPlanItemCategoryId: matchedPlanItem?.categoryId ?? null,
       hasDuplicateSourceFingerprint
     });
-    const category = await this.readEffectiveCategory(
-      input.tx,
+    const effectiveCategory = await this.readEffectiveCategory(
+      input.client,
       input.workspace,
       autoPreparation.effectiveCategoryId
     );
-    const matchedPlanItemId =
-      autoPreparation.allowPlanItemMatch && matchedPlanItem
-        ? matchedPlanItem.id
-        : null;
-    const createdCollectedTransaction =
-      await this.createCollectedTransactionRecord({
-        tx: input.tx,
-        workspace: input.workspace,
-        importBatchId: input.importBatchId,
+    const requestedCategoryName = input.input.categoryId
+      ? effectiveCategory?.name ?? null
+      : null;
+    const autoPreparationSummary = buildImportedRowAutoPreparationSummary({
+      type: input.input.type,
+      requestedCategoryId: input.input.categoryId ?? null,
+      matchedPlanItemId: matchedPlanItem?.id ?? null,
+      matchedPlanItemTitle: matchedPlanItem?.title ?? null,
+      effectiveCategoryId: effectiveCategory?.id ?? null,
+      effectiveCategoryName: effectiveCategory?.name ?? null,
+      nextWorkflowStatus: autoPreparation.nextStatus,
+      hasDuplicateSourceFingerprint,
+      allowPlanItemMatch: autoPreparation.allowPlanItemMatch
+    });
+
+    return {
+      occurredOn,
+      normalizedRow,
+      ledgerTransactionTypeId,
+      fundingAccount,
+      matchedPlanItem,
+      effectiveCategory,
+      sourceFingerprint,
+      preview: buildCollectImportedRowPreview({
         importedRowId: row.id,
-        periodId: currentCollectingPeriod.id,
-        matchedPlanItemId,
-        ledgerTransactionTypeId: ledgerTransactionType.id,
-        fundingAccountId: fundingAccount.id,
-        categoryId: category?.id ?? null,
-        title: normalizedRow.title,
         occurredOn,
-        amount: normalizedRow.amount,
-        status: autoPreparation.nextStatus,
-        sourceFingerprint,
-        memo: input.input.memo
-      });
-
-    await this.markPlanItemMatched(input.tx, matchedPlanItemId);
-
-    return createdCollectedTransaction;
+        title: normalizedRow.title,
+        amountWon: normalizedRow.amount,
+        fundingAccountId: fundingAccount.id,
+        fundingAccountName: fundingAccount.name,
+        type: input.input.type,
+        requestedCategoryId: input.input.categoryId ?? null,
+        requestedCategoryName,
+        autoPreparation: autoPreparationSummary
+      })
+    };
   }
 
   private async readCollectableImportedRow(
@@ -202,7 +324,7 @@ export class ImportedRowCollectionService {
   }
 
   private async readCurrentCollectingPeriod(
-    tx: Prisma.TransactionClient,
+    tx: PrismaClientLike,
     workspace: WorkspaceContext,
     periodId: string
   ): Promise<CollectingPeriodRecord> {
@@ -228,7 +350,7 @@ export class ImportedRowCollectionService {
   }
 
   private async readFundingAccount(
-    tx: Prisma.TransactionClient,
+    tx: PrismaClientLike,
     workspace: WorkspaceContext,
     fundingAccountId: string
   ): Promise<{ id: string; name: string }> {
@@ -251,11 +373,11 @@ export class ImportedRowCollectionService {
     return fundingAccount;
   }
 
-  private async readLedgerTransactionType(
-    tx: Prisma.TransactionClient,
+  private async readLedgerTransactionTypeId(
+    tx: PrismaClientLike,
     workspace: WorkspaceContext,
     type: CollectImportedRowRequest['type']
-  ): Promise<{ id: string }> {
+  ): Promise<string> {
     const ledgerTransactionType = await tx.ledgerTransactionType.findFirst({
       where: {
         tenantId: workspace.tenantId,
@@ -274,11 +396,11 @@ export class ImportedRowCollectionService {
       );
     }
 
-    return ledgerTransactionType;
+    return ledgerTransactionType.id;
   }
 
   private async readDraftPlanItemCandidates(
-    tx: Prisma.TransactionClient,
+    tx: PrismaClientLike,
     workspace: WorkspaceContext,
     periodId: string
   ): Promise<DraftPlanItemCandidate[]> {
@@ -294,6 +416,7 @@ export class ImportedRowCollectionService {
       },
       select: {
         id: true,
+        title: true,
         plannedAmount: true,
         plannedDate: true,
         fundingAccountId: true,
@@ -304,7 +427,7 @@ export class ImportedRowCollectionService {
   }
 
   private async readMatchedPlanItemCandidate(
-    tx: Prisma.TransactionClient,
+    tx: PrismaClientLike,
     workspace: WorkspaceContext,
     periodId: string,
     amount: number,
@@ -330,7 +453,7 @@ export class ImportedRowCollectionService {
   }
 
   private async hasDuplicateSourceFingerprint(
-    tx: Prisma.TransactionClient,
+    tx: PrismaClientLike,
     workspace: WorkspaceContext,
     sourceFingerprint: string
   ): Promise<boolean> {
@@ -406,7 +529,7 @@ export class ImportedRowCollectionService {
   }
 
   private async readEffectiveCategory(
-    tx: Prisma.TransactionClient,
+    tx: PrismaClientLike,
     workspace: WorkspaceContext,
     categoryId: string | null
   ): Promise<{ id: string; name: string } | null> {

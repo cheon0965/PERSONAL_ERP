@@ -1,7 +1,9 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 import {
   Alert,
   Button,
@@ -36,49 +38,10 @@ import {
   planItemsQueryKey
 } from './plan-items.api';
 
-const columns: GridColDef<PlanItemItem>[] = [
-  {
-    field: 'plannedDate',
-    headerName: '계획일',
-    flex: 0.9,
-    valueFormatter: (value) => formatDate(String(value))
-  },
-  {
-    field: 'title',
-    headerName: '제목',
-    flex: 1.4
-  },
-  {
-    field: 'plannedAmount',
-    headerName: '계획 금액',
-    flex: 1,
-    valueFormatter: (value) => formatWon(Number(value))
-  },
-  {
-    field: 'ledgerTransactionTypeName',
-    headerName: '거래 유형',
-    flex: 1
-  },
-  {
-    field: 'fundingAccountName',
-    headerName: '자금수단',
-    flex: 1
-  },
-  {
-    field: 'categoryName',
-    headerName: '카테고리',
-    flex: 1
-  },
-  {
-    field: 'status',
-    headerName: '상태',
-    flex: 0.9,
-    renderCell: (params) => <StatusChip label={String(params.value)} />
-  }
-];
-
 export function PlanItemsPage() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const highlightedPlanItemId = searchParams?.get('planItemId') ?? null;
   const { user } = useAuthSession();
   const [selectedPeriodId, setSelectedPeriodId] = React.useState('');
   const [feedback, setFeedback] = React.useState<{
@@ -133,11 +96,78 @@ export function PlanItemsPage() {
     membershipRole === 'MANAGER' ||
     membershipRole === 'EDITOR';
   const view = planItemsQuery.data;
+  const tableRows = React.useMemo(() => {
+    const items = view?.items ?? (selectedPeriod
+      ? buildPlanItemsFallbackView(selectedPeriod).items
+      : []);
+    if (!highlightedPlanItemId) {
+      return items;
+    }
+
+    const highlighted = items.find((item) => item.id === highlightedPlanItemId);
+    if (!highlighted) {
+      return items;
+    }
+
+    return [highlighted, ...items.filter((item) => item.id !== highlightedPlanItemId)];
+  }, [highlightedPlanItemId, selectedPeriod, view?.items]);
+
+  const columns = React.useMemo<GridColDef<PlanItemItem>[]>(
+    () => [
+      {
+        field: 'plannedDate',
+        headerName: '계획일',
+        flex: 0.9,
+        valueFormatter: (value) => formatDate(String(value))
+      },
+      {
+        field: 'title',
+        headerName: '제목',
+        flex: 1.4
+      },
+      {
+        field: 'plannedAmount',
+        headerName: '계획 금액',
+        flex: 1,
+        valueFormatter: (value) => formatWon(Number(value))
+      },
+      {
+        field: 'ledgerTransactionTypeName',
+        headerName: '거래 유형',
+        flex: 1
+      },
+      {
+        field: 'fundingAccountName',
+        headerName: '자금수단',
+        flex: 1
+      },
+      {
+        field: 'categoryName',
+        headerName: '카테고리',
+        flex: 1
+      },
+      {
+        field: 'status',
+        headerName: '상태',
+        flex: 0.9,
+        renderCell: (params) => <StatusChip label={String(params.value)} />
+      },
+      {
+        field: 'executionLink',
+        headerName: '실행 연결',
+        flex: 1.6,
+        sortable: false,
+        filterable: false,
+        renderCell: (params) => <PlanItemLinkCell item={params.row} />
+      }
+    ],
+    []
+  );
 
   useDomainHelp({
     title: '계획 항목 개요',
     description:
-      '반복 규칙을 기준으로 현재 운영 월 안의 계획 항목을 생성합니다. 계획 항목은 아직 확정 전 단계의 운영 계획이며, 이후 수집 거래와 전표 흐름에서 실제화됩니다.',
+      '반복 규칙을 기준으로 현재 운영 월 안의 계획 항목을 생성합니다. 이제 이 화면에서 실제 수집 거래와 전표 연결까지 함께 추적할 수 있습니다.',
     primaryEntity: '계획 항목',
     relatedEntities: [
       '반복 규칙',
@@ -149,7 +179,7 @@ export function PlanItemsPage() {
     truthSource:
       '계획 항목은 반복 규칙에서 파생된 계획 기준이며, 회계 확정은 이후 수집 거래와 전표에서 이뤄집니다.',
     readModelNote:
-      '현재 화면은 특정 기간 안의 계획 항목을 생성하고 상태를 검토하는 운영 화면입니다.'
+      '현재 화면은 특정 기간 안의 계획 항목을 생성하고, 실제 거래와 공식 전표로 어디까지 이어졌는지 추적하는 운영 화면입니다.'
   });
 
   return (
@@ -157,8 +187,15 @@ export function PlanItemsPage() {
       <PageHeader
         eyebrow="계획 계층"
         title="계획 항목"
-        description="반복 규칙을 현재 운영 월의 계획 항목으로 생성하고, 계획 상태와 예상 금액을 확인합니다. 아직 회계 확정은 아니며 이후 수집 거래와 전표로 이어집니다."
+        description="반복 규칙을 현재 운영 월의 계획 항목으로 생성하고, 계획이 실제 수집 거래와 전표로 어디까지 이어졌는지 함께 추적합니다."
       />
+
+      {highlightedPlanItemId ? (
+        <Alert severity="info" variant="outlined">
+          다른 화면에서 연결된 계획 항목을 열었습니다. 관련 항목을 목록 상단에
+          먼저 배치했습니다.
+        </Alert>
+      ) : null}
 
       {feedback ? (
         <Alert severity={feedback.severity} variant="outlined">
@@ -207,7 +244,11 @@ export function PlanItemsPage() {
             ))}
           </TextField>
 
-          <div>
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={1}
+            alignItems={{ xs: 'stretch', md: 'center' }}
+          >
             <Button
               variant="contained"
               color="inherit"
@@ -238,7 +279,10 @@ export function PlanItemsPage() {
             >
               {mutation.isPending ? '생성 중...' : '계획 항목 생성'}
             </Button>
-          </div>
+            <Button component={Link} href="/imports" variant="text">
+              업로드 배치로 이동
+            </Button>
+          </Stack>
 
           {!canGenerate ? (
             <Alert severity="info" variant="outlined">
@@ -287,10 +331,8 @@ export function PlanItemsPage() {
           <Grid size={{ xs: 12, md: 8 }}>
             <DataTableCard
               title="기간 계획 항목"
-              description="반복 규칙에서 파생된 계획 항목 목록입니다. 아직 수집 거래나 전표로 확정되기 전 단계입니다."
-              rows={
-                view?.items ?? buildPlanItemsFallbackView(selectedPeriod).items
-              }
+              description="반복 규칙에서 파생된 계획 항목 목록입니다. 이제 실제 수집 거래와 전표 연결까지 함께 확인할 수 있습니다."
+              rows={tableRows}
               columns={columns}
               height={420}
             />
@@ -298,6 +340,43 @@ export function PlanItemsPage() {
         </Grid>
       )}
     </Stack>
+  );
+}
+
+function PlanItemLinkCell({ item }: { item: PlanItemItem }) {
+  if (item.postedJournalEntryId) {
+    return (
+      <Button
+        size="small"
+        component={Link}
+        href={`/journal-entries?entryId=${item.postedJournalEntryId}`}
+      >
+        {item.postedJournalEntryNumber ?? '전표 보기'}
+      </Button>
+    );
+  }
+
+  if (item.matchedCollectedTransactionId) {
+    return (
+      <Stack direction="row" spacing={1} alignItems="center">
+        {item.matchedCollectedTransactionStatus ? (
+          <StatusChip label={item.matchedCollectedTransactionStatus} />
+        ) : null}
+        <Button
+          size="small"
+          component={Link}
+          href={`/transactions?transactionId=${item.matchedCollectedTransactionId}`}
+        >
+          수집 거래
+        </Button>
+      </Stack>
+    );
+  }
+
+  return (
+    <Typography variant="body2" color="text.secondary">
+      아직 실제 거래 연결 없음
+    </Typography>
   );
 }
 

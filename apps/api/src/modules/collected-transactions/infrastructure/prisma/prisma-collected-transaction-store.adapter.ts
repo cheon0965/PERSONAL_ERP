@@ -19,6 +19,7 @@ import {
   assertCollectedTransactionCanBeDeleted,
   assertCollectedTransactionCanBeUpdated
 } from '../../collected-transaction-transition.policy';
+import { resolveManualCollectedTransactionStatus } from '../../manual-collected-transaction-status.policy';
 import type {
   CollectedTransactionWorkspaceScope,
   CreateCollectedTransactionRecord,
@@ -36,6 +37,9 @@ type CollectedTransactionRecord = {
   status: CollectedTransactionStatus;
   importBatchId: string | null;
   matchedPlanItemId: string | null;
+  matchedPlanItem: {
+    title: string;
+  } | null;
   postedJournalEntry: {
     id: string;
     entryNumber: string;
@@ -98,8 +102,11 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
   async createInWorkspace(
     record: CreateCollectedTransactionRecord
   ): Promise<StoredCollectedTransaction> {
-    const ledgerTransactionTypeId =
-      await this.findLedgerTransactionTypeId(record.tenantId, record.ledgerId, record.type);
+    const ledgerTransactionTypeId = await this.findLedgerTransactionTypeId(
+      record.tenantId,
+      record.ledgerId,
+      record.type
+    );
 
     const created = await this.prisma.collectedTransaction.create({
       data: {
@@ -112,7 +119,10 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
         title: record.title,
         occurredOn: record.businessDate,
         amount: record.amountWon,
-        status: CollectedTransactionStatus.COLLECTED,
+        status: resolveManualCollectedTransactionStatus({
+          type: record.type,
+          categoryId: record.categoryId
+        }),
         memo: record.memo
       },
       select: buildCollectedTransactionSelect()
@@ -151,12 +161,13 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
         postedJournalEntryId: current.postedJournalEntry?.id ?? null
       });
 
-      const ledgerTransactionTypeId = await this.findLedgerTransactionTypeIdInClient(
-        tx,
-        workspace.tenantId,
-        workspace.ledgerId,
-        record.type
-      );
+      const ledgerTransactionTypeId =
+        await this.findLedgerTransactionTypeIdInClient(
+          tx,
+          workspace.tenantId,
+          workspace.ledgerId,
+          record.type
+        );
 
       const result = await tx.collectedTransaction.updateMany({
         where: {
@@ -179,6 +190,10 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
           title: record.title,
           occurredOn: record.businessDate,
           amount: record.amountWon,
+          status: resolveManualCollectedTransactionStatus({
+            type: record.type,
+            categoryId: record.categoryId
+          }),
           memo: record.memo
         }
       });
@@ -303,18 +318,17 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
     ledgerId: string,
     type: CollectedTransactionType
   ): Promise<string> {
-    const ledgerTransactionType =
-      await client.ledgerTransactionType.findFirst({
-        where: {
-          tenantId,
-          ledgerId,
-          code: mapCollectedTransactionTypeToLedgerTransactionCode(type),
-          isActive: true
-        },
-        select: {
-          id: true
-        }
-      });
+    const ledgerTransactionType = await client.ledgerTransactionType.findFirst({
+      where: {
+        tenantId,
+        ledgerId,
+        code: mapCollectedTransactionTypeToLedgerTransactionCode(type),
+        isActive: true
+      },
+      select: {
+        id: true
+      }
+    });
 
     if (!ledgerTransactionType) {
       throw new InternalServerErrorException(
@@ -335,6 +349,11 @@ function buildCollectedTransactionSelect() {
     status: true,
     importBatchId: true,
     matchedPlanItemId: true,
+    matchedPlanItem: {
+      select: {
+        title: true
+      }
+    },
     postedJournalEntry: {
       select: {
         id: true,
@@ -389,6 +408,8 @@ function mapCollectedTransactionRecordToStoredTransaction(
           name: transaction.category.name
         }
       : null,
+    matchedPlanItemId: transaction.matchedPlanItemId,
+    matchedPlanItemTitle: transaction.matchedPlanItem?.title ?? null,
     postedJournalEntryId: transaction.postedJournalEntry?.id ?? null,
     postedJournalEntryNumber:
       transaction.postedJournalEntry?.entryNumber ?? null
@@ -460,16 +481,19 @@ function mapCollectedTransactionPostingStatus(
   status: CollectedTransactionStatus
 ): CollectedTransactionPostingStatus {
   switch (status) {
+    case CollectedTransactionStatus.COLLECTED:
+      return 'COLLECTED';
+    case CollectedTransactionStatus.REVIEWED:
+      return 'REVIEWED';
+    case CollectedTransactionStatus.READY_TO_POST:
+      return 'READY_TO_POST';
     case CollectedTransactionStatus.POSTED:
       return 'POSTED';
     case CollectedTransactionStatus.CORRECTED:
       return 'CORRECTED';
     case CollectedTransactionStatus.LOCKED:
-      return 'CANCELLED';
-    case CollectedTransactionStatus.COLLECTED:
-    case CollectedTransactionStatus.REVIEWED:
-    case CollectedTransactionStatus.READY_TO_POST:
+      return 'LOCKED';
     default:
-      return 'PENDING';
+      return 'REVIEWED';
   }
 }

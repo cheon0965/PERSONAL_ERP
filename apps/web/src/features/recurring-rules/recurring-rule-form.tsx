@@ -5,14 +5,17 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Grid, MenuItem, Stack, TextField } from '@mui/material';
 import type {
+  FundingAccountItem,
   RecurringRuleDetailItem,
   RecurringRuleItem,
   UpdateRecurringRuleRequest
 } from '@personal-erp/contracts';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
+  categoriesManagementQueryKey,
   categoriesQueryKey,
+  fundingAccountsManagementQueryKey,
   fundingAccountsQueryKey,
   getCategories,
   getFundingAccounts
@@ -83,13 +86,22 @@ export function RecurringRuleForm({
 }: RecurringRuleFormProps) {
   const queryClient = useQueryClient();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
+  const includeInactiveCategories =
+    mode === 'edit' && Boolean(initialRule?.categoryId);
+  const includeInactiveFundingAccounts =
+    mode === 'edit' && Boolean(initialRule?.fundingAccountId);
   const { data: fundingAccounts = [], error: fundingAccountsError } = useQuery({
-    queryKey: fundingAccountsQueryKey,
-    queryFn: getFundingAccounts
+    queryKey: includeInactiveFundingAccounts
+      ? fundingAccountsManagementQueryKey
+      : fundingAccountsQueryKey,
+    queryFn: () =>
+      getFundingAccounts({ includeInactive: includeInactiveFundingAccounts })
   });
   const { data: categories = [], error: categoriesError } = useQuery({
-    queryKey: categoriesQueryKey,
-    queryFn: getCategories
+    queryKey: includeInactiveCategories
+      ? categoriesManagementQueryKey
+      : categoriesQueryKey,
+    queryFn: () => getCategories({ includeInactive: includeInactiveCategories })
   });
   const form = useForm<RecurringRuleFormInput>({
     resolver: zodResolver(recurringRuleSchema),
@@ -105,6 +117,25 @@ export function RecurringRuleForm({
       status: 'ACTIVE'
     }
   });
+  const selectedFundingAccountId = form.watch('accountId');
+  const selectedCategoryId = form.watch('categoryId');
+  const availableFundingAccounts = React.useMemo(
+    () =>
+      fundingAccounts.filter(
+        (fundingAccount) =>
+          fundingAccount.status === 'ACTIVE' ||
+          fundingAccount.id === selectedFundingAccountId
+      ),
+    [fundingAccounts, selectedFundingAccountId]
+  );
+  const filteredCategories = React.useMemo(
+    () =>
+      categories.filter(
+        (category) =>
+          category.isActive || category.id === selectedCategoryId
+      ),
+    [categories, selectedCategoryId]
+  );
 
   const mutation = useMutation({
     mutationFn: ({
@@ -145,13 +176,13 @@ export function RecurringRuleForm({
   });
 
   React.useEffect(() => {
-    const firstFundingAccount = fundingAccounts[0];
+    const firstFundingAccount = availableFundingAccounts[0];
     if (!form.getValues('accountId') && firstFundingAccount) {
       form.setValue('accountId', firstFundingAccount.id, {
         shouldValidate: true
       });
     }
-  }, [fundingAccounts, form]);
+  }, [availableFundingAccounts, form]);
 
   React.useEffect(() => {
     setFeedback(null);
@@ -178,7 +209,7 @@ export function RecurringRuleForm({
   const isBusy =
     mutation.isPending ||
     form.formState.isSubmitting ||
-    fundingAccounts.length === 0 ||
+    availableFundingAccounts.length === 0 ||
     Boolean(referenceError) ||
     (mode === 'edit' && !initialRule);
   const submitLabel = mode === 'edit' ? '반복 규칙 수정' : '반복 규칙 저장';
@@ -196,7 +227,7 @@ export function RecurringRuleForm({
           return;
         }
 
-        const selectedFundingAccount = fundingAccounts.find(
+        const selectedFundingAccount = availableFundingAccounts.find(
           (fundingAccount) => fundingAccount.id === values.accountId
         );
         if (!selectedFundingAccount) {
@@ -207,7 +238,7 @@ export function RecurringRuleForm({
           return;
         }
 
-        const selectedCategory = categories.find(
+        const selectedCategory = filteredCategories.find(
           (category) => category.id === values.categoryId
         );
         const payload: UpdateRecurringRuleRequest = {
@@ -312,65 +343,105 @@ export function RecurringRuleForm({
             />
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
-            <TextField
-              select
-              label="주기"
-              error={Boolean(form.formState.errors.frequency)}
-              helperText={form.formState.errors.frequency?.message}
-              {...form.register('frequency')}
-            >
-              <MenuItem value="WEEKLY">매주</MenuItem>
-              <MenuItem value="MONTHLY">매월</MenuItem>
-              <MenuItem value="QUARTERLY">분기</MenuItem>
-              <MenuItem value="YEARLY">매년</MenuItem>
-            </TextField>
+            <Controller
+              control={form.control}
+              name="frequency"
+              render={({ field }) => (
+                <TextField
+                  select
+                  label="주기"
+                  error={Boolean(form.formState.errors.frequency)}
+                  helperText={form.formState.errors.frequency?.message}
+                  name={field.name}
+                  value={field.value}
+                  onBlur={field.onBlur}
+                  onChange={field.onChange}
+                  inputRef={field.ref}
+                >
+                  <MenuItem value="WEEKLY">매주</MenuItem>
+                  <MenuItem value="MONTHLY">매월</MenuItem>
+                  <MenuItem value="QUARTERLY">분기</MenuItem>
+                  <MenuItem value="YEARLY">매년</MenuItem>
+                </TextField>
+              )}
+            />
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
-            <TextField
-              select
-              label="자금수단"
-              disabled={fundingAccounts.length === 0}
-              error={Boolean(form.formState.errors.accountId)}
-              helperText={
-                form.formState.errors.accountId?.message ??
-                (fundingAccounts.length === 0
-                  ? '사용할 수 있는 자금수단이 아직 없습니다.'
-                  : ' ')
-              }
-              {...form.register('accountId')}
-            >
-              {fundingAccounts.map((fundingAccount) => (
-                <MenuItem key={fundingAccount.id} value={fundingAccount.id}>
-                  {fundingAccount.name}
-                </MenuItem>
-              ))}
-            </TextField>
+            <Controller
+              control={form.control}
+              name="accountId"
+              render={({ field }) => (
+                <TextField
+                  select
+                  label="자금수단"
+                  disabled={availableFundingAccounts.length === 0}
+                  error={Boolean(form.formState.errors.accountId)}
+                  helperText={
+                    form.formState.errors.accountId?.message ??
+                    (availableFundingAccounts.length === 0
+                      ? '사용할 수 있는 자금수단이 아직 없습니다.'
+                      : ' ')
+                  }
+                  name={field.name}
+                  value={field.value ?? ''}
+                  onBlur={field.onBlur}
+                  onChange={field.onChange}
+                  inputRef={field.ref}
+                >
+                  {availableFundingAccounts.map((fundingAccount) => (
+                    <MenuItem key={fundingAccount.id} value={fundingAccount.id}>
+                      {readFundingAccountOptionLabel(fundingAccount)}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+            />
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
-            <TextField
-              select
-              label="카테고리"
-              helperText="선택 사항"
-              {...form.register('categoryId')}
-            >
-              <MenuItem value="">카테고리 없음</MenuItem>
-              {categories.map((category) => (
-                <MenuItem key={category.id} value={category.id}>
-                  {category.name}
-                </MenuItem>
-              ))}
-            </TextField>
+            <Controller
+              control={form.control}
+              name="categoryId"
+              render={({ field }) => (
+                <TextField
+                  select
+                  label="카테고리"
+                  helperText="선택 사항"
+                  name={field.name}
+                  value={field.value ?? ''}
+                  onBlur={field.onBlur}
+                  onChange={field.onChange}
+                  inputRef={field.ref}
+                >
+                  <MenuItem value="">카테고리 없음</MenuItem>
+                  {filteredCategories.map((category) => (
+                    <MenuItem key={category.id} value={category.id}>
+                      {category.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+            />
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
-            <TextField
-              select
-              label="상태"
-              helperText="중지한 규칙도 목록에는 남아 있지만 더 이상 계획 항목을 생성하지 않습니다."
-              {...form.register('status')}
-            >
-              <MenuItem value="ACTIVE">활성</MenuItem>
-              <MenuItem value="PAUSED">일시중지</MenuItem>
-            </TextField>
+            <Controller
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <TextField
+                  select
+                  label="상태"
+                  helperText="중지한 규칙도 목록에는 남아 있지만 더 이상 계획 항목을 생성하지 않습니다."
+                  name={field.name}
+                  value={field.value}
+                  onBlur={field.onBlur}
+                  onChange={field.onChange}
+                  inputRef={field.ref}
+                >
+                  <MenuItem value="ACTIVE">활성</MenuItem>
+                  <MenuItem value="PAUSED">일시중지</MenuItem>
+                </TextField>
+              )}
+            />
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
             <TextField
@@ -390,15 +461,30 @@ export function RecurringRuleForm({
             />
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
-            <TextField
-              label="기준 일자"
-              type="number"
-              error={Boolean(form.formState.errors.dayOfMonth)}
-              helperText={
-                form.formState.errors.dayOfMonth?.message ??
-                '선택 사항입니다. 매월 계획 생성 기준일이 필요한 규칙에 유용합니다.'
-              }
-              {...form.register('dayOfMonth')}
+            <Controller
+              control={form.control}
+              name="dayOfMonth"
+              render={({ field }) => (
+                <TextField
+                  label="기준 일자"
+                  type="number"
+                  error={Boolean(form.formState.errors.dayOfMonth)}
+                  helperText={
+                    form.formState.errors.dayOfMonth?.message ??
+                    '선택 사항입니다. 매월 계획 생성 기준일이 필요한 규칙에 유용합니다.'
+                  }
+                  name={field.name}
+                  value={field.value ?? ''}
+                  onBlur={field.onBlur}
+                  onChange={(event) => {
+                    const nextValue = event.target.value;
+                    field.onChange(
+                      nextValue === '' ? undefined : Number(nextValue)
+                    );
+                  }}
+                  inputRef={field.ref}
+                />
+              )}
             />
           </Grid>
         </Grid>
@@ -429,4 +515,15 @@ function mapDetailToFormInput(
     endDate: recurringRule.endDate ?? '',
     status: recurringRule.isActive ? 'ACTIVE' : 'PAUSED'
   };
+}
+
+function readFundingAccountOptionLabel(fundingAccount: FundingAccountItem) {
+  switch (fundingAccount.status) {
+    case 'INACTIVE':
+      return `${fundingAccount.name} (비활성)`;
+    case 'CLOSED':
+      return `${fundingAccount.name} (종료)`;
+    default:
+      return fundingAccount.name;
+  }
 }

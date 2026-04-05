@@ -2,6 +2,7 @@ import type {
   AccountingPeriodItem,
   AccountingPeriodStatus
 } from './accounting';
+import type { CollectedTransactionPostingStatus } from './transactions';
 
 export type PlanItemStatus =
   | 'DRAFT'
@@ -23,7 +24,10 @@ export type PlanItemItem = {
   fundingAccountName: string;
   categoryName: string;
   matchedCollectedTransactionId: string | null;
+  matchedCollectedTransactionTitle: string | null;
+  matchedCollectedTransactionStatus: CollectedTransactionPostingStatus | null;
   postedJournalEntryId: string | null;
+  postedJournalEntryNumber: string | null;
 };
 
 export type PlanItemSummary = {

@@ -268,7 +268,9 @@ export async function createRequestTestState(): Promise<RequestTestState> {
         ledgerId: 'ledger-1',
         name: 'Main checking',
         type: 'BANK',
-        balanceWon: 2_000_000
+        balanceWon: 2_000_000,
+        sortOrder: 0,
+        status: 'ACTIVE'
       },
       {
         id: 'acc-1b',
@@ -277,7 +279,9 @@ export async function createRequestTestState(): Promise<RequestTestState> {
         ledgerId: 'ledger-1',
         name: 'Emergency savings',
         type: 'BANK',
-        balanceWon: 3_500_000
+        balanceWon: 3_500_000,
+        sortOrder: 1,
+        status: 'ACTIVE'
       },
       {
         id: 'acc-2',
@@ -286,7 +290,9 @@ export async function createRequestTestState(): Promise<RequestTestState> {
         ledgerId: 'ledger-2',
         name: 'Other account',
         type: 'BANK',
-        balanceWon: 9_000_000
+        balanceWon: 9_000_000,
+        sortOrder: 0,
+        status: 'ACTIVE'
       }
     ],
     categories: [
