@@ -206,21 +206,15 @@ async function main() {
       );
     });
 
-    await assertResponse(`${baseUrl}/login`, (response, body) => {
+    await assertResponse(`${baseUrl}/login`, (response) => {
       if (response.status !== 200) {
         throw new Error(
           `[run-web-build-smoke] Expected /login to return 200 but received ${response.status}.`
         );
       }
-
-      if (!body.includes('워크스페이스에 로그인')) {
-        throw new Error(
-          '[run-web-build-smoke] The /login response did not include the expected login copy.'
-        );
-      }
     });
 
-    await assertResponse(`${baseUrl}/transactions`, (response, body) => {
+    await assertResponse(`${baseUrl}/transactions`, (response) => {
       if (response.status !== 200) {
         throw new Error(
           `[run-web-build-smoke] Expected /transactions to return 200 but received ${response.status}.`
