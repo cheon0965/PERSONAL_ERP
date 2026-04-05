@@ -78,8 +78,11 @@ function buildAccountingPeriodFallbackItem(
     status: 'OPEN',
     openedAt: new Date().toISOString(),
     lockedAt: null,
-    hasOpeningBalanceSnapshot: Boolean(input.initializeOpeningBalance),
-    openingBalanceSourceKind: input.initializeOpeningBalance
+    hasOpeningBalanceSnapshot: Boolean(
+      input.initializeOpeningBalance || input.openingBalanceLines?.length
+    ),
+    openingBalanceSourceKind:
+      input.initializeOpeningBalance || input.openingBalanceLines?.length
       ? 'INITIAL_SETUP'
       : null,
     statusHistory: [

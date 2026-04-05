@@ -9,6 +9,7 @@ import type {
   OpenAccountingPeriodRequest
 } from '@personal-erp/contracts';
 import {
+  AccountSubjectKind,
   AccountingPeriodEventType,
   AccountingPeriodStatus
 } from '@prisma/client';
@@ -71,6 +72,15 @@ export class OpenAccountingPeriodUseCase {
 
     const isFirstPeriod = latestPeriod == null;
     const shouldCreateOpeningSnapshot = Boolean(input.initializeOpeningBalance);
+    const openingBalanceLineDrafts = normalizeOpeningBalanceLineDrafts(
+      input.openingBalanceLines
+    );
+
+    if (!shouldCreateOpeningSnapshot && openingBalanceLineDrafts.length > 0) {
+      throw new BadRequestException(
+        '오프닝 잔액 라인을 입력하려면 기초 잔액 기준 생성을 함께 선택해 주세요.'
+      );
+    }
 
     if (isFirstPeriod && !shouldCreateOpeningSnapshot) {
       throw new BadRequestException(
@@ -81,6 +91,12 @@ export class OpenAccountingPeriodUseCase {
     if (!isFirstPeriod && shouldCreateOpeningSnapshot) {
       throw new BadRequestException(
         '오프닝 잔액 스냅샷 직접 생성은 첫 월 운영 시작에서만 허용합니다.'
+      );
+    }
+
+    if (isFirstPeriod && openingBalanceLineDrafts.length === 0) {
+      throw new BadRequestException(
+        '첫 월 운영 시작에는 최소 1건 이상의 오프닝 잔액 라인이 필요합니다.'
       );
     }
 
@@ -98,6 +114,29 @@ export class OpenAccountingPeriodUseCase {
     }
 
     assertAccountingPeriodCanRecordInitialOpen();
+
+    const validatedOpeningBalanceLines = shouldCreateOpeningSnapshot
+      ? buildValidatedOpeningBalanceLines({
+          lineDrafts: openingBalanceLineDrafts,
+          accountSubjects: await this.prisma.accountSubject.findMany({
+            where: {
+              tenantId: workspace.tenantId,
+              ledgerId: workspace.ledgerId,
+              isActive: true
+            }
+          }),
+          fundingAccounts: await this.prisma.account.findMany({
+            where: {
+              tenantId: workspace.tenantId,
+              ledgerId: workspace.ledgerId
+            }
+          })
+        })
+      : [];
+
+    if (shouldCreateOpeningSnapshot) {
+      assertOpeningBalanceLinesBalanced(validatedOpeningBalanceLines);
+    }
 
     const { createdPeriod, createdStatusHistory, openingBalanceSnapshot } =
       await this.prisma.$transaction(async (tx) => {
@@ -134,17 +173,30 @@ export class OpenAccountingPeriodUseCase {
                 effectivePeriodId: createdPeriod.id,
                 sourceKind: 'INITIAL_SETUP',
                 ...createdByActorRef
-              },
-              select: {
-                sourceKind: true
               }
             })
           : null;
 
+        if (openingBalanceSnapshot && validatedOpeningBalanceLines.length > 0) {
+          await tx.balanceSnapshotLine.createMany({
+            data: validatedOpeningBalanceLines.map((line) => ({
+              snapshotKind: 'OPENING',
+              openingSnapshotId: openingBalanceSnapshot.id,
+              accountSubjectId: line.accountSubjectId,
+              fundingAccountId: line.fundingAccountId,
+              balanceAmount: line.balanceAmount
+            }))
+          });
+        }
+
         return {
           createdPeriod,
           createdStatusHistory,
-          openingBalanceSnapshot
+          openingBalanceSnapshot: openingBalanceSnapshot
+            ? {
+                sourceKind: openingBalanceSnapshot.sourceKind
+              }
+            : null
         };
       });
 
@@ -160,4 +212,138 @@ function assertOpenPermission(
   membershipRole: ReturnType<typeof requireCurrentWorkspace>['membershipRole']
 ) {
   return assertWorkspaceActionAllowed(membershipRole, 'accounting_period.open');
+}
+
+function normalizeOpeningBalanceLineDrafts(
+  lines: OpenAccountingPeriodRequest['openingBalanceLines']
+) {
+  return (lines ?? []).map((line) => ({
+    accountSubjectId: line.accountSubjectId,
+    fundingAccountId: normalizeOptionalIdentifier(line.fundingAccountId),
+    balanceAmount: line.balanceAmount
+  }));
+}
+
+function buildValidatedOpeningBalanceLines(input: {
+  lineDrafts: Array<{
+    accountSubjectId: string;
+    fundingAccountId: string | null;
+    balanceAmount: number;
+  }>;
+  accountSubjects: Array<{
+    id: string;
+    code: string;
+    name: string;
+    subjectKind: AccountSubjectKind;
+    isActive: boolean;
+  }>;
+  fundingAccounts: Array<{
+    id: string;
+    name: string;
+    status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+  }>;
+}) {
+  const accountSubjectById = new Map(
+    input.accountSubjects.map((candidate) => [candidate.id, candidate])
+  );
+  const fundingAccountById = new Map(
+    input.fundingAccounts
+      .filter((candidate) => candidate.status !== 'CLOSED')
+      .map((candidate) => [candidate.id, candidate])
+  );
+  const seenKeys = new Set<string>();
+
+  return input.lineDrafts.map((line, index) => {
+    const accountSubject = accountSubjectById.get(line.accountSubjectId);
+    if (!accountSubject) {
+      throw new BadRequestException(
+        `오프닝 잔액 라인 ${index + 1}의 계정과목을 찾을 수 없습니다.`
+      );
+    }
+
+    if (!isOpeningBalanceSubjectKind(accountSubject.subjectKind)) {
+      throw new BadRequestException(
+        `오프닝 잔액 라인 ${index + 1}에는 재무상태표 계정과목만 사용할 수 있습니다.`
+      );
+    }
+
+    if (
+      line.fundingAccountId &&
+      !fundingAccountById.has(line.fundingAccountId)
+    ) {
+      throw new BadRequestException(
+        `오프닝 잔액 라인 ${index + 1}의 자금수단을 찾을 수 없습니다.`
+      );
+    }
+
+    const lineKey = `${accountSubject.id}:${line.fundingAccountId ?? 'none'}`;
+    if (seenKeys.has(lineKey)) {
+      throw new BadRequestException(
+        '동일한 계정과목과 자금수단 조합의 오프닝 잔액 라인은 한 번만 입력할 수 있습니다.'
+      );
+    }
+
+    seenKeys.add(lineKey);
+
+    return {
+      accountSubjectId: accountSubject.id,
+      accountSubjectKind: accountSubject.subjectKind,
+      fundingAccountId: line.fundingAccountId,
+      balanceAmount: line.balanceAmount
+    };
+  });
+}
+
+function assertOpeningBalanceLinesBalanced(
+  lines: Array<{
+    accountSubjectKind: AccountSubjectKind;
+    balanceAmount: number;
+  }>
+) {
+  const totals = lines.reduce(
+    (accumulator, line) => {
+      switch (line.accountSubjectKind) {
+        case 'ASSET':
+          accumulator.assetAmount += line.balanceAmount;
+          break;
+        case 'LIABILITY':
+          accumulator.liabilityAmount += line.balanceAmount;
+          break;
+        case 'EQUITY':
+          accumulator.equityAmount += line.balanceAmount;
+          break;
+        default:
+          break;
+      }
+
+      return accumulator;
+    },
+    {
+      assetAmount: 0,
+      liabilityAmount: 0,
+      equityAmount: 0
+    }
+  );
+
+  if (
+    totals.assetAmount !==
+    totals.liabilityAmount + totals.equityAmount
+  ) {
+    throw new BadRequestException(
+      `오프닝 잔액 합계가 맞지 않습니다. 자산 ${totals.assetAmount}원, 부채+자본 ${totals.liabilityAmount + totals.equityAmount}원입니다.`
+    );
+  }
+}
+
+function isOpeningBalanceSubjectKind(subjectKind: AccountSubjectKind) {
+  return (
+    subjectKind === 'ASSET' ||
+    subjectKind === 'LIABILITY' ||
+    subjectKind === 'EQUITY'
+  );
+}
+
+function normalizeOptionalIdentifier(value: string | null | undefined) {
+  const normalized = value?.trim();
+  return normalized && normalized.length > 0 ? normalized : null;
 }

@@ -172,6 +172,18 @@ export async function createRequestTestState(): Promise<RequestTestState> {
         isActive: true
       },
       {
+        id: 'as-1-3010',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        code: '3010',
+        name: '사업자본',
+        statementType: 'BALANCE_SHEET',
+        normalSide: 'CREDIT',
+        subjectKind: 'EQUITY',
+        isSystem: true,
+        isActive: true
+      },
+      {
         id: 'as-1-4100',
         tenantId: 'tenant-1',
         ledgerId: 'ledger-1',
@@ -216,6 +228,18 @@ export async function createRequestTestState(): Promise<RequestTestState> {
         statementType: 'BALANCE_SHEET',
         normalSide: 'CREDIT',
         subjectKind: 'LIABILITY',
+        isSystem: true,
+        isActive: true
+      },
+      {
+        id: 'as-2-3010',
+        tenantId: 'tenant-2',
+        ledgerId: 'ledger-2',
+        code: '3010',
+        name: '사업자본',
+        statementType: 'BALANCE_SHEET',
+        normalSide: 'CREDIT',
+        subjectKind: 'EQUITY',
         isSystem: true,
         isActive: true
       },

@@ -7,6 +7,7 @@ import type {
 import {
   AccountingPeriodStatus,
   AuditActorType,
+  CollectedTransactionStatus,
   FinancialStatementKind,
   OpeningBalanceSourceKind
 } from '@prisma/client';
@@ -130,6 +131,35 @@ test('POST /accounting-periods blocks the first period when opening balance init
   }
 });
 
+test('POST /accounting-periods blocks the first period when opening balance lines are missing', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/accounting-periods', {
+      method: 'POST',
+      headers: context.authHeaders(),
+      body: {
+        month: '2026-03',
+        initializeOpeningBalance: true,
+        note: '2026년 3월 운영 시작'
+      }
+    });
+
+    assert.equal(response.status, 400);
+    assert.deepEqual(response.body, {
+      statusCode: 400,
+      message:
+        '첫 월 운영 시작에는 최소 1건 이상의 오프닝 잔액 라인이 필요합니다.',
+      error: 'Bad Request'
+    });
+    assert.equal(context.state.accountingPeriods.length, 0);
+    assert.equal(context.state.openingBalanceSnapshots.length, 0);
+    assert.equal(context.state.balanceSnapshotLines.length, 0);
+  } finally {
+    await context.close();
+  }
+});
+
 test('POST /accounting-periods opens the first period and records status history with an opening balance snapshot', async () => {
   const context = await createRequestTestContext();
 
@@ -140,6 +170,17 @@ test('POST /accounting-periods opens the first period and records status history
       body: {
         month: '2026-03',
         initializeOpeningBalance: true,
+        openingBalanceLines: [
+          {
+            accountSubjectId: 'as-1-1010',
+            fundingAccountId: 'acc-1',
+            balanceAmount: 3000000
+          },
+          {
+            accountSubjectId: 'as-1-3010',
+            balanceAmount: 3000000
+          }
+        ],
         note: '2026년 3월 운영 시작'
       }
     });
@@ -156,6 +197,7 @@ test('POST /accounting-periods opens the first period and records status history
     );
     assert.equal(context.state.accountingPeriods.length, 1);
     assert.equal(context.state.openingBalanceSnapshots.length, 1);
+    assert.equal(context.state.balanceSnapshotLines.length, 2);
     assert.equal(context.state.periodStatusHistory.length, 1);
     assert.equal(context.state.accountingPeriods[0]?.year, 2026);
     assert.equal(context.state.accountingPeriods[0]?.month, 3);
@@ -174,6 +216,14 @@ test('POST /accounting-periods opens the first period and records status history
     assert.equal(
       context.state.openingBalanceSnapshots[0]?.createdByMembershipId,
       'membership-1'
+    );
+    assert.equal(
+      context.state.balanceSnapshotLines[0]?.snapshotKind,
+      'OPENING'
+    );
+    assert.equal(
+      context.state.balanceSnapshotLines[0]?.openingSnapshotId,
+      context.state.openingBalanceSnapshots[0]?.id ?? null
     );
     assert.ok(
       context.securityEvents.some(
@@ -203,6 +253,17 @@ test('POST /accounting-periods rolls back the opened period when opening snapsho
       body: {
         month: '2026-03',
         initializeOpeningBalance: true,
+        openingBalanceLines: [
+          {
+            accountSubjectId: 'as-1-1010',
+            fundingAccountId: 'acc-1',
+            balanceAmount: 3000000
+          },
+          {
+            accountSubjectId: 'as-1-3010',
+            balanceAmount: 3000000
+          }
+        ],
         note: '2026년 3월 운영 시작'
       }
     });
@@ -314,6 +375,36 @@ test('POST /accounting-periods/:id/close locks the period and creates a closing 
       actorMembershipId: 'membership-1',
       changedAt: new Date('2026-03-01T00:00:00.000Z')
     });
+    context.state.openingBalanceSnapshots.push({
+      id: 'opening-close-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      effectivePeriodId: 'period-close-1',
+      sourceKind: OpeningBalanceSourceKind.INITIAL_SETUP,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+      createdByMembershipId: 'membership-1'
+    });
+    context.state.balanceSnapshotLines.push(
+      {
+        id: 'opening-close-line-1',
+        snapshotKind: 'OPENING',
+        openingSnapshotId: 'opening-close-1',
+        closingSnapshotId: null,
+        accountSubjectId: 'as-1-1010',
+        fundingAccountId: 'acc-1',
+        balanceAmount: 3_000_000
+      },
+      {
+        id: 'opening-close-line-2',
+        snapshotKind: 'OPENING',
+        openingSnapshotId: 'opening-close-1',
+        closingSnapshotId: null,
+        accountSubjectId: 'as-1-3010',
+        fundingAccountId: null,
+        balanceAmount: 3_000_000
+      }
+    );
     context.state.journalEntries.push({
       id: 'je-close-1',
       tenantId: 'tenant-1',
@@ -363,20 +454,47 @@ test('POST /accounting-periods/:id/close locks the period and creates a closing 
     );
 
     const body = response.body as CloseAccountingPeriodResponse;
+    const closingLines = context.state.balanceSnapshotLines.filter(
+      (line) => line.snapshotKind === 'CLOSING'
+    );
 
     assert.equal(response.status, 201);
     assert.equal(body.period.status, AccountingPeriodStatus.LOCKED);
     assert.equal(context.state.closingSnapshots.length, 1);
-    assert.equal(context.state.balanceSnapshotLines.length, 2);
+    assert.equal(closingLines.length, 3);
     assert.equal(
       context.state.periodStatusHistory.at(-1)?.toStatus,
       AccountingPeriodStatus.LOCKED
     );
-    assert.equal(body.closingSnapshot.totalAssetAmount, -84_000);
+    assert.equal(body.closingSnapshot.totalAssetAmount, 2_916_000);
     assert.equal(body.closingSnapshot.totalLiabilityAmount, 0);
-    assert.equal(body.closingSnapshot.totalEquityAmount, -84_000);
+    assert.equal(body.closingSnapshot.totalEquityAmount, 2_916_000);
     assert.equal(body.closingSnapshot.periodPnLAmount, -84_000);
-    assert.equal(body.closingSnapshot.lines.length, 2);
+    assert.equal(body.closingSnapshot.lines.length, 3);
+    assert.deepEqual(
+      body.closingSnapshot.lines.map((line) => ({
+        accountSubjectCode: line.accountSubjectCode,
+        fundingAccountName: line.fundingAccountName,
+        balanceAmount: line.balanceAmount
+      })),
+      [
+        {
+          accountSubjectCode: '1010',
+          fundingAccountName: 'Main checking',
+          balanceAmount: 2_916_000
+        },
+        {
+          accountSubjectCode: '3010',
+          fundingAccountName: null,
+          balanceAmount: 3_000_000
+        },
+        {
+          accountSubjectCode: '5100',
+          fundingAccountName: null,
+          balanceAmount: 84_000
+        }
+      ]
+    );
     assert.ok(
       context.securityEvents.some(
         (candidate) =>
@@ -388,6 +506,74 @@ test('POST /accounting-periods/:id/close locks the period and creates a closing 
           candidate.details.periodId === 'period-close-1' &&
           candidate.details.closingSnapshotId === body.closingSnapshot.id
       )
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /accounting-periods/:id/close blocks locking when unresolved collected transactions remain', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push({
+      id: 'period-close-pending-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 3,
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.OPEN,
+      openedAt: new Date('2026-03-01T00:00:00.000Z'),
+      lockedAt: null,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
+    context.state.collectedTransactions.push({
+      id: 'ctx-close-pending-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-close-pending-1',
+      ledgerTransactionTypeId: 'ltt-1-expense',
+      fundingAccountId: 'acc-1',
+      categoryId: 'cat-1',
+      matchedPlanItemId: null,
+      importBatchId: null,
+      importedRowId: null,
+      sourceFingerprint: 'close-pending-1',
+      title: '미확정 주유',
+      occurredOn: new Date('2026-03-13T00:00:00.000Z'),
+      amount: 84_000,
+      status: CollectedTransactionStatus.REVIEWED,
+      memo: null,
+      createdAt: new Date('2026-03-13T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-13T00:00:00.000Z')
+    });
+
+    const response = await context.request(
+      '/accounting-periods/period-close-pending-1/close',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          note: '미확정 거래가 있는 상태에서 월마감 시도'
+        }
+      }
+    );
+
+    assert.equal(response.status, 400);
+    assert.deepEqual(response.body, {
+      statusCode: 400,
+      message: '미확정 수집 거래 1건이 남아 있어 운영 기간을 잠글 수 없습니다.',
+      error: 'Bad Request'
+    });
+    assert.equal(context.state.closingSnapshots.length, 0);
+    assert.equal(
+      context.state.accountingPeriods.find(
+        (candidate) => candidate.id === 'period-close-pending-1'
+      )?.status,
+      AccountingPeriodStatus.OPEN
     );
   } finally {
     await context.close();

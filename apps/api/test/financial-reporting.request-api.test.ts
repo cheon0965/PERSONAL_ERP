@@ -61,9 +61,9 @@ test('POST /financial-statements/generate creates official statement snapshots f
       ledgerId: 'ledger-1',
       periodId: 'period-report-1',
       lockedAt: new Date('2026-03-31T15:00:00.000Z'),
-      totalAssetAmount: -84_000,
+      totalAssetAmount: 2_916_000,
       totalLiabilityAmount: 0,
-      totalEquityAmount: -84_000,
+      totalEquityAmount: 2_916_000,
       periodPnLAmount: -84_000,
       createdAt: new Date('2026-03-31T15:00:00.000Z')
     });
@@ -75,10 +75,19 @@ test('POST /financial-statements/generate creates official statement snapshots f
         closingSnapshotId: 'closing-report-1',
         accountSubjectId: 'as-1-1010',
         fundingAccountId: 'acc-1',
-        balanceAmount: -84_000
+        balanceAmount: 2_916_000
       },
       {
         id: 'balance-report-2',
+        snapshotKind: 'CLOSING',
+        openingSnapshotId: null,
+        closingSnapshotId: 'closing-report-1',
+        accountSubjectId: 'as-1-3010',
+        fundingAccountId: null,
+        balanceAmount: 3_000_000
+      },
+      {
+        id: 'balance-report-3',
         snapshotKind: 'CLOSING',
         openingSnapshotId: null,
         closingSnapshotId: 'closing-report-1',
@@ -162,7 +171,7 @@ test('POST /financial-statements/generate creates official statement snapshots f
       'CASH_FLOW_SUMMARY',
       'NET_WORTH_MOVEMENT'
     ]);
-    assert.equal(positionStatement?.payload.summary[0]?.amountWon, -84_000);
+    assert.equal(positionStatement?.payload.summary[0]?.amountWon, 2_916_000);
     assert.equal(cashFlowStatement?.payload.summary[2]?.amountWon, -84_000);
     assert.ok(
       context.securityEvents.some(
@@ -518,6 +527,15 @@ test('POST /carry-forwards/generate creates a carry forward record and the next 
         snapshotKind: 'CLOSING',
         openingSnapshotId: null,
         closingSnapshotId: 'closing-carry-1',
+        accountSubjectId: 'as-1-3010',
+        fundingAccountId: null,
+        balanceAmount: 3_000_000
+      },
+      {
+        id: 'carry-balance-3',
+        snapshotKind: 'CLOSING',
+        openingSnapshotId: null,
+        closingSnapshotId: 'closing-carry-1',
         accountSubjectId: 'as-1-5100',
         fundingAccountId: null,
         balanceAmount: 84_000
@@ -540,14 +558,22 @@ test('POST /carry-forwards/generate creates a carry forward record and the next 
     assert.equal(body.targetPeriod.monthLabel, '2026-05');
     assert.equal(body.targetPeriod.status, AccountingPeriodStatus.OPEN);
     assert.equal(body.targetOpeningBalanceSnapshot.sourceKind, 'CARRY_FORWARD');
-    assert.equal(body.targetOpeningBalanceSnapshot.lines.length, 1);
-    assert.equal(
-      body.targetOpeningBalanceSnapshot.lines[0]?.accountSubjectCode,
-      '1010'
-    );
-    assert.equal(
-      body.targetOpeningBalanceSnapshot.lines[0]?.balanceAmount,
-      2_916_000
+    assert.equal(body.targetOpeningBalanceSnapshot.lines.length, 2);
+    assert.deepEqual(
+      body.targetOpeningBalanceSnapshot.lines.map((line) => ({
+        accountSubjectCode: line.accountSubjectCode,
+        balanceAmount: line.balanceAmount
+      })),
+      [
+        {
+          accountSubjectCode: '1010',
+          balanceAmount: 2_916_000
+        },
+        {
+          accountSubjectCode: '3010',
+          balanceAmount: 3_000_000
+        }
+      ]
     );
     assert.equal(
       context.state.periodStatusHistory.at(-1)?.actorMembershipId,
@@ -685,12 +711,30 @@ test('GET /carry-forwards returns the stored carry forward view for the selected
         balanceAmount: 3_120_000
       },
       {
+        id: 'carry-view-closing-equity-line',
+        snapshotKind: 'CLOSING',
+        openingSnapshotId: null,
+        closingSnapshotId: 'closing-carry-view',
+        accountSubjectId: 'as-1-3010',
+        fundingAccountId: null,
+        balanceAmount: 3_120_000
+      },
+      {
         id: 'carry-view-opening-line',
         snapshotKind: 'OPENING',
         openingSnapshotId: 'opening-carry-view',
         closingSnapshotId: null,
         accountSubjectId: 'as-1-1010',
         fundingAccountId: 'acc-1',
+        balanceAmount: 3_120_000
+      },
+      {
+        id: 'carry-view-opening-equity-line',
+        snapshotKind: 'OPENING',
+        openingSnapshotId: 'opening-carry-view',
+        closingSnapshotId: null,
+        accountSubjectId: 'as-1-3010',
+        fundingAccountId: null,
         balanceAmount: 3_120_000
       }
     );
@@ -730,10 +774,12 @@ test('GET /carry-forwards returns the stored carry forward view for the selected
     assert.equal(body.carryForwardRecord.id, 'carry-record-view');
     assert.equal(body.sourcePeriod.monthLabel, '2026-05');
     assert.equal(body.targetPeriod.monthLabel, '2026-06');
-    assert.equal(body.targetOpeningBalanceSnapshot.lines.length, 1);
-    assert.equal(
-      body.targetOpeningBalanceSnapshot.lines[0]?.accountSubjectCode,
-      '1010'
+    assert.equal(body.targetOpeningBalanceSnapshot.lines.length, 2);
+    assert.deepEqual(
+      body.targetOpeningBalanceSnapshot.lines.map(
+        (line) => line.accountSubjectCode
+      ),
+      ['1010', '3010']
     );
   } finally {
     await context.close();

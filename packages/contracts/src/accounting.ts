@@ -42,9 +42,16 @@ export type AccountingPeriodItem = {
   statusHistory: PeriodStatusHistoryItem[];
 };
 
+export type OpeningBalanceLineInput = {
+  accountSubjectId: string;
+  fundingAccountId?: string | null;
+  balanceAmount: number;
+};
+
 export type OpenAccountingPeriodRequest = {
   month: string;
   initializeOpeningBalance?: boolean;
+  openingBalanceLines?: OpeningBalanceLineInput[];
   note?: string;
 };
 

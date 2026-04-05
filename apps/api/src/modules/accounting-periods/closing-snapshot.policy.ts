@@ -25,42 +25,97 @@ type JournalLineForClosingSnapshot = {
   creditAmount: number;
 };
 
+type OpeningBalanceLineForClosingSnapshot = {
+  accountSubject: {
+    id: string;
+    code: string;
+    name: string;
+    subjectKind: AccountSubjectKind;
+  };
+  fundingAccount: {
+    id: string;
+    name: string;
+  } | null;
+  balanceAmount: number;
+};
+
 export function aggregateClosingSnapshotLines(
-  journalLines: JournalLineForClosingSnapshot[]
+  input: {
+    openingBalanceLines?: OpeningBalanceLineForClosingSnapshot[];
+    journalLines: JournalLineForClosingSnapshot[];
+  }
 ): AggregatedClosingSnapshotLine[] {
   const grouped = new Map<string, AggregatedClosingSnapshotLine>();
 
-  for (const line of journalLines) {
-    const balanceAmount = projectNaturalBalance(
-      line.accountSubject.subjectKind,
-      line.debitAmount,
-      line.creditAmount
-    );
+  for (const line of input.openingBalanceLines ?? []) {
+    accumulateClosingSnapshotLine(grouped, {
+      accountSubject: line.accountSubject,
+      fundingAccount: line.fundingAccount,
+      balanceAmount: line.balanceAmount
+    });
+  }
 
-    if (balanceAmount === 0) {
-      continue;
-    }
-
-    const key = `${line.accountSubject.id}:${line.fundingAccount?.id ?? 'none'}`;
-    const existing = grouped.get(key);
-
-    if (existing) {
-      existing.balanceAmount += balanceAmount;
-      continue;
-    }
-
-    grouped.set(key, {
-      accountSubjectId: line.accountSubject.id,
-      accountSubjectCode: line.accountSubject.code,
-      accountSubjectName: line.accountSubject.name,
-      accountSubjectKind: line.accountSubject.subjectKind,
-      fundingAccountId: line.fundingAccount?.id ?? null,
-      fundingAccountName: line.fundingAccount?.name ?? null,
-      balanceAmount
+  for (const line of input.journalLines) {
+    accumulateClosingSnapshotLine(grouped, {
+      accountSubject: line.accountSubject,
+      fundingAccount: line.fundingAccount,
+      balanceAmount: projectNaturalBalance(
+        line.accountSubject.subjectKind,
+        line.debitAmount,
+        line.creditAmount
+      )
     });
   }
 
   return [...grouped.values()].filter((line) => line.balanceAmount !== 0);
+}
+
+function accumulateClosingSnapshotLine(
+  grouped: Map<string, AggregatedClosingSnapshotLine>,
+  input: {
+    accountSubject: OpeningBalanceLineForClosingSnapshot['accountSubject'];
+    fundingAccount: OpeningBalanceLineForClosingSnapshot['fundingAccount'];
+    balanceAmount: number;
+  }
+) {
+  if (input.balanceAmount === 0) {
+    return;
+  }
+
+  const key = `${input.accountSubject.id}:${input.fundingAccount?.id ?? 'none'}`;
+  const existing = grouped.get(key);
+
+  if (existing) {
+    existing.balanceAmount += input.balanceAmount;
+    return;
+  }
+
+  grouped.set(key, {
+    accountSubjectId: input.accountSubject.id,
+    accountSubjectCode: input.accountSubject.code,
+    accountSubjectName: input.accountSubject.name,
+    accountSubjectKind: input.accountSubject.subjectKind,
+    fundingAccountId: input.fundingAccount?.id ?? null,
+    fundingAccountName: input.fundingAccount?.name ?? null,
+    balanceAmount: input.balanceAmount
+  });
+}
+
+function projectNaturalBalance(
+  subjectKind: AccountSubjectKind,
+  debitAmount: number,
+  creditAmount: number
+) {
+  switch (subjectKind) {
+    case 'LIABILITY':
+    case 'EQUITY':
+    case 'INCOME':
+      return creditAmount - debitAmount;
+    case 'ASSET':
+    case 'EXPENSE':
+    default:
+      return debitAmount - creditAmount;
+  }
 }
 
 export function summarizeClosingSnapshot(
@@ -103,21 +158,4 @@ export function summarizeClosingSnapshot(
     totalEquityAmount,
     periodPnLAmount
   };
-}
-
-function projectNaturalBalance(
-  subjectKind: AccountSubjectKind,
-  debitAmount: number,
-  creditAmount: number
-) {
-  switch (subjectKind) {
-    case 'LIABILITY':
-    case 'EQUITY':
-    case 'INCOME':
-      return creditAmount - debitAmount;
-    case 'ASSET':
-    case 'EXPENSE':
-    default:
-      return debitAmount - creditAmount;
-  }
 }
