@@ -143,7 +143,7 @@
 
 ## 현재 남아 있는 공백
 
-- 차량 연료 이력과 정비 이력은 분리되었지만, `monthlyExpenseWon`과 운영 요약 차트는 아직 `Vehicle` 기본 write model에 기대고 있어 `VehicleOperatingSummary` 정리가 계속 남아 있음
+- 차량 연료/정비 이력 분리와 `monthlyExpenseWon` 전환 기준 고정은 끝났지만, `monthlyExpenseWon` 물리 필드 제거와 `VehicleOperatingSummary` read model의 실제 projection 구현은 후속 작업으로 남아 있음
 - `.github/workflows/ci.yml`의 `prisma-integration` job wiring은 반영되었지만, 실제 GitHub 저장소/조직 secret `PRISMA_INTEGRATION_DATABASE_URL` 등록과 첫 통과 증적 확보는 저장소 밖 후속 작업으로 남아 있음
 - Docker가 없는 개발 PC에서는 `semgrep-ce`, `gitleaks`를 로컬에서 CI와 동일하게 재현하기 어려움
 - Windows `core.autocrlf=true` checkout에서는 `npm run check:quick`의 Prettier 단계가 CI(Ubuntu LF 기준)와 다르게 보일 수 있음
@@ -165,4 +165,4 @@
 
 현재 검증체계는 성공 경로 계약, 인증, DTO validation, 접근 범위 검증, readiness/request-id 같은 운영 신호, 핵심 쓰기 흐름, 대표 브라우저 사용자 흐름까지를 자동으로 막는 상태입니다.
 `npm run test:e2e`, `npm run test:prisma`는 빠른 기본 테스트와 분리된 대표 심화 검증으로 유지합니다.
-다음 보강 우선순위는 차량 운영 요약 모델 정리와 `monthlyExpenseWon` 전환 기준 고정, `PRISMA_INTEGRATION_DATABASE_URL` GitHub secret 등록과 첫 `prisma-integration` 통과 증적 확보, Docker 기반 로컬 CI 재현성 보강입니다.
+다음 보강 우선순위는 `PRISMA_INTEGRATION_DATABASE_URL` GitHub secret 등록과 첫 `prisma-integration` 통과 증적 확보, Docker 기반 로컬 CI 재현성 보강입니다.
