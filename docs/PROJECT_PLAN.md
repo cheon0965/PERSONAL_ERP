@@ -3,8 +3,7 @@
 ## 목적
 
 이 프로젝트의 목적은 1인 사업자와 소상공인의 사업 재무 운영 데이터를 단순 입출금 기록이 아니라 월별 운영 사이클 관점에서 다루는 것입니다.
-핵심은 소상공인용 일반 ERP 전반을 넓게 덮는 것이 아니라, 월별 재무운영 사이클을 실제로 끝까지 연결하는 것입니다.
-핵심은 실제 거래, 반복규칙, 업로드 배치, 월 운영, 공식 보고를 한 구조 안에서 연결하는 것입니다.
+핵심은 소상공인용 일반 ERP 전반을 넓게 덮는 것이 아니라, 실제 거래, 반복규칙, 업로드 배치, 월 운영, 공식 보고까지 한 구조 안에서 월별 재무운영 사이클을 끝까지 닫는 것입니다.
 
 ## 완료한 기반 단계
 
@@ -53,10 +52,9 @@
 
 ## 다음 중기 우선순위
 
-1. 차량 운영 요약 모델 정리와 `monthlyExpenseWon` 전환 기준 고정
-2. 운영 HTTPS/HSTS/Swagger 배포 리허설과 보안 증적 정리
-3. Docker 기반 로컬 CI 재현성 보강
-4. `PRISMA_INTEGRATION_DATABASE_URL` GitHub secret 등록과 첫 `prisma-integration` 통과 증적 확보
+1. 운영 HTTPS/HSTS/Swagger 배포 리허설과 보안 증적 정리
+2. Docker 기반 로컬 CI 재현성 보강
+3. `PRISMA_INTEGRATION_DATABASE_URL` GitHub secret 등록과 첫 `prisma-integration` 통과 증적 확보
 
 ## 범위 밖 항목
 
