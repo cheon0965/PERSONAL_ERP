@@ -57,9 +57,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
-
       - name: Run smoke E2E
         run: npm run test:e2e:smoke:build
 

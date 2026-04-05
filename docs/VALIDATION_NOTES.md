@@ -16,7 +16,8 @@
 
 설명:
 
-- `npm run test:e2e:smoke:build`는 CI smoke와 동일하게 in-process `Next.js` production build/start 경로에 결과물을 올린 뒤 최소 핵심 브라우저 smoke만 다시 확인합니다.
+- `npm run test:e2e:smoke:build`는 CI와 동일하게 in-process `Next.js` production build/start 경로를 올린 뒤 HTTP 기준 핵심 smoke로 build 결과물과 대표 라우팅을 확인합니다.
+- `npm run test:e2e:smoke:build:browser`는 필요할 때 로그인/세션 복원/운영 체크리스트/문맥 fallback까지 포함한 브라우저 build smoke를 별도로 다시 확인합니다.
 - `npm run test:e2e`는 기준 데이터 CRUD, 반복 규칙 CRUD까지 포함한 전체 브라우저 대표 흐름 검증입니다.
 - `npm run test:prisma`는 기본 루프와 분리된 실DB Prisma 경계 검증입니다.
 - 현재 기본 `npm run test`에서는 Prisma 통합 테스트가 안내 문구와 함께 skip됩니다.
@@ -26,7 +27,7 @@
 - `validate`
   `npm run check:quick`와 `npm run test`를 조합해 포맷, lint, typecheck, 기본 테스트를 확인합니다.
 - `e2e-smoke`
-  `npm run test:e2e:smoke:build`로 CI와 같은 in-process production build/start 기준 최소 핵심 브라우저 smoke를 다시 확인합니다.
+  `npm run test:e2e:smoke:build`로 CI와 같은 in-process production build/start 기준 HTTP smoke를 다시 확인합니다.
 
 - `security-regression`
   `npm run test:security:api`로 인증/세션, 브라우저/API 경계 회귀를 CI에서 다시 확인합니다.
@@ -112,8 +113,9 @@
 - `/transactions` 진입 시 기준 데이터 readiness API가 함께 조회되어도 브라우저 스모크가 계속 통과하는지 검증
 - 실제 브라우저 상호작용으로 `/reference-data`에서 자금수단 생성, 수정, 비활성화/재활성화, 비활성 자금수단 종료와 카테고리 생성/수정/비활성화/재활성화가 동작하는지 검증
 - 실제 브라우저 상호작용으로 `/recurring`에서 반복 규칙 생성, 수정, 삭제와 목록 반영이 동작하는지 검증
-- `npm run test:e2e:smoke:build`로 in-process production build/start 경로에 결과물을 올린 뒤 로그인/세션 복원, 운영 체크리스트 핵심 CTA, 작업 문맥 fallback 같은 최소 핵심 브라우저 smoke를 자동 검증
-- CI의 `e2e-smoke` 잡은 개발 서버가 아니라 build 결과물 기준 smoke를 실행
+- `npm run test:e2e:smoke:build`로 in-process production build/start 경로에 결과물을 올린 뒤 health route, 루트 리다이렉트, 로그인 화면, 거래 화면 shell 같은 핵심 HTTP smoke를 자동 검증
+- `npm run test:e2e:smoke:build:browser`로는 로그인/세션 복원, 운영 체크리스트 핵심 CTA, 작업 문맥 fallback 같은 브라우저 build smoke를 필요 시 별도로 검증
+- CI의 `e2e-smoke` 잡은 개발 서버가 아니라 build 결과물 기준 HTTP smoke를 실행
 - 실제 브라우저 상호작용으로 `dashboard`, `transactions`, `reference-data`, `financial-statements`, `carry-forwards`, `settings`의 대표 운영 체크리스트 empty state, readiness 경고, fallback CTA가 유지되는지 검증
 - 기준 데이터 CRUD와 반복 규칙 CRUD 브라우저 검증은 현재 `npm run test:e2e` 전체 브라우저 회귀 범위에 남기고, CI smoke에서는 제외합니다.
 
