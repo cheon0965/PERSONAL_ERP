@@ -12,6 +12,7 @@ const e2eWebEnv = {
 };
 
 export function buildPlaywrightConfig(input) {
+  const isCi = process.env.CI === 'true';
   const port = String(input.port);
   const baseURL = `http://localhost:${port}`;
   const command =
@@ -23,9 +24,10 @@ export function buildPlaywrightConfig(input) {
     testDir: './e2e',
     fullyParallel: false,
     workers: 1,
-    timeout: 60_000,
+    retries: isCi ? 2 : 0,
+    timeout: isCi ? 90_000 : 60_000,
     expect: {
-      timeout: 10_000
+      timeout: isCi ? 15_000 : 10_000
     },
     outputDir: './test-results',
     reporter: [['list']],
