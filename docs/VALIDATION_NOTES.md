@@ -8,29 +8,41 @@
 - `npm run check:quick`
 - `npm run test`
 
+설명:
+
+- `npm run check:quick`는 Prettier, 문서의 `npm run` 명령 정합성 검사, 문서의 Web/API surface 정합성 검사, lint, typecheck를 함께 확인합니다.
+- 현재 문서 정합성 검사는 `npm run docs:check`로도 단독 실행할 수 있습니다.
+- `npm run docs:check:npm-run`는 `README.md`, `CONTRIBUTING.md`, `ENVIRONMENT_SETUP.md`, `docs/**/*.md`의 `npm run` 표기를 루트/workspace 스크립트와 대조합니다.
+- `npm run docs:check:surface`는 `docs/API.md`, `docs/VALIDATION_NOTES.md`의 Web/API surface가 실제 `apps/web/app` 라우트와 controller 기반 Swagger surface와 맞는지 확인합니다.
+
 ## 대표 심화 검증
 
 - `npm run test:e2e:smoke:build`
 - `npm run test:e2e`
 - `npm run test:prisma`
+- `npm run audit:runtime:full`
 
 설명:
 
 - `npm run test:e2e:smoke:build`는 CI와 동일하게 in-process `Next.js` production build/start 경로를 올린 뒤 health route 기준 최소 HTTP smoke로 build 결과물과 서버 기동을 확인합니다.
-- `npm run test:e2e:smoke:build:browser`는 필요할 때 로그인/세션 복원/운영 체크리스트/문맥 fallback까지 포함한 브라우저 build smoke를 별도로 다시 확인합니다.
+- `npm run test:e2e:smoke:build:browser`는 루트 래퍼 명령이며, 내부적으로 Web workspace의 browser build smoke를 호출합니다.
+- 이 명령은 필요할 때 로그인/세션 복원/운영 체크리스트/문맥 fallback까지 포함한 브라우저 build smoke를 별도로 다시 확인합니다.
 - `npm run test:e2e`는 기준 데이터 CRUD, 반복 규칙 CRUD까지 포함한 전체 브라우저 대표 흐름 검증입니다.
-- `npm run test:prisma`는 기본 루프와 분리된 실DB Prisma/HTTP 통합 검증이며, 현재는 대표적으로 `운영기간 open -> 업로드 배치 -> 수집 -> 전표 확정 -> close`와 `반복규칙 -> plan item 생성 -> import collect 자동 매칭 -> confirm -> 재무제표 생성` 시나리오를 포함합니다.
+- `npm run test:prisma`는 기본 루프와 분리된 실DB Prisma/HTTP 통합 검증이며, 로컬에서는 `PRISMA_INTEGRATION_DATABASE_URL`을 우선하고 없으면 `DATABASE_URL`로 fallback 합니다. CI에서는 `PRISMA_INTEGRATION_DATABASE_URL` 전용으로 동작합니다. 현재는 대표적으로 `운영기간 open -> 업로드 배치 -> 수집 -> 전표 확정 -> close`와 `반복규칙 -> plan item 생성 -> import collect 자동 매칭 -> confirm -> 재무제표 생성` 시나리오를 포함합니다.
+- `npm run audit:runtime:full`은 `critical` gate 없이 현재 runtime advisory 전체를 다시 확인할 때 사용하는 follow-up 명령입니다.
 - 현재 기본 `npm run test`에서는 Prisma 통합 테스트가 안내 문구와 함께 skip됩니다.
 
 ## CI 게이트
 
 - `validate`
-  `npm run check:quick`와 `npm run test`를 조합해 포맷, lint, typecheck, 기본 테스트를 확인합니다.
+  `npm run check:quick`와 `npm run test`를 조합해 포맷, 문서 명령 정합성, 문서 Web/API surface 정합성, lint, typecheck, 기본 테스트를 확인합니다.
 - `e2e-smoke`
   `npm run test:e2e:smoke:build`로 CI와 같은 in-process production build/start 기준 HTTP smoke를 다시 확인합니다.
 
 - `security-regression`
   `npm run test:security:api`로 인증/세션, 브라우저/API 경계 회귀를 CI에서 다시 확인합니다.
+- `prisma-integration`
+  `PRISMA_INTEGRATION_DATABASE_URL` secret이 있는 경우 `npm run test:prisma`로 실제 MySQL 경계 시나리오를 수행하고, secret이 없는 경우에는 `DATABASE_URL` 우회 없이 skip 이유를 남깁니다.
 - `audit-runtime`
   `npm run audit:runtime`으로 실제 배포 대상인 `api`, `web` workspace의 runtime dependency를 점검하고, 현재 CI 게이트는 `critical` 임계값 기준으로 실패를 판정합니다.
 - `semgrep-ce`
@@ -57,6 +69,12 @@
 - `GET /auth/me`
 - `GET /funding-accounts`, `GET /categories`, `GET /account-subjects`, `GET /ledger-transaction-types`, `GET /insurance-policies`, `GET /vehicles`
   현재 workspace/ledger 기준 활성 참조 데이터와 운영 보조 자산 데이터만 반환하는지 검증
+- `GET /insurance-policies?includeInactive=true`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`
+  Owner/Manager 전용 보험 계약 생성, 수정, 비활성화/재활성화와 workspace 범위 접근통제를 검증
+- `POST /vehicles`, `PATCH /vehicles/:id`
+  Owner/Manager 전용 차량 기본 정보 생성, 수정과 workspace 범위 접근통제를 검증
+- `GET /vehicles/maintenance-logs`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`
+  Owner/Manager 전용 차량 정비 이력 생성, 수정과 workspace 범위 접근통제를 검증
 - `GET /reference-data/readiness`
   현재 workspace 기준 기준 데이터 readiness, ownership 구분, 부족 항목 요약을 검증
 - `POST /funding-accounts`, `PATCH /funding-accounts/:id`
@@ -113,21 +131,36 @@
 - `/transactions` 진입 시 기준 데이터 readiness API가 함께 조회되어도 브라우저 스모크가 계속 통과하는지 검증
 - 실제 브라우저 상호작용으로 `/reference-data`에서 자금수단 생성, 수정, 비활성화/재활성화, 비활성 자금수단 종료와 카테고리 생성/수정/비활성화/재활성화가 동작하는지 검증
 - 실제 브라우저 상호작용으로 `/recurring`에서 반복 규칙 생성, 수정, 삭제와 목록 반영이 동작하는지 검증
+- 실제 브라우저 상호작용으로 `/insurances`에서 보험 계약 생성, 수정, 비활성화와 목록 반영이 동작하는지 검증
+- 실제 브라우저 상호작용으로 `/vehicles`에서 차량 생성, 수정, 정비 이력 생성/수정과 목록 반영이 동작하는지 검증
 - `npm run test:e2e:smoke:build`로 in-process production build/start 경로에 결과물을 올린 뒤 health route 응답 기준 최소 HTTP smoke를 자동 검증
-- `npm run test:e2e:smoke:build:browser`로는 로그인/세션 복원, 운영 체크리스트 핵심 CTA, 작업 문맥 fallback 같은 브라우저 build smoke를 필요 시 별도로 검증
+- `npm run test:e2e:smoke:build:browser`로는 로그인/세션 복원, 운영 체크리스트 핵심 CTA, 작업 문맥 fallback 같은 브라우저 build smoke를 루트 래퍼 경로로 필요 시 별도로 검증
 - CI의 `e2e-smoke` 잡은 개발 서버가 아니라 build 결과물 기준 HTTP smoke를 실행
 - 실제 브라우저 상호작용으로 `dashboard`, `transactions`, `reference-data`, `financial-statements`, `carry-forwards`, `settings`의 대표 운영 체크리스트 empty state, readiness 경고, fallback CTA가 유지되는지 검증
-- 기준 데이터 CRUD와 반복 규칙 CRUD 브라우저 검증은 현재 `npm run test:e2e` 전체 브라우저 회귀 범위에 남기고, CI smoke에서는 제외합니다.
+- 기준 데이터 CRUD, 반복 규칙 CRUD, 보험 계약 CRUD, 차량 기본 정보 CRUD 브라우저 검증은 현재 `npm run test:e2e` 전체 브라우저 회귀 범위에 남기고, CI smoke에서는 제외합니다.
 
 ## 현재 남아 있는 공백
 
-- `npm run test:prisma`용 테스트 DB 환경 고정
+- 차량 정비 이력 Phase 1은 구현되었지만, `VehicleItem.fuelLogs`가 아직 `/vehicles` 응답에 남아 있어 연료 이력 분리와 응답 슬림화가 계속 남아 있음
+- `.github/workflows/ci.yml`의 `prisma-integration` job wiring은 반영되었지만, 실제 GitHub 저장소/조직 secret `PRISMA_INTEGRATION_DATABASE_URL` 등록과 첫 통과 증적 확보는 저장소 밖 후속 작업으로 남아 있음
 - Docker가 없는 개발 PC에서는 `semgrep-ce`, `gitleaks`를 로컬에서 CI와 동일하게 재현하기 어려움
 - Windows `core.autocrlf=true` checkout에서는 `npm run check:quick`의 Prettier 단계가 CI(Ubuntu LF 기준)와 다르게 보일 수 있음
-- `npm run audit:runtime`는 현재 `critical` 기준으로 gate를 걸고 있으며, Nest 전이 의존성 기준 `high` 취약점 4건은 별도 대응 또는 예외 판단이 남아 있음
+- `npm run audit:runtime`는 현재 `critical` 기준으로 gate를 걸고 있으며, 2026-04-05 재검증 기준 runtime `high` 4건은 upstream Nest 패키지의 exact dependency pin으로 남아 있어 예외 추적으로 관리 중임
+
+## 2026-04-05 Runtime Audit Follow-up
+
+- 실행: `npm run audit:runtime:full`과 동등한 runtime `npm audit --omit=dev --workspace @personal-erp/api --workspace @personal-erp/web --json`
+- 결과: `critical 0`, `high 4`
+- 분류:
+  - `@nestjs/config@4.0.3 -> lodash@4.17.23`
+  - `@nestjs/swagger@11.2.6 -> lodash@4.17.23`
+  - `@nestjs/swagger@11.2.6 -> path-to-regexp@8.3.0`
+  - `express -> router@2.2.0 -> path-to-regexp@8.3.0`
+- 같은 날 npm registry 기준 최신 배포 버전도 `@nestjs/config 4.0.3`, `@nestjs/swagger 11.2.6`이며, 패키지 내부 dependency가 각각 `lodash 4.17.23`, `path-to-regexp 8.3.0`으로 고정돼 있어 로컬 비파괴 업그레이드 경로가 확인되지 않았습니다.
+- 결론: 현재 CI gate는 `npm run audit:runtime`의 `critical` 기준을 유지하고, 위 4건은 upstream 릴리스 또는 안전한 대체 경로가 나올 때까지 `tracked exception`으로 관리합니다.
 
 ## 해석
 
 현재 검증체계는 성공 경로 계약, 인증, DTO validation, 접근 범위 검증, readiness/request-id 같은 운영 신호, 핵심 쓰기 흐름, 대표 브라우저 사용자 흐름까지를 자동으로 막는 상태입니다.
 `npm run test:e2e`, `npm run test:prisma`는 빠른 기본 테스트와 분리된 대표 심화 검증으로 유지합니다.
-다음 보강 우선순위는 `audit-runtime` 잔여 `high` 취약점 대응 또는 예외 판단, `test:prisma` 환경 고정, Docker 기반 로컬 CI 재현성 보강입니다.
+다음 보강 우선순위는 차량 연료 이력 read/write 분리와 `/vehicles` 응답 슬림화, `PRISMA_INTEGRATION_DATABASE_URL` GitHub secret 등록과 첫 `prisma-integration` 통과 증적 확보, Docker 기반 로컬 CI 재현성 보강입니다.

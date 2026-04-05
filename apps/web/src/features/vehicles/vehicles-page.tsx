@@ -1,23 +1,53 @@
 'use client';
 
+import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Grid, Stack, Typography } from '@mui/material';
+import { Alert, Button, Grid, Stack, Typography } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import { BarChart } from '@mui/x-charts/BarChart';
-import type { FuelLogItem } from '@personal-erp/contracts';
+import type {
+  FuelLogItem,
+  VehicleItem,
+  VehicleMaintenanceLogItem
+} from '@personal-erp/contracts';
 import { formatDate, formatNumber, formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { ChartCard } from '@/shared/ui/chart-card';
 import { DataTableCard } from '@/shared/ui/data-table-card';
+import { FormDrawer } from '@/shared/ui/form-drawer';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { SummaryCard } from '@/shared/ui/summary-card';
-import { getVehicles } from './vehicles.api';
+import { VehicleMaintenanceForm } from './vehicle-maintenance-form';
+import { VehicleForm } from './vehicle-form';
+import {
+  getVehicleMaintenanceLogs,
+  getVehicles,
+  vehicleMaintenanceLogsQueryKey,
+  vehiclesQueryKey
+} from './vehicles.api';
 
 type VehicleFuelLogRow = FuelLogItem & {
   vehicleName: string;
 };
+
+type VehicleMaintenanceLogRow = VehicleMaintenanceLogItem;
+
+type SubmitFeedback = {
+  severity: 'success' | 'error';
+  message: string;
+} | null;
+
+type VehicleDrawerState =
+  | { mode: 'create' }
+  | { mode: 'edit'; vehicle: VehicleItem }
+  | null;
+
+type VehicleMaintenanceDrawerState =
+  | { mode: 'create'; vehicleId?: string | null }
+  | { mode: 'edit'; maintenanceLog: VehicleMaintenanceLogItem }
+  | null;
 
 const fuelTypeLabelMap: Record<string, string> = {
   GASOLINE: '가솔린',
@@ -25,6 +55,15 @@ const fuelTypeLabelMap: Record<string, string> = {
   HYBRID: '하이브리드',
   ELECTRIC: '전기',
   LPG: 'LPG'
+};
+
+const maintenanceCategoryLabelMap: Record<string, string> = {
+  INSPECTION: '점검',
+  REPAIR: '수리',
+  CONSUMABLE: '소모품',
+  TIRE: '타이어',
+  ACCIDENT: '사고',
+  OTHER: '기타'
 };
 
 const fuelColumns: GridColDef<VehicleFuelLogRow>[] = [
@@ -65,16 +104,67 @@ const fuelColumns: GridColDef<VehicleFuelLogRow>[] = [
   }
 ];
 
+const maintenanceColumns: GridColDef<VehicleMaintenanceLogRow>[] = [
+  {
+    field: 'vehicleName',
+    headerName: '차량',
+    flex: 1
+  },
+  {
+    field: 'performedOn',
+    headerName: '정비일',
+    flex: 0.9,
+    valueFormatter: (value) => formatDate(String(value))
+  },
+  {
+    field: 'category',
+    headerName: '구분',
+    flex: 0.8,
+    valueFormatter: (value) =>
+      maintenanceCategoryLabelMap[String(value)] ?? String(value)
+  },
+  {
+    field: 'description',
+    headerName: '정비 내용',
+    flex: 1.4
+  },
+  {
+    field: 'odometerKm',
+    headerName: '주행거리',
+    flex: 0.9,
+    valueFormatter: (value) => `${formatNumber(Number(value))} km`
+  },
+  {
+    field: 'amountWon',
+    headerName: '비용',
+    flex: 0.9,
+    valueFormatter: (value) => formatWon(Number(value))
+  }
+];
+
 export function VehiclesPage() {
-  const { data = [], error } = useQuery({
-    queryKey: ['vehicles'],
+  const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
+  const [drawerState, setDrawerState] =
+    React.useState<VehicleDrawerState>(null);
+  const [maintenanceDrawerState, setMaintenanceDrawerState] =
+    React.useState<VehicleMaintenanceDrawerState>(null);
+  const { data: vehicles = [], error: vehiclesError } = useQuery({
+    queryKey: vehiclesQueryKey,
     queryFn: getVehicles
   });
-  const totalMonthlyExpenseWon = data.reduce(
+  const { data: maintenanceLogs = [], error: maintenanceLogsError } = useQuery({
+    queryKey: vehicleMaintenanceLogsQueryKey,
+    queryFn: getVehicleMaintenanceLogs
+  });
+  const totalMonthlyExpenseWon = vehicles.reduce(
     (total, vehicle) => total + vehicle.monthlyExpenseWon,
     0
   );
-  const vehiclesWithEfficiency = data.filter(
+  const totalMaintenanceAmountWon = maintenanceLogs.reduce(
+    (total, maintenanceLog) => total + maintenanceLog.amountWon,
+    0
+  );
+  const vehiclesWithEfficiency = vehicles.filter(
     (vehicle) => vehicle.estimatedFuelEfficiencyKmPerLiter != null
   );
   const averageFuelEfficiencyKmPerLiter =
@@ -85,7 +175,7 @@ export function VehiclesPage() {
           0
         ) / vehiclesWithEfficiency.length
       : null;
-  const fuelLogRows: VehicleFuelLogRow[] = data
+  const fuelLogRows: VehicleFuelLogRow[] = vehicles
     .flatMap((vehicle) =>
       (vehicle.fuelLogs ?? []).map((fuelLog) => ({
         ...fuelLog,
@@ -94,21 +184,169 @@ export function VehiclesPage() {
       }))
     )
     .sort((left, right) => right.filledOn.localeCompare(left.filledOn));
+  const maintenanceLogRows = maintenanceLogs;
+  const manufacturers = Array.from(
+    new Set(vehicles.map((vehicle) => vehicle.manufacturer).filter(Boolean))
+  );
+
+  const handleCreateOpen = () => {
+    setFeedback(null);
+    setDrawerState({ mode: 'create' });
+  };
+
+  const handleEditOpen = (vehicle: VehicleItem) => {
+    setFeedback(null);
+    setDrawerState({ mode: 'edit', vehicle });
+  };
+
+  const handleDrawerClose = () => {
+    setDrawerState(null);
+  };
+
+  const handleMaintenanceCreateOpen = (vehicleId?: string | null) => {
+    setFeedback(null);
+    setMaintenanceDrawerState({ mode: 'create', vehicleId });
+  };
+
+  const handleMaintenanceEditOpen = (
+    maintenanceLog: VehicleMaintenanceLogItem
+  ) => {
+    setFeedback(null);
+    setMaintenanceDrawerState({ mode: 'edit', maintenanceLog });
+  };
+
+  const handleMaintenanceDrawerClose = () => {
+    setMaintenanceDrawerState(null);
+  };
+
+  const handleFormCompleted = (
+    vehicle: VehicleItem,
+    mode: 'create' | 'edit'
+  ) => {
+    setDrawerState(null);
+    setFeedback({
+      severity: 'success',
+      message:
+        mode === 'edit'
+          ? `${vehicle.name} 차량 정보를 수정했습니다.`
+          : `${vehicle.name} 차량을 등록했습니다.`
+    });
+  };
+
+  const handleMaintenanceCompleted = (
+    maintenanceLog: VehicleMaintenanceLogItem,
+    mode: 'create' | 'edit'
+  ) => {
+    setMaintenanceDrawerState(null);
+    setFeedback({
+      severity: 'success',
+      message:
+        mode === 'edit'
+          ? `${maintenanceLog.vehicleName} 정비 기록을 수정했습니다.`
+          : `${maintenanceLog.vehicleName} 정비 기록을 추가했습니다.`
+    });
+  };
+
+  const vehicleColumns: GridColDef<VehicleItem>[] = [
+    {
+      field: 'name',
+      headerName: '차량명',
+      flex: 1.2
+    },
+    {
+      field: 'manufacturer',
+      headerName: '제조사',
+      flex: 1,
+      valueFormatter: (value) => (value ? String(value) : '-')
+    },
+    {
+      field: 'fuelType',
+      headerName: '연료 종류',
+      flex: 0.9,
+      valueFormatter: (value) => fuelTypeLabelMap[String(value)] ?? String(value)
+    },
+    {
+      field: 'initialOdometerKm',
+      headerName: '초기 주행거리',
+      flex: 1,
+      valueFormatter: (value) => `${formatNumber(Number(value))} km`
+    },
+    {
+      field: 'monthlyExpenseWon',
+      headerName: '월 운영비',
+      flex: 1,
+      valueFormatter: (value) => formatWon(Number(value))
+    },
+    {
+      field: 'estimatedFuelEfficiencyKmPerLiter',
+      headerName: '예상 연비',
+      flex: 0.9,
+      valueFormatter: (value) =>
+        value == null ? '-' : `${formatNumber(Number(value), 2)} km/L`
+    },
+    {
+      field: 'actions',
+      headerName: '동작',
+      flex: 0.9,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <Stack direction="row" spacing={1}>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => {
+              handleEditOpen(params.row);
+            }}
+          >
+            수정
+          </Button>
+          <Button
+            size="small"
+            variant="text"
+            onClick={() => {
+              handleMaintenanceCreateOpen(params.row.id);
+            }}
+          >
+            정비 기록
+          </Button>
+        </Stack>
+      )
+    }
+  ];
+
+  const maintenanceTableColumns: GridColDef<VehicleMaintenanceLogRow>[] = [
+    ...maintenanceColumns,
+    {
+      field: 'actions',
+      headerName: '동작',
+      flex: 0.8,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={() => {
+            handleMaintenanceEditOpen(params.row);
+          }}
+        >
+          수정
+        </Button>
+      )
+    }
+  ];
 
   useDomainHelp({
     title: '차량 운영 개요',
     description:
       '차량 화면은 운영 판단과 분류를 돕는 보조 영역입니다. 공식 회계 확정은 수집 거래와 전표에서 이뤄집니다.',
     primaryEntity: '차량 운영 보조 데이터',
-    relatedEntities: [
-      '수집 거래',
-      '거래 분류',
-      '입출금 계정',
-      '전표'
-    ],
+    relatedEntities: ['수집 거래', '거래 분류', '입출금 계정', '전표', '정비 이력'],
     truthSource:
       '차량과 주유 기록 자체는 회계 저장이 아니며 실제 확정은 수집 거래 분류와 전표 반영에서 이뤄집니다.',
-    readModelNote: '주유비와 연비는 비용 판단을 돕는 운영 지표입니다.'
+    readModelNote:
+      '주유비, 연비, 정비 이력은 차량비 판단과 운영 계획을 돕는 보조 지표입니다.'
   });
 
   return (
@@ -117,20 +355,36 @@ export function VehiclesPage() {
         eyebrow="보조 운영 영역"
         title="차량 운영"
         description="차량과 주유 기록은 핵심 회계 데이터가 아니라 차량비를 더 정확하게 분류하고 검토하기 위한 운영 보조 데이터입니다."
+        primaryActionLabel="차량 등록"
+        primaryActionOnClick={handleCreateOpen}
       />
 
-      {error ? (
-        <QueryErrorAlert title="차량 정보 조회에 실패했습니다." error={error} />
+      {feedback ? (
+        <Alert severity={feedback.severity} variant="outlined">
+          {feedback.message}
+        </Alert>
+      ) : null}
+      {vehiclesError ? (
+        <QueryErrorAlert
+          title="차량 정보 조회에 실패했습니다."
+          error={vehiclesError}
+        />
+      ) : null}
+      {maintenanceLogsError ? (
+        <QueryErrorAlert
+          title="차량 정비 이력 조회에 실패했습니다."
+          error={maintenanceLogsError}
+        />
       ) : null}
       <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <SummaryCard
             title="월 차량 운영비"
             value={formatWon(totalMonthlyExpenseWon)}
             subtitle="주유, 정비, 보험 등 차량 관련 운영비를 합친 월 기준 금액입니다."
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <SummaryCard
             title="평균 연비"
             value={
@@ -141,23 +395,32 @@ export function VehiclesPage() {
             subtitle="연비가 있는 차량만 기준으로 계산한 평균 운영 지표입니다."
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <SummaryCard
-            title="차량 수"
-            value={`${data.length}대`}
+            title="관리 중 차량 수"
+            value={`${vehicles.length}대`}
             subtitle={
-              data.length > 0
-                ? data
-                    .map(
-                      (vehicle) =>
-                        fuelTypeLabelMap[vehicle.fuelType] ?? vehicle.fuelType
-                    )
-                    .join(' / ')
+              manufacturers.length > 0
+                ? manufacturers.join(' / ')
                 : '등록된 차량이 없습니다.'
             }
           />
         </Grid>
+        <Grid size={{ xs: 12, md: 3 }}>
+          <SummaryCard
+            title="누적 정비비"
+            value={formatWon(totalMaintenanceAmountWon)}
+            subtitle="현재 화면에서 관리 중인 차량 정비 이력을 합산한 운영 보조 지표입니다."
+          />
+        </Grid>
       </Grid>
+
+      <DataTableCard
+        title="차량 기본 정보"
+        description="차량 기본 정보를 직접 관리하면서 아래 운영비 차트, 주유 기록, 정비 이력을 같은 화면에서 함께 확인합니다."
+        rows={vehicles}
+        columns={vehicleColumns}
+      />
 
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, xl: 5 }}>
@@ -170,12 +433,12 @@ export function VehiclesPage() {
                 xAxis={[
                   {
                     scaleType: 'band',
-                    data: data.map((vehicle) => vehicle.name)
+                    data: vehicles.map((vehicle) => vehicle.name)
                   }
                 ]}
                 series={[
                   {
-                    data: data.map((vehicle) => vehicle.monthlyExpenseWon)
+                    data: vehicles.map((vehicle) => vehicle.monthlyExpenseWon)
                   }
                 ]}
               />
@@ -193,12 +456,82 @@ export function VehiclesPage() {
         </Grid>
       </Grid>
 
-      {data.length > 0 ? (
+      <DataTableCard
+        title="정비 이력"
+        description="차량별 정비 내용을 누적 기록해 향후 수집 거래 분류와 운영 계획 판단에 참고합니다."
+        rows={maintenanceLogRows}
+        columns={maintenanceTableColumns}
+        actions={
+          <Button
+            variant="outlined"
+            onClick={() => {
+              handleMaintenanceCreateOpen(vehicles[0]?.id ?? null);
+            }}
+            disabled={vehicles.length === 0}
+          >
+            정비 기록 추가
+          </Button>
+        }
+        height={360}
+      />
+
+      {vehicles.length > 0 ? (
         <Typography variant="body2" color="text.secondary">
-          차량 데이터가 쌓이면 정비 이력과 수집 거래 분류 규칙까지 함께 연결하는
-          확장으로 자연스럽게 이어갈 수 있습니다.
+          차량 기본 정보와 정비 이력을 함께 관리하면서, 다음 단계에서는 연료
+          이력 분리와 차량 운영 요약 정리를 이어갈 수 있습니다.
         </Typography>
       ) : null}
+
+      <FormDrawer
+        open={drawerState !== null}
+        onClose={handleDrawerClose}
+        title={drawerState?.mode === 'edit' ? '차량 수정' : '차량 등록'}
+        description={
+          drawerState?.mode === 'edit'
+            ? '차량 기본 정보를 조정해 운영 보조 데이터와 비용 판단 흐름을 맞춥니다.'
+            : '차량 기본 정보를 추가해 차량비 관련 운영 데이터의 기준선을 만듭니다.'
+        }
+      >
+        {drawerState?.mode === 'edit' ? (
+          <VehicleForm
+            mode="edit"
+            initialVehicle={drawerState.vehicle}
+            onCompleted={handleFormCompleted}
+          />
+        ) : (
+          <VehicleForm mode="create" onCompleted={handleFormCompleted} />
+        )}
+      </FormDrawer>
+
+      <FormDrawer
+        open={maintenanceDrawerState !== null}
+        onClose={handleMaintenanceDrawerClose}
+        title={
+          maintenanceDrawerState?.mode === 'edit'
+            ? '정비 기록 수정'
+            : '정비 기록 추가'
+        }
+        description={
+          maintenanceDrawerState?.mode === 'edit'
+            ? '차량 정비 이력을 조정해 운영 판단과 비용 검토 기준을 맞춥니다.'
+            : '차량 정비 이력을 추가해 운영 보조 데이터와 비용 판단 흐름을 보강합니다.'
+        }
+      >
+        {maintenanceDrawerState?.mode === 'edit' ? (
+          <VehicleMaintenanceForm
+            vehicles={vehicles}
+            mode="edit"
+            initialMaintenanceLog={maintenanceDrawerState.maintenanceLog}
+            onCompleted={handleMaintenanceCompleted}
+          />
+        ) : (
+          <VehicleMaintenanceForm
+            vehicles={vehicles}
+            initialVehicleId={maintenanceDrawerState?.vehicleId ?? null}
+            onCompleted={handleMaintenanceCompleted}
+          />
+        )}
+      </FormDrawer>
     </Stack>
   );
 }

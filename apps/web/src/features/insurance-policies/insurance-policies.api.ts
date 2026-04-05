@@ -1,5 +1,11 @@
-import type { InsurancePolicyItem } from '@personal-erp/contracts';
-import { fetchJson } from '@/shared/api/fetch-json';
+import type {
+  CreateInsurancePolicyRequest,
+  InsurancePolicyItem,
+  UpdateInsurancePolicyRequest
+} from '@personal-erp/contracts';
+import { fetchJson, patchJson, postJson } from '@/shared/api/fetch-json';
+
+export const insurancePoliciesQueryKey = ['insurance-policies'] as const;
 
 export const mockInsurancePolicies: InsurancePolicyItem[] = [
   {
@@ -10,7 +16,8 @@ export const mockInsurancePolicies: InsurancePolicyItem[] = [
     paymentDay: 25,
     cycle: 'MONTHLY',
     renewalDate: '2026-11-01',
-    maturityDate: null
+    maturityDate: null,
+    isActive: true
   },
   {
     id: 'ins-2',
@@ -20,13 +27,88 @@ export const mockInsurancePolicies: InsurancePolicyItem[] = [
     paymentDay: 25,
     cycle: 'MONTHLY',
     renewalDate: '2026-09-15',
-    maturityDate: null
+    maturityDate: null,
+    isActive: false
   }
 ];
 
-export function getInsurancePolicies() {
+export function getInsurancePolicies(input?: { includeInactive?: boolean }) {
+  const includeInactive = input?.includeInactive ?? false;
+
   return fetchJson<InsurancePolicyItem[]>(
-    '/insurance-policies',
-    mockInsurancePolicies
+    includeInactive
+      ? '/insurance-policies?includeInactive=true'
+      : '/insurance-policies',
+    includeInactive
+      ? mockInsurancePolicies
+      : mockInsurancePolicies.filter((policy) => policy.isActive)
   );
+}
+
+export function createInsurancePolicy(
+  input: CreateInsurancePolicyRequest,
+  fallback: InsurancePolicyItem
+) {
+  return postJson<InsurancePolicyItem, CreateInsurancePolicyRequest>(
+    '/insurance-policies',
+    input,
+    fallback
+  );
+}
+
+export function updateInsurancePolicy(
+  insurancePolicyId: string,
+  input: UpdateInsurancePolicyRequest,
+  fallback: InsurancePolicyItem
+) {
+  return patchJson<InsurancePolicyItem, UpdateInsurancePolicyRequest>(
+    `/insurance-policies/${insurancePolicyId}`,
+    input,
+    fallback
+  );
+}
+
+export function buildInsurancePolicyFallbackItem(
+  input: CreateInsurancePolicyRequest | UpdateInsurancePolicyRequest,
+  context?: {
+    id?: string;
+  }
+): InsurancePolicyItem {
+  return {
+    id: context?.id ?? `insurance-policy-demo-${Date.now()}`,
+    provider: input.provider,
+    productName: input.productName,
+    monthlyPremiumWon: input.monthlyPremiumWon,
+    paymentDay: input.paymentDay,
+    cycle: input.cycle,
+    renewalDate: input.renewalDate ?? null,
+    maturityDate: input.maturityDate ?? null,
+    isActive: input.isActive ?? true
+  };
+}
+
+export function mergeInsurancePolicyItem(
+  current: InsurancePolicyItem[] | undefined,
+  saved: InsurancePolicyItem
+) {
+  return [
+    saved,
+    ...(current ?? []).filter((item) => item.id !== saved.id)
+  ].sort((left, right) => {
+    if (left.isActive !== right.isActive) {
+      return Number(right.isActive) - Number(left.isActive);
+    }
+
+    const paymentDayDiff = left.paymentDay - right.paymentDay;
+    if (paymentDayDiff !== 0) {
+      return paymentDayDiff;
+    }
+
+    const providerDiff = left.provider.localeCompare(right.provider);
+    if (providerDiff !== 0) {
+      return providerDiff;
+    }
+
+    return left.productName.localeCompare(right.productName);
+  });
 }

@@ -581,6 +581,21 @@ export async function createRequestTestState(): Promise<RequestTestState> {
         createdAt: new Date('2026-03-02T08:00:00.000Z'),
         fuelLogs: []
       }
+    ],
+    vehicleMaintenanceLogs: [
+      {
+        id: 'maintenance-1',
+        vehicleId: 'vehicle-1',
+        performedOn: new Date('2026-03-18T00:00:00.000Z'),
+        odometerKm: 58_620,
+        category: 'REPAIR',
+        vendor: '현대 블루핸즈',
+        description: '브레이크 패드 교체',
+        amountWon: 185_000,
+        memo: '전륜 패드 기준',
+        createdAt: new Date('2026-03-18T10:00:00.000Z'),
+        updatedAt: new Date('2026-03-18T10:00:00.000Z')
+      }
     ]
   };
 }

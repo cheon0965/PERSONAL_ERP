@@ -20,15 +20,21 @@
 
 ## 2. `Transaction`의 현재 위치
 
-`Transaction`은 아직 [`apps/api/prisma/schema.prisma`](../apps/api/prisma/schema.prisma)에 남아 있고, `User`, `Tenant`, `Ledger`, `Account`, `Category`와의 레거시 관계도 유지된다.
+물리 DB 테이블 `Transaction`은 아직 남아 있다.
+다만 현재 Prisma schema에서는 이 테이블을 `LegacyTransaction`으로 명시적으로 노출해, 신규 회계 흐름의 현재 모델과 혼동되지 않도록 했다.
+
+즉, 현재 남아 있는 것은 “공식 신규 거래 모델”이 아니라 “레거시 물리 테이블 + 브리지 표면”이다.
 
 다만 현재 저장소 기준으로 확인한 결과:
 
 - Web의 `/transactions` 화면은 레거시 `Transaction`이 아니라 `CollectedTransaction` shorthand다.
 - 현재 API 모듈은 `collected-transactions`, `journal-entries`, `financial-statements`, `carry-forwards` 중심으로 동작한다.
 - `apps/api/src`, `apps/web/src`, `packages/contracts` 안에서는 레거시 `Transaction`을 직접 읽고 쓰는 현재 런타임 경로를 찾지 못했다.
+- 현재 직접적인 레거시 접근은 `apps/api/prisma/phase1-backbone.ts`의 pre-phase1 데이터 backfill 경계로 제한되어 있다.
+- demo seed는 더 이상 새 레거시 `Transaction` rows를 만들지 않는다.
 
-위 마지막 항목은 현재 코드 검색 결과에 근거한 구현 상태 판단이다. 즉, `Transaction`은 현시점 구현에서 “주요 런타임 write/read 모델”이 아니라 “스키마에 남아 있는 레거시 구조”로 보는 것이 타당하다.
+위 항목들은 현재 코드 검색 결과와 실제 seed/backfill 코드 기준 판단이다.
+즉, 현재 남아 있는 것은 “주요 런타임 write/read 모델”이라기보다 “레거시 물리 테이블과 제한된 브리지 코드”라고 보는 것이 더 정확하다.
 
 ## 3. 신규 기능 작성 규칙
 

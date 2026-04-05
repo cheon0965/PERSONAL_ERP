@@ -5,9 +5,7 @@ import {
   InsuranceCycle,
   PrismaClient,
   RecurrenceFrequency,
-  TransactionOrigin,
-  TransactionStatus,
-  TransactionType
+  VehicleMaintenanceCategory
 } from '@prisma/client';
 import { getApiEnv } from '../src/config/api-env';
 import { ensurePhase1BackboneForUser } from './phase1-backbone';
@@ -85,49 +83,6 @@ const DEMO_CATEGORIES = [
     name: '포장재/소모품',
     kind: CategoryKind.EXPENSE,
     sortOrder: 6
-  }
-] as const;
-
-const DEMO_TRANSACTIONS = [
-  {
-    title: '3월 스마트스토어 매출',
-    type: TransactionType.INCOME,
-    amountWon: 3200000,
-    businessDate: new Date('2026-03-01T00:00:00.000Z'),
-    accountKey: 'mainAccount',
-    categoryKey: 'salesCategory',
-    origin: TransactionOrigin.MANUAL,
-    status: TransactionStatus.POSTED
-  },
-  {
-    title: '배송 차량 주유',
-    type: TransactionType.EXPENSE,
-    amountWon: 84000,
-    businessDate: new Date('2026-03-03T00:00:00.000Z'),
-    accountKey: 'reserveAccount',
-    categoryKey: 'fuelCategory',
-    origin: TransactionOrigin.MANUAL,
-    status: TransactionStatus.POSTED
-  },
-  {
-    title: 'POS/인터넷 요금 자동이체',
-    type: TransactionType.EXPENSE,
-    amountWon: 75000,
-    businessDate: new Date('2026-03-10T00:00:00.000Z'),
-    accountKey: 'mainAccount',
-    categoryKey: 'utilitiesCategory',
-    origin: TransactionOrigin.RECURRING,
-    status: TransactionStatus.POSTED
-  },
-  {
-    title: '포장재 구매',
-    type: TransactionType.EXPENSE,
-    amountWon: 126000,
-    businessDate: new Date('2026-03-12T00:00:00.000Z'),
-    accountKey: 'reserveAccount',
-    categoryKey: 'packagingCategory',
-    origin: TransactionOrigin.MANUAL,
-    status: TransactionStatus.POSTED
   }
 ] as const;
 
@@ -223,6 +178,31 @@ const DEMO_FUEL_LOGS = [
   }
 ] as const;
 
+const DEMO_VEHICLE_MAINTENANCE_LOGS = [
+  {
+    performedOn: new Date('2026-03-21T00:00:00.000Z'),
+    odometerKm: 128720,
+    category: VehicleMaintenanceCategory.REPAIR,
+    vendor: '현대 블루핸즈',
+    description: '브레이크 패드 교체',
+    amountWon: 185000,
+    memo: '전륜 패드 기준'
+  },
+  {
+    performedOn: new Date('2026-03-28T00:00:00.000Z'),
+    odometerKm: 128940,
+    category: VehicleMaintenanceCategory.INSPECTION,
+    vendor: '현대 블루핸즈',
+    description: '엔진오일 점검',
+    amountWon: 42000,
+    memo: null
+  }
+] as const;
+
+// Demo seed intentionally avoids creating new legacy Transaction rows.
+// Any remaining legacy rows should come only from pre-phase1 data or explicit
+// backfill/rollback workflows.
+
 type SummaryItem = {
   created: number;
   skipped: number;
@@ -234,11 +214,11 @@ type SeedSummary = {
   settings: SummaryItem;
   accounts: SummaryItem;
   categories: SummaryItem;
-  transactions: SummaryItem;
   recurringRules: SummaryItem;
   insurancePolicies: SummaryItem;
   vehicles: SummaryItem;
   fuelLogs: SummaryItem;
+  maintenanceLogs: SummaryItem;
 };
 
 function createSummary(): SeedSummary {
@@ -248,11 +228,11 @@ function createSummary(): SeedSummary {
     settings: { created: 0, skipped: 0 },
     accounts: { created: 0, skipped: 0 },
     categories: { created: 0, skipped: 0 },
-    transactions: { created: 0, skipped: 0 },
     recurringRules: { created: 0, skipped: 0 },
     insurancePolicies: { created: 0, skipped: 0 },
     vehicles: { created: 0, skipped: 0 },
-    fuelLogs: { created: 0, skipped: 0 }
+    fuelLogs: { created: 0, skipped: 0 },
+    maintenanceLogs: { created: 0, skipped: 0 }
   };
 }
 
@@ -264,11 +244,12 @@ function printSummary(summary: SeedSummary) {
     `  - settings: created ${summary.settings.created}, skipped ${summary.settings.skipped}`,
     `  - accounts: created ${summary.accounts.created}, skipped ${summary.accounts.skipped}`,
     `  - categories: created ${summary.categories.created}, skipped ${summary.categories.skipped}`,
-    `  - transactions: created ${summary.transactions.created}, skipped ${summary.transactions.skipped}`,
+    '  - legacy transactions: not seeded',
     `  - recurring rules: created ${summary.recurringRules.created}, skipped ${summary.recurringRules.skipped}`,
     `  - insurance policies: created ${summary.insurancePolicies.created}, skipped ${summary.insurancePolicies.skipped}`,
     `  - vehicles: created ${summary.vehicles.created}, skipped ${summary.vehicles.skipped}`,
-    `  - fuel logs: created ${summary.fuelLogs.created}, skipped ${summary.fuelLogs.skipped}`
+    `  - fuel logs: created ${summary.fuelLogs.created}, skipped ${summary.fuelLogs.skipped}`,
+    `  - maintenance logs: created ${summary.maintenanceLogs.created}, skipped ${summary.maintenanceLogs.skipped}`
   ];
 
   console.log(lines.join('\n'));
@@ -425,62 +406,6 @@ async function ensureDemoCategories(
   }
 
   return categoryIds;
-}
-
-async function ensureDemoTransactions(
-  userId: string,
-  tenantId: string,
-  ledgerId: string,
-  accountIds: Map<(typeof DEMO_ACCOUNTS)[number]['key'], string>,
-  categoryIds: Map<(typeof DEMO_CATEGORIES)[number]['key'], string>,
-  summary: SeedSummary
-) {
-  for (const transaction of DEMO_TRANSACTIONS) {
-    const accountId = accountIds.get(transaction.accountKey);
-    const categoryId = categoryIds.get(transaction.categoryKey);
-
-    if (!accountId || !categoryId) {
-      throw new Error(
-        `Missing seed reference for transaction: ${transaction.title}`
-      );
-    }
-
-    const existingTransaction = await prisma.transaction.findFirst({
-      where: {
-        tenantId,
-        ledgerId,
-        type: transaction.type,
-        amountWon: transaction.amountWon,
-        businessDate: transaction.businessDate,
-        accountId,
-        origin: transaction.origin
-      },
-      select: { id: true }
-    });
-
-    if (existingTransaction) {
-      summary.transactions.skipped += 1;
-      continue;
-    }
-
-    await prisma.transaction.create({
-      data: {
-        userId,
-        tenantId,
-        ledgerId,
-        title: transaction.title,
-        type: transaction.type,
-        amountWon: transaction.amountWon,
-        businessDate: transaction.businessDate,
-        accountId,
-        categoryId,
-        origin: transaction.origin,
-        status: transaction.status
-      }
-    });
-
-    summary.transactions.created += 1;
-  }
 }
 
 async function ensureDemoRecurringRules(
@@ -642,6 +567,37 @@ async function ensureDemoFuelLogs(vehicleId: string, summary: SeedSummary) {
   }
 }
 
+async function ensureDemoVehicleMaintenanceLogs(
+  vehicleId: string,
+  summary: SeedSummary
+) {
+  for (const maintenanceLog of DEMO_VEHICLE_MAINTENANCE_LOGS) {
+    const existingMaintenanceLog = await prisma.vehicleMaintenanceLog.findFirst({
+      where: {
+        vehicleId,
+        performedOn: maintenanceLog.performedOn,
+        odometerKm: maintenanceLog.odometerKm,
+        description: maintenanceLog.description
+      },
+      select: { id: true }
+    });
+
+    if (existingMaintenanceLog) {
+      summary.maintenanceLogs.skipped += 1;
+      continue;
+    }
+
+    await prisma.vehicleMaintenanceLog.create({
+      data: {
+        vehicleId,
+        ...maintenanceLog
+      }
+    });
+
+    summary.maintenanceLogs.created += 1;
+  }
+}
+
 async function resetDemoUserIfRequested(summary: SeedSummary) {
   const shouldReset = process.argv.includes('--reset');
 
@@ -683,15 +639,6 @@ async function main() {
     backbone.ledgerId,
     summary
   );
-
-  await ensureDemoTransactions(
-    userId,
-    backbone.tenantId,
-    backbone.ledgerId,
-    accountIds,
-    categoryIds,
-    summary
-  );
   await ensureDemoRecurringRules(
     userId,
     backbone.tenantId,
@@ -714,6 +661,7 @@ async function main() {
     summary
   );
   await ensureDemoFuelLogs(vehicleId, summary);
+  await ensureDemoVehicleMaintenanceLogs(vehicleId, summary);
   await ensurePhase1BackboneForUser(prisma, userId);
 
   printSummary(summary);

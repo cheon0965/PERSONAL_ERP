@@ -19,6 +19,7 @@ export function mapInsurancePolicyToItem(
     paymentDay: item.paymentDay,
     cycle: item.cycle,
     renewalDate: item.renewalDate?.toISOString().slice(0, 10) ?? null,
-    maturityDate: item.maturityDate?.toISOString().slice(0, 10) ?? null
+    maturityDate: item.maturityDate?.toISOString().slice(0, 10) ?? null,
+    isActive: item.isActive
   };
 }

@@ -112,6 +112,7 @@ API나 공유 계약이 바뀌면 아래 순서를 같은 PR 안에서 닫습니
 npm run check:quick
 ```
 
+- `npm run check:quick`에는 `npm run docs:check`도 포함되며, 문서의 `npm run` 표기와 `docs/API.md`, `docs/VALIDATION_NOTES.md`의 Web/API surface가 실제 라우트와 controller 기반 Swagger surface와 맞는지 함께 확인합니다.
 - Windows에서 `core.autocrlf=true` checkout을 쓰면 Prettier EOL 차이로 `check:quick`가 CI와 다르게 보일 수 있습니다.
 - CI와 같은 LF 기준 포맷 확인이 필요하면 `npm run format:check -- --end-of-line auto`를 함께 봅니다.
 
@@ -131,7 +132,9 @@ npm run test:prisma
 
 - `npm run test:e2e:smoke:build`는 `next build` 결과물을 기준으로 대표 브라우저 smoke를 다시 확인하는 CI 정렬용 검증입니다.
 - `npm run test:e2e`는 브라우저 사용자 흐름 대표 검증입니다.
-- `npm run test:prisma`는 실제 MySQL 경계를 보는 대표 통합 검증입니다.
+- `npm run test:prisma`는 로컬에서는 `PRISMA_INTEGRATION_DATABASE_URL`을 우선, `DATABASE_URL`을 fallback 으로 사용해 실제 MySQL 경계를 보는 대표 통합 검증입니다.
+- CI에서는 `PRISMA_INTEGRATION_DATABASE_URL` 전용으로 동작하며, 전용 secret이 없으면 `DATABASE_URL`로 우회하지 않고 skip 이유를 남깁니다.
+- 테스트 DB가 준비되지 않은 경우에는 어떤 env가 없거나 닿지 않는지 skip 메시지에 바로 드러납니다.
 - 둘 다 기본 개발 루프와 분리된 선택 실행입니다.
 
 전체 CI 수준 검증:

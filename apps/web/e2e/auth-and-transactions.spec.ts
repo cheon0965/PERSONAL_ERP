@@ -8,15 +8,24 @@ import type {
   CreateCategoryRequest,
   CreateCollectedTransactionRequest,
   CreateFundingAccountRequest,
+  CreateInsurancePolicyRequest,
   CreateRecurringRuleRequest,
+  CreateVehicleMaintenanceLogRequest,
+  CreateVehicleRequest,
   FundingAccountItem,
+  InsurancePolicyItem,
   LedgerTransactionTypeItem,
   RecurringRuleDetailItem,
   RecurringRuleItem,
   ReferenceDataReadinessSummary,
   UpdateCategoryRequest,
   UpdateFundingAccountRequest,
-  UpdateRecurringRuleRequest
+  UpdateInsurancePolicyRequest,
+  UpdateRecurringRuleRequest,
+  UpdateVehicleMaintenanceLogRequest,
+  UpdateVehicleRequest,
+  VehicleItem,
+  VehicleMaintenanceLogItem
 } from '@personal-erp/contracts';
 
 const e2eApiRoutePattern = '**/api/**';
@@ -1268,6 +1277,534 @@ test('manages recurring rules through the recurring rules UI', async ({
   expectNoPageErrors(pageErrors);
 });
 
+test('manages insurance policies through the insurance policies UI', async ({
+  page
+}) => {
+  const pageErrors: string[] = [];
+  const unhandledApiRequests: string[] = [];
+  const newInsuranceProductName = `E2E 보험 계약 ${Date.now()}`;
+  const renamedInsuranceProductName = `${newInsuranceProductName} 수정`;
+  const currentUser = createE2ECurrentUser();
+  let sessionActive = false;
+  let insurancePolicies = createE2EInsurancePolicies();
+
+  page.on('pageerror', (error) => {
+    pageErrors.push(error.stack ?? error.message);
+  });
+
+  await page.route(e2eApiRoutePattern, async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const path = url.pathname;
+
+    if (path === '/api/auth/login' && request.method() === 'POST') {
+      sessionActive = true;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          accessToken: 'playwright-demo-access-token',
+          user: currentUser
+        })
+      });
+      return;
+    }
+
+    if (path === '/api/auth/refresh' && request.method() === 'POST') {
+      if (!sessionActive) {
+        await route.fulfill({
+          status: 401,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            message: 'Missing refresh token'
+          })
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          accessToken: 'playwright-refreshed-access-token',
+          user: currentUser
+        })
+      });
+      return;
+    }
+
+    if (path === '/api/auth/logout' && request.method() === 'POST') {
+      sessionActive = false;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          status: 'logged_out'
+        })
+      });
+      return;
+    }
+
+    if (path === '/api/insurance-policies' && request.method() === 'GET') {
+      const includeInactive =
+        url.searchParams.get('includeInactive') === 'true';
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(
+          includeInactive
+            ? insurancePolicies
+            : insurancePolicies.filter((policy) => policy.isActive)
+        )
+      });
+      return;
+    }
+
+    if (path === '/api/insurance-policies' && request.method() === 'POST') {
+      const payload = request.postDataJSON() as CreateInsurancePolicyRequest;
+      const created = buildInsurancePolicyItemFromPayload(payload, {
+        id: `policy-e2e-${Date.now()}`
+      });
+
+      insurancePolicies = mergeInsurancePoliciesForE2E(
+        insurancePolicies,
+        created
+      );
+
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify(created)
+      });
+      return;
+    }
+
+    if (
+      path.startsWith('/api/insurance-policies/') &&
+      request.method() === 'PATCH'
+    ) {
+      const insurancePolicyId = path.split('/').at(-1) ?? '';
+      const payload = request.postDataJSON() as UpdateInsurancePolicyRequest;
+      const updated = buildInsurancePolicyItemFromPayload(payload, {
+        id: insurancePolicyId
+      });
+
+      insurancePolicies = mergeInsurancePoliciesForE2E(
+        insurancePolicies,
+        updated
+      );
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(updated)
+      });
+      return;
+    }
+
+    const requestSignature = `${request.method()} ${path}`;
+    unhandledApiRequests.push(requestSignature);
+
+    await route.fulfill({
+      status: 404,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        message: `Unhandled E2E route: ${requestSignature}`
+      })
+    });
+  });
+
+  await page.goto('/insurances');
+  await expect(page).toHaveURL(/\/login/);
+
+  await page.getByLabel('이메일').fill('demo@example.com');
+  await page.getByLabel('비밀번호').fill('Demo1234!');
+  await page.getByRole('button', { name: '로그인' }).click();
+
+  await expect(page).toHaveURL(/\/insurances$/);
+  await expect(
+    page.getByRole('heading', { name: '보험 계약', exact: true })
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: '보험 계약 등록' })
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: '보험 계약 등록' }).click();
+  await expect(
+    page.getByRole('heading', { name: '보험 계약 등록' })
+  ).toBeVisible();
+  const insurancePolicyForm = page.locator('form');
+  await insurancePolicyForm
+    .getByRole('textbox', { name: '보험사' })
+    .fill('메리츠화재');
+  await insurancePolicyForm
+    .getByRole('textbox', { name: '상품명' })
+    .fill(newInsuranceProductName);
+  await insurancePolicyForm.getByLabel('월 보험료 (원)').fill('88000');
+  await insurancePolicyForm.getByLabel('갱신일').fill('2026-10-15');
+  await insurancePolicyForm
+    .getByRole('button', { name: '보험 계약 저장' })
+    .click();
+
+  await expect(
+    page.getByText(`${newInsuranceProductName} 보험 계약을 등록했습니다.`)
+  ).toBeVisible();
+  await expect(
+    page.getByRole('gridcell', { name: newInsuranceProductName, exact: true })
+  ).toBeVisible();
+
+  const newInsurancePolicyRow = page.getByRole('row', {
+    name: new RegExp(newInsuranceProductName)
+  });
+  await newInsurancePolicyRow.getByRole('button', { name: '수정' }).click();
+  await expect(
+    page.getByRole('heading', { name: '보험 계약 수정' })
+  ).toBeVisible();
+  await insurancePolicyForm
+    .getByRole('textbox', { name: '상품명' })
+    .fill(renamedInsuranceProductName);
+  await insurancePolicyForm.getByRole('combobox', { name: '상태' }).click();
+  await page.getByRole('option', { name: '비활성' }).click();
+  await insurancePolicyForm
+    .getByRole('button', { name: '보험 계약 수정' })
+    .click();
+
+  await expect(
+    page.getByText(`${renamedInsuranceProductName} 보험 계약을 수정했습니다.`)
+  ).toBeVisible();
+  const renamedInsurancePolicyRow = page.getByRole('row', {
+    name: new RegExp(renamedInsuranceProductName)
+  });
+  await expect(
+    renamedInsurancePolicyRow.getByText('비활성', { exact: true })
+  ).toBeVisible();
+
+  expectNoUnhandledApiRequests(unhandledApiRequests);
+  expectNoPageErrors(pageErrors);
+});
+
+test('manages vehicles through the vehicles UI', async ({ page }) => {
+  const pageErrors: string[] = [];
+  const unhandledApiRequests: string[] = [];
+  const newVehicleName = `E2E 차량 ${Date.now()}`;
+  const renamedVehicleName = `${newVehicleName} 수정`;
+  const newMaintenanceDescription = `엔진오일 교체 ${Date.now()}`;
+  const renamedMaintenanceDescription = `${newMaintenanceDescription} 완료`;
+  const currentUser = createE2ECurrentUser();
+  let sessionActive = false;
+  let vehicles = createE2EVehicles();
+  let maintenanceLogs = createE2EVehicleMaintenanceLogs();
+
+  page.on('pageerror', (error) => {
+    pageErrors.push(error.stack ?? error.message);
+  });
+
+  await page.route(e2eApiRoutePattern, async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+
+    if (path === '/api/auth/login' && request.method() === 'POST') {
+      sessionActive = true;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          accessToken: 'playwright-demo-access-token',
+          user: currentUser
+        })
+      });
+      return;
+    }
+
+    if (path === '/api/auth/refresh' && request.method() === 'POST') {
+      if (!sessionActive) {
+        await route.fulfill({
+          status: 401,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            message: 'Missing refresh token'
+          })
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          accessToken: 'playwright-refreshed-access-token',
+          user: currentUser
+        })
+      });
+      return;
+    }
+
+    if (path === '/api/auth/logout' && request.method() === 'POST') {
+      sessionActive = false;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          status: 'logged_out'
+        })
+      });
+      return;
+    }
+
+    if (path === '/api/vehicles' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(vehicles)
+      });
+      return;
+    }
+
+    if (path === '/api/vehicles' && request.method() === 'POST') {
+      const payload = request.postDataJSON() as CreateVehicleRequest;
+      const created = buildVehicleItemFromPayload(payload, {
+        id: `vehicle-e2e-${Date.now()}`,
+        fuelLogs: []
+      });
+
+      vehicles = mergeVehiclesForE2E(vehicles, created);
+
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify(created)
+      });
+      return;
+    }
+
+    if (
+      path === '/api/vehicles/maintenance-logs' &&
+      request.method() === 'GET'
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(maintenanceLogs)
+      });
+      return;
+    }
+
+    if (
+      /^\/api\/vehicles\/[^/]+\/maintenance-logs$/.test(path) &&
+      request.method() === 'POST'
+    ) {
+      const pathSegments = path.split('/').filter(Boolean);
+      const vehicleId = pathSegments[2] ?? '';
+      const payload =
+        request.postDataJSON() as CreateVehicleMaintenanceLogRequest;
+      const vehicle =
+        vehicles.find((candidate) => candidate.id === vehicleId) ?? null;
+      const created = buildVehicleMaintenanceLogItemFromPayload(payload, {
+        id: `maintenance-e2e-${Date.now()}`,
+        vehicleId,
+        vehicleName: vehicle?.name ?? '알 수 없는 차량'
+      });
+
+      maintenanceLogs = mergeVehicleMaintenanceLogsForE2E(
+        maintenanceLogs,
+        created
+      );
+
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify(created)
+      });
+      return;
+    }
+
+    if (
+      /^\/api\/vehicles\/[^/]+\/maintenance-logs\/[^/]+$/.test(path) &&
+      request.method() === 'PATCH'
+    ) {
+      const pathSegments = path.split('/').filter(Boolean);
+      const vehicleId = pathSegments[2] ?? '';
+      const maintenanceLogId = pathSegments[4] ?? '';
+      const payload =
+        request.postDataJSON() as UpdateVehicleMaintenanceLogRequest;
+      const currentMaintenanceLog =
+        maintenanceLogs.find(
+          (maintenanceLog) => maintenanceLog.id === maintenanceLogId
+        ) ?? null;
+      const updated = buildVehicleMaintenanceLogItemFromPayload(payload, {
+        id: maintenanceLogId,
+        vehicleId,
+        vehicleName: currentMaintenanceLog?.vehicleName ?? '알 수 없는 차량'
+      });
+
+      maintenanceLogs = mergeVehicleMaintenanceLogsForE2E(
+        maintenanceLogs,
+        updated
+      );
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(updated)
+      });
+      return;
+    }
+
+    if (/^\/api\/vehicles\/[^/]+$/.test(path) && request.method() === 'PATCH') {
+      const vehicleId = path.split('/').at(-1) ?? '';
+      const payload = request.postDataJSON() as UpdateVehicleRequest;
+      const currentVehicle =
+        vehicles.find((vehicle) => vehicle.id === vehicleId) ?? null;
+      const updated = buildVehicleItemFromPayload(payload, {
+        id: vehicleId,
+        fuelLogs: currentVehicle?.fuelLogs ?? []
+      });
+
+      vehicles = mergeVehiclesForE2E(vehicles, updated);
+      maintenanceLogs = maintenanceLogs.map((maintenanceLog) =>
+        maintenanceLog.vehicleId === vehicleId
+          ? {
+              ...maintenanceLog,
+              vehicleName: updated.name
+            }
+          : maintenanceLog
+      );
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(updated)
+      });
+      return;
+    }
+
+    const requestSignature = `${request.method()} ${path}`;
+    unhandledApiRequests.push(requestSignature);
+
+    await route.fulfill({
+      status: 404,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        message: `Unhandled E2E route: ${requestSignature}`
+      })
+    });
+  });
+
+  await page.goto('/vehicles');
+  await expect(page).toHaveURL(/\/login/);
+
+  await page.getByLabel('이메일').fill('demo@example.com');
+  await page.getByLabel('비밀번호').fill('Demo1234!');
+  await page.getByRole('button', { name: '로그인' }).click();
+
+  await expect(page).toHaveURL(/\/vehicles$/);
+  await expect(
+    page.getByRole('heading', { name: '차량 운영', exact: true })
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: '차량 등록' })).toBeVisible();
+
+  await page.getByRole('button', { name: '차량 등록' }).click();
+  await expect(page.getByRole('heading', { name: '차량 등록' })).toBeVisible();
+  const vehicleForm = page.locator('form');
+  await vehicleForm
+    .getByRole('textbox', { name: '차량명' })
+    .fill(newVehicleName);
+  await vehicleForm.getByRole('textbox', { name: '제조사' }).fill('Kia');
+  await vehicleForm.getByLabel('초기 주행거리 (km)').fill('12400');
+  await vehicleForm.getByLabel('월 차량 운영비 (원)').fill('215000');
+  await vehicleForm.getByLabel('예상 연비 (km/L)').fill('14.8');
+  await vehicleForm.getByRole('button', { name: '차량 저장' }).click();
+
+  await expect(
+    page.getByText(`${newVehicleName} 차량을 등록했습니다.`)
+  ).toBeVisible();
+  await expect(
+    page.getByRole('gridcell', { name: newVehicleName, exact: true })
+  ).toBeVisible();
+
+  const newVehicleRow = page.getByRole('row', {
+    name: new RegExp(newVehicleName)
+  });
+  await newVehicleRow.getByRole('button', { name: '수정' }).click();
+  await expect(page.getByRole('heading', { name: '차량 수정' })).toBeVisible();
+  await vehicleForm
+    .getByRole('textbox', { name: '차량명' })
+    .fill(renamedVehicleName);
+  await vehicleForm.getByLabel('월 차량 운영비 (원)').fill('238000');
+  await vehicleForm.getByRole('button', { name: '차량 수정' }).click();
+
+  await expect(
+    page.getByText(`${renamedVehicleName} 차량 정보를 수정했습니다.`)
+  ).toBeVisible();
+  await expect(
+    page.getByRole('gridcell', { name: renamedVehicleName, exact: true })
+  ).toBeVisible();
+
+  const renamedVehicleRow = page.getByRole('row', {
+    name: new RegExp(renamedVehicleName)
+  });
+  await renamedVehicleRow.getByRole('button', { name: '정비 기록' }).click();
+  await expect(
+    page.getByRole('heading', { name: '정비 기록 추가' })
+  ).toBeVisible();
+  const maintenanceForm = page.locator('form').last();
+  await maintenanceForm.getByLabel('정비일').fill('2026-03-26');
+  await maintenanceForm.getByLabel('정비 시점 주행거리 (km)').fill('58940');
+  await maintenanceForm.getByLabel('정비 비용 (원)').fill('198000');
+  await maintenanceForm
+    .getByRole('textbox', { name: '정비처' })
+    .fill('현대 블루핸즈');
+  await maintenanceForm
+    .getByRole('textbox', { name: '정비 내용' })
+    .fill(newMaintenanceDescription);
+  await maintenanceForm
+    .getByRole('textbox', { name: '메모' })
+    .fill('엔진오일과 필터를 함께 교체했습니다.');
+  await maintenanceForm.getByRole('button', { name: '정비 저장' }).click();
+
+  await expect(
+    page.getByText(`${renamedVehicleName} 정비 기록을 추가했습니다.`)
+  ).toBeVisible();
+  const createdMaintenanceRow = page.getByRole('row', {
+    name: new RegExp(newMaintenanceDescription)
+  });
+  await expect(createdMaintenanceRow).toBeVisible();
+  await expect(
+    createdMaintenanceRow.getByRole('gridcell', {
+      name: '₩198,000',
+      exact: true
+    })
+  ).toBeVisible();
+
+  await createdMaintenanceRow.getByRole('button', { name: '수정' }).click();
+  await expect(
+    page.getByRole('heading', { name: '정비 기록 수정' })
+  ).toBeVisible();
+  const maintenanceEditForm = page.locator('form').last();
+  await maintenanceEditForm
+    .getByRole('textbox', { name: '정비 내용' })
+    .fill(renamedMaintenanceDescription);
+  await maintenanceEditForm.getByLabel('정비 비용 (원)').fill('212000');
+  await maintenanceEditForm.getByRole('button', { name: '정비 수정' }).click();
+
+  await expect(
+    page.getByText(`${renamedVehicleName} 정비 기록을 수정했습니다.`)
+  ).toBeVisible();
+  const renamedMaintenanceRow = page.getByRole('row', {
+    name: new RegExp(renamedMaintenanceDescription)
+  });
+  await expect(renamedMaintenanceRow).toBeVisible();
+  await expect(
+    renamedMaintenanceRow.getByRole('gridcell', {
+      name: '₩212,000',
+      exact: true
+    })
+  ).toBeVisible();
+
+  expectNoUnhandledApiRequests(unhandledApiRequests);
+  expectNoPageErrors(pageErrors);
+});
+
 test('@smoke surfaces operational checklist guidance across empty states and readiness gaps', async ({
   page
 }) => {
@@ -1760,6 +2297,64 @@ function createE2ERecurringRules(): RecurringRuleItem[] {
   ];
 }
 
+function createE2EInsurancePolicies(): InsurancePolicyItem[] {
+  return [
+    {
+      id: 'policy-seed-1',
+      provider: '삼성화재',
+      productName: '업무용 차량 보험',
+      monthlyPremiumWon: 98_000,
+      paymentDay: 25,
+      cycle: 'MONTHLY',
+      renewalDate: '2026-11-01',
+      maturityDate: null,
+      isActive: true
+    }
+  ];
+}
+
+function createE2EVehicles(): VehicleItem[] {
+  return [
+    {
+      id: 'vehicle-seed-1',
+      name: '배송 밴',
+      manufacturer: 'Hyundai',
+      fuelType: 'DIESEL',
+      initialOdometerKm: 58_200,
+      monthlyExpenseWon: 130_000,
+      estimatedFuelEfficiencyKmPerLiter: 11.2,
+      fuelLogs: [
+        {
+          id: 'fuel-seed-1',
+          filledOn: '2026-03-05',
+          odometerKm: 58_480,
+          liters: 42.5,
+          amountWon: 72_000,
+          unitPriceWon: 1694,
+          isFullTank: true
+        }
+      ]
+    }
+  ];
+}
+
+function createE2EVehicleMaintenanceLogs(): VehicleMaintenanceLogItem[] {
+  return [
+    {
+      id: 'maintenance-seed-1',
+      vehicleId: 'vehicle-seed-1',
+      vehicleName: '배송 밴',
+      performedOn: '2026-03-18',
+      odometerKm: 58620,
+      category: 'REPAIR',
+      vendor: '현대 블루핸즈',
+      description: '브레이크 패드 교체',
+      amountWon: 185000,
+      memo: '전륜 패드 기준'
+    }
+  ];
+}
+
 function buildRecurringRuleItemFromPayload(
   payload: CreateRecurringRuleRequest | UpdateRecurringRuleRequest,
   input: {
@@ -1841,6 +2436,135 @@ function mergeRecurringRulesForE2E(
       return (left.nextRunDate ?? '9999-12-31').localeCompare(
         right.nextRunDate ?? '9999-12-31'
       );
+    }
+  );
+}
+
+function buildInsurancePolicyItemFromPayload(
+  payload: CreateInsurancePolicyRequest | UpdateInsurancePolicyRequest,
+  input: {
+    id: string;
+  }
+): InsurancePolicyItem {
+  return {
+    id: input.id,
+    provider: payload.provider,
+    productName: payload.productName,
+    monthlyPremiumWon: payload.monthlyPremiumWon,
+    paymentDay: payload.paymentDay,
+    cycle: payload.cycle,
+    renewalDate: payload.renewalDate ?? null,
+    maturityDate: payload.maturityDate ?? null,
+    isActive: payload.isActive ?? true
+  };
+}
+
+function mergeInsurancePoliciesForE2E(
+  current: InsurancePolicyItem[],
+  nextItem: InsurancePolicyItem
+) {
+  return [nextItem, ...current.filter((item) => item.id !== nextItem.id)].sort(
+    (left, right) => {
+      if (left.isActive !== right.isActive) {
+        return Number(right.isActive) - Number(left.isActive);
+      }
+
+      const paymentDayDiff = left.paymentDay - right.paymentDay;
+      if (paymentDayDiff !== 0) {
+        return paymentDayDiff;
+      }
+
+      const providerDiff = left.provider.localeCompare(right.provider);
+      if (providerDiff !== 0) {
+        return providerDiff;
+      }
+
+      return left.productName.localeCompare(right.productName);
+    }
+  );
+}
+
+function buildVehicleItemFromPayload(
+  payload: CreateVehicleRequest | UpdateVehicleRequest,
+  input: {
+    id: string;
+    fuelLogs: VehicleItem['fuelLogs'];
+  }
+): VehicleItem {
+  return {
+    id: input.id,
+    name: payload.name,
+    manufacturer: payload.manufacturer ?? null,
+    fuelType: payload.fuelType,
+    initialOdometerKm: payload.initialOdometerKm,
+    monthlyExpenseWon: payload.monthlyExpenseWon,
+    estimatedFuelEfficiencyKmPerLiter:
+      payload.estimatedFuelEfficiencyKmPerLiter ?? null,
+    fuelLogs: input.fuelLogs ?? []
+  };
+}
+
+function mergeVehiclesForE2E(current: VehicleItem[], nextItem: VehicleItem) {
+  return [nextItem, ...current.filter((item) => item.id !== nextItem.id)].sort(
+    (left, right) => {
+      const nameDiff = left.name.localeCompare(right.name);
+      if (nameDiff !== 0) {
+        return nameDiff;
+      }
+
+      const manufacturerDiff = (left.manufacturer ?? '').localeCompare(
+        right.manufacturer ?? ''
+      );
+      if (manufacturerDiff !== 0) {
+        return manufacturerDiff;
+      }
+
+      return left.initialOdometerKm - right.initialOdometerKm;
+    }
+  );
+}
+
+function buildVehicleMaintenanceLogItemFromPayload(
+  payload:
+    | CreateVehicleMaintenanceLogRequest
+    | UpdateVehicleMaintenanceLogRequest,
+  input: {
+    id: string;
+    vehicleId: string;
+    vehicleName: string;
+  }
+): VehicleMaintenanceLogItem {
+  return {
+    id: input.id,
+    vehicleId: input.vehicleId,
+    vehicleName: input.vehicleName,
+    performedOn: payload.performedOn,
+    odometerKm: payload.odometerKm,
+    category: payload.category,
+    vendor: payload.vendor ?? null,
+    description: payload.description,
+    amountWon: payload.amountWon,
+    memo: payload.memo ?? null
+  };
+}
+
+function mergeVehicleMaintenanceLogsForE2E(
+  current: VehicleMaintenanceLogItem[],
+  nextItem: VehicleMaintenanceLogItem
+) {
+  return [nextItem, ...current.filter((item) => item.id !== nextItem.id)].sort(
+    (left, right) => {
+      const performedOnDiff = right.performedOn.localeCompare(left.performedOn);
+      if (performedOnDiff !== 0) {
+        return performedOnDiff;
+      }
+
+      const odometerDiff = right.odometerKm - left.odometerKm;
+      if (odometerDiff !== 0) {
+        return odometerDiff;
+      }
+
+      return left.vehicleName.localeCompare(right.vehicleName);
     }
   );
 }
