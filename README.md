@@ -10,12 +10,12 @@
 리뷰어가 가장 빠르게 확인해야 하는 점은 "레거시 `Transaction`이 왜 남아 있는가"보다 "언제 어떻게 걷어낼 것인가"입니다.
 이 저장소의 공식 회계 흐름은 이미 `CollectedTransaction -> JournalEntry / JournalLine -> ClosingSnapshot -> FinancialStatementSnapshot -> CarryForwardRecord`로 고정했고, 레거시 Prisma `Transaction` 모델은 신규 기능 확장 대상이 아니라 제거 예정 경계로만 남겨 두고 있습니다.
 
-| 단계 | 목표 | 현재 상태 |
-| --- | --- | --- |
-| 1. 의존성 동결 | 신규 입력, 확정, 마감, 공식 보고를 모두 신규 회계 흐름에만 올린다 | 완료 |
-| 2. 브리지 표면 축소 | shorthand 명칭, 문서, 테스트/호환 레이어에 남은 흔적만 줄인다 | 진행 중 |
-| 3. 제거 준비 | Prisma migration, seed/test 정리, backfill/rollback 기준과 삭제 순서를 확정한다 | 다음 단계 |
-| 4. 스키마 제거 | 레거시 `Transaction` 및 관련 관계를 제거하고 문서/검증 기준을 함께 맞춘다 | 3단계 게이트 통과 후 |
+| 단계                | 목표                                                                            | 현재 상태            |
+| ------------------- | ------------------------------------------------------------------------------- | -------------------- |
+| 1. 의존성 동결      | 신규 입력, 확정, 마감, 공식 보고를 모두 신규 회계 흐름에만 올린다               | 완료                 |
+| 2. 브리지 표면 축소 | shorthand 명칭, 문서, 테스트/호환 레이어에 남은 흔적만 줄인다                   | 진행 중              |
+| 3. 제거 준비        | Prisma migration, seed/test 정리, backfill/rollback 기준과 삭제 순서를 확정한다 | 다음 단계            |
+| 4. 스키마 제거      | 레거시 `Transaction` 및 관련 관계를 제거하고 문서/검증 기준을 함께 맞춘다       | 3단계 게이트 통과 후 |
 
 상세 기준과 제거 게이트는 [`docs/ACCOUNTING_MODEL_BOUNDARY.md`](./docs/ACCOUNTING_MODEL_BOUNDARY.md)에 유지합니다.
 

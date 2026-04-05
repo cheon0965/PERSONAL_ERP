@@ -148,7 +148,8 @@ test('POST /accounting-periods blocks the first period when opening balance line
     assert.equal(response.status, 400);
     assert.deepEqual(response.body, {
       statusCode: 400,
-      message: '첫 월 운영 시작에는 최소 1건 이상의 오프닝 잔액 라인이 필요합니다.',
+      message:
+        '첫 월 운영 시작에는 최소 1건 이상의 오프닝 잔액 라인이 필요합니다.',
       error: 'Bad Request'
     });
     assert.equal(context.state.accountingPeriods.length, 0);

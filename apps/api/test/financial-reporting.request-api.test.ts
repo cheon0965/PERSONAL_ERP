@@ -776,7 +776,9 @@ test('GET /carry-forwards returns the stored carry forward view for the selected
     assert.equal(body.targetPeriod.monthLabel, '2026-06');
     assert.equal(body.targetOpeningBalanceSnapshot.lines.length, 2);
     assert.deepEqual(
-      body.targetOpeningBalanceSnapshot.lines.map((line) => line.accountSubjectCode),
+      body.targetOpeningBalanceSnapshot.lines.map(
+        (line) => line.accountSubjectCode
+      ),
       ['1010', '3010']
     );
   } finally {

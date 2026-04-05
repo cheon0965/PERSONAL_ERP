@@ -29,7 +29,10 @@ type ApiResponse = {
 export type RealApiPrismaIntegrationContext = {
   prisma: PrismaService;
   request(path: string, options?: ApiRequestOptions): Promise<ApiResponse>;
-  login(email: string, password: string): Promise<{
+  login(
+    email: string,
+    password: string
+  ): Promise<{
     accessToken: string;
     headers: Headers;
     user: unknown;
@@ -97,7 +100,9 @@ export async function createRealApiPrismaIntegrationContext(
 
     const address = app.getHttpServer().address();
     if (!address || typeof address === 'string') {
-      throw new Error('Could not resolve the Prisma integration server address.');
+      throw new Error(
+        'Could not resolve the Prisma integration server address.'
+      );
     }
 
     const baseUrl = `http://127.0.0.1:${address.port}/api`;
