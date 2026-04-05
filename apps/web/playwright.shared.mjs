@@ -48,7 +48,7 @@ export function buildPlaywrightConfig(input) {
         ...process.env,
         ...e2eWebEnv
       },
-      url: `${baseURL}/login`,
+      url: `${baseURL}/api/health`,
       reuseExistingServer: input.reuseExistingServer,
       timeout: 180_000
     }
