@@ -13,6 +13,7 @@ import {
   AccountingPeriodEventType,
   AccountingPeriodStatus,
   BalanceSnapshotKind,
+  CollectedTransactionStatus,
   JournalEntryStatus
 } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
@@ -123,40 +124,88 @@ export class CloseAccountingPeriodUseCase {
           );
         }
 
-        const journalLines = await tx.journalLine.findMany({
-          where: {
-            journalEntry: {
-              tenantId: workspace.tenantId,
-              ledgerId: workspace.ledgerId,
-              periodId: currentPeriod.id,
-              status: JournalEntryStatus.POSTED
+        const [
+          openingBalanceSnapshot,
+          collectedTransactions,
+          journalLines
+        ] = await Promise.all([
+          tx.openingBalanceSnapshot.findUnique({
+            where: {
+              effectivePeriodId: currentPeriod.id
+            },
+            include: {
+              lines: {
+                include: {
+                  accountSubject: {
+                    select: {
+                      id: true,
+                      code: true,
+                      name: true,
+                      subjectKind: true
+                    }
+                  },
+                  fundingAccount: {
+                    select: {
+                      id: true,
+                      name: true
+                    }
+                  }
+                }
+              }
             }
-          },
-          include: {
-            accountSubject: {
-              select: {
-                id: true,
-                code: true,
-                name: true,
-                subjectKind: true
+          }),
+          tx.collectedTransaction.findMany({
+            where: {
+              tenantId: workspace.tenantId,
+              ledgerId: workspace.ledgerId
+            }
+          }),
+          tx.journalLine.findMany({
+            where: {
+              journalEntry: {
+                tenantId: workspace.tenantId,
+                ledgerId: workspace.ledgerId,
+                periodId: currentPeriod.id,
+                status: JournalEntryStatus.POSTED
               }
             },
-            fundingAccount: {
-              select: {
-                id: true,
-                name: true
+            include: {
+              accountSubject: {
+                select: {
+                  id: true,
+                  code: true,
+                  name: true,
+                  subjectKind: true
+                }
+              },
+              fundingAccount: {
+                select: {
+                  id: true,
+                  name: true
+                }
               }
             }
-          }
-        });
+          })
+        ]);
 
-        if (journalLines.length === 0) {
+        const pendingCollectedTransactionCount = collectedTransactions.filter(
+          (candidate) =>
+            candidate.periodId === currentPeriod.id &&
+            (candidate.status === CollectedTransactionStatus.COLLECTED ||
+              candidate.status === CollectedTransactionStatus.REVIEWED ||
+              candidate.status === CollectedTransactionStatus.READY_TO_POST)
+        ).length;
+
+        if (pendingCollectedTransactionCount > 0) {
           throw new BadRequestException(
-            '마감할 전표가 아직 없어 운영 기간을 잠글 수 없습니다.'
+            `미확정 수집 거래 ${pendingCollectedTransactionCount}건이 남아 있어 운영 기간을 잠글 수 없습니다.`
           );
         }
 
-        const closingLineDrafts = aggregateClosingSnapshotLines(journalLines);
+        const closingLineDrafts = aggregateClosingSnapshotLines({
+          openingBalanceLines: openingBalanceSnapshot?.lines ?? [],
+          journalLines
+        });
         const totals = summarizeClosingSnapshot(closingLineDrafts);
 
         const createdSnapshot = await tx.closingSnapshot.create({

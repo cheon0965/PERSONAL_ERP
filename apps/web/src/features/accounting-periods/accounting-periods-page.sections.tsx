@@ -1,18 +1,28 @@
 import * as React from 'react';
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import {
+  Box,
   Button,
   Checkbox,
   FormControlLabel,
   Grid,
+  IconButton,
+  MenuItem,
   Stack,
   TextField,
   Typography
 } from '@mui/material';
-import type { AccountingPeriodItem } from '@personal-erp/contracts';
+import type {
+  AccountSubjectItem,
+  AccountingPeriodItem,
+  FundingAccountItem
+} from '@personal-erp/contracts';
 import type { GridColDef } from '@mui/x-data-grid';
 import type { UseFormReturn } from 'react-hook-form';
-import { formatDate } from '@/shared/lib/format';
+import { formatDate, formatWon } from '@/shared/lib/format';
 import { appLayout } from '@/shared/ui/layout-metrics';
+import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { SectionCard } from '@/shared/ui/section-card';
 import { StatusChip } from '@/shared/ui/status-chip';
 import type { PeriodFormInput } from './accounting-periods-page.types';
@@ -112,7 +122,15 @@ export function OpenAccountingPeriodSection({
   isFirstPeriod,
   isBusy,
   canOpenPeriod,
+  canSubmitOpeningBalance,
   isSubmitting,
+  openingBalanceFields,
+  openingBalanceAccountSubjects,
+  openingBalanceFundingAccounts,
+  openingBalanceTotals,
+  openingBalanceReferenceError,
+  onAppendOpeningBalanceLine,
+  onRemoveOpeningBalanceLine,
   onSubmit
 }: {
   form: UseFormReturn<PeriodFormInput>;
@@ -120,14 +138,28 @@ export function OpenAccountingPeriodSection({
   isFirstPeriod: boolean;
   isBusy: boolean;
   canOpenPeriod: boolean;
+  canSubmitOpeningBalance: boolean;
   isSubmitting: boolean;
+  openingBalanceFields: Array<{ id: string }>;
+  openingBalanceAccountSubjects: AccountSubjectItem[];
+  openingBalanceFundingAccounts: FundingAccountItem[];
+  openingBalanceTotals: {
+    assetAmount: number;
+    liabilityAmount: number;
+    equityAmount: number;
+    hasLines: boolean;
+    isBalanced: boolean;
+  };
+  openingBalanceReferenceError: unknown;
+  onAppendOpeningBalanceLine: () => void;
+  onRemoveOpeningBalanceLine: (index: number) => void;
   onSubmit: React.FormEventHandler<HTMLFormElement>;
 }) {
   return (
     <div id="open-accounting-period-form">
       <SectionCard
         title="월 운영 시작"
-        description="첫 월은 기초 잔액 기준을 함께 만들고, 이후 월은 이전 기간 잠금 이후에만 열 수 있습니다."
+        description="첫 월은 오프닝 잔액 라인을 함께 저장하고, 이후 월은 이전 기간 잠금 이후에만 열 수 있습니다."
       >
         <form onSubmit={onSubmit}>
           <Stack spacing={appLayout.cardGap}>
@@ -161,6 +193,171 @@ export function OpenAccountingPeriodSection({
                   : '첫 월 이후에는 기초 잔액 직접 생성을 허용하지 않음'
               }
             />
+            {isFirstPeriod && initializeOpeningBalance ? (
+              <Stack spacing={appLayout.cardGap}>
+                <Typography variant="subtitle2">오프닝 잔액 라인</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  자산, 부채, 자본 기준으로 첫 월 시작 잔액을 입력합니다.
+                  자산 합계와 부채+자본 합계가 같아야 합니다.
+                </Typography>
+                {openingBalanceReferenceError ? (
+                  <QueryErrorAlert
+                    title="오프닝 잔액 참조데이터를 불러오지 못했습니다."
+                    error={openingBalanceReferenceError}
+                  />
+                ) : null}
+                {openingBalanceAccountSubjects.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    사용할 수 있는 재무상태표 계정과목이 없습니다.
+                  </Typography>
+                ) : null}
+                <Stack spacing={1}>
+                  {openingBalanceFields.map((field, index) => (
+                    <Box
+                      key={field.id}
+                      sx={{
+                        border: 1,
+                        borderColor: 'divider',
+                        borderRadius: 3,
+                        p: appLayout.cardPadding
+                      }}
+                    >
+                      <Stack spacing={appLayout.fieldGap}>
+                        <Stack
+                          direction="row"
+                          alignItems="center"
+                          justifyContent="space-between"
+                        >
+                          <Typography variant="subtitle2">
+                            라인 {index + 1}
+                          </Typography>
+                          <IconButton
+                            aria-label={`오프닝 라인 ${index + 1} 삭제`}
+                            size="small"
+                            disabled={
+                              openingBalanceFields.length <= 1 || isSubmitting
+                            }
+                            onClick={() => onRemoveOpeningBalanceLine(index)}
+                          >
+                            <DeleteOutlineRoundedIcon fontSize="small" />
+                          </IconButton>
+                        </Stack>
+                        <Grid container spacing={appLayout.fieldGap}>
+                          <Grid size={{ xs: 12, md: 5 }}>
+                            <TextField
+                              select
+                              label="계정과목"
+                              disabled={isSubmitting}
+                              error={Boolean(
+                                form.formState.errors.openingBalanceLines?.[
+                                  index
+                                ]?.accountSubjectId
+                              )}
+                              helperText={
+                                form.formState.errors.openingBalanceLines?.[
+                                  index
+                                ]?.accountSubjectId?.message ??
+                                '재무상태표 계정과목만 표시됩니다.'
+                              }
+                              {...form.register(
+                                `openingBalanceLines.${index}.accountSubjectId` as const
+                              )}
+                            >
+                              {openingBalanceAccountSubjects.map(
+                                (accountSubject) => (
+                                  <MenuItem
+                                    key={accountSubject.id}
+                                    value={accountSubject.id}
+                                  >
+                                    {accountSubject.code} {accountSubject.name}
+                                  </MenuItem>
+                                )
+                              )}
+                            </TextField>
+                          </Grid>
+                          <Grid size={{ xs: 12, md: 4 }}>
+                            <TextField
+                              select
+                              label="자금수단"
+                              disabled={isSubmitting}
+                              helperText="선택 사항"
+                              {...form.register(
+                                `openingBalanceLines.${index}.fundingAccountId` as const
+                              )}
+                            >
+                              <MenuItem value="">자금수단 없음</MenuItem>
+                              {openingBalanceFundingAccounts.map(
+                                (fundingAccount) => (
+                                  <MenuItem
+                                    key={fundingAccount.id}
+                                    value={fundingAccount.id}
+                                  >
+                                    {fundingAccount.name}
+                                  </MenuItem>
+                                )
+                              )}
+                            </TextField>
+                          </Grid>
+                          <Grid size={{ xs: 12, md: 3 }}>
+                            <TextField
+                              label="잔액(원)"
+                              type="number"
+                              disabled={isSubmitting}
+                              error={Boolean(
+                                form.formState.errors.openingBalanceLines?.[
+                                  index
+                                ]?.balanceAmount
+                              )}
+                              helperText={
+                                form.formState.errors.openingBalanceLines?.[
+                                  index
+                                ]?.balanceAmount?.message ??
+                                '자연잔액 기준 양수 금액'
+                              }
+                              {...form.register(
+                                `openingBalanceLines.${index}.balanceAmount` as const
+                              )}
+                            />
+                          </Grid>
+                        </Grid>
+                      </Stack>
+                    </Box>
+                  ))}
+                </Stack>
+                <Button
+                  variant="outlined"
+                  startIcon={<AddRoundedIcon />}
+                  onClick={onAppendOpeningBalanceLine}
+                  disabled={isSubmitting || Boolean(openingBalanceReferenceError)}
+                  sx={{ alignSelf: 'flex-start' }}
+                >
+                  라인 추가
+                </Button>
+                <Stack spacing={0.5}>
+                  <Typography variant="body2" color="text.secondary">
+                    자산 합계 {formatWon(openingBalanceTotals.assetAmount)}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    부채 합계 {formatWon(openingBalanceTotals.liabilityAmount)}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    자본 합계 {formatWon(openingBalanceTotals.equityAmount)}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color={
+                      openingBalanceTotals.isBalanced
+                        ? 'success.main'
+                        : 'warning.main'
+                    }
+                  >
+                    {openingBalanceTotals.isBalanced
+                      ? '자산과 부채+자본 합계가 일치합니다.'
+                      : '자산 합계와 부채+자본 합계를 같게 맞춰 주세요.'}
+                  </Typography>
+                </Stack>
+              </Stack>
+            ) : null}
             <TextField
               label="메모"
               multiline
@@ -175,7 +372,12 @@ export function OpenAccountingPeriodSection({
             <Button
               type="submit"
               variant="contained"
-              disabled={isBusy || !canOpenPeriod}
+              disabled={
+                isBusy ||
+                !canOpenPeriod ||
+                !canSubmitOpeningBalance ||
+                Boolean(openingBalanceReferenceError)
+              }
               sx={{ alignSelf: 'flex-start' }}
             >
               {isSubmitting ? '운영 기간 시작 중...' : '월 운영 시작'}
@@ -222,7 +424,7 @@ export function PeriodLifecycleActionsSection({
     <Stack spacing={appLayout.sectionGap}>
       <SectionCard
         title="월 마감"
-        description="현재 열린 운영 기간을 잠그고 월 마감 결과와 잔액 라인을 생성합니다. 현재 구현에서는 전표가 한 건 이상 존재하는 기간만 마감할 수 있습니다."
+        description="현재 열린 운영 기간을 잠그고 오프닝 기준과 확정 전표를 반영한 월 마감 스냅샷을 생성합니다. 미확정 수집 거래가 남아 있으면 마감할 수 없습니다."
       >
         <Stack spacing={appLayout.cardGap}>
           <InfoRow

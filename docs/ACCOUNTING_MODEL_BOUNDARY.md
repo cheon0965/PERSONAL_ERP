@@ -1,4 +1,4 @@
-# 구형 거래 모델과 신규 회계 흐름 경계
+# 구형 거래 모델과 신규 회계 흐름 경계 및 제거 로드맵
 
 ## 목적
 
@@ -50,7 +50,29 @@
 
 즉, 유지 전략은 “계속 사용”이 아니라 “새 기능 확장 금지 + 점진 제거 준비”다.
 
-## 5. 의미 보존 체크리스트
+## 5. 정리 로드맵
+
+현재 정리 계획은 아래 4단계로 고정한다.
+
+| 단계 | 의미 | 현재 상태 |
+| --- | --- | --- |
+| 1. 의존성 동결 | 신규 기능이 레거시 Prisma `Transaction` 모델 위에 직접 규칙을 추가하지 못하게 막는다 | 완료 |
+| 2. 브리지 표면 축소 | shorthand 명칭, 문서, 테스트/호환 레이어에 남은 흔적만 줄이고 공식 원장 판단은 계속 신규 회계 흐름에 고정한다 | 진행 중 |
+| 3. 제거 준비 | Prisma migration, seed/test 정리, 데이터 backfill/rollback 기준, 삭제 순서를 명시한다 | 다음 단계 |
+| 4. 스키마 제거 | 레거시 `Transaction` 모델과 관련 관계를 제거하고 문서/검증 기준을 같은 변경에서 맞춘다 | 3단계 완료 후 |
+
+이 로드맵의 핵심은 "`Transaction`을 유지할 이유를 길게 설명하는 것"이 아니라 "`Transaction`이 더 커지지 못하도록 먼저 막고, 제거 준비가 끝나는 즉시 치운다"는 점을 명확히 보여주는 데 있다.
+
+## 6. 제거 게이트
+
+아래 조건이 모두 충족될 때 제거 작업을 진행한다.
+
+- `apps/api/src`, `apps/web/src`, `packages/contracts` 기준으로 레거시 Prisma `Transaction` 모델을 직접 read/write하는 현재 런타임 경로가 없어야 한다.
+- 공식 회계 숫자, 잠금/마감, 재무제표, 차기 이월이 `CollectedTransaction`, `JournalEntry`, `ClosingSnapshot`, `FinancialStatementSnapshot`, `CarryForwardRecord`만으로 성립해야 한다.
+- Prisma migration 순서, 기존 데이터 처리 방식, rollback 기준이 문서와 함께 정리돼 있어야 한다.
+- seed, 테스트 fixture, 문서 링크, reviewer 설명이 제거 이후 구조와 같은 기준으로 동시에 갱신돼야 한다.
+
+## 7. 의미 보존 체크리스트
 
 구조 개선 또는 화면 개편 시 아래 질문에 하나라도 `Transaction` 기준 답이 나오면 경계가 흐려진 것이다.
 
@@ -59,6 +81,6 @@
 - 이 보고 숫자는 `JournalEntry` 또는 `FinancialStatementSnapshot` 기준인가?
 - 이 변경이 레거시 `Transaction` 의존을 새로 늘리지는 않는가?
 
-## 6. 현재 한 줄 결론
+## 8. 현재 한 줄 결론
 
 현재 저장소에서 `Transaction`은 레거시 잔존 모델이고, 신규 회계 흐름의 공식 원장은 `JournalEntry`다.

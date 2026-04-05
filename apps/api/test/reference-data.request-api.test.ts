@@ -74,7 +74,7 @@ test('GET /reference-data/readiness returns the current workspace preparation su
           description:
             '전표 라인, 월 마감, 재무제표 계산에 공통으로 쓰이는 공식 계정과목 목록입니다.',
           ready: true,
-          count: 4,
+          count: 5,
           minimumRequiredCount: 1,
           ownershipScope: 'SYSTEM_MANAGED',
           responsibleRoles: [],
@@ -745,6 +745,16 @@ test('GET /account-subjects returns active account subjects for the current work
         statementType: 'BALANCE_SHEET',
         normalSide: 'CREDIT',
         subjectKind: 'LIABILITY',
+        isSystem: true,
+        isActive: true
+      },
+      {
+        id: 'as-1-3010',
+        code: '3010',
+        name: '사업자본',
+        statementType: 'BALANCE_SHEET',
+        normalSide: 'CREDIT',
+        subjectKind: 'EQUITY',
         isSystem: true,
         isActive: true
       },

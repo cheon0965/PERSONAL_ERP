@@ -100,6 +100,26 @@ export const mockAccountSubjects: AccountSubjectItem[] = [
     isActive: true
   },
   {
+    id: 'as-2010',
+    code: '2010',
+    name: '카드대금',
+    statementType: 'BALANCE_SHEET',
+    normalSide: 'CREDIT',
+    subjectKind: 'LIABILITY',
+    isSystem: true,
+    isActive: true
+  },
+  {
+    id: 'as-3010',
+    code: '3010',
+    name: '사업자본',
+    statementType: 'BALANCE_SHEET',
+    normalSide: 'CREDIT',
+    subjectKind: 'EQUITY',
+    isSystem: true,
+    isActive: true
+  },
+  {
     id: 'as-4100',
     code: '4100',
     name: '운영수익',

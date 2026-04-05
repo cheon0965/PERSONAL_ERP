@@ -10,12 +10,17 @@ import {
 } from '@tanstack/react-query';
 import { Alert, Grid, Stack } from '@mui/material';
 import type {
+  AccountSubjectItem,
   AccountingPeriodItem,
   CloseAccountingPeriodResponse,
   OpenAccountingPeriodRequest
 } from '@personal-erp/contracts';
-import { useForm } from 'react-hook-form';
+import { useFieldArray, useForm } from 'react-hook-form';
 import {
+  accountSubjectsQueryKey,
+  fundingAccountsManagementQueryKey,
+  getAccountSubjects,
+  getFundingAccounts,
   getReferenceDataReadiness,
   referenceDataReadinessQueryKey
 } from '@/features/reference-data/reference-data.api';
@@ -45,6 +50,7 @@ import {
   periodColumns
 } from './accounting-periods-page.sections';
 import {
+  createEmptyOpeningBalanceLine,
   periodFormSchema,
   type PeriodFormInput,
   type ReopenAccountingPeriodPayload,
@@ -66,6 +72,14 @@ export function AccountingPeriodsPage() {
   const referenceDataReadinessQuery = useQuery({
     queryKey: referenceDataReadinessQueryKey,
     queryFn: getReferenceDataReadiness
+  });
+  const accountSubjectsQuery = useQuery({
+    queryKey: accountSubjectsQueryKey,
+    queryFn: getAccountSubjects
+  });
+  const fundingAccountsQuery = useQuery({
+    queryKey: fundingAccountsManagementQueryKey,
+    queryFn: () => getFundingAccounts({ includeInactive: true })
   });
   const currentWorkspace = user?.currentWorkspace ?? null;
   const membershipRole = currentWorkspace?.membership.role ?? null;
@@ -168,8 +182,18 @@ export function AccountingPeriodsPage() {
     defaultValues: {
       month: getTodayMonthInputValue(),
       initializeOpeningBalance: true,
+      openingBalanceLines: [createEmptyOpeningBalanceLine()],
       note: ''
     }
+  });
+  const {
+    fields: openingBalanceFields,
+    append: appendOpeningBalanceLine,
+    remove: removeOpeningBalanceLine,
+    replace: replaceOpeningBalanceLines
+  } = useFieldArray({
+    control: form.control,
+    name: 'openingBalanceLines'
   });
 
   const hasWorkspace = Boolean(currentWorkspace?.ledger);
@@ -185,12 +209,40 @@ export function AccountingPeriodsPage() {
   const latestPeriod = periods[0] ?? null;
   const reopenPeriod = latestPeriod?.status === 'LOCKED' ? latestPeriod : null;
   const currentPeriod = openPeriod ?? latestPeriod ?? null;
+  const balanceSheetAccountSubjects = React.useMemo(
+    () =>
+      (accountSubjectsQuery.data ?? []).filter((accountSubject) =>
+        isBalanceSheetAccountSubject(accountSubject)
+      ),
+    [accountSubjectsQuery.data]
+  );
+  const openingBalanceFundingAccounts = React.useMemo(
+    () =>
+      (fundingAccountsQuery.data ?? []).filter(
+        (fundingAccount) => fundingAccount.status !== 'CLOSED'
+      ),
+    [fundingAccountsQuery.data]
+  );
 
   React.useEffect(() => {
     form.setValue('initializeOpeningBalance', isFirstPeriod, {
       shouldValidate: false
     });
   }, [form, isFirstPeriod]);
+
+  React.useEffect(() => {
+    if (isFirstPeriod) {
+      if (openingBalanceFields.length === 0) {
+        replaceOpeningBalanceLines([createEmptyOpeningBalanceLine()]);
+      }
+
+      return;
+    }
+
+    if (openingBalanceFields.length > 0) {
+      replaceOpeningBalanceLines([]);
+    }
+  }, [isFirstPeriod, openingBalanceFields.length, replaceOpeningBalanceLines]);
 
   const openMutation = useMutation({
     mutationFn: (payload: OpenAccountingPeriodRequest) =>
@@ -229,8 +281,29 @@ export function AccountingPeriodsPage() {
   });
 
   const initializeOpeningBalance = form.watch('initializeOpeningBalance');
+  const openingBalanceLines = form.watch('openingBalanceLines');
+  const openingBalanceTotals = React.useMemo(
+    () =>
+      buildOpeningBalanceTotals(
+        openingBalanceLines,
+        balanceSheetAccountSubjects
+      ),
+    [balanceSheetAccountSubjects, openingBalanceLines]
+  );
+  const openingBalanceReferenceError = isFirstPeriod
+    ? accountSubjectsQuery.error ?? fundingAccountsQuery.error ?? null
+    : null;
+  const canSubmitOpeningBalance =
+    !isFirstPeriod ||
+    (balanceSheetAccountSubjects.length > 0 &&
+      openingBalanceTotals.hasLines &&
+      openingBalanceTotals.isBalanced);
   const openFormBusy =
-    openMutation.isPending || form.formState.isSubmitting || !hasWorkspace;
+    openMutation.isPending ||
+    form.formState.isSubmitting ||
+    !hasWorkspace ||
+    (isFirstPeriod &&
+      (accountSubjectsQuery.isLoading || fundingAccountsQuery.isLoading));
 
   const handleOpenPeriodSubmit = form.handleSubmit(async (values) => {
     setFeedback(null);
@@ -239,6 +312,15 @@ export function AccountingPeriodsPage() {
       await openMutation.mutateAsync({
         month: values.month,
         initializeOpeningBalance: values.initializeOpeningBalance,
+        openingBalanceLines: values.initializeOpeningBalance
+          ? values.openingBalanceLines.map((line) => ({
+              accountSubjectId: line.accountSubjectId,
+              fundingAccountId: normalizeOptionalIdentifier(
+                line.fundingAccountId
+              ),
+              balanceAmount: Number(line.balanceAmount)
+            }))
+          : undefined,
         note: values.note.trim() || undefined
       });
 
@@ -381,7 +463,17 @@ export function AccountingPeriodsPage() {
             isFirstPeriod={isFirstPeriod}
             isBusy={openFormBusy}
             canOpenPeriod={canOpenPeriod}
+            canSubmitOpeningBalance={canSubmitOpeningBalance}
             isSubmitting={openMutation.isPending}
+            openingBalanceFields={openingBalanceFields}
+            openingBalanceAccountSubjects={balanceSheetAccountSubjects}
+            openingBalanceFundingAccounts={openingBalanceFundingAccounts}
+            openingBalanceTotals={openingBalanceTotals}
+            openingBalanceReferenceError={openingBalanceReferenceError}
+            onAppendOpeningBalanceLine={() => {
+              appendOpeningBalanceLine(createEmptyOpeningBalanceLine());
+            }}
+            onRemoveOpeningBalanceLine={removeOpeningBalanceLine}
             onSubmit={handleOpenPeriodSubmit}
           />
         </Grid>
@@ -429,4 +521,65 @@ function readMembershipRoleLabel(role: string | null) {
     default:
       return role ?? '-';
   }
+}
+
+function isBalanceSheetAccountSubject(accountSubject: AccountSubjectItem) {
+  return (
+    accountSubject.subjectKind === 'ASSET' ||
+    accountSubject.subjectKind === 'LIABILITY' ||
+    accountSubject.subjectKind === 'EQUITY'
+  );
+}
+
+function buildOpeningBalanceTotals(
+  lines: PeriodFormInput['openingBalanceLines'],
+  accountSubjects: AccountSubjectItem[]
+) {
+  const accountSubjectById = new Map(
+    accountSubjects.map((accountSubject) => [accountSubject.id, accountSubject])
+  );
+
+  return lines.reduce(
+    (accumulator, line) => {
+      const accountSubject = accountSubjectById.get(line.accountSubjectId);
+      const balanceAmount = Number(line.balanceAmount);
+      if (!accountSubject || !Number.isFinite(balanceAmount) || balanceAmount <= 0) {
+        return accumulator;
+      }
+
+      accumulator.hasLines = true;
+
+      switch (accountSubject.subjectKind) {
+        case 'ASSET':
+          accumulator.assetAmount += balanceAmount;
+          break;
+        case 'LIABILITY':
+          accumulator.liabilityAmount += balanceAmount;
+          break;
+        case 'EQUITY':
+          accumulator.equityAmount += balanceAmount;
+          break;
+        default:
+          break;
+      }
+
+      accumulator.isBalanced =
+        accumulator.assetAmount ===
+        accumulator.liabilityAmount + accumulator.equityAmount;
+
+      return accumulator;
+    },
+    {
+      assetAmount: 0,
+      liabilityAmount: 0,
+      equityAmount: 0,
+      hasLines: false,
+      isBalanced: false
+    }
+  );
+}
+
+function normalizeOptionalIdentifier(value: string | null | undefined) {
+  const normalized = value?.trim();
+  return normalized && normalized.length > 0 ? normalized : null;
 }

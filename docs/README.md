@@ -18,7 +18,7 @@
 - `API.md`: 구현된 엔드포인트와 인증/쓰기 흐름 요약
 - `ARCHITECTURE.md`: 워크스페이스 구조와 컨텍스트 경계
 - `SCREEN_FLOW_GUIDE.md`: 현재 화면 기준 운영 흐름과 추천 진행 순서
-- `ACCOUNTING_MODEL_BOUNDARY.md`: 레거시 `Transaction`과 신규 회계 흐름 경계
+- `ACCOUNTING_MODEL_BOUNDARY.md`: 레거시 `Transaction`과 신규 회계 흐름 경계 및 제거 로드맵
 - `DEVELOPMENT_GUIDE.md`: 구현 순서와 문서 동기화 절차
 - `OPERATIONS_CHECKLIST.md`: 배포와 운영 점검 절차
 - `ERROR_HANDLING_AND_LOGGING.md`: 예외 처리와 최소 로깅 기준

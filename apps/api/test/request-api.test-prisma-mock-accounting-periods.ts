@@ -447,6 +447,7 @@ export function createAccountingPeriodsPrismaMock(
             include?: {
               accountSubject?: {
                 select?: {
+                  id?: boolean;
                   code?: boolean;
                   name?: boolean;
                   subjectKind?: boolean;
@@ -454,6 +455,7 @@ export function createAccountingPeriodsPrismaMock(
               };
               fundingAccount?: {
                 select?: {
+                  id?: boolean;
                   name?: boolean;
                 };
               };
@@ -483,6 +485,9 @@ export function createAccountingPeriodsPrismaMock(
                 return {
                   ...line,
                   accountSubject: {
+                    ...(args.include?.lines?.include?.accountSubject?.select?.id
+                      ? { id: accountSubject?.id ?? '' }
+                      : {}),
                     ...(args.include?.lines?.include?.accountSubject?.select
                       ?.code
                       ? { code: accountSubject?.code ?? '' }
@@ -498,6 +503,10 @@ export function createAccountingPeriodsPrismaMock(
                   },
                   fundingAccount: fundingAccount
                     ? {
+                        ...(args.include?.lines?.include?.fundingAccount?.select
+                          ?.id
+                          ? { id: fundingAccount.id }
+                          : {}),
                         ...(args.include?.lines?.include?.fundingAccount?.select
                           ?.name
                           ? { name: fundingAccount.name }

@@ -19,7 +19,7 @@
 - `npm run test:e2e:smoke:build`는 CI와 동일하게 in-process `Next.js` production build/start 경로를 올린 뒤 health route 기준 최소 HTTP smoke로 build 결과물과 서버 기동을 확인합니다.
 - `npm run test:e2e:smoke:build:browser`는 필요할 때 로그인/세션 복원/운영 체크리스트/문맥 fallback까지 포함한 브라우저 build smoke를 별도로 다시 확인합니다.
 - `npm run test:e2e`는 기준 데이터 CRUD, 반복 규칙 CRUD까지 포함한 전체 브라우저 대표 흐름 검증입니다.
-- `npm run test:prisma`는 기본 루프와 분리된 실DB Prisma 경계 검증입니다.
+- `npm run test:prisma`는 기본 루프와 분리된 실DB Prisma/HTTP 통합 검증이며, 현재는 대표적으로 `운영기간 open -> 업로드 배치 -> 수집 -> 전표 확정 -> close`와 `반복규칙 -> plan item 생성 -> import collect 자동 매칭 -> confirm -> 재무제표 생성` 시나리오를 포함합니다.
 - 현재 기본 `npm run test`에서는 Prisma 통합 테스트가 안내 문구와 함께 skip됩니다.
 
 ## CI 게이트
@@ -88,8 +88,8 @@
 - 인증/민감 응답의 `Cache-Control: no-store`
 - allowlist 밖 origin의 cookie-auth 요청 차단(`403 Origin not allowed`)
 - 로그인 실패, refresh 재사용, bearer 누락, scope 거부, readiness 실패에 대한 보안 이벤트 로그 기록
-- `collected-transactions` Prisma 통합 테스트
-  실제 MySQL 기준으로 현재 workspace 접근 범위 확인, 생성, 조회 정렬과 current ledger 스코프를 대표 검증
+- `test:prisma`
+  실제 MySQL 기준으로 현재 workspace 접근 범위 확인, 수집 거래 저장소 경계, 실제 API를 통한 기간/업로드/수집/전표/보고 대표 시나리오를 함께 검증
 - `GET /collected-transactions`
   현재 구현 기준 current workspace 범위만 반환하는지, 내부 접근 제어 필드를 노출하지 않는지 검증
 - `GET /recurring-rules`
