@@ -6,7 +6,7 @@ import { Alert, Button, Grid, Stack, Typography } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import { BarChart } from '@mui/x-charts/BarChart';
 import type {
-  FuelLogItem,
+  VehicleFuelLogItem,
   VehicleItem,
   VehicleMaintenanceLogItem
 } from '@personal-erp/contracts';
@@ -19,18 +19,19 @@ import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { SummaryCard } from '@/shared/ui/summary-card';
+import { VehicleFuelLogForm } from './vehicle-fuel-log-form';
 import { VehicleMaintenanceForm } from './vehicle-maintenance-form';
 import { VehicleForm } from './vehicle-form';
 import {
+  getVehicleFuelLogs,
   getVehicleMaintenanceLogs,
   getVehicles,
+  vehicleFuelLogsQueryKey,
   vehicleMaintenanceLogsQueryKey,
   vehiclesQueryKey
 } from './vehicles.api';
 
-type VehicleFuelLogRow = FuelLogItem & {
-  vehicleName: string;
-};
+type VehicleFuelLogRow = VehicleFuelLogItem;
 
 type VehicleMaintenanceLogRow = VehicleMaintenanceLogItem;
 
@@ -47,6 +48,11 @@ type VehicleDrawerState =
 type VehicleMaintenanceDrawerState =
   | { mode: 'create'; vehicleId?: string | null }
   | { mode: 'edit'; maintenanceLog: VehicleMaintenanceLogItem }
+  | null;
+
+type VehicleFuelDrawerState =
+  | { mode: 'create'; vehicleId?: string | null }
+  | { mode: 'edit'; fuelLog: VehicleFuelLogItem }
   | null;
 
 const fuelTypeLabelMap: Record<string, string> = {
@@ -101,6 +107,12 @@ const fuelColumns: GridColDef<VehicleFuelLogRow>[] = [
     headerName: '금액',
     flex: 1,
     valueFormatter: (value) => formatWon(Number(value))
+  },
+  {
+    field: 'isFullTank',
+    headerName: '가득 주유',
+    flex: 0.8,
+    valueFormatter: (value) => (value ? '예' : '아니오')
   }
 ];
 
@@ -146,11 +158,17 @@ export function VehiclesPage() {
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const [drawerState, setDrawerState] =
     React.useState<VehicleDrawerState>(null);
+  const [fuelDrawerState, setFuelDrawerState] =
+    React.useState<VehicleFuelDrawerState>(null);
   const [maintenanceDrawerState, setMaintenanceDrawerState] =
     React.useState<VehicleMaintenanceDrawerState>(null);
   const { data: vehicles = [], error: vehiclesError } = useQuery({
     queryKey: vehiclesQueryKey,
     queryFn: getVehicles
+  });
+  const { data: fuelLogs = [], error: fuelLogsError } = useQuery({
+    queryKey: vehicleFuelLogsQueryKey,
+    queryFn: getVehicleFuelLogs
   });
   const { data: maintenanceLogs = [], error: maintenanceLogsError } = useQuery({
     queryKey: vehicleMaintenanceLogsQueryKey,
@@ -175,15 +193,7 @@ export function VehiclesPage() {
           0
         ) / vehiclesWithEfficiency.length
       : null;
-  const fuelLogRows: VehicleFuelLogRow[] = vehicles
-    .flatMap((vehicle) =>
-      (vehicle.fuelLogs ?? []).map((fuelLog) => ({
-        ...fuelLog,
-        id: `${vehicle.id}-${fuelLog.id}`,
-        vehicleName: vehicle.name
-      }))
-    )
-    .sort((left, right) => right.filledOn.localeCompare(left.filledOn));
+  const fuelLogRows = fuelLogs;
   const maintenanceLogRows = maintenanceLogs;
   const manufacturers = Array.from(
     new Set(vehicles.map((vehicle) => vehicle.manufacturer).filter(Boolean))
@@ -201,6 +211,20 @@ export function VehiclesPage() {
 
   const handleDrawerClose = () => {
     setDrawerState(null);
+  };
+
+  const handleFuelCreateOpen = (vehicleId?: string | null) => {
+    setFeedback(null);
+    setFuelDrawerState({ mode: 'create', vehicleId });
+  };
+
+  const handleFuelEditOpen = (fuelLog: VehicleFuelLogItem) => {
+    setFeedback(null);
+    setFuelDrawerState({ mode: 'edit', fuelLog });
+  };
+
+  const handleFuelDrawerClose = () => {
+    setFuelDrawerState(null);
   };
 
   const handleMaintenanceCreateOpen = (vehicleId?: string | null) => {
@@ -230,6 +254,20 @@ export function VehiclesPage() {
         mode === 'edit'
           ? `${vehicle.name} 차량 정보를 수정했습니다.`
           : `${vehicle.name} 차량을 등록했습니다.`
+    });
+  };
+
+  const handleFuelCompleted = (
+    fuelLog: VehicleFuelLogItem,
+    mode: 'create' | 'edit'
+  ) => {
+    setFuelDrawerState(null);
+    setFeedback({
+      severity: 'success',
+      message:
+        mode === 'edit'
+          ? `${fuelLog.vehicleName} 연료 기록을 수정했습니다.`
+          : `${fuelLog.vehicleName} 연료 기록을 추가했습니다.`
     });
   };
 
@@ -263,7 +301,8 @@ export function VehiclesPage() {
       field: 'fuelType',
       headerName: '연료 종류',
       flex: 0.9,
-      valueFormatter: (value) => fuelTypeLabelMap[String(value)] ?? String(value)
+      valueFormatter: (value) =>
+        fuelTypeLabelMap[String(value)] ?? String(value)
     },
     {
       field: 'initialOdometerKm',
@@ -305,12 +344,43 @@ export function VehiclesPage() {
             size="small"
             variant="text"
             onClick={() => {
+              handleFuelCreateOpen(params.row.id);
+            }}
+          >
+            연료 기록
+          </Button>
+          <Button
+            size="small"
+            variant="text"
+            onClick={() => {
               handleMaintenanceCreateOpen(params.row.id);
             }}
           >
             정비 기록
           </Button>
         </Stack>
+      )
+    }
+  ];
+
+  const fuelTableColumns: GridColDef<VehicleFuelLogRow>[] = [
+    ...fuelColumns,
+    {
+      field: 'actions',
+      headerName: '동작',
+      flex: 0.8,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={() => {
+            handleFuelEditOpen(params.row);
+          }}
+        >
+          수정
+        </Button>
       )
     }
   ];
@@ -342,7 +412,14 @@ export function VehiclesPage() {
     description:
       '차량 화면은 운영 판단과 분류를 돕는 보조 영역입니다. 공식 회계 확정은 수집 거래와 전표에서 이뤄집니다.',
     primaryEntity: '차량 운영 보조 데이터',
-    relatedEntities: ['수집 거래', '거래 분류', '입출금 계정', '전표', '정비 이력'],
+    relatedEntities: [
+      '수집 거래',
+      '거래 분류',
+      '입출금 계정',
+      '전표',
+      '연료 이력',
+      '정비 이력'
+    ],
     truthSource:
       '차량과 주유 기록 자체는 회계 저장이 아니며 실제 확정은 수집 거래 분류와 전표 반영에서 이뤄집니다.',
     readModelNote:
@@ -368,6 +445,12 @@ export function VehiclesPage() {
         <QueryErrorAlert
           title="차량 정보 조회에 실패했습니다."
           error={vehiclesError}
+        />
+      ) : null}
+      {fuelLogsError ? (
+        <QueryErrorAlert
+          title="차량 연료 이력 조회에 실패했습니다."
+          error={fuelLogsError}
         />
       ) : null}
       {maintenanceLogsError ? (
@@ -417,7 +500,7 @@ export function VehiclesPage() {
 
       <DataTableCard
         title="차량 기본 정보"
-        description="차량 기본 정보를 직접 관리하면서 아래 운영비 차트, 주유 기록, 정비 이력을 같은 화면에서 함께 확인합니다."
+        description="차량 기본 프로필을 관리하면서 아래 연료/정비 이력과 운영 요약을 같은 화면에서 함께 확인합니다."
         rows={vehicles}
         columns={vehicleColumns}
       />
@@ -448,9 +531,20 @@ export function VehiclesPage() {
         <Grid size={{ xs: 12, xl: 7 }}>
           <DataTableCard
             title="주유 / 충전 기록"
-            description="원천 비용 판단과 수집 거래 분류 시 참고할 수 있도록 최근 기록을 차량별로 정리했습니다."
+            description="차량 기본 정보와 분리된 별도 운영 기록으로 최근 주유 / 충전 이력을 관리합니다."
             rows={fuelLogRows}
-            columns={fuelColumns}
+            columns={fuelTableColumns}
+            actions={
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  handleFuelCreateOpen(vehicles[0]?.id ?? null);
+                }}
+                disabled={vehicles.length === 0}
+              >
+                연료 기록 추가
+              </Button>
+            }
             height={320}
           />
         </Grid>
@@ -477,8 +571,8 @@ export function VehiclesPage() {
 
       {vehicles.length > 0 ? (
         <Typography variant="body2" color="text.secondary">
-          차량 기본 정보와 정비 이력을 함께 관리하면서, 다음 단계에서는 연료
-          이력 분리와 차량 운영 요약 정리를 이어갈 수 있습니다.
+          차량 기본 정보, 연료 이력, 정비 이력을 각각 분리해 관리하고, 다음
+          단계에서는 차량 운영 요약 모델 정리를 이어갈 수 있습니다.
         </Typography>
       ) : null}
 
@@ -500,6 +594,34 @@ export function VehiclesPage() {
           />
         ) : (
           <VehicleForm mode="create" onCompleted={handleFormCompleted} />
+        )}
+      </FormDrawer>
+
+      <FormDrawer
+        open={fuelDrawerState !== null}
+        onClose={handleFuelDrawerClose}
+        title={
+          fuelDrawerState?.mode === 'edit' ? '연료 기록 수정' : '연료 기록 추가'
+        }
+        description={
+          fuelDrawerState?.mode === 'edit'
+            ? '차량 연료 이력을 조정해 운영 판단과 비용 검토 기준을 맞춥니다.'
+            : '차량 연료 이력을 추가해 운영 보조 데이터와 비용 판단 흐름을 보강합니다.'
+        }
+      >
+        {fuelDrawerState?.mode === 'edit' ? (
+          <VehicleFuelLogForm
+            vehicles={vehicles}
+            mode="edit"
+            initialFuelLog={fuelDrawerState.fuelLog}
+            onCompleted={handleFuelCompleted}
+          />
+        ) : (
+          <VehicleFuelLogForm
+            vehicles={vehicles}
+            initialVehicleId={fuelDrawerState?.vehicleId ?? null}
+            onCompleted={handleFuelCompleted}
+          />
         )}
       </FormDrawer>
 

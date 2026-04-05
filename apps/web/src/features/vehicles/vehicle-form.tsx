@@ -7,6 +7,8 @@ import { Alert, Button, Grid, MenuItem, Stack, TextField } from '@mui/material';
 import type {
   CreateVehicleRequest,
   UpdateVehicleRequest,
+  VehicleFuelLogItem,
+  VehicleMaintenanceLogItem,
   VehicleItem
 } from '@personal-erp/contracts';
 import { Controller, useForm } from 'react-hook-form';
@@ -18,6 +20,8 @@ import {
   createVehicle,
   mergeVehicleItem,
   updateVehicle,
+  vehicleFuelLogsQueryKey,
+  vehicleMaintenanceLogsQueryKey,
   vehiclesQueryKey
 } from './vehicles.api';
 
@@ -94,10 +98,40 @@ export function VehicleForm({
       queryClient.setQueryData<VehicleItem[]>(vehiclesQueryKey, (current) =>
         mergeVehicleItem(current, saved)
       );
+      queryClient.setQueryData<VehicleFuelLogItem[]>(
+        vehicleFuelLogsQueryKey,
+        (current) =>
+          current?.map((fuelLog) =>
+            fuelLog.vehicleId === saved.id
+              ? {
+                  ...fuelLog,
+                  vehicleName: saved.name
+                }
+              : fuelLog
+          ) ?? current
+      );
+      queryClient.setQueryData<VehicleMaintenanceLogItem[]>(
+        vehicleMaintenanceLogsQueryKey,
+        (current) =>
+          current?.map((maintenanceLog) =>
+            maintenanceLog.vehicleId === saved.id
+              ? {
+                  ...maintenanceLog,
+                  vehicleName: saved.name
+                }
+              : maintenanceLog
+          ) ?? current
+      );
 
       if (!webRuntime.demoFallbackEnabled) {
         await queryClient.invalidateQueries({
           queryKey: vehiclesQueryKey
+        });
+        await queryClient.invalidateQueries({
+          queryKey: vehicleFuelLogsQueryKey
+        });
+        await queryClient.invalidateQueries({
+          queryKey: vehicleMaintenanceLogsQueryKey
         });
       }
     }
@@ -140,8 +174,7 @@ export function VehicleForm({
             vehicleId: initialVehicle?.id,
             payload,
             fallback: buildVehicleFallbackItem(payload, {
-              id: initialVehicle?.id,
-              fuelLogs: initialVehicle?.fuelLogs ?? []
+              id: initialVehicle?.id
             })
           });
 

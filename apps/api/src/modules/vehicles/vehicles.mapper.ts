@@ -1,22 +1,25 @@
 import type {
-  FuelLogItem,
   VehicleItem,
+  VehicleFuelLogItem,
   VehicleMaintenanceLogItem
 } from '@personal-erp/contracts';
 
 type DecimalLike = number | string | { toString(): string };
 
-type FuelLogRecord = Omit<FuelLogItem, 'filledOn' | 'liters'> & {
+type VehicleFuelLogRecord = Omit<
+  VehicleFuelLogItem,
+  'filledOn' | 'liters' | 'vehicleName'
+> & {
   filledOn: Date;
   liters: DecimalLike;
+  vehicle: {
+    id: string;
+    name: string;
+  };
 };
 
-type VehicleRecord = Omit<
-  VehicleItem,
-  'estimatedFuelEfficiencyKmPerLiter' | 'fuelLogs'
-> & {
+type VehicleRecord = Omit<VehicleItem, 'estimatedFuelEfficiencyKmPerLiter'> & {
   estimatedFuelEfficiencyKmPerLiter: DecimalLike | null;
-  fuelLogs: FuelLogRecord[];
 };
 
 type VehicleMaintenanceLogRecord = Omit<
@@ -34,9 +37,13 @@ function toNumber(value: DecimalLike): number {
   return typeof value === 'number' ? value : Number(value.toString());
 }
 
-function mapFuelLogToItem(log: FuelLogRecord): FuelLogItem {
+export function mapVehicleFuelLogToItem(
+  log: VehicleFuelLogRecord
+): VehicleFuelLogItem {
   return {
     id: log.id,
+    vehicleId: log.vehicleId,
+    vehicleName: log.vehicle.name,
     filledOn: log.filledOn.toISOString().slice(0, 10),
     odometerKm: log.odometerKm,
     liters: toNumber(log.liters),
@@ -57,8 +64,7 @@ export function mapVehicleToItem(vehicle: VehicleRecord): VehicleItem {
     estimatedFuelEfficiencyKmPerLiter:
       vehicle.estimatedFuelEfficiencyKmPerLiter === null
         ? null
-        : toNumber(vehicle.estimatedFuelEfficiencyKmPerLiter),
-    fuelLogs: vehicle.fuelLogs.map(mapFuelLogToItem)
+        : toNumber(vehicle.estimatedFuelEfficiencyKmPerLiter)
   };
 }
 

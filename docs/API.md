@@ -79,9 +79,12 @@
 - `POST /insurance-policies`
 - `PATCH /insurance-policies/:id`
 - `GET /vehicles`
+- `GET /vehicles/fuel-logs`
 - `GET /vehicles/maintenance-logs`
 - `POST /vehicles`
 - `PATCH /vehicles/:id`
+- `POST /vehicles/:id/fuel-logs`
+- `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`
 - `POST /vehicles/:id/maintenance-logs`
 - `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`
 
@@ -224,23 +227,40 @@
 ### `GET /vehicles`
 
 - 계약: response `VehicleItem[]`
-- 현재 작업 문맥 기준 차량 기본 정보와 연결된 주유 기록을 함께 반환합니다.
-- 현재 1차 범위는 차량 기본 정보 관리와 운영비/연비 보조 지표 조회까지로 한정합니다.
-- 이 shape은 차량 1차 CRUD를 닫기 위한 과도기 응답이며, 세부 분리 기준은 `docs/VEHICLE_OPERATIONS_MODEL_PLAN.md`를 따릅니다.
+- 현재 작업 문맥 기준 차량 기본 프로필만 반환합니다.
+- 현재 범위는 차량 기본 정보 관리와 운영비/연비 보조 지표 조회까지로 한정합니다.
+- 연료 이력과 정비 이력은 각각 별도 운영 기록 API로 분리합니다.
 
 ### `POST /vehicles`
 
 - 계약: `CreateVehicleRequest -> VehicleItem`
 - 현재 작업 문맥의 Owner/Manager만 새 차량 기본 정보를 생성할 수 있습니다.
-- 현재 범위는 `name`, `manufacturer`, `fuelType`, `initialOdometerKm`, `monthlyExpenseWon`, `estimatedFuelEfficiencyKmPerLiter`까지의 운영 보조 필드 관리로 한정하며 연료 이력 생성은 별도 단계로 분리합니다.
-- 다음 단계부터 차량 세부 운영 이력은 차량 기본 정보 계약과 분리해 확장합니다.
+- 현재 범위는 `name`, `manufacturer`, `fuelType`, `initialOdometerKm`, `monthlyExpenseWon`, `estimatedFuelEfficiencyKmPerLiter`까지의 운영 보조 필드 관리로 한정하며 연료/정비 이력 생성은 별도 계약으로 분리합니다.
 
 ### `PATCH /vehicles/:id`
 
 - 계약: `UpdateVehicleRequest -> VehicleItem`
 - 현재 작업 문맥의 Owner/Manager만 차량 기본 정보를 수정할 수 있습니다.
-- 현재 범위는 기존 주유 기록을 유지한 채 기본 필드만 조정하며, 차량 세부 운영 이력과 하드 삭제는 지원하지 않습니다.
-- 즉, 현재 수정 흐름은 차량 프로필 관리에만 집중하고, 연료/정비 이력은 별도 운영 모델로 분리하는 방향을 기준으로 삼습니다.
+- 현재 범위는 차량 프로필 필드만 조정하며, 차량 세부 운영 이력과 하드 삭제는 지원하지 않습니다.
+- 즉, 현재 수정 흐름은 차량 프로필 관리에만 집중하고, 연료/정비 이력은 별도 운영 모델로 관리합니다.
+
+### `GET /vehicles/fuel-logs`
+
+- 계약: response `VehicleFuelLogItem[]`
+- 현재 작업 문맥 기준 차량 연료 이력을 workspace 범위로 모아 반환합니다.
+- 연료 이력은 차량 기본 정보 응답과 분리된 별도 운영 기록 모델이며, 차량명은 read model 편의를 위해 함께 내려갑니다.
+
+### `POST /vehicles/:id/fuel-logs`
+
+- 계약: `CreateVehicleFuelLogRequest -> VehicleFuelLogItem`
+- 현재 작업 문맥의 Owner/Manager만 특정 차량에 연료 이력을 추가할 수 있습니다.
+- 현재 범위는 `filledOn`, `odometerKm`, `liters`, `amountWon`, `unitPriceWon`, `isFullTank`까지의 최소 운영 기록 필드만 지원합니다.
+
+### `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`
+
+- 계약: `UpdateVehicleFuelLogRequest -> VehicleFuelLogItem`
+- 현재 작업 문맥의 Owner/Manager만 특정 차량의 연료 이력을 수정할 수 있습니다.
+- 현재 범위는 연료 이력 수정만 지원하며, 삭제와 회계 자동 매칭은 후속 단계로 남겨 둡니다.
 
 ### `GET /vehicles/maintenance-logs`
 

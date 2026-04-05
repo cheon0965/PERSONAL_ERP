@@ -1,15 +1,21 @@
 import type {
   CreateVehicleRequest,
+  CreateVehicleFuelLogRequest,
   CreateVehicleMaintenanceLogRequest,
+  UpdateVehicleFuelLogRequest,
   UpdateVehicleMaintenanceLogRequest,
   UpdateVehicleRequest,
+  VehicleFuelLogItem,
   VehicleItem,
   VehicleMaintenanceLogItem
 } from '@personal-erp/contracts';
 import { fetchJson, patchJson, postJson } from '@/shared/api/fetch-json';
 
 export const vehiclesQueryKey = ['vehicles'] as const;
-export const vehicleMaintenanceLogsQueryKey = ['vehicle-maintenance-logs'] as const;
+export const vehicleFuelLogsQueryKey = ['vehicle-fuel-logs'] as const;
+export const vehicleMaintenanceLogsQueryKey = [
+  'vehicle-maintenance-logs'
+] as const;
 
 export const mockVehicles: VehicleItem[] = [
   {
@@ -19,27 +25,7 @@ export const mockVehicles: VehicleItem[] = [
     fuelType: 'DIESEL',
     initialOdometerKm: 128000,
     monthlyExpenseWon: 286000,
-    estimatedFuelEfficiencyKmPerLiter: 10.8,
-    fuelLogs: [
-      {
-        id: 'fuel-1',
-        filledOn: '2026-03-03',
-        odometerKm: 128240,
-        liters: 52.3,
-        amountWon: 84000,
-        unitPriceWon: 1606,
-        isFullTank: true
-      },
-      {
-        id: 'fuel-2',
-        filledOn: '2026-03-15',
-        odometerKm: 128695,
-        liters: 49.6,
-        amountWon: 80100,
-        unitPriceWon: 1615,
-        isFullTank: true
-      }
-    ]
+    estimatedFuelEfficiencyKmPerLiter: 10.8
   },
   {
     id: 'veh-2',
@@ -48,8 +34,32 @@ export const mockVehicles: VehicleItem[] = [
     fuelType: 'GASOLINE',
     initialOdometerKm: 32400,
     monthlyExpenseWon: 91000,
-    estimatedFuelEfficiencyKmPerLiter: 15.4,
-    fuelLogs: []
+    estimatedFuelEfficiencyKmPerLiter: 15.4
+  }
+];
+
+export const mockVehicleFuelLogs: VehicleFuelLogItem[] = [
+  {
+    id: 'fuel-1',
+    vehicleId: 'veh-1',
+    vehicleName: '포터2 배송차량',
+    filledOn: '2026-03-03',
+    odometerKm: 128240,
+    liters: 52.3,
+    amountWon: 84000,
+    unitPriceWon: 1606,
+    isFullTank: true
+  },
+  {
+    id: 'fuel-2',
+    vehicleId: 'veh-1',
+    vehicleName: '포터2 배송차량',
+    filledOn: '2026-03-15',
+    odometerKm: 128695,
+    liters: 49.6,
+    amountWon: 80100,
+    unitPriceWon: 1615,
+    isFullTank: true
   }
 ];
 
@@ -84,6 +94,13 @@ export function getVehicles() {
   return fetchJson<VehicleItem[]>('/vehicles', mockVehicles);
 }
 
+export function getVehicleFuelLogs() {
+  return fetchJson<VehicleFuelLogItem[]>(
+    '/vehicles/fuel-logs',
+    mockVehicleFuelLogs
+  );
+}
+
 export function getVehicleMaintenanceLogs() {
   return fetchJson<VehicleMaintenanceLogItem[]>(
     '/vehicles/maintenance-logs',
@@ -95,7 +112,11 @@ export function createVehicle(
   input: CreateVehicleRequest,
   fallback: VehicleItem
 ) {
-  return postJson<VehicleItem, CreateVehicleRequest>('/vehicles', input, fallback);
+  return postJson<VehicleItem, CreateVehicleRequest>(
+    '/vehicles',
+    input,
+    fallback
+  );
 }
 
 export function updateVehicle(
@@ -110,16 +131,40 @@ export function updateVehicle(
   );
 }
 
+export function createVehicleFuelLog(
+  vehicleId: string,
+  input: CreateVehicleFuelLogRequest,
+  fallback: VehicleFuelLogItem
+) {
+  return postJson<VehicleFuelLogItem, CreateVehicleFuelLogRequest>(
+    `/vehicles/${vehicleId}/fuel-logs`,
+    input,
+    fallback
+  );
+}
+
+export function updateVehicleFuelLog(
+  vehicleId: string,
+  fuelLogId: string,
+  input: UpdateVehicleFuelLogRequest,
+  fallback: VehicleFuelLogItem
+) {
+  return patchJson<VehicleFuelLogItem, UpdateVehicleFuelLogRequest>(
+    `/vehicles/${vehicleId}/fuel-logs/${fuelLogId}`,
+    input,
+    fallback
+  );
+}
+
 export function createVehicleMaintenanceLog(
   vehicleId: string,
   input: CreateVehicleMaintenanceLogRequest,
   fallback: VehicleMaintenanceLogItem
 ) {
-  return postJson<VehicleMaintenanceLogItem, CreateVehicleMaintenanceLogRequest>(
-    `/vehicles/${vehicleId}/maintenance-logs`,
-    input,
-    fallback
-  );
+  return postJson<
+    VehicleMaintenanceLogItem,
+    CreateVehicleMaintenanceLogRequest
+  >(`/vehicles/${vehicleId}/maintenance-logs`, input, fallback);
 }
 
 export function updateVehicleMaintenanceLog(
@@ -142,7 +187,6 @@ export function buildVehicleFallbackItem(
   input: CreateVehicleRequest | UpdateVehicleRequest,
   context?: {
     id?: string;
-    fuelLogs?: VehicleItem['fuelLogs'];
   }
 ): VehicleItem {
   return {
@@ -153,8 +197,28 @@ export function buildVehicleFallbackItem(
     initialOdometerKm: input.initialOdometerKm,
     monthlyExpenseWon: input.monthlyExpenseWon,
     estimatedFuelEfficiencyKmPerLiter:
-      input.estimatedFuelEfficiencyKmPerLiter ?? null,
-    fuelLogs: context?.fuelLogs ?? []
+      input.estimatedFuelEfficiencyKmPerLiter ?? null
+  };
+}
+
+export function buildVehicleFuelLogFallbackItem(
+  input: CreateVehicleFuelLogRequest | UpdateVehicleFuelLogRequest,
+  context: {
+    id?: string;
+    vehicleId: string;
+    vehicleName: string;
+  }
+): VehicleFuelLogItem {
+  return {
+    id: context.id ?? `fuel-demo-${Date.now()}`,
+    vehicleId: context.vehicleId,
+    vehicleName: context.vehicleName,
+    filledOn: input.filledOn,
+    odometerKm: input.odometerKm,
+    liters: input.liters,
+    amountWon: input.amountWon,
+    unitPriceWon: input.unitPriceWon,
+    isFullTank: input.isFullTank
   };
 }
 
@@ -186,42 +250,66 @@ export function mergeVehicleItem(
   current: VehicleItem[] | undefined,
   saved: VehicleItem
 ) {
-  return [saved, ...(current ?? []).filter((item) => item.id !== saved.id)].sort(
-    (left, right) => {
-      const nameDiff = left.name.localeCompare(right.name);
-      if (nameDiff !== 0) {
-        return nameDiff;
-      }
-
-      const manufacturerDiff = (left.manufacturer ?? '').localeCompare(
-        right.manufacturer ?? ''
-      );
-      if (manufacturerDiff !== 0) {
-        return manufacturerDiff;
-      }
-
-      return left.initialOdometerKm - right.initialOdometerKm;
+  return [
+    saved,
+    ...(current ?? []).filter((item) => item.id !== saved.id)
+  ].sort((left, right) => {
+    const nameDiff = left.name.localeCompare(right.name);
+    if (nameDiff !== 0) {
+      return nameDiff;
     }
-  );
+
+    const manufacturerDiff = (left.manufacturer ?? '').localeCompare(
+      right.manufacturer ?? ''
+    );
+    if (manufacturerDiff !== 0) {
+      return manufacturerDiff;
+    }
+
+    return left.initialOdometerKm - right.initialOdometerKm;
+  });
+}
+
+export function mergeVehicleFuelLogItem(
+  current: VehicleFuelLogItem[] | undefined,
+  saved: VehicleFuelLogItem
+) {
+  return [
+    saved,
+    ...(current ?? []).filter((item) => item.id !== saved.id)
+  ].sort((left, right) => {
+    const filledOnDiff = right.filledOn.localeCompare(left.filledOn);
+    if (filledOnDiff !== 0) {
+      return filledOnDiff;
+    }
+
+    const odometerDiff = right.odometerKm - left.odometerKm;
+    if (odometerDiff !== 0) {
+      return odometerDiff;
+    }
+
+    return left.vehicleName.localeCompare(right.vehicleName);
+  });
 }
 
 export function mergeVehicleMaintenanceLogItem(
   current: VehicleMaintenanceLogItem[] | undefined,
   saved: VehicleMaintenanceLogItem
 ) {
-  return [saved, ...(current ?? []).filter((item) => item.id !== saved.id)].sort(
-    (left, right) => {
-      const performedOnDiff = right.performedOn.localeCompare(left.performedOn);
-      if (performedOnDiff !== 0) {
-        return performedOnDiff;
-      }
-
-      const odometerDiff = right.odometerKm - left.odometerKm;
-      if (odometerDiff !== 0) {
-        return odometerDiff;
-      }
-
-      return left.vehicleName.localeCompare(right.vehicleName);
+  return [
+    saved,
+    ...(current ?? []).filter((item) => item.id !== saved.id)
+  ].sort((left, right) => {
+    const performedOnDiff = right.performedOn.localeCompare(left.performedOn);
+    if (performedOnDiff !== 0) {
+      return performedOnDiff;
     }
-  );
+
+    const odometerDiff = right.odometerKm - left.odometerKm;
+    if (odometerDiff !== 0) {
+      return odometerDiff;
+    }
+
+    return left.vehicleName.localeCompare(right.vehicleName);
+  });
 }
