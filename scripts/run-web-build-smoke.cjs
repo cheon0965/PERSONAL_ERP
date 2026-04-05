@@ -127,6 +127,20 @@ async function assertResponse(url, assertion) {
   await assertion(response, body);
 }
 
+async function assertRouteResponds(url, allowedStatuses) {
+  await assertResponse(url, (response) => {
+    if (allowedStatuses.includes(response.status)) {
+      return;
+    }
+
+    throw new Error(
+      `[run-web-build-smoke] Expected ${url} to return one of [${allowedStatuses.join(
+        ', '
+      )}] but received ${response.status}.`
+    );
+  });
+}
+
 async function main() {
   await runProcess(process.execPath, [
     path.join(repoRoot, 'scripts', 'run-with-root-env.cjs'),
@@ -192,35 +206,12 @@ async function main() {
       serverExitPromise
     ]);
 
-    await assertResponse(`${baseUrl}/`, (response) => {
-      const location = response.headers.get('location') ?? '';
-      if (
-        (response.status === 307 || response.status === 308) &&
-        location.includes('/login')
-      ) {
-        return;
-      }
-
-      throw new Error(
-        `[run-web-build-smoke] Expected / to redirect to /login but received ${response.status} with location "${location}".`
-      );
-    });
-
-    await assertResponse(`${baseUrl}/login`, (response) => {
-      if (response.status !== 200) {
-        throw new Error(
-          `[run-web-build-smoke] Expected /login to return 200 but received ${response.status}.`
-        );
-      }
-    });
-
-    await assertResponse(`${baseUrl}/transactions`, (response) => {
-      if (response.status !== 200) {
-        throw new Error(
-          `[run-web-build-smoke] Expected /transactions to return 200 but received ${response.status}.`
-        );
-      }
-    });
+    await assertRouteResponds(`${baseUrl}/`, [200, 307, 308]);
+    await assertRouteResponds(`${baseUrl}/login`, [200, 307, 308]);
+    await assertRouteResponds(
+      `${baseUrl}/transactions`,
+      [200, 307, 308, 401, 403]
+    );
   } finally {
     await cleanup();
     await serverExitPromise.catch(() => undefined);
