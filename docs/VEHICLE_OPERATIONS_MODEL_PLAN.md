@@ -202,7 +202,7 @@
 - `docs/API.md`
 - `docs/VALIDATION_NOTES.md`
 - `docs/PROJECT_PLAN.md`
-- `docs/ALIGNMENT_PATCH_EXECUTION_PLAN.md`
+- `docs/archive/ALIGNMENT_PATCH_EXECUTION_PLAN.md`
 
 검증은 최소 아래 범위를 다시 닫는다.
 
