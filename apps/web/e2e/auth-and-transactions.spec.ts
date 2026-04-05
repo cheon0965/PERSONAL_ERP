@@ -27,7 +27,7 @@ function expectNoUnhandledApiRequests(unhandledApiRequests: string[]) {
   expect(unhandledApiRequests, unhandledApiRequests.join('\n\n')).toEqual([]);
 }
 
-test('protects the transactions route, restores the session, and saves a transaction through the UI', async ({
+test('@smoke protects the transactions route, restores the session, and saves a transaction through the UI', async ({
   page
 }) => {
   const pageErrors: string[] = [];
@@ -1266,7 +1266,7 @@ test('manages recurring rules through the recurring rules UI', async ({
   expectNoPageErrors(pageErrors);
 });
 
-test('surfaces operational checklist guidance across empty states and readiness gaps', async ({
+test('@smoke surfaces operational checklist guidance across empty states and readiness gaps', async ({
   page
 }) => {
   const pageErrors: string[] = [];
@@ -1511,7 +1511,7 @@ test('surfaces operational checklist guidance across empty states and readiness 
   expectNoPageErrors(pageErrors);
 });
 
-test('shows safe context fallback when no workspace is connected', async ({
+test('@smoke shows safe context fallback when no workspace is connected', async ({
   page
 }) => {
   const pageErrors: string[] = [];
