@@ -17,8 +17,13 @@ export const navigationItems = [
   { label: '대시보드', href: '/dashboard', icon: DashboardRoundedIcon },
   { label: '작업 문맥', href: '/settings', icon: SettingsRoundedIcon },
   {
-    label: '기준 데이터',
+    label: '기준 데이터 준비',
     href: '/reference-data',
+    icon: Inventory2RoundedIcon
+  },
+  {
+    label: '기준 데이터 관리',
+    href: '/reference-data/manage',
     icon: Inventory2RoundedIcon
   },
   { label: '월 운영', href: '/periods', icon: CalendarMonthRoundedIcon },

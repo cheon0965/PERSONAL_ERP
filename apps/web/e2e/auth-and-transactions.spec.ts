@@ -781,16 +781,16 @@ test('manages funding accounts and categories through the reference data UI', as
     });
   });
 
-  await page.goto('/reference-data');
+  await page.goto('/reference-data/manage');
   await expect(page).toHaveURL(/\/login/);
 
   await page.getByLabel('이메일').fill('demo@example.com');
   await page.getByLabel('비밀번호').fill('Demo1234!');
   await page.getByRole('button', { name: '로그인' }).click();
 
-  await expect(page).toHaveURL(/\/reference-data$/);
+  await expect(page).toHaveURL(/\/reference-data\/manage$/);
   await expect(
-    page.getByRole('heading', { name: '기준 데이터와 참조 입력' })
+    page.getByRole('heading', { name: '기준 데이터 관리와 참조 입력' })
   ).toBeVisible();
   await expect(
     page.getByRole('button', { name: '자금수단 추가' })
@@ -2149,7 +2149,7 @@ test('@smoke surfaces operational checklist guidance across empty states and rea
   await page.getByRole('link', { name: '기준 데이터 확인' }).click();
   await expect(page).toHaveURL(/\/reference-data$/);
   await expect(
-    page.getByRole('heading', { name: '기준 데이터와 참조 입력' })
+    page.getByRole('heading', { name: '기준 데이터 준비 상태와 관리 범위' })
   ).toBeVisible();
   await expect(
     page.getByText(
