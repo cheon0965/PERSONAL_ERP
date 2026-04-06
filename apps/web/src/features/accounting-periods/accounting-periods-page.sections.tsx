@@ -10,6 +10,8 @@ import {
   IconButton,
   MenuItem,
   Stack,
+  Tab,
+  Tabs,
   TextField,
   Typography
 } from '@mui/material';
@@ -197,8 +199,8 @@ export function OpenAccountingPeriodSection({
               <Stack spacing={appLayout.cardGap}>
                 <Typography variant="subtitle2">오프닝 잔액 라인</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  자산, 부채, 자본 기준으로 첫 월 시작 잔액을 입력합니다.
-                  자산 합계와 부채+자본 합계가 같아야 합니다.
+                  자산, 부채, 자본 기준으로 첫 월 시작 잔액을 입력합니다. 자산
+                  합계와 부채+자본 합계가 같아야 합니다.
                 </Typography>
                 {openingBalanceReferenceError ? (
                   <QueryErrorAlert
@@ -328,7 +330,9 @@ export function OpenAccountingPeriodSection({
                   variant="outlined"
                   startIcon={<AddRoundedIcon />}
                   onClick={onAppendOpeningBalanceLine}
-                  disabled={isSubmitting || Boolean(openingBalanceReferenceError)}
+                  disabled={
+                    isSubmitting || Boolean(openingBalanceReferenceError)
+                  }
                   sx={{ alignSelf: 'flex-start' }}
                 >
                   라인 추가
@@ -435,7 +439,11 @@ export function PeriodLifecycleActionsSection({
           />
           <InfoRow
             label="권한"
-            value={canClosePeriod ? '소유자' : readMembershipRoleLabel(membershipRole)}
+            value={
+              canClosePeriod
+                ? '소유자'
+                : readMembershipRoleLabel(membershipRole)
+            }
           />
           <TextField
             label="마감 메모"
@@ -480,7 +488,9 @@ export function PeriodLifecycleActionsSection({
           <InfoRow
             label="권한"
             value={
-              canReopenPeriod ? '소유자' : readMembershipRoleLabel(membershipRole)
+              canReopenPeriod
+                ? '소유자'
+                : readMembershipRoleLabel(membershipRole)
             }
           />
           <TextField
@@ -514,6 +524,229 @@ export function PeriodLifecycleActionsSection({
       </SectionCard>
     </Stack>
   );
+}
+
+export function PeriodOperationsSection(
+  props: Parameters<typeof OpenAccountingPeriodSection>[0] &
+    Parameters<typeof PeriodLifecycleActionsSection>[0]
+) {
+  const { openPeriod, reopenPeriod } = props;
+  const [activeTab, setActiveTab] = React.useState<PeriodOperationTab>(() =>
+    pickDefaultPeriodOperationTab({ openPeriod, reopenPeriod })
+  );
+
+  React.useEffect(() => {
+    setActiveTab((currentTab) => {
+      if (currentTab === 'close' && !openPeriod) {
+        return pickDefaultPeriodOperationTab({ openPeriod, reopenPeriod });
+      }
+
+      if (currentTab === 'reopen' && !reopenPeriod) {
+        return pickDefaultPeriodOperationTab({ openPeriod, reopenPeriod });
+      }
+
+      return currentTab;
+    });
+  }, [openPeriod, reopenPeriod]);
+
+  return (
+    <Stack spacing={appLayout.cardGap} id="accounting-period-operations">
+      <Tabs
+        value={activeTab}
+        onChange={(_event, nextValue: PeriodOperationTab) => {
+          setActiveTab(nextValue);
+        }}
+        variant="scrollable"
+        allowScrollButtonsMobile
+      >
+        <Tab value="open" label="월 운영 시작" />
+        <Tab value="close" label="월 마감" />
+        <Tab value="reopen" label="월 재오픈" />
+      </Tabs>
+
+      {activeTab === 'open' ? <OpenAccountingPeriodSection {...props} /> : null}
+
+      {activeTab === 'close' ? (
+        <CloseAccountingPeriodSection
+          openPeriod={props.openPeriod}
+          membershipRole={props.membershipRole}
+          canClosePeriod={props.canClosePeriod}
+          hasWorkspace={props.hasWorkspace}
+          closeNote={props.closeNote}
+          closePending={props.closePending}
+          onCloseNoteChange={props.onCloseNoteChange}
+          onClosePeriod={props.onClosePeriod}
+        />
+      ) : null}
+
+      {activeTab === 'reopen' ? (
+        <ReopenAccountingPeriodSection
+          reopenPeriod={props.reopenPeriod}
+          membershipRole={props.membershipRole}
+          canReopenPeriod={props.canReopenPeriod}
+          hasWorkspace={props.hasWorkspace}
+          reopenReason={props.reopenReason}
+          reopenPending={props.reopenPending}
+          onReopenReasonChange={props.onReopenReasonChange}
+          onReopenPeriod={props.onReopenPeriod}
+        />
+      ) : null}
+    </Stack>
+  );
+}
+
+function CloseAccountingPeriodSection({
+  openPeriod,
+  membershipRole,
+  canClosePeriod,
+  hasWorkspace,
+  closeNote,
+  closePending,
+  onCloseNoteChange,
+  onClosePeriod
+}: {
+  openPeriod: AccountingPeriodItem | null;
+  membershipRole: string | null;
+  canClosePeriod: boolean;
+  hasWorkspace: boolean;
+  closeNote: string;
+  closePending: boolean;
+  onCloseNoteChange: (value: string) => void;
+  onClosePeriod: () => Promise<void> | void;
+}) {
+  return (
+    <SectionCard
+      title="월 마감"
+      description="현재 열린 운영 기간을 잠그고 오프닝 기준과 확정 전표를 반영한 월 마감 스냅샷을 생성합니다. 미확정 수집 거래가 남아 있으면 마감할 수 없습니다."
+    >
+      <Stack spacing={appLayout.cardGap}>
+        <InfoRow
+          label="마감 대상"
+          value={
+            openPeriod ? openPeriod.monthLabel : '현재 열린 운영 기간 없음'
+          }
+        />
+        <InfoRow
+          label="권한"
+          value={
+            canClosePeriod ? '소유자' : readMembershipRoleLabel(membershipRole)
+          }
+        />
+        <TextField
+          label="마감 메모"
+          multiline
+          minRows={3}
+          value={closeNote}
+          onChange={(event) => {
+            onCloseNoteChange(event.target.value);
+          }}
+          helperText="월 마감 사유 또는 운영 메모를 남길 수 있습니다."
+          disabled={!openPeriod || !canClosePeriod || !hasWorkspace}
+        />
+        <Button
+          variant="contained"
+          color="inherit"
+          disabled={
+            !openPeriod || !canClosePeriod || !hasWorkspace || closePending
+          }
+          onClick={() => {
+            void onClosePeriod();
+          }}
+          sx={{ alignSelf: 'flex-start' }}
+        >
+          {closePending ? '월 마감 진행 중...' : '월 마감'}
+        </Button>
+      </Stack>
+    </SectionCard>
+  );
+}
+
+function ReopenAccountingPeriodSection({
+  reopenPeriod,
+  membershipRole,
+  canReopenPeriod,
+  hasWorkspace,
+  reopenReason,
+  reopenPending,
+  onReopenReasonChange,
+  onReopenPeriod
+}: {
+  reopenPeriod: AccountingPeriodItem | null;
+  membershipRole: string | null;
+  canReopenPeriod: boolean;
+  hasWorkspace: boolean;
+  reopenReason: string;
+  reopenPending: boolean;
+  onReopenReasonChange: (value: string) => void;
+  onReopenPeriod: () => Promise<void> | void;
+}) {
+  return (
+    <SectionCard
+      title="월 재오픈"
+      description="가장 최근에 잠긴 운영 기간만 재오픈할 수 있으며, 재오픈 시 해당 기간의 마감 산출물은 함께 정리됩니다."
+    >
+      <Stack spacing={appLayout.cardGap}>
+        <InfoRow
+          label="재오픈 대상"
+          value={
+            reopenPeriod
+              ? reopenPeriod.monthLabel
+              : '가장 최근 잠금 운영 기간 없음'
+          }
+        />
+        <InfoRow
+          label="권한"
+          value={
+            canReopenPeriod ? '소유자' : readMembershipRoleLabel(membershipRole)
+          }
+        />
+        <TextField
+          label="재오픈 사유"
+          multiline
+          minRows={3}
+          value={reopenReason}
+          onChange={(event) => {
+            onReopenReasonChange(event.target.value);
+          }}
+          helperText="재무제표 재산출, 전표 정정 등 재오픈 사유를 남겨 주세요."
+          disabled={!reopenPeriod || !canReopenPeriod || !hasWorkspace}
+        />
+        <Button
+          variant="outlined"
+          disabled={
+            !reopenPeriod ||
+            !canReopenPeriod ||
+            !hasWorkspace ||
+            reopenPending ||
+            reopenReason.trim().length === 0
+          }
+          onClick={() => {
+            void onReopenPeriod();
+          }}
+          sx={{ alignSelf: 'flex-start' }}
+        >
+          {reopenPending ? '월 재오픈 진행 중...' : '월 재오픈'}
+        </Button>
+      </Stack>
+    </SectionCard>
+  );
+}
+
+type PeriodOperationTab = 'open' | 'close' | 'reopen';
+
+function pickDefaultPeriodOperationTab(input: {
+  openPeriod: AccountingPeriodItem | null;
+  reopenPeriod: AccountingPeriodItem | null;
+}): PeriodOperationTab {
+  if (input.openPeriod) {
+    return 'close';
+  }
+
+  if (input.reopenPeriod) {
+    return 'reopen';
+  }
+
+  return 'open';
 }
 
 function readOpeningBalanceSource(period: AccountingPeriodItem) {
