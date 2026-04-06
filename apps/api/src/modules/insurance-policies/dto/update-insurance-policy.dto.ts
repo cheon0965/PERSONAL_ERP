@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+﻿import { ApiProperty } from '@nestjs/swagger';
 import type { UpdateInsurancePolicyRequest } from '@personal-erp/contracts';
 import { InsuranceCycle } from '@prisma/client';
 import {
@@ -9,7 +9,8 @@ import {
   IsOptional,
   IsString,
   Max,
-  Min
+  Min,
+  MinLength
 } from 'class-validator';
 
 export class UpdateInsurancePolicyDto implements UpdateInsurancePolicyRequest {
@@ -35,6 +36,20 @@ export class UpdateInsurancePolicyDto implements UpdateInsurancePolicyRequest {
   @ApiProperty({ enum: InsuranceCycle })
   @IsEnum(InsuranceCycle)
   cycle!: InsuranceCycle;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(1)
+  fundingAccountId!: string;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(1)
+  categoryId!: string;
+
+  @ApiProperty()
+  @IsDateString()
+  recurringStartDate!: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

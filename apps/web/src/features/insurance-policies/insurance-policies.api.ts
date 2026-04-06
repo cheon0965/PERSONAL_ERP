@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   CreateInsurancePolicyRequest,
   InsurancePolicyItem,
   UpdateInsurancePolicyRequest
@@ -15,6 +15,12 @@ export const mockInsurancePolicies: InsurancePolicyItem[] = [
     monthlyPremiumWon: 98000,
     paymentDay: 25,
     cycle: 'MONTHLY',
+    fundingAccountId: 'acc-1',
+    fundingAccountName: '사업 운영 통장',
+    categoryId: 'cat-3',
+    categoryName: '사업 보험료',
+    recurringStartDate: '2026-04-25',
+    linkedRecurringRuleId: 'rr-ins-1',
     renewalDate: '2026-11-01',
     maturityDate: null,
     isActive: true
@@ -26,6 +32,12 @@ export const mockInsurancePolicies: InsurancePolicyItem[] = [
     monthlyPremiumWon: 43000,
     paymentDay: 25,
     cycle: 'MONTHLY',
+    fundingAccountId: 'acc-1',
+    fundingAccountName: '사업 운영 통장',
+    categoryId: 'cat-3',
+    categoryName: '사업 보험료',
+    recurringStartDate: '2026-04-25',
+    linkedRecurringRuleId: 'rr-ins-2',
     renewalDate: '2026-09-15',
     maturityDate: null,
     isActive: false
@@ -72,6 +84,9 @@ export function buildInsurancePolicyFallbackItem(
   input: CreateInsurancePolicyRequest | UpdateInsurancePolicyRequest,
   context?: {
     id?: string;
+    fundingAccountName?: string | null;
+    categoryName?: string | null;
+    linkedRecurringRuleId?: string | null;
   }
 ): InsurancePolicyItem {
   return {
@@ -81,6 +96,13 @@ export function buildInsurancePolicyFallbackItem(
     monthlyPremiumWon: input.monthlyPremiumWon,
     paymentDay: input.paymentDay,
     cycle: input.cycle,
+    fundingAccountId: input.fundingAccountId,
+    fundingAccountName: context?.fundingAccountName ?? null,
+    categoryId: input.categoryId,
+    categoryName: context?.categoryName ?? null,
+    recurringStartDate: input.recurringStartDate,
+    linkedRecurringRuleId:
+      context?.linkedRecurringRuleId ?? `rr-insurance-demo-${Date.now()}`,
     renewalDate: input.renewalDate ?? null,
     maturityDate: input.maturityDate ?? null,
     isActive: input.isActive ?? true

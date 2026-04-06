@@ -371,6 +371,7 @@ model Account {
   ledger                Ledger              @relation("LedgerAccounts", fields: [ledgerId], references: [id], onDelete: Cascade)
   legacyTransactions    LegacyTransaction[]
   recurringRules        RecurringRule[]
+  insurancePolicies     InsurancePolicy[]
   planItems             PlanItem[]
   collectedTransactions CollectedTransaction[]
   journalLines          JournalLine[]
@@ -396,6 +397,7 @@ model Category {
   ledger                Ledger               @relation("LedgerCategories", fields: [ledgerId], references: [id], onDelete: Cascade)
   legacyTransactions    LegacyTransaction[]
   recurringRules        RecurringRule[]
+  insurancePolicies     InsurancePolicy[]
   planItems             PlanItem[]
   collectedTransactions CollectedTransaction[]
 
@@ -457,6 +459,7 @@ model RecurringRule {
   account                 Account                @relation(fields: [accountId], references: [id], onDelete: Restrict)
   category                Category?              @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   ledgerTransactionType   LedgerTransactionType? @relation(fields: [ledgerTransactionTypeId], references: [id], onDelete: SetNull)
+  linkedInsurancePolicy   InsurancePolicy?       @relation("InsurancePolicyLinkedRecurringRule")
   planItems               PlanItem[]
 
   @@index([userId, isActive, nextRunDate])
@@ -802,26 +805,35 @@ model CarryForwardRecord {
 }
 
 model InsurancePolicy {
-  id                String         @id @default(cuid())
-  userId            String
-  tenantId          String
-  ledgerId          String
-  provider          String
-  productName       String
-  monthlyPremiumWon Int
-  paymentDay        Int
-  cycle             InsuranceCycle @default(MONTHLY)
-  renewalDate       DateTime?
-  maturityDate      DateTime?
-  isActive          Boolean        @default(true)
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant            Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger            Ledger         @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  id                    String         @id @default(cuid())
+  userId                String
+  tenantId              String
+  ledgerId              String
+  accountId             String?
+  categoryId            String?
+  recurringStartDate    DateTime?
+  linkedRecurringRuleId String?        @unique
+  provider              String
+  productName           String
+  monthlyPremiumWon     Int
+  paymentDay            Int
+  cycle                 InsuranceCycle @default(MONTHLY)
+  renewalDate           DateTime?
+  maturityDate          DateTime?
+  isActive              Boolean        @default(true)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  user                  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant                Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                Ledger         @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  account               Account?       @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  category              Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  linkedRecurringRule   RecurringRule? @relation("InsurancePolicyLinkedRecurringRule", fields: [linkedRecurringRuleId], references: [id], onDelete: SetNull)
 
   @@index([userId, isActive])
   @@index([tenantId, ledgerId, isActive])
+  @@index([accountId])
+  @@index([categoryId])
 }
 
 model Vehicle {
@@ -879,3 +891,6 @@ model VehicleMaintenanceLog {
 
   @@index([vehicleId, performedOn])
 }
+
+
+

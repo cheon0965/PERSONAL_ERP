@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -50,27 +50,19 @@ export function InsurancePoliciesPage() {
     0
   );
   const inactivePolicyCount = data.filter((item) => !item.isActive).length;
-  const upcomingRenewalCount = activePolicies.filter((item) => {
-    if (!item.renewalDate) {
-      return false;
-    }
-
-    const diffDays =
-      (new Date(item.renewalDate).getTime() - Date.now()) /
-      (1000 * 60 * 60 * 24);
-
-    return diffDays >= 0 && diffDays <= 60;
-  }).length;
+  const linkedPolicyCount = data.filter((item) => item.linkedRecurringRuleId).length;
+  const unlinkedPolicyCount = data.length - linkedPolicyCount;
 
   useDomainHelp({
     title: '보험 계약 개요',
     description:
-      '보험 화면은 공식 장부가 아니라 추후 계획 지출과 실제 지급 흐름을 잇는 보조 화면입니다.',
+      '보험 화면은 반복 규칙과 실제 지급 흐름을 잇는 보조 운영 화면이며, 계약 저장 시 연결 규칙을 함께 관리합니다.',
     primaryEntity: '보험 계약 보조 데이터',
     relatedEntities: ['반복 규칙', '계획 항목', '수집 거래', '전표'],
     truthSource:
-      '보험 계약 자체는 회계 저장이 아니며 실제 회계 확정은 수집 거래와 전표에서 이뤄집니다.',
-    readModelNote: '월 보험료와 갱신일은 운영 판단을 위한 보조 지표입니다.'
+      '보험 계약은 운영 보조 데이터이지만, 여기서 입력한 반복 기준은 연결된 반복 규칙에 함께 반영됩니다.',
+    readModelNote:
+      '월 보험료와 연결 상태를 함께 보며 계획 기준 누락 없이 운영하도록 돕습니다.'
   });
 
   const handleCreateOpen = React.useCallback(() => {
@@ -97,8 +89,8 @@ export function InsurancePoliciesPage() {
         severity: 'success',
         message:
           mode === 'edit'
-            ? `${insurancePolicy.productName} 보험 계약을 수정했습니다.`
-            : `${insurancePolicy.productName} 보험 계약을 등록했습니다.`
+            ? `${insurancePolicy.productName} 보험 계약과 연결 규칙을 수정했습니다.`
+            : `${insurancePolicy.productName} 보험 계약과 연결 규칙을 등록했습니다.`
       });
     },
     []
@@ -122,10 +114,31 @@ export function InsurancePoliciesPage() {
         valueFormatter: (value) => cycleLabelMap[String(value)] ?? String(value)
       },
       {
-        field: 'renewalDate',
-        headerName: '갱신일',
+        field: 'fundingAccountName',
+        headerName: '자금수단',
+        flex: 1.1,
+        valueFormatter: (value) => (value ? String(value) : '미설정')
+      },
+      {
+        field: 'categoryName',
+        headerName: '카테고리',
+        flex: 1,
+        valueFormatter: (value) => (value ? String(value) : '미설정')
+      },
+      {
+        field: 'recurringStartDate',
+        headerName: '반복 시작',
         flex: 1,
         valueFormatter: (value) => (value ? formatDate(String(value)) : '-')
+      },
+      {
+        field: 'linkedRecurringRuleId',
+        headerName: '연결 규칙',
+        flex: 0.9,
+        sortable: false,
+        renderCell: (params) => (
+          <StatusChip label={params.value ? '연결됨' : '미연결'} />
+        )
       },
       {
         field: 'isActive',
@@ -161,21 +174,28 @@ export function InsurancePoliciesPage() {
     drawerState?.mode === 'edit' ? '보험 계약 수정' : '보험 계약 등록';
   const drawerDescription =
     drawerState?.mode === 'edit'
-      ? '보험 계약의 상태와 기준 필드를 조정해 운영 판단 흐름에 반영합니다.'
-      : '보험 계약 보조 데이터를 추가하고 반복 지출 검토 흐름의 기준을 보강합니다.';
+      ? '보험 계약 기준을 조정하면 연결된 반복 규칙도 함께 동기화합니다.'
+      : '보험 계약과 연결된 반복 규칙 기준을 함께 추가합니다.';
 
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
         eyebrow="보조 운영 영역"
         title="보험 계약"
-        description="보험 계약은 핵심 회계 데이터 자체가 아니라 반복 규칙과 실제 지급 흐름을 설명하는 운영 보조 데이터로 관리합니다."
+        description="보험 계약은 보조 운영 데이터이지만, 저장 시 반복 규칙과 연결해 이후 계획 생성 기준으로 함께 관리합니다."
         primaryActionLabel="보험 계약 등록"
         primaryActionOnClick={handleCreateOpen}
       />
       {feedback ? (
         <Alert severity={feedback.severity} variant="outlined">
           {feedback.message}
+        </Alert>
+      ) : null}
+      {unlinkedPolicyCount > 0 ? (
+        <Alert severity="warning" variant="outlined">
+          반복 규칙 연결 정보가 비어 있는 보험 계약이 {unlinkedPolicyCount}건
+          있습니다. 수정 드로어에서 자금수단, 카테고리, 반복 시작일을 입력하면
+          연결할 수 있습니다.
         </Alert>
       ) : null}
       {error ? (
@@ -198,15 +218,15 @@ export function InsurancePoliciesPage() {
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
           <SummaryCard
-            title="가까운 갱신 / 비활성"
-            value={`${upcomingRenewalCount} / ${inactivePolicyCount}`}
-            subtitle="60일 이내 갱신 예정 계약 수와 비활성 계약 수"
+            title="연결 완료 / 비활성"
+            value={`${linkedPolicyCount} / ${inactivePolicyCount}`}
+            subtitle="반복 규칙 연결 완료 계약 수와 비활성 계약 수"
           />
         </Grid>
       </Grid>
       <DataTableCard
         title="보험 계약 목록"
-        description="계약 자체를 회계 저장으로 취급하지 않고, 계획과 검토에 필요한 필드와 활성 상태를 함께 보여줍니다."
+        description="보험 계약 저장 시 연결된 반복 규칙도 함께 관리합니다. 미연결 계약은 수정 드로어에서 보완할 수 있습니다."
         rows={data}
         columns={columns}
       />

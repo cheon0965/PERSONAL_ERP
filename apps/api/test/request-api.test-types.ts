@@ -336,6 +336,10 @@ export type RequestTestState = {
     monthlyPremiumWon: number;
     paymentDay: number;
     cycle: 'MONTHLY' | 'YEARLY';
+    accountId: string | null;
+    categoryId: string | null;
+    recurringStartDate: Date | null;
+    linkedRecurringRuleId: string | null;
     renewalDate: Date | null;
     maturityDate: Date | null;
     isActive: boolean;
@@ -409,3 +413,5 @@ export type RequestTestContext = {
 
 export type RequestTestOptions = RequestOptions;
 export type RequestTestResult = RequestResult;
+
+
