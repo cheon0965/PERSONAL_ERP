@@ -175,7 +175,10 @@ test('POST /insurance-policies creates an insurance policy and a linked recurrin
     assert.ok(createdRecurringRule);
     assert.equal(createdRecurringRule?.accountId, 'acc-1');
     assert.equal(createdRecurringRule?.categoryId, 'cat-1c');
-    assert.equal(createdRecurringRule?.title, '메리츠화재 사업장 배상 책임보험');
+    assert.equal(
+      createdRecurringRule?.title,
+      '메리츠화재 사업장 배상 책임보험'
+    );
     assert.equal(createdRecurringRule?.amountWon, 58_000);
     assert.equal(createdRecurringRule?.frequency, RecurrenceFrequency.MONTHLY);
     assert.equal(createdRecurringRule?.dayOfMonth, 17);
@@ -317,7 +320,10 @@ test('PATCH /insurance-policies/:id updates an insurance policy and syncs its ex
     assert.ok(syncedRecurringRule);
     assert.equal(syncedRecurringRule?.accountId, 'acc-1b');
     assert.equal(syncedRecurringRule?.categoryId, 'cat-1');
-    assert.equal(syncedRecurringRule?.title, '삼성화재 업무용 차량 보험 플러스');
+    assert.equal(
+      syncedRecurringRule?.title,
+      '삼성화재 업무용 차량 보험 플러스'
+    );
     assert.equal(syncedRecurringRule?.amountWon, 46_000);
     assert.equal(syncedRecurringRule?.frequency, RecurrenceFrequency.YEARLY);
     assert.equal(syncedRecurringRule?.dayOfMonth, 27);

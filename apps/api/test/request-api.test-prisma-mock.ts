@@ -2033,4 +2033,3 @@ export function createPrismaMock(
     }
   };
 }
-

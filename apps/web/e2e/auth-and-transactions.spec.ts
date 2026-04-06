@@ -1424,7 +1424,10 @@ test('manages insurance policies through the insurance policies UI', async ({
           categories
         });
 
-      recurringRules = mergeRecurringRulesForE2E(recurringRules, syncedRecurringRule);
+      recurringRules = mergeRecurringRulesForE2E(
+        recurringRules,
+        syncedRecurringRule
+      );
       insurancePolicies = mergeInsurancePoliciesForE2E(
         insurancePolicies,
         created
@@ -1445,7 +1448,8 @@ test('manages insurance policies through the insurance policies UI', async ({
       const insurancePolicyId = path.split('/').at(-1) ?? '';
       const payload = request.postDataJSON() as UpdateInsurancePolicyRequest;
       const existingPolicy =
-        insurancePolicies.find((policy) => policy.id === insurancePolicyId) ?? null;
+        insurancePolicies.find((policy) => policy.id === insurancePolicyId) ??
+        null;
       const linkedRecurringRuleId =
         existingPolicy?.linkedRecurringRuleId ?? `rr-insurance-${Date.now()}`;
       const updated = buildInsurancePolicyItemFromPayload(payload, {
@@ -1461,7 +1465,10 @@ test('manages insurance policies through the insurance policies UI', async ({
           categories
         });
 
-      recurringRules = mergeRecurringRulesForE2E(recurringRules, syncedRecurringRule);
+      recurringRules = mergeRecurringRulesForE2E(
+        recurringRules,
+        syncedRecurringRule
+      );
       insurancePolicies = mergeInsurancePoliciesForE2E(
         insurancePolicies,
         updated
@@ -1527,7 +1534,9 @@ test('manages insurance policies through the insurance policies UI', async ({
     .click();
 
   await expect(
-    page.getByText(`${newInsuranceProductName} 보험 계약과 연결 규칙을 등록했습니다.`)
+    page.getByText(
+      `${newInsuranceProductName} 보험 계약과 연결 규칙을 등록했습니다.`
+    )
   ).toBeVisible();
   const newInsurancePolicyRow = page.getByRole('row', {
     name: new RegExp(newInsuranceProductName)
@@ -1567,7 +1576,9 @@ test('manages insurance policies through the insurance policies UI', async ({
     .click();
 
   await expect(
-    page.getByText(`${renamedInsuranceProductName} 보험 계약과 연결 규칙을 수정했습니다.`)
+    page.getByText(
+      `${renamedInsuranceProductName} 보험 계약과 연결 규칙을 수정했습니다.`
+    )
   ).toBeVisible();
   const renamedInsurancePolicyRow = page.getByRole('row', {
     name: new RegExp(renamedInsuranceProductName)
@@ -3039,4 +3050,3 @@ function buildReferenceDataReadinessSummary(input: {
     ]
   };
 }
-

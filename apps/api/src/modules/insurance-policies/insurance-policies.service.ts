@@ -1,4 +1,4 @@
-﻿import {
+import {
   BadRequestException,
   ConflictException,
   Injectable,
@@ -16,7 +16,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   prepareRecurringRuleSchedule,
   resolveMissingOwnedRecurringRuleReference
-} from '../recurring-rules/domain/recurring-rule-policy';
+} from '../recurring-rules/public';
 import { mapInsurancePolicyToItem } from './insurance-policies.mapper';
 import { InsurancePoliciesRepository } from './insurance-policies.repository';
 
