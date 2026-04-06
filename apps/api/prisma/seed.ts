@@ -88,6 +88,7 @@ const DEMO_CATEGORIES = [
 
 const DEMO_RECURRING_RULES = [
   {
+    key: 'utilitiesRule',
     title: 'POS/인터넷 요금',
     amountWon: 75000,
     frequency: RecurrenceFrequency.MONTHLY,
@@ -98,6 +99,7 @@ const DEMO_RECURRING_RULES = [
     categoryKey: 'utilitiesCategory'
   },
   {
+    key: 'packagingRule',
     title: '정기 소모품 보충',
     amountWon: 280000,
     frequency: RecurrenceFrequency.MONTHLY,
@@ -108,6 +110,7 @@ const DEMO_RECURRING_RULES = [
     categoryKey: 'packagingCategory'
   },
   {
+    key: 'vehicleInsuranceRule',
     title: '업무용 차량 보험료',
     amountWon: 98000,
     frequency: RecurrenceFrequency.MONTHLY,
@@ -118,6 +121,7 @@ const DEMO_RECURRING_RULES = [
     categoryKey: 'insuranceCategory'
   },
   {
+    key: 'liabilityInsuranceRule',
     title: '영업배상 책임보험료',
     amountWon: 43000,
     frequency: RecurrenceFrequency.MONTHLY,
@@ -136,6 +140,10 @@ const DEMO_INSURANCE_POLICIES = [
     monthlyPremiumWon: 98000,
     paymentDay: 25,
     cycle: InsuranceCycle.MONTHLY,
+    accountKey: 'mainAccount',
+    categoryKey: 'insuranceCategory',
+    recurringStartDate: new Date('2026-01-25T00:00:00.000Z'),
+    linkedRecurringRuleKey: 'vehicleInsuranceRule',
     renewalDate: new Date('2026-11-01T00:00:00.000Z'),
     isActive: true
   },
@@ -145,6 +153,10 @@ const DEMO_INSURANCE_POLICIES = [
     monthlyPremiumWon: 43000,
     paymentDay: 25,
     cycle: InsuranceCycle.MONTHLY,
+    accountKey: 'mainAccount',
+    categoryKey: 'insuranceCategory',
+    recurringStartDate: new Date('2026-01-25T00:00:00.000Z'),
+    linkedRecurringRuleKey: 'liabilityInsuranceRule',
     renewalDate: new Date('2026-09-15T00:00:00.000Z'),
     isActive: true
   }
@@ -416,6 +428,11 @@ async function ensureDemoRecurringRules(
   categoryIds: Map<(typeof DEMO_CATEGORIES)[number]['key'], string>,
   summary: SeedSummary
 ) {
+  const recurringRuleIds = new Map<
+    (typeof DEMO_RECURRING_RULES)[number]['key'],
+    string
+  >();
+
   for (const rule of DEMO_RECURRING_RULES) {
     const accountId = accountIds.get(rule.accountKey);
     const categoryId = categoryIds.get(rule.categoryKey);
@@ -439,11 +456,12 @@ async function ensureDemoRecurringRules(
     });
 
     if (existingRule) {
+      recurringRuleIds.set(rule.key, existingRule.id);
       summary.recurringRules.skipped += 1;
       continue;
     }
 
-    await prisma.recurringRule.create({
+    const createdRule = await prisma.recurringRule.create({
       data: {
         userId,
         tenantId,
@@ -457,20 +475,39 @@ async function ensureDemoRecurringRules(
         startDate: rule.startDate,
         nextRunDate: rule.nextRunDate,
         isActive: true
-      }
+      },
+      select: { id: true }
     });
 
+    recurringRuleIds.set(rule.key, createdRule.id);
     summary.recurringRules.created += 1;
   }
+
+  return recurringRuleIds;
 }
 
 async function ensureDemoInsurancePolicies(
   userId: string,
   tenantId: string,
   ledgerId: string,
+  accountIds: Map<(typeof DEMO_ACCOUNTS)[number]['key'], string>,
+  categoryIds: Map<(typeof DEMO_CATEGORIES)[number]['key'], string>,
+  recurringRuleIds: Map<(typeof DEMO_RECURRING_RULES)[number]['key'], string>,
   summary: SeedSummary
 ) {
   for (const policy of DEMO_INSURANCE_POLICIES) {
+    const accountId = accountIds.get(policy.accountKey);
+    const categoryId = categoryIds.get(policy.categoryKey);
+    const linkedRecurringRuleId = recurringRuleIds.get(
+      policy.linkedRecurringRuleKey
+    );
+
+    if (!accountId || !categoryId || !linkedRecurringRuleId) {
+      throw new Error(
+        `Missing seed reference for insurance policy: ${policy.productName}`
+      );
+    }
+
     const existingPolicy = await prisma.insurancePolicy.findFirst({
       where: {
         tenantId,
@@ -483,6 +520,23 @@ async function ensureDemoInsurancePolicies(
     });
 
     if (existingPolicy) {
+      await prisma.insurancePolicy.update({
+        where: { id: existingPolicy.id },
+        data: {
+          accountId,
+          categoryId,
+          recurringStartDate: policy.recurringStartDate,
+          linkedRecurringRuleId,
+          provider: policy.provider,
+          productName: policy.productName,
+          monthlyPremiumWon: policy.monthlyPremiumWon,
+          paymentDay: policy.paymentDay,
+          cycle: policy.cycle,
+          renewalDate: policy.renewalDate,
+          isActive: policy.isActive
+        }
+      });
+
       summary.insurancePolicies.skipped += 1;
       continue;
     }
@@ -492,6 +546,10 @@ async function ensureDemoInsurancePolicies(
         userId,
         tenantId,
         ledgerId,
+        accountId,
+        categoryId,
+        recurringStartDate: policy.recurringStartDate,
+        linkedRecurringRuleId,
         provider: policy.provider,
         productName: policy.productName,
         monthlyPremiumWon: policy.monthlyPremiumWon,
@@ -639,7 +697,7 @@ async function main() {
     backbone.ledgerId,
     summary
   );
-  await ensureDemoRecurringRules(
+  const recurringRuleIds = await ensureDemoRecurringRules(
     userId,
     backbone.tenantId,
     backbone.ledgerId,
@@ -651,6 +709,9 @@ async function main() {
     userId,
     backbone.tenantId,
     backbone.ledgerId,
+    accountIds,
+    categoryIds,
+    recurringRuleIds,
     summary
   );
 
@@ -675,3 +736,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+

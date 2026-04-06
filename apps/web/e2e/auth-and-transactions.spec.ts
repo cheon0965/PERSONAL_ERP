@@ -781,16 +781,16 @@ test('manages funding accounts and categories through the reference data UI', as
     });
   });
 
-  await page.goto('/reference-data');
+  await page.goto('/reference-data/manage');
   await expect(page).toHaveURL(/\/login/);
 
   await page.getByLabel('이메일').fill('demo@example.com');
   await page.getByLabel('비밀번호').fill('Demo1234!');
   await page.getByRole('button', { name: '로그인' }).click();
 
-  await expect(page).toHaveURL(/\/reference-data$/);
+  await expect(page).toHaveURL(/\/reference-data\/manage$/);
   await expect(
-    page.getByRole('heading', { name: '기준 데이터와 참조 입력' })
+    page.getByRole('heading', { name: '기준 데이터 관리와 참조 입력' })
   ).toBeVisible();
   await expect(
     page.getByRole('button', { name: '자금수단 추가' })
@@ -1289,6 +1289,9 @@ test('manages insurance policies through the insurance policies UI', async ({
   const renamedInsuranceProductName = `${newInsuranceProductName} 수정`;
   const currentUser = createE2ECurrentUser();
   let sessionActive = false;
+  const fundingAccounts = createE2EFundingAccounts();
+  const categories = createE2ECategories();
+  let recurringRules = createE2ERecurringRules();
   let insurancePolicies = createE2EInsurancePolicies();
 
   page.on('pageerror', (error) => {
@@ -1348,6 +1351,47 @@ test('manages insurance policies through the insurance policies UI', async ({
       return;
     }
 
+    if (path === '/api/recurring-rules' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(recurringRules)
+      });
+      return;
+    }
+
+    if (path === '/api/funding-accounts' && request.method() === 'GET') {
+      const includeInactive =
+        url.searchParams.get('includeInactive') === 'true';
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(
+          includeInactive
+            ? fundingAccounts
+            : fundingAccounts.filter(
+                (fundingAccount) => fundingAccount.status === 'ACTIVE'
+              )
+        )
+      });
+      return;
+    }
+
+    if (path === '/api/categories' && request.method() === 'GET') {
+      const includeInactive =
+        url.searchParams.get('includeInactive') === 'true';
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(
+          includeInactive
+            ? categories
+            : categories.filter((category) => category.isActive)
+        )
+      });
+      return;
+    }
+
     if (path === '/api/insurance-policies' && request.method() === 'GET') {
       const includeInactive =
         url.searchParams.get('includeInactive') === 'true';
@@ -1365,10 +1409,25 @@ test('manages insurance policies through the insurance policies UI', async ({
 
     if (path === '/api/insurance-policies' && request.method() === 'POST') {
       const payload = request.postDataJSON() as CreateInsurancePolicyRequest;
+      const seedToken = Date.now();
+      const linkedRecurringRuleId = `rr-insurance-${seedToken}`;
       const created = buildInsurancePolicyItemFromPayload(payload, {
-        id: `policy-e2e-${Date.now()}`
+        id: `policy-e2e-${seedToken}`,
+        fundingAccounts,
+        categories,
+        linkedRecurringRuleId
       });
+      const syncedRecurringRule =
+        buildInsuranceRecurringRuleItemFromPolicyPayload(payload, {
+          id: linkedRecurringRuleId,
+          fundingAccounts,
+          categories
+        });
 
+      recurringRules = mergeRecurringRulesForE2E(
+        recurringRules,
+        syncedRecurringRule
+      );
       insurancePolicies = mergeInsurancePoliciesForE2E(
         insurancePolicies,
         created
@@ -1388,10 +1447,28 @@ test('manages insurance policies through the insurance policies UI', async ({
     ) {
       const insurancePolicyId = path.split('/').at(-1) ?? '';
       const payload = request.postDataJSON() as UpdateInsurancePolicyRequest;
+      const existingPolicy =
+        insurancePolicies.find((policy) => policy.id === insurancePolicyId) ??
+        null;
+      const linkedRecurringRuleId =
+        existingPolicy?.linkedRecurringRuleId ?? `rr-insurance-${Date.now()}`;
       const updated = buildInsurancePolicyItemFromPayload(payload, {
-        id: insurancePolicyId
+        id: insurancePolicyId,
+        fundingAccounts,
+        categories,
+        linkedRecurringRuleId
       });
+      const syncedRecurringRule =
+        buildInsuranceRecurringRuleItemFromPolicyPayload(payload, {
+          id: linkedRecurringRuleId,
+          fundingAccounts,
+          categories
+        });
 
+      recurringRules = mergeRecurringRulesForE2E(
+        recurringRules,
+        syncedRecurringRule
+      );
       insurancePolicies = mergeInsurancePoliciesForE2E(
         insurancePolicies,
         updated
@@ -1444,22 +1521,48 @@ test('manages insurance policies through the insurance policies UI', async ({
     .getByRole('textbox', { name: '상품명' })
     .fill(newInsuranceProductName);
   await insurancePolicyForm.getByLabel('월 보험료 (원)').fill('88000');
+  await insurancePolicyForm.getByRole('combobox', { name: '자금수단' }).click();
+  await page.getByRole('option', { name: '사업 운영 통장' }).click();
+  await insurancePolicyForm
+    .getByRole('combobox', { name: '지출 카테고리' })
+    .click();
+  await page.getByRole('option', { name: '보험료' }).click();
+  await insurancePolicyForm.getByLabel('반복 시작일').fill('2026-04-25');
   await insurancePolicyForm.getByLabel('갱신일').fill('2026-10-15');
   await insurancePolicyForm
     .getByRole('button', { name: '보험 계약 저장' })
     .click();
 
   await expect(
-    page.getByText(`${newInsuranceProductName} 보험 계약을 등록했습니다.`)
+    page.getByText(
+      `${newInsuranceProductName} 보험 계약과 연결 규칙을 등록했습니다.`
+    )
   ).toBeVisible();
-  await expect(
-    page.getByRole('gridcell', { name: newInsuranceProductName, exact: true })
-  ).toBeVisible();
-
   const newInsurancePolicyRow = page.getByRole('row', {
     name: new RegExp(newInsuranceProductName)
   });
-  await newInsurancePolicyRow.getByRole('button', { name: '수정' }).click();
+  await expect(
+    page.getByRole('gridcell', { name: newInsuranceProductName, exact: true })
+  ).toBeVisible();
+  await expect(
+    newInsurancePolicyRow.getByText('연결됨', { exact: true })
+  ).toBeVisible();
+
+  await page.goto('/recurring');
+  await expect(page).toHaveURL(/\/recurring$/);
+  await expect(
+    page.getByRole('gridcell', {
+      name: `메리츠화재 ${newInsuranceProductName}`,
+      exact: true
+    })
+  ).toBeVisible();
+
+  await page.goto('/insurances');
+  await expect(page).toHaveURL(/\/insurances$/);
+  await page
+    .getByRole('row', { name: new RegExp(newInsuranceProductName) })
+    .getByRole('button', { name: '수정' })
+    .click();
   await expect(
     page.getByRole('heading', { name: '보험 계약 수정' })
   ).toBeVisible();
@@ -1473,13 +1576,33 @@ test('manages insurance policies through the insurance policies UI', async ({
     .click();
 
   await expect(
-    page.getByText(`${renamedInsuranceProductName} 보험 계약을 수정했습니다.`)
+    page.getByText(
+      `${renamedInsuranceProductName} 보험 계약과 연결 규칙을 수정했습니다.`
+    )
   ).toBeVisible();
   const renamedInsurancePolicyRow = page.getByRole('row', {
     name: new RegExp(renamedInsuranceProductName)
   });
   await expect(
     renamedInsurancePolicyRow.getByText('비활성', { exact: true })
+  ).toBeVisible();
+  await expect(
+    renamedInsurancePolicyRow.getByText('연결됨', { exact: true })
+  ).toBeVisible();
+
+  await page.goto('/recurring');
+  await expect(page).toHaveURL(/\/recurring$/);
+  const renamedRecurringRuleRow = page.getByRole('row', {
+    name: new RegExp(renamedInsuranceProductName)
+  });
+  await expect(
+    page.getByRole('gridcell', {
+      name: `메리츠화재 ${renamedInsuranceProductName}`,
+      exact: true
+    })
+  ).toBeVisible();
+  await expect(
+    renamedRecurringRuleRow.getByText('중지', { exact: true })
   ).toBeVisible();
 
   expectNoUnhandledApiRequests(unhandledApiRequests);
@@ -2149,7 +2272,7 @@ test('@smoke surfaces operational checklist guidance across empty states and rea
   await page.getByRole('link', { name: '기준 데이터 확인' }).click();
   await expect(page).toHaveURL(/\/reference-data$/);
   await expect(
-    page.getByRole('heading', { name: '기준 데이터와 참조 입력' })
+    page.getByRole('heading', { name: '기준 데이터 준비 상태와 관리 범위' })
   ).toBeVisible();
   await expect(
     page.getByText(
@@ -2352,6 +2475,12 @@ function createE2ECategories(): CategoryItem[] {
       isActive: true
     },
     {
+      id: 'cat-insurance',
+      name: '보험료',
+      kind: 'EXPENSE',
+      isActive: true
+    },
+    {
       id: 'cat-sales',
       name: '매출 입금',
       kind: 'INCOME',
@@ -2417,6 +2546,16 @@ function createE2ERecurringRules(): RecurringRuleItem[] {
       fundingAccountName: '사업 운영 통장',
       categoryName: '원재료비',
       isActive: true
+    },
+    {
+      id: 'rr-insurance-seed-1',
+      title: '삼성화재 업무용 차량 보험',
+      amountWon: 98_000,
+      frequency: 'MONTHLY',
+      nextRunDate: '2026-04-25',
+      fundingAccountName: '사업 운영 통장',
+      categoryName: '보험료',
+      isActive: true
     }
   ];
 }
@@ -2430,6 +2569,12 @@ function createE2EInsurancePolicies(): InsurancePolicyItem[] {
       monthlyPremiumWon: 98_000,
       paymentDay: 25,
       cycle: 'MONTHLY',
+      fundingAccountId: 'acc-main',
+      fundingAccountName: '사업 운영 통장',
+      categoryId: 'cat-insurance',
+      categoryName: '보험료',
+      recurringStartDate: '2026-04-25',
+      linkedRecurringRuleId: 'rr-insurance-seed-1',
       renewalDate: '2026-11-01',
       maturityDate: null,
       isActive: true
@@ -2537,6 +2682,10 @@ function buildRecurringRuleDetailFromItem(
     return null;
   }
 
+  const derivedDayOfMonth = recurringRule.nextRunDate
+    ? Number(recurringRule.nextRunDate.slice(8, 10))
+    : Number.NaN;
+
   return {
     id: recurringRule.id,
     title: recurringRule.title,
@@ -2544,7 +2693,7 @@ function buildRecurringRuleDetailFromItem(
     categoryId,
     amountWon: recurringRule.amountWon,
     frequency: recurringRule.frequency,
-    dayOfMonth: 15,
+    dayOfMonth: Number.isNaN(derivedDayOfMonth) ? 15 : derivedDayOfMonth,
     startDate: recurringRule.nextRunDate ?? '2026-04-15',
     endDate: null,
     nextRunDate: recurringRule.nextRunDate,
@@ -2569,12 +2718,51 @@ function mergeRecurringRulesForE2E(
   );
 }
 
+function buildInsuranceRecurringRuleItemFromPolicyPayload(
+  payload: CreateInsurancePolicyRequest | UpdateInsurancePolicyRequest,
+  input: {
+    id: string;
+    fundingAccounts: FundingAccountItem[];
+    categories: CategoryItem[];
+  }
+): RecurringRuleItem {
+  const fundingAccountName =
+    input.fundingAccounts.find(
+      (fundingAccount) => fundingAccount.id === payload.fundingAccountId
+    )?.name ?? '-';
+  const categoryName =
+    input.categories.find((category) => category.id === payload.categoryId)
+      ?.name ?? '-';
+
+  return {
+    id: input.id,
+    title: `${payload.provider} ${payload.productName}`,
+    amountWon: payload.monthlyPremiumWon,
+    frequency: payload.cycle === 'YEARLY' ? 'YEARLY' : 'MONTHLY',
+    nextRunDate: payload.recurringStartDate,
+    fundingAccountName,
+    categoryName,
+    isActive: payload.isActive ?? true
+  };
+}
+
 function buildInsurancePolicyItemFromPayload(
   payload: CreateInsurancePolicyRequest | UpdateInsurancePolicyRequest,
   input: {
     id: string;
+    fundingAccounts: FundingAccountItem[];
+    categories: CategoryItem[];
+    linkedRecurringRuleId: string | null;
   }
 ): InsurancePolicyItem {
+  const fundingAccountName =
+    input.fundingAccounts.find(
+      (fundingAccount) => fundingAccount.id === payload.fundingAccountId
+    )?.name ?? null;
+  const categoryName =
+    input.categories.find((category) => category.id === payload.categoryId)
+      ?.name ?? null;
+
   return {
     id: input.id,
     provider: payload.provider,
@@ -2582,6 +2770,12 @@ function buildInsurancePolicyItemFromPayload(
     monthlyPremiumWon: payload.monthlyPremiumWon,
     paymentDay: payload.paymentDay,
     cycle: payload.cycle,
+    fundingAccountId: payload.fundingAccountId,
+    fundingAccountName,
+    categoryId: payload.categoryId,
+    categoryName,
+    recurringStartDate: payload.recurringStartDate,
+    linkedRecurringRuleId: input.linkedRecurringRuleId,
     renewalDate: payload.renewalDate ?? null,
     maturityDate: payload.maturityDate ?? null,
     isActive: payload.isActive ?? true

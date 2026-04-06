@@ -523,6 +523,10 @@ export async function createRequestTestState(): Promise<RequestTestState> {
         monthlyPremiumWon: 42_000,
         paymentDay: 25,
         cycle: 'MONTHLY',
+        accountId: 'acc-1',
+        categoryId: 'cat-1c',
+        recurringStartDate: new Date('2026-03-25T00:00:00.000Z'),
+        linkedRecurringRuleId: null,
         renewalDate: new Date('2026-11-01T00:00:00.000Z'),
         maturityDate: null,
         isActive: true
@@ -537,6 +541,10 @@ export async function createRequestTestState(): Promise<RequestTestState> {
         monthlyPremiumWon: 250_000,
         paymentDay: 20,
         cycle: 'MONTHLY',
+        accountId: 'acc-2',
+        categoryId: 'cat-2',
+        recurringStartDate: new Date('2026-03-20T00:00:00.000Z'),
+        linkedRecurringRuleId: null,
         renewalDate: new Date('2026-10-15T00:00:00.000Z'),
         maturityDate: null,
         isActive: true

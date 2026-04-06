@@ -21,6 +21,12 @@ export type InsurancePolicyItem = {
   monthlyPremiumWon: number;
   paymentDay: number;
   cycle: InsuranceCycle;
+  fundingAccountId: string | null;
+  fundingAccountName: string | null;
+  categoryId: string | null;
+  categoryName: string | null;
+  recurringStartDate: string | null;
+  linkedRecurringRuleId: string | null;
   renewalDate: string | null;
   maturityDate: string | null;
   isActive: boolean;
@@ -32,6 +38,9 @@ export type CreateInsurancePolicyRequest = {
   monthlyPremiumWon: number;
   paymentDay: number;
   cycle: InsuranceCycle;
+  fundingAccountId: string;
+  categoryId: string;
+  recurringStartDate: string;
   renewalDate?: string | null;
   maturityDate?: string | null;
   isActive?: boolean;

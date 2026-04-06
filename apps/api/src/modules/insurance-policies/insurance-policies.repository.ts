@@ -1,9 +1,25 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
 import type {
   CreateInsurancePolicyRequest,
   UpdateInsurancePolicyRequest
 } from '@personal-erp/contracts';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+
+const insurancePolicyInclude = {
+  account: {
+    select: {
+      id: true,
+      name: true
+    }
+  },
+  category: {
+    select: {
+      id: true,
+      name: true
+    }
+  }
+} satisfies Prisma.InsurancePolicyInclude;
 
 @Injectable()
 export class InsurancePoliciesRepository {
@@ -22,6 +38,7 @@ export class InsurancePoliciesRepository {
         ledgerId,
         ...(input?.includeInactive ? {} : { isActive: true })
       },
+      include: insurancePolicyInclude,
       orderBy: input?.includeInactive
         ? [
             { isActive: 'desc' },
@@ -43,7 +60,8 @@ export class InsurancePoliciesRepository {
         id: insurancePolicyId,
         tenantId,
         ledgerId
-      }
+      },
+      include: insurancePolicyInclude
     });
   }
 
@@ -51,13 +69,18 @@ export class InsurancePoliciesRepository {
     userId: string,
     tenantId: string,
     ledgerId: string,
-    input: CreateInsurancePolicyRequest
+    input: CreateInsurancePolicyRequest,
+    linkedRecurringRuleId: string | null
   ) {
     return this.prisma.insurancePolicy.create({
       data: {
         userId,
         tenantId,
         ledgerId,
+        accountId: input.fundingAccountId,
+        categoryId: input.categoryId,
+        recurringStartDate: input.recurringStartDate,
+        linkedRecurringRuleId,
         provider: input.provider,
         productName: input.productName,
         monthlyPremiumWon: input.monthlyPremiumWon,
@@ -66,19 +89,25 @@ export class InsurancePoliciesRepository {
         renewalDate: input.renewalDate,
         maturityDate: input.maturityDate,
         isActive: input.isActive ?? true
-      }
+      },
+      include: insurancePolicyInclude
     });
   }
 
   updateInWorkspace(
     insurancePolicyId: string,
-    input: UpdateInsurancePolicyRequest
+    input: UpdateInsurancePolicyRequest,
+    linkedRecurringRuleId: string | null
   ) {
     return this.prisma.insurancePolicy.update({
       where: {
         id: insurancePolicyId
       },
       data: {
+        accountId: input.fundingAccountId,
+        categoryId: input.categoryId,
+        recurringStartDate: input.recurringStartDate,
+        linkedRecurringRuleId,
         provider: input.provider,
         productName: input.productName,
         monthlyPremiumWon: input.monthlyPremiumWon,
@@ -87,7 +116,8 @@ export class InsurancePoliciesRepository {
         renewalDate: input.renewalDate,
         maturityDate: input.maturityDate,
         ...(input.isActive === undefined ? {} : { isActive: input.isActive })
-      }
+      },
+      include: insurancePolicyInclude
     });
   }
 }

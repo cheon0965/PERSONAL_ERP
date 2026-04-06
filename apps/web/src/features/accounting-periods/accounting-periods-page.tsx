@@ -45,8 +45,7 @@ import {
 } from './accounting-periods.api';
 import {
   CurrentPeriodStatusSection,
-  OpenAccountingPeriodSection,
-  PeriodLifecycleActionsSection,
+  PeriodOperationsSection,
   periodColumns
 } from './accounting-periods-page.sections';
 import {
@@ -291,7 +290,7 @@ export function AccountingPeriodsPage() {
     [balanceSheetAccountSubjects, openingBalanceLines]
   );
   const openingBalanceReferenceError = isFirstPeriod
-    ? accountSubjectsQuery.error ?? fundingAccountsQuery.error ?? null
+    ? (accountSubjectsQuery.error ?? fundingAccountsQuery.error ?? null)
     : null;
   const canSubmitOpeningBalance =
     !isFirstPeriod ||
@@ -399,8 +398,8 @@ export function AccountingPeriodsPage() {
         eyebrow="월 운영 시작"
         title="운영 기간 관리"
         description="현재 사업 장부의 운영 기간을 열고 상태를 관리합니다. 최근 마감 상세는 도메인 가이드에서 확인할 수 있습니다."
-        primaryActionLabel="월 운영 시작"
-        primaryActionHref="#open-accounting-period-form"
+        primaryActionLabel="운영 작업 보기"
+        primaryActionHref="#accounting-period-operations"
       />
       {error ? (
         <QueryErrorAlert
@@ -457,7 +456,7 @@ export function AccountingPeriodsPage() {
         </Grid>
 
         <Grid size={{ xs: 12, xl: 5 }}>
-          <OpenAccountingPeriodSection
+          <PeriodOperationsSection
             form={form}
             initializeOpeningBalance={initializeOpeningBalance}
             isFirstPeriod={isFirstPeriod}
@@ -475,26 +474,23 @@ export function AccountingPeriodsPage() {
             }}
             onRemoveOpeningBalanceLine={removeOpeningBalanceLine}
             onSubmit={handleOpenPeriodSubmit}
+            openPeriod={openPeriod}
+            reopenPeriod={reopenPeriod}
+            membershipRole={membershipRole}
+            canClosePeriod={canClosePeriod}
+            canReopenPeriod={canReopenPeriod}
+            hasWorkspace={hasWorkspace}
+            closeNote={closeNote}
+            reopenReason={reopenReason}
+            closePending={closeMutation.isPending}
+            reopenPending={reopenMutation.isPending}
+            onCloseNoteChange={setCloseNote}
+            onReopenReasonChange={setReopenReason}
+            onClosePeriod={handleClosePeriod}
+            onReopenPeriod={handleReopenPeriod}
           />
         </Grid>
       </Grid>
-
-      <PeriodLifecycleActionsSection
-        openPeriod={openPeriod}
-        reopenPeriod={reopenPeriod}
-        membershipRole={membershipRole}
-        canClosePeriod={canClosePeriod}
-        canReopenPeriod={canReopenPeriod}
-        hasWorkspace={hasWorkspace}
-        closeNote={closeNote}
-        reopenReason={reopenReason}
-        closePending={closeMutation.isPending}
-        reopenPending={reopenMutation.isPending}
-        onCloseNoteChange={setCloseNote}
-        onReopenReasonChange={setReopenReason}
-        onClosePeriod={handleClosePeriod}
-        onReopenPeriod={handleReopenPeriod}
-      />
     </Stack>
   );
 }
@@ -543,7 +539,11 @@ function buildOpeningBalanceTotals(
     (accumulator, line) => {
       const accountSubject = accountSubjectById.get(line.accountSubjectId);
       const balanceAmount = Number(line.balanceAmount);
-      if (!accountSubject || !Number.isFinite(balanceAmount) || balanceAmount <= 0) {
+      if (
+        !accountSubject ||
+        !Number.isFinite(balanceAmount) ||
+        balanceAmount <= 0
+      ) {
         return accumulator;
       }
 

@@ -1,18 +1,28 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Grid, MenuItem, Stack, TextField } from '@mui/material';
 import type {
   CreateInsurancePolicyRequest,
+  FundingAccountItem,
   InsurancePolicyItem,
   UpdateInsurancePolicyRequest
 } from '@personal-erp/contracts';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
+import {
+  categoriesManagementQueryKey,
+  categoriesQueryKey,
+  fundingAccountsManagementQueryKey,
+  fundingAccountsQueryKey,
+  getCategories,
+  getFundingAccounts
+} from '@/features/reference-data/reference-data.api';
 import { webRuntime } from '@/shared/config/env';
 import { appLayout } from '@/shared/ui/layout-metrics';
+import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import {
   buildInsurancePolicyFallbackItem,
   createInsurancePolicy,
@@ -35,6 +45,9 @@ const insurancePolicySchema = z
       .min(1, '납부일은 1 이상이어야 합니다.')
       .max(31, '납부일은 31 이하여야 합니다.'),
     cycle: z.enum(['MONTHLY', 'YEARLY']),
+    fundingAccountId: z.string().min(1, '자금수단을 선택해 주세요.'),
+    categoryId: z.string().min(1, '카테고리를 선택해 주세요.'),
+    recurringStartDate: z.string().min(1, '반복 시작일을 입력해 주세요.'),
     renewalDate: z.string(),
     maturityDate: z.string(),
     status: z.enum(['ACTIVE', 'INACTIVE'])
@@ -49,6 +62,29 @@ const insurancePolicySchema = z
         code: z.ZodIssueCode.custom,
         path: ['maturityDate'],
         message: '만기일은 갱신일보다 빠를 수 없습니다.'
+      });
+    }
+
+    if (
+      value.recurringStartDate &&
+      readDateInputDay(value.recurringStartDate) !== value.paymentDay
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['recurringStartDate'],
+        message: '반복 시작일의 날짜는 납부일과 같아야 합니다.'
+      });
+    }
+
+    if (
+      value.recurringStartDate &&
+      value.maturityDate &&
+      value.maturityDate < value.recurringStartDate
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['maturityDate'],
+        message: '만기일은 반복 시작일보다 빠를 수 없습니다.'
       });
     }
   });
@@ -84,10 +120,47 @@ export function InsurancePolicyForm({
 }: InsurancePolicyFormProps) {
   const queryClient = useQueryClient();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
+  const includeInactiveFundingAccounts =
+    mode === 'edit' && Boolean(initialPolicy?.fundingAccountId);
+  const includeInactiveCategories =
+    mode === 'edit' && Boolean(initialPolicy?.categoryId);
+  const { data: fundingAccounts = [], error: fundingAccountsError } = useQuery({
+    queryKey: includeInactiveFundingAccounts
+      ? fundingAccountsManagementQueryKey
+      : fundingAccountsQueryKey,
+    queryFn: () =>
+      getFundingAccounts({ includeInactive: includeInactiveFundingAccounts })
+  });
+  const { data: categories = [], error: categoriesError } = useQuery({
+    queryKey: includeInactiveCategories
+      ? categoriesManagementQueryKey
+      : categoriesQueryKey,
+    queryFn: () => getCategories({ includeInactive: includeInactiveCategories })
+  });
   const form = useForm<InsurancePolicyFormInput>({
     resolver: zodResolver(insurancePolicySchema),
     defaultValues: buildDefaultValues()
   });
+  const selectedFundingAccountId = form.watch('fundingAccountId');
+  const selectedCategoryId = form.watch('categoryId');
+  const availableFundingAccounts = React.useMemo(
+    () =>
+      fundingAccounts.filter(
+        (fundingAccount) =>
+          fundingAccount.status === 'ACTIVE' ||
+          fundingAccount.id === selectedFundingAccountId
+      ),
+    [fundingAccounts, selectedFundingAccountId]
+  );
+  const availableCategories = React.useMemo(
+    () =>
+      categories.filter(
+        (category) =>
+          category.kind === 'EXPENSE' &&
+          (category.isActive || category.id === selectedCategoryId)
+      ),
+    [categories, selectedCategoryId]
+  );
 
   const mutation = useMutation({
     mutationFn: ({
@@ -109,12 +182,36 @@ export function InsurancePolicyForm({
       );
 
       if (!webRuntime.demoFallbackEnabled) {
-        await queryClient.invalidateQueries({
-          queryKey: insurancePoliciesQueryKey
-        });
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: insurancePoliciesQueryKey
+          }),
+          queryClient.invalidateQueries({
+            queryKey: ['recurring-rules']
+          }),
+          queryClient.invalidateQueries({
+            queryKey: ['dashboard-summary']
+          })
+        ]);
       }
     }
   });
+
+  React.useEffect(() => {
+    if (!form.getValues('fundingAccountId') && availableFundingAccounts[0]) {
+      form.setValue('fundingAccountId', availableFundingAccounts[0].id, {
+        shouldValidate: true
+      });
+    }
+  }, [availableFundingAccounts, form]);
+
+  React.useEffect(() => {
+    if (!form.getValues('categoryId') && availableCategories[0]) {
+      form.setValue('categoryId', availableCategories[0].id, {
+        shouldValidate: true
+      });
+    }
+  }, [availableCategories, form]);
 
   React.useEffect(() => {
     setFeedback(null);
@@ -127,7 +224,13 @@ export function InsurancePolicyForm({
     form.reset(buildDefaultValues());
   }, [form, initialPolicy, mode]);
 
-  const isBusy = mutation.isPending || form.formState.isSubmitting;
+  const referenceError = fundingAccountsError ?? categoriesError;
+  const isBusy =
+    mutation.isPending ||
+    form.formState.isSubmitting ||
+    availableFundingAccounts.length === 0 ||
+    availableCategories.length === 0 ||
+    Boolean(referenceError);
   const submitLabel = mode === 'edit' ? '보험 계약 수정' : '보험 계약 저장';
 
   return (
@@ -135,12 +238,37 @@ export function InsurancePolicyForm({
       onSubmit={form.handleSubmit(async (values) => {
         setFeedback(null);
 
+        const selectedFundingAccount = availableFundingAccounts.find(
+          (fundingAccount) => fundingAccount.id === values.fundingAccountId
+        );
+        if (!selectedFundingAccount) {
+          setFeedback({
+            severity: 'error',
+            message: '반복 규칙에 사용할 자금수단을 선택해 주세요.'
+          });
+          return;
+        }
+
+        const selectedCategory = availableCategories.find(
+          (category) => category.id === values.categoryId
+        );
+        if (!selectedCategory) {
+          setFeedback({
+            severity: 'error',
+            message: '반복 규칙에 사용할 지출 카테고리를 선택해 주세요.'
+          });
+          return;
+        }
+
         const payload: CreateInsurancePolicyRequest = {
           provider: values.provider.trim(),
           productName: values.productName.trim(),
           monthlyPremiumWon: values.monthlyPremiumWon,
           paymentDay: values.paymentDay,
           cycle: values.cycle,
+          fundingAccountId: values.fundingAccountId,
+          categoryId: values.categoryId,
+          recurringStartDate: values.recurringStartDate,
           renewalDate: values.renewalDate || null,
           maturityDate: values.maturityDate || null,
           isActive: values.status === 'ACTIVE'
@@ -152,7 +280,10 @@ export function InsurancePolicyForm({
             insurancePolicyId: initialPolicy?.id,
             payload,
             fallback: buildInsurancePolicyFallbackItem(payload, {
-              id: initialPolicy?.id
+              id: initialPolicy?.id,
+              fundingAccountName: selectedFundingAccount.name,
+              categoryName: selectedCategory.name,
+              linkedRecurringRuleId: initialPolicy?.linkedRecurringRuleId
             })
           });
 
@@ -164,8 +295,13 @@ export function InsurancePolicyForm({
           if (mode === 'create') {
             form.reset({
               ...buildDefaultValues(),
-              cycle: values.cycle,
               paymentDay: values.paymentDay,
+              cycle: values.cycle,
+              fundingAccountId: values.fundingAccountId,
+              categoryId: values.categoryId,
+              recurringStartDate: buildSuggestedRecurringStartDate(
+                values.paymentDay
+              ),
               status: values.status
             });
           }
@@ -174,8 +310,8 @@ export function InsurancePolicyForm({
             severity: 'success',
             message:
               mode === 'edit'
-                ? '보험 계약을 수정했고 목록을 새로고침했습니다.'
-                : '보험 계약을 저장했고 목록을 새로고침했습니다.'
+                ? '보험 계약과 연결된 반복 규칙을 함께 수정했습니다.'
+                : '보험 계약과 연결된 반복 규칙을 함께 저장했습니다.'
           });
         } catch (error) {
           setFeedback({
@@ -191,14 +327,20 @@ export function InsurancePolicyForm({
       })}
     >
       <Stack spacing={appLayout.cardGap}>
+        {referenceError ? (
+          <QueryErrorAlert
+            title="보험 계약 반복 규칙 기준 조회에 실패했습니다."
+            error={referenceError}
+          />
+        ) : null}
         {feedback ? (
           <Alert severity={feedback.severity} variant="outlined">
             {feedback.message}
           </Alert>
         ) : null}
         <Alert severity="info" variant="outlined">
-          보험 계약은 운영 보조 데이터이며, 실제 회계 확정은 반복 규칙과 수집
-          거래, 전표 흐름에서 이어집니다.
+          보험 계약을 저장하면 연결된 반복 규칙이 함께 생성되거나 갱신됩니다.
+          실제 회계 확정은 이후 수집 거래와 전표 흐름에서 이어집니다.
         </Alert>
 
         <Grid container spacing={appLayout.fieldGap}>
@@ -279,6 +421,80 @@ export function InsurancePolicyForm({
             />
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
+            <Controller
+              control={form.control}
+              name="fundingAccountId"
+              render={({ field }) => (
+                <TextField
+                  select
+                  label="자금수단"
+                  disabled={availableFundingAccounts.length === 0}
+                  error={Boolean(form.formState.errors.fundingAccountId)}
+                  helperText={
+                    form.formState.errors.fundingAccountId?.message ??
+                    (availableFundingAccounts.length === 0
+                      ? '사용할 수 있는 자금수단이 아직 없습니다.'
+                      : ' ')
+                  }
+                  name={field.name}
+                  value={field.value ?? ''}
+                  onBlur={field.onBlur}
+                  onChange={field.onChange}
+                  inputRef={field.ref}
+                >
+                  {availableFundingAccounts.map((fundingAccount) => (
+                    <MenuItem key={fundingAccount.id} value={fundingAccount.id}>
+                      {readFundingAccountOptionLabel(fundingAccount)}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Controller
+              control={form.control}
+              name="categoryId"
+              render={({ field }) => (
+                <TextField
+                  select
+                  label="지출 카테고리"
+                  disabled={availableCategories.length === 0}
+                  error={Boolean(form.formState.errors.categoryId)}
+                  helperText={
+                    form.formState.errors.categoryId?.message ??
+                    (availableCategories.length === 0
+                      ? '사용할 수 있는 지출 카테고리가 아직 없습니다.'
+                      : ' ')
+                  }
+                  name={field.name}
+                  value={field.value ?? ''}
+                  onBlur={field.onBlur}
+                  onChange={field.onChange}
+                  inputRef={field.ref}
+                >
+                  {availableCategories.map((category) => (
+                    <MenuItem key={category.id} value={category.id}>
+                      {category.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <TextField
+              label="반복 시작일"
+              type="date"
+              helperText={
+                form.formState.errors.recurringStartDate?.message ??
+                '납부일과 같은 날짜로 첫 반복 기준일을 지정합니다.'
+              }
+              error={Boolean(form.formState.errors.recurringStartDate)}
+              {...form.register('recurringStartDate')}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               label="갱신일"
               type="date"
@@ -320,6 +536,9 @@ function buildDefaultValues(): InsurancePolicyFormInput {
     monthlyPremiumWon: 0,
     paymentDay: 25,
     cycle: 'MONTHLY',
+    fundingAccountId: '',
+    categoryId: '',
+    recurringStartDate: buildSuggestedRecurringStartDate(25),
     renewalDate: '',
     maturityDate: '',
     status: 'ACTIVE'
@@ -335,8 +554,51 @@ function mapPolicyToFormInput(
     monthlyPremiumWon: insurancePolicy.monthlyPremiumWon,
     paymentDay: insurancePolicy.paymentDay,
     cycle: insurancePolicy.cycle,
+    fundingAccountId: insurancePolicy.fundingAccountId ?? '',
+    categoryId: insurancePolicy.categoryId ?? '',
+    recurringStartDate:
+      insurancePolicy.recurringStartDate ??
+      buildSuggestedRecurringStartDate(insurancePolicy.paymentDay),
     renewalDate: insurancePolicy.renewalDate ?? '',
     maturityDate: insurancePolicy.maturityDate ?? '',
     status: insurancePolicy.isActive ? 'ACTIVE' : 'INACTIVE'
   };
+}
+
+function buildSuggestedRecurringStartDate(paymentDay: number) {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const currentMonthCandidate = new Date(year, month, paymentDay);
+  const candidate =
+    currentMonthCandidate >= stripTime(today)
+      ? currentMonthCandidate
+      : new Date(year, month + 1, paymentDay);
+
+  return [
+    candidate.getFullYear(),
+    String(candidate.getMonth() + 1).padStart(2, '0'),
+    String(candidate.getDate()).padStart(2, '0')
+  ].join('-');
+}
+
+function stripTime(value: Date) {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+}
+
+function readDateInputDay(value: string) {
+  const day = Number(value.slice(8, 10));
+
+  return Number.isNaN(day) ? null : day;
+}
+
+function readFundingAccountOptionLabel(fundingAccount: FundingAccountItem) {
+  switch (fundingAccount.status) {
+    case 'INACTIVE':
+      return `${fundingAccount.name} (비활성)`;
+    case 'CLOSED':
+      return `${fundingAccount.name} (종료)`;
+    default:
+      return fundingAccount.name;
+  }
 }

@@ -19,6 +19,7 @@ const drawerWidth = 264;
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const currentPath = pathname ?? '';
 
   return (
     <Drawer
@@ -53,7 +54,9 @@ export function SidebarNav() {
       <List sx={{ p: 2 }}>
         {navigationItems.map((item) => {
           const Icon = item.icon;
-          const selected = pathname === item.href;
+          const selected =
+            currentPath === item.href ||
+            currentPath.startsWith(`${item.href}/`);
 
           return (
             <Link

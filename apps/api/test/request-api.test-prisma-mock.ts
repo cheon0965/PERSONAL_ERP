@@ -79,6 +79,28 @@ export function createPrismaMock(
     resolveCategory
   } = context;
 
+  const projectInsurancePolicy = (
+    candidate: RequestTestState['insurancePolicies'][number],
+    include?: { account?: boolean; category?: boolean }
+  ) => {
+    const account = candidate.accountId
+      ? resolveAccount(candidate.accountId)
+      : null;
+    const category = candidate.categoryId
+      ? resolveCategory(candidate.categoryId)
+      : null;
+
+    return {
+      ...candidate,
+      ...(include
+        ? {
+            account: include.account ? account : undefined,
+            category: include.category ? category : undefined
+          }
+        : {})
+    };
+  };
+
   return {
     $queryRaw: async () => {
       if (!state.databaseReady) {
@@ -1063,21 +1085,20 @@ export function createPrismaMock(
           ledgerId?: string;
           isActive?: boolean;
         };
+        include?: { account?: boolean; category?: boolean };
       }) => {
-        return (
-          state.insurancePolicies.find((candidate) => {
-            const matchesId = !args.where?.id || candidate.id === args.where.id;
+        const candidate =
+          state.insurancePolicies.find((item) => {
+            const matchesId = !args.where?.id || item.id === args.where.id;
             const matchesUser =
-              !args.where?.userId || candidate.userId === args.where.userId;
+              !args.where?.userId || item.userId === args.where.userId;
             const matchesTenant =
-              !args.where?.tenantId ||
-              candidate.tenantId === args.where.tenantId;
+              !args.where?.tenantId || item.tenantId === args.where.tenantId;
             const matchesLedger =
-              !args.where?.ledgerId ||
-              candidate.ledgerId === args.where.ledgerId;
+              !args.where?.ledgerId || item.ledgerId === args.where.ledgerId;
             const matchesActive =
               args.where?.isActive === undefined ||
-              candidate.isActive === args.where.isActive;
+              item.isActive === args.where.isActive;
 
             return (
               matchesId &&
@@ -1086,8 +1107,13 @@ export function createPrismaMock(
               matchesLedger &&
               matchesActive
             );
-          }) ?? null
-        );
+          }) ?? null;
+
+        if (!candidate) {
+          return null;
+        }
+
+        return projectInsurancePolicy(candidate, args.include);
       },
       findMany: async (args: {
         where?: {
@@ -1103,6 +1129,7 @@ export function createPrismaMock(
           productName?: 'asc' | 'desc';
         }>;
         select?: { monthlyPremiumWon?: boolean };
+        include?: { account?: boolean; category?: boolean };
       }) => {
         const items = state.insurancePolicies
           .filter((candidate) => {
@@ -1186,28 +1213,41 @@ export function createPrismaMock(
           }));
         }
 
-        return items;
+        return items.map((candidate) =>
+          projectInsurancePolicy(candidate, args.include)
+        );
       },
       create: async (args: {
         data: {
           userId: string;
           tenantId: string;
           ledgerId: string;
+          accountId?: string | null;
+          categoryId?: string | null;
+          recurringStartDate?: string | Date | null;
+          linkedRecurringRuleId?: string | null;
           provider: string;
           productName: string;
           monthlyPremiumWon: number;
           paymentDay: number;
           cycle: 'MONTHLY' | 'YEARLY';
-          renewalDate?: string | Date;
-          maturityDate?: string | Date;
+          renewalDate?: string | Date | null;
+          maturityDate?: string | Date | null;
           isActive?: boolean;
         };
+        include?: { account?: boolean; category?: boolean };
       }) => {
         const created = {
           id: `policy-generated-${state.insurancePolicies.length + 1}`,
           userId: args.data.userId,
           tenantId: args.data.tenantId,
           ledgerId: args.data.ledgerId,
+          accountId: args.data.accountId ?? null,
+          categoryId: args.data.categoryId ?? null,
+          recurringStartDate: args.data.recurringStartDate
+            ? new Date(String(args.data.recurringStartDate))
+            : null,
+          linkedRecurringRuleId: args.data.linkedRecurringRuleId ?? null,
           provider: args.data.provider,
           productName: args.data.productName,
           monthlyPremiumWon: Number(args.data.monthlyPremiumWon),
@@ -1223,11 +1263,15 @@ export function createPrismaMock(
         };
 
         state.insurancePolicies.push(created);
-        return created;
+        return projectInsurancePolicy(created, args.include);
       },
       update: async (args: {
         where: { id: string };
         data: {
+          accountId?: string | null;
+          categoryId?: string | null;
+          recurringStartDate?: string | Date | null;
+          linkedRecurringRuleId?: string | null;
           provider?: string;
           productName?: string;
           monthlyPremiumWon?: number;
@@ -1237,6 +1281,7 @@ export function createPrismaMock(
           maturityDate?: string | Date | null;
           isActive?: boolean;
         };
+        include?: { account?: boolean; category?: boolean };
       }) => {
         const insurancePolicy = state.insurancePolicies.find(
           (candidate) => candidate.id === args.where.id
@@ -1246,6 +1291,21 @@ export function createPrismaMock(
           throw new Error('Insurance policy not found');
         }
 
+        if ('accountId' in args.data) {
+          insurancePolicy.accountId = args.data.accountId ?? null;
+        }
+        if ('categoryId' in args.data) {
+          insurancePolicy.categoryId = args.data.categoryId ?? null;
+        }
+        if ('recurringStartDate' in args.data) {
+          insurancePolicy.recurringStartDate = args.data.recurringStartDate
+            ? new Date(String(args.data.recurringStartDate))
+            : null;
+        }
+        if ('linkedRecurringRuleId' in args.data) {
+          insurancePolicy.linkedRecurringRuleId =
+            args.data.linkedRecurringRuleId ?? null;
+        }
         if (args.data.provider !== undefined) {
           insurancePolicy.provider = args.data.provider;
         }
@@ -1277,7 +1337,7 @@ export function createPrismaMock(
           insurancePolicy.isActive = args.data.isActive;
         }
 
-        return insurancePolicy;
+        return projectInsurancePolicy(insurancePolicy, args.include);
       }
     },
     vehicle: {

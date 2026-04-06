@@ -22,9 +22,7 @@ import {
   getCategories,
   getFundingAccounts,
   getLedgerTransactionTypes,
-  getReferenceDataReadiness,
   ledgerTransactionTypesQueryKey,
-  referenceDataReadinessQueryKey,
   updateCategory,
   updateFundingAccount
 } from './reference-data.api';
@@ -71,10 +69,6 @@ export function useReferenceDataPage() {
     queryKey: ledgerTransactionTypesQueryKey,
     queryFn: getLedgerTransactionTypes
   });
-  const readinessQuery = useQuery({
-    queryKey: referenceDataReadinessQueryKey,
-    queryFn: getReferenceDataReadiness
-  });
 
   const currentWorkspace = user?.currentWorkspace ?? null;
   const membershipRole = currentWorkspace?.membership.role ?? null;
@@ -102,7 +96,6 @@ export function useReferenceDataPage() {
         ) ?? null)
       : null;
   const queryErrors = [
-    readinessQuery.error,
     fundingAccountsManagementQuery.error,
     categoriesManagementQuery.error,
     accountSubjectsQuery.error,
@@ -110,9 +103,9 @@ export function useReferenceDataPage() {
   ].filter(Boolean);
 
   useDomainHelp({
-    title: '기준 데이터와 참조 입력',
+    title: '기준 데이터 관리와 참조 입력',
     description:
-      '입출금 계정, 거래 분류, 계정과목, 거래 유형은 월 운영, 거래 입력, 전표 확정, 마감 보고에 공통으로 쓰이는 공식 기준 데이터입니다.',
+      '입출금 계정, 거래 분류, 계정과목, 거래 유형은 월 운영, 거래 입력, 전표 확정, 마감 보고에 공통으로 쓰이는 공식 기준 데이터이며, 이 화면은 그 기준값을 직접 확인하고 관리하는 용도입니다.',
     primaryEntity: '기준 데이터',
     relatedEntities: ['입출금 계정', '거래 분류', '계정과목', '거래 유형'],
     truthSource:
@@ -140,9 +133,9 @@ export function useReferenceDataPage() {
         ]
       },
       {
-        title: '참조 입력 원칙',
+        title: '직접 관리 원칙',
         description:
-          '화면별 입력 폼은 여기서 조회되는 활성 기준 데이터만 선택지로 사용합니다.',
+          '화면별 입력 폼은 여기서 조회되는 활성 기준 데이터만 선택지로 사용하며, 직접 편집 가능한 범위도 제한적으로 유지합니다.',
         items: [
           '수집 거래와 반복 규칙 폼은 이 화면에서 보이는 공식 기준 데이터만 사용합니다.',
           '입력 화면은 기준 데이터의 식별자와 정책 키를 참조하며, 임의 텍스트를 기준값으로 확정하지 않습니다.',
@@ -153,7 +146,7 @@ export function useReferenceDataPage() {
       }
     ],
     readModelNote:
-      '이 화면은 각 입력 폼에서 참조하는 활성 기준 데이터를 확인하고, readiness/ownership를 함께 점검하며 현재 범위의 카테고리/자금수단 관리까지 수행하는 운영 화면입니다.'
+      '이 화면은 각 입력 폼에서 참조하는 활성 기준 데이터를 확인하고, 현재 범위의 카테고리/자금수단 관리와 system-managed 기준값 조회를 수행하는 운영 화면입니다.'
   });
 
   const saveFundingAccountMutation = useMutation({
@@ -441,7 +434,6 @@ export function useReferenceDataPage() {
     openFundingAccountEdit,
     openFundingAccountTransition,
     queryErrors,
-    readiness: readinessQuery.data,
     saveCategoryPending: saveCategoryMutation.isPending,
     saveFundingAccountPending: saveFundingAccountMutation.isPending,
     submitCategory,
