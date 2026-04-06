@@ -3,6 +3,7 @@ import type {
   UpdateRecurringRuleRequest
 } from '@personal-erp/contracts';
 import {
+  InsuranceManagedRecurringRuleError,
   MissingOwnedRecurringRuleReferenceError,
   prepareRecurringRuleSchedule,
   resolveMissingOwnedRecurringRuleReference
@@ -34,6 +35,12 @@ export class UpdateRecurringRuleUseCase {
 
     if (!existing) {
       return null;
+    }
+
+    if (existing.linkedInsurancePolicyId) {
+      throw new InsuranceManagedRecurringRuleError(
+        existing.linkedInsurancePolicyId
+      );
     }
 
     const [fundingAccountExists, categoryExists] = await Promise.all([

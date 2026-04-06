@@ -3,7 +3,12 @@
   InsurancePolicyItem,
   UpdateInsurancePolicyRequest
 } from '@personal-erp/contracts';
-import { fetchJson, patchJson, postJson } from '@/shared/api/fetch-json';
+import {
+  deleteJson,
+  fetchJson,
+  patchJson,
+  postJson
+} from '@/shared/api/fetch-json';
 
 export const insurancePoliciesQueryKey = ['insurance-policies'] as const;
 
@@ -80,6 +85,10 @@ export function updateInsurancePolicy(
   );
 }
 
+export function deleteInsurancePolicy(insurancePolicyId: string) {
+  return deleteJson<null>(`/insurance-policies/${insurancePolicyId}`, null);
+}
+
 export function buildInsurancePolicyFallbackItem(
   input: CreateInsurancePolicyRequest | UpdateInsurancePolicyRequest,
   context?: {
@@ -133,4 +142,11 @@ export function mergeInsurancePolicyItem(
 
     return left.productName.localeCompare(right.productName);
   });
+}
+
+export function removeInsurancePolicyItem(
+  current: InsurancePolicyItem[] | undefined,
+  insurancePolicyId: string
+) {
+  return (current ?? []).filter((item) => item.id !== insurancePolicyId);
 }

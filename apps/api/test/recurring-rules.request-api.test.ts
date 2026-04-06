@@ -20,6 +20,7 @@ test('GET /recurring-rules returns only the current user recurring rule items wi
         amountWon: 75_000,
         frequency: RecurrenceFrequency.MONTHLY,
         nextRunDate: '2026-03-10',
+        linkedInsurancePolicyId: null,
         fundingAccountName: 'Main checking',
         categoryName: 'Utilities',
         isActive: true
@@ -189,6 +190,7 @@ test('POST /recurring-rules returns the created recurring rule item shape', asyn
       amountWon: 75000,
       frequency: RecurrenceFrequency.MONTHLY,
       nextRunDate: '2026-03-10',
+      linkedInsurancePolicyId: null,
       fundingAccountName: 'Main checking',
       categoryName: 'Fuel',
       isActive: true
@@ -230,6 +232,7 @@ test('GET /recurring-rules/:id returns the recurring rule detail without ownersh
       startDate: '2026-03-10',
       endDate: null,
       nextRunDate: '2026-03-10',
+      linkedInsurancePolicyId: null,
       isActive: true
     });
     assert.equal(
@@ -272,6 +275,7 @@ test('PATCH /recurring-rules/:id updates the recurring rule and returns the shar
       amountWon: 88_000,
       frequency: RecurrenceFrequency.MONTHLY,
       nextRunDate: '2026-03-15',
+      linkedInsurancePolicyId: null,
       fundingAccountName: 'Main checking',
       categoryName: 'Fuel',
       isActive: false
@@ -311,6 +315,40 @@ test('PATCH /recurring-rules/:id updates the recurring rule and returns the shar
           candidate.details.action === 'recurring_rule.update' &&
           candidate.details.recurringRuleId === 'rr-seed-1'
       )
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('PATCH /recurring-rules/:id returns 409 when the rule is managed by an insurance policy', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.insurancePolicies[0] = {
+      ...context.state.insurancePolicies[0]!,
+      linkedRecurringRuleId: 'rr-seed-1'
+    };
+
+    const response = await context.request('/recurring-rules/rr-seed-1', {
+      method: 'PATCH',
+      headers: context.authHeaders(),
+      body: {
+        title: 'Phone bill revised',
+        fundingAccountId: 'acc-1',
+        categoryId: 'cat-1',
+        amountWon: 88_000,
+        frequency: RecurrenceFrequency.MONTHLY,
+        dayOfMonth: 15,
+        startDate: '2026-03-15',
+        isActive: false
+      }
+    });
+
+    assert.equal(response.status, 409);
+    assert.equal(
+      (response.body as { message: string }).message,
+      '보험 계약에서 생성된 반복 규칙은 보험 계약 화면에서만 수정하거나 삭제할 수 있습니다.'
     );
   } finally {
     await context.close();
@@ -406,6 +444,36 @@ test('DELETE /recurring-rules/:id deletes the recurring rule and clears linked p
           candidate.details.action === 'recurring_rule.delete' &&
           candidate.details.recurringRuleId === 'rr-seed-1'
       )
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('DELETE /recurring-rules/:id returns 409 when the rule is managed by an insurance policy', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.insurancePolicies[0] = {
+      ...context.state.insurancePolicies[0]!,
+      linkedRecurringRuleId: 'rr-seed-1'
+    };
+
+    const response = await context.request('/recurring-rules/rr-seed-1', {
+      method: 'DELETE',
+      headers: context.authHeaders()
+    });
+
+    assert.equal(response.status, 409);
+    assert.equal(
+      (response.body as { message: string }).message,
+      '보험 계약에서 생성된 반복 규칙은 보험 계약 화면에서만 수정하거나 삭제할 수 있습니다.'
+    );
+    assert.equal(
+      context.state.recurringRules.some(
+        (candidate) => candidate.id === 'rr-seed-1'
+      ),
+      true
     );
   } finally {
     await context.close();

@@ -193,6 +193,44 @@ export class InsurancePoliciesService {
     return mapInsurancePolicyToItem(updated);
   }
 
+  async delete(
+    user: AuthenticatedUser,
+    insurancePolicyId: string
+  ): Promise<boolean> {
+    const workspace = requireCurrentWorkspace(user);
+    const existing = await this.insurancePoliciesRepository.findByIdInWorkspace(
+      insurancePolicyId,
+      workspace.tenantId,
+      workspace.ledgerId
+    );
+
+    if (!existing) {
+      return false;
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      if (existing.linkedRecurringRuleId) {
+        await tx.recurringRule.deleteMany({
+          where: {
+            id: existing.linkedRecurringRuleId,
+            tenantId: workspace.tenantId,
+            ledgerId: workspace.ledgerId
+          }
+        });
+      }
+
+      const deleted = await tx.insurancePolicy.deleteMany({
+        where: {
+          id: insurancePolicyId,
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId
+        }
+      });
+
+      return deleted.count > 0;
+    });
+  }
+
   private async assertNoDuplicateInsurancePolicy(input: {
     tenantId: string;
     ledgerId: string;
@@ -290,7 +328,9 @@ export class InsurancePoliciesService {
       existingLinkedRecurringRuleId?: string | null;
     }
   ) {
-    const recurringRulePayload = buildInsuranceRecurringRulePayload(input.input);
+    const recurringRulePayload = buildInsuranceRecurringRulePayload(
+      input.input
+    );
     const schedule = prepareRecurringRuleSchedule({
       startDate: recurringRulePayload.startDate,
       endDate: recurringRulePayload.endDate,
@@ -417,7 +457,9 @@ function normalizeInsurancePolicyInput(
   };
 }
 
-function buildInsuranceRecurringRulePayload(input: NormalizedInsurancePolicyInput) {
+function buildInsuranceRecurringRulePayload(
+  input: NormalizedInsurancePolicyInput
+) {
   return {
     title: [input.provider, input.productName].filter(Boolean).join(' '),
     fundingAccountId: input.fundingAccountId,

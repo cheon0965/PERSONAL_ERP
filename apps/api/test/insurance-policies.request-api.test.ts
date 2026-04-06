@@ -455,3 +455,82 @@ test('PATCH /insurance-policies/:id returns 403 when the current membership cann
     await context.close();
   }
 });
+
+test('DELETE /insurance-policies/:id deletes the insurance policy and its linked recurring rule', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.insurancePolicies[0] = {
+      ...context.state.insurancePolicies[0]!,
+      linkedRecurringRuleId: 'rr-policy-1'
+    };
+    context.state.recurringRules.push({
+      id: 'rr-policy-1',
+      userId: 'user-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      accountId: 'acc-1',
+      categoryId: 'cat-1c',
+      title: '삼성화재 업무용 차량 보험',
+      amountWon: 42_000,
+      frequency: RecurrenceFrequency.MONTHLY,
+      dayOfMonth: 25,
+      startDate: new Date('2026-03-25T00:00:00.000Z'),
+      endDate: null,
+      isActive: true,
+      nextRunDate: new Date('2026-03-25T00:00:00.000Z'),
+      createdAt: new Date('2026-03-01T09:30:00.000Z'),
+      updatedAt: new Date('2026-03-01T09:30:00.000Z')
+    });
+
+    const response = await context.request('/insurance-policies/policy-1', {
+      method: 'DELETE',
+      headers: context.authHeaders()
+    });
+
+    assert.equal(response.status, 204);
+    assert.equal(response.body, null);
+    assert.equal(
+      context.state.insurancePolicies.some(
+        (candidate) => candidate.id === 'policy-1'
+      ),
+      false
+    );
+    assert.equal(
+      context.state.recurringRules.some(
+        (candidate) => candidate.id === 'rr-policy-1'
+      ),
+      false
+    );
+    assert.ok(
+      context.securityEvents.some(
+        (candidate) =>
+          candidate.level === 'log' &&
+          candidate.event === 'audit.action_succeeded' &&
+          candidate.details.requestId ===
+            response.headers.get('x-request-id') &&
+          candidate.details.action === 'insurance_policy.delete' &&
+          candidate.details.insurancePolicyId === 'policy-1'
+      )
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('DELETE /insurance-policies/:id returns 403 when the current membership cannot delete insurance policies', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.memberships[0]!.role = 'VIEWER';
+
+    const response = await context.request('/insurance-policies/policy-1', {
+      method: 'DELETE',
+      headers: context.authHeaders()
+    });
+
+    assert.equal(response.status, 403);
+  } finally {
+    await context.close();
+  }
+});

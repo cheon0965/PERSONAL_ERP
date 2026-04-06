@@ -1,12 +1,14 @@
 ﻿'use client';
 
 import * as React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Grid, Stack } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import type { InsurancePolicyItem } from '@personal-erp/contracts';
+import { webRuntime } from '@/shared/config/env';
 import { formatDate, formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import { ConfirmActionDialog } from '@/shared/ui/confirm-action-dialog';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { FormDrawer } from '@/shared/ui/form-drawer';
 import { appLayout } from '@/shared/ui/layout-metrics';
@@ -15,8 +17,10 @@ import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { StatusChip } from '@/shared/ui/status-chip';
 import { SummaryCard } from '@/shared/ui/summary-card';
 import {
+  deleteInsurancePolicy,
   getInsurancePolicies,
-  insurancePoliciesQueryKey
+  insurancePoliciesQueryKey,
+  removeInsurancePolicyItem
 } from './insurance-policies.api';
 import { InsurancePolicyForm } from './insurance-policy-form';
 
@@ -36,9 +40,12 @@ type InsurancePolicyDrawerState =
   | null;
 
 export function InsurancePoliciesPage() {
+  const queryClient = useQueryClient();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const [drawerState, setDrawerState] =
     React.useState<InsurancePolicyDrawerState>(null);
+  const [deleteTarget, setDeleteTarget] =
+    React.useState<InsurancePolicyItem | null>(null);
   const { data = [], error } = useQuery({
     queryKey: insurancePoliciesQueryKey,
     queryFn: () => getInsurancePolicies({ includeInactive: true })
@@ -50,8 +57,48 @@ export function InsurancePoliciesPage() {
     0
   );
   const inactivePolicyCount = data.filter((item) => !item.isActive).length;
-  const linkedPolicyCount = data.filter((item) => item.linkedRecurringRuleId).length;
+  const linkedPolicyCount = data.filter(
+    (item) => item.linkedRecurringRuleId
+  ).length;
   const unlinkedPolicyCount = data.length - linkedPolicyCount;
+
+  const deleteMutation = useMutation({
+    mutationFn: (insurancePolicy: InsurancePolicyItem) =>
+      deleteInsurancePolicy(insurancePolicy.id),
+    onSuccess: async (_response, insurancePolicy) => {
+      setDeleteTarget(null);
+      setFeedback({
+        severity: 'success',
+        message: insurancePolicy.linkedRecurringRuleId
+          ? `${insurancePolicy.productName} 보험 계약과 연결된 반복 규칙을 함께 삭제했습니다.`
+          : `${insurancePolicy.productName} 보험 계약을 삭제했습니다.`
+      });
+
+      queryClient.setQueryData<InsurancePolicyItem[]>(
+        insurancePoliciesQueryKey,
+        (current) => removeInsurancePolicyItem(current, insurancePolicy.id)
+      );
+
+      if (!webRuntime.demoFallbackEnabled) {
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: insurancePoliciesQueryKey
+          }),
+          queryClient.invalidateQueries({ queryKey: ['recurring-rules'] }),
+          queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] })
+        ]);
+      }
+    },
+    onError: (error) => {
+      setFeedback({
+        severity: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : '보험 계약을 삭제하지 못했습니다.'
+      });
+    }
+  });
 
   useDomainHelp({
     title: '보험 계약 개요',
@@ -81,6 +128,26 @@ export function InsurancePoliciesPage() {
   const handleDrawerClose = React.useCallback(() => {
     setDrawerState(null);
   }, []);
+
+  const handleDeleteOpen = React.useCallback(
+    (insurancePolicy: InsurancePolicyItem) => {
+      setFeedback(null);
+      setDeleteTarget(insurancePolicy);
+    },
+    []
+  );
+
+  const handleDeleteClose = React.useCallback(() => {
+    setDeleteTarget(null);
+  }, []);
+
+  const handleDeleteConfirm = React.useCallback(() => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    void deleteMutation.mutateAsync(deleteTarget);
+  }, [deleteMutation, deleteTarget]);
 
   const handleFormCompleted = React.useCallback(
     (insurancePolicy: InsurancePolicyItem, mode: 'create' | 'edit') => {
@@ -151,23 +218,34 @@ export function InsurancePoliciesPage() {
       {
         field: 'actions',
         headerName: '동작',
-        flex: 1,
+        flex: 1.5,
         sortable: false,
         filterable: false,
         renderCell: (params) => (
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={() => {
-              handleEditOpen(params.row);
-            }}
-          >
-            수정
-          </Button>
+          <Stack direction="row" spacing={1}>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => {
+                handleEditOpen(params.row);
+              }}
+            >
+              수정
+            </Button>
+            <Button
+              size="small"
+              color="error"
+              onClick={() => {
+                handleDeleteOpen(params.row);
+              }}
+            >
+              삭제
+            </Button>
+          </Stack>
         )
       }
     ],
-    [handleEditOpen]
+    [handleDeleteOpen, handleEditOpen]
   );
 
   const drawerTitle =
@@ -226,7 +304,7 @@ export function InsurancePoliciesPage() {
       </Grid>
       <DataTableCard
         title="보험 계약 목록"
-        description="보험 계약 저장 시 연결된 반복 규칙도 함께 관리합니다. 미연결 계약은 수정 드로어에서 보완할 수 있습니다."
+        description="보험 계약 저장 시 연결된 반복 규칙도 함께 관리합니다. 계약을 삭제하면 연결된 반복 규칙도 함께 정리됩니다."
         rows={data}
         columns={columns}
       />
@@ -250,6 +328,24 @@ export function InsurancePoliciesPage() {
           />
         )}
       </FormDrawer>
+
+      <ConfirmActionDialog
+        open={deleteTarget !== null}
+        title="보험 계약 삭제"
+        description={
+          deleteTarget
+            ? deleteTarget.linkedRecurringRuleId
+              ? `"${deleteTarget.productName}" 보험 계약을 삭제할까요? 연결된 반복 규칙도 함께 삭제됩니다.`
+              : `"${deleteTarget.productName}" 보험 계약을 삭제할까요?`
+            : ''
+        }
+        confirmLabel="삭제"
+        pendingLabel="삭제 중..."
+        confirmColor="error"
+        busy={deleteMutation.isPending}
+        onClose={handleDeleteClose}
+        onConfirm={handleDeleteConfirm}
+      />
     </Stack>
   );
 }

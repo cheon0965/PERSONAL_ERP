@@ -16,6 +16,7 @@ export function mapRecurringRuleToItem(
     amountWon: rule.amountWon,
     frequency: rule.frequency,
     nextRunDate: rule.nextRunDate?.toISOString().slice(0, 10) ?? null,
+    linkedInsurancePolicyId: rule.linkedInsurancePolicyId,
     fundingAccountName: rule.account.name,
     categoryName: rule.category?.name ?? '-',
     isActive: rule.isActive
@@ -36,6 +37,7 @@ export function mapRecurringRuleToDetailItem(
     startDate: rule.startDate.toISOString().slice(0, 10),
     endDate: rule.endDate?.toISOString().slice(0, 10) ?? null,
     nextRunDate: rule.nextRunDate?.toISOString().slice(0, 10) ?? null,
+    linkedInsurancePolicyId: rule.linkedInsurancePolicyId,
     isActive: rule.isActive
   };
 }

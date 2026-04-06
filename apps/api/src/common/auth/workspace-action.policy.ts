@@ -11,6 +11,7 @@ export type WorkspaceAction =
   | 'category.update'
   | 'insurance_policy.create'
   | 'insurance_policy.update'
+  | 'insurance_policy.delete'
   | 'vehicle.create'
   | 'vehicle.update'
   | 'vehicle_fuel.create'
@@ -44,6 +45,7 @@ const workspaceActionAllowedRoles: Record<
   'category.update': ['OWNER', 'MANAGER'],
   'insurance_policy.create': ['OWNER', 'MANAGER'],
   'insurance_policy.update': ['OWNER', 'MANAGER'],
+  'insurance_policy.delete': ['OWNER', 'MANAGER'],
   'vehicle.create': ['OWNER', 'MANAGER'],
   'vehicle.update': ['OWNER', 'MANAGER'],
   'vehicle_fuel.create': ['OWNER', 'MANAGER'],
@@ -79,6 +81,8 @@ const workspaceActionDeniedMessages: Record<WorkspaceAction, string> = {
     'Only owners and managers can create insurance policies.',
   'insurance_policy.update':
     'Only owners and managers can update insurance policies.',
+  'insurance_policy.delete':
+    'Only owners and managers can delete insurance policies.',
   'vehicle.create': 'Only owners and managers can create vehicles.',
   'vehicle.update': 'Only owners and managers can update vehicles.',
   'vehicle_fuel.create':

@@ -1,3 +1,4 @@
+import { InsuranceManagedRecurringRuleError } from '../../domain/recurring-rule-policy';
 import type { RecurringRuleStorePort } from '../ports/recurring-rule-store.port';
 
 export class DeleteRecurringRuleUseCase {
@@ -16,6 +17,12 @@ export class DeleteRecurringRuleUseCase {
 
     if (!existing) {
       return false;
+    }
+
+    if (existing.linkedInsurancePolicyId) {
+      throw new InsuranceManagedRecurringRuleError(
+        existing.linkedInsurancePolicyId
+      );
     }
 
     return this.recurringRuleStore.deleteInWorkspace(

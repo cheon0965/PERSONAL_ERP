@@ -33,6 +33,14 @@ import type {
 
 const e2eApiRoutePattern = '**/api/**';
 
+type ManagedRecurringRuleItem = RecurringRuleItem & {
+  linkedInsurancePolicyId: string | null;
+};
+
+type ManagedRecurringRuleDetailItem = RecurringRuleDetailItem & {
+  linkedInsurancePolicyId: string | null;
+};
+
 function expectNoPageErrors(pageErrors: string[]) {
   expect(pageErrors, pageErrors.join('\n\n')).toEqual([]);
 }
@@ -1420,6 +1428,7 @@ test('manages insurance policies through the insurance policies UI', async ({
       const syncedRecurringRule =
         buildInsuranceRecurringRuleItemFromPolicyPayload(payload, {
           id: linkedRecurringRuleId,
+          insurancePolicyId: created.id,
           fundingAccounts,
           categories
         });
@@ -1461,6 +1470,7 @@ test('manages insurance policies through the insurance policies UI', async ({
       const syncedRecurringRule =
         buildInsuranceRecurringRuleItemFromPolicyPayload(payload, {
           id: linkedRecurringRuleId,
+          insurancePolicyId: updated.id,
           fundingAccounts,
           categories
         });
@@ -1478,6 +1488,32 @@ test('manages insurance policies through the insurance policies UI', async ({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(updated)
+      });
+      return;
+    }
+
+    if (
+      path.startsWith('/api/insurance-policies/') &&
+      request.method() === 'DELETE'
+    ) {
+      const insurancePolicyId = path.split('/').at(-1) ?? '';
+      const existingPolicy =
+        insurancePolicies.find((policy) => policy.id === insurancePolicyId) ??
+        null;
+
+      insurancePolicies = insurancePolicies.filter(
+        (policy) => policy.id !== insurancePolicyId
+      );
+      recurringRules = recurringRules.filter(
+        (rule) => rule.linkedInsurancePolicyId !== insurancePolicyId
+      );
+
+      await route.fulfill({
+        status: existingPolicy ? 204 : 404,
+        contentType: 'application/json',
+        body: existingPolicy
+          ? ''
+          : JSON.stringify({ message: 'Insurance policy not found' })
       });
       return;
     }
@@ -2535,7 +2571,7 @@ function createE2ELedgerTransactionTypes(): LedgerTransactionTypeItem[] {
   ];
 }
 
-function createE2ERecurringRules(): RecurringRuleItem[] {
+function createE2ERecurringRules(): ManagedRecurringRuleItem[] {
   return [
     {
       id: 'rr-seed-1',
@@ -2543,6 +2579,7 @@ function createE2ERecurringRules(): RecurringRuleItem[] {
       amountWon: 1_200_000,
       frequency: 'MONTHLY',
       nextRunDate: '2026-04-05',
+      linkedInsurancePolicyId: null,
       fundingAccountName: '사업 운영 통장',
       categoryName: '원재료비',
       isActive: true
@@ -2553,6 +2590,7 @@ function createE2ERecurringRules(): RecurringRuleItem[] {
       amountWon: 98_000,
       frequency: 'MONTHLY',
       nextRunDate: '2026-04-25',
+      linkedInsurancePolicyId: 'policy-seed-1',
       fundingAccountName: '사업 운영 통장',
       categoryName: '보험료',
       isActive: true
@@ -2636,7 +2674,7 @@ function buildRecurringRuleItemFromPayload(
     fundingAccounts: FundingAccountItem[];
     categories: CategoryItem[];
   }
-): RecurringRuleItem {
+): ManagedRecurringRuleItem {
   const fundingAccountName =
     input.fundingAccounts.find(
       (fundingAccount) => fundingAccount.id === payload.fundingAccountId
@@ -2651,6 +2689,7 @@ function buildRecurringRuleItemFromPayload(
     amountWon: payload.amountWon,
     frequency: payload.frequency,
     nextRunDate: payload.startDate,
+    linkedInsurancePolicyId: null,
     fundingAccountName,
     categoryName,
     isActive: payload.isActive ?? true
@@ -2658,12 +2697,12 @@ function buildRecurringRuleItemFromPayload(
 }
 
 function buildRecurringRuleDetailFromItem(
-  recurringRule: RecurringRuleItem | null,
+  recurringRule: ManagedRecurringRuleItem | null,
   input: {
     fundingAccounts: FundingAccountItem[];
     categories: CategoryItem[];
   }
-): RecurringRuleDetailItem | null {
+): ManagedRecurringRuleDetailItem | null {
   if (!recurringRule) {
     return null;
   }
@@ -2697,13 +2736,14 @@ function buildRecurringRuleDetailFromItem(
     startDate: recurringRule.nextRunDate ?? '2026-04-15',
     endDate: null,
     nextRunDate: recurringRule.nextRunDate,
+    linkedInsurancePolicyId: recurringRule.linkedInsurancePolicyId,
     isActive: recurringRule.isActive
   };
 }
 
 function mergeRecurringRulesForE2E(
-  current: RecurringRuleItem[],
-  nextItem: RecurringRuleItem
+  current: ManagedRecurringRuleItem[],
+  nextItem: ManagedRecurringRuleItem
 ) {
   return [nextItem, ...current.filter((item) => item.id !== nextItem.id)].sort(
     (left, right) => {
@@ -2722,10 +2762,11 @@ function buildInsuranceRecurringRuleItemFromPolicyPayload(
   payload: CreateInsurancePolicyRequest | UpdateInsurancePolicyRequest,
   input: {
     id: string;
+    insurancePolicyId: string;
     fundingAccounts: FundingAccountItem[];
     categories: CategoryItem[];
   }
-): RecurringRuleItem {
+): ManagedRecurringRuleItem {
   const fundingAccountName =
     input.fundingAccounts.find(
       (fundingAccount) => fundingAccount.id === payload.fundingAccountId
@@ -2740,6 +2781,7 @@ function buildInsuranceRecurringRuleItemFromPolicyPayload(
     amountWon: payload.monthlyPremiumWon,
     frequency: payload.cycle === 'YEARLY' ? 'YEARLY' : 'MONTHLY',
     nextRunDate: payload.recurringStartDate,
+    linkedInsurancePolicyId: input.insurancePolicyId,
     fundingAccountName,
     categoryName,
     isActive: payload.isActive ?? true

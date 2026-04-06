@@ -11,6 +11,15 @@ export class MissingOwnedRecurringRuleReferenceError extends Error {
   }
 }
 
+export class InsuranceManagedRecurringRuleError extends Error {
+  constructor(readonly insurancePolicyId: string) {
+    super(
+      '보험 계약에서 생성된 반복 규칙은 보험 계약 화면에서만 수정하거나 삭제할 수 있습니다.'
+    );
+    this.name = 'InsuranceManagedRecurringRuleError';
+  }
+}
+
 export function resolveMissingOwnedRecurringRuleReference(input: {
   fundingAccountExists: boolean;
   categoryExists: boolean;

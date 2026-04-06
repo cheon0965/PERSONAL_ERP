@@ -6,6 +6,7 @@ export type RecurringRuleItem = {
   amountWon: number;
   frequency: RecurrenceFrequency;
   nextRunDate: string | null;
+  linkedInsurancePolicyId: string | null;
   fundingAccountName: string;
   categoryName: string;
   isActive: boolean;
@@ -22,6 +23,7 @@ export type RecurringRuleDetailItem = {
   startDate: string;
   endDate: string | null;
   nextRunDate: string | null;
+  linkedInsurancePolicyId: string | null;
   isActive: boolean;
 };
 

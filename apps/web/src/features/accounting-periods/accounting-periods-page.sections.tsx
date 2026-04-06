@@ -127,6 +127,7 @@ export function OpenAccountingPeriodSection({
   canSubmitOpeningBalance,
   isSubmitting,
   openingBalanceFields,
+  openingBalanceLineCount,
   openingBalanceAccountSubjects,
   openingBalanceFundingAccounts,
   openingBalanceTotals,
@@ -143,12 +144,14 @@ export function OpenAccountingPeriodSection({
   canSubmitOpeningBalance: boolean;
   isSubmitting: boolean;
   openingBalanceFields: Array<{ id: string }>;
+  openingBalanceLineCount: number;
   openingBalanceAccountSubjects: AccountSubjectItem[];
   openingBalanceFundingAccounts: FundingAccountItem[];
   openingBalanceTotals: {
     assetAmount: number;
     liabilityAmount: number;
     equityAmount: number;
+    balanceGapAmount: number;
     hasLines: boolean;
     isBalanced: boolean;
   };
@@ -199,8 +202,8 @@ export function OpenAccountingPeriodSection({
               <Stack spacing={appLayout.cardGap}>
                 <Typography variant="subtitle2">오프닝 잔액 라인</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  자산, 부채, 자본 기준으로 첫 월 시작 잔액을 입력합니다. 자산
-                  합계와 부채+자본 합계가 같아야 합니다.
+                  자산, 부채, 자본 기준으로 첫 월 시작 잔액을 입력합니다. 서비스
+                  첫 시작이라면 자산만 먼저 입력해도 운영을 시작할 수 있습니다.
                 </Typography>
                 {openingBalanceReferenceError ? (
                   <QueryErrorAlert
@@ -212,6 +215,22 @@ export function OpenAccountingPeriodSection({
                   <Typography variant="body2" color="text.secondary">
                     사용할 수 있는 재무상태표 계정과목이 없습니다.
                   </Typography>
+                ) : null}
+                {openingBalanceLineCount === 0 ? (
+                  <Box
+                    sx={{
+                      border: 1,
+                      borderStyle: 'dashed',
+                      borderColor: 'divider',
+                      borderRadius: 3,
+                      p: appLayout.cardPadding
+                    }}
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      아직 기초 잔액 라인이 없습니다. 라인 추가를 눌러 첫
+                      항목부터 입력해 주세요.
+                    </Typography>
+                  </Box>
                 ) : null}
                 <Stack spacing={1}>
                   {openingBalanceFields.map((field, index) => (
@@ -236,9 +255,7 @@ export function OpenAccountingPeriodSection({
                           <IconButton
                             aria-label={`오프닝 라인 ${index + 1} 삭제`}
                             size="small"
-                            disabled={
-                              openingBalanceFields.length <= 1 || isSubmitting
-                            }
+                            disabled={isSubmitting}
                             onClick={() => onRemoveOpeningBalanceLine(index)}
                           >
                             <DeleteOutlineRoundedIcon fontSize="small" />
@@ -262,9 +279,9 @@ export function OpenAccountingPeriodSection({
                                     ]?.accountSubjectId
                                   )}
                                   helperText={
-                                    form.formState.errors
-                                      .openingBalanceLines?.[index]
-                                      ?.accountSubjectId?.message ??
+                                    form.formState.errors.openingBalanceLines?.[
+                                      index
+                                    ]?.accountSubjectId?.message ??
                                     '재무상태표 계정과목만 표시됩니다.'
                                   }
                                   {...field}
@@ -316,23 +333,30 @@ export function OpenAccountingPeriodSection({
                             />
                           </Grid>
                           <Grid size={{ xs: 12, md: 3 }}>
-                            <TextField
-                              label="잔액(원)"
-                              type="number"
-                              disabled={isSubmitting}
-                              error={Boolean(
-                                form.formState.errors.openingBalanceLines?.[
-                                  index
-                                ]?.balanceAmount
-                              )}
-                              helperText={
-                                form.formState.errors.openingBalanceLines?.[
-                                  index
-                                ]?.balanceAmount?.message ??
-                                '자연잔액 기준 양수 금액'
-                              }
-                              {...form.register(
+                            <Controller
+                              control={form.control}
+                              name={
                                 `openingBalanceLines.${index}.balanceAmount` as const
+                              }
+                              render={({ field }) => (
+                                <TextField
+                                  label="잔액(원)"
+                                  type="number"
+                                  disabled={isSubmitting}
+                                  error={Boolean(
+                                    form.formState.errors.openingBalanceLines?.[
+                                      index
+                                    ]?.balanceAmount
+                                  )}
+                                  helperText={
+                                    form.formState.errors.openingBalanceLines?.[
+                                      index
+                                    ]?.balanceAmount?.message ??
+                                    '자연잔액 기준 양수 금액'
+                                  }
+                                  {...field}
+                                  value={field.value ?? ''}
+                                />
                               )}
                             />
                           </Grid>
@@ -365,14 +389,21 @@ export function OpenAccountingPeriodSection({
                   <Typography
                     variant="body2"
                     color={
-                      openingBalanceTotals.isBalanced
-                        ? 'success.main'
-                        : 'warning.main'
+                      openingBalanceLineCount === 0 ||
+                      !openingBalanceTotals.hasLines
+                        ? 'warning.main'
+                        : openingBalanceTotals.isBalanced
+                          ? 'success.main'
+                          : 'info.main'
                     }
                   >
-                    {openingBalanceTotals.isBalanced
-                      ? '자산과 부채+자본 합계가 일치합니다.'
-                      : '자산 합계와 부채+자본 합계를 같게 맞춰 주세요.'}
+                    {openingBalanceLineCount === 0
+                      ? '기초 잔액 라인을 추가하면 월 운영 시작 버튼과 합계가 바로 반영됩니다.'
+                      : !openingBalanceTotals.hasLines
+                        ? '계정과목과 잔액을 입력하면 월 운영 시작 버튼과 합계가 바로 반영됩니다.'
+                        : openingBalanceTotals.isBalanced
+                          ? '자산과 부채+자본 합계가 일치합니다.'
+                          : `자산과 부채+자본 차이 ${formatWon(Math.abs(openingBalanceTotals.balanceGapAmount))}이 있습니다. 첫 월 초기 설정에서는 차이가 있어도 운영 시작이 가능합니다.`}
                   </Typography>
                 </Stack>
               </Stack>

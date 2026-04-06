@@ -3,9 +3,14 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, CircularProgress, Stack, Typography } from '@mui/material';
+import {
+  Alert,
+  Button,
+  CircularProgress,
+  Stack,
+  Typography
+} from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
-import type { RecurringRuleItem } from '@personal-erp/contracts';
 import { webRuntime } from '@/shared/config/env';
 import { formatDate, formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
@@ -21,6 +26,7 @@ import {
   deleteRecurringRule,
   getRecurringRuleDetail,
   getRecurringRules,
+  type ManagedRecurringRuleItem,
   recurringRuleDetailQueryKey,
   recurringRulesQueryKey,
   removeRecurringRuleItem
@@ -49,11 +55,14 @@ export function RecurringRulesPage() {
   const [drawerState, setDrawerState] =
     React.useState<RecurringRuleDrawerState>(null);
   const [deleteTarget, setDeleteTarget] =
-    React.useState<RecurringRuleItem | null>(null);
+    React.useState<ManagedRecurringRuleItem | null>(null);
   const { data = [], error } = useQuery({
     queryKey: recurringRulesQueryKey,
     queryFn: getRecurringRules
   });
+  const insuranceManagedRuleCount = data.filter(
+    (recurringRule) => recurringRule.linkedInsurancePolicyId
+  ).length;
 
   const editingRecurringRuleId =
     drawerState?.mode === 'edit' ? drawerState.recurringRuleId : null;
@@ -66,7 +75,7 @@ export function RecurringRulesPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (recurringRule: RecurringRuleItem) =>
+    mutationFn: (recurringRule: ManagedRecurringRuleItem) =>
       deleteRecurringRule(recurringRule.id),
     onSuccess: async (_response, recurringRule) => {
       setDeleteTarget(null);
@@ -75,7 +84,7 @@ export function RecurringRulesPage() {
         message: `${recurringRule.title} 반복 규칙을 삭제했습니다.`
       });
 
-      queryClient.setQueryData<RecurringRuleItem[]>(
+      queryClient.setQueryData<ManagedRecurringRuleItem[]>(
         recurringRulesQueryKey,
         (current) => removeRecurringRuleItem(current, recurringRule.id)
       );
@@ -124,15 +133,39 @@ export function RecurringRulesPage() {
     setDrawerState({ mode: 'create' });
   }, []);
 
-  const handleEditOpen = React.useCallback((recurringRule: RecurringRuleItem) => {
-    setFeedback(null);
-    setDrawerState({ mode: 'edit', recurringRuleId: recurringRule.id });
-  }, []);
+  const handleEditOpen = React.useCallback(
+    (recurringRule: ManagedRecurringRuleItem) => {
+      if (recurringRule.linkedInsurancePolicyId) {
+        setFeedback({
+          severity: 'error',
+          message:
+            '보험 계약에서 생성된 반복 규칙은 보험 계약 화면에서만 수정할 수 있습니다.'
+        });
+        return;
+      }
 
-  const handleDeleteOpen = React.useCallback((recurringRule: RecurringRuleItem) => {
-    setFeedback(null);
-    setDeleteTarget(recurringRule);
-  }, []);
+      setFeedback(null);
+      setDrawerState({ mode: 'edit', recurringRuleId: recurringRule.id });
+    },
+    []
+  );
+
+  const handleDeleteOpen = React.useCallback(
+    (recurringRule: ManagedRecurringRuleItem) => {
+      if (recurringRule.linkedInsurancePolicyId) {
+        setFeedback({
+          severity: 'error',
+          message:
+            '보험 계약에서 생성된 반복 규칙은 보험 계약 화면에서만 삭제할 수 있습니다.'
+        });
+        return;
+      }
+
+      setFeedback(null);
+      setDeleteTarget(recurringRule);
+    },
+    []
+  );
 
   const handleDrawerClose = React.useCallback(() => {
     setDrawerState(null);
@@ -151,7 +184,7 @@ export function RecurringRulesPage() {
   }, [deleteMutation, deleteTarget]);
 
   const handleFormCompleted = React.useCallback(
-    (recurringRule: RecurringRuleItem, mode: 'create' | 'edit') => {
+    (recurringRule: ManagedRecurringRuleItem, mode: 'create' | 'edit') => {
       setDrawerState(null);
       setFeedback({
         severity: 'success',
@@ -164,7 +197,7 @@ export function RecurringRulesPage() {
     []
   );
 
-  const columns = React.useMemo<GridColDef<RecurringRuleItem>[]>(
+  const columns = React.useMemo<GridColDef<ManagedRecurringRuleItem>[]>(
     () => [
       { field: 'title', headerName: '제목', flex: 1.2 },
       {
@@ -177,17 +210,26 @@ export function RecurringRulesPage() {
         field: 'frequency',
         headerName: '주기',
         flex: 0.8,
-        valueFormatter: (value) => frequencyLabelMap[String(value)] ?? String(value)
+        valueFormatter: (value) =>
+          frequencyLabelMap[String(value)] ?? String(value)
       },
       {
         field: 'nextRunDate',
         headerName: '다음 실행일',
         flex: 1,
-        valueFormatter: (value) =>
-          value ? formatDate(String(value)) : '-'
+        valueFormatter: (value) => (value ? formatDate(String(value)) : '-')
       },
       { field: 'fundingAccountName', headerName: '자금수단', flex: 1 },
       { field: 'categoryName', headerName: '카테고리', flex: 1 },
+      {
+        field: 'linkedInsurancePolicyId',
+        headerName: '관리 원본',
+        flex: 0.9,
+        sortable: false,
+        renderCell: (params) => (
+          <StatusChip label={params.value ? '보험 계약 연동' : '직접 작성'} />
+        )
+      },
       {
         field: 'isActive',
         headerName: '규칙 상태',
@@ -202,28 +244,38 @@ export function RecurringRulesPage() {
         flex: 1.5,
         sortable: false,
         filterable: false,
-        renderCell: (params) => (
-          <Stack direction="row" spacing={1}>
+        renderCell: (params) =>
+          params.row.linkedInsurancePolicyId ? (
             <Button
+              component={Link}
+              href="/insurances"
               size="small"
               variant="outlined"
-              onClick={() => {
-                handleEditOpen(params.row);
-              }}
             >
-              수정
+              보험 계약에서 관리
             </Button>
-            <Button
-              size="small"
-              color="error"
-              onClick={() => {
-                handleDeleteOpen(params.row);
-              }}
-            >
-              삭제
-            </Button>
-          </Stack>
-        )
+          ) : (
+            <Stack direction="row" spacing={1}>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => {
+                  handleEditOpen(params.row);
+                }}
+              >
+                수정
+              </Button>
+              <Button
+                size="small"
+                color="error"
+                onClick={() => {
+                  handleDeleteOpen(params.row);
+                }}
+              >
+                삭제
+              </Button>
+            </Stack>
+          )
       }
     ],
     [handleDeleteOpen, handleEditOpen]
@@ -257,6 +309,13 @@ export function RecurringRulesPage() {
           {feedback.message}
         </Alert>
       ) : null}
+      {insuranceManagedRuleCount > 0 ? (
+        <Alert severity="info" variant="outlined">
+          보험 계약과 연결된 반복 규칙이 {insuranceManagedRuleCount}건 있습니다.
+          이런 규칙은 반복 규칙 화면에서 직접 수정하거나 삭제하지 않고{' '}
+          <Link href="/insurances">보험 계약</Link> 화면에서 함께 관리합니다.
+        </Alert>
+      ) : null}
       {error ? (
         <QueryErrorAlert title="반복 규칙 조회에 실패했습니다." error={error} />
       ) : null}
@@ -288,11 +347,19 @@ export function RecurringRulesPage() {
               error={editingRecurringRuleQuery.error}
             />
           ) : editingRecurringRuleQuery.data ? (
-            <RecurringRuleForm
-              mode="edit"
-              initialRule={editingRecurringRuleQuery.data}
-              onCompleted={handleFormCompleted}
-            />
+            editingRecurringRuleQuery.data.linkedInsurancePolicyId ? (
+              <Alert severity="info" variant="outlined">
+                보험 계약에서 생성된 반복 규칙입니다. 수정은{' '}
+                <Link href="/insurances">보험 계약</Link> 화면에서 진행해
+                주세요.
+              </Alert>
+            ) : (
+              <RecurringRuleForm
+                mode="edit"
+                initialRule={editingRecurringRuleQuery.data}
+                onCompleted={handleFormCompleted}
+              />
+            )
           ) : (
             <Alert severity="warning" variant="outlined">
               수정할 반복 규칙을 찾지 못했습니다.
