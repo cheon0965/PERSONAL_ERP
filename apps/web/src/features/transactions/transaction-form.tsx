@@ -1,69 +1,21 @@
 'use client';
 
-import * as React from 'react';
 import Link from 'next/link';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Grid, MenuItem, Stack, TextField } from '@mui/material';
+import { Alert, Button, Stack } from '@mui/material';
 import type {
   AccountingPeriodItem,
   CollectedTransactionDetailItem,
-  CollectedTransactionItem,
-  FundingAccountItem,
-  UpdateCollectedTransactionRequest
+  CollectedTransactionItem
 } from '@personal-erp/contracts';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import {
-  categoriesManagementQueryKey,
-  categoriesQueryKey,
-  fundingAccountsManagementQueryKey,
-  fundingAccountsQueryKey,
-  getCategories,
-  getFundingAccounts,
-  getReferenceDataReadiness,
-  referenceDataReadinessQueryKey
-} from '@/features/reference-data/reference-data.api';
 import { ReferenceDataReadinessAlert } from '@/features/reference-data/reference-data-readiness';
-import { webRuntime } from '@/shared/config/env';
-import { getTodayDateInputValue } from '@/shared/lib/date-input';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { resolveStatusLabel } from '@/shared/ui/status-chip';
+import { TransactionFormFields } from './transaction-form.fields';
 import {
-  buildCollectedTransactionFallbackItem,
-  collectedTransactionDetailQueryKey,
-  collectedTransactionsQueryKey,
-  createCollectedTransaction,
-  mergeCollectedTransactionItem,
-  updateCollectedTransaction
-} from './transactions.api';
-import { resolveManualCollectedTransactionPostingStatus } from './transaction-workflow';
-
-const transactionSchema = z.object({
-  title: z.string().trim().min(2, '제목은 2자 이상이어야 합니다.'),
-  amountWon: z.coerce.number().int().positive('금액은 0보다 커야 합니다.'),
-  businessDate: z.string().min(1, '거래일을 입력해 주세요.'),
-  type: z.enum(['INCOME', 'EXPENSE', 'TRANSFER']),
-  accountId: z.string().min(1, '자금수단을 선택해 주세요.'),
-  categoryId: z.string(),
-  memo: z.string().max(500, '메모는 500자 이하여야 합니다.')
-});
-
-type TransactionFormInput = z.infer<typeof transactionSchema>;
-type TransactionFormMode = 'create' | 'edit';
-
-type SubmitFeedback = {
-  severity: 'success' | 'error';
-  message: string;
-} | null;
-
-type SaveTransactionMutationInput = {
-  mode: TransactionFormMode;
-  collectedTransactionId?: string;
-  payload: UpdateCollectedTransactionRequest;
-  fallback: CollectedTransactionItem;
-};
+  useTransactionForm,
+  type TransactionFormMode
+} from './use-transaction-form';
 
 type TransactionFormProps = {
   currentPeriod: AccountingPeriodItem | null;
@@ -81,297 +33,33 @@ export function TransactionForm({
   initialTransaction = null,
   onCompleted
 }: TransactionFormProps) {
-  const queryClient = useQueryClient();
-  const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
-  const includeInactiveCategories =
-    mode === 'edit' && Boolean(initialTransaction?.categoryId);
-  const includeInactiveFundingAccounts =
-    mode === 'edit' && Boolean(initialTransaction?.fundingAccountId);
-  const { data: fundingAccounts = [], error: fundingAccountsError } = useQuery({
-    queryKey: includeInactiveFundingAccounts
-      ? fundingAccountsManagementQueryKey
-      : fundingAccountsQueryKey,
-    queryFn: () =>
-      getFundingAccounts({ includeInactive: includeInactiveFundingAccounts })
+  const formState = useTransactionForm({
+    currentPeriod,
+    mode,
+    initialTransaction,
+    onCompleted
   });
-  const { data: categories = [], error: categoriesError } = useQuery({
-    queryKey: includeInactiveCategories
-      ? categoriesManagementQueryKey
-      : categoriesQueryKey,
-    queryFn: () => getCategories({ includeInactive: includeInactiveCategories })
-  });
-  const referenceDataReadinessQuery = useQuery({
-    queryKey: referenceDataReadinessQueryKey,
-    queryFn: getReferenceDataReadiness
-  });
-  const form = useForm<TransactionFormInput>({
-    resolver: zodResolver(transactionSchema),
-    defaultValues: {
-      title: '',
-      amountWon: 0,
-      businessDate: resolveInitialBusinessDate(currentPeriod),
-      type: 'EXPENSE',
-      accountId: '',
-      categoryId: '',
-      memo: ''
-    }
-  });
-  const selectedType = form.watch('type');
-  const selectedFundingAccountId = form.watch('accountId');
-  const selectedCategoryId = form.watch('categoryId');
-  const availableFundingAccounts = React.useMemo(
-    () =>
-      fundingAccounts.filter(
-        (fundingAccount) =>
-          fundingAccount.status === 'ACTIVE' ||
-          fundingAccount.id === selectedFundingAccountId
-      ),
-    [fundingAccounts, selectedFundingAccountId]
-  );
-  const filteredCategories = React.useMemo(
-    () =>
-      categories.filter(
-        (category) =>
-          category.kind === selectedType &&
-          (category.isActive || category.id === selectedCategoryId)
-      ),
-    [categories, selectedCategoryId, selectedType]
-  );
-  const predictedStatus = React.useMemo(
-    () =>
-      resolveManualCollectedTransactionPostingStatus({
-        type: selectedType,
-        categoryId: selectedCategoryId
-      }),
-    [selectedCategoryId, selectedType]
-  );
-
-  const mutation = useMutation({
-    mutationFn: ({
-      mode: nextMode,
-      collectedTransactionId,
-      payload,
-      fallback
-    }: SaveTransactionMutationInput) => {
-      if (nextMode === 'edit' && collectedTransactionId) {
-        return updateCollectedTransaction(
-          collectedTransactionId,
-          payload,
-          fallback
-        );
-      }
-
-      return createCollectedTransaction(payload, fallback);
-    },
-    onSuccess: async (saved, variables) => {
-      queryClient.setQueryData<CollectedTransactionItem[]>(
-        collectedTransactionsQueryKey,
-        (current) => mergeCollectedTransactionItem(current, saved)
-      );
-
-      if (!webRuntime.demoFallbackEnabled) {
-        const invalidations = [
-          queryClient.invalidateQueries({
-            queryKey: collectedTransactionsQueryKey
-          }),
-          queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] })
-        ];
-
-        if (variables.mode === 'edit' && variables.collectedTransactionId) {
-          invalidations.push(
-            queryClient.invalidateQueries({
-              queryKey: collectedTransactionDetailQueryKey(
-                variables.collectedTransactionId
-              )
-            })
-          );
-        }
-
-        await Promise.all(invalidations);
-      }
-    }
-  });
-
-  React.useEffect(() => {
-    const firstFundingAccount = availableFundingAccounts[0];
-    if (!form.getValues('accountId') && firstFundingAccount) {
-      form.setValue('accountId', firstFundingAccount.id, {
-        shouldValidate: true
-      });
-    }
-  }, [availableFundingAccounts, form]);
-
-  React.useEffect(() => {
-    const currentCategoryId = form.getValues('categoryId');
-    if (
-      currentCategoryId &&
-      !filteredCategories.some((category) => category.id === currentCategoryId)
-    ) {
-      form.setValue('categoryId', '');
-    }
-  }, [filteredCategories, form]);
-
-  React.useEffect(() => {
-    setFeedback(null);
-
-    if (mode === 'edit' && initialTransaction) {
-      form.reset(mapDetailToFormInput(initialTransaction));
-      return;
-    }
-
-    form.reset({
-      title: '',
-      amountWon: 0,
-      businessDate: resolveInitialBusinessDate(currentPeriod),
-      type: 'EXPENSE',
-      accountId: '',
-      categoryId: '',
-      memo: ''
-    });
-  }, [currentPeriod, form, initialTransaction, mode]);
-
-  React.useEffect(() => {
-    const nextValue = resolveInitialBusinessDate(currentPeriod);
-    const currentValue = form.getValues('businessDate');
-
-    if (!currentValue || !isWithinPeriod(currentValue, currentPeriod)) {
-      form.setValue('businessDate', nextValue, { shouldValidate: true });
-    }
-  }, [currentPeriod, form]);
-
-  const referenceError = fundingAccountsError ?? categoriesError;
-  const canSaveInPeriod = Boolean(currentPeriod);
-  const isBusy =
-    mutation.isPending ||
-    form.formState.isSubmitting ||
-    availableFundingAccounts.length === 0 ||
-    Boolean(referenceError) ||
-    !canSaveInPeriod ||
-    (mode === 'edit' && !initialTransaction);
-  const submitLabel = mode === 'edit' ? '수집 거래 수정' : '수집 거래 등록';
 
   return (
     <form
-      onSubmit={form.handleSubmit(async (values) => {
-        setFeedback(null);
-
-        if (!currentPeriod) {
-          setFeedback({
-            severity: 'error',
-            message:
-              '현재 열린 운영 기간이 없어 수집 거래를 저장할 수 없습니다. 먼저 월 운영을 시작해 주세요.'
-          });
-          return;
-        }
-
-        if (mode === 'edit' && !initialTransaction) {
-          setFeedback({
-            severity: 'error',
-            message: '수정할 수집 거래 상세 정보를 아직 불러오지 못했습니다.'
-          });
-          return;
-        }
-
-        if (!isWithinPeriod(values.businessDate, currentPeriod)) {
-          setFeedback({
-            severity: 'error',
-            message: '거래 일자는 현재 열린 운영 기간 안에 있어야 합니다.'
-          });
-          return;
-        }
-
-        const selectedFundingAccount = availableFundingAccounts.find(
-          (fundingAccount) => fundingAccount.id === values.accountId
-        );
-        if (!selectedFundingAccount) {
-          setFeedback({
-            severity: 'error',
-            message: '수집 거래를 저장하기 전에 자금수단을 선택해 주세요.'
-          });
-          return;
-        }
-
-        const selectedCategory = filteredCategories.find(
-          (category) => category.id === values.categoryId
-        );
-        const payload: UpdateCollectedTransactionRequest = {
-          title: values.title.trim(),
-          type: values.type,
-          amountWon: values.amountWon,
-          businessDate: values.businessDate,
-          fundingAccountId: values.accountId,
-          categoryId: values.categoryId || undefined,
-          memo: values.memo.trim() || undefined
-        };
-
-        try {
-          const saved = await mutation.mutateAsync({
-            mode,
-            collectedTransactionId: initialTransaction?.id,
-            payload,
-            fallback: buildCollectedTransactionFallbackItem(payload, {
-              id: initialTransaction?.id,
-              fundingAccountName: selectedFundingAccount.name,
-              categoryName: selectedCategory?.name,
-              sourceKind: initialTransaction?.sourceKind,
-              postingStatus: initialTransaction?.postingStatus,
-              postedJournalEntryId: initialTransaction?.postedJournalEntryId,
-              postedJournalEntryNumber:
-                initialTransaction?.postedJournalEntryNumber
-            })
-          });
-
-          if (onCompleted) {
-            onCompleted(saved, mode);
-            return;
-          }
-
-          if (mode === 'create') {
-            form.reset({
-              title: '',
-              amountWon: 0,
-              businessDate: resolveInitialBusinessDate(currentPeriod),
-              type: values.type,
-              accountId: values.accountId,
-              categoryId: '',
-              memo: ''
-            });
-          }
-
-          setFeedback({
-            severity: 'success',
-            message:
-              mode === 'edit'
-                ? `수집 거래를 수정했고 ${resolveStatusLabel(saved.postingStatus)} 상태로 반영했습니다.`
-                : `수집 거래를 등록했고 ${resolveStatusLabel(saved.postingStatus)} 상태로 반영했습니다.`
-          });
-        } catch (error) {
-          setFeedback({
-            severity: 'error',
-            message:
-              error instanceof Error
-                ? error.message
-                : mode === 'edit'
-                  ? '수집 거래를 수정하지 못했습니다.'
-                  : '수집 거래를 등록하지 못했습니다.'
-          });
-        }
+      onSubmit={formState.form.handleSubmit(async (values) => {
+        await formState.submit(values);
       })}
     >
       <Stack spacing={appLayout.cardGap}>
         <ReferenceDataReadinessAlert
-          readiness={referenceDataReadinessQuery.data ?? null}
+          readiness={formState.referenceDataReadinessQuery.data ?? null}
           context="transaction-entry"
         />
-        {referenceError ? (
+        {formState.referenceError ? (
           <QueryErrorAlert
             title="자금수단 또는 카테고리 조회에 실패했습니다."
-            error={referenceError}
+            error={formState.referenceError}
           />
         ) : null}
-        {feedback ? (
-          <Alert severity={feedback.severity} variant="outlined">
-            {feedback.message}
+        {formState.feedback ? (
+          <Alert severity={formState.feedback.severity} variant="outlined">
+            {formState.feedback.message}
           </Alert>
         ) : null}
         {!currentPeriod ? (
@@ -383,16 +71,16 @@ export function TransactionForm({
           <Alert severity="info" variant="outlined">
             {currentPeriod.monthLabel} 운영 기간 안의 미확정 거래만 수정할 수
             있습니다. 현재 입력 기준 저장 시{' '}
-            {resolveStatusLabel(predictedStatus)} 상태로 반영됩니다.
+            {resolveStatusLabel(formState.predictedStatus)} 상태로 반영됩니다.
           </Alert>
         ) : (
           <Alert severity="info" variant="outlined">
             현재 수집 거래는 {currentPeriod.monthLabel} 운영 기간 안에서만
-            등록됩니다. 저장 시 {resolveStatusLabel(predictedStatus)} 상태로
-            반영됩니다.
+            등록됩니다. 저장 시 {resolveStatusLabel(formState.predictedStatus)}{' '}
+            상태로 반영됩니다.
           </Alert>
         )}
-        {availableFundingAccounts.length === 0 ? (
+        {formState.availableFundingAccounts.length === 0 ? (
           <Alert severity="warning" variant="outlined">
             사용할 수 있는 자금수단이 아직 없습니다.{' '}
             <Button component={Link} href="/reference-data" size="small">
@@ -400,7 +88,8 @@ export function TransactionForm({
             </Button>
           </Alert>
         ) : null}
-        {selectedType !== 'TRANSFER' && filteredCategories.length === 0 ? (
+        {formState.selectedType !== 'TRANSFER' &&
+        formState.filteredCategories.length === 0 ? (
           <Alert severity="warning" variant="outlined">
             선택한 거래 성격에 맞는 카테고리가 아직 없습니다.{' '}
             <Button component={Link} href="/reference-data" size="small">
@@ -409,169 +98,17 @@ export function TransactionForm({
           </Alert>
         ) : null}
 
-        <Grid container spacing={appLayout.fieldGap}>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <TextField
-              label="적요"
-              error={Boolean(form.formState.errors.title)}
-              helperText={form.formState.errors.title?.message}
-              {...form.register('title')}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 3 }}>
-            <TextField
-              label="금액 (원)"
-              type="number"
-              error={Boolean(form.formState.errors.amountWon)}
-              helperText={form.formState.errors.amountWon?.message}
-              {...form.register('amountWon')}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 3 }}>
-            <TextField
-              label="거래일"
-              type="date"
-              disabled={!currentPeriod}
-              error={Boolean(form.formState.errors.businessDate)}
-              helperText={
-                form.formState.errors.businessDate?.message ??
-                (currentPeriod
-                  ? `${currentPeriod.monthLabel} 운영 기간 범위 안에서만 선택할 수 있습니다.`
-                  : '현재 열린 운영 기간이 없습니다.')
-              }
-              {...form.register('businessDate')}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <TextField
-              select
-              label="거래 성격"
-              disabled={!currentPeriod}
-              error={Boolean(form.formState.errors.type)}
-              helperText={form.formState.errors.type?.message}
-              {...form.register('type')}
-            >
-              <MenuItem value="EXPENSE">지출</MenuItem>
-              <MenuItem value="INCOME">수입</MenuItem>
-              <MenuItem value="TRANSFER">이체</MenuItem>
-            </TextField>
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <TextField
-              select
-              label="자금수단"
-              disabled={!currentPeriod || availableFundingAccounts.length === 0}
-              error={Boolean(form.formState.errors.accountId)}
-              helperText={
-                form.formState.errors.accountId?.message ??
-                (availableFundingAccounts.length === 0
-                  ? '사용할 수 있는 자금수단이 아직 없습니다.'
-                  : ' ')
-              }
-              {...form.register('accountId')}
-            >
-              {availableFundingAccounts.map((fundingAccount) => (
-                <MenuItem key={fundingAccount.id} value={fundingAccount.id}>
-                  {readFundingAccountOptionLabel(fundingAccount)}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <TextField
-              select
-              label="카테고리"
-              disabled={!currentPeriod || filteredCategories.length === 0}
-              helperText={
-                filteredCategories.length === 0
-                  ? '선택한 거래 유형에 맞는 카테고리가 없으면 비워 둘 수 있습니다.'
-                  : '이체는 카테고리 없이 전표 준비 상태가 됩니다. 손익 거래는 카테고리가 비어 있으면 검토 상태로 남습니다.'
-              }
-              {...form.register('categoryId')}
-            >
-              <MenuItem value="">카테고리 없음</MenuItem>
-              {filteredCategories.map((category) => (
-                <MenuItem key={category.id} value={category.id}>
-                  {category.name}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <TextField
-              label="메모"
-              multiline
-              minRows={3}
-              error={Boolean(form.formState.errors.memo)}
-              helperText={form.formState.errors.memo?.message ?? '선택 사항'}
-              {...form.register('memo')}
-            />
-          </Grid>
-        </Grid>
-        <Button
-          type="submit"
-          variant="contained"
-          disabled={isBusy}
-          sx={{ alignSelf: 'flex-start' }}
-        >
-          {mutation.isPending ? '저장 중...' : submitLabel}
-        </Button>
+        <TransactionFormFields
+          currentPeriod={currentPeriod}
+          form={formState.form}
+          availableFundingAccounts={formState.availableFundingAccounts}
+          filteredCategories={formState.filteredCategories}
+          isBusy={formState.isBusy}
+          submitLabel={
+            formState.mutationPending ? '저장 중...' : formState.submitLabel
+          }
+        />
       </Stack>
     </form>
   );
-}
-
-function mapDetailToFormInput(
-  transaction: CollectedTransactionDetailItem
-): TransactionFormInput {
-  return {
-    title: transaction.title,
-    amountWon: transaction.amountWon,
-    businessDate: transaction.businessDate,
-    type: transaction.type,
-    accountId: transaction.fundingAccountId,
-    categoryId: transaction.categoryId ?? '',
-    memo: transaction.memo ?? ''
-  };
-}
-
-function readFundingAccountOptionLabel(fundingAccount: FundingAccountItem) {
-  switch (fundingAccount.status) {
-    case 'INACTIVE':
-      return `${fundingAccount.name} (비활성)`;
-    case 'CLOSED':
-      return `${fundingAccount.name} (종료)`;
-    default:
-      return fundingAccount.name;
-  }
-}
-
-function resolveInitialBusinessDate(
-  currentPeriod: AccountingPeriodItem | null
-): string {
-  const today = getTodayDateInputValue();
-  if (!currentPeriod) {
-    return today;
-  }
-
-  if (isWithinPeriod(today, currentPeriod)) {
-    return today;
-  }
-
-  return currentPeriod.startDate.slice(0, 10);
-}
-
-function isWithinPeriod(
-  businessDate: string,
-  currentPeriod: AccountingPeriodItem | null
-): boolean {
-  if (!currentPeriod) {
-    return false;
-  }
-
-  const businessTime = Date.parse(`${businessDate}T00:00:00.000Z`);
-  const startTime = Date.parse(currentPeriod.startDate);
-  const endTime = Date.parse(currentPeriod.endDate);
-
-  return businessTime >= startTime && businessTime < endTime;
 }

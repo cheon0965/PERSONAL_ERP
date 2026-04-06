@@ -1,34 +1,36 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type {
   AuthenticatedUser,
   JournalEntryItem
 } from '@personal-erp/contracts';
-import {
-  CollectedTransactionStatus,
-  JournalEntrySourceKind,
-  JournalEntryStatus,
-  PlanItemStatus
-} from '@prisma/client';
+import { JournalEntrySourceKind, JournalEntryStatus } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { readWorkspaceCreatedByActorRef } from '../../common/auth/workspace-actor-ref.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AccountingPeriodsService } from '../accounting-periods/accounting-periods.service';
 import { mapJournalEntryRecordToItem } from '../journal-entries/journal-entry-item.mapper';
+import { REQUIRED_CONFIRM_ACCOUNT_SUBJECT_CODES } from './confirm-collected-transaction.policy';
 import {
-  assertConfirmJournalAccountSubjectIdsResolved,
-  assertConfirmJournalLinesSupported,
-  buildConfirmCollectedTransactionEntryNumber,
-  REQUIRED_CONFIRM_ACCOUNT_SUBJECT_CODES,
-  resolveConfirmJournalAccountSubjectIds,
-  resolveConfirmCollectedTransactionJournalLines
-} from './confirm-collected-transaction.policy';
-import { assertCollectedTransactionCanBeConfirmed } from './collected-transaction-transition.policy';
+  assertConfirmationAllowed,
+  assertConfirmationTransactionFound,
+  assertConfirmationTransactionHasPeriod
+} from './confirm-collected-transaction.validator';
+import {
+  buildConfirmationEntryNumber,
+  buildConfirmationJournalLines,
+  resolveConfirmationAccountSubjectIds
+} from './confirm-collected-transaction.factory';
+import {
+  assertConfirmationClaimSucceeded,
+  claimCollectedTransactionForConfirmation,
+  markMatchedPlanItemConfirmed
+} from './confirm-collected-transaction.effects';
+import {
+  readActiveConfirmAccountSubjects,
+  readCollectedTransactionForConfirmation,
+  readLatestCollectedTransactionForConfirmation
+} from './confirm-collected-transaction.reader';
 
 @Injectable()
 export class ConfirmCollectedTransactionUseCase {
@@ -48,124 +50,50 @@ export class ConfirmCollectedTransactionUseCase {
       'collected_transaction.confirm'
     );
 
-    const collectedTransaction =
-      await this.prisma.collectedTransaction.findFirst({
-        where: {
-          id: collectedTransactionId,
-          tenantId: workspace.tenantId,
-          ledgerId: workspace.ledgerId
-        },
-        include: {
-          period: {
-            select: {
-              id: true,
-              year: true,
-              month: true,
-              status: true
-            }
-          },
-          fundingAccount: {
-            select: {
-              id: true,
-              name: true
-            }
-          },
-          ledgerTransactionType: {
-            select: {
-              postingPolicyKey: true
-            }
-          },
-          postedJournalEntry: {
-            select: {
-              id: true
-            }
-          }
-        }
-      });
-
-    if (!collectedTransaction) {
-      throw new NotFoundException('Collected transaction not found.');
-    }
-
-    if (!collectedTransaction.period) {
-      throw new BadRequestException(
-        'Collected transaction is not linked to an accounting period.'
-      );
-    }
+    const collectedTransaction = await readCollectedTransactionForConfirmation(
+      this.prisma,
+      {
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId
+      },
+      collectedTransactionId
+    );
+    assertConfirmationTransactionFound(collectedTransaction);
+    assertConfirmationTransactionHasPeriod(collectedTransaction);
 
     const period = collectedTransaction.period;
-    assertCollectedTransactionCanBeConfirmed({
+    assertConfirmationAllowed({
       status: collectedTransaction.status,
       periodStatus: period.status,
       postedJournalEntryId: collectedTransaction.postedJournalEntry?.id ?? null
     });
 
-    const accountSubjects = await this.prisma.accountSubject.findMany({
-      where: {
+    const accountSubjects = await readActiveConfirmAccountSubjects(
+      this.prisma,
+      {
         tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId,
-        code: {
-          in: [...REQUIRED_CONFIRM_ACCOUNT_SUBJECT_CODES]
-        },
-        isActive: true
+        ledgerId: workspace.ledgerId
       },
-      select: {
-        id: true,
-        code: true
-      }
-    });
-
-    const accountSubjectIds = assertConfirmJournalAccountSubjectIdsResolved(
-      resolveConfirmJournalAccountSubjectIds(accountSubjects)
+      REQUIRED_CONFIRM_ACCOUNT_SUBJECT_CODES
     );
+    const accountSubjectIds =
+      resolveConfirmationAccountSubjectIds(accountSubjects);
 
     const journalEntry = await this.prisma.$transaction(async (tx) => {
       const latestCollectedTransaction =
-        await tx.collectedTransaction.findFirst({
-          where: {
-            id: collectedTransaction.id,
+        await readLatestCollectedTransactionForConfirmation(
+          tx,
+          {
             tenantId: workspace.tenantId,
             ledgerId: workspace.ledgerId
           },
-          include: {
-            period: {
-              select: {
-                id: true,
-                year: true,
-                month: true,
-                status: true
-              }
-            },
-            fundingAccount: {
-              select: {
-                id: true
-              }
-            },
-            ledgerTransactionType: {
-              select: {
-                postingPolicyKey: true
-              }
-            },
-            postedJournalEntry: {
-              select: {
-                id: true
-              }
-            }
-          }
-        });
-
-      if (!latestCollectedTransaction) {
-        throw new NotFoundException('Collected transaction not found.');
-      }
-
-      if (!latestCollectedTransaction.period) {
-        throw new BadRequestException(
-          'Collected transaction is not linked to an accounting period.'
+          collectedTransaction.id
         );
-      }
+      assertConfirmationTransactionFound(latestCollectedTransaction);
+      assertConfirmationTransactionHasPeriod(latestCollectedTransaction);
 
       const latestPeriod = latestCollectedTransaction.period;
-      assertCollectedTransactionCanBeConfirmed({
+      assertConfirmationAllowed({
         status: latestCollectedTransaction.status,
         periodStatus: latestPeriod.status,
         postedJournalEntryId:
@@ -180,79 +108,25 @@ export class ConfirmCollectedTransactionUseCase {
           latestPeriod.id
         );
 
-      const journalLines = assertConfirmJournalLinesSupported(
-        resolveConfirmCollectedTransactionJournalLines({
-          postingPolicyKey:
-            latestCollectedTransaction.ledgerTransactionType.postingPolicyKey,
-          amount: latestCollectedTransaction.amount,
-          title: latestCollectedTransaction.title,
-          fundingAccountId: latestCollectedTransaction.fundingAccount.id,
-          accountSubjectIds
-        })
-      );
+      const journalLines = buildConfirmationJournalLines({
+        collectedTransaction: latestCollectedTransaction,
+        accountSubjectIds
+      });
 
-      const claimedCollectedTransaction = await tx.collectedTransaction.updateMany(
-        {
-          where: {
-            id: latestCollectedTransaction.id,
-            tenantId: workspace.tenantId,
-            ledgerId: workspace.ledgerId,
-            status: {
-              in: [latestCollectedTransaction.status]
-            }
-          },
-          data: {
-            status: CollectedTransactionStatus.POSTED
-          }
-        }
-      );
-
-      if (claimedCollectedTransaction.count !== 1) {
-        const currentCollectedTransaction =
-          await tx.collectedTransaction.findFirst({
-            where: {
-              id: collectedTransaction.id,
-              tenantId: workspace.tenantId,
-              ledgerId: workspace.ledgerId
-            },
-            include: {
-              period: {
-                select: {
-                  id: true,
-                  year: true,
-                  month: true,
-                  status: true
-                }
-              },
-              postedJournalEntry: {
-                select: {
-                  id: true
-                }
-              }
-            }
-          });
-
-        if (!currentCollectedTransaction) {
-          throw new NotFoundException('Collected transaction not found.');
-        }
-
-        if (!currentCollectedTransaction.period) {
-          throw new BadRequestException(
-            'Collected transaction is not linked to an accounting period.'
-          );
-        }
-
-        assertCollectedTransactionCanBeConfirmed({
-          status: currentCollectedTransaction.status,
-          periodStatus: currentCollectedTransaction.period.status,
-          postedJournalEntryId:
-            currentCollectedTransaction.postedJournalEntry?.id ?? null
+      const claimedCollectedTransaction =
+        await claimCollectedTransactionForConfirmation(tx, {
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId,
+          collectedTransactionId: latestCollectedTransaction.id,
+          currentStatus: latestCollectedTransaction.status
         });
 
-        throw new ConflictException(
-          'Collected transaction changed during confirmation. Please retry.'
-        );
-      }
+      await assertConfirmationClaimSucceeded(tx, {
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId,
+        collectedTransactionId: collectedTransaction.id,
+        updatedCount: claimedCollectedTransaction.count
+      });
 
       const existingCount = await tx.journalEntry.count({
         where: {
@@ -262,11 +136,11 @@ export class ConfirmCollectedTransactionUseCase {
         }
       });
 
-      const entryNumber = buildConfirmCollectedTransactionEntryNumber(
-        writablePeriod.year,
-        writablePeriod.month,
-        existingCount + 1
-      );
+      const entryNumber = buildConfirmationEntryNumber({
+        year: writablePeriod.year,
+        month: writablePeriod.month,
+        existingCount
+      });
 
       const created = await tx.journalEntry.create({
         data: {
@@ -313,16 +187,10 @@ export class ConfirmCollectedTransactionUseCase {
         }
       });
 
-      if (latestCollectedTransaction.matchedPlanItemId) {
-        await tx.planItem.update({
-          where: {
-            id: latestCollectedTransaction.matchedPlanItemId
-          },
-          data: {
-            status: PlanItemStatus.CONFIRMED
-          }
-        });
-      }
+      await markMatchedPlanItemConfirmed(
+        tx,
+        latestCollectedTransaction.matchedPlanItemId
+      );
 
       return created;
     });
