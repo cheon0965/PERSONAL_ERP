@@ -21,7 +21,7 @@ import type {
   FundingAccountItem
 } from '@personal-erp/contracts';
 import type { GridColDef } from '@mui/x-data-grid';
-import type { UseFormReturn } from 'react-hook-form';
+import { Controller, type UseFormReturn } from 'react-hook-form';
 import { formatDate, formatWon } from '@/shared/lib/format';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -246,59 +246,74 @@ export function OpenAccountingPeriodSection({
                         </Stack>
                         <Grid container spacing={appLayout.fieldGap}>
                           <Grid size={{ xs: 12, md: 5 }}>
-                            <TextField
-                              select
-                              label="계정과목"
-                              disabled={isSubmitting}
-                              error={Boolean(
-                                form.formState.errors.openingBalanceLines?.[
-                                  index
-                                ]?.accountSubjectId
-                              )}
-                              helperText={
-                                form.formState.errors.openingBalanceLines?.[
-                                  index
-                                ]?.accountSubjectId?.message ??
-                                '재무상태표 계정과목만 표시됩니다.'
-                              }
-                              {...form.register(
+                            <Controller
+                              control={form.control}
+                              name={
                                 `openingBalanceLines.${index}.accountSubjectId` as const
+                              }
+                              render={({ field }) => (
+                                <TextField
+                                  select
+                                  label="계정과목"
+                                  disabled={isSubmitting}
+                                  error={Boolean(
+                                    form.formState.errors.openingBalanceLines?.[
+                                      index
+                                    ]?.accountSubjectId
+                                  )}
+                                  helperText={
+                                    form.formState.errors
+                                      .openingBalanceLines?.[index]
+                                      ?.accountSubjectId?.message ??
+                                    '재무상태표 계정과목만 표시됩니다.'
+                                  }
+                                  {...field}
+                                  value={field.value ?? ''}
+                                >
+                                  {openingBalanceAccountSubjects.map(
+                                    (accountSubject) => (
+                                      <MenuItem
+                                        key={accountSubject.id}
+                                        value={accountSubject.id}
+                                      >
+                                        {accountSubject.code}{' '}
+                                        {accountSubject.name}
+                                      </MenuItem>
+                                    )
+                                  )}
+                                </TextField>
                               )}
-                            >
-                              {openingBalanceAccountSubjects.map(
-                                (accountSubject) => (
-                                  <MenuItem
-                                    key={accountSubject.id}
-                                    value={accountSubject.id}
-                                  >
-                                    {accountSubject.code} {accountSubject.name}
-                                  </MenuItem>
-                                )
-                              )}
-                            </TextField>
+                            />
                           </Grid>
                           <Grid size={{ xs: 12, md: 4 }}>
-                            <TextField
-                              select
-                              label="자금수단"
-                              disabled={isSubmitting}
-                              helperText="선택 사항"
-                              {...form.register(
+                            <Controller
+                              control={form.control}
+                              name={
                                 `openingBalanceLines.${index}.fundingAccountId` as const
+                              }
+                              render={({ field }) => (
+                                <TextField
+                                  select
+                                  label="자금수단"
+                                  disabled={isSubmitting}
+                                  helperText="선택 사항"
+                                  {...field}
+                                  value={field.value ?? ''}
+                                >
+                                  <MenuItem value="">자금수단 없음</MenuItem>
+                                  {openingBalanceFundingAccounts.map(
+                                    (fundingAccount) => (
+                                      <MenuItem
+                                        key={fundingAccount.id}
+                                        value={fundingAccount.id}
+                                      >
+                                        {fundingAccount.name}
+                                      </MenuItem>
+                                    )
+                                  )}
+                                </TextField>
                               )}
-                            >
-                              <MenuItem value="">자금수단 없음</MenuItem>
-                              {openingBalanceFundingAccounts.map(
-                                (fundingAccount) => (
-                                  <MenuItem
-                                    key={fundingAccount.id}
-                                    value={fundingAccount.id}
-                                  >
-                                    {fundingAccount.name}
-                                  </MenuItem>
-                                )
-                              )}
-                            </TextField>
+                            />
                           </Grid>
                           <Grid size={{ xs: 12, md: 3 }}>
                             <TextField

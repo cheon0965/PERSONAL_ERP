@@ -1,4 +1,4 @@
-﻿ALTER TABLE `InsurancePolicy`
+ALTER TABLE `InsurancePolicy`
   ADD COLUMN `accountId` VARCHAR(191) NULL,
   ADD COLUMN `categoryId` VARCHAR(191) NULL,
   ADD COLUMN `recurringStartDate` DATETIME(3) NULL,
