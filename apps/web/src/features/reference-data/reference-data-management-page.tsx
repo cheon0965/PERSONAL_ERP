@@ -23,8 +23,6 @@ export function ReferenceDataManagementPage() {
         eyebrow="기준 데이터"
         title="기준 데이터 관리와 참조 입력"
         description="현재 사업 장부에서 사용하는 자금수단, 카테고리, 계정과목, 거래유형을 확인하고 직접 관리하는 화면입니다."
-        primaryActionLabel="준비 상태 보기"
-        primaryActionHref="/reference-data"
       />
 
       <ReferenceDataSectionNav />

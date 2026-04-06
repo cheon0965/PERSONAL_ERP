@@ -131,6 +131,7 @@
 - Web `/dashboard` -> API `GET /dashboard/summary`
 - Web `/periods` -> API `/accounting-periods`
 - Web `/reference-data` -> API `/reference-data/readiness`, `/funding-accounts`, `/categories`, `/account-subjects`, `/ledger-transaction-types`
+- Web `/reference-data/manage` -> API `/funding-accounts`, `/categories`, `/account-subjects`, `/ledger-transaction-types`
 - Web `/recurring` -> API `/recurring-rules`
 - Web `/plan-items` -> API `/plan-items`
 - Web `/transactions` -> API `/collected-transactions`
