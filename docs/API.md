@@ -53,7 +53,7 @@
 
 ## 현재 구현 범위 요약
 
-- 기준/참조 범위는 조회 `auth/me`, `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/차량 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
+- 기준/참조 범위는 조회 `auth/me`, `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/차량 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `DELETE /insurance-policies/:id`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
 - 운영/원장 조회 범위는 `accounting-periods`, `collected-transactions`, `journal-entries`, `plan-items`, `financial-statements`, `carry-forwards`, `import-batches`까지 포함합니다.
 - 집계/보고 조회 범위는 `dashboard/summary`, `forecast/monthly`까지 포함합니다.
 - 현재 쓰기/명령 범위는 `funding-accounts`, `categories`, `insurance-policies`, `vehicles`, `vehicle maintenance logs`, `accounting-periods`, `collected-transactions`, `recurring-rules`, `plan-items`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`까지 확장되어 있습니다.
@@ -78,6 +78,7 @@
 - `GET /insurance-policies`
 - `POST /insurance-policies`
 - `PATCH /insurance-policies/:id`
+- `DELETE /insurance-policies/:id`
 - `GET /vehicles`
 - `GET /vehicles/fuel-logs`
 - `GET /vehicles/maintenance-logs`
@@ -223,7 +224,13 @@
 
 - 계약: `UpdateInsurancePolicyRequest -> InsurancePolicyItem`
 - 현재 작업 문맥의 Owner/Manager만 보험 계약 기준 필드와 활성/비활성 상태를 수정할 수 있습니다.
-- 현재 범위는 하드 삭제를 지원하지 않으며, 비활성 계약도 `?includeInactive=true` 목록과 수정 흐름에서 계속 관리할 수 있습니다.
+- 현재 범위는 비활성 계약도 `?includeInactive=true` 목록과 수정 흐름에서 계속 관리할 수 있으며, 삭제가 필요하면 별도 `DELETE /insurance-policies/:id` 흐름을 사용합니다.
+
+### `DELETE /insurance-policies/:id`
+
+- 계약: response body 없음 (`204 No Content`)
+- 현재 작업 문맥의 Owner/Manager만 보험 계약을 삭제할 수 있습니다.
+- 현재 구현은 보험 계약과 연결된 반복 규칙이 있으면 함께 삭제해 이후 자동 생성 기준에서도 제거합니다.
 
 ### `GET /vehicles`
 
@@ -414,7 +421,7 @@
 - 조회 엔드포인트는 인증된 workspace 범위 내 데이터만 반환합니다.
 - `insurance-policies`, `vehicles`도 개인 생활용 고정 데이터가 아니라 현재 workspace/ledger 기준 사업 운영 보조 자산 데이터만 반환합니다.
 - 쓰기 권한은 workspace membership role로 제어합니다.
-- `OWNER`, `MANAGER`: `funding_account.create`, `funding_account.update`, `category.create`, `category.update`, `insurance_policy.create`, `insurance_policy.update`, `vehicle.create`, `vehicle.update`, `accounting_period.open`, `recurring_rule.create`, `plan_item.generate`, `financial_statement.generate`, `carry_forward.generate`, `journal_entry.reverse`, `journal_entry.correct`
+- `OWNER`, `MANAGER`: `funding_account.create`, `funding_account.update`, `category.create`, `category.update`, `insurance_policy.create`, `insurance_policy.update`, `insurance_policy.delete`, `vehicle.create`, `vehicle.update`, `accounting_period.open`, `recurring_rule.create`, `plan_item.generate`, `financial_statement.generate`, `carry_forward.generate`, `journal_entry.reverse`, `journal_entry.correct`
 - `OWNER`: `accounting_period.close`, `accounting_period.reopen`
 - `OWNER`, `MANAGER`, `EDITOR`: `collected_transaction.create`, `collected_transaction.confirm`, `import_batch.upload`
 - `CollectedTransactionItem`, `RecurringRuleItem`, `JournalEntryItem`, `PlanItemsView`, `FinancialStatementsView`, `CarryForwardView`, `DashboardSummary`, `ForecastResponse`는 raw table 전체가 아니라 API view/projection shape를 응답합니다.
