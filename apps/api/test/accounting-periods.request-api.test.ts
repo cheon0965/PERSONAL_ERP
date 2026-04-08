@@ -241,6 +241,50 @@ test('POST /accounting-periods opens the first period and records status history
   }
 });
 
+test('POST /accounting-periods allows the first period to open with asset-only opening balance lines', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/accounting-periods', {
+      method: 'POST',
+      headers: context.authHeaders(),
+      body: {
+        month: '2026-03',
+        initializeOpeningBalance: true,
+        openingBalanceLines: [
+          {
+            accountSubjectId: 'as-1-1010',
+            fundingAccountId: 'acc-1',
+            balanceAmount: 3000000
+          }
+        ],
+        note: '자산만 입력한 첫 월 운영 시작'
+      }
+    });
+
+    const createdPeriod = response.body as Record<string, unknown>;
+
+    assert.equal(response.status, 201);
+    assert.equal(createdPeriod.monthLabel, '2026-03');
+    assert.equal(createdPeriod.status, AccountingPeriodStatus.OPEN);
+    assert.equal(createdPeriod.hasOpeningBalanceSnapshot, true);
+    assert.equal(
+      createdPeriod.openingBalanceSourceKind,
+      OpeningBalanceSourceKind.INITIAL_SETUP
+    );
+    assert.equal(context.state.accountingPeriods.length, 1);
+    assert.equal(context.state.openingBalanceSnapshots.length, 1);
+    assert.equal(context.state.balanceSnapshotLines.length, 1);
+    assert.equal(
+      context.state.balanceSnapshotLines[0]?.accountSubjectId,
+      'as-1-1010'
+    );
+    assert.equal(context.state.balanceSnapshotLines[0]?.balanceAmount, 3000000);
+  } finally {
+    await context.close();
+  }
+});
+
 test('POST /accounting-periods rolls back the opened period when opening snapshot creation fails', async () => {
   const context = await createRequestTestContext();
 

@@ -101,6 +101,18 @@ export function createPrismaMock(
     };
   };
 
+  const resolveLinkedInsurancePolicy = (recurringRuleId?: string | null) => {
+    if (!recurringRuleId) {
+      return null;
+    }
+
+    return (
+      state.insurancePolicies.find(
+        (candidate) => candidate.linkedRecurringRuleId === recurringRuleId
+      ) ?? null
+    );
+  };
+
   return {
     $queryRaw: async () => {
       if (!state.databaseReady) {
@@ -762,7 +774,18 @@ export function createPrismaMock(
           return candidate;
         });
       },
-      create: async (args: { data: Record<string, unknown> }) => {
+      create: async (args: {
+        data: Record<string, unknown>;
+        include?: {
+          account?: boolean;
+          category?: boolean;
+          linkedInsurancePolicy?: {
+            select?: {
+              id?: boolean;
+            };
+          };
+        };
+      }) => {
         const account = resolveAccount(String(args.data.accountId));
         const category = resolveCategory(String(args.data.categoryId));
         const created = {
@@ -799,7 +822,15 @@ export function createPrismaMock(
           ledgerId?: string;
           isActive?: boolean;
         };
-        include?: { account?: boolean; category?: boolean };
+        include?: {
+          account?: boolean;
+          category?: boolean;
+          linkedInsurancePolicy?: {
+            select?: {
+              id?: boolean;
+            };
+          };
+        };
         select?: {
           id?: boolean;
           title?: boolean;
@@ -812,6 +843,11 @@ export function createPrismaMock(
           endDate?: boolean;
           nextRunDate?: boolean;
           isActive?: boolean;
+          linkedInsurancePolicy?: {
+            select?: {
+              id?: boolean;
+            };
+          };
         };
       }) => {
         const candidate =
@@ -841,6 +877,9 @@ export function createPrismaMock(
         }
 
         if (args.select) {
+          const linkedInsurancePolicy = resolveLinkedInsurancePolicy(
+            candidate.id
+          );
           return {
             ...(args.select.id ? { id: candidate.id } : {}),
             ...(args.select.title ? { title: candidate.title } : {}),
@@ -866,18 +905,33 @@ export function createPrismaMock(
             ...(args.select.nextRunDate
               ? { nextRunDate: candidate.nextRunDate }
               : {}),
-            ...(args.select.isActive ? { isActive: candidate.isActive } : {})
+            ...(args.select.isActive ? { isActive: candidate.isActive } : {}),
+            ...(args.select.linkedInsurancePolicy
+              ? {
+                  linkedInsurancePolicy: linkedInsurancePolicy
+                    ? { id: linkedInsurancePolicy.id }
+                    : null
+                }
+              : {})
           };
         }
 
         const account = resolveAccount(candidate.accountId);
         const category = resolveCategory(candidate.categoryId);
+        const linkedInsurancePolicy = resolveLinkedInsurancePolicy(
+          candidate.id
+        );
 
         if (args.include) {
           return {
             ...candidate,
             account: args.include.account ? account : undefined,
-            category: args.include.category ? category : undefined
+            category: args.include.category ? category : undefined,
+            linkedInsurancePolicy: args.include.linkedInsurancePolicy
+              ? linkedInsurancePolicy
+                ? { id: linkedInsurancePolicy.id }
+                : null
+              : undefined
           };
         }
 
@@ -890,7 +944,15 @@ export function createPrismaMock(
           ledgerId?: string;
           isActive?: boolean;
         };
-        include?: { account?: boolean; category?: boolean };
+        include?: {
+          account?: boolean;
+          category?: boolean;
+          linkedInsurancePolicy?: {
+            select?: {
+              id?: boolean;
+            };
+          };
+        };
         select?: { amountWon?: boolean };
         orderBy?: Array<{
           isActive?: 'asc' | 'desc';
@@ -923,19 +985,38 @@ export function createPrismaMock(
 
           const account = resolveAccount(candidate.accountId);
           const category = resolveCategory(candidate.categoryId);
+          const linkedInsurancePolicy = resolveLinkedInsurancePolicy(
+            candidate.id
+          );
 
           if (args.include) {
             return {
               ...candidate,
               account: args.include.account ? account : undefined,
-              category: args.include.category ? category : undefined
+              category: args.include.category ? category : undefined,
+              linkedInsurancePolicy: args.include.linkedInsurancePolicy
+                ? linkedInsurancePolicy
+                  ? { id: linkedInsurancePolicy.id }
+                  : null
+                : undefined
             };
           }
 
           return candidate;
         });
       },
-      create: async (args: { data: Record<string, unknown> }) => {
+      create: async (args: {
+        data: Record<string, unknown>;
+        include?: {
+          account?: boolean;
+          category?: boolean;
+          linkedInsurancePolicy?: {
+            select?: {
+              id?: boolean;
+            };
+          };
+        };
+      }) => {
         const account = resolveAccount(String(args.data.accountId));
         const category = resolveCategory(String(args.data.categoryId));
         const created = {
@@ -960,10 +1041,16 @@ export function createPrismaMock(
           updatedAt: new Date()
         };
         state.recurringRules.push(created);
+        const linkedInsurancePolicy = resolveLinkedInsurancePolicy(created.id);
         return {
           ...created,
-          account,
-          category
+          account: args.include?.account ? account : undefined,
+          category: args.include?.category ? category : undefined,
+          linkedInsurancePolicy: args.include?.linkedInsurancePolicy
+            ? linkedInsurancePolicy
+              ? { id: linkedInsurancePolicy.id }
+              : null
+            : undefined
         };
       },
       update: async (args: {
@@ -980,7 +1067,15 @@ export function createPrismaMock(
           isActive?: boolean;
           nextRunDate?: Date;
         };
-        include?: { account?: boolean; category?: boolean };
+        include?: {
+          account?: boolean;
+          category?: boolean;
+          linkedInsurancePolicy?: {
+            select?: {
+              id?: boolean;
+            };
+          };
+        };
       }) => {
         const candidate = state.recurringRules.find(
           (item) => item.id === args.where.id
@@ -1026,12 +1121,20 @@ export function createPrismaMock(
 
         const account = resolveAccount(candidate.accountId);
         const category = resolveCategory(candidate.categoryId);
+        const linkedInsurancePolicy = resolveLinkedInsurancePolicy(
+          candidate.id
+        );
 
         if (args.include) {
           return {
             ...candidate,
             account: args.include.account ? account : undefined,
-            category: args.include.category ? category : undefined
+            category: args.include.category ? category : undefined,
+            linkedInsurancePolicy: args.include.linkedInsurancePolicy
+              ? linkedInsurancePolicy
+                ? { id: linkedInsurancePolicy.id }
+                : null
+              : undefined
           };
         }
 
@@ -1064,6 +1167,11 @@ export function createPrismaMock(
 
         state.recurringRules = state.recurringRules.filter(
           (candidate) => !deletedIds.includes(candidate.id)
+        );
+        state.insurancePolicies = state.insurancePolicies.map((candidate) =>
+          deletedIds.includes(candidate.linkedRecurringRuleId ?? '')
+            ? { ...candidate, linkedRecurringRuleId: null }
+            : candidate
         );
         state.planItems = state.planItems.map((candidate) =>
           deletedIds.includes(candidate.recurringRuleId ?? '')
@@ -1338,6 +1446,39 @@ export function createPrismaMock(
         }
 
         return projectInsurancePolicy(insurancePolicy, args.include);
+      },
+      deleteMany: async (args: {
+        where?: {
+          id?: string;
+          tenantId?: string;
+          ledgerId?: string;
+        };
+      }) => {
+        const deletedIds = state.insurancePolicies
+          .filter((candidate) => {
+            const matchesId = !args.where?.id || candidate.id === args.where.id;
+            const matchesTenant =
+              !args.where?.tenantId ||
+              candidate.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId;
+
+            return matchesId && matchesTenant && matchesLedger;
+          })
+          .map((candidate) => candidate.id);
+
+        if (deletedIds.length === 0) {
+          return { count: 0 };
+        }
+
+        state.insurancePolicies = state.insurancePolicies.filter(
+          (candidate) => !deletedIds.includes(candidate.id)
+        );
+
+        return {
+          count: deletedIds.length
+        };
       }
     },
     vehicle: {

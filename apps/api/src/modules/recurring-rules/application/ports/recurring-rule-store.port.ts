@@ -7,6 +7,7 @@ export type StoredRecurringRule = {
   frequency: RecurringRuleItem['frequency'];
   nextRunDate: Date | null;
   isActive: boolean;
+  linkedInsurancePolicyId: string | null;
   account: {
     name: string;
   };
@@ -27,6 +28,7 @@ export type StoredRecurringRuleDetail = {
   endDate: Date | null;
   nextRunDate: Date | null;
   isActive: boolean;
+  linkedInsurancePolicyId: string | null;
 };
 
 export type CreateRecurringRuleRecord = {

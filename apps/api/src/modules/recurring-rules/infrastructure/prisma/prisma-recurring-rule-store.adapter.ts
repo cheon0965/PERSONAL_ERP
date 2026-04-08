@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { RecurrenceFrequency } from '@personal-erp/contracts';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
 import type {
   CreateRecurringRuleRecord,
@@ -8,27 +9,80 @@ import type {
 } from '../../application/ports/recurring-rule-store.port';
 import { RecurringRuleStorePort } from '../../application/ports/recurring-rule-store.port';
 
+type RecurringRuleListRecord = {
+  id: string;
+  title: string;
+  amountWon: number;
+  frequency: RecurrenceFrequency;
+  nextRunDate: Date | null;
+  isActive: boolean;
+  account: {
+    name: string;
+  };
+  category: {
+    name: string;
+  } | null;
+  linkedInsurancePolicy: {
+    id: string;
+  } | null;
+};
+
+type RecurringRuleDetailRecord = {
+  id: string;
+  title: string;
+  accountId: string;
+  categoryId: string | null;
+  amountWon: number;
+  frequency: RecurrenceFrequency;
+  dayOfMonth: number | null;
+  startDate: Date;
+  endDate: Date | null;
+  nextRunDate: Date | null;
+  isActive: boolean;
+  linkedInsurancePolicy: {
+    id: string;
+  } | null;
+};
+
 @Injectable()
 export class PrismaRecurringRuleStoreAdapter implements RecurringRuleStorePort {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAllInWorkspace(
+  async findAllInWorkspace(
     tenantId: string,
     ledgerId: string
   ): Promise<StoredRecurringRule[]> {
-    return this.prisma.recurringRule.findMany({
+    const items = await this.prisma.recurringRule.findMany({
       where: { tenantId, ledgerId },
-      include: { account: true, category: true },
+      include: {
+        account: {
+          select: {
+            name: true
+          }
+        },
+        category: {
+          select: {
+            name: true
+          }
+        },
+        linkedInsurancePolicy: {
+          select: {
+            id: true
+          }
+        }
+      },
       orderBy: [{ isActive: 'desc' }, { nextRunDate: 'asc' }]
     });
+
+    return items.map(mapRecurringRuleListRecord);
   }
 
-  findByIdInWorkspace(
+  async findByIdInWorkspace(
     tenantId: string,
     ledgerId: string,
     recurringRuleId: string
   ): Promise<StoredRecurringRuleDetail | null> {
-    return this.prisma.recurringRule.findFirst({
+    const item = await this.prisma.recurringRule.findFirst({
       where: {
         id: recurringRuleId,
         tenantId,
@@ -45,15 +99,22 @@ export class PrismaRecurringRuleStoreAdapter implements RecurringRuleStorePort {
         startDate: true,
         endDate: true,
         nextRunDate: true,
-        isActive: true
+        isActive: true,
+        linkedInsurancePolicy: {
+          select: {
+            id: true
+          }
+        }
       }
     });
+
+    return item ? mapRecurringRuleDetailRecord(item) : null;
   }
 
-  createInWorkspace(
+  async createInWorkspace(
     record: CreateRecurringRuleRecord
   ): Promise<StoredRecurringRule> {
-    return this.prisma.recurringRule.create({
+    const created = await this.prisma.recurringRule.create({
       data: {
         userId: record.userId,
         tenantId: record.tenantId,
@@ -69,16 +130,34 @@ export class PrismaRecurringRuleStoreAdapter implements RecurringRuleStorePort {
         isActive: record.isActive,
         nextRunDate: record.nextRunDate
       },
-      include: { account: true, category: true }
+      include: {
+        account: {
+          select: {
+            name: true
+          }
+        },
+        category: {
+          select: {
+            name: true
+          }
+        },
+        linkedInsurancePolicy: {
+          select: {
+            id: true
+          }
+        }
+      }
     });
+
+    return mapRecurringRuleListRecord(created);
   }
 
-  updateInWorkspace(
+  async updateInWorkspace(
     _tenantId: string,
     _ledgerId: string,
     record: UpdateRecurringRuleRecord
   ): Promise<StoredRecurringRule> {
-    return this.prisma.recurringRule.update({
+    const updated = await this.prisma.recurringRule.update({
       where: { id: record.id },
       data: {
         accountId: record.accountId,
@@ -92,8 +171,26 @@ export class PrismaRecurringRuleStoreAdapter implements RecurringRuleStorePort {
         isActive: record.isActive,
         nextRunDate: record.nextRunDate
       },
-      include: { account: true, category: true }
+      include: {
+        account: {
+          select: {
+            name: true
+          }
+        },
+        category: {
+          select: {
+            name: true
+          }
+        },
+        linkedInsurancePolicy: {
+          select: {
+            id: true
+          }
+        }
+      }
     });
+
+    return mapRecurringRuleListRecord(updated);
   }
 
   async deleteInWorkspace(
@@ -111,4 +208,45 @@ export class PrismaRecurringRuleStoreAdapter implements RecurringRuleStorePort {
 
     return result.count > 0;
   }
+}
+
+function mapRecurringRuleListRecord(
+  record: RecurringRuleListRecord
+): StoredRecurringRule {
+  return {
+    id: record.id,
+    title: record.title,
+    amountWon: record.amountWon,
+    frequency: record.frequency,
+    nextRunDate: record.nextRunDate,
+    isActive: record.isActive,
+    linkedInsurancePolicyId: record.linkedInsurancePolicy?.id ?? null,
+    account: {
+      name: record.account.name
+    },
+    category: record.category
+      ? {
+          name: record.category.name
+        }
+      : null
+  };
+}
+
+function mapRecurringRuleDetailRecord(
+  record: RecurringRuleDetailRecord
+): StoredRecurringRuleDetail {
+  return {
+    id: record.id,
+    title: record.title,
+    accountId: record.accountId,
+    categoryId: record.categoryId,
+    amountWon: record.amountWon,
+    frequency: record.frequency,
+    dayOfMonth: record.dayOfMonth,
+    startDate: record.startDate,
+    endDate: record.endDate,
+    nextRunDate: record.nextRunDate,
+    isActive: record.isActive,
+    linkedInsurancePolicyId: record.linkedInsurancePolicy?.id ?? null
+  };
 }

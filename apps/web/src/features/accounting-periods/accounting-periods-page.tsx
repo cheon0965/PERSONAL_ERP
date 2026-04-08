@@ -15,7 +15,7 @@ import type {
   CloseAccountingPeriodResponse,
   OpenAccountingPeriodRequest
 } from '@personal-erp/contracts';
-import { useFieldArray, useForm } from 'react-hook-form';
+import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import {
   accountSubjectsQueryKey,
   fundingAccountsManagementQueryKey,
@@ -181,7 +181,7 @@ export function AccountingPeriodsPage() {
     defaultValues: {
       month: getTodayMonthInputValue(),
       initializeOpeningBalance: true,
-      openingBalanceLines: [createEmptyOpeningBalanceLine()],
+      openingBalanceLines: [],
       note: ''
     }
   });
@@ -230,15 +230,7 @@ export function AccountingPeriodsPage() {
   }, [form, isFirstPeriod]);
 
   React.useEffect(() => {
-    if (isFirstPeriod) {
-      if (openingBalanceFields.length === 0) {
-        replaceOpeningBalanceLines([createEmptyOpeningBalanceLine()]);
-      }
-
-      return;
-    }
-
-    if (openingBalanceFields.length > 0) {
+    if (!isFirstPeriod && openingBalanceFields.length > 0) {
       replaceOpeningBalanceLines([]);
     }
   }, [isFirstPeriod, openingBalanceFields.length, replaceOpeningBalanceLines]);
@@ -279,8 +271,16 @@ export function AccountingPeriodsPage() {
     }
   });
 
-  const initializeOpeningBalance = form.watch('initializeOpeningBalance');
-  const openingBalanceLines = form.watch('openingBalanceLines');
+  const initializeOpeningBalance = useWatch({
+    control: form.control,
+    name: 'initializeOpeningBalance',
+    defaultValue: true
+  });
+  const openingBalanceLines = useWatch({
+    control: form.control,
+    name: 'openingBalanceLines',
+    defaultValue: []
+  });
   const openingBalanceTotals = React.useMemo(
     () =>
       buildOpeningBalanceTotals(
@@ -295,8 +295,8 @@ export function AccountingPeriodsPage() {
   const canSubmitOpeningBalance =
     !isFirstPeriod ||
     (balanceSheetAccountSubjects.length > 0 &&
-      openingBalanceTotals.hasLines &&
-      openingBalanceTotals.isBalanced);
+      openingBalanceFields.length > 0 &&
+      openingBalanceTotals.hasLines);
   const openFormBusy =
     openMutation.isPending ||
     form.formState.isSubmitting ||
@@ -465,12 +465,15 @@ export function AccountingPeriodsPage() {
             canSubmitOpeningBalance={canSubmitOpeningBalance}
             isSubmitting={openMutation.isPending}
             openingBalanceFields={openingBalanceFields}
+            openingBalanceLineCount={openingBalanceFields.length}
             openingBalanceAccountSubjects={balanceSheetAccountSubjects}
             openingBalanceFundingAccounts={openingBalanceFundingAccounts}
             openingBalanceTotals={openingBalanceTotals}
             openingBalanceReferenceError={openingBalanceReferenceError}
             onAppendOpeningBalanceLine={() => {
-              appendOpeningBalanceLine(createEmptyOpeningBalanceLine());
+              appendOpeningBalanceLine(createEmptyOpeningBalanceLine(), {
+                shouldFocus: true
+              });
             }}
             onRemoveOpeningBalanceLine={removeOpeningBalanceLine}
             onSubmit={handleOpenPeriodSubmit}
@@ -535,7 +538,7 @@ function buildOpeningBalanceTotals(
     accountSubjects.map((accountSubject) => [accountSubject.id, accountSubject])
   );
 
-  return lines.reduce(
+  const totals = lines.reduce(
     (accumulator, line) => {
       const accountSubject = accountSubjectById.get(line.accountSubjectId);
       const balanceAmount = Number(line.balanceAmount);
@@ -563,20 +566,24 @@ function buildOpeningBalanceTotals(
           break;
       }
 
-      accumulator.isBalanced =
-        accumulator.assetAmount ===
-        accumulator.liabilityAmount + accumulator.equityAmount;
-
       return accumulator;
     },
     {
       assetAmount: 0,
       liabilityAmount: 0,
       equityAmount: 0,
-      hasLines: false,
-      isBalanced: false
+      hasLines: false
     }
   );
+
+  const balanceGapAmount =
+    totals.assetAmount - (totals.liabilityAmount + totals.equityAmount);
+
+  return {
+    ...totals,
+    balanceGapAmount,
+    isBalanced: balanceGapAmount === 0
+  };
 }
 
 function normalizeOptionalIdentifier(value: string | null | undefined) {

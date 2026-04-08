@@ -134,10 +134,6 @@ export class OpenAccountingPeriodUseCase {
         })
       : [];
 
-    if (shouldCreateOpeningSnapshot) {
-      assertOpeningBalanceLinesBalanced(validatedOpeningBalanceLines);
-    }
-
     const { createdPeriod, createdStatusHistory, openingBalanceSnapshot } =
       await this.prisma.$transaction(async (tx) => {
         const createdPeriod = await tx.accountingPeriod.create({
@@ -292,47 +288,6 @@ function buildValidatedOpeningBalanceLines(input: {
       balanceAmount: line.balanceAmount
     };
   });
-}
-
-function assertOpeningBalanceLinesBalanced(
-  lines: Array<{
-    accountSubjectKind: AccountSubjectKind;
-    balanceAmount: number;
-  }>
-) {
-  const totals = lines.reduce(
-    (accumulator, line) => {
-      switch (line.accountSubjectKind) {
-        case 'ASSET':
-          accumulator.assetAmount += line.balanceAmount;
-          break;
-        case 'LIABILITY':
-          accumulator.liabilityAmount += line.balanceAmount;
-          break;
-        case 'EQUITY':
-          accumulator.equityAmount += line.balanceAmount;
-          break;
-        default:
-          break;
-      }
-
-      return accumulator;
-    },
-    {
-      assetAmount: 0,
-      liabilityAmount: 0,
-      equityAmount: 0
-    }
-  );
-
-  if (
-    totals.assetAmount !==
-    totals.liabilityAmount + totals.equityAmount
-  ) {
-    throw new BadRequestException(
-      `오프닝 잔액 합계가 맞지 않습니다. 자산 ${totals.assetAmount}원, 부채+자본 ${totals.liabilityAmount + totals.equityAmount}원입니다.`
-    );
-  }
 }
 
 function isOpeningBalanceSubjectKind(subjectKind: AccountSubjectKind) {

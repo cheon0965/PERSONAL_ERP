@@ -1,5 +1,6 @@
 import {
   Body,
+  ConflictException,
   Controller,
   Delete,
   ForbiddenException,
@@ -35,7 +36,10 @@ import { GetRecurringRuleDetailUseCase } from './application/use-cases/get-recur
 import { CreateRecurringRuleUseCase } from './application/use-cases/create-recurring-rule.use-case';
 import { ListRecurringRulesUseCase } from './application/use-cases/list-recurring-rules.use-case';
 import { UpdateRecurringRuleUseCase } from './application/use-cases/update-recurring-rule.use-case';
-import { MissingOwnedRecurringRuleReferenceError } from './domain/recurring-rule-policy';
+import {
+  InsuranceManagedRecurringRuleError,
+  MissingOwnedRecurringRuleReferenceError
+} from './domain/recurring-rule-policy';
 import { CreateRecurringRuleDto } from './dto/create-recurring-rule.dto';
 import { UpdateRecurringRuleDto } from './dto/update-recurring-rule.dto';
 
@@ -136,6 +140,10 @@ export class RecurringRulesController {
         throw new NotFoundException(error.message);
       }
 
+      if (error instanceof InsuranceManagedRecurringRuleError) {
+        throw new ConflictException(error.message);
+      }
+
       throw error;
     }
   }
@@ -201,6 +209,10 @@ export class RecurringRulesController {
         throw new NotFoundException(error.message);
       }
 
+      if (error instanceof InsuranceManagedRecurringRuleError) {
+        throw new ConflictException(error.message);
+      }
+
       throw error;
     }
   }
@@ -251,6 +263,10 @@ export class RecurringRulesController {
             ).join(',')
           }
         });
+      }
+
+      if (error instanceof InsuranceManagedRecurringRuleError) {
+        throw new ConflictException(error.message);
       }
 
       throw error;

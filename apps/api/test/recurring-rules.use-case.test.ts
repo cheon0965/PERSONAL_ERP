@@ -6,6 +6,7 @@ import { DeleteRecurringRuleUseCase } from '../src/modules/recurring-rules/appli
 import { ListRecurringRulesUseCase } from '../src/modules/recurring-rules/application/use-cases/list-recurring-rules.use-case';
 import { UpdateRecurringRuleUseCase } from '../src/modules/recurring-rules/application/use-cases/update-recurring-rule.use-case';
 import {
+  InsuranceManagedRecurringRuleError,
   MissingOwnedRecurringRuleReferenceError,
   prepareRecurringRuleSchedule
 } from '../src/modules/recurring-rules/domain/recurring-rule-policy';
@@ -34,6 +35,7 @@ test('CreateRecurringRuleUseCase persists a rule after ownership checks pass', a
         id: 'rr-1',
         ...record,
         nextRunDate: new Date('2026-03-10T00:00:00.000Z'),
+        linkedInsurancePolicyId: null,
         account: { name: 'Main checking' },
         category: { name: 'Fuel' }
       };
@@ -73,6 +75,7 @@ test('CreateRecurringRuleUseCase persists a rule after ownership checks pass', a
     amountWon: 75000,
     frequency: RecurrenceFrequency.MONTHLY,
     nextRunDate: '2026-03-10',
+    linkedInsurancePolicyId: null,
     fundingAccountName: 'Main checking',
     categoryName: 'Fuel',
     isActive: true
@@ -135,6 +138,7 @@ test('ListRecurringRulesUseCase maps stored rules into the shared response shape
         frequency: RecurrenceFrequency.MONTHLY,
         nextRunDate: new Date('2026-03-10T00:00:00.000Z'),
         isActive: true,
+        linkedInsurancePolicyId: null,
         account: { name: 'Main checking' },
         category: { name: 'Fuel' }
       }
@@ -157,6 +161,7 @@ test('ListRecurringRulesUseCase maps stored rules into the shared response shape
       amountWon: 75000,
       frequency: RecurrenceFrequency.MONTHLY,
       nextRunDate: '2026-03-10',
+      linkedInsurancePolicyId: null,
       fundingAccountName: 'Main checking',
       categoryName: 'Fuel',
       isActive: true
@@ -209,7 +214,8 @@ test('UpdateRecurringRuleUseCase persists updated schedule data after ownership 
       startDate: new Date('2026-03-10T00:00:00.000Z'),
       endDate: null,
       nextRunDate: new Date('2026-03-10T00:00:00.000Z'),
-      isActive: true
+      isActive: true,
+      linkedInsurancePolicyId: null
     }),
     createInWorkspace: async () => {
       throw new Error('createInWorkspace should not be called');
@@ -227,6 +233,7 @@ test('UpdateRecurringRuleUseCase persists updated schedule data after ownership 
         frequency: RecurrenceFrequency.MONTHLY,
         nextRunDate: new Date('2026-03-15T00:00:00.000Z'),
         isActive: false,
+        linkedInsurancePolicyId: null,
         account: { name: 'Main checking' },
         category: { name: 'Fuel' }
       };
@@ -264,6 +271,7 @@ test('UpdateRecurringRuleUseCase persists updated schedule data after ownership 
     amountWon: 88000,
     frequency: RecurrenceFrequency.MONTHLY,
     nextRunDate: '2026-03-15',
+    linkedInsurancePolicyId: null,
     fundingAccountName: 'Main checking',
     categoryName: 'Fuel',
     isActive: false
@@ -284,7 +292,8 @@ test('UpdateRecurringRuleUseCase rejects missing categories on update', async ()
       startDate: new Date('2026-03-10T00:00:00.000Z'),
       endDate: null,
       nextRunDate: new Date('2026-03-10T00:00:00.000Z'),
-      isActive: true
+      isActive: true,
+      linkedInsurancePolicyId: null
     }),
     createInWorkspace: async () => ({}),
     updateInWorkspace: async () => ({})
@@ -307,6 +316,48 @@ test('UpdateRecurringRuleUseCase rejects missing categories on update', async ()
   );
 });
 
+test('UpdateRecurringRuleUseCase rejects recurring rules managed by insurance policies', async () => {
+  const recurringRuleStore = {
+    findAllInWorkspace: async () => [],
+    findByIdInWorkspace: async () => ({
+      id: 'rr-1',
+      title: 'Phone bill',
+      accountId: 'acc-1',
+      categoryId: 'cat-1c',
+      amountWon: 75000,
+      frequency: RecurrenceFrequency.MONTHLY,
+      dayOfMonth: 10,
+      startDate: new Date('2026-03-10T00:00:00.000Z'),
+      endDate: null,
+      nextRunDate: new Date('2026-03-10T00:00:00.000Z'),
+      isActive: true,
+      linkedInsurancePolicyId: 'policy-1'
+    }),
+    createInWorkspace: async () => {
+      throw new Error('createInWorkspace should not be called');
+    },
+    updateInWorkspace: async () => {
+      throw new Error('updateInWorkspace should not be called');
+    }
+  };
+  const referenceOwnership = {
+    fundingAccountExistsInWorkspace: async () => true,
+    categoryExistsInWorkspace: async () => true
+  };
+
+  const useCase = new UpdateRecurringRuleUseCase(
+    recurringRuleStore as never,
+    referenceOwnership as never
+  );
+
+  await assert.rejects(
+    () => useCase.execute(updateRecurringRuleCommand),
+    (error: unknown) =>
+      error instanceof InsuranceManagedRecurringRuleError &&
+      error.insurancePolicyId === 'policy-1'
+  );
+});
+
 test('DeleteRecurringRuleUseCase deletes an existing recurring rule', async () => {
   const calls: Array<Record<string, string>> = [];
   const recurringRuleStore = {
@@ -321,7 +372,8 @@ test('DeleteRecurringRuleUseCase deletes an existing recurring rule', async () =
       startDate: new Date('2026-03-10T00:00:00.000Z'),
       endDate: null,
       nextRunDate: new Date('2026-03-10T00:00:00.000Z'),
-      isActive: true
+      isActive: true,
+      linkedInsurancePolicyId: null
     }),
     deleteInWorkspace: async (
       tenantId: string,
@@ -364,4 +416,40 @@ test('DeleteRecurringRuleUseCase returns false when the recurring rule is missin
   });
 
   assert.equal(result, false);
+});
+
+test('DeleteRecurringRuleUseCase rejects recurring rules managed by insurance policies', async () => {
+  const recurringRuleStore = {
+    findByIdInWorkspace: async () => ({
+      id: 'rr-1',
+      title: 'Phone bill',
+      accountId: 'acc-1',
+      categoryId: 'cat-1',
+      amountWon: 75000,
+      frequency: RecurrenceFrequency.MONTHLY,
+      dayOfMonth: 10,
+      startDate: new Date('2026-03-10T00:00:00.000Z'),
+      endDate: null,
+      nextRunDate: new Date('2026-03-10T00:00:00.000Z'),
+      isActive: true,
+      linkedInsurancePolicyId: 'policy-1'
+    }),
+    deleteInWorkspace: async () => {
+      throw new Error('deleteInWorkspace should not be called');
+    }
+  };
+
+  const useCase = new DeleteRecurringRuleUseCase(recurringRuleStore as never);
+
+  await assert.rejects(
+    () =>
+      useCase.execute({
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        recurringRuleId: 'rr-1'
+      }),
+    (error: unknown) =>
+      error instanceof InsuranceManagedRecurringRuleError &&
+      error.insurancePolicyId === 'policy-1'
+  );
 });

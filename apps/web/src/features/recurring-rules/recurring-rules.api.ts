@@ -4,71 +4,92 @@ import type {
   RecurringRuleItem,
   UpdateRecurringRuleRequest
 } from '@personal-erp/contracts';
-import { deleteJson, fetchJson, patchJson, postJson } from '@/shared/api/fetch-json';
+import {
+  deleteJson,
+  fetchJson,
+  patchJson,
+  postJson
+} from '@/shared/api/fetch-json';
 
 export const recurringRulesQueryKey = ['recurring-rules'] as const;
 
 export const recurringRuleDetailQueryKey = (recurringRuleId: string) =>
   ['recurring-rules', recurringRuleId] as const;
 
-export const mockRecurringRules: RecurringRuleItem[] = [
+export type ManagedRecurringRuleItem = RecurringRuleItem & {
+  linkedInsurancePolicyId: string | null;
+};
+
+export type ManagedRecurringRuleDetailItem = RecurringRuleDetailItem & {
+  linkedInsurancePolicyId: string | null;
+};
+
+export const mockRecurringRules: ManagedRecurringRuleItem[] = [
   {
     id: 'rr-1',
     title: 'POS/인터넷 요금',
     amountWon: 75000,
     frequency: 'MONTHLY',
     nextRunDate: '2026-04-10',
+    linkedInsurancePolicyId: null,
     fundingAccountName: '사업 운영 통장',
     categoryName: '통신·POS 비용',
     isActive: true
   },
   {
-    id: 'rr-2',
-    title: '정기 소모품 보충',
-    amountWon: 280000,
+    id: 'rr-ins-1',
+    title: '삼성화재 업무용 차량 보험',
+    amountWon: 98000,
     frequency: 'MONTHLY',
-    nextRunDate: '2026-04-03',
+    nextRunDate: '2026-04-25',
+    linkedInsurancePolicyId: 'ins-1',
     fundingAccountName: '사업 운영 통장',
-    categoryName: '원재료비',
+    categoryName: '사업 보험료',
     isActive: true
   }
 ];
 
-const mockRecurringRuleDetails: Record<string, RecurringRuleDetailItem> = {
-  'rr-1': {
-    id: 'rr-1',
-    title: 'POS/인터넷 요금',
-    fundingAccountId: 'acc-1',
-    categoryId: 'cat-5',
-    amountWon: 75000,
-    frequency: 'MONTHLY',
-    dayOfMonth: 10,
-    startDate: '2026-04-10',
-    endDate: null,
-    nextRunDate: '2026-04-10',
-    isActive: true
-  },
-  'rr-2': {
-    id: 'rr-2',
-    title: '정기 소모품 보충',
-    fundingAccountId: 'acc-1',
-    categoryId: 'cat-2',
-    amountWon: 280000,
-    frequency: 'MONTHLY',
-    dayOfMonth: 3,
-    startDate: '2026-04-03',
-    endDate: null,
-    nextRunDate: '2026-04-03',
-    isActive: true
-  }
-};
+const mockRecurringRuleDetails: Record<string, ManagedRecurringRuleDetailItem> =
+  {
+    'rr-1': {
+      id: 'rr-1',
+      title: 'POS/인터넷 요금',
+      fundingAccountId: 'acc-1',
+      categoryId: 'cat-5',
+      amountWon: 75000,
+      frequency: 'MONTHLY',
+      dayOfMonth: 10,
+      startDate: '2026-04-10',
+      endDate: null,
+      nextRunDate: '2026-04-10',
+      linkedInsurancePolicyId: null,
+      isActive: true
+    },
+    'rr-ins-1': {
+      id: 'rr-ins-1',
+      title: '삼성화재 업무용 차량 보험',
+      fundingAccountId: 'acc-1',
+      categoryId: 'cat-3',
+      amountWon: 98000,
+      frequency: 'MONTHLY',
+      dayOfMonth: 25,
+      startDate: '2026-04-25',
+      endDate: null,
+      nextRunDate: '2026-04-25',
+      linkedInsurancePolicyId: 'ins-1',
+      isActive: true
+    }
+  };
 
 export function getRecurringRules() {
-  return fetchJson<RecurringRuleItem[]>('/recurring-rules', mockRecurringRules);
+  return fetchJson<ManagedRecurringRuleItem[]>(
+    '/recurring-rules',
+    mockRecurringRules
+  );
 }
 
 export function getRecurringRuleDetail(recurringRuleId: string) {
-  return fetchJson<RecurringRuleDetailItem>(
+  return fetchJson<ManagedRecurringRuleDetailItem>(
     `/recurring-rules/${recurringRuleId}`,
     resolveRecurringRuleDetailFallback(recurringRuleId)
   );
@@ -76,9 +97,9 @@ export function getRecurringRuleDetail(recurringRuleId: string) {
 
 export function createRecurringRule(
   input: CreateRecurringRuleRequest,
-  fallback: RecurringRuleItem
+  fallback: ManagedRecurringRuleItem
 ) {
-  return postJson<RecurringRuleItem, CreateRecurringRuleRequest>(
+  return postJson<ManagedRecurringRuleItem, CreateRecurringRuleRequest>(
     '/recurring-rules',
     input,
     fallback
@@ -88,9 +109,9 @@ export function createRecurringRule(
 export function updateRecurringRule(
   recurringRuleId: string,
   input: UpdateRecurringRuleRequest,
-  fallback: RecurringRuleItem
+  fallback: ManagedRecurringRuleItem
 ) {
-  return patchJson<RecurringRuleItem, UpdateRecurringRuleRequest>(
+  return patchJson<ManagedRecurringRuleItem, UpdateRecurringRuleRequest>(
     `/recurring-rules/${recurringRuleId}`,
     input,
     fallback
@@ -109,14 +130,16 @@ export function buildRecurringRuleFallbackItem(
     id?: string;
     nextRunDate?: string | null;
     isActive?: boolean;
+    linkedInsurancePolicyId?: string | null;
   }
-): RecurringRuleItem {
+): ManagedRecurringRuleItem {
   return {
     id: context.id ?? `rr-demo-${Date.now()}`,
     title: input.title,
     amountWon: input.amountWon,
     frequency: input.frequency,
     nextRunDate: context.nextRunDate ?? input.startDate,
+    linkedInsurancePolicyId: context.linkedInsurancePolicyId ?? null,
     fundingAccountName: context.fundingAccountName,
     categoryName: context.categoryName ?? '-',
     isActive: context.isActive ?? input.isActive ?? true
@@ -124,9 +147,9 @@ export function buildRecurringRuleFallbackItem(
 }
 
 export function mergeRecurringRuleItem(
-  current: RecurringRuleItem[] | undefined,
-  created: RecurringRuleItem
-): RecurringRuleItem[] {
+  current: ManagedRecurringRuleItem[] | undefined,
+  created: ManagedRecurringRuleItem
+): ManagedRecurringRuleItem[] {
   const nextItems = [
     created,
     ...(current ?? []).filter((item) => item.id !== created.id)
@@ -144,15 +167,15 @@ export function mergeRecurringRuleItem(
 }
 
 export function removeRecurringRuleItem(
-  current: RecurringRuleItem[] | undefined,
+  current: ManagedRecurringRuleItem[] | undefined,
   recurringRuleId: string
-): RecurringRuleItem[] {
+): ManagedRecurringRuleItem[] {
   return (current ?? []).filter((item) => item.id !== recurringRuleId);
 }
 
 function resolveRecurringRuleDetailFallback(
   recurringRuleId: string
-): RecurringRuleDetailItem {
+): ManagedRecurringRuleDetailItem {
   const mockDetail = mockRecurringRuleDetails[recurringRuleId];
   if (mockDetail) {
     return mockDetail;
@@ -171,6 +194,7 @@ function resolveRecurringRuleDetailFallback(
     startDate: base?.nextRunDate ?? '2026-04-01',
     endDate: null,
     nextRunDate: base?.nextRunDate ?? '2026-04-01',
+    linkedInsurancePolicyId: base?.linkedInsurancePolicyId ?? null,
     isActive: base?.isActive ?? true
   };
 }

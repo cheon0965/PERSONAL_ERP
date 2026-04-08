@@ -6,8 +6,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Grid, MenuItem, Stack, TextField } from '@mui/material';
 import type {
   FundingAccountItem,
-  RecurringRuleDetailItem,
-  RecurringRuleItem,
   UpdateRecurringRuleRequest
 } from '@personal-erp/contracts';
 import { Controller, useForm } from 'react-hook-form';
@@ -27,6 +25,8 @@ import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import {
   buildRecurringRuleFallbackItem,
   createRecurringRule,
+  type ManagedRecurringRuleDetailItem,
+  type ManagedRecurringRuleItem,
   mergeRecurringRuleItem,
   recurringRuleDetailQueryKey,
   recurringRulesQueryKey,
@@ -67,14 +67,14 @@ type SaveRecurringRuleMutationInput = {
   mode: RecurringRuleFormMode;
   recurringRuleId?: string;
   payload: UpdateRecurringRuleRequest;
-  fallback: RecurringRuleItem;
+  fallback: ManagedRecurringRuleItem;
 };
 
 type RecurringRuleFormProps = {
   mode?: RecurringRuleFormMode;
-  initialRule?: RecurringRuleDetailItem | null;
+  initialRule?: ManagedRecurringRuleDetailItem | null;
   onCompleted?: (
-    recurringRule: RecurringRuleItem,
+    recurringRule: ManagedRecurringRuleItem,
     mode: RecurringRuleFormMode
   ) => void;
 };
@@ -131,8 +131,7 @@ export function RecurringRuleForm({
   const filteredCategories = React.useMemo(
     () =>
       categories.filter(
-        (category) =>
-          category.isActive || category.id === selectedCategoryId
+        (category) => category.isActive || category.id === selectedCategoryId
       ),
     [categories, selectedCategoryId]
   );
@@ -151,7 +150,7 @@ export function RecurringRuleForm({
       return createRecurringRule(payload, fallback);
     },
     onSuccess: async (saved, variables) => {
-      queryClient.setQueryData<RecurringRuleItem[]>(
+      queryClient.setQueryData<ManagedRecurringRuleItem[]>(
         recurringRulesQueryKey,
         (current) => mergeRecurringRuleItem(current, saved)
       );
@@ -263,7 +262,8 @@ export function RecurringRuleForm({
               fundingAccountName: selectedFundingAccount.name,
               categoryName: selectedCategory?.name,
               nextRunDate: initialRule?.nextRunDate ?? payload.startDate,
-              isActive: payload.isActive
+              isActive: payload.isActive,
+              linkedInsurancePolicyId: initialRule?.linkedInsurancePolicyId
             })
           });
 
@@ -502,7 +502,7 @@ export function RecurringRuleForm({
 }
 
 function mapDetailToFormInput(
-  recurringRule: RecurringRuleDetailItem
+  recurringRule: ManagedRecurringRuleDetailItem
 ): RecurringRuleFormInput {
   return {
     title: recurringRule.title,

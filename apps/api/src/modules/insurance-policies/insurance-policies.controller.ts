@@ -1,8 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
+  HttpCode,
+  HttpStatus,
   NotFoundException,
   Param,
   Patch,
@@ -82,6 +85,57 @@ export class InsurancePoliciesController {
           details: {
             requiredRoles: readAllowedWorkspaceRoles(
               'insurance_policy.create'
+            ).join(',')
+          }
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async delete(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') insurancePolicyId: string
+  ): Promise<void> {
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      assertWorkspaceActionAllowed(
+        workspace.membershipRole,
+        'insurance_policy.delete'
+      );
+
+      const deleted = await this.insurancePoliciesService.delete(
+        user,
+        insurancePolicyId
+      );
+
+      if (!deleted) {
+        throw new NotFoundException('Insurance policy not found');
+      }
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'insurance_policy.delete',
+        request,
+        workspace,
+        details: {
+          insurancePolicyId
+        }
+      });
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'insurance_policy.delete',
+          request,
+          workspace,
+          details: {
+            insurancePolicyId,
+            requiredRoles: readAllowedWorkspaceRoles(
+              'insurance_policy.delete'
             ).join(',')
           }
         });
