@@ -1,4 +1,5 @@
 import type { DashboardSummary } from '@personal-erp/contracts';
+import { addMoneyWon, subtractMoneyWon } from '@personal-erp/money';
 import { mapAccountingPeriodRecordToItem } from '../accounting-periods/accounting-period.mapper';
 import {
   buildOperationalHighlights,
@@ -25,11 +26,14 @@ export function projectDashboardSummary(
       ? (readModel.targetClosingSnapshot?.cashBalanceWon ??
         readModel.currentFundingBalanceWon)
       : readModel.currentFundingBalanceWon;
-  const expectedMonthEndBalanceWon =
-    actualBalanceWon +
-    remainingPlan.plannedIncomeWon -
-    remainingPlan.plannedExpenseWon;
-  const safetySurplusWon = expectedMonthEndBalanceWon - minimumReserveWon;
+  const expectedMonthEndBalanceWon = subtractMoneyWon(
+    addMoneyWon(actualBalanceWon, remainingPlan.plannedIncomeWon),
+    remainingPlan.plannedExpenseWon
+  );
+  const safetySurplusWon = subtractMoneyWon(
+    expectedMonthEndBalanceWon,
+    minimumReserveWon
+  );
   const comparisonPeriod = readModel.comparisonPeriod;
   const comparisonMonthLabel = comparisonPeriod
     ? `${comparisonPeriod.year}-${String(comparisonPeriod.month).padStart(2, '0')}`
@@ -52,8 +56,10 @@ export function projectDashboardSummary(
       safetySurplusWon,
       plannedExpenseWon: remainingPlan.plannedExpenseWon,
       officialComparisonNetWorthWon: readModel.comparisonClosingSnapshot
-        ? readModel.comparisonClosingSnapshot.totalAssetAmount -
-          readModel.comparisonClosingSnapshot.totalLiabilityAmount
+        ? subtractMoneyWon(
+            readModel.comparisonClosingSnapshot.totalAssetAmount,
+            readModel.comparisonClosingSnapshot.totalLiabilityAmount
+          )
         : null
     }),
     trend: readModel.trend.map((item) => {
@@ -84,9 +90,10 @@ export function projectDashboardSummary(
             periodId: comparisonPeriod.id,
             monthLabel: comparisonMonthLabel ?? comparisonPeriod.id,
             officialCashWon: readModel.comparisonClosingSnapshot.cashBalanceWon,
-            officialNetWorthWon:
-              readModel.comparisonClosingSnapshot.totalAssetAmount -
-              readModel.comparisonClosingSnapshot.totalLiabilityAmount,
+            officialNetWorthWon: subtractMoneyWon(
+              readModel.comparisonClosingSnapshot.totalAssetAmount,
+              readModel.comparisonClosingSnapshot.totalLiabilityAmount
+            ),
             officialPeriodPnLWon:
               readModel.comparisonClosingSnapshot.periodPnLAmount
           }

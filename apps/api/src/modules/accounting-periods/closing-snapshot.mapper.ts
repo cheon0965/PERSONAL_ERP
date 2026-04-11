@@ -2,10 +2,14 @@ import type {
   ClosingSnapshotItem,
   ClosingSnapshotLineItem
 } from '@personal-erp/contracts';
+import {
+  fromPrismaMoneyWon,
+  type PrismaMoneyLike
+} from '../../common/money/prisma-money';
 
 type ClosingSnapshotLineRecord = {
   id: string;
-  balanceAmount: number;
+  balanceAmount: PrismaMoneyLike;
   accountSubjectCode: string;
   accountSubjectName: string;
   fundingAccountName: string | null;
@@ -15,10 +19,10 @@ type ClosingSnapshotRecord = {
   id: string;
   periodId: string;
   lockedAt: Date;
-  totalAssetAmount: number;
-  totalLiabilityAmount: number;
-  totalEquityAmount: number;
-  periodPnLAmount: number;
+  totalAssetAmount: PrismaMoneyLike;
+  totalLiabilityAmount: PrismaMoneyLike;
+  totalEquityAmount: PrismaMoneyLike;
+  periodPnLAmount: PrismaMoneyLike;
   lines: ClosingSnapshotLineRecord[];
 };
 
@@ -29,10 +33,10 @@ export function mapClosingSnapshotRecordToItem(
     id: record.id,
     periodId: record.periodId,
     lockedAt: record.lockedAt.toISOString(),
-    totalAssetAmount: record.totalAssetAmount,
-    totalLiabilityAmount: record.totalLiabilityAmount,
-    totalEquityAmount: record.totalEquityAmount,
-    periodPnLAmount: record.periodPnLAmount,
+    totalAssetAmount: fromPrismaMoneyWon(record.totalAssetAmount),
+    totalLiabilityAmount: fromPrismaMoneyWon(record.totalLiabilityAmount),
+    totalEquityAmount: fromPrismaMoneyWon(record.totalEquityAmount),
+    periodPnLAmount: fromPrismaMoneyWon(record.periodPnLAmount),
     lines: record.lines.map(mapClosingSnapshotLineRecordToItem)
   };
 }
@@ -45,6 +49,6 @@ function mapClosingSnapshotLineRecordToItem(
     accountSubjectCode: record.accountSubjectCode,
     accountSubjectName: record.accountSubjectName,
     fundingAccountName: record.fundingAccountName,
-    balanceAmount: record.balanceAmount
+    balanceAmount: fromPrismaMoneyWon(record.balanceAmount)
   };
 }

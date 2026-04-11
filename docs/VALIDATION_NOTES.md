@@ -7,13 +7,22 @@
 
 - `npm run check:quick`
 - `npm run test`
+- `npm run money:check`
 
 설명:
 
-- `npm run check:quick`는 Prettier, 문서의 `npm run` 명령 정합성 검사, 문서의 Web/API surface 정합성 검사, lint, typecheck를 함께 확인합니다.
+- `npm run check:quick`는 Prettier, 문서의 `npm run` 명령 정합성 검사, 문서의 Web/API surface 정합성 검사, 금액 raw 연산 가드, lint, typecheck를 함께 확인합니다.
 - 현재 문서 정합성 검사는 `npm run docs:check`로도 단독 실행할 수 있습니다.
+- `npm run money:check`는 `apps/api/src`, `apps/web/src`, `packages/contracts/src`에서 money package 밖의 금액 필드 `Number(...)`, raw `+/-`, `+=/-=` 유입을 보수적으로 막습니다.
 - `npm run docs:check:npm-run`는 `README.md`, `CONTRIBUTING.md`, `ENVIRONMENT_SETUP.md`, `docs/**/*.md`의 `npm run` 표기를 루트/workspace 스크립트와 대조합니다.
 - `npm run docs:check:surface`는 `docs/API.md`, `docs/VALIDATION_NOTES.md`의 Web/API surface가 실제 `apps/web/app` 라우트와 controller 기반 Swagger surface와 맞는지 확인합니다.
+
+## 금액 정합성 검증 기준
+
+- HTTP 계약의 금액은 `MoneyWon` 의미의 `number`이며, KRW 원 단위 safe integer만 허용합니다.
+- Prisma 금액 컬럼은 `Decimal(19,0)`로 저장하고 mapper 경계에서 `Prisma.Decimal -> MoneyWon(number)`로 변환합니다.
+- `HALF_UP` 반올림과 배분 잔차 보정은 `@personal-erp/money`의 `decimal.js` 기반 helper로 고정합니다.
+- 금액 합계, 차감, 배분, 업로드 파싱 회귀는 `apps/api/test/money-won.test.ts`와 API/Web 요청 테스트에서 확인합니다.
 
 ## 대표 심화 검증
 

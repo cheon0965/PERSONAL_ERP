@@ -6,6 +6,7 @@ import type {
   ReportingHighlightItem,
   ReportingTrendPoint
 } from '@personal-erp/contracts';
+import { addMoneyWon, subtractMoneyWon } from '@personal-erp/money';
 
 export type JournalLineMetricInput = {
   debitAmount: number;
@@ -37,10 +38,16 @@ export function summarizeJournalLines(lines: JournalLineMetricInput[]) {
     (summary, line) => {
       switch (line.accountSubject.subjectKind) {
         case 'INCOME':
-          summary.incomeWon += line.creditAmount - line.debitAmount;
+          summary.incomeWon = addMoneyWon(
+            summary.incomeWon,
+            subtractMoneyWon(line.creditAmount, line.debitAmount)
+          );
           break;
         case 'EXPENSE':
-          summary.expenseWon += line.debitAmount - line.creditAmount;
+          summary.expenseWon = addMoneyWon(
+            summary.expenseWon,
+            subtractMoneyWon(line.debitAmount, line.creditAmount)
+          );
           break;
         default:
           break;
@@ -75,9 +82,15 @@ export function summarizeRemainingPlanItems(input: {
 
       const flowKind = flowKindByTypeId.get(item.ledgerTransactionTypeId);
       if (flowKind === 'INCOME') {
-        summary.plannedIncomeWon += item.plannedAmount;
+        summary.plannedIncomeWon = addMoneyWon(
+          summary.plannedIncomeWon,
+          item.plannedAmount
+        );
       } else if (flowKind === 'EXPENSE') {
-        summary.plannedExpenseWon += item.plannedAmount;
+        summary.plannedExpenseWon = addMoneyWon(
+          summary.plannedExpenseWon,
+          item.plannedAmount
+        );
       }
 
       return summary;
@@ -102,11 +115,13 @@ export function buildTrendPoint(input: {
 }): ReportingTrendPoint {
   const periodPnLWon = input.closingSnapshot
     ? input.closingSnapshot.periodPnLAmount
-    : input.incomeWon - input.expenseWon;
+    : subtractMoneyWon(input.incomeWon, input.expenseWon);
   const cashWon = input.actualBalanceWon;
   const netWorthWon = input.closingSnapshot
-    ? input.closingSnapshot.totalAssetAmount -
-      input.closingSnapshot.totalLiabilityAmount
+    ? subtractMoneyWon(
+        input.closingSnapshot.totalAssetAmount,
+        input.closingSnapshot.totalLiabilityAmount
+      )
     : null;
 
   return {

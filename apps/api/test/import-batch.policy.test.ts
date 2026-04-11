@@ -75,3 +75,21 @@ test('parseImportBatchContent uses source-specific origin columns when building 
   assert.equal(parsed.parseStatus, ImportBatchParseStatus.COMPLETED);
   assert.equal(parsed.rows[0]?.sourceFingerprint, expected);
 });
+
+test('parseImportBatchContent rejects amounts outside the safe money integer range', () => {
+  const parsed = parseImportBatchContent({
+    sourceKind: ImportSourceKind.BANK_CSV,
+    content: [
+      'date,title,amount,account_name',
+      '2026-03-02,Overflow,9007199254740992,Main Checking'
+    ].join('\n')
+  });
+
+  assert.equal(parsed.parseStatus, ImportBatchParseStatus.FAILED);
+  assert.equal(parsed.rows[0]?.parseStatus, ImportedRowParseStatus.FAILED);
+  assert.match(
+    parsed.rows[0]?.parseError ?? '',
+    /amount 값이 올바르지 않습니다\./
+  );
+  assert.equal(parsed.rows[0]?.sourceFingerprint, null);
+});

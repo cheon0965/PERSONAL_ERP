@@ -265,6 +265,8 @@ test(
           categoryName: 'Integration Fuel',
           sourceKind: 'MANUAL',
           postingStatus: 'READY_TO_POST',
+          matchedPlanItemId: null,
+          matchedPlanItemTitle: null,
           postedJournalEntryId: null,
           postedJournalEntryNumber: null
         });

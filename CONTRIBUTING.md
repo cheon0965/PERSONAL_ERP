@@ -90,6 +90,14 @@
 - Next.js build 결과물, 공용 라우팅, 인증 복원, 운영 체크리스트 smoke에 영향을 줄 수 있다면 `npm run test:e2e:smoke:build`를 추가로 봅니다.
 - Prisma/MySQL 경계를 건드리면 `npm run test:prisma`를 대표 심화 검증으로 사용합니다.
 - 인증, 소유권 검증, 월말 계산 로직을 건드리면 관련 테스트를 같이 수정합니다.
+- 금액 필드나 금액 집계/반올림/배분을 건드리면 `@personal-erp/money` helper와 `npm run money:check` 기준을 함께 확인합니다.
+
+## 금액 규칙
+
+- HTTP 계약의 금액은 `MoneyWon` 의미의 `number`이며 KRW 원 단위 safe integer만 허용합니다.
+- Prisma 영속 금액 컬럼은 `Decimal(19,0)` 기준으로 유지하고, API mapper/adapter 경계에서 `MoneyWon(number)`로 변환합니다.
+- 금액 합산, 차감, `HALF_UP` 반올림, 배분 잔차 보정은 `@personal-erp/money`를 사용하고 money package 밖에서 raw `Number(...)`, `+/-`, `+=/-=`를 새로 추가하지 않습니다.
+- 이 규칙은 `npm run money:check`와 `npm run check:quick`에 포함된 정적 가드로 검증합니다.
 
 ## 문서 갱신 규칙
 
@@ -97,6 +105,7 @@
 - 배포/운영 절차 변경: `docs/OPERATIONS_CHECKLIST.md`
 - 협업 흐름 변경: `CONTRIBUTING.md`
 - 구조 변경: `docs/ARCHITECTURE.md`
+- 금액 계약/연산/검증 기준 변경: `docs/API.md`, `docs/VALIDATION_NOTES.md`, `docs/ARCHITECTURE.md`
 - 설계 결정 기록: `docs/adr/`
 
 ## 계약과 문서 동기화 규칙

@@ -117,7 +117,17 @@ const nextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
   env: resolvedPublicEnv,
-  webpack: (config) => config
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@personal-erp/money': path.resolve(
+        repoRoot,
+        'packages/money/dist/index.js'
+      )
+    };
+
+    return config;
+  }
 };
 
 export default nextConfig;

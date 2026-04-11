@@ -12,6 +12,7 @@ import type {
 } from '@personal-erp/contracts';
 import { CategoryKind, type Prisma, RecurrenceFrequency } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
+import { requirePositiveMoneyWon } from '../../common/money/money-won';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   prepareRecurringRuleSchedule,
@@ -445,7 +446,10 @@ function normalizeInsurancePolicyInput(
   return {
     provider,
     productName,
-    monthlyPremiumWon: input.monthlyPremiumWon,
+    monthlyPremiumWon: requirePositiveMoneyWon(
+      input.monthlyPremiumWon,
+      '월 보험료는 0보다 큰 안전한 정수여야 합니다.'
+    ),
     paymentDay: input.paymentDay,
     cycle: input.cycle,
     fundingAccountId,

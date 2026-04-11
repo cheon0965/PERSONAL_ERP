@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { BadRequestException } from '@nestjs/common';
+import { isMoneyWon, parseMoneyWon } from '@personal-erp/money';
 import {
   ImportBatchParseStatus,
   ImportedRowParseStatus,
@@ -241,7 +242,7 @@ export function readParsedImportedRowPayload(
     typeof parsed.amount === 'number' &&
     normalizeDateToken(parsed.occurredOn) &&
     normalizeTextToken(parsed.title) &&
-    Number.isSafeInteger(parsed.amount)
+    isMoneyWon(parsed.amount)
     ? {
         occurredOn: parsed.occurredOn,
         title: parsed.title,
@@ -352,17 +353,7 @@ function normalizeAmountToken(value: string | null): number | null {
     return null;
   }
 
-  const normalized = value.replace(/,/g, '').trim();
-  if (!/^-?\d+$/.test(normalized)) {
-    return null;
-  }
-
-  const amount = Number(normalized);
-  if (!Number.isSafeInteger(amount)) {
-    return null;
-  }
-
-  return amount;
+  return parseMoneyWon(value);
 }
 
 function isRecord(

@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import type { ReportingBasisStatus } from '@personal-erp/contracts';
+import { sumMoneyWon } from '@personal-erp/money';
 import { AccountingPeriodStatus, Prisma } from '@prisma/client';
+import {
+  fromPrismaMoneyWon,
+  type PrismaMoneyLike
+} from '../../common/money/prisma-money';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   findLatestLockedPeriod,
@@ -190,8 +195,8 @@ export class DashboardReadRepository {
               month: period.month,
               status: period.status
             },
-            journalLines,
-            planItems,
+            journalLines: journalLines.map(mapDashboardJournalLineRecord),
+            planItems: planItems.map(mapDashboardPlanItemRecord),
             closingSnapshot
           }
         ] as const;
@@ -199,9 +204,8 @@ export class DashboardReadRepository {
     );
 
     const metricsByPeriodId = new Map(periodMetrics);
-    const currentFundingBalanceWon = accounts.reduce(
-      (sum, account) => sum + account.balanceWon,
-      0
+    const currentFundingBalanceWon = sumMoneyWon(
+      accounts.map((account) => fromPrismaMoneyWon(account.balanceWon))
     );
 
     return {
@@ -210,7 +214,10 @@ export class DashboardReadRepository {
         targetPeriod.status === AccountingPeriodStatus.LOCKED
           ? 'OFFICIAL_LOCKED'
           : 'LIVE_OPERATIONS',
-      minimumReserveWon: user.settings?.minimumReserveWon ?? null,
+      minimumReserveWon:
+        user.settings?.minimumReserveWon == null
+          ? null
+          : fromPrismaMoneyWon(user.settings.minimumReserveWon),
       currentFundingBalanceWon,
       targetJournalLines:
         metricsByPeriodId.get(targetPeriod.id)?.journalLines ?? [],
@@ -298,13 +305,36 @@ async function loadClosingSnapshotMetrics(
         line.accountSubject.subjectKind === 'ASSET' &&
         Boolean(line.fundingAccount)
     )
-    .reduce((sum, line) => sum + line.balanceAmount, 0);
+    .map((line) => fromPrismaMoneyWon(line.balanceAmount));
 
   return {
-    totalAssetAmount: snapshot.totalAssetAmount,
-    totalLiabilityAmount: snapshot.totalLiabilityAmount,
-    periodPnLAmount: snapshot.periodPnLAmount,
-    cashBalanceWon
+    totalAssetAmount: fromPrismaMoneyWon(snapshot.totalAssetAmount),
+    totalLiabilityAmount: fromPrismaMoneyWon(snapshot.totalLiabilityAmount),
+    periodPnLAmount: fromPrismaMoneyWon(snapshot.periodPnLAmount),
+    cashBalanceWon: sumMoneyWon(cashBalanceWon)
+  };
+}
+
+function mapDashboardJournalLineRecord(record: {
+  debitAmount: PrismaMoneyLike;
+  creditAmount: PrismaMoneyLike;
+  accountSubject: DashboardJournalLineRecord['accountSubject'];
+}): DashboardJournalLineRecord {
+  return {
+    ...record,
+    debitAmount: fromPrismaMoneyWon(record.debitAmount),
+    creditAmount: fromPrismaMoneyWon(record.creditAmount)
+  };
+}
+
+function mapDashboardPlanItemRecord(record: {
+  plannedAmount: PrismaMoneyLike;
+  status: DashboardPlanItemRecord['status'];
+  ledgerTransactionTypeId: string;
+}): DashboardPlanItemRecord {
+  return {
+    ...record,
+    plannedAmount: fromPrismaMoneyWon(record.plannedAmount)
   };
 }
 

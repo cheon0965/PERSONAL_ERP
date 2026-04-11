@@ -160,9 +160,9 @@ test('GET /account-subjects returns active account subjects for the current work
         isActive: true
       },
       {
-        id: 'as-1-2010',
-        code: '2010',
-        name: '카드대금',
+        id: 'as-1-2100',
+        code: '2100',
+        name: '카드미지급금',
         statementType: 'BALANCE_SHEET',
         normalSide: 'CREDIT',
         subjectKind: 'LIABILITY',
@@ -170,9 +170,9 @@ test('GET /account-subjects returns active account subjects for the current work
         isActive: true
       },
       {
-        id: 'as-1-3010',
-        code: '3010',
-        name: '사업자본',
+        id: 'as-1-3100',
+        code: '3100',
+        name: '순자산',
         statementType: 'BALANCE_SHEET',
         normalSide: 'CREDIT',
         subjectKind: 'EQUITY',

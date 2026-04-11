@@ -2,6 +2,7 @@ import type {
   CollectImportedRowRequest,
   CollectedTransactionItem
 } from '@personal-erp/contracts';
+import { fromPrismaMoneyWon } from '../../common/money/prisma-money';
 import type { CreatedCollectedTransactionRecord } from './imported-row-collection.types';
 
 export function mapCreatedCollectedTransactionToItem(
@@ -13,7 +14,7 @@ export function mapCreatedCollectedTransactionToItem(
     businessDate: transaction.occurredOn.toISOString().slice(0, 10),
     title: transaction.title,
     type,
-    amountWon: transaction.amount,
+    amountWon: fromPrismaMoneyWon(transaction.amount),
     fundingAccountName: transaction.fundingAccount.name,
     categoryName: transaction.category?.name ?? '-',
     sourceKind: 'IMPORT',

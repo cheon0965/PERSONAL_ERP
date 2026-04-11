@@ -1,4 +1,5 @@
 import type { AuditActorType } from './accounting';
+import type { MoneyWon } from './money';
 
 export type CollectedTransactionType = 'INCOME' | 'EXPENSE' | 'TRANSFER';
 
@@ -17,7 +18,7 @@ export type CollectedTransactionItem = {
   businessDate: string;
   title: string;
   type: CollectedTransactionType;
-  amountWon: number;
+  amountWon: MoneyWon;
   fundingAccountName: string;
   categoryName: string;
   sourceKind: CollectedTransactionSourceKind;
@@ -33,7 +34,7 @@ export type CollectedTransactionDetailItem = {
   businessDate: string;
   title: string;
   type: CollectedTransactionType;
-  amountWon: number;
+  amountWon: MoneyWon;
   fundingAccountId: string;
   categoryId: string | null;
   memo: string | null;
@@ -48,7 +49,7 @@ export type CollectedTransactionDetailItem = {
 export type CreateCollectedTransactionRequest = {
   title: string;
   type: CollectedTransactionType;
-  amountWon: number;
+  amountWon: MoneyWon;
   businessDate: string;
   fundingAccountId: string;
   categoryId?: string;
@@ -73,8 +74,8 @@ export type JournalLineItem = {
   accountSubjectCode: string;
   accountSubjectName: string;
   fundingAccountName: string | null;
-  debitAmount: number;
-  creditAmount: number;
+  debitAmount: MoneyWon;
+  creditAmount: MoneyWon;
   description: string | null;
 };
 
@@ -109,8 +110,8 @@ export type ReverseJournalEntryRequest = {
 export type CorrectJournalEntryLineInput = {
   accountSubjectId: string;
   fundingAccountId?: string;
-  debitAmount: number;
-  creditAmount: number;
+  debitAmount: MoneyWon;
+  creditAmount: MoneyWon;
   description?: string;
 };
 

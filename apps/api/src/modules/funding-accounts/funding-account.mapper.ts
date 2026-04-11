@@ -1,9 +1,16 @@
 import type { FundingAccountItem } from '@personal-erp/contracts';
+import {
+  fromPrismaMoneyWon,
+  type PrismaMoneyLike
+} from '../../common/money/prisma-money';
 
-type AccountRecord = Pick<
-  FundingAccountItem,
-  'id' | 'name' | 'type' | 'balanceWon' | 'status'
->;
+type AccountRecord = {
+  id: string;
+  name: string;
+  type: FundingAccountItem['type'];
+  balanceWon: PrismaMoneyLike;
+  status: FundingAccountItem['status'];
+};
 
 export function mapFundingAccountRecordToItem(
   account: AccountRecord
@@ -12,7 +19,7 @@ export function mapFundingAccountRecordToItem(
     id: account.id,
     name: account.name,
     type: account.type,
-    balanceWon: account.balanceWon,
+    balanceWon: fromPrismaMoneyWon(account.balanceWon),
     status: account.status
   };
 }

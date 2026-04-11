@@ -14,6 +14,7 @@ import { vehicleMaintenanceCategoryValues } from '@personal-erp/contracts/assets
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { webRuntime } from '@/shared/config/env';
+import { createNonNegativeMoneyWonSchema } from '@/shared/lib/money';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import {
   buildVehicleMaintenanceLogFallbackItem,
@@ -42,10 +43,9 @@ const vehicleMaintenanceFormSchema = z.object({
   category: z.enum(vehicleMaintenanceCategoryValues),
   vendor: z.string().trim(),
   description: z.string().trim().min(2, '정비 내용은 2자 이상이어야 합니다.'),
-  amountWon: z.coerce
-    .number()
-    .int()
-    .min(0, '정비 비용은 0 이상이어야 합니다.'),
+  amountWon: createNonNegativeMoneyWonSchema(
+    '정비 비용은 0 이상이어야 합니다.'
+  ),
   memo: z.string().trim()
 });
 

@@ -3,14 +3,14 @@ import type {
   ReopenAccountingPeriodRequest
 } from '@personal-erp/contracts';
 import { z } from 'zod';
+import { createPositiveMoneyWonTextSchema } from '@/shared/lib/money';
 
 export const openingBalanceLineFormSchema = z.object({
   accountSubjectId: z.string().trim().min(1, '계정과목을 선택해 주세요.'),
   fundingAccountId: z.string(),
-  balanceAmount: z
-    .string()
-    .trim()
-    .regex(/^[1-9]\d*$/, '잔액은 1원 이상의 정수로 입력해 주세요.')
+  balanceAmount: createPositiveMoneyWonTextSchema(
+    '잔액은 1원 이상의 안전한 정수로 입력해 주세요.'
+  )
 });
 
 export const periodFormSchema = z.object({

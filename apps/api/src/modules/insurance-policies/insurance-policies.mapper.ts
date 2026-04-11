@@ -1,10 +1,14 @@
-﻿import type { InsurancePolicyItem } from '@personal-erp/contracts';
+import type { InsurancePolicyItem } from '@personal-erp/contracts';
+import {
+  fromPrismaMoneyWon,
+  type PrismaMoneyLike
+} from '../../common/money/prisma-money';
 
 type InsurancePolicyRecord = {
   id: string;
   provider: string;
   productName: string;
-  monthlyPremiumWon: number;
+  monthlyPremiumWon: PrismaMoneyLike;
   paymentDay: number;
   cycle: InsurancePolicyItem['cycle'];
   accountId: string | null;
@@ -31,14 +35,15 @@ export function mapInsurancePolicyToItem(
     id: item.id,
     provider: item.provider,
     productName: item.productName,
-    monthlyPremiumWon: item.monthlyPremiumWon,
+    monthlyPremiumWon: fromPrismaMoneyWon(item.monthlyPremiumWon),
     paymentDay: item.paymentDay,
     cycle: item.cycle,
     fundingAccountId: item.accountId,
     fundingAccountName: item.account?.name ?? null,
     categoryId: item.categoryId,
     categoryName: item.category?.name ?? null,
-    recurringStartDate: item.recurringStartDate?.toISOString().slice(0, 10) ?? null,
+    recurringStartDate:
+      item.recurringStartDate?.toISOString().slice(0, 10) ?? null,
     linkedRecurringRuleId: item.linkedRecurringRuleId,
     renewalDate: item.renewalDate?.toISOString().slice(0, 10) ?? null,
     maturityDate: item.maturityDate?.toISOString().slice(0, 10) ?? null,

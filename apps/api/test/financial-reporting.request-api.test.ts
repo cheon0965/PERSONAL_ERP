@@ -82,7 +82,7 @@ test('POST /financial-statements/generate creates official statement snapshots f
         snapshotKind: 'CLOSING',
         openingSnapshotId: null,
         closingSnapshotId: 'closing-report-1',
-        accountSubjectId: 'as-1-3010',
+        accountSubjectId: 'as-1-3100',
         fundingAccountId: null,
         balanceAmount: 3_000_000
       },
@@ -527,7 +527,7 @@ test('POST /carry-forwards/generate creates a carry forward record and the next 
         snapshotKind: 'CLOSING',
         openingSnapshotId: null,
         closingSnapshotId: 'closing-carry-1',
-        accountSubjectId: 'as-1-3010',
+        accountSubjectId: 'as-1-3100',
         fundingAccountId: null,
         balanceAmount: 3_000_000
       },
@@ -570,7 +570,7 @@ test('POST /carry-forwards/generate creates a carry forward record and the next 
           balanceAmount: 2_916_000
         },
         {
-          accountSubjectCode: '3010',
+          accountSubjectCode: '3100',
           balanceAmount: 3_000_000
         }
       ]
@@ -715,7 +715,7 @@ test('GET /carry-forwards returns the stored carry forward view for the selected
         snapshotKind: 'CLOSING',
         openingSnapshotId: null,
         closingSnapshotId: 'closing-carry-view',
-        accountSubjectId: 'as-1-3010',
+        accountSubjectId: 'as-1-3100',
         fundingAccountId: null,
         balanceAmount: 3_120_000
       },
@@ -733,7 +733,7 @@ test('GET /carry-forwards returns the stored carry forward view for the selected
         snapshotKind: 'OPENING',
         openingSnapshotId: 'opening-carry-view',
         closingSnapshotId: null,
-        accountSubjectId: 'as-1-3010',
+        accountSubjectId: 'as-1-3100',
         fundingAccountId: null,
         balanceAmount: 3_120_000
       }
@@ -779,7 +779,7 @@ test('GET /carry-forwards returns the stored carry forward view for the selected
       body.targetOpeningBalanceSnapshot.lines.map(
         (line) => line.accountSubjectCode
       ),
-      ['1010', '3010']
+      ['1010', '3100']
     );
   } finally {
     await context.close();

@@ -15,6 +15,7 @@ import {
   Min,
   ValidateNested
 } from 'class-validator';
+import { moneyWonApiProperty } from '../../../common/money/swagger-money';
 
 class CorrectJournalEntryLineInputDto implements CorrectJournalEntryLineInput {
   @ApiProperty({ example: 'as-1-5100' })
@@ -26,12 +27,12 @@ class CorrectJournalEntryLineInputDto implements CorrectJournalEntryLineInput {
   @IsString()
   fundingAccountId?: string;
 
-  @ApiProperty({ example: 84000 })
+  @ApiProperty(moneyWonApiProperty({ example: 84000, minimum: 0 }))
   @IsInt()
   @Min(0)
   debitAmount!: number;
 
-  @ApiProperty({ example: 0 })
+  @ApiProperty(moneyWonApiProperty({ example: 0, minimum: 0 }))
   @IsInt()
   @Min(0)
   creditAmount!: number;

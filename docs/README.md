@@ -37,6 +37,7 @@
 - `archive/`: 이미 수행했거나 특정 단계의 실행 기준으로 사용했던 문서를 보관한다.
 - `archive/ALIGNMENT_PATCH_EXECUTION_PLAN.md`: 내부 정합성 패치와 설계 모델 분리를 완료하고 보관한 실행 계획
 - `archive/BUSINESS_FLOW_IMPROVEMENT_EXECUTION_PLAN.md`: 완료된 메인 비즈니스 흐름 고도화 실행 계획 및 반영 현황
+- `archive/MONEY_INTEGRITY_EXECUTION_PLAN.md`: `MoneyWon`, 금액 컬럼 승격, exact arithmetic 통일을 완료하고 보관한 실행계획
 - 아카이브 문서는 배경 맥락과 의사결정 이력을 남기기 위한 용도이며, 현재 기준 문서를 대체하지 않는다.
 
 현재 `phase-1` 실행 계획 문서는 `archive/phase-1/`로 분리해 두었다.

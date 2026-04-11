@@ -1,5 +1,6 @@
 export * from './auth';
 export * from './reference-data';
+export * from './money';
 export * from './accounting';
 export * from './transactions';
 export * from './recurring';

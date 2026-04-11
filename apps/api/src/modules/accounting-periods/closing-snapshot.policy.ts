@@ -1,4 +1,9 @@
+import { addMoneyWon, subtractMoneyWon } from '@personal-erp/money';
 import type { AccountSubjectKind } from '@prisma/client';
+import {
+  fromPrismaMoneyWon,
+  type PrismaMoneyLike
+} from '../../common/money/prisma-money';
 
 export type AggregatedClosingSnapshotLine = {
   accountSubjectId: string;
@@ -21,8 +26,8 @@ type JournalLineForClosingSnapshot = {
     id: string;
     name: string;
   } | null;
-  debitAmount: number;
-  creditAmount: number;
+  debitAmount: PrismaMoneyLike;
+  creditAmount: PrismaMoneyLike;
 };
 
 type OpeningBalanceLineForClosingSnapshot = {
@@ -36,7 +41,7 @@ type OpeningBalanceLineForClosingSnapshot = {
     id: string;
     name: string;
   } | null;
-  balanceAmount: number;
+  balanceAmount: PrismaMoneyLike;
 };
 
 export function aggregateClosingSnapshotLines(
@@ -51,7 +56,7 @@ export function aggregateClosingSnapshotLines(
     accumulateClosingSnapshotLine(grouped, {
       accountSubject: line.accountSubject,
       fundingAccount: line.fundingAccount,
-      balanceAmount: line.balanceAmount
+      balanceAmount: fromPrismaMoneyWon(line.balanceAmount)
     });
   }
 
@@ -61,8 +66,8 @@ export function aggregateClosingSnapshotLines(
       fundingAccount: line.fundingAccount,
       balanceAmount: projectNaturalBalance(
         line.accountSubject.subjectKind,
-        line.debitAmount,
-        line.creditAmount
+        fromPrismaMoneyWon(line.debitAmount),
+        fromPrismaMoneyWon(line.creditAmount)
       )
     });
   }
@@ -86,7 +91,10 @@ function accumulateClosingSnapshotLine(
   const existing = grouped.get(key);
 
   if (existing) {
-    existing.balanceAmount += input.balanceAmount;
+    existing.balanceAmount = addMoneyWon(
+      existing.balanceAmount,
+      input.balanceAmount
+    );
     return;
   }
 
@@ -110,11 +118,11 @@ function projectNaturalBalance(
     case 'LIABILITY':
     case 'EQUITY':
     case 'INCOME':
-      return creditAmount - debitAmount;
+      return subtractMoneyWon(creditAmount, debitAmount);
     case 'ASSET':
     case 'EXPENSE':
     default:
-      return debitAmount - creditAmount;
+      return subtractMoneyWon(debitAmount, creditAmount);
   }
 }
 
@@ -130,27 +138,42 @@ export function summarizeClosingSnapshot(
   for (const line of lines) {
     switch (line.accountSubjectKind) {
       case 'ASSET':
-        totalAssetAmount += line.balanceAmount;
+        totalAssetAmount = addMoneyWon(totalAssetAmount, line.balanceAmount);
         break;
       case 'LIABILITY':
-        totalLiabilityAmount += line.balanceAmount;
+        totalLiabilityAmount = addMoneyWon(
+          totalLiabilityAmount,
+          line.balanceAmount
+        );
         break;
       case 'EQUITY':
-        totalEquityBaseAmount += line.balanceAmount;
+        totalEquityBaseAmount = addMoneyWon(
+          totalEquityBaseAmount,
+          line.balanceAmount
+        );
         break;
       case 'INCOME':
-        totalIncomeAmount += line.balanceAmount;
+        totalIncomeAmount = addMoneyWon(totalIncomeAmount, line.balanceAmount);
         break;
       case 'EXPENSE':
-        totalExpenseAmount += line.balanceAmount;
+        totalExpenseAmount = addMoneyWon(
+          totalExpenseAmount,
+          line.balanceAmount
+        );
         break;
       default:
         break;
     }
   }
 
-  const periodPnLAmount = totalIncomeAmount - totalExpenseAmount;
-  const totalEquityAmount = totalEquityBaseAmount + periodPnLAmount;
+  const periodPnLAmount = subtractMoneyWon(
+    totalIncomeAmount,
+    totalExpenseAmount
+  );
+  const totalEquityAmount = addMoneyWon(
+    totalEquityBaseAmount,
+    periodPnLAmount
+  );
 
   return {
     totalAssetAmount,

@@ -1,5 +1,10 @@
 import type { FinancialStatementPayload } from '@personal-erp/contracts';
+import { addMoneyWon, subtractMoneyWon, sumMoneyWon } from '@personal-erp/money';
 import { AccountSubjectKind, FinancialStatementKind } from '@prisma/client';
+import {
+  fromPrismaMoneyWon,
+  type PrismaMoneyLike
+} from '../../common/money/prisma-money';
 
 const STATEMENT_KIND_ORDER: FinancialStatementKind[] = [
   FinancialStatementKind.STATEMENT_OF_FINANCIAL_POSITION,
@@ -21,13 +26,13 @@ export function sortFinancialStatementSnapshots<
 export function buildStatementPayloads(input: {
   monthLabel: string;
   closingSnapshot: {
-    totalAssetAmount: number;
-    totalLiabilityAmount: number;
-    totalEquityAmount: number;
-    periodPnLAmount: number;
+    totalAssetAmount: PrismaMoneyLike;
+    totalLiabilityAmount: PrismaMoneyLike;
+    totalEquityAmount: PrismaMoneyLike;
+    periodPnLAmount: PrismaMoneyLike;
   };
   closingLines: Array<{
-    balanceAmount: number;
+    balanceAmount: PrismaMoneyLike;
     accountSubject: {
       code: string;
       name: string;
@@ -38,8 +43,8 @@ export function buildStatementPayloads(input: {
     } | null;
   }>;
   journalLines: Array<{
-    debitAmount: number;
-    creditAmount: number;
+    debitAmount: PrismaMoneyLike;
+    creditAmount: PrismaMoneyLike;
     accountSubject: {
       code: string;
       name: string;
@@ -51,24 +56,43 @@ export function buildStatementPayloads(input: {
   }>;
   openingNetWorth: number;
 }): Map<FinancialStatementKind, FinancialStatementPayload> {
-  const assets = input.closingLines.filter(
+  const closingSnapshot = {
+    totalAssetAmount: fromPrismaMoneyWon(input.closingSnapshot.totalAssetAmount),
+    totalLiabilityAmount: fromPrismaMoneyWon(
+      input.closingSnapshot.totalLiabilityAmount
+    ),
+    totalEquityAmount: fromPrismaMoneyWon(
+      input.closingSnapshot.totalEquityAmount
+    ),
+    periodPnLAmount: fromPrismaMoneyWon(input.closingSnapshot.periodPnLAmount)
+  };
+  const closingLines = input.closingLines.map((line) => ({
+    ...line,
+    balanceAmount: fromPrismaMoneyWon(line.balanceAmount)
+  }));
+  const journalLines = input.journalLines.map((line) => ({
+    ...line,
+    debitAmount: fromPrismaMoneyWon(line.debitAmount),
+    creditAmount: fromPrismaMoneyWon(line.creditAmount)
+  }));
+  const assets = closingLines.filter(
     (line) => line.accountSubject.subjectKind === 'ASSET'
   );
-  const liabilities = input.closingLines.filter(
+  const liabilities = closingLines.filter(
     (line) => line.accountSubject.subjectKind === 'LIABILITY'
   );
-  const equity = input.closingLines.filter(
+  const equity = closingLines.filter(
     (line) => line.accountSubject.subjectKind === 'EQUITY'
   );
-  const incomeLines = input.closingLines.filter(
+  const incomeLines = closingLines.filter(
     (line) => line.accountSubject.subjectKind === 'INCOME'
   );
-  const expenseLines = input.closingLines.filter(
+  const expenseLines = closingLines.filter(
     (line) => line.accountSubject.subjectKind === 'EXPENSE'
   );
 
   const cashFlowByFundingAccount = new Map<string, number>();
-  for (const line of input.journalLines) {
+  for (const line of journalLines) {
     if (line.accountSubject.subjectKind !== 'ASSET' || !line.fundingAccount) {
       continue;
     }
@@ -76,21 +100,28 @@ export function buildStatementPayloads(input: {
     const current = cashFlowByFundingAccount.get(line.fundingAccount.name) ?? 0;
     cashFlowByFundingAccount.set(
       line.fundingAccount.name,
-      current + (line.debitAmount - line.creditAmount)
+      addMoneyWon(current, subtractMoneyWon(line.debitAmount, line.creditAmount))
     );
   }
 
   const operatingCashIn = [...cashFlowByFundingAccount.values()]
     .filter((amount) => amount > 0)
-    .reduce((sum, amount) => sum + amount, 0);
+    .reduce((sum, amount) => addMoneyWon(sum, amount), 0);
   const operatingCashOut = [...cashFlowByFundingAccount.values()]
     .filter((amount) => amount < 0)
-    .reduce((sum, amount) => sum + Math.abs(amount), 0);
-  const netCashFlow = operatingCashIn - operatingCashOut;
+    .reduce((sum, amount) => addMoneyWon(sum, Math.abs(amount)), 0);
+  const netCashFlow = subtractMoneyWon(operatingCashIn, operatingCashOut);
 
-  const closingNetWorth =
-    input.closingSnapshot.totalAssetAmount -
-    input.closingSnapshot.totalLiabilityAmount;
+  const closingNetWorth = subtractMoneyWon(
+    closingSnapshot.totalAssetAmount,
+    closingSnapshot.totalLiabilityAmount
+  );
+  const monthlyIncomeAmount = sumMoneyWon(
+    incomeLines.map((line) => line.balanceAmount)
+  );
+  const monthlyExpenseAmount = sumMoneyWon(
+    expenseLines.map((line) => line.balanceAmount)
+  );
 
   return new Map([
     [
@@ -99,15 +130,15 @@ export function buildStatementPayloads(input: {
         summary: [
           {
             label: '자산 합계',
-            amountWon: input.closingSnapshot.totalAssetAmount
+            amountWon: closingSnapshot.totalAssetAmount
           },
           {
             label: '부채 합계',
-            amountWon: input.closingSnapshot.totalLiabilityAmount
+            amountWon: closingSnapshot.totalLiabilityAmount
           },
           {
             label: '자본 합계',
-            amountWon: input.closingSnapshot.totalEquityAmount
+            amountWon: closingSnapshot.totalEquityAmount
           }
         ],
         sections: [
@@ -153,21 +184,15 @@ export function buildStatementPayloads(input: {
         summary: [
           {
             label: '월간 수익',
-            amountWon: incomeLines.reduce(
-              (sum, line) => sum + line.balanceAmount,
-              0
-            )
+            amountWon: monthlyIncomeAmount
           },
           {
             label: '월간 비용',
-            amountWon: expenseLines.reduce(
-              (sum, line) => sum + line.balanceAmount,
-              0
-            )
+            amountWon: monthlyExpenseAmount
           },
           {
             label: '당기 손익',
-            amountWon: input.closingSnapshot.periodPnLAmount
+            amountWon: closingSnapshot.periodPnLAmount
           }
         ],
         sections: [
@@ -222,7 +247,7 @@ export function buildStatementPayloads(input: {
           { label: '기초 순자산', amountWon: input.openingNetWorth },
           {
             label: '당기 손익',
-            amountWon: input.closingSnapshot.periodPnLAmount
+            amountWon: closingSnapshot.periodPnLAmount
           },
           { label: '기말 순자산', amountWon: closingNetWorth }
         ],
@@ -233,7 +258,7 @@ export function buildStatementPayloads(input: {
               { label: '기초 순자산', amountWon: input.openingNetWorth },
               {
                 label: '당기 손익',
-                amountWon: input.closingSnapshot.periodPnLAmount
+                amountWon: closingSnapshot.periodPnLAmount
               },
               {
                 label: '기말 순자산',

@@ -346,8 +346,8 @@ model AuthSession {
 model UserSetting {
   id                    String   @id @default(cuid())
   userId                String   @unique
-  minimumReserveWon     Int      @default(400000)
-  monthlySinkingFundWon Int      @default(140000)
+  minimumReserveWon     Decimal  @default(400000) @db.Decimal(19, 0)
+  monthlySinkingFundWon Decimal  @default(140000) @db.Decimal(19, 0)
   timezone              String   @default("Asia/Seoul")
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
@@ -361,7 +361,7 @@ model Account {
   ledgerId              String
   name                  String
   type                  AccountType
-  balanceWon            Int                 @default(0)
+  balanceWon            Decimal             @default(0) @db.Decimal(19, 0)
   sortOrder             Int                 @default(0)
   status                FundingAccountStatus @default(ACTIVE)
   createdAt             DateTime            @default(now())
@@ -414,7 +414,7 @@ model LegacyTransaction {
   ledgerId     String
   title        String
   type         TransactionType
-  amountWon    Int
+  amountWon    Decimal          @db.Decimal(19, 0)
   businessDate DateTime
   accountId    String
   categoryId   String?
@@ -444,7 +444,7 @@ model RecurringRule {
   categoryId              String?
   ledgerTransactionTypeId String?
   title                   String
-  amountWon               Int
+  amountWon               Decimal                @db.Decimal(19, 0)
   frequency               RecurrenceFrequency
   dayOfMonth              Int?
   startDate               DateTime
@@ -572,7 +572,7 @@ model PlanItem {
   fundingAccountId         String
   categoryId               String?
   title                    String
-  plannedAmount            Int
+  plannedAmount            Decimal          @db.Decimal(19, 0)
   plannedDate              DateTime
   status                   PlanItemStatus  @default(DRAFT)
   createdAt                DateTime        @default(now())
@@ -641,7 +641,7 @@ model CollectedTransaction {
   matchedPlanItemId        String?                    @unique
   title                    String
   occurredOn               DateTime
-  amount                   Int
+  amount                   Decimal                   @db.Decimal(19, 0)
   status                   CollectedTransactionStatus @default(COLLECTED)
   sourceFingerprint        String?                    @db.VarChar(191)
   memo                     String?                    @db.Text
@@ -704,8 +704,8 @@ model JournalLine {
   lineNumber       Int
   accountSubjectId String
   fundingAccountId String?
-  debitAmount      Int            @default(0)
-  creditAmount     Int            @default(0)
+  debitAmount      Decimal        @default(0) @db.Decimal(19, 0)
+  creditAmount     Decimal        @default(0) @db.Decimal(19, 0)
   description      String?        @db.Text
   journalEntry     JournalEntry   @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
   accountSubject   AccountSubject @relation(fields: [accountSubjectId], references: [id], onDelete: Restrict)
@@ -736,10 +736,10 @@ model ClosingSnapshot {
   ledgerId             String
   periodId             String                @unique
   lockedAt             DateTime
-  totalAssetAmount     Int
-  totalLiabilityAmount Int
-  totalEquityAmount    Int
-  periodPnLAmount      Int
+  totalAssetAmount     Decimal               @db.Decimal(19, 0)
+  totalLiabilityAmount Decimal               @db.Decimal(19, 0)
+  totalEquityAmount    Decimal               @db.Decimal(19, 0)
+  periodPnLAmount      Decimal               @db.Decimal(19, 0)
   createdAt            DateTime              @default(now())
   tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   ledger               Ledger                @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
@@ -755,7 +755,7 @@ model BalanceSnapshotLine {
   closingSnapshotId String?
   accountSubjectId String
   fundingAccountId String?
-  balanceAmount    Int
+  balanceAmount    Decimal             @db.Decimal(19, 0)
   openingSnapshot  OpeningBalanceSnapshot? @relation("OpeningSnapshotLines", fields: [openingSnapshotId], references: [id], onDelete: Cascade)
   closingSnapshot  ClosingSnapshot?        @relation("ClosingSnapshotLines", fields: [closingSnapshotId], references: [id], onDelete: Cascade)
   accountSubject   AccountSubject          @relation(fields: [accountSubjectId], references: [id], onDelete: Restrict)
@@ -815,7 +815,7 @@ model InsurancePolicy {
   linkedRecurringRuleId String?        @unique
   provider              String
   productName           String
-  monthlyPremiumWon     Int
+  monthlyPremiumWon     Decimal        @db.Decimal(19, 0)
   paymentDay            Int
   cycle                 InsuranceCycle @default(MONTHLY)
   renewalDate           DateTime?
@@ -845,7 +845,7 @@ model Vehicle {
   manufacturer                      String?
   fuelType                          FuelType
   initialOdometerKm                 Int
-  monthlyExpenseWon                 Int       @default(0)
+  monthlyExpenseWon                 Decimal   @default(0) @db.Decimal(19, 0)
   estimatedFuelEfficiencyKmPerLiter Decimal?  @db.Decimal(10, 2)
   createdAt                         DateTime  @default(now())
   updatedAt                         DateTime  @updatedAt
@@ -865,8 +865,8 @@ model FuelLog {
   filledOn     DateTime
   odometerKm   Int
   liters       Decimal  @db.Decimal(10, 3)
-  amountWon    Int
-  unitPriceWon Int
+  amountWon    Decimal  @db.Decimal(19, 0)
+  unitPriceWon Decimal  @db.Decimal(19, 0)
   isFullTank   Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -883,7 +883,7 @@ model VehicleMaintenanceLog {
   category    VehicleMaintenanceCategory
   vendor      String?
   description String
-  amountWon   Int
+  amountWon   Decimal                    @db.Decimal(19, 0)
   memo        String?                    @db.Text
   createdAt   DateTime                   @default(now())
   updatedAt   DateTime                   @updatedAt

@@ -11,6 +11,7 @@ import type {
   CollectImportedRowResponse
 } from '@personal-erp/contracts';
 import { PlanItemStatus, Prisma } from '@prisma/client';
+import { fromPrismaMoneyWon } from '../../common/money/prisma-money';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -404,7 +405,7 @@ export class ImportedRowCollectionService {
     workspace: WorkspaceContext,
     periodId: string
   ): Promise<DraftPlanItemCandidate[]> {
-    return tx.planItem.findMany({
+    const records = await tx.planItem.findMany({
       where: {
         tenantId: workspace.tenantId,
         ledgerId: workspace.ledgerId,
@@ -424,6 +425,11 @@ export class ImportedRowCollectionService {
         categoryId: true
       }
     });
+
+    return records.map((record) => ({
+      ...record,
+      plannedAmount: fromPrismaMoneyWon(record.plannedAmount)
+    }));
   }
 
   private async readMatchedPlanItemCandidate(

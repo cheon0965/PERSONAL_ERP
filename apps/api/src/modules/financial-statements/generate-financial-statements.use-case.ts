@@ -8,9 +8,11 @@ import type {
   FinancialStatementsView,
   GenerateFinancialStatementSnapshotsRequest
 } from '@personal-erp/contracts';
+import { subtractMoneyWon } from '@personal-erp/money';
 import { AccountingPeriodStatus, JournalEntryStatus } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
+import { fromPrismaMoneyWon } from '../../common/money/prisma-money';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { buildStatementPayloads } from './financial-statement-payload.policy';
 import { FinancialStatementsService } from './financial-statements.service';
@@ -141,8 +143,10 @@ export class GenerateFinancialStatementsUseCase {
       openingNetWorth:
         previousClosingSnapshot == null
           ? 0
-          : previousClosingSnapshot.totalAssetAmount -
-            previousClosingSnapshot.totalLiabilityAmount
+          : subtractMoneyWon(
+              fromPrismaMoneyWon(previousClosingSnapshot.totalAssetAmount),
+              fromPrismaMoneyWon(previousClosingSnapshot.totalLiabilityAmount)
+            )
     });
 
     for (const [statementKind, payload] of payloads) {

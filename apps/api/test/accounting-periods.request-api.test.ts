@@ -177,7 +177,7 @@ test('POST /accounting-periods opens the first period and records status history
             balanceAmount: 3000000
           },
           {
-            accountSubjectId: 'as-1-3010',
+            accountSubjectId: 'as-1-3100',
             balanceAmount: 3000000
           }
         ],
@@ -304,7 +304,7 @@ test('POST /accounting-periods rolls back the opened period when opening snapsho
             balanceAmount: 3000000
           },
           {
-            accountSubjectId: 'as-1-3010',
+            accountSubjectId: 'as-1-3100',
             balanceAmount: 3000000
           }
         ],
@@ -444,7 +444,7 @@ test('POST /accounting-periods/:id/close locks the period and creates a closing 
         snapshotKind: 'OPENING',
         openingSnapshotId: 'opening-close-1',
         closingSnapshotId: null,
-        accountSubjectId: 'as-1-3010',
+        accountSubjectId: 'as-1-3100',
         fundingAccountId: null,
         balanceAmount: 3_000_000
       }
@@ -528,7 +528,7 @@ test('POST /accounting-periods/:id/close locks the period and creates a closing 
           balanceAmount: 2_916_000
         },
         {
-          accountSubjectCode: '3010',
+          accountSubjectCode: '3100',
           fundingAccountName: null,
           balanceAmount: 3_000_000
         },

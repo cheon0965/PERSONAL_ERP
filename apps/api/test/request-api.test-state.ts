@@ -160,11 +160,11 @@ export async function createRequestTestState(): Promise<RequestTestState> {
         isActive: true
       },
       {
-        id: 'as-1-2010',
+        id: 'as-1-2100',
         tenantId: 'tenant-1',
         ledgerId: 'ledger-1',
-        code: '2010',
-        name: '카드대금',
+        code: '2100',
+        name: '카드미지급금',
         statementType: 'BALANCE_SHEET',
         normalSide: 'CREDIT',
         subjectKind: 'LIABILITY',
@@ -172,11 +172,11 @@ export async function createRequestTestState(): Promise<RequestTestState> {
         isActive: true
       },
       {
-        id: 'as-1-3010',
+        id: 'as-1-3100',
         tenantId: 'tenant-1',
         ledgerId: 'ledger-1',
-        code: '3010',
-        name: '사업자본',
+        code: '3100',
+        name: '순자산',
         statementType: 'BALANCE_SHEET',
         normalSide: 'CREDIT',
         subjectKind: 'EQUITY',
@@ -220,11 +220,11 @@ export async function createRequestTestState(): Promise<RequestTestState> {
         isActive: true
       },
       {
-        id: 'as-2-2010',
+        id: 'as-2-2100',
         tenantId: 'tenant-2',
         ledgerId: 'ledger-2',
-        code: '2010',
-        name: '카드대금',
+        code: '2100',
+        name: '카드미지급금',
         statementType: 'BALANCE_SHEET',
         normalSide: 'CREDIT',
         subjectKind: 'LIABILITY',
@@ -232,11 +232,11 @@ export async function createRequestTestState(): Promise<RequestTestState> {
         isActive: true
       },
       {
-        id: 'as-2-3010',
+        id: 'as-2-3100',
         tenantId: 'tenant-2',
         ledgerId: 'ledger-2',
-        code: '3010',
-        name: '사업자본',
+        code: '3100',
+        name: '순자산',
         statementType: 'BALANCE_SHEET',
         normalSide: 'CREDIT',
         subjectKind: 'EQUITY',

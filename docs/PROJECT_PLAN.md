@@ -25,6 +25,8 @@
 16. 메인 비즈니스 흐름 가시성, 준비 경로, 추적성 보강
 17. 기준 데이터 readiness와 자금수단/카테고리 제한적 관리 구현
 18. build 결과물 기준 smoke와 운영 체크리스트 일부 자동화
+19. 금액 정합성 기준 고정
+    `packages/money`의 `MoneyWon` 공용 모듈, Prisma 금액 컬럼 `Decimal(19,0)` 승격, `decimal.js` 기반 `HALF_UP`/배분 잔차 보정, `npm run money:check` 가드까지 완료
 
 ## 현재 MVP 범위
 

@@ -1,9 +1,11 @@
+import type { MoneyWon } from './money';
+
 export type RecurrenceFrequency = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 
 export type RecurringRuleItem = {
   id: string;
   title: string;
-  amountWon: number;
+  amountWon: MoneyWon;
   frequency: RecurrenceFrequency;
   nextRunDate: string | null;
   linkedInsurancePolicyId: string | null;
@@ -17,7 +19,7 @@ export type RecurringRuleDetailItem = {
   title: string;
   fundingAccountId: string;
   categoryId: string | null;
-  amountWon: number;
+  amountWon: MoneyWon;
   frequency: RecurrenceFrequency;
   dayOfMonth: number | null;
   startDate: string;
@@ -31,7 +33,7 @@ export type CreateRecurringRuleRequest = {
   title: string;
   fundingAccountId: string;
   categoryId?: string;
-  amountWon: number;
+  amountWon: MoneyWon;
   frequency: RecurrenceFrequency;
   dayOfMonth?: number;
   startDate: string;

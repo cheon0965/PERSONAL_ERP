@@ -1,32 +1,43 @@
 import type {
-  VehicleItem,
   VehicleFuelLogItem,
+  VehicleItem,
   VehicleMaintenanceLogItem
 } from '@personal-erp/contracts';
+import {
+  fromPrismaMoneyWon,
+  type PrismaMoneyLike
+} from '../../common/money/prisma-money';
 
 type DecimalLike = number | string | { toString(): string };
 
 type VehicleFuelLogRecord = Omit<
   VehicleFuelLogItem,
-  'filledOn' | 'liters' | 'vehicleName'
+  'filledOn' | 'liters' | 'vehicleName' | 'amountWon' | 'unitPriceWon'
 > & {
   filledOn: Date;
   liters: DecimalLike;
+  amountWon: PrismaMoneyLike;
+  unitPriceWon: PrismaMoneyLike;
   vehicle: {
     id: string;
     name: string;
   };
 };
 
-type VehicleRecord = Omit<VehicleItem, 'estimatedFuelEfficiencyKmPerLiter'> & {
+type VehicleRecord = Omit<
+  VehicleItem,
+  'monthlyExpenseWon' | 'estimatedFuelEfficiencyKmPerLiter'
+> & {
+  monthlyExpenseWon: PrismaMoneyLike;
   estimatedFuelEfficiencyKmPerLiter: DecimalLike | null;
 };
 
 type VehicleMaintenanceLogRecord = Omit<
   VehicleMaintenanceLogItem,
-  'performedOn' | 'vehicleName'
+  'performedOn' | 'vehicleName' | 'amountWon'
 > & {
   performedOn: Date;
+  amountWon: PrismaMoneyLike;
   vehicle: {
     id: string;
     name: string;
@@ -47,8 +58,8 @@ export function mapVehicleFuelLogToItem(
     filledOn: log.filledOn.toISOString().slice(0, 10),
     odometerKm: log.odometerKm,
     liters: toNumber(log.liters),
-    amountWon: log.amountWon,
-    unitPriceWon: log.unitPriceWon,
+    amountWon: fromPrismaMoneyWon(log.amountWon),
+    unitPriceWon: fromPrismaMoneyWon(log.unitPriceWon),
     isFullTank: log.isFullTank
   };
 }
@@ -60,7 +71,7 @@ export function mapVehicleToItem(vehicle: VehicleRecord): VehicleItem {
     manufacturer: vehicle.manufacturer,
     fuelType: vehicle.fuelType,
     initialOdometerKm: vehicle.initialOdometerKm,
-    monthlyExpenseWon: vehicle.monthlyExpenseWon,
+    monthlyExpenseWon: fromPrismaMoneyWon(vehicle.monthlyExpenseWon),
     estimatedFuelEfficiencyKmPerLiter:
       vehicle.estimatedFuelEfficiencyKmPerLiter === null
         ? null
@@ -80,7 +91,7 @@ export function mapVehicleMaintenanceLogToItem(
     category: log.category,
     vendor: log.vendor,
     description: log.description,
-    amountWon: log.amountWon,
+    amountWon: fromPrismaMoneyWon(log.amountWon),
     memo: log.memo
   };
 }

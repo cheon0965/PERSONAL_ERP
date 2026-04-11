@@ -15,6 +15,11 @@ import type {
   CloseAccountingPeriodResponse,
   OpenAccountingPeriodRequest
 } from '@personal-erp/contracts';
+import {
+  addMoneyWon,
+  parseMoneyWon,
+  subtractMoneyWon
+} from '@personal-erp/money';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import {
   accountSubjectsQueryKey,
@@ -317,7 +322,7 @@ export function AccountingPeriodsPage() {
               fundingAccountId: normalizeOptionalIdentifier(
                 line.fundingAccountId
               ),
-              balanceAmount: Number(line.balanceAmount)
+              balanceAmount: parseMoneyWon(line.balanceAmount) ?? 0
             }))
           : undefined,
         note: values.note.trim() || undefined
@@ -541,12 +546,8 @@ function buildOpeningBalanceTotals(
   const totals = lines.reduce(
     (accumulator, line) => {
       const accountSubject = accountSubjectById.get(line.accountSubjectId);
-      const balanceAmount = Number(line.balanceAmount);
-      if (
-        !accountSubject ||
-        !Number.isFinite(balanceAmount) ||
-        balanceAmount <= 0
-      ) {
+      const balanceAmount = parseMoneyWon(line.balanceAmount);
+      if (!accountSubject || balanceAmount == null || balanceAmount <= 0) {
         return accumulator;
       }
 
@@ -554,13 +555,22 @@ function buildOpeningBalanceTotals(
 
       switch (accountSubject.subjectKind) {
         case 'ASSET':
-          accumulator.assetAmount += balanceAmount;
+          accumulator.assetAmount = addMoneyWon(
+            accumulator.assetAmount,
+            balanceAmount
+          );
           break;
         case 'LIABILITY':
-          accumulator.liabilityAmount += balanceAmount;
+          accumulator.liabilityAmount = addMoneyWon(
+            accumulator.liabilityAmount,
+            balanceAmount
+          );
           break;
         case 'EQUITY':
-          accumulator.equityAmount += balanceAmount;
+          accumulator.equityAmount = addMoneyWon(
+            accumulator.equityAmount,
+            balanceAmount
+          );
           break;
         default:
           break;
@@ -576,8 +586,10 @@ function buildOpeningBalanceTotals(
     }
   );
 
-  const balanceGapAmount =
-    totals.assetAmount - (totals.liabilityAmount + totals.equityAmount);
+  const balanceGapAmount = subtractMoneyWon(
+    subtractMoneyWon(totals.assetAmount, totals.liabilityAmount),
+    totals.equityAmount
+  );
 
   return {
     ...totals,

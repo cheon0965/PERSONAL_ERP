@@ -19,6 +19,7 @@ import {
   readWorkspaceCreatedByActorRef
 } from '../../common/auth/workspace-actor-ref.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
+import { requirePositiveMoneyWon } from '../../common/money/money-won';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { parseMonthRange } from '../../common/utils/date.util';
 import { mapAccountingPeriodRecordToItem } from './accounting-period.mapper';
@@ -285,7 +286,10 @@ function buildValidatedOpeningBalanceLines(input: {
       accountSubjectId: accountSubject.id,
       accountSubjectKind: accountSubject.subjectKind,
       fundingAccountId: line.fundingAccountId,
-      balanceAmount: line.balanceAmount
+      balanceAmount: requirePositiveMoneyWon(
+        line.balanceAmount,
+        `오프닝 잔액 라인 ${index + 1}의 금액은 0보다 큰 안전한 정수여야 합니다.`
+      )
     };
   });
 }

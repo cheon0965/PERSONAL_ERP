@@ -12,6 +12,7 @@ import {
   MaxLength,
   ValidateNested
 } from 'class-validator';
+import { moneyWonApiProperty } from '../../../common/money/swagger-money';
 
 class OpenAccountingPeriodOpeningBalanceLineDto {
   @ApiProperty({
@@ -30,10 +31,13 @@ class OpenAccountingPeriodOpeningBalanceLineDto {
   @IsString()
   fundingAccountId?: string | null;
 
-  @ApiProperty({
-    example: 3000000,
-    description: '자연잔액 기준 오프닝 금액(원 단위 정수)'
-  })
+  @ApiProperty(
+    moneyWonApiProperty({
+      description: '자연잔액 기준 오프닝 금액입니다.',
+      example: 3000000,
+      minimum: 1
+    })
+  )
   @Type(() => Number)
   @IsInt()
   @Min(1)
@@ -60,8 +64,7 @@ export class OpenAccountingPeriodRequestDto implements OpenAccountingPeriodReque
   @ApiProperty({
     required: false,
     type: [OpenAccountingPeriodOpeningBalanceLineDto],
-    description:
-      '첫 월 운영 시작 시 함께 저장할 오프닝 잔액 라인 목록'
+    description: '첫 월 운영 시작 시 함께 저장할 오프닝 잔액 라인 목록'
   })
   @IsOptional()
   @IsArray()

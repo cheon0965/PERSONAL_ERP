@@ -17,6 +17,7 @@ import {
   Typography
 } from '@mui/material';
 import type { CorrectJournalEntryRequest } from '@personal-erp/contracts';
+import { sumMoneyWon, parseMoneyWon } from '@personal-erp/money';
 import { useFieldArray, useForm } from 'react-hook-form';
 import {
   accountSubjectsQueryKey,
@@ -115,13 +116,17 @@ export function CorrectJournalEntryDialogContent({
 
   const watchedLines = form.watch('lines');
   const totals = React.useMemo(() => {
-    return (watchedLines ?? []).reduce(
-      (accumulator, line) => ({
-        debit: accumulator.debit + Number(line?.debitAmount ?? 0),
-        credit: accumulator.credit + Number(line?.creditAmount ?? 0)
-      }),
-      { debit: 0, credit: 0 }
+    const debit = sumMoneyWon(
+      (watchedLines ?? []).map((line) => parseMoneyWon(line?.debitAmount) ?? 0)
     );
+    const credit = sumMoneyWon(
+      (watchedLines ?? []).map((line) => parseMoneyWon(line?.creditAmount) ?? 0)
+    );
+
+    return {
+      debit,
+      credit
+    };
   }, [watchedLines]);
 
   const mutation = useMutation({
@@ -187,8 +192,8 @@ export function CorrectJournalEntryDialogContent({
           lines: values.lines.map((line) => ({
             accountSubjectId: line.accountSubjectId,
             fundingAccountId: trimOptionalText(line.fundingAccountId),
-            debitAmount: Number(line.debitAmount),
-            creditAmount: Number(line.creditAmount),
+            debitAmount: line.debitAmount,
+            creditAmount: line.creditAmount,
             description: trimOptionalText(line.description)
           }))
         });

@@ -9,6 +9,7 @@ import type {
   ImportSourceKind,
   ImportedRowAutoPreparationSummary
 } from '@personal-erp/contracts';
+import { parseMoneyWon } from '@personal-erp/money';
 import { resolveImportedCollectedTransactionPostingStatus } from '@/features/transactions/transaction-workflow';
 import { fetchJson, postJson } from '@/shared/api/fetch-json';
 
@@ -388,13 +389,13 @@ function parseFallbackRows(
       const title = String(
         raw.title ?? raw.description ?? raw.merchant ?? raw.memo ?? ''
       ).trim();
-      const amount = Number(
-        String(raw.amount ?? raw.approved_amount ?? '').replace(/,/g, '')
+      const amount = parseMoneyWon(
+        String(raw.amount ?? raw.approved_amount ?? '')
       );
       const isParsed =
         /^\d{4}-\d{2}-\d{2}$/.test(occurredOn) &&
         title.length > 0 &&
-        Number.isFinite(amount);
+        amount != null;
 
       return {
         id: `imported-row-demo-${sourceKind}-${candidate.rowNumber}-${Date.now()}`,
@@ -411,7 +412,7 @@ function parseFallbackRows(
           parsed: {
             occurredOn: isParsed ? occurredOn : null,
             title: title || null,
-            amount: Number.isFinite(amount) ? amount : null
+            amount: amount ?? null
           }
         }
       } satisfies ImportBatchItem['rows'][number];

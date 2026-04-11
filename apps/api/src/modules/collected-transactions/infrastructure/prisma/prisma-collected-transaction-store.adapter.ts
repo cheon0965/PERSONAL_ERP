@@ -14,6 +14,10 @@ import {
   LedgerTransactionFlowKind,
   Prisma
 } from '@prisma/client';
+import {
+  fromPrismaMoneyWon,
+  type PrismaMoneyLike
+} from '../../../../common/money/prisma-money';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
 import {
   assertCollectedTransactionCanBeDeleted,
@@ -33,7 +37,7 @@ type CollectedTransactionRecord = {
   id: string;
   occurredOn: Date;
   title: string;
-  amount: number;
+  amount: PrismaMoneyLike;
   status: CollectedTransactionStatus;
   importBatchId: string | null;
   matchedPlanItemId: string | null;
@@ -397,7 +401,7 @@ function mapCollectedTransactionRecordToStoredTransaction(
     type: mapLedgerTransactionFlowKindToCollectedTransactionType(
       transaction.ledgerTransactionType.flowKind
     ),
-    amountWon: transaction.amount,
+    amountWon: fromPrismaMoneyWon(transaction.amount),
     origin: mapCollectedTransactionSourceKind(transaction),
     status: mapCollectedTransactionPostingStatus(transaction.status),
     account: {

@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Grid, Stack } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import type { InsurancePolicyItem } from '@personal-erp/contracts';
+import { sumMoneyWon } from '@personal-erp/money';
 import { webRuntime } from '@/shared/config/env';
 import { formatDate, formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
@@ -52,9 +53,8 @@ export function InsurancePoliciesPage() {
   });
 
   const activePolicies = data.filter((policy) => policy.isActive);
-  const totalPremium = activePolicies.reduce(
-    (acc, item) => acc + item.monthlyPremiumWon,
-    0
+  const totalPremium = sumMoneyWon(
+    activePolicies.map((item) => item.monthlyPremiumWon)
   );
   const inactivePolicyCount = data.filter((item) => !item.isActive).length;
   const linkedPolicyCount = data.filter(

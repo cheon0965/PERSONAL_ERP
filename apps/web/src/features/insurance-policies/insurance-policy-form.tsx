@@ -21,6 +21,7 @@ import {
   getFundingAccounts
 } from '@/features/reference-data/reference-data.api';
 import { webRuntime } from '@/shared/config/env';
+import { createPositiveMoneyWonSchema } from '@/shared/lib/money';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import {
@@ -35,10 +36,9 @@ const insurancePolicySchema = z
   .object({
     provider: z.string().trim().min(2, '보험사 이름은 2자 이상이어야 합니다.'),
     productName: z.string().trim().min(2, '상품명은 2자 이상이어야 합니다.'),
-    monthlyPremiumWon: z.coerce
-      .number()
-      .int()
-      .positive('월 보험료는 0보다 커야 합니다.'),
+    monthlyPremiumWon: createPositiveMoneyWonSchema(
+      '월 보험료는 0보다 커야 합니다.'
+    ),
     paymentDay: z.coerce
       .number()
       .int()
