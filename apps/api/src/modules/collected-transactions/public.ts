@@ -4,3 +4,4 @@ export {
   assertCollectedTransactionCanBeConfirmed,
   assertCollectedTransactionCanBeCorrected
 } from './collected-transaction-transition.policy';
+export { mapCollectedTransactionTypeToLedgerTransactionCode } from './collected-transaction-type.mapper';

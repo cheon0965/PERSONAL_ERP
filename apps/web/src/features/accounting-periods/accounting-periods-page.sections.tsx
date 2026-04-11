@@ -439,22 +439,7 @@ export function OpenAccountingPeriodSection({
   );
 }
 
-export function PeriodLifecycleActionsSection({
-  openPeriod,
-  reopenPeriod,
-  membershipRole,
-  canClosePeriod,
-  canReopenPeriod,
-  hasWorkspace,
-  closeNote,
-  reopenReason,
-  closePending,
-  reopenPending,
-  onCloseNoteChange,
-  onReopenReasonChange,
-  onClosePeriod,
-  onReopenPeriod
-}: {
+type PeriodLifecycleActionProps = {
   openPeriod: AccountingPeriodItem | null;
   reopenPeriod: AccountingPeriodItem | null;
   membershipRole: string | null;
@@ -469,112 +454,10 @@ export function PeriodLifecycleActionsSection({
   onReopenReasonChange: (value: string) => void;
   onClosePeriod: () => Promise<void> | void;
   onReopenPeriod: () => Promise<void> | void;
-}) {
-  return (
-    <Stack spacing={appLayout.sectionGap}>
-      <SectionCard
-        title="월 마감"
-        description="현재 열린 운영 기간을 잠그고 오프닝 기준과 확정 전표를 반영한 월 마감 스냅샷을 생성합니다. 미확정 수집 거래가 남아 있으면 마감할 수 없습니다."
-      >
-        <Stack spacing={appLayout.cardGap}>
-          <InfoRow
-            label="마감 대상"
-            value={
-              openPeriod ? openPeriod.monthLabel : '현재 열린 운영 기간 없음'
-            }
-          />
-          <InfoRow
-            label="권한"
-            value={
-              canClosePeriod
-                ? '소유자'
-                : readMembershipRoleLabel(membershipRole)
-            }
-          />
-          <TextField
-            label="마감 메모"
-            multiline
-            minRows={3}
-            value={closeNote}
-            onChange={(event) => {
-              onCloseNoteChange(event.target.value);
-            }}
-            helperText="월 마감 사유 또는 운영 메모를 남길 수 있습니다."
-            disabled={!openPeriod || !canClosePeriod || !hasWorkspace}
-          />
-          <Button
-            variant="contained"
-            color="inherit"
-            disabled={
-              !openPeriod || !canClosePeriod || !hasWorkspace || closePending
-            }
-            onClick={() => {
-              void onClosePeriod();
-            }}
-            sx={{ alignSelf: 'flex-start' }}
-          >
-            {closePending ? '월 마감 진행 중...' : '월 마감'}
-          </Button>
-        </Stack>
-      </SectionCard>
-
-      <SectionCard
-        title="월 재오픈"
-        description="가장 최근에 잠긴 운영 기간만 재오픈할 수 있으며, 재오픈 시 해당 기간의 마감 산출물은 함께 정리됩니다."
-      >
-        <Stack spacing={appLayout.cardGap}>
-          <InfoRow
-            label="재오픈 대상"
-            value={
-              reopenPeriod
-                ? reopenPeriod.monthLabel
-                : '가장 최근 잠금 운영 기간 없음'
-            }
-          />
-          <InfoRow
-            label="권한"
-            value={
-              canReopenPeriod
-                ? '소유자'
-                : readMembershipRoleLabel(membershipRole)
-            }
-          />
-          <TextField
-            label="재오픈 사유"
-            multiline
-            minRows={3}
-            value={reopenReason}
-            onChange={(event) => {
-              onReopenReasonChange(event.target.value);
-            }}
-            helperText="재무제표 재산출, 전표 정정 등 재오픈 사유를 남겨 주세요."
-            disabled={!reopenPeriod || !canReopenPeriod || !hasWorkspace}
-          />
-          <Button
-            variant="outlined"
-            disabled={
-              !reopenPeriod ||
-              !canReopenPeriod ||
-              !hasWorkspace ||
-              reopenPending ||
-              reopenReason.trim().length === 0
-            }
-            onClick={() => {
-              void onReopenPeriod();
-            }}
-            sx={{ alignSelf: 'flex-start' }}
-          >
-            {reopenPending ? '월 재오픈 진행 중...' : '월 재오픈'}
-          </Button>
-        </Stack>
-      </SectionCard>
-    </Stack>
-  );
-}
-
+};
 export function PeriodOperationsSection(
   props: Parameters<typeof OpenAccountingPeriodSection>[0] &
-    Parameters<typeof PeriodLifecycleActionsSection>[0]
+    PeriodLifecycleActionProps
 ) {
   const { openPeriod, reopenPeriod } = props;
   const [activeTab, setActiveTab] = React.useState<PeriodOperationTab>(() =>

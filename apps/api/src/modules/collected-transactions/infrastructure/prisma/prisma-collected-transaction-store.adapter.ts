@@ -23,6 +23,7 @@ import {
   assertCollectedTransactionCanBeDeleted,
   assertCollectedTransactionCanBeUpdated
 } from '../../collected-transaction-transition.policy';
+import { mapCollectedTransactionTypeToLedgerTransactionCode } from '../../collected-transaction-type.mapper';
 import { resolveManualCollectedTransactionStatus } from '../../manual-collected-transaction-status.policy';
 import type {
   CollectedTransactionWorkspaceScope,
@@ -431,20 +432,6 @@ function mapCollectedTransactionRecordToStoredTransactionDetail(
     categoryId: transaction.categoryId,
     memo: transaction.memo
   };
-}
-
-function mapCollectedTransactionTypeToLedgerTransactionCode(
-  type: CollectedTransactionType
-): string {
-  switch (type) {
-    case 'INCOME':
-      return 'INCOME_BASIC';
-    case 'TRANSFER':
-      return 'TRANSFER_BASIC';
-    case 'EXPENSE':
-    default:
-      return 'EXPENSE_BASIC';
-  }
 }
 
 function mapLedgerTransactionFlowKindToCollectedTransactionType(

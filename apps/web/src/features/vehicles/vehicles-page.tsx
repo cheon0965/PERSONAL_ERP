@@ -11,7 +11,7 @@ import type {
   VehicleMaintenanceLogItem
 } from '@personal-erp/contracts';
 import { sumMoneyWon } from '@personal-erp/money';
-import { formatDate, formatNumber, formatWon } from '@/shared/lib/format';
+import { formatNumber, formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { ChartCard } from '@/shared/ui/chart-card';
 import { DataTableCard } from '@/shared/ui/data-table-card';
@@ -24,6 +24,11 @@ import { VehicleFuelLogForm } from './vehicle-fuel-log-form';
 import { VehicleMaintenanceForm } from './vehicle-maintenance-form';
 import { VehicleForm } from './vehicle-form';
 import {
+  fuelColumns,
+  fuelTypeLabelMap,
+  maintenanceColumns
+} from './vehicles.columns';
+import {
   getVehicleFuelLogs,
   getVehicleMaintenanceLogs,
   getVehicles,
@@ -31,10 +36,6 @@ import {
   vehicleMaintenanceLogsQueryKey,
   vehiclesQueryKey
 } from './vehicles.api';
-
-type VehicleFuelLogRow = VehicleFuelLogItem;
-
-type VehicleMaintenanceLogRow = VehicleMaintenanceLogItem;
 
 type SubmitFeedback = {
   severity: 'success' | 'error';
@@ -55,105 +56,6 @@ type VehicleFuelDrawerState =
   | { mode: 'create'; vehicleId?: string | null }
   | { mode: 'edit'; fuelLog: VehicleFuelLogItem }
   | null;
-
-const fuelTypeLabelMap: Record<string, string> = {
-  GASOLINE: '가솔린',
-  DIESEL: '디젤',
-  HYBRID: '하이브리드',
-  ELECTRIC: '전기',
-  LPG: 'LPG'
-};
-
-const maintenanceCategoryLabelMap: Record<string, string> = {
-  INSPECTION: '점검',
-  REPAIR: '수리',
-  CONSUMABLE: '소모품',
-  TIRE: '타이어',
-  ACCIDENT: '사고',
-  OTHER: '기타'
-};
-
-const fuelColumns: GridColDef<VehicleFuelLogRow>[] = [
-  {
-    field: 'vehicleName',
-    headerName: '차량',
-    flex: 1
-  },
-  {
-    field: 'filledOn',
-    headerName: '주유일',
-    flex: 1,
-    valueFormatter: (value) => formatDate(String(value))
-  },
-  {
-    field: 'odometerKm',
-    headerName: '주행거리',
-    flex: 1,
-    valueFormatter: (value) => `${formatNumber(Number(value))} km`
-  },
-  {
-    field: 'liters',
-    headerName: '주유량',
-    flex: 0.8,
-    valueFormatter: (value) => `${formatNumber(Number(value), 3)} L`
-  },
-  {
-    field: 'unitPriceWon',
-    headerName: '리터당 단가',
-    flex: 1,
-    valueFormatter: (value) => `${formatNumber(Number(value))}원/L`
-  },
-  {
-    field: 'amountWon',
-    headerName: '금액',
-    flex: 1,
-    valueFormatter: (value) => formatWon(Number(value))
-  },
-  {
-    field: 'isFullTank',
-    headerName: '가득 주유',
-    flex: 0.8,
-    valueFormatter: (value) => (value ? '예' : '아니오')
-  }
-];
-
-const maintenanceColumns: GridColDef<VehicleMaintenanceLogRow>[] = [
-  {
-    field: 'vehicleName',
-    headerName: '차량',
-    flex: 1
-  },
-  {
-    field: 'performedOn',
-    headerName: '정비일',
-    flex: 0.9,
-    valueFormatter: (value) => formatDate(String(value))
-  },
-  {
-    field: 'category',
-    headerName: '구분',
-    flex: 0.8,
-    valueFormatter: (value) =>
-      maintenanceCategoryLabelMap[String(value)] ?? String(value)
-  },
-  {
-    field: 'description',
-    headerName: '정비 내용',
-    flex: 1.4
-  },
-  {
-    field: 'odometerKm',
-    headerName: '주행거리',
-    flex: 0.9,
-    valueFormatter: (value) => `${formatNumber(Number(value))} km`
-  },
-  {
-    field: 'amountWon',
-    headerName: '비용',
-    flex: 0.9,
-    valueFormatter: (value) => formatWon(Number(value))
-  }
-];
 
 export function VehiclesPage() {
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
@@ -362,7 +264,7 @@ export function VehiclesPage() {
     }
   ];
 
-  const fuelTableColumns: GridColDef<VehicleFuelLogRow>[] = [
+  const fuelTableColumns: GridColDef<VehicleFuelLogItem>[] = [
     ...fuelColumns,
     {
       field: 'actions',
@@ -384,7 +286,7 @@ export function VehiclesPage() {
     }
   ];
 
-  const maintenanceTableColumns: GridColDef<VehicleMaintenanceLogRow>[] = [
+  const maintenanceTableColumns: GridColDef<VehicleMaintenanceLogItem>[] = [
     ...maintenanceColumns,
     {
       field: 'actions',
