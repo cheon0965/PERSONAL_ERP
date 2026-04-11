@@ -35,6 +35,7 @@ npm run test
 1. 먼저 `docs/domain/business-logic-draft.md`와 `docs/domain/core-entity-definition.md`를 기준으로 이 기능이 어떤 운영 흐름과 엔티티 경계에 속하는지 판단합니다.
 2. 이어서 이 기능이 `단순 CRUD`, `핵심 쓰기 흐름`, `읽기/조합 흐름` 중 어디에 속하는지 판단합니다.
 3. `packages/contracts`에 새 요청/응답 계약이 필요한지 먼저 확인합니다.
+   금액 필드라면 계약 타입은 `MoneyWon` 의미를 유지하고, API/Web 구현은 `@personal-erp/money` helper 기준을 따릅니다.
 4. 필요한 DTO와 컨트롤러 엔드포인트를 추가합니다.
 5. 구현 패턴은 아래 셋 중 하나를 고릅니다.
    `단순 CRUD`: `controller -> service -> repository -> mapper/calculator`
@@ -113,6 +114,7 @@ npm run check:quick
 ```
 
 - `npm run check:quick`에는 `npm run docs:check`도 포함되며, 문서의 `npm run` 표기와 `docs/API.md`, `docs/VALIDATION_NOTES.md`의 Web/API surface가 실제 라우트와 controller 기반 Swagger surface와 맞는지 함께 확인합니다.
+- `npm run check:quick`에는 `npm run money:check`도 포함되며, money package 밖의 금액 필드 raw `Number(...)`, `+/-`, `+=/-=` 유입을 함께 막습니다.
 - Windows에서 `core.autocrlf=true` checkout을 쓰면 Prettier EOL 차이로 `check:quick`가 CI와 다르게 보일 수 있습니다.
 - CI와 같은 LF 기준 포맷 확인이 필요하면 `npm run format:check -- --end-of-line auto`를 함께 봅니다.
 
@@ -148,6 +150,7 @@ npm run check
 - demo fallback을 기본값처럼 켜두지 않았는지
 - 요청 주체 경계 없이 데이터를 조회하지 않았는지
 - contracts와 실제 응답 shape가 어긋나지 않았는지
+- 금액 필드가 `MoneyWon`, `Decimal(19,0)`, `HALF_UP`, safe integer, `@personal-erp/money` helper 기준을 벗어나지 않았는지
 - Swagger 노출 상태와 문서 설명이 달라지지 않았는지
 - `docs/VALIDATION_NOTES.md`가 현재 검증 범위보다 뒤처지지 않았는지
 - `.secret-dir.local` 경로와 실제 SECRET 폴더 구성이 맞는지

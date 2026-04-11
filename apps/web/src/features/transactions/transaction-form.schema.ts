@@ -3,10 +3,11 @@
 import type { AccountingPeriodItem } from '@personal-erp/contracts';
 import { z } from 'zod';
 import { getTodayDateInputValue } from '@/shared/lib/date-input';
+import { createPositiveMoneyWonSchema } from '@/shared/lib/money';
 
 export const transactionSchema = z.object({
   title: z.string().trim().min(2, '제목은 2자 이상이어야 합니다.'),
-  amountWon: z.coerce.number().int().positive('금액은 0보다 커야 합니다.'),
+  amountWon: createPositiveMoneyWonSchema('금액은 0보다 커야 합니다.'),
   businessDate: z.string().min(1, '거래일을 입력해 주세요.'),
   type: z.enum(['INCOME', 'EXPENSE', 'TRANSFER']),
   accountId: z.string().min(1, '자금수단을 선택해 주세요.'),

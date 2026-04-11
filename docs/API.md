@@ -26,6 +26,14 @@
 - 클라이언트가 `x-request-id`를 보내면 같은 값을 그대로 유지합니다.
 - 운영 추적이나 문제 재현 시 이 값을 기준으로 요청 로그를 연결합니다.
 
+## 금액 계약
+
+- HTTP 요청/응답의 금액은 1차 마이그레이션 범위에서 계속 `number`를 사용하되, 의미는 `MoneyWon`으로 고정합니다.
+- `MoneyWon`은 KRW `원 단위 정수`이며 `Number.isSafeInteger` 범위를 통과해야 합니다.
+- Prisma 영속 금액 컬럼은 `Decimal(19,0)`을 사용하고, API mapper 경계에서 `MoneyWon(number)`로 변환합니다.
+- 소수 중간 계산이 필요한 반올림/배분은 `@personal-erp/money`의 `decimal.js` 기반 helper를 사용하며 저장 전 `HALF_UP`과 잔차 보정으로 정수 금액을 확정합니다.
+- 대표 필드는 `amountWon`, `balanceWon`, `plannedAmount`, `balanceAmount`, `debitAmount`, `creditAmount`, `monthlyPremiumWon`, `monthlyExpenseWon`, `unitPriceWon`입니다. `CollectedTransaction.amount`처럼 DB 컬럼명이 일반적인 경우에도 HTTP 계약에서는 `amountWon` 의미로 노출합니다.
+
 ## 인증 흐름
 
 1. `POST /auth/login`으로 access token을 받고, HttpOnly refresh token 쿠키를 설정합니다.

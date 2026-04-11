@@ -10,6 +10,7 @@ import type {
   VehicleItem,
   VehicleMaintenanceLogItem
 } from '@personal-erp/contracts';
+import { sumMoneyWon } from '@personal-erp/money';
 import { formatDate, formatNumber, formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { ChartCard } from '@/shared/ui/chart-card';
@@ -174,13 +175,11 @@ export function VehiclesPage() {
     queryKey: vehicleMaintenanceLogsQueryKey,
     queryFn: getVehicleMaintenanceLogs
   });
-  const totalMonthlyExpenseWon = vehicles.reduce(
-    (total, vehicle) => total + vehicle.monthlyExpenseWon,
-    0
+  const totalMonthlyExpenseWon = sumMoneyWon(
+    vehicles.map((vehicle) => vehicle.monthlyExpenseWon)
   );
-  const totalMaintenanceAmountWon = maintenanceLogs.reduce(
-    (total, maintenanceLog) => total + maintenanceLog.amountWon,
-    0
+  const totalMaintenanceAmountWon = sumMoneyWon(
+    maintenanceLogs.map((maintenanceLog) => maintenanceLog.amountWon)
   );
   const vehiclesWithEfficiency = vehicles.filter(
     (vehicle) => vehicle.estimatedFuelEfficiencyKmPerLiter != null

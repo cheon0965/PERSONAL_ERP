@@ -12,6 +12,7 @@ import {
   Min,
   MinLength
 } from 'class-validator';
+import { moneyWonApiProperty } from '../../../common/money/swagger-money';
 
 export class UpdateInsurancePolicyDto implements UpdateInsurancePolicyRequest {
   @ApiProperty()
@@ -22,7 +23,7 @@ export class UpdateInsurancePolicyDto implements UpdateInsurancePolicyRequest {
   @IsString()
   productName!: string;
 
-  @ApiProperty()
+  @ApiProperty(moneyWonApiProperty({ example: 85000, minimum: 1 }))
   @IsInt()
   @Min(1)
   monthlyPremiumWon!: number;

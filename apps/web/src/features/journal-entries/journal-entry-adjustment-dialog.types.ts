@@ -3,6 +3,8 @@ import type {
   JournalEntryItem
 } from '@personal-erp/contracts';
 import { z } from 'zod';
+import { sumMoneyWon } from '@personal-erp/money';
+import { createNonNegativeMoneyWonSchema } from '@/shared/lib/money';
 
 export type JournalEntryAdjustmentMode = 'reverse' | 'correct';
 
@@ -39,14 +41,12 @@ const correctionLineSchema = z
   .object({
     accountSubjectId: z.string().min(1, '계정과목을 선택해 주세요.'),
     fundingAccountId: z.string().optional(),
-    debitAmount: z.coerce
-      .number()
-      .int('차변 금액은 정수여야 합니다.')
-      .min(0, '차변 금액은 0 이상이어야 합니다.'),
-    creditAmount: z.coerce
-      .number()
-      .int('대변 금액은 정수여야 합니다.')
-      .min(0, '대변 금액은 0 이상이어야 합니다.'),
+    debitAmount: createNonNegativeMoneyWonSchema(
+      '차변 금액은 0 이상이어야 합니다.'
+    ),
+    creditAmount: createNonNegativeMoneyWonSchema(
+      '대변 금액은 0 이상이어야 합니다.'
+    ),
     description: z
       .string()
       .max(300, '라인 설명은 300자 이하여야 합니다.')
@@ -78,13 +78,9 @@ export const correctJournalEntrySchema = z
       .min(2, '정정 전표에는 최소 2개 라인이 필요합니다.')
   })
   .superRefine((value, context) => {
-    const totalDebit = value.lines.reduce(
-      (sum, line) => sum + line.debitAmount,
-      0
-    );
-    const totalCredit = value.lines.reduce(
-      (sum, line) => sum + line.creditAmount,
-      0
+    const totalDebit = sumMoneyWon(value.lines.map((line) => line.debitAmount));
+    const totalCredit = sumMoneyWon(
+      value.lines.map((line) => line.creditAmount)
     );
 
     if (totalDebit <= 0 || totalCredit <= 0) {

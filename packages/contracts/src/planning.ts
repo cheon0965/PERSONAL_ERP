@@ -2,6 +2,7 @@ import type {
   AccountingPeriodItem,
   AccountingPeriodStatus
 } from './accounting';
+import type { MoneyWon } from './money';
 import type { CollectedTransactionPostingStatus } from './transactions';
 
 export type PlanItemStatus =
@@ -16,7 +17,7 @@ export type PlanItemItem = {
   periodId: string;
   title: string;
   plannedDate: string;
-  plannedAmount: number;
+  plannedAmount: MoneyWon;
   status: PlanItemStatus;
   recurringRuleId: string | null;
   recurringRuleTitle: string | null;
@@ -32,7 +33,7 @@ export type PlanItemItem = {
 
 export type PlanItemSummary = {
   totalCount: number;
-  totalPlannedAmount: number;
+  totalPlannedAmount: MoneyWon;
   draftCount: number;
   matchedCount: number;
   confirmedCount: number;
@@ -64,7 +65,7 @@ export type ReportingHighlightTone = 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
 
 export type ReportingHighlightItem = {
   label: string;
-  amountWon: number;
+  amountWon: MoneyWon;
   tone: ReportingHighlightTone;
 };
 
@@ -72,35 +73,35 @@ export type ReportingTrendPoint = {
   periodId: string;
   monthLabel: string;
   periodStatus: AccountingPeriodStatus;
-  incomeWon: number;
-  expenseWon: number;
-  plannedIncomeWon: number;
-  plannedExpenseWon: number;
-  periodPnLWon: number | null;
-  cashWon: number | null;
-  netWorthWon: number | null;
+  incomeWon: MoneyWon;
+  expenseWon: MoneyWon;
+  plannedIncomeWon: MoneyWon;
+  plannedExpenseWon: MoneyWon;
+  periodPnLWon: MoneyWon | null;
+  cashWon: MoneyWon | null;
+  netWorthWon: MoneyWon | null;
   isOfficial: boolean;
 };
 
 export type ReportingOfficialComparison = {
   periodId: string;
   monthLabel: string;
-  officialCashWon: number;
-  officialNetWorthWon: number;
-  officialPeriodPnLWon: number;
+  officialCashWon: MoneyWon;
+  officialNetWorthWon: MoneyWon;
+  officialPeriodPnLWon: MoneyWon;
 };
 
 export type DashboardSummary = {
   period: AccountingPeriodItem;
   basisStatus: ReportingBasisStatus;
-  actualBalanceWon: number;
-  confirmedIncomeWon: number;
-  confirmedExpenseWon: number;
-  remainingPlannedIncomeWon: number;
-  remainingPlannedExpenseWon: number;
-  minimumReserveWon: number;
-  expectedMonthEndBalanceWon: number;
-  safetySurplusWon: number;
+  actualBalanceWon: MoneyWon;
+  confirmedIncomeWon: MoneyWon;
+  confirmedExpenseWon: MoneyWon;
+  remainingPlannedIncomeWon: MoneyWon;
+  remainingPlannedExpenseWon: MoneyWon;
+  minimumReserveWon: MoneyWon;
+  expectedMonthEndBalanceWon: MoneyWon;
+  safetySurplusWon: MoneyWon;
   warnings: string[];
   highlights: ReportingHighlightItem[];
   trend: ReportingTrendPoint[];
@@ -110,15 +111,15 @@ export type DashboardSummary = {
 export type ForecastResponse = {
   period: AccountingPeriodItem;
   basisStatus: ReportingBasisStatus;
-  actualBalanceWon: number;
-  confirmedIncomeWon: number;
-  expectedIncomeWon: number;
-  confirmedExpenseWon: number;
-  remainingPlannedExpenseWon: number;
-  sinkingFundWon: number;
-  minimumReserveWon: number;
-  expectedMonthEndBalanceWon: number;
-  safetySurplusWon: number;
+  actualBalanceWon: MoneyWon;
+  confirmedIncomeWon: MoneyWon;
+  expectedIncomeWon: MoneyWon;
+  confirmedExpenseWon: MoneyWon;
+  remainingPlannedExpenseWon: MoneyWon;
+  sinkingFundWon: MoneyWon;
+  minimumReserveWon: MoneyWon;
+  expectedMonthEndBalanceWon: MoneyWon;
+  safetySurplusWon: MoneyWon;
   warnings: string[];
   highlights: ReportingHighlightItem[];
   trend: ReportingTrendPoint[];

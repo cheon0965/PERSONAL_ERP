@@ -21,6 +21,7 @@ import {
   assertWorkspaceActionAllowed,
   readAllowedWorkspaceRoles
 } from '../../common/auth/workspace-action.policy';
+import { requirePositiveMoneyWon } from '../../common/money/money-won';
 import {
   readRequestId,
   readRequestPath,
@@ -103,7 +104,11 @@ export class RecurringRulesController {
         userId: workspace.userId,
         tenantId: workspace.tenantId,
         ledgerId: workspace.ledgerId,
-        ...dto
+        ...dto,
+        amountWon: requirePositiveMoneyWon(
+          dto.amountWon,
+          '반복 규칙 금액은 0보다 큰 안전한 정수여야 합니다.'
+        )
       });
 
       logWorkspaceActionSucceeded(this.securityEvents, {
@@ -167,7 +172,11 @@ export class RecurringRulesController {
         recurringRuleId,
         tenantId: workspace.tenantId,
         ledgerId: workspace.ledgerId,
-        ...dto
+        ...dto,
+        amountWon: requirePositiveMoneyWon(
+          dto.amountWon,
+          '반복 규칙 금액은 0보다 큰 안전한 정수여야 합니다.'
+        )
       });
 
       if (!updated) {

@@ -25,6 +25,7 @@ import {
   assertWorkspaceActionAllowed,
   readAllowedWorkspaceRoles
 } from '../../common/auth/workspace-action.policy';
+import { requirePositiveMoneyWon } from '../../common/money/money-won';
 import {
   readRequestId,
   readRequestPath,
@@ -121,7 +122,10 @@ export class CollectedTransactionsController {
         periodId: currentPeriod.id,
         title: dto.title,
         type: dto.type,
-        amountWon: dto.amountWon,
+        amountWon: requirePositiveMoneyWon(
+          dto.amountWon,
+          '거래 금액은 0보다 큰 안전한 정수여야 합니다.'
+        ),
         businessDate: dto.businessDate,
         fundingAccountId: dto.fundingAccountId,
         categoryId: dto.categoryId,
@@ -195,7 +199,10 @@ export class CollectedTransactionsController {
         periodId: currentPeriod.id,
         title: dto.title,
         type: dto.type,
-        amountWon: dto.amountWon,
+        amountWon: requirePositiveMoneyWon(
+          dto.amountWon,
+          '거래 금액은 0보다 큰 안전한 정수여야 합니다.'
+        ),
         businessDate: dto.businessDate,
         fundingAccountId: dto.fundingAccountId,
         categoryId: dto.categoryId,

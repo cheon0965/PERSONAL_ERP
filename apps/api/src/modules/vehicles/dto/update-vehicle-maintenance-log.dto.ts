@@ -12,10 +12,9 @@ import {
   IsString,
   Min
 } from 'class-validator';
+import { moneyWonApiProperty } from '../../../common/money/swagger-money';
 
-export class UpdateVehicleMaintenanceLogDto
-  implements UpdateVehicleMaintenanceLogRequest
-{
+export class UpdateVehicleMaintenanceLogDto implements UpdateVehicleMaintenanceLogRequest {
   @ApiProperty()
   @IsDateString()
   performedOn!: string;
@@ -38,7 +37,7 @@ export class UpdateVehicleMaintenanceLogDto
   @IsString()
   description!: string;
 
-  @ApiProperty()
+  @ApiProperty(moneyWonApiProperty({ example: 120000, minimum: 0 }))
   @IsInt()
   @Min(0)
   amountWon!: number;

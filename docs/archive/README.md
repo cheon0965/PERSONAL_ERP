@@ -14,3 +14,4 @@
 
 - `ALIGNMENT_PATCH_EXECUTION_PLAN.md`: 내부 정합성 패치와 설계 모델 분리를 완료하고 보관한 실행 계획
 - `BUSINESS_FLOW_IMPROVEMENT_EXECUTION_PLAN.md`: 현재 범위 완료 후 보관한 메인 비즈니스 흐름 개선 실행 계획 및 반영 현황
+- `MONEY_INTEGRITY_EXECUTION_PLAN.md`: `MoneyWon`, 금액 컬럼 `Decimal(19,0)` 승격, exact arithmetic, 금액 raw 연산 가드까지 완료 후 보관한 실행 계획

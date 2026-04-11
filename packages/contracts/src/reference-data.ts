@@ -1,4 +1,5 @@
 import type { TenantMembershipRole } from './auth';
+import type { MoneyWon } from './money';
 
 export type AccountType = 'BANK' | 'CASH' | 'CARD';
 
@@ -10,7 +11,7 @@ export type FundingAccountItem = {
   id: string;
   name: string;
   type: AccountType;
-  balanceWon: number;
+  balanceWon: MoneyWon;
   status: FundingAccountStatus;
 };
 

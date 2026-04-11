@@ -20,6 +20,7 @@ import {
 } from '@/features/reference-data/reference-data.api';
 import { webRuntime } from '@/shared/config/env';
 import { getTodayDateInputValue } from '@/shared/lib/date-input';
+import { createPositiveMoneyWonSchema } from '@/shared/lib/money';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import {
@@ -47,7 +48,7 @@ const recurringRuleSchema = z.object({
   title: z.string().trim().min(2, '제목은 2자 이상이어야 합니다.'),
   accountId: z.string().min(1, '자금수단을 선택해 주세요.'),
   categoryId: z.string(),
-  amountWon: z.coerce.number().int().positive('금액은 0보다 커야 합니다.'),
+  amountWon: createPositiveMoneyWonSchema('금액은 0보다 커야 합니다.'),
   frequency: z.enum(['WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY']),
   dayOfMonth: optionalDayOfMonthSchema,
   startDate: z.string().min(1, '시작일을 입력해 주세요.'),

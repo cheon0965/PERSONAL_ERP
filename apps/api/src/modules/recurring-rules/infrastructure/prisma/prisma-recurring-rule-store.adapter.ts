@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import type { RecurrenceFrequency } from '@personal-erp/contracts';
+import {
+  fromPrismaMoneyWon,
+  type PrismaMoneyLike
+} from '../../../../common/money/prisma-money';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
 import type {
   CreateRecurringRuleRecord,
@@ -12,7 +16,7 @@ import { RecurringRuleStorePort } from '../../application/ports/recurring-rule-s
 type RecurringRuleListRecord = {
   id: string;
   title: string;
-  amountWon: number;
+  amountWon: PrismaMoneyLike;
   frequency: RecurrenceFrequency;
   nextRunDate: Date | null;
   isActive: boolean;
@@ -32,7 +36,7 @@ type RecurringRuleDetailRecord = {
   title: string;
   accountId: string;
   categoryId: string | null;
-  amountWon: number;
+  amountWon: PrismaMoneyLike;
   frequency: RecurrenceFrequency;
   dayOfMonth: number | null;
   startDate: Date;
@@ -216,7 +220,7 @@ function mapRecurringRuleListRecord(
   return {
     id: record.id,
     title: record.title,
-    amountWon: record.amountWon,
+    amountWon: fromPrismaMoneyWon(record.amountWon),
     frequency: record.frequency,
     nextRunDate: record.nextRunDate,
     isActive: record.isActive,
@@ -240,7 +244,7 @@ function mapRecurringRuleDetailRecord(
     title: record.title,
     accountId: record.accountId,
     categoryId: record.categoryId,
-    amountWon: record.amountWon,
+    amountWon: fromPrismaMoneyWon(record.amountWon),
     frequency: record.frequency,
     dayOfMonth: record.dayOfMonth,
     startDate: record.startDate,

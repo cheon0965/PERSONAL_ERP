@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import type { CreateVehicleFuelLogRequest } from '@personal-erp/contracts';
 import { IsBoolean, IsDateString, IsInt, IsNumber, Min } from 'class-validator';
+import { moneyWonApiProperty } from '../../../common/money/swagger-money';
 
 export class CreateVehicleFuelLogDto implements CreateVehicleFuelLogRequest {
   @ApiProperty()
@@ -17,12 +18,12 @@ export class CreateVehicleFuelLogDto implements CreateVehicleFuelLogRequest {
   @Min(0.001)
   liters!: number;
 
-  @ApiProperty()
+  @ApiProperty(moneyWonApiProperty({ example: 84000, minimum: 0 }))
   @IsInt()
   @Min(0)
   amountWon!: number;
 
-  @ApiProperty()
+  @ApiProperty(moneyWonApiProperty({ example: 1700, minimum: 0 }))
   @IsInt()
   @Min(0)
   unitPriceWon!: number;

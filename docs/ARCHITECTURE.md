@@ -24,12 +24,14 @@ apps/
   api/
 packages/
   contracts/
+  money/
 docs/
 ```
 
 - `apps/web`: 화면, 사용자 상호작용, feature 조합
 - `apps/api`: 인증, 검증, 도메인 처리, 데이터 접근
 - `packages/contracts`: 요청/응답 타입의 단일 소스
+- `packages/money`: `MoneyWon` 파싱/검증/합산/반올림/배분을 담당하는 공용 금액 모듈
 
 ## 3. MSA-ready Context Map
 
@@ -53,7 +55,7 @@ docs/
 | Recurring Automation | `recurring-rules`, `plan-items`                                                                                                                                                                                                             | 반복규칙 정의와 기간별 계획 항목 생성/정합성                   |
 | Asset & Coverage     | `vehicles`, `insurance-policies`                                                                                                                                                                                                            | 운영비 성격의 자산/보장 도메인                                 |
 | Insight & Planning   | `dashboard`, `forecast`                                                                                                                                                                                                                     | 읽기 기반 요약/예측 조합                                       |
-| Platform & Contracts | `packages/contracts`, env, Prisma, health, 공통 외부 의존성 조립                                                                                                                                                                            | 계약과 런타임 기반선                                           |
+| Platform & Contracts | `packages/contracts`, `packages/money`, env, Prisma, health, 공통 외부 의존성 조립                                                                                                                                                          | 계약, 금액 값 기준, 런타임 기반선                              |
 
 여기서 `Ledger`는 현재 코드베이스의 컨텍스트 이름입니다.  
 현재 API 모듈명은 `accounting-periods`, `collected-transactions`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`, `recurring-rules`, `plan-items` 등이고, Web feature/route는 shorthand로 `periods`, `transactions`, `imports`, `recurring`, `insurances` 같은 화면 경로를 함께 사용합니다.  
@@ -73,6 +75,13 @@ docs/
 - 다른 모듈의 `repository`, `adapter`, `controller`를 직접 import하는 것을 기본 규칙으로 두지 않습니다.
 - `packages/contracts`에 앱 구현 코드나 비즈니스 로직을 넣지 않습니다.
 - 메시지 브로커, outbox, gateway, service split은 별도 ADR 없이 도입하지 않습니다.
+
+## 3.1 금액 정합성 경계
+
+- HTTP 요청/응답의 금액은 `MoneyWon` 의미의 `number`이며 KRW 원 단위 safe integer만 허용합니다.
+- Prisma 영속 금액 컬럼은 `Decimal(19,0)`로 유지하고, business logic 경계에는 mapper/adapter의 `Prisma.Decimal -> MoneyWon(number)` 변환을 거쳐 전달합니다.
+- 금액 덧셈, 차감, 합계, `HALF_UP` 반올림, 배분 잔차 보정은 `@personal-erp/money` helper를 우선 사용합니다.
+- money package 밖의 금액 필드 raw `Number(...)`, `+/-`, `+=/-=` 유입은 `npm run money:check`와 `npm run check:quick`로 막습니다.
 
 ## 4. 프론트엔드 구조
 

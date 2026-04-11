@@ -1,3 +1,5 @@
+import type { MoneyWon } from './money';
+
 export type AccountingPeriodStatus =
   | 'OPEN'
   | 'IN_REVIEW'
@@ -45,7 +47,7 @@ export type AccountingPeriodItem = {
 export type OpeningBalanceLineInput = {
   accountSubjectId: string;
   fundingAccountId?: string | null;
-  balanceAmount: number;
+  balanceAmount: MoneyWon;
 };
 
 export type OpenAccountingPeriodRequest = {
@@ -68,17 +70,17 @@ export type ClosingSnapshotLineItem = {
   accountSubjectCode: string;
   accountSubjectName: string;
   fundingAccountName: string | null;
-  balanceAmount: number;
+  balanceAmount: MoneyWon;
 };
 
 export type ClosingSnapshotItem = {
   id: string;
   periodId: string;
   lockedAt: string;
-  totalAssetAmount: number;
-  totalLiabilityAmount: number;
-  totalEquityAmount: number;
-  periodPnLAmount: number;
+  totalAssetAmount: MoneyWon;
+  totalLiabilityAmount: MoneyWon;
+  totalEquityAmount: MoneyWon;
+  periodPnLAmount: MoneyWon;
   lines: ClosingSnapshotLineItem[];
 };
 
@@ -92,7 +94,7 @@ export type OpeningBalanceSnapshotLineItem = {
   accountSubjectCode: string;
   accountSubjectName: string;
   fundingAccountName: string | null;
-  balanceAmount: number;
+  balanceAmount: MoneyWon;
 };
 
 export type OpeningBalanceSnapshotItem = {
@@ -134,12 +136,12 @@ export type FinancialStatementKind =
 
 export type FinancialStatementMetricItem = {
   label: string;
-  amountWon: number;
+  amountWon: MoneyWon;
 };
 
 export type FinancialStatementSectionItem = {
   label: string;
-  amountWon: number;
+  amountWon: MoneyWon;
 };
 
 export type FinancialStatementSection = {
@@ -165,9 +167,9 @@ export type FinancialStatementSnapshotItem = {
 
 export type FinancialStatementComparisonMetricItem = {
   label: string;
-  currentAmountWon: number;
-  previousAmountWon: number | null;
-  deltaWon: number | null;
+  currentAmountWon: MoneyWon;
+  previousAmountWon: MoneyWon | null;
+  deltaWon: MoneyWon | null;
   deltaRate: number | null;
 };
 

@@ -11,6 +11,7 @@ import {
   Max,
   Min
 } from 'class-validator';
+import { moneyWonApiProperty } from '../../../common/money/swagger-money';
 
 export class CreateRecurringRuleDto implements CreateRecurringRuleRequest {
   @ApiProperty() @IsString() title!: string;
@@ -19,7 +20,10 @@ export class CreateRecurringRuleDto implements CreateRecurringRuleRequest {
   @IsOptional()
   @IsString()
   categoryId?: string;
-  @ApiProperty() @IsInt() @Min(1) amountWon!: number;
+  @ApiProperty(moneyWonApiProperty({ example: 125000, minimum: 1 }))
+  @IsInt()
+  @Min(1)
+  amountWon!: number;
   @ApiProperty({ enum: RecurrenceFrequency })
   @IsEnum(RecurrenceFrequency)
   frequency!: RecurrenceFrequency;

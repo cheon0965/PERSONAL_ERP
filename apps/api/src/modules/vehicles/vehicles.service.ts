@@ -16,6 +16,7 @@ import type {
   VehicleMaintenanceLogItem
 } from '@personal-erp/contracts';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
+import { requireNonNegativeMoneyWon } from '../../common/money/money-won';
 import {
   mapVehicleFuelLogToItem,
   mapVehicleMaintenanceLogToItem,
@@ -332,20 +333,18 @@ function normalizeFuelLogInput(
     throw new BadRequestException('주유량은 0보다 커야 합니다.');
   }
 
-  if (!Number.isFinite(input.amountWon) || input.amountWon < 0) {
-    throw new BadRequestException('주유 금액은 0 이상이어야 합니다.');
-  }
-
-  if (!Number.isFinite(input.unitPriceWon) || input.unitPriceWon < 0) {
-    throw new BadRequestException('리터당 단가는 0 이상이어야 합니다.');
-  }
-
   return {
     filledOn,
     odometerKm: input.odometerKm,
     liters: input.liters,
-    amountWon: input.amountWon,
-    unitPriceWon: input.unitPriceWon,
+    amountWon: requireNonNegativeMoneyWon(
+      input.amountWon,
+      '주유 금액은 0 이상인 안전한 정수여야 합니다.'
+    ),
+    unitPriceWon: requireNonNegativeMoneyWon(
+      input.unitPriceWon,
+      '리터당 단가는 0 이상인 안전한 정수여야 합니다.'
+    ),
     isFullTank: input.isFullTank
   };
 }
@@ -381,7 +380,10 @@ function normalizeMaintenanceLogInput(
     category: input.category,
     vendor,
     description,
-    amountWon: input.amountWon,
+    amountWon: requireNonNegativeMoneyWon(
+      input.amountWon,
+      '정비 금액은 0 이상인 안전한 정수여야 합니다.'
+    ),
     memo
   };
 }

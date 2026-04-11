@@ -3,10 +3,14 @@ import type {
   OpeningBalanceSnapshotLineItem
 } from '@personal-erp/contracts';
 import type { OpeningBalanceSourceKind } from '@prisma/client';
+import {
+  fromPrismaMoneyWon,
+  type PrismaMoneyLike
+} from '../../common/money/prisma-money';
 
 type OpeningBalanceSnapshotLineRecord = {
   id: string;
-  balanceAmount: number;
+  balanceAmount: PrismaMoneyLike;
   accountSubjectCode: string;
   accountSubjectName: string;
   fundingAccountName: string | null;
@@ -40,6 +44,6 @@ function mapOpeningBalanceSnapshotLineRecordToItem(
     accountSubjectCode: record.accountSubjectCode,
     accountSubjectName: record.accountSubjectName,
     fundingAccountName: record.fundingAccountName,
-    balanceAmount: record.balanceAmount
+    balanceAmount: fromPrismaMoneyWon(record.balanceAmount)
   };
 }

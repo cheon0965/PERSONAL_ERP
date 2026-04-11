@@ -1,4 +1,6 @@
-﻿export type InsuranceCycle = 'MONTHLY' | 'YEARLY';
+import type { MoneyWon } from './money';
+
+export type InsuranceCycle = 'MONTHLY' | 'YEARLY';
 
 export type FuelType = 'GASOLINE' | 'DIESEL' | 'LPG' | 'HYBRID' | 'ELECTRIC';
 
@@ -18,7 +20,7 @@ export type InsurancePolicyItem = {
   id: string;
   provider: string;
   productName: string;
-  monthlyPremiumWon: number;
+  monthlyPremiumWon: MoneyWon;
   paymentDay: number;
   cycle: InsuranceCycle;
   fundingAccountId: string | null;
@@ -35,7 +37,7 @@ export type InsurancePolicyItem = {
 export type CreateInsurancePolicyRequest = {
   provider: string;
   productName: string;
-  monthlyPremiumWon: number;
+  monthlyPremiumWon: MoneyWon;
   paymentDay: number;
   cycle: InsuranceCycle;
   fundingAccountId: string;
@@ -53,8 +55,8 @@ export type FuelLogItem = {
   filledOn: string;
   odometerKm: number;
   liters: number;
-  amountWon: number;
-  unitPriceWon: number;
+  amountWon: MoneyWon;
+  unitPriceWon: MoneyWon;
   isFullTank: boolean;
 };
 
@@ -72,7 +74,7 @@ export type VehicleMaintenanceLogItem = {
   category: VehicleMaintenanceCategory;
   vendor: string | null;
   description: string;
-  amountWon: number;
+  amountWon: MoneyWon;
   memo: string | null;
 };
 
@@ -82,7 +84,7 @@ export type VehicleItem = {
   manufacturer: string | null;
   fuelType: FuelType;
   initialOdometerKm: number;
-  monthlyExpenseWon: number;
+  monthlyExpenseWon: MoneyWon;
   estimatedFuelEfficiencyKmPerLiter: number | null;
 };
 
@@ -91,7 +93,7 @@ export type CreateVehicleRequest = {
   manufacturer?: string | null;
   fuelType: FuelType;
   initialOdometerKm: number;
-  monthlyExpenseWon: number;
+  monthlyExpenseWon: MoneyWon;
   estimatedFuelEfficiencyKmPerLiter?: number | null;
 };
 
@@ -101,8 +103,8 @@ export type CreateVehicleFuelLogRequest = {
   filledOn: string;
   odometerKm: number;
   liters: number;
-  amountWon: number;
-  unitPriceWon: number;
+  amountWon: MoneyWon;
+  unitPriceWon: MoneyWon;
   isFullTank: boolean;
 };
 
@@ -114,7 +116,7 @@ export type CreateVehicleMaintenanceLogRequest = {
   category: VehicleMaintenanceCategory;
   vendor?: string | null;
   description: string;
-  amountWon: number;
+  amountWon: MoneyWon;
   memo?: string | null;
 };
 

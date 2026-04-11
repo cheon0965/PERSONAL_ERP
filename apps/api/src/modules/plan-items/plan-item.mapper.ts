@@ -1,12 +1,17 @@
 import type { PlanItemItem, PlanItemSummary } from '@personal-erp/contracts';
+import { addMoneyWon } from '@personal-erp/money';
 import type { PlanItemStatus } from '@prisma/client';
+import {
+  fromPrismaMoneyWon,
+  type PrismaMoneyLike
+} from '../../common/money/prisma-money';
 
 type PlanItemRecord = {
   id: string;
   periodId: string;
   title: string;
   plannedDate: Date;
-  plannedAmount: number;
+  plannedAmount: PrismaMoneyLike;
   status: PlanItemStatus;
   recurringRule: {
     id: string;
@@ -38,7 +43,7 @@ export function mapPlanItemRecordToItem(record: PlanItemRecord): PlanItemItem {
     periodId: record.periodId,
     title: record.title,
     plannedDate: record.plannedDate.toISOString().slice(0, 10),
-    plannedAmount: record.plannedAmount,
+    plannedAmount: fromPrismaMoneyWon(record.plannedAmount),
     status: record.status,
     recurringRuleId: record.recurringRule?.id ?? null,
     recurringRuleTitle: record.recurringRule?.title ?? null,
@@ -62,7 +67,10 @@ export function summarizePlanItems(
   return items.reduce<PlanItemSummary>(
     (summary, item) => {
       summary.totalCount += 1;
-      summary.totalPlannedAmount += item.plannedAmount;
+      summary.totalPlannedAmount = addMoneyWon(
+        summary.totalPlannedAmount,
+        item.plannedAmount
+      );
 
       switch (item.status) {
         case 'DRAFT':

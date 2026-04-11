@@ -6,7 +6,7 @@ import type { PostingPolicyKey } from '@prisma/client';
 import { buildJournalEntryEntryNumber } from '../journal-entries/journal-entry-adjustment.policy';
 
 const ASSET_SUBJECT_CODE = '1010';
-const LIABILITY_SUBJECT_CODE = '2010';
+const LIABILITY_SUBJECT_CODE = '2100';
 const INCOME_SUBJECT_CODE = '4100';
 const EXPENSE_SUBJECT_CODE = '5100';
 

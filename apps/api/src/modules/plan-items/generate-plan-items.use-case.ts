@@ -14,6 +14,7 @@ import {
 } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
+import { fromPrismaMoneyWon } from '../../common/money/prisma-money';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   buildPlannedDates,
@@ -186,7 +187,7 @@ export class GeneratePlanItemsUseCase {
           fundingAccountId: rule.accountId,
           categoryId: rule.categoryId ?? undefined,
           title: rule.title,
-          plannedAmount: rule.amountWon,
+          plannedAmount: fromPrismaMoneyWon(rule.amountWon),
           plannedDate
         });
       }

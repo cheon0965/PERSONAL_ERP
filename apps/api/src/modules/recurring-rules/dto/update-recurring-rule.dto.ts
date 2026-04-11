@@ -11,6 +11,7 @@ import {
   Max,
   Min
 } from 'class-validator';
+import { moneyWonApiProperty } from '../../../common/money/swagger-money';
 
 export class UpdateRecurringRuleDto implements UpdateRecurringRuleRequest {
   @ApiProperty()
@@ -26,7 +27,7 @@ export class UpdateRecurringRuleDto implements UpdateRecurringRuleRequest {
   @IsString()
   categoryId?: string;
 
-  @ApiProperty()
+  @ApiProperty(moneyWonApiProperty({ example: 125000, minimum: 1 }))
   @IsInt()
   @Min(1)
   amountWon!: number;

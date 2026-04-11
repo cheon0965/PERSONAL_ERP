@@ -4,6 +4,7 @@ import type {
   FinancialStatementComparisonItem,
   FinancialStatementsView
 } from '@personal-erp/contracts';
+import { subtractMoneyWon } from '@personal-erp/money';
 import { AccountingPeriodStatus, Prisma } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -241,7 +242,7 @@ function buildFinancialStatementComparison(
         const deltaWon =
           previousAmountWon === null
             ? null
-            : currentAmountWon - previousAmountWon;
+            : subtractMoneyWon(currentAmountWon, previousAmountWon);
         const deltaRate =
           previousAmountWon === null ||
           previousAmountWon === 0 ||

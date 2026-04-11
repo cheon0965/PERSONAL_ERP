@@ -3,6 +3,7 @@ import type {
   CollectedTransactionPostingStatus,
   CollectedTransactionType
 } from './transactions';
+import type { MoneyWon } from './money';
 
 export type ImportSourceKind = 'CARD_EXCEL' | 'BANK_CSV' | 'MANUAL_UPLOAD';
 
@@ -77,7 +78,7 @@ export type CollectImportedRowPreview = {
   importedRowId: string;
   occurredOn: string;
   title: string;
-  amountWon: number;
+  amountWon: MoneyWon;
   fundingAccountId: string;
   fundingAccountName: string;
   type: CollectedTransactionType;

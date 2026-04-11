@@ -7,12 +7,16 @@ import type {
   JournalEntrySourceKind,
   JournalEntryStatus
 } from '@prisma/client';
+import {
+  fromPrismaMoneyWon,
+  type PrismaMoneyLike
+} from '../../common/money/prisma-money';
 
 type JournalLineRecord = {
   id: string;
   lineNumber: number;
-  debitAmount: number;
-  creditAmount: number;
+  debitAmount: PrismaMoneyLike;
+  creditAmount: PrismaMoneyLike;
   description: string | null;
   accountSubject: {
     code: string;
@@ -97,8 +101,8 @@ function mapJournalLineRecordToItem(
     accountSubjectCode: record.accountSubject.code,
     accountSubjectName: record.accountSubject.name,
     fundingAccountName: record.fundingAccount?.name ?? null,
-    debitAmount: record.debitAmount,
-    creditAmount: record.creditAmount,
+    debitAmount: fromPrismaMoneyWon(record.debitAmount),
+    creditAmount: fromPrismaMoneyWon(record.creditAmount),
     description: record.description
   };
 }

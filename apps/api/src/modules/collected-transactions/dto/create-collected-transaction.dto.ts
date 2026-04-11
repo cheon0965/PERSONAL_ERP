@@ -9,6 +9,7 @@ import {
   IsString,
   Min
 } from 'class-validator';
+import { moneyWonApiProperty } from '../../../common/money/swagger-money';
 
 export class CreateCollectedTransactionRequestDto implements CreateCollectedTransactionRequest {
   @ApiProperty()
@@ -19,7 +20,7 @@ export class CreateCollectedTransactionRequestDto implements CreateCollectedTran
   @IsEnum(TransactionType)
   type!: TransactionType;
 
-  @ApiProperty({ example: 125000 })
+  @ApiProperty(moneyWonApiProperty({ example: 125000, minimum: 1 }))
   @IsInt()
   @Min(1)
   amountWon!: number;

@@ -1,4 +1,14 @@
-﻿export type JournalAdjustmentLineInput = {
+import {
+  addMoneyWon,
+  compareMoneyWon,
+  isMoneyWon
+} from '@personal-erp/money';
+import {
+  fromPrismaMoneyWon,
+  type PrismaMoneyLike
+} from '../../common/money/prisma-money';
+
+export type JournalAdjustmentLineInput = {
   accountSubjectId: string;
   fundingAccountId?: string | null;
   debitAmount: number;
@@ -18,8 +28,8 @@ export type JournalAdjustmentLineDraft = {
 export type JournalEntrySourceLine = {
   accountSubjectId: string;
   fundingAccountId: string | null;
-  debitAmount: number;
-  creditAmount: number;
+  debitAmount: PrismaMoneyLike;
+  creditAmount: PrismaMoneyLike;
   description: string | null;
 };
 
@@ -54,8 +64,8 @@ export function buildReversalJournalLines(
     ...(line.fundingAccountId
       ? { fundingAccountId: line.fundingAccountId }
       : {}),
-    debitAmount: line.creditAmount,
-    creditAmount: line.debitAmount,
+    debitAmount: fromPrismaMoneyWon(line.creditAmount),
+    creditAmount: fromPrismaMoneyWon(line.debitAmount),
     ...(line.description ? { description: line.description } : {})
   }));
 }
@@ -90,11 +100,8 @@ export function assertBalancedJournalAdjustmentLines(
   let totalCredit = 0;
 
   for (const line of lines) {
-    if (
-      !Number.isInteger(line.debitAmount) ||
-      !Number.isInteger(line.creditAmount)
-    ) {
-      throw new Error('Journal line amounts must be integers.');
+    if (!isMoneyWon(line.debitAmount) || !isMoneyWon(line.creditAmount)) {
+      throw new Error('Journal line amounts must be safe integers.');
     }
 
     if (line.debitAmount < 0 || line.creditAmount < 0) {
@@ -110,15 +117,15 @@ export function assertBalancedJournalAdjustmentLines(
       );
     }
 
-    totalDebit += line.debitAmount;
-    totalCredit += line.creditAmount;
+    totalDebit = addMoneyWon(totalDebit, line.debitAmount);
+    totalCredit = addMoneyWon(totalCredit, line.creditAmount);
   }
 
   if (totalDebit <= 0 || totalCredit <= 0) {
     throw new Error('Journal entry amount must be greater than zero.');
   }
 
-  if (totalDebit !== totalCredit) {
+  if (compareMoneyWon(totalDebit, totalCredit) !== 0) {
     throw new Error('Journal entry debit and credit totals must match.');
   }
 }

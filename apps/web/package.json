@@ -16,6 +16,7 @@
     "test:e2e:smoke:build:browser": "npm run build:e2e:smoke && playwright test --config playwright.build.config.mjs e2e/auth-and-transactions.spec.ts --grep @smoke"
   },
   "dependencies": {
+    "@personal-erp/money": "0.1.0",
     "@emotion/cache": "^11.14.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
