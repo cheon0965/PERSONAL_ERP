@@ -17,6 +17,7 @@ import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AccountingPeriodsService } from '../accounting-periods/accounting-periods.service';
 import { readCollectingAccountingPeriodStatuses } from '../accounting-periods/accounting-period-transition.policy';
+import { mapCollectedTransactionTypeToLedgerTransactionCode } from '../collected-transactions/public';
 import { resolveImportedRowAutoPreparation } from './imported-row-auto-preparation.policy';
 import {
   buildCollectImportedRowPreview,
@@ -265,7 +266,7 @@ export class ImportedRowCollectionService {
       autoPreparation.effectiveCategoryId
     );
     const requestedCategoryName = input.input.categoryId
-      ? effectiveCategory?.name ?? null
+      ? (effectiveCategory?.name ?? null)
       : null;
     const autoPreparationSummary = buildImportedRowAutoPreparationSummary({
       type: input.input.type,
@@ -560,19 +561,5 @@ export class ImportedRowCollectionService {
     }
 
     return category;
-  }
-}
-
-function mapCollectedTransactionTypeToLedgerTransactionCode(
-  type: CollectImportedRowRequest['type']
-): string {
-  switch (type) {
-    case 'INCOME':
-      return 'INCOME_BASIC';
-    case 'TRANSFER':
-      return 'TRANSFER_BASIC';
-    case 'EXPENSE':
-    default:
-      return 'EXPENSE_BASIC';
   }
 }
