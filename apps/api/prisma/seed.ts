@@ -167,7 +167,6 @@ const DEMO_VEHICLE = {
   manufacturer: 'Hyundai',
   fuelType: FuelType.DIESEL,
   initialOdometerKm: 128000,
-  monthlyExpenseWon: 286000,
   estimatedFuelEfficiencyKmPerLiter: '10.80'
 } as const;
 
@@ -211,8 +210,8 @@ const DEMO_VEHICLE_MAINTENANCE_LOGS = [
   }
 ] as const;
 
-// Demo seed intentionally avoids creating new legacy Transaction rows.
-// Any remaining legacy rows should come only from pre-phase1 data or explicit
+// Demo seed does not create rows for the removed Transaction table.
+// Any pre-phase1 residue should come only from explicit backbone
 // backfill/rollback workflows.
 
 type SummaryItem = {
@@ -256,7 +255,7 @@ function printSummary(summary: SeedSummary) {
     `  - settings: created ${summary.settings.created}, skipped ${summary.settings.skipped}`,
     `  - accounts: created ${summary.accounts.created}, skipped ${summary.accounts.skipped}`,
     `  - categories: created ${summary.categories.created}, skipped ${summary.categories.skipped}`,
-    '  - legacy transactions: not seeded',
+    '  - removed Transaction table rows: not seeded',
     `  - recurring rules: created ${summary.recurringRules.created}, skipped ${summary.recurringRules.skipped}`,
     `  - insurance policies: created ${summary.insurancePolicies.created}, skipped ${summary.insurancePolicies.skipped}`,
     `  - vehicles: created ${summary.vehicles.created}, skipped ${summary.vehicles.skipped}`,

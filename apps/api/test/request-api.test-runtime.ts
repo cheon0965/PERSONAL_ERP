@@ -4,6 +4,7 @@ import { configureApiApp } from '../src/bootstrap/configure-api-app';
 import { SecurityEventLogger } from '../src/common/infrastructure/operational/security-event.logger';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { getApiEnv, resetApiEnvCache } from '../src/config/api-env';
+import { listenOnSafeTestPort } from './http-test-port';
 import { createPrismaMock } from './request-api.test-prisma-mock';
 import { createRequestTestState } from './request-api.test-state';
 import type {
@@ -172,14 +173,8 @@ export async function createRequestTestContext(): Promise<RequestTestContext> {
     const app = moduleRef.createNestApplication();
     configureApiApp(app, getApiEnv());
 
-    await app.listen(0, '127.0.0.1');
-
-    const address = app.getHttpServer().address();
-    if (!address || typeof address === 'string') {
-      throw new Error('Could not resolve the test server address.');
-    }
-
-    const baseUrl = `http://127.0.0.1:${address.port}/api`;
+    const port = await listenOnSafeTestPort(app);
+    const baseUrl = `http://127.0.0.1:${port}/api`;
 
     return {
       state,

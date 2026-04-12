@@ -76,7 +76,7 @@
 - 인증 세션 생성/회전/로그아웃
 - 보호 라우트의 `401`
 - `GET /auth/me`
-- `GET /funding-accounts`, `GET /categories`, `GET /account-subjects`, `GET /ledger-transaction-types`, `GET /insurance-policies`, `GET /vehicles`
+- `GET /funding-accounts`, `GET /categories`, `GET /account-subjects`, `GET /ledger-transaction-types`, `GET /insurance-policies`, `GET /vehicles`, `GET /vehicles/operating-summary`
   현재 workspace/ledger 기준 활성 참조 데이터와 운영 보조 자산 데이터만 반환하는지 검증
 - `GET /insurance-policies?includeInactive=true`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`
   Owner/Manager 전용 보험 계약 생성, 수정, 비활성화/재활성화와 workspace 범위 접근통제를 검증
@@ -144,6 +144,9 @@
 - 실제 브라우저 상호작용으로 `/recurring`에서 반복 규칙 생성, 수정, 삭제와 목록 반영이 동작하는지 검증
 - 실제 브라우저 상호작용으로 `/insurances`에서 보험 계약 생성, 수정, 비활성화와 목록 반영이 동작하는지 검증
 - 실제 브라우저 상호작용으로 `/vehicles`에서 차량 생성, 수정, 연료 이력 생성/수정, 정비 이력 생성/수정과 목록 반영이 동작하는지 검증
+- 실제 브라우저 상호작용으로 `/plan-items` 생성, `dashboard`/`forecast` 반영, `/financial-statements` 생성, `/carry-forwards` 생성과 차기 이월 basis note 반영이 동작하는지 검증
+- 실제 브라우저 상호작용으로 `/imports` 업로드 배치에서 행을 승격한 뒤 `/transactions`에서 전표 확정을 실행하고 `/journal-entries`에서 생성 전표를 여는 월 운영 cross-feature 흐름을 검증
+- 루트 `ci:local:*` 스크립트와 `docs/DEVELOPMENT_GUIDE.md` 매핑표로 GitHub Actions 주요 job을 로컬에서 다시 따를 수 있는 진입점을 제공
 - `npm run test:e2e:smoke:build`로 in-process production build/start 경로에 결과물을 올린 뒤 health route 응답 기준 최소 HTTP smoke를 자동 검증
 - `npm run test:e2e:smoke:build:browser`로는 로그인/세션 복원, 운영 체크리스트 핵심 CTA, 작업 문맥 fallback 같은 브라우저 build smoke를 루트 래퍼 경로로 필요 시 별도로 검증
 - CI의 `e2e-smoke` 잡은 개발 서버가 아니라 build 결과물 기준 HTTP smoke를 실행
@@ -152,7 +155,8 @@
 
 ## 현재 남아 있는 공백
 
-- 차량 연료/정비 이력 분리와 `monthlyExpenseWon` 전환 기준 고정은 끝났지만, `monthlyExpenseWon` 물리 필드 제거와 `VehicleOperatingSummary` read model의 실제 projection 구현은 후속 작업으로 남아 있음
+- 차량 연료/정비 이력 분리, `GET /vehicles/operating-summary` projection 추가, 차량 `Vehicle` 물리 필드/응답/계약에서 `monthlyExpenseWon` 제거, 레거시 `Transaction` 물리 제거와 active reference guard, 메인 월 운영 루프의 `plan-items -> dashboard/forecast -> financial-statements -> carry-forwards` 브라우저 시나리오, `imports -> collected-transactions -> journal-entries` cross-feature 브라우저 시나리오, Next.js ESLint plugin explicit registration까지는 반영됨
+- 저장소 안 우선순위로 선별했던 작업은 현재 문서 기준 모두 닫혔음
 - `.github/workflows/ci.yml`의 `prisma-integration` job wiring은 반영되었지만, 실제 GitHub 저장소/조직 secret `PRISMA_INTEGRATION_DATABASE_URL` 등록과 첫 통과 증적 확보는 저장소 밖 후속 작업으로 남아 있음
 - Docker가 없는 개발 PC에서는 `semgrep-ce`, `gitleaks`를 로컬에서 CI와 동일하게 재현하기 어려움
 - Windows `core.autocrlf=true` checkout에서는 `npm run check:quick`의 Prettier 단계가 CI(Ubuntu LF 기준)와 다르게 보일 수 있음
@@ -174,4 +178,4 @@
 
 현재 검증체계는 성공 경로 계약, 인증, DTO validation, 접근 범위 검증, readiness/request-id 같은 운영 신호, 핵심 쓰기 흐름, 대표 브라우저 사용자 흐름까지를 자동으로 막는 상태입니다.
 `npm run test:e2e`, `npm run test:prisma`는 빠른 기본 테스트와 분리된 대표 심화 검증으로 유지합니다.
-다음 보강 우선순위는 `PRISMA_INTEGRATION_DATABASE_URL` GitHub secret 등록과 첫 `prisma-integration` 통과 증적 확보, Docker 기반 로컬 CI 재현성 보강입니다.
+다음 보강 우선순위는 현재 저장소 밖 작업인 `PRISMA_INTEGRATION_DATABASE_URL` GitHub secret 등록과 첫 `prisma-integration` 통과 증적 확보입니다.

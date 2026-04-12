@@ -32,7 +32,7 @@
 - `MoneyWon`은 KRW `원 단위 정수`이며 `Number.isSafeInteger` 범위를 통과해야 합니다.
 - Prisma 영속 금액 컬럼은 `Decimal(19,0)`을 사용하고, API mapper 경계에서 `MoneyWon(number)`로 변환합니다.
 - 소수 중간 계산이 필요한 반올림/배분은 `@personal-erp/money`의 `decimal.js` 기반 helper를 사용하며 저장 전 `HALF_UP`과 잔차 보정으로 정수 금액을 확정합니다.
-- 대표 필드는 `amountWon`, `balanceWon`, `plannedAmount`, `balanceAmount`, `debitAmount`, `creditAmount`, `monthlyPremiumWon`, `monthlyExpenseWon`, `unitPriceWon`입니다. `CollectedTransaction.amount`처럼 DB 컬럼명이 일반적인 경우에도 HTTP 계약에서는 `amountWon` 의미로 노출합니다.
+- 대표 필드는 `amountWon`, `balanceWon`, `plannedAmount`, `balanceAmount`, `debitAmount`, `creditAmount`, `monthlyPremiumWon`, `unitPriceWon`입니다. `CollectedTransaction.amount`처럼 DB 컬럼명이 일반적인 경우에도 HTTP 계약에서는 `amountWon` 의미로 노출합니다.
 
 ## 인증 흐름
 
@@ -61,7 +61,7 @@
 
 ## 현재 구현 범위 요약
 
-- 기준/참조 범위는 조회 `auth/me`, `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/차량 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `DELETE /insurance-policies/:id`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
+- 기준/참조 범위는 조회 `auth/me`, `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`, `vehicles/operating-summary`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/차량 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `DELETE /insurance-policies/:id`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
 - 운영/원장 조회 범위는 `accounting-periods`, `collected-transactions`, `journal-entries`, `plan-items`, `financial-statements`, `carry-forwards`, `import-batches`까지 포함합니다.
 - 집계/보고 조회 범위는 `dashboard/summary`, `forecast/monthly`까지 포함합니다.
 - 현재 쓰기/명령 범위는 `funding-accounts`, `categories`, `insurance-policies`, `vehicles`, `vehicle maintenance logs`, `accounting-periods`, `collected-transactions`, `recurring-rules`, `plan-items`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`까지 확장되어 있습니다.
@@ -88,6 +88,7 @@
 - `PATCH /insurance-policies/:id`
 - `DELETE /insurance-policies/:id`
 - `GET /vehicles`
+- `GET /vehicles/operating-summary`
 - `GET /vehicles/fuel-logs`
 - `GET /vehicles/maintenance-logs`
 - `POST /vehicles`
@@ -244,14 +245,22 @@
 
 - 계약: response `VehicleItem[]`
 - 현재 작업 문맥 기준 차량 기본 프로필만 반환합니다.
-- 현재 범위는 차량 기본 정보 관리와 운영비/연비 보조 지표 조회까지로 한정합니다.
+- 현재 범위는 차량 기본 정보 관리에 집중하며, 운영비/연비 요약은 별도 summary projection으로 분리합니다.
 - 연료 이력과 정비 이력은 각각 별도 운영 기록 API로 분리합니다.
+
+### `GET /vehicles/operating-summary`
+
+- 계약: response `VehicleOperatingSummaryView`
+- 현재 작업 문맥 기준 차량별 운영 요약 read model을 반환합니다.
+- 현재 구현은 연료 이력 비용 합계, 정비 이력 비용 합계, 기록 기반 운영비, 최근 이력 날짜, 입력 기준 연비/기록 기준 연비를 함께 요약합니다.
+- 이 응답은 차량 프로필 write model을 대체하지 않고, `/vehicles` 화면 상단 카드와 차트 같은 운영 보조 지표를 분리해 읽기 위한 projection입니다.
 
 ### `POST /vehicles`
 
 - 계약: `CreateVehicleRequest -> VehicleItem`
 - 현재 작업 문맥의 Owner/Manager만 새 차량 기본 정보를 생성할 수 있습니다.
-- 현재 범위는 `name`, `manufacturer`, `fuelType`, `initialOdometerKm`, `monthlyExpenseWon`, `estimatedFuelEfficiencyKmPerLiter`까지의 운영 보조 필드 관리로 한정하며 연료/정비 이력 생성은 별도 계약으로 분리합니다.
+- 현재 범위는 `name`, `manufacturer`, `fuelType`, `initialOdometerKm`, `estimatedFuelEfficiencyKmPerLiter`까지의 차량 기본 프로필 관리로 한정하며 연료/정비 이력 생성은 별도 계약으로 분리합니다.
+- 운영비 요약은 `VehicleItem`이 아니라 `/vehicles/operating-summary` projection에서 읽습니다.
 
 ### `PATCH /vehicles/:id`
 
@@ -259,6 +268,7 @@
 - 현재 작업 문맥의 Owner/Manager만 차량 기본 정보를 수정할 수 있습니다.
 - 현재 범위는 차량 프로필 필드만 조정하며, 차량 세부 운영 이력과 하드 삭제는 지원하지 않습니다.
 - 즉, 현재 수정 흐름은 차량 프로필 관리에만 집중하고, 연료/정비 이력은 별도 운영 모델로 관리합니다.
+- 운영비/연비 보조 지표는 수정 응답이 아니라 별도 summary projection에서 해석합니다.
 
 ### `GET /vehicles/fuel-logs`
 

@@ -11,6 +11,7 @@ import type {
   FundingAccountItem,
   ImportBatchItem,
   ImportedRowAutoPreparationSummary,
+  JournalEntryItem,
   ReferenceDataReadinessSummary
 } from '@personal-erp/contracts';
 
@@ -77,13 +78,14 @@ function buildPreview(input: {
   };
 }
 
-test('@smoke uploads an import batch, previews collection, and follows the created transaction link', async ({
+test('@smoke uploads an import batch, collects it into a transaction, confirms it, and opens the created journal entry', async ({
   page
 }) => {
   const pageErrors: string[] = [];
   const unhandledApiRequests: string[] = [];
   let sessionActive = false;
   let collectedTransactions: CollectedTransactionItem[] = [];
+  let journalEntries: JournalEntryItem[] = [];
 
   const currentUser: AuthenticatedUser = {
     id: 'user-demo',
@@ -533,11 +535,114 @@ test('@smoke uploads an import batch, previews collection, and follows the creat
       return;
     }
 
+    if (
+      /^\/api\/collected-transactions\/[^/]+\/confirm$/.test(path) &&
+      request.method() === 'POST'
+    ) {
+      const collectedTransactionId = path.split('/')[3] ?? null;
+      const targetTransaction =
+        collectedTransactions.find(
+          (candidate) => candidate.id === collectedTransactionId
+        ) ?? null;
+
+      if (!targetTransaction) {
+        const requestSignature = `${request.method()} ${path}`;
+        unhandledApiRequests.push(requestSignature);
+        await route.fulfill({
+          status: 404,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            message: `Unhandled E2E route: ${requestSignature}`
+          })
+        });
+        return;
+      }
+
+      const createdJournalEntry: JournalEntryItem = {
+        id: 'je-import-e2e-1',
+        entryNumber: '202604-0007',
+        entryDate: `${targetTransaction.businessDate}T00:00:00.000Z`,
+        status: 'POSTED',
+        sourceKind: 'COLLECTED_TRANSACTION',
+        memo: `${targetTransaction.title} 업로드 확정`,
+        sourceCollectedTransactionId: targetTransaction.id,
+        sourceCollectedTransactionTitle: targetTransaction.title,
+        reversesJournalEntryId: null,
+        reversesJournalEntryNumber: null,
+        reversedByJournalEntryId: null,
+        reversedByJournalEntryNumber: null,
+        correctsJournalEntryId: null,
+        correctsJournalEntryNumber: null,
+        correctionEntryIds: [],
+        correctionEntryNumbers: [],
+        correctionReason: null,
+        createdByActorType: 'TENANT_MEMBERSHIP',
+        createdByMembershipId: 'membership-demo',
+        lines: [
+          {
+            id: 'jel-import-e2e-1',
+            lineNumber: 1,
+            accountSubjectCode: '5100',
+            accountSubjectName: '원재료비',
+            fundingAccountName: null,
+            debitAmount: targetTransaction.amountWon,
+            creditAmount: 0,
+            description: targetTransaction.title
+          },
+          {
+            id: 'jel-import-e2e-2',
+            lineNumber: 2,
+            accountSubjectCode: '1010',
+            accountSubjectName: '현금및예금',
+            fundingAccountName: targetTransaction.fundingAccountName,
+            debitAmount: 0,
+            creditAmount: targetTransaction.amountWon,
+            description: targetTransaction.title
+          }
+        ]
+      };
+
+      collectedTransactions = collectedTransactions.map((candidate) =>
+        candidate.id === targetTransaction.id
+          ? {
+              ...candidate,
+              postingStatus: 'POSTED',
+              postedJournalEntryId: createdJournalEntry.id,
+              postedJournalEntryNumber: createdJournalEntry.entryNumber
+            }
+          : candidate
+      );
+      journalEntries = [createdJournalEntry, ...journalEntries];
+      importBatches = importBatches.map((batch) => ({
+        ...batch,
+        rows: batch.rows.map((row) =>
+          row.createdCollectedTransactionId === targetTransaction.id
+            ? {
+                ...row,
+                collectionSummary: row.collectionSummary
+                  ? {
+                      ...row.collectionSummary,
+                      createdCollectedTransactionStatus: 'POSTED'
+                    }
+                  : row.collectionSummary
+              }
+            : row
+        )
+      }));
+
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify(createdJournalEntry)
+      });
+      return;
+    }
+
     if (path === '/api/journal-entries' && request.method() === 'GET') {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([])
+        body: JSON.stringify(journalEntries)
       });
       return;
     }
@@ -557,15 +662,19 @@ test('@smoke uploads an import batch, previews collection, and follows the creat
   await page.getByRole('button', { name: '로그인' }).click();
 
   await expect(
-    page.getByRole('heading', { name: '업로드 배치' })
+    page.getByRole('heading', { name: '업로드 배치', exact: true })
   ).toBeVisible();
-  await expect(page.getByText('seeded-batch.csv')).toBeVisible();
+  await expect(
+    page.getByRole('gridcell', { name: 'seeded-batch.csv', exact: true })
+  ).toBeVisible();
 
   await page.getByRole('button', { name: '업로드 배치 등록' }).click();
   await expect(
     page.getByRole('heading', { name: '새 업로드 배치' })
   ).toBeVisible();
-  await page.getByLabel('파일명').fill('e2e-import.csv');
+  await page
+    .getByRole('textbox', { name: '파일명', exact: true })
+    .fill('e2e-import.csv');
   await page
     .getByLabel('UTF-8 본문')
     .fill('date,title,amount\n2026-04-06,Coffee beans,19800');
@@ -574,8 +683,12 @@ test('@smoke uploads an import batch, previews collection, and follows the creat
   await expect(
     page.getByText('e2e-import.csv 업로드를 등록하고 1개 행을 파싱했습니다.')
   ).toBeVisible();
-  await expect(page.getByText('e2e-import.csv')).toBeVisible();
-  await expect(page.getByText('Coffee beans')).toBeVisible();
+  await expect(
+    page.getByRole('gridcell', { name: 'e2e-import.csv', exact: true })
+  ).toBeVisible();
+  await expect(
+    page.getByRole('gridcell', { name: 'Coffee beans', exact: true })
+  ).toBeVisible();
 
   await page.getByRole('button', { name: '승격 준비' }).click();
   await expect(page.getByRole('heading', { name: '행 승격' })).toBeVisible();
@@ -586,10 +699,7 @@ test('@smoke uploads an import batch, previews collection, and follows the creat
     )
   ).toBeVisible();
 
-  await page
-    .locator('form')
-    .getByRole('combobox', { name: '카테고리' })
-    .click();
+  await page.getByRole('combobox', { name: '카테고리', exact: true }).click();
   await page.getByRole('option', { name: '원재료비' }).click();
   await expect(
     page.getByText('"원재료비" 카테고리를 유지합니다.')
@@ -598,13 +708,15 @@ test('@smoke uploads an import batch, previews collection, and follows the creat
   await page.getByRole('button', { name: '수집 거래로 승격' }).click();
 
   await expect(
-    page.getByText('Coffee beans 행을 수집 거래 "Coffee beans"로 올렸습니다.')
+    page.getByText('Coffee beans 행을 수집 거래로 올렸습니다.')
   ).toBeVisible();
   await expect(
-    page.getByRole('button', { name: '보기' }).first()
+    page.locator('a[href="/transactions?transactionId=txn-import-e2e-1"]')
   ).toBeVisible();
 
-  await page.getByRole('button', { name: '보기' }).first().click();
+  await page
+    .locator('a[href="/transactions?transactionId=txn-import-e2e-1"]')
+    .click();
 
   await expect(page).toHaveURL(
     /\/transactions\?transactionId=txn-import-e2e-1$/
@@ -615,6 +727,27 @@ test('@smoke uploads an import batch, previews collection, and follows the creat
   await expect(
     page.getByRole('gridcell', { name: 'Coffee beans', exact: true })
   ).toBeVisible();
+  await page.getByRole('button', { name: '전표 확정' }).click();
+  await expect(
+    page.getByText('202604-0007 전표를 생성하고 수집 거래를 확정했습니다.')
+  ).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: '202604-0007', exact: true })
+  ).toBeVisible();
+
+  await page.getByRole('link', { name: '202604-0007', exact: true }).click();
+  await expect(page).toHaveURL(/\/journal-entries\?entryId=je-import-e2e-1$/);
+  await expect(page.getByRole('heading', { name: '전표 조회' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '202604-0007 전표', exact: true })
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      '수집 거래 확정으로 생성된 전표입니다. 원본 거래: Coffee beans'
+    )
+  ).toBeVisible();
+  await expect(page.getByText('원재료비')).toBeVisible();
+  await expect(page.getByText('현금및예금')).toBeVisible();
 
   expectNoPageErrors(pageErrors);
   expectNoUnhandledApiRequests(unhandledApiRequests);

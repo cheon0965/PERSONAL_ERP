@@ -7,8 +7,10 @@ import { Alert, Button, Grid, MenuItem, Stack, TextField } from '@mui/material';
 import type {
   CreateVehicleMaintenanceLogRequest,
   UpdateVehicleMaintenanceLogRequest,
+  VehicleFuelLogItem,
   VehicleItem,
-  VehicleMaintenanceLogItem
+  VehicleMaintenanceLogItem,
+  VehicleOperatingSummaryView
 } from '@personal-erp/contracts/assets';
 import { vehicleMaintenanceCategoryValues } from '@personal-erp/contracts/assets';
 import { Controller, useForm } from 'react-hook-form';
@@ -21,8 +23,12 @@ import {
   createVehicleMaintenanceLog,
   mergeVehicleMaintenanceLogItem,
   updateVehicleMaintenanceLog,
-  vehicleMaintenanceLogsQueryKey
+  vehicleFuelLogsQueryKey,
+  vehicleMaintenanceLogsQueryKey,
+  vehicleOperatingSummaryQueryKey,
+  vehiclesQueryKey
 } from './vehicles.api';
+import { buildVehicleOperatingSummaryView } from './vehicles.summary';
 
 const maintenanceCategoryLabelMap: Record<string, string> = {
   INSPECTION: '점검',
@@ -114,10 +120,28 @@ export function VehicleMaintenanceForm({
         vehicleMaintenanceLogsQueryKey,
         (current) => mergeVehicleMaintenanceLogItem(current, saved)
       );
+      queryClient.setQueryData<VehicleOperatingSummaryView>(
+        vehicleOperatingSummaryQueryKey,
+        buildVehicleOperatingSummaryView({
+          vehicles:
+            queryClient.getQueryData<VehicleItem[]>(vehiclesQueryKey) ?? [],
+          fuelLogs:
+            queryClient.getQueryData<VehicleFuelLogItem[]>(
+              vehicleFuelLogsQueryKey
+            ) ?? [],
+          maintenanceLogs:
+            queryClient.getQueryData<VehicleMaintenanceLogItem[]>(
+              vehicleMaintenanceLogsQueryKey
+            ) ?? []
+        })
+      );
 
       if (!webRuntime.demoFallbackEnabled) {
         await queryClient.invalidateQueries({
           queryKey: vehicleMaintenanceLogsQueryKey
+        });
+        await queryClient.invalidateQueries({
+          queryKey: vehicleOperatingSummaryQueryKey
         });
       }
     }

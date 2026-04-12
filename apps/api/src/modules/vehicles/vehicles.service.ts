@@ -9,7 +9,8 @@ import type {
   UpdateVehicleRequest,
   VehicleFuelLogItem,
   VehicleItem,
-  VehicleMaintenanceLogItem
+  VehicleMaintenanceLogItem,
+  VehicleOperatingSummaryView
 } from '@personal-erp/contracts';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import {
@@ -17,6 +18,7 @@ import {
   mapVehicleMaintenanceLogToItem,
   mapVehicleToItem
 } from './vehicles.mapper';
+import { buildVehicleOperatingSummaryView } from './vehicle-operating-summary.projection';
 import { VehiclesRepository } from './vehicles.repository';
 import {
   normalizeFuelLogInput,
@@ -35,6 +37,29 @@ export class VehiclesService {
       workspace.ledgerId
     );
     return items.map(mapVehicleToItem);
+  }
+
+  async findOperatingSummary(
+    user: AuthenticatedUser
+  ): Promise<VehicleOperatingSummaryView> {
+    const workspace = requireCurrentWorkspace(user);
+    const [vehicles, fuelLogs, maintenanceLogs] = await Promise.all([
+      this.vehiclesRepository
+        .findAllInWorkspace(workspace.tenantId, workspace.ledgerId)
+        .then((items) => items.map(mapVehicleToItem)),
+      this.vehiclesRepository
+        .findFuelLogsInWorkspace(workspace.tenantId, workspace.ledgerId)
+        .then((items) => items.map(mapVehicleFuelLogToItem)),
+      this.vehiclesRepository
+        .findMaintenanceLogsInWorkspace(workspace.tenantId, workspace.ledgerId)
+        .then((items) => items.map(mapVehicleMaintenanceLogToItem))
+    ]);
+
+    return buildVehicleOperatingSummaryView({
+      vehicles,
+      fuelLogs,
+      maintenanceLogs
+    });
   }
 
   async create(

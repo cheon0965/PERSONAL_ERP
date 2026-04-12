@@ -45,6 +45,11 @@ export class VehiclesController {
     return this.vehiclesService.findAll(user);
   }
 
+  @Get('operating-summary')
+  findOperatingSummary(@CurrentUser() user: AuthenticatedUser) {
+    return this.vehiclesService.findOperatingSummary(user);
+  }
+
   @Get('fuel-logs')
   findFuelLogs(@CurrentUser() user: AuthenticatedUser) {
     return this.vehiclesService.findFuelLogs(user);

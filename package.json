@@ -58,6 +58,16 @@
     "check:quick": "npm run format:check && npm run docs:check && npm run money:check && npm run lint && npm run typecheck",
     "check": "npm run check:quick && npm run build && npm run test",
     "ci": "npm run check",
+    "ci:local:validate": "npm run db:generate && npm run check:quick && npm run test",
+    "ci:local:e2e-smoke": "npm run test:e2e:smoke:build",
+    "ci:local:security": "npm run db:generate && npm run test:security:api",
+    "ci:local:prisma": "npm run db:generate && npm run test:prisma",
+    "ci:local:audit": "npm run audit:runtime",
+    "ci:local:semgrep": "node ./scripts/run-semgrep-local.cjs",
+    "ci:local:gitleaks": "node ./scripts/run-gitleaks-local.cjs",
+    "ci:local:core": "npm run ci:local:validate && npm run ci:local:e2e-smoke && npm run ci:local:security && npm run ci:local:audit",
+    "ci:local:docker": "npm run ci:local:semgrep && npm run ci:local:gitleaks",
+    "ci:local:all": "npm run ci:local:core && npm run ci:local:prisma && npm run ci:local:docker",
     "prepare": "npm run build:money && node ./scripts/setup-hooks.cjs"
   },
   "devDependencies": {

@@ -2,10 +2,7 @@ import * as argon2 from 'argon2';
 import {
   CollectedTransactionStatus,
   LedgerTransactionFlowKind,
-  RecurrenceFrequency,
-  TransactionOrigin,
-  TransactionStatus,
-  TransactionType
+  RecurrenceFrequency
 } from '@prisma/client';
 import type { RequestTestState } from './request-api.test-types';
 
@@ -419,59 +416,6 @@ export async function createRequestTestState(): Promise<RequestTestState> {
         updatedAt: new Date('2026-03-18T08:00:00.000Z')
       }
     ],
-    transactions: [
-      {
-        id: 'txn-seed-1',
-        userId: 'user-1',
-        tenantId: 'tenant-1',
-        ledgerId: 'ledger-1',
-        title: 'March salary',
-        type: TransactionType.INCOME,
-        amountWon: 3_000_000,
-        businessDate: new Date('2026-03-25T00:00:00.000Z'),
-        accountId: 'acc-1',
-        categoryId: 'cat-1b',
-        memo: null,
-        origin: TransactionOrigin.MANUAL,
-        status: TransactionStatus.POSTED,
-        createdAt: new Date('2026-03-25T09:00:00.000Z'),
-        updatedAt: new Date('2026-03-25T09:00:00.000Z')
-      },
-      {
-        id: 'txn-seed-2',
-        userId: 'user-1',
-        tenantId: 'tenant-1',
-        ledgerId: 'ledger-1',
-        title: 'Fuel refill',
-        type: TransactionType.EXPENSE,
-        amountWon: 84_000,
-        businessDate: new Date('2026-03-20T00:00:00.000Z'),
-        accountId: 'acc-1',
-        categoryId: 'cat-1',
-        memo: 'Full tank',
-        origin: TransactionOrigin.MANUAL,
-        status: TransactionStatus.POSTED,
-        createdAt: new Date('2026-03-20T08:00:00.000Z'),
-        updatedAt: new Date('2026-03-20T08:00:00.000Z')
-      },
-      {
-        id: 'txn-seed-3',
-        userId: 'user-2',
-        tenantId: 'tenant-2',
-        ledgerId: 'ledger-2',
-        title: 'Other user expense',
-        type: TransactionType.EXPENSE,
-        amountWon: 777_777,
-        businessDate: new Date('2026-03-18T00:00:00.000Z'),
-        accountId: 'acc-2',
-        categoryId: 'cat-2',
-        memo: null,
-        origin: TransactionOrigin.MANUAL,
-        status: TransactionStatus.POSTED,
-        createdAt: new Date('2026-03-18T08:00:00.000Z'),
-        updatedAt: new Date('2026-03-18T08:00:00.000Z')
-      }
-    ],
     recurringRules: [
       {
         id: 'rr-seed-1',
@@ -560,7 +504,6 @@ export async function createRequestTestState(): Promise<RequestTestState> {
         manufacturer: 'Hyundai',
         fuelType: 'DIESEL',
         initialOdometerKm: 58_200,
-        monthlyExpenseWon: 130_000,
         estimatedFuelEfficiencyKmPerLiter: 11.2,
         createdAt: new Date('2026-03-01T08:00:00.000Z'),
         fuelLogs: [
@@ -584,7 +527,6 @@ export async function createRequestTestState(): Promise<RequestTestState> {
         manufacturer: 'Kia',
         fuelType: 'GASOLINE',
         initialOdometerKm: 12_000,
-        monthlyExpenseWon: 410_000,
         estimatedFuelEfficiencyKmPerLiter: 9.4,
         createdAt: new Date('2026-03-02T08:00:00.000Z'),
         fuelLogs: []

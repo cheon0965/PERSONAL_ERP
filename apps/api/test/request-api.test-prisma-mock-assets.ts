@@ -360,7 +360,6 @@ export function createAssetsPrismaMock(
           tenantId?: string;
           ledgerId?: string;
         };
-        select?: { monthlyExpenseWon?: boolean };
       }) => {
         const items = state.vehicles.filter((candidate) => {
           const matchesUser =
@@ -373,12 +372,6 @@ export function createAssetsPrismaMock(
           return matchesUser && matchesTenant && matchesLedger;
         });
 
-        if (args.select?.monthlyExpenseWon) {
-          return items.map((candidate) => ({
-            monthlyExpenseWon: candidate.monthlyExpenseWon
-          }));
-        }
-
         return items;
       },
       create: async (args: {
@@ -390,7 +383,6 @@ export function createAssetsPrismaMock(
           manufacturer?: string | null;
           fuelType: 'GASOLINE' | 'DIESEL' | 'LPG' | 'HYBRID' | 'ELECTRIC';
           initialOdometerKm: number;
-          monthlyExpenseWon: number;
           estimatedFuelEfficiencyKmPerLiter?: number | null;
         };
       }) => {
@@ -403,7 +395,6 @@ export function createAssetsPrismaMock(
           manufacturer: args.data.manufacturer ?? null,
           fuelType: args.data.fuelType,
           initialOdometerKm: Number(args.data.initialOdometerKm),
-          monthlyExpenseWon: Number(args.data.monthlyExpenseWon),
           estimatedFuelEfficiencyKmPerLiter:
             args.data.estimatedFuelEfficiencyKmPerLiter ?? null,
           createdAt: new Date(),
@@ -421,7 +412,6 @@ export function createAssetsPrismaMock(
           manufacturer?: string | null;
           fuelType?: 'GASOLINE' | 'DIESEL' | 'LPG' | 'HYBRID' | 'ELECTRIC';
           initialOdometerKm?: number;
-          monthlyExpenseWon?: number;
           estimatedFuelEfficiencyKmPerLiter?: number | null;
         };
       }) => {
@@ -444,9 +434,6 @@ export function createAssetsPrismaMock(
         }
         if (args.data.initialOdometerKm !== undefined) {
           vehicle.initialOdometerKm = Number(args.data.initialOdometerKm);
-        }
-        if (args.data.monthlyExpenseWon !== undefined) {
-          vehicle.monthlyExpenseWon = Number(args.data.monthlyExpenseWon);
         }
         if ('estimatedFuelEfficiencyKmPerLiter' in args.data) {
           vehicle.estimatedFuelEfficiencyKmPerLiter =

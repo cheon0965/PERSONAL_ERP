@@ -10,7 +10,6 @@ import type {
   VehicleItem,
   VehicleMaintenanceLogItem
 } from '@personal-erp/contracts';
-import { sumMoneyWon } from '@personal-erp/money';
 import { formatNumber, formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { ChartCard } from '@/shared/ui/chart-card';
@@ -31,11 +30,14 @@ import {
 import {
   getVehicleFuelLogs,
   getVehicleMaintenanceLogs,
+  getVehicleOperatingSummary,
   getVehicles,
   vehicleFuelLogsQueryKey,
   vehicleMaintenanceLogsQueryKey,
+  vehicleOperatingSummaryQueryKey,
   vehiclesQueryKey
 } from './vehicles.api';
+import { buildVehicleOperatingSummaryView } from './vehicles.summary';
 
 type SubmitFeedback = {
   severity: 'success' | 'error';
@@ -77,27 +79,24 @@ export function VehiclesPage() {
     queryKey: vehicleMaintenanceLogsQueryKey,
     queryFn: getVehicleMaintenanceLogs
   });
-  const totalMonthlyExpenseWon = sumMoneyWon(
-    vehicles.map((vehicle) => vehicle.monthlyExpenseWon)
-  );
-  const totalMaintenanceAmountWon = sumMoneyWon(
-    maintenanceLogs.map((maintenanceLog) => maintenanceLog.amountWon)
-  );
-  const vehiclesWithEfficiency = vehicles.filter(
-    (vehicle) => vehicle.estimatedFuelEfficiencyKmPerLiter != null
-  );
-  const averageFuelEfficiencyKmPerLiter =
-    vehiclesWithEfficiency.length > 0
-      ? vehiclesWithEfficiency.reduce(
-          (total, vehicle) =>
-            total + Number(vehicle.estimatedFuelEfficiencyKmPerLiter),
-          0
-        ) / vehiclesWithEfficiency.length
-      : null;
+  const { data: vehicleOperatingSummary } = useQuery({
+    queryKey: vehicleOperatingSummaryQueryKey,
+    queryFn: getVehicleOperatingSummary
+  });
+  const operatingSummary =
+    vehicleOperatingSummary ??
+    buildVehicleOperatingSummaryView({
+      vehicles,
+      fuelLogs,
+      maintenanceLogs
+    });
   const fuelLogRows = fuelLogs;
   const maintenanceLogRows = maintenanceLogs;
   const manufacturers = Array.from(
     new Set(vehicles.map((vehicle) => vehicle.manufacturer).filter(Boolean))
+  );
+  const operatingSummaryByVehicleId = new Map(
+    operatingSummary.items.map((item) => [item.vehicleId, item])
   );
 
   const handleCreateOpen = () => {
@@ -212,15 +211,28 @@ export function VehiclesPage() {
       valueFormatter: (value) => `${formatNumber(Number(value))} km`
     },
     {
-      field: 'monthlyExpenseWon',
-      headerName: '월 운영비',
+      field: 'recordedOperatingExpenseWon',
+      headerName: '기록 운영비',
       flex: 1,
+      valueGetter: (_value, row) =>
+        operatingSummaryByVehicleId.get(row.id)?.recordedOperatingExpenseWon ??
+        0,
       valueFormatter: (value) => formatWon(Number(value))
     },
     {
       field: 'estimatedFuelEfficiencyKmPerLiter',
-      headerName: '예상 연비',
+      headerName: '입력 기준 연비',
       flex: 0.9,
+      valueFormatter: (value) =>
+        value == null ? '-' : `${formatNumber(Number(value), 2)} km/L`
+    },
+    {
+      field: 'recordedFuelEfficiencyKmPerLiter',
+      headerName: '기록 연비',
+      flex: 0.9,
+      valueGetter: (_value, row) =>
+        operatingSummaryByVehicleId.get(row.id)
+          ?.recordedFuelEfficiencyKmPerLiter ?? null,
       valueFormatter: (value) =>
         value == null ? '-' : `${formatNumber(Number(value), 2)} km/L`
     },
@@ -363,26 +375,33 @@ export function VehiclesPage() {
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, md: 3 }}>
           <SummaryCard
-            title="월 차량 운영비"
-            value={formatWon(totalMonthlyExpenseWon)}
-            subtitle="주유, 정비, 보험 등 차량 관련 운영비를 합친 월 기준 금액입니다."
+            title="기록 운영비"
+            value={formatWon(
+              operatingSummary.totals.recordedOperatingExpenseWon
+            )}
+            subtitle={`연료 ${formatWon(operatingSummary.totals.fuelExpenseWon)} 및 정비 ${formatWon(
+              operatingSummary.totals.maintenanceExpenseWon
+            )} 누적 합계입니다.`}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 3 }}>
           <SummaryCard
-            title="평균 연비"
-            value={
-              averageFuelEfficiencyKmPerLiter
-                ? `${formatNumber(averageFuelEfficiencyKmPerLiter)} km/L`
-                : '-'
-            }
-            subtitle="연비가 있는 차량만 기준으로 계산한 평균 운영 지표입니다."
+            title="연료 / 충전 비용"
+            value={formatWon(operatingSummary.totals.fuelExpenseWon)}
+            subtitle="주유 / 충전 기록에서 집계한 누적 비용입니다."
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 3 }}>
+          <SummaryCard
+            title="정비 비용"
+            value={formatWon(operatingSummary.totals.maintenanceExpenseWon)}
+            subtitle="정비 이력에서 집계한 누적 비용입니다."
           />
         </Grid>
         <Grid size={{ xs: 12, md: 3 }}>
           <SummaryCard
             title="관리 중 차량 수"
-            value={`${vehicles.length}대`}
+            value={`${operatingSummary.totals.vehicleCount}대`}
             subtitle={
               manufacturers.length > 0
                 ? manufacturers.join(' / ')
@@ -390,18 +409,42 @@ export function VehiclesPage() {
             }
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
+      </Grid>
+
+      <Grid container spacing={appLayout.sectionGap}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <SummaryCard
-            title="누적 정비비"
-            value={formatWon(totalMaintenanceAmountWon)}
-            subtitle="현재 화면에서 관리 중인 차량 정비 이력을 합산한 운영 보조 지표입니다."
+            title="평균 입력 연비"
+            value={
+              operatingSummary.totals.averageEstimatedFuelEfficiencyKmPerLiter
+                ? `${formatNumber(
+                    operatingSummary.totals
+                      .averageEstimatedFuelEfficiencyKmPerLiter
+                  )} km/L`
+                : '-'
+            }
+            subtitle="차량 프로필에 입력된 기준 연비의 평균값입니다."
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <SummaryCard
+            title="평균 기록 연비"
+            value={
+              operatingSummary.totals.averageRecordedFuelEfficiencyKmPerLiter
+                ? `${formatNumber(
+                    operatingSummary.totals
+                      .averageRecordedFuelEfficiencyKmPerLiter
+                  )} km/L`
+                : '-'
+            }
+            subtitle="주유 기록 누적 거리와 연료량으로 계산한 평균값입니다."
           />
         </Grid>
       </Grid>
 
       <DataTableCard
         title="차량 기본 정보"
-        description="차량 기본 프로필을 관리하면서 아래 연료/정비 이력과 운영 요약을 같은 화면에서 함께 확인합니다."
+        description="차량 프로필은 기본 정보만 관리하고, 운영비와 연비 보조 지표는 별도 운영 요약 projection으로 함께 읽습니다."
         rows={vehicles}
         columns={vehicleColumns}
       />
@@ -409,20 +452,22 @@ export function VehiclesPage() {
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, xl: 5 }}>
           <ChartCard
-            title="차량별 월 운영비"
-            description="차량 운영비를 수집 거래로 분류하기 전에 비용 흐름을 빠르게 읽을 수 있도록 정리했습니다."
+            title="차량별 기록 운영비"
+            description="차량별 연료비와 정비비 누적 합계를 운영 요약 projection으로 비교합니다."
             chart={
               <BarChart
                 height={320}
                 xAxis={[
                   {
                     scaleType: 'band',
-                    data: vehicles.map((vehicle) => vehicle.name)
+                    data: operatingSummary.items.map((item) => item.vehicleName)
                   }
                 ]}
                 series={[
                   {
-                    data: vehicles.map((vehicle) => vehicle.monthlyExpenseWon)
+                    data: operatingSummary.items.map(
+                      (item) => item.recordedOperatingExpenseWon
+                    )
                   }
                 ]}
               />
@@ -472,8 +517,9 @@ export function VehiclesPage() {
 
       {vehicles.length > 0 ? (
         <Typography variant="body2" color="text.secondary">
-          차량 기본 정보, 연료 이력, 정비 이력을 각각 분리해 관리하고, 다음
-          단계에서는 차량 운영 요약 모델 정리를 이어갈 수 있습니다.
+          차량 기본 정보, 연료 이력, 정비 이력은 각각 분리해 저장하고,
+          운영비/연비 요약은 `operating-summary` projection으로 기록 기준에 맞춰
+          따로 읽습니다.
         </Typography>
       ) : null}
 

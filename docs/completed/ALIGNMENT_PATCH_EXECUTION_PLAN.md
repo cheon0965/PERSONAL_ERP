@@ -58,7 +58,7 @@
 
 - 2026-04-05 기준 차량 운영 요약 모델 정리와 monthlyExpenseWon 전환 기준 고정까지 반영 완료
 
-- 기준 문서: `docs/VEHICLE_OPERATIONS_MODEL_PLAN.md`
+- 기준 문서: `docs/completed/VEHICLE_OPERATIONS_MODEL_PLAN.md`
 - 목적: 차량 기본 프로필 write model과 운영 요약 read model의 경계를 더 분명히 하고, `monthlyExpenseWon` 같은 보조 지표의 전환 기준을 고정한다.
 
 ### 저장소 밖 후속
@@ -173,7 +173,7 @@
 - `/design-system`은 현재처럼 문서 진실성을 우선 유지하고, 실제 페이지 복구는 별도 UX 작업으로 분리한다.
 - `test:e2e:smoke:build:browser`는 루트 래퍼 스크립트를 유지해 문서와 명령 진입점을 단순화한다.
 - `test:prisma`는 CI에서 `PRISMA_INTEGRATION_DATABASE_URL` 전용으로 실행하고, 저장소 밖에서는 secret 등록과 첫 통과 증적 확보를 후속으로 진행한다.
-- 차량 세부 운영 모델 분리 기준은 `docs/VEHICLE_OPERATIONS_MODEL_PLAN.md`에 고정하고, 다음 저장소 작업은 차량 운영 요약 모델 정리와 `monthlyExpenseWon` 전환 기준 고정으로 둔다.
+- 차량 세부 운영 모델 분리 기준은 `docs/completed/VEHICLE_OPERATIONS_MODEL_PLAN.md`에 고정하고, 다음 저장소 작업은 차량 운영 요약 모델 정리와 `monthlyExpenseWon` 전환 기준 고정으로 둔다.
 
 ## 한 줄 결론
 

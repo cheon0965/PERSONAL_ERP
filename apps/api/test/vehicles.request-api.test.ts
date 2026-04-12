@@ -18,10 +18,59 @@ test('GET /vehicles returns only vehicles for the current workspace ledger', asy
         manufacturer: 'Hyundai',
         fuelType: 'DIESEL',
         initialOdometerKm: 58_200,
-        monthlyExpenseWon: 130_000,
         estimatedFuelEfficiencyKmPerLiter: 11.2
       }
     ]);
+  } finally {
+    await context.close();
+  }
+});
+
+test('GET /vehicles/operating-summary returns the projected operating view for the current workspace ledger', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.vehicles[0]!.fuelLogs.push({
+      id: 'fuel-2',
+      filledOn: new Date('2026-03-12T00:00:00.000Z'),
+      odometerKm: 58_930,
+      liters: 41.2,
+      amountWon: 69_000,
+      unitPriceWon: 1675,
+      isFullTank: true
+    });
+
+    const response = await context.request('/vehicles/operating-summary', {
+      headers: context.authHeaders()
+    });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body, {
+      totals: {
+        vehicleCount: 1,
+        fuelExpenseWon: 141_000,
+        maintenanceExpenseWon: 185_000,
+        recordedOperatingExpenseWon: 326_000,
+        averageEstimatedFuelEfficiencyKmPerLiter: 11.2,
+        averageRecordedFuelEfficiencyKmPerLiter: 5.4
+      },
+      items: [
+        {
+          vehicleId: 'vehicle-1',
+          vehicleName: '배송 밴',
+          fuelType: 'DIESEL',
+          fuelExpenseWon: 141_000,
+          maintenanceExpenseWon: 185_000,
+          recordedOperatingExpenseWon: 326_000,
+          estimatedFuelEfficiencyKmPerLiter: 11.2,
+          recordedFuelEfficiencyKmPerLiter: 5.4,
+          fuelLogCount: 2,
+          maintenanceLogCount: 1,
+          lastFueledOn: '2026-03-12',
+          lastMaintainedOn: '2026-03-18'
+        }
+      ]
+    });
   } finally {
     await context.close();
   }
@@ -39,7 +88,6 @@ test('POST /vehicles creates a vehicle for the current workspace when the member
         manufacturer: 'Kia',
         fuelType: 'HYBRID',
         initialOdometerKm: 12_400,
-        monthlyExpenseWon: 215_000,
         estimatedFuelEfficiencyKmPerLiter: 14.8
       }
     });
@@ -51,7 +99,6 @@ test('POST /vehicles creates a vehicle for the current workspace when the member
       manufacturer: 'Kia',
       fuelType: 'HYBRID',
       initialOdometerKm: 12_400,
-      monthlyExpenseWon: 215_000,
       estimatedFuelEfficiencyKmPerLiter: 14.8
     });
 
@@ -66,7 +113,6 @@ test('POST /vehicles creates a vehicle for the current workspace when the member
     assert.equal(createdVehicle.manufacturer, 'Kia');
     assert.equal(createdVehicle.fuelType, 'HYBRID');
     assert.equal(createdVehicle.initialOdometerKm, 12_400);
-    assert.equal(createdVehicle.monthlyExpenseWon, 215_000);
     assert.equal(createdVehicle.estimatedFuelEfficiencyKmPerLiter, 14.8);
     assert.equal(createdVehicle.fuelLogs.length, 0);
   } finally {
@@ -86,8 +132,7 @@ test('POST /vehicles returns 403 when the current membership cannot create vehic
       body: {
         name: '영업용 승합차',
         fuelType: 'HYBRID',
-        initialOdometerKm: 12_400,
-        monthlyExpenseWon: 215_000
+        initialOdometerKm: 12_400
       }
     });
 
@@ -109,7 +154,6 @@ test('PATCH /vehicles/:id updates vehicle basic information for the current work
         manufacturer: 'Hyundai',
         fuelType: 'DIESEL',
         initialOdometerKm: 58_500,
-        monthlyExpenseWon: 164_000,
         estimatedFuelEfficiencyKmPerLiter: 12.1
       }
     });
@@ -121,7 +165,6 @@ test('PATCH /vehicles/:id updates vehicle basic information for the current work
       manufacturer: 'Hyundai',
       fuelType: 'DIESEL',
       initialOdometerKm: 58_500,
-      monthlyExpenseWon: 164_000,
       estimatedFuelEfficiencyKmPerLiter: 12.1
     });
 
@@ -133,7 +176,6 @@ test('PATCH /vehicles/:id updates vehicle basic information for the current work
     assert.equal(updatedVehicle.manufacturer, 'Hyundai');
     assert.equal(updatedVehicle.fuelType, 'DIESEL');
     assert.equal(updatedVehicle.initialOdometerKm, 58_500);
-    assert.equal(updatedVehicle.monthlyExpenseWon, 164_000);
     assert.equal(updatedVehicle.estimatedFuelEfficiencyKmPerLiter, 12.1);
     assert.equal(updatedVehicle.fuelLogs.length, 1);
   } finally {
@@ -155,7 +197,6 @@ test('PATCH /vehicles/:id returns 403 when the current membership cannot update 
         manufacturer: 'Hyundai',
         fuelType: 'DIESEL',
         initialOdometerKm: 58_500,
-        monthlyExpenseWon: 164_000,
         estimatedFuelEfficiencyKmPerLiter: 12.1
       }
     });
