@@ -11,9 +11,9 @@
     "typecheck": "tsc --noEmit --incremental false -p tsconfig.test.json",
     "test": "tsc -p tsconfig.test-run.json && node --test --test-concurrency=1 --test-isolation=none .test-dist/apps/web/test/*.test.js",
     "test:e2e": "playwright test",
-    "test:e2e:smoke": "playwright test e2e/auth-and-transactions.spec.ts --grep @smoke",
+    "test:e2e:smoke": "playwright test e2e/auth-and-transactions --grep @smoke",
     "test:e2e:smoke:build": "node ../../scripts/run-web-build-smoke.cjs",
-    "test:e2e:smoke:build:browser": "npm run build:e2e:smoke && playwright test --config playwright.build.config.mjs e2e/auth-and-transactions.spec.ts --grep @smoke"
+    "test:e2e:smoke:build:browser": "npm run build:e2e:smoke && playwright test --config playwright.build.config.mjs e2e/auth-and-transactions --grep @smoke"
   },
   "dependencies": {
     "@personal-erp/money": "0.1.0",

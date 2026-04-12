@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, Button, Grid, Stack, Typography } from '@mui/material';
-import type { GridColDef } from '@mui/x-data-grid';
 import { BarChart } from '@mui/x-charts/BarChart';
 import type {
   VehicleFuelLogItem,
@@ -23,11 +22,6 @@ import { VehicleFuelLogForm } from './vehicle-fuel-log-form';
 import { VehicleMaintenanceForm } from './vehicle-maintenance-form';
 import { VehicleForm } from './vehicle-form';
 import {
-  fuelColumns,
-  fuelTypeLabelMap,
-  maintenanceColumns
-} from './vehicles.columns';
-import {
   getVehicleFuelLogs,
   getVehicleMaintenanceLogs,
   getVehicleOperatingSummary,
@@ -37,6 +31,11 @@ import {
   vehicleOperatingSummaryQueryKey,
   vehiclesQueryKey
 } from './vehicles.api';
+import {
+  buildFuelLogColumns,
+  buildMaintenanceLogColumns,
+  buildVehicleColumns
+} from './vehicles-page.columns';
 import { buildVehicleOperatingSummaryView } from './vehicles.summary';
 
 type SubmitFeedback = {
@@ -185,140 +184,18 @@ export function VehiclesPage() {
     });
   };
 
-  const vehicleColumns: GridColDef<VehicleItem>[] = [
-    {
-      field: 'name',
-      headerName: '차량명',
-      flex: 1.2
-    },
-    {
-      field: 'manufacturer',
-      headerName: '제조사',
-      flex: 1,
-      valueFormatter: (value) => (value ? String(value) : '-')
-    },
-    {
-      field: 'fuelType',
-      headerName: '연료 종류',
-      flex: 0.9,
-      valueFormatter: (value) =>
-        fuelTypeLabelMap[String(value)] ?? String(value)
-    },
-    {
-      field: 'initialOdometerKm',
-      headerName: '초기 주행거리',
-      flex: 1,
-      valueFormatter: (value) => `${formatNumber(Number(value))} km`
-    },
-    {
-      field: 'recordedOperatingExpenseWon',
-      headerName: '기록 운영비',
-      flex: 1,
-      valueGetter: (_value, row) =>
-        operatingSummaryByVehicleId.get(row.id)?.recordedOperatingExpenseWon ??
-        0,
-      valueFormatter: (value) => formatWon(Number(value))
-    },
-    {
-      field: 'estimatedFuelEfficiencyKmPerLiter',
-      headerName: '입력 기준 연비',
-      flex: 0.9,
-      valueFormatter: (value) =>
-        value == null ? '-' : `${formatNumber(Number(value), 2)} km/L`
-    },
-    {
-      field: 'recordedFuelEfficiencyKmPerLiter',
-      headerName: '기록 연비',
-      flex: 0.9,
-      valueGetter: (_value, row) =>
-        operatingSummaryByVehicleId.get(row.id)
-          ?.recordedFuelEfficiencyKmPerLiter ?? null,
-      valueFormatter: (value) =>
-        value == null ? '-' : `${formatNumber(Number(value), 2)} km/L`
-    },
-    {
-      field: 'actions',
-      headerName: '동작',
-      flex: 0.9,
-      sortable: false,
-      filterable: false,
-      renderCell: (params) => (
-        <Stack direction="row" spacing={1}>
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={() => {
-              handleEditOpen(params.row);
-            }}
-          >
-            수정
-          </Button>
-          <Button
-            size="small"
-            variant="text"
-            onClick={() => {
-              handleFuelCreateOpen(params.row.id);
-            }}
-          >
-            연료 기록
-          </Button>
-          <Button
-            size="small"
-            variant="text"
-            onClick={() => {
-              handleMaintenanceCreateOpen(params.row.id);
-            }}
-          >
-            정비 기록
-          </Button>
-        </Stack>
-      )
-    }
-  ];
-
-  const fuelTableColumns: GridColDef<VehicleFuelLogItem>[] = [
-    ...fuelColumns,
-    {
-      field: 'actions',
-      headerName: '동작',
-      flex: 0.8,
-      sortable: false,
-      filterable: false,
-      renderCell: (params) => (
-        <Button
-          size="small"
-          variant="outlined"
-          onClick={() => {
-            handleFuelEditOpen(params.row);
-          }}
-        >
-          수정
-        </Button>
-      )
-    }
-  ];
-
-  const maintenanceTableColumns: GridColDef<VehicleMaintenanceLogItem>[] = [
-    ...maintenanceColumns,
-    {
-      field: 'actions',
-      headerName: '동작',
-      flex: 0.8,
-      sortable: false,
-      filterable: false,
-      renderCell: (params) => (
-        <Button
-          size="small"
-          variant="outlined"
-          onClick={() => {
-            handleMaintenanceEditOpen(params.row);
-          }}
-        >
-          수정
-        </Button>
-      )
-    }
-  ];
+  const vehicleColumns = buildVehicleColumns({
+    operatingSummaryByVehicleId,
+    onEditVehicle: handleEditOpen,
+    onCreateFuelLog: handleFuelCreateOpen,
+    onCreateMaintenanceLog: handleMaintenanceCreateOpen
+  });
+  const fuelTableColumns = buildFuelLogColumns({
+    onEditFuelLog: handleFuelEditOpen
+  });
+  const maintenanceTableColumns = buildMaintenanceLogColumns({
+    onEditMaintenanceLog: handleMaintenanceEditOpen
+  });
 
   useDomainHelp({
     title: '차량 운영 사용 가이드',

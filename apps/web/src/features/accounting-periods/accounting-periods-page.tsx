@@ -10,16 +10,11 @@ import {
 } from '@tanstack/react-query';
 import { Alert, Grid, Stack } from '@mui/material';
 import type {
-  AccountSubjectItem,
   AccountingPeriodItem,
   CloseAccountingPeriodResponse,
   OpenAccountingPeriodRequest
 } from '@personal-erp/contracts';
-import {
-  addMoneyWon,
-  parseMoneyWon,
-  subtractMoneyWon
-} from '@personal-erp/money';
+import { parseMoneyWon } from '@personal-erp/money';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import {
   accountSubjectsQueryKey,
@@ -50,9 +45,15 @@ import {
 } from './accounting-periods.api';
 import {
   CurrentPeriodStatusSection,
-  PeriodOperationsSection,
   periodColumns
 } from './accounting-periods-page.sections';
+import {
+  buildOpeningBalanceTotals,
+  isBalanceSheetAccountSubject,
+  normalizeOptionalIdentifier,
+  readMembershipRoleLabel
+} from './accounting-periods-page.helpers';
+import { PeriodOperationsSection } from './accounting-periods-page.lifecycle-section';
 import {
   createEmptyOpeningBalanceLine,
   periodFormSchema,
@@ -522,95 +523,4 @@ async function invalidateAccountingPeriodQueries(queryClient: QueryClient) {
   await queryClient.invalidateQueries({
     queryKey: currentAccountingPeriodQueryKey
   });
-}
-
-function readMembershipRoleLabel(role: string | null) {
-  switch (role) {
-    case 'OWNER':
-      return '소유자';
-    case 'MANAGER':
-      return '관리자';
-    case 'EDITOR':
-      return '편집자';
-    case 'VIEWER':
-      return '조회자';
-    default:
-      return role ?? '-';
-  }
-}
-
-function isBalanceSheetAccountSubject(accountSubject: AccountSubjectItem) {
-  return (
-    accountSubject.subjectKind === 'ASSET' ||
-    accountSubject.subjectKind === 'LIABILITY' ||
-    accountSubject.subjectKind === 'EQUITY'
-  );
-}
-
-function buildOpeningBalanceTotals(
-  lines: PeriodFormInput['openingBalanceLines'],
-  accountSubjects: AccountSubjectItem[]
-) {
-  const accountSubjectById = new Map(
-    accountSubjects.map((accountSubject) => [accountSubject.id, accountSubject])
-  );
-
-  const totals = lines.reduce(
-    (accumulator, line) => {
-      const accountSubject = accountSubjectById.get(line.accountSubjectId);
-      const balanceAmount = parseMoneyWon(line.balanceAmount);
-      if (!accountSubject || balanceAmount == null || balanceAmount <= 0) {
-        return accumulator;
-      }
-
-      accumulator.hasLines = true;
-
-      switch (accountSubject.subjectKind) {
-        case 'ASSET':
-          accumulator.assetAmount = addMoneyWon(
-            accumulator.assetAmount,
-            balanceAmount
-          );
-          break;
-        case 'LIABILITY':
-          accumulator.liabilityAmount = addMoneyWon(
-            accumulator.liabilityAmount,
-            balanceAmount
-          );
-          break;
-        case 'EQUITY':
-          accumulator.equityAmount = addMoneyWon(
-            accumulator.equityAmount,
-            balanceAmount
-          );
-          break;
-        default:
-          break;
-      }
-
-      return accumulator;
-    },
-    {
-      assetAmount: 0,
-      liabilityAmount: 0,
-      equityAmount: 0,
-      hasLines: false
-    }
-  );
-
-  const balanceGapAmount = subtractMoneyWon(
-    subtractMoneyWon(totals.assetAmount, totals.liabilityAmount),
-    totals.equityAmount
-  );
-
-  return {
-    ...totals,
-    balanceGapAmount,
-    isBalanced: balanceGapAmount === 0
-  };
-}
-
-function normalizeOptionalIdentifier(value: string | null | undefined) {
-  const normalized = value?.trim();
-  return normalized && normalized.length > 0 ? normalized : null;
 }

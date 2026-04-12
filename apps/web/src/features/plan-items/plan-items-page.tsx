@@ -15,19 +15,16 @@ import {
 } from '@mui/material';
 import type {
   AccountingPeriodItem,
-  JournalEntryItem,
   PlanItemItem
 } from '@personal-erp/contracts';
-import type { GridColDef } from '@mui/x-data-grid';
 import { useAuthSession } from '@/shared/auth/auth-provider';
-import { formatDate, formatWon } from '@/shared/lib/format';
+import { formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { SectionCard } from '@/shared/ui/section-card';
-import { StatusChip } from '@/shared/ui/status-chip';
 import {
   accountingPeriodsQueryKey,
   getAccountingPeriods
@@ -36,18 +33,20 @@ import {
   getJournalEntries,
   journalEntriesQueryKey
 } from '@/features/journal-entries/journal-entries.api';
-import { resolveLatestLinkedJournalEntry } from '@/features/transactions/transactions-page.shared';
 import {
   collectedTransactionsQueryKey,
   confirmCollectedTransaction
 } from '@/features/transactions/transactions.api';
-import { resolveCollectedTransactionActionHint } from '@/features/transactions/transaction-workflow';
 import {
   buildPlanItemsFallbackView,
   generatePlanItems,
   getPlanItems,
   planItemsQueryKey
 } from './plan-items.api';
+import {
+  buildPlanItemColumns,
+  buildPlanItemConfirmFallbackEntry
+} from './plan-items-page.columns';
 
 export function PlanItemsPage() {
   const queryClient = useQueryClient();
@@ -108,7 +107,9 @@ export function PlanItemsPage() {
     mutationFn: (item: PlanItemItem) => {
       const transactionId = item.matchedCollectedTransactionId;
       if (!transactionId) {
-        throw new Error('연결된 수집 거래가 없는 계획 항목은 확정할 수 없습니다.');
+        throw new Error(
+          '연결된 수집 거래가 없는 계획 항목은 확정할 수 없습니다.'
+        );
       }
 
       return confirmCollectedTransaction(
@@ -124,7 +125,9 @@ export function PlanItemsPage() {
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['plan-items'] }),
-        queryClient.invalidateQueries({ queryKey: collectedTransactionsQueryKey }),
+        queryClient.invalidateQueries({
+          queryKey: collectedTransactionsQueryKey
+        }),
         queryClient.invalidateQueries({ queryKey: journalEntriesQueryKey }),
         queryClient.invalidateQueries({ queryKey: accountingPeriodsQueryKey })
       ]);
@@ -172,9 +175,9 @@ export function PlanItemsPage() {
     return mapping;
   }, [journalEntriesQuery.data]);
   const tableRows = React.useMemo(() => {
-    const items = view?.items ?? (selectedPeriod
-      ? buildPlanItemsFallbackView(selectedPeriod).items
-      : []);
+    const items =
+      view?.items ??
+      (selectedPeriod ? buildPlanItemsFallbackView(selectedPeriod).items : []);
     if (!highlightedPlanItemId) {
       return items;
     }
@@ -184,75 +187,26 @@ export function PlanItemsPage() {
       return items;
     }
 
-    return [highlighted, ...items.filter((item) => item.id !== highlightedPlanItemId)];
+    return [
+      highlighted,
+      ...items.filter((item) => item.id !== highlightedPlanItemId)
+    ];
   }, [highlightedPlanItemId, selectedPeriod, view?.items]);
 
-  const columns = React.useMemo<GridColDef<PlanItemItem>[]>(
-    () => [
-      {
-        field: 'plannedDate',
-        headerName: '계획일',
-        flex: 0.9,
-        valueFormatter: (value) => formatDate(String(value))
-      },
-      {
-        field: 'title',
-        headerName: '제목',
-        flex: 1.4
-      },
-      {
-        field: 'plannedAmount',
-        headerName: '계획 금액',
-        flex: 1,
-        valueFormatter: (value) => formatWon(Number(value))
-      },
-      {
-        field: 'ledgerTransactionTypeName',
-        headerName: '거래 유형',
-        flex: 1
-      },
-      {
-        field: 'fundingAccountName',
-        headerName: '자금수단',
-        flex: 1
-      },
-      {
-        field: 'categoryName',
-        headerName: '카테고리',
-        flex: 1
-      },
-      {
-        field: 'status',
-        headerName: '상태',
-        flex: 0.9,
-        renderCell: (params) => <StatusChip label={String(params.value)} />
-      },
-      {
-        field: 'executionLink',
-        headerName: '실행 연결',
-        flex: 1.6,
-        sortable: false,
-        filterable: false,
-        renderCell: (params) => (
-          <PlanItemLinkCell
-            item={params.row}
-            canConfirmCollectedTransactions={canConfirmCollectedTransactions}
-            confirmPending={confirmMutation.isPending}
-            confirmingTransactionId={
-              confirmMutation.variables?.matchedCollectedTransactionId ?? undefined
-            }
-            journalEntriesById={journalEntriesById}
-            linkedJournalEntryIdByCollectedTransaction={
-              linkedJournalEntryIdByCollectedTransaction
-            }
-            onConfirm={(item) => {
-              setFeedback(null);
-              void confirmMutation.mutateAsync(item);
-            }}
-          />
-        )
-      }
-    ],
+  const columns = React.useMemo(
+    () =>
+      buildPlanItemColumns({
+        canConfirmCollectedTransactions,
+        confirmPending: confirmMutation.isPending,
+        confirmingTransactionId:
+          confirmMutation.variables?.matchedCollectedTransactionId ?? undefined,
+        journalEntriesById,
+        linkedJournalEntryIdByCollectedTransaction,
+        onConfirm: (item) => {
+          setFeedback(null);
+          void confirmMutation.mutateAsync(item);
+        }
+      }),
     [
       canConfirmCollectedTransactions,
       confirmMutation.isPending,
@@ -267,13 +221,7 @@ export function PlanItemsPage() {
     description:
       '이 화면은 반복 규칙을 선택한 운영 월의 계획 항목으로 펼치고, 각 계획이 수집 거래와 전표까지 이어졌는지 추적하는 곳입니다.',
     primaryEntity: '계획 항목',
-    relatedEntities: [
-      '반복 규칙',
-      '운영 월',
-      '거래 유형',
-      '수집 거래',
-      '전표'
-    ],
+    relatedEntities: ['반복 규칙', '운영 월', '거래 유형', '수집 거래', '전표'],
     truthSource:
       '계획 항목은 반복 규칙에서 파생된 계획 기준이며, 회계 확정은 연결된 수집 거래를 통해 전표로 이뤄집니다.',
     supplementarySections: [
@@ -459,159 +407,6 @@ export function PlanItemsPage() {
       )}
     </Stack>
   );
-}
-
-function PlanItemLinkCell({
-  item,
-  canConfirmCollectedTransactions,
-  confirmPending,
-  confirmingTransactionId,
-  journalEntriesById,
-  linkedJournalEntryIdByCollectedTransaction,
-  onConfirm
-}: {
-  item: PlanItemItem;
-  canConfirmCollectedTransactions: boolean;
-  confirmPending: boolean;
-  confirmingTransactionId?: string;
-  journalEntriesById: Map<string, JournalEntryItem>;
-  linkedJournalEntryIdByCollectedTransaction: Map<string, string>;
-  onConfirm: (item: PlanItemItem) => void;
-}) {
-  const linkedJournalEntry = resolvePlanItemLinkedJournalEntry(
-    item,
-    journalEntriesById,
-    linkedJournalEntryIdByCollectedTransaction
-  );
-  const isConfirming =
-    confirmPending &&
-    item.matchedCollectedTransactionId != null &&
-    item.matchedCollectedTransactionId === confirmingTransactionId;
-  const actionHint = item.matchedCollectedTransactionStatus
-    ? resolveCollectedTransactionActionHint(item.matchedCollectedTransactionStatus)
-    : null;
-
-  if (item.postedJournalEntryId) {
-    return (
-      <Button
-        size="small"
-        component={Link}
-        href={`/journal-entries?entryId=${item.postedJournalEntryId}`}
-      >
-        {item.postedJournalEntryNumber ?? '전표 보기'}
-      </Button>
-    );
-  }
-
-  if (item.matchedCollectedTransactionId) {
-    const canConfirm =
-      canConfirmCollectedTransactions &&
-      linkedJournalEntry == null &&
-      item.matchedCollectedTransactionStatus === 'READY_TO_POST';
-
-    return (
-      <Stack spacing={0.5} sx={{ py: 0.5 }}>
-        <Stack direction="row" spacing={1} alignItems="center">
-          {item.matchedCollectedTransactionStatus ? (
-            <StatusChip label={item.matchedCollectedTransactionStatus} />
-          ) : null}
-          {linkedJournalEntry ? (
-            <Button
-              size="small"
-              component={Link}
-              href={`/journal-entries?entryId=${linkedJournalEntry.id}`}
-            >
-              {linkedJournalEntry.entryNumber}
-            </Button>
-          ) : null}
-        </Stack>
-        <Stack direction="row" spacing={1} alignItems="center">
-          {canConfirm ? (
-            <Button
-              size="small"
-              variant="contained"
-              disabled={isConfirming}
-              onClick={() => {
-                onConfirm(item);
-              }}
-            >
-              {isConfirming ? '확정 중...' : '바로 전표 확정'}
-            </Button>
-          ) : null}
-          <Button
-            size="small"
-            component={Link}
-            href={`/transactions?transactionId=${item.matchedCollectedTransactionId}`}
-          >
-            {readPlanItemTransactionActionLabel(
-              item.matchedCollectedTransactionStatus
-            )}
-          </Button>
-        </Stack>
-        {actionHint ? (
-          <Typography variant="caption" color="text.secondary">
-            {actionHint}
-          </Typography>
-        ) : null}
-      </Stack>
-    );
-  }
-
-  return (
-    <Typography variant="body2" color="text.secondary">
-      아직 실제 거래 연결 없음
-    </Typography>
-  );
-}
-
-function buildPlanItemConfirmFallbackEntry(
-  item: PlanItemItem,
-  collectedTransactionId: string
-): JournalEntryItem {
-  return {
-    id: `je-demo-${collectedTransactionId}`,
-    entryNumber: 'DEMO',
-    entryDate: `${item.plannedDate}T00:00:00.000Z`,
-    status: 'POSTED',
-    sourceKind: 'COLLECTED_TRANSACTION',
-    memo: item.title,
-    sourceCollectedTransactionId: collectedTransactionId,
-    sourceCollectedTransactionTitle: item.title,
-    lines: []
-  };
-}
-
-function resolvePlanItemLinkedJournalEntry(
-  item: PlanItemItem,
-  journalEntriesById: Map<string, JournalEntryItem>,
-  linkedJournalEntryIdByCollectedTransaction: Map<string, string>
-): JournalEntryItem | null {
-  const collectedTransactionId = item.matchedCollectedTransactionId;
-  if (!collectedTransactionId) {
-    return null;
-  }
-
-  const journalEntryId =
-    linkedJournalEntryIdByCollectedTransaction.get(collectedTransactionId) ?? null;
-  if (!journalEntryId) {
-    return null;
-  }
-
-  return resolveLatestLinkedJournalEntry(journalEntriesById, journalEntryId);
-}
-
-function readPlanItemTransactionActionLabel(
-  status: PlanItemItem['matchedCollectedTransactionStatus']
-) {
-  switch (status) {
-    case 'COLLECTED':
-    case 'REVIEWED':
-      return '수집 거래 보완';
-    case 'READY_TO_POST':
-      return '수집 거래 보기';
-    default:
-      return '수집 거래';
-  }
 }
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
