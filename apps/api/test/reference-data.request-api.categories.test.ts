@@ -116,6 +116,7 @@ test('POST /categories creates a category for the current workspace when the mem
         tenantId: 'tenant-1',
         ledgerId: 'ledger-1',
         name: 'Office snacks',
+        normalizedName: 'office snacks',
         kind: 'EXPENSE',
         isActive: true
       }
@@ -174,6 +175,7 @@ test('PATCH /categories/:id renames and deactivates a category for the current w
         tenantId: 'tenant-1',
         ledgerId: 'ledger-1',
         name: 'Fuel and toll',
+        normalizedName: 'fuel and toll',
         kind: 'EXPENSE',
         isActive: false
       }

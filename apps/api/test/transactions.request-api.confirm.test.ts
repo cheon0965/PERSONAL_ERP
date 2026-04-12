@@ -204,6 +204,71 @@ test('POST /collected-transactions/:id/confirm creates a journal entry and marks
   }
 });
 
+test('POST /collected-transactions/:id/confirm uses the allocated journal sequence instead of recounting existing entries', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push({
+      id: 'period-open-confirm-sequence',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 3,
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.OPEN,
+      nextJournalEntrySequence: 10,
+      openedAt: new Date('2026-03-01T00:00:00.000Z'),
+      lockedAt: null,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
+
+    context.state.collectedTransactions.push({
+      id: 'ctx-confirm-sequence-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-open-confirm-sequence',
+      ledgerTransactionTypeId: 'ltt-1-expense',
+      fundingAccountId: 'acc-1',
+      categoryId: 'cat-1',
+      matchedPlanItemId: null,
+      importBatchId: null,
+      importedRowId: null,
+      sourceFingerprint: null,
+      title: 'Sequence test',
+      occurredOn: new Date('2026-03-15T00:00:00.000Z'),
+      amount: 42_000,
+      status: CollectedTransactionStatus.READY_TO_POST,
+      memo: null,
+      createdAt: new Date('2026-03-15T08:00:00.000Z'),
+      updatedAt: new Date('2026-03-15T08:00:00.000Z')
+    });
+
+    const response = await context.request(
+      '/collected-transactions/ctx-confirm-sequence-1/confirm',
+      {
+        method: 'POST',
+        headers: context.authHeaders()
+      }
+    );
+
+    assert.equal(response.status, 201);
+    assert.equal(
+      (response.body as { entryNumber: string }).entryNumber,
+      '202603-0010'
+    );
+    assert.equal(
+      context.state.accountingPeriods.find(
+        (candidate) => candidate.id === 'period-open-confirm-sequence'
+      )?.nextJournalEntrySequence,
+      11
+    );
+  } finally {
+    await context.close();
+  }
+});
+
 test('POST /collected-transactions/:id/confirm re-checks the transaction inside the transaction boundary before posting', async () => {
   const context = await createRequestTestContext();
 

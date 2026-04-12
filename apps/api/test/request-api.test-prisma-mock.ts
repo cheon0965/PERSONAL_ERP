@@ -466,6 +466,7 @@ export function createPrismaMock(
           tenantId: string;
           ledgerId: string;
           name: string;
+          normalizedName?: string;
           type: 'BANK' | 'CASH' | 'CARD';
           sortOrder?: number;
         };
@@ -476,6 +477,7 @@ export function createPrismaMock(
           tenantId: args.data.tenantId,
           ledgerId: args.data.ledgerId,
           name: args.data.name,
+          normalizedName: args.data.normalizedName,
           type: args.data.type,
           balanceWon: 0,
           sortOrder: args.data.sortOrder ?? 0,
@@ -489,6 +491,7 @@ export function createPrismaMock(
         where: { id: string };
         data: {
           name?: string;
+          normalizedName?: string;
           status?: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
         };
       }) => {
@@ -502,6 +505,9 @@ export function createPrismaMock(
 
         if (args.data.name !== undefined) {
           account.name = args.data.name;
+        }
+        if (args.data.normalizedName !== undefined) {
+          account.normalizedName = args.data.normalizedName;
         }
         if (args.data.status !== undefined) {
           account.status = args.data.status;
@@ -645,6 +651,7 @@ export function createPrismaMock(
           tenantId: string;
           ledgerId: string;
           name: string;
+          normalizedName?: string;
           kind: 'INCOME' | 'EXPENSE' | 'TRANSFER';
         };
       }) => {
@@ -654,6 +661,7 @@ export function createPrismaMock(
           tenantId: args.data.tenantId,
           ledgerId: args.data.ledgerId,
           name: args.data.name,
+          normalizedName: args.data.normalizedName,
           kind: args.data.kind,
           isActive: true
         };
@@ -665,6 +673,7 @@ export function createPrismaMock(
         where: { id: string };
         data: {
           name?: string;
+          normalizedName?: string;
           isActive?: boolean;
         };
       }) => {
@@ -678,6 +687,9 @@ export function createPrismaMock(
 
         if (args.data.name !== undefined) {
           category.name = args.data.name;
+        }
+        if (args.data.normalizedName !== undefined) {
+          category.normalizedName = args.data.normalizedName;
         }
         if (args.data.isActive !== undefined) {
           category.isActive = args.data.isActive;

@@ -18,6 +18,17 @@ export function createAccountingPeriodsPrismaMock(
     resolveAccountSubject,
     resolveAccount
   } = context;
+  const resolveNextJournalEntrySequence = (periodId: string) =>
+    state.accountingPeriods.find((candidate) => candidate.id === periodId)
+      ?.nextJournalEntrySequence ??
+    state.journalEntries
+      .filter((candidate) => candidate.periodId === periodId)
+      .reduce((maxSequence, candidate) => {
+        const rawSequence = Number(candidate.entryNumber.split('-').at(-1));
+        return Number.isFinite(rawSequence) && rawSequence > maxSequence
+          ? rawSequence
+          : maxSequence;
+      }, 0) + 1;
 
   return {
     accountingPeriod: {
@@ -177,6 +188,9 @@ export function createAccountingPeriodsPrismaMock(
 
         return {
           ...candidate,
+          nextJournalEntrySequence: resolveNextJournalEntrySequence(
+            candidate.id
+          ),
           ...(args.include?.ledger
             ? {
                 ledger: ledger
@@ -279,6 +293,9 @@ export function createAccountingPeriodsPrismaMock(
 
           return {
             ...candidate,
+            nextJournalEntrySequence: resolveNextJournalEntrySequence(
+              candidate.id
+            ),
             ...(args.include?.openingBalanceSnapshot
               ? {
                   openingBalanceSnapshot: openingBalanceSnapshot
@@ -315,6 +332,7 @@ export function createAccountingPeriodsPrismaMock(
           startDate: args.data.startDate,
           endDate: args.data.endDate,
           status: args.data.status,
+          nextJournalEntrySequence: 1,
           openedAt: new Date(),
           lockedAt: null,
           createdAt: new Date(),
@@ -329,6 +347,7 @@ export function createAccountingPeriodsPrismaMock(
         data: {
           status?: AccountingPeriodStatus;
           lockedAt?: Date | null;
+          nextJournalEntrySequence?: { increment?: number };
         };
       }) => {
         const candidate = state.accountingPeriods.find(
@@ -347,6 +366,12 @@ export function createAccountingPeriodsPrismaMock(
           candidate.lockedAt = args.data.lockedAt;
         }
 
+        if (args.data.nextJournalEntrySequence?.increment) {
+          candidate.nextJournalEntrySequence =
+            resolveNextJournalEntrySequence(candidate.id) +
+            args.data.nextJournalEntrySequence.increment;
+        }
+
         candidate.updatedAt = new Date();
         return candidate;
       },
@@ -360,6 +385,7 @@ export function createAccountingPeriodsPrismaMock(
         data: {
           status?: AccountingPeriodStatus;
           lockedAt?: Date | null;
+          nextJournalEntrySequence?: { increment?: number };
         };
       }) => {
         let updatedCount = 0;
@@ -388,6 +414,12 @@ export function createAccountingPeriodsPrismaMock(
 
           if (args.data.lockedAt !== undefined) {
             candidate.lockedAt = args.data.lockedAt;
+          }
+
+          if (args.data.nextJournalEntrySequence?.increment) {
+            candidate.nextJournalEntrySequence =
+              resolveNextJournalEntrySequence(candidate.id) +
+              args.data.nextJournalEntrySequence.increment;
           }
 
           candidate.updatedAt = new Date();

@@ -13,6 +13,7 @@ import type {
   VehicleOperatingSummaryView
 } from '@personal-erp/contracts';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
+import { normalizeCaseInsensitiveText } from '../../common/utils/normalize-unique-key.util';
 import {
   mapVehicleFuelLogToItem,
   mapVehicleMaintenanceLogToItem,
@@ -280,7 +281,8 @@ export class VehiclesService {
     const duplicate = items.find(
       (candidate) =>
         candidate.id !== input.excludeVehicleId &&
-        candidate.name.trim().toLowerCase() === input.name.toLowerCase()
+        normalizeCaseInsensitiveText(candidate.name) ===
+          normalizeCaseInsensitiveText(input.name)
     );
 
     if (!duplicate) {

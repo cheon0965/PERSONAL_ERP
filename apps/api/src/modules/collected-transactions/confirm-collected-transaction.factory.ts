@@ -35,11 +35,11 @@ export function buildConfirmationJournalLines(input: {
 export function buildConfirmationEntryNumber(input: {
   year: number;
   month: number;
-  existingCount: number;
+  sequence: number;
 }) {
   return buildConfirmCollectedTransactionEntryNumber(
     input.year,
     input.month,
-    input.existingCount + 1
+    input.sequence
   );
 }

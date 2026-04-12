@@ -5,6 +5,7 @@ import type {
 } from '@personal-erp/contracts';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { normalizeCaseInsensitiveText } from '../../common/utils/normalize-unique-key.util';
 
 const insurancePolicyInclude = {
   account: {
@@ -82,7 +83,9 @@ export class InsurancePoliciesRepository {
         recurringStartDate: input.recurringStartDate,
         linkedRecurringRuleId,
         provider: input.provider,
+        normalizedProvider: normalizeCaseInsensitiveText(input.provider),
         productName: input.productName,
+        normalizedProductName: normalizeCaseInsensitiveText(input.productName),
         monthlyPremiumWon: input.monthlyPremiumWon,
         paymentDay: input.paymentDay,
         cycle: input.cycle,
@@ -109,7 +112,9 @@ export class InsurancePoliciesRepository {
         recurringStartDate: input.recurringStartDate,
         linkedRecurringRuleId,
         provider: input.provider,
+        normalizedProvider: normalizeCaseInsensitiveText(input.provider),
         productName: input.productName,
+        normalizedProductName: normalizeCaseInsensitiveText(input.productName),
         monthlyPremiumWon: input.monthlyPremiumWon,
         paymentDay: input.paymentDay,
         cycle: input.cycle,

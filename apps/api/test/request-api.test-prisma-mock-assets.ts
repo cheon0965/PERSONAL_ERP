@@ -180,7 +180,9 @@ export function createAssetsPrismaMock(
           recurringStartDate?: string | Date | null;
           linkedRecurringRuleId?: string | null;
           provider: string;
+          normalizedProvider?: string;
           productName: string;
+          normalizedProductName?: string;
           monthlyPremiumWon: number;
           paymentDay: number;
           cycle: 'MONTHLY' | 'YEARLY';
@@ -202,7 +204,9 @@ export function createAssetsPrismaMock(
             : null,
           linkedRecurringRuleId: args.data.linkedRecurringRuleId ?? null,
           provider: args.data.provider,
+          normalizedProvider: args.data.normalizedProvider,
           productName: args.data.productName,
+          normalizedProductName: args.data.normalizedProductName,
           monthlyPremiumWon: Number(args.data.monthlyPremiumWon),
           paymentDay: Number(args.data.paymentDay),
           cycle: args.data.cycle,
@@ -226,7 +230,9 @@ export function createAssetsPrismaMock(
           recurringStartDate?: string | Date | null;
           linkedRecurringRuleId?: string | null;
           provider?: string;
+          normalizedProvider?: string;
           productName?: string;
+          normalizedProductName?: string;
           monthlyPremiumWon?: number;
           paymentDay?: number;
           cycle?: 'MONTHLY' | 'YEARLY';
@@ -262,8 +268,15 @@ export function createAssetsPrismaMock(
         if (args.data.provider !== undefined) {
           insurancePolicy.provider = args.data.provider;
         }
+        if (args.data.normalizedProvider !== undefined) {
+          insurancePolicy.normalizedProvider = args.data.normalizedProvider;
+        }
         if (args.data.productName !== undefined) {
           insurancePolicy.productName = args.data.productName;
+        }
+        if (args.data.normalizedProductName !== undefined) {
+          insurancePolicy.normalizedProductName =
+            args.data.normalizedProductName;
         }
         if (args.data.monthlyPremiumWon !== undefined) {
           insurancePolicy.monthlyPremiumWon = Number(
@@ -380,6 +393,7 @@ export function createAssetsPrismaMock(
           tenantId: string;
           ledgerId: string;
           name: string;
+          normalizedName?: string;
           manufacturer?: string | null;
           fuelType: 'GASOLINE' | 'DIESEL' | 'LPG' | 'HYBRID' | 'ELECTRIC';
           initialOdometerKm: number;
@@ -392,6 +406,7 @@ export function createAssetsPrismaMock(
           tenantId: args.data.tenantId,
           ledgerId: args.data.ledgerId,
           name: args.data.name,
+          normalizedName: args.data.normalizedName,
           manufacturer: args.data.manufacturer ?? null,
           fuelType: args.data.fuelType,
           initialOdometerKm: Number(args.data.initialOdometerKm),
@@ -409,6 +424,7 @@ export function createAssetsPrismaMock(
         where: { id: string };
         data: {
           name?: string;
+          normalizedName?: string;
           manufacturer?: string | null;
           fuelType?: 'GASOLINE' | 'DIESEL' | 'LPG' | 'HYBRID' | 'ELECTRIC';
           initialOdometerKm?: number;
@@ -425,6 +441,9 @@ export function createAssetsPrismaMock(
 
         if (args.data.name !== undefined) {
           vehicle.name = args.data.name;
+        }
+        if (args.data.normalizedName !== undefined) {
+          vehicle.normalizedName = args.data.normalizedName;
         }
         if ('manufacturer' in args.data) {
           vehicle.manufacturer = args.data.manufacturer ?? null;

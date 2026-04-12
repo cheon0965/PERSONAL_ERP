@@ -6,6 +6,7 @@ import type {
   UpdateCategoryRequest
 } from '@personal-erp/contracts';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
+import { normalizeCaseInsensitiveText } from '../../common/utils/normalize-unique-key.util';
 import { mapCategoryToItem } from './categories.mapper';
 import { CategoriesRepository } from './categories.repository';
 
@@ -110,8 +111,8 @@ export class CategoriesService {
       (candidate) =>
         candidate.kind === input.kind &&
         candidate.id !== input.excludeCategoryId &&
-        candidate.name.trim().toLowerCase() ===
-          input.normalizedName.toLowerCase()
+        normalizeCaseInsensitiveText(candidate.name) ===
+          normalizeCaseInsensitiveText(input.normalizedName)
     );
 
     if (duplicate) {

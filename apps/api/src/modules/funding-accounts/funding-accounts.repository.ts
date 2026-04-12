@@ -4,6 +4,7 @@ import type {
   UpdateFundingAccountRequest
 } from '@personal-erp/contracts';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { normalizeCaseInsensitiveText } from '../../common/utils/normalize-unique-key.util';
 
 @Injectable()
 export class FundingAccountsRepository {
@@ -63,6 +64,7 @@ export class FundingAccountsRepository {
         tenantId,
         ledgerId,
         name: input.name,
+        normalizedName: normalizeCaseInsensitiveText(input.name),
         type: input.type,
         sortOrder: (lastAccount?.sortOrder ?? -1) + 1
       }
@@ -79,6 +81,7 @@ export class FundingAccountsRepository {
       },
       data: {
         name: input.name,
+        normalizedName: normalizeCaseInsensitiveText(input.name),
         ...(input.status === undefined ? {} : { status: input.status })
       }
     });

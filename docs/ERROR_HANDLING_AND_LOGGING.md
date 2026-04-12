@@ -6,7 +6,7 @@
 `실패를 어떻게 다루는가`, `로그를 어디에 남기는가`, `민감정보는 어떻게 피하는가`를 짧게 보는 문서가 따로 필요합니다.
 
 이 문서는 현재 저장소에 이미 구현된 방식과, 앞으로 같은 방향으로 유지할 최소 규칙만 정리합니다.
-즉, 아직 없는 전역 예외 필터나 대형 관측 플랫폼을 가정하지 않습니다.
+즉, 대형 관측 플랫폼이나 범용 예외 래퍼를 가정하지 않되, 현재 저장소에 실제 들어간 좁은 범위의 예외 변환은 반영합니다.
 
 ## 핵심 원칙
 
@@ -56,12 +56,17 @@
 
 - controller, use-case, repository, adapter가 무조건 `try/catch`로 감싸지 않습니다.
 - 복구 가능한 실패가 아니면 그대로 상위로 전파합니다.
-- 현재는 Nest 기본 예외 처리에 맡기고 있으며, 이 단계에서 전역 custom exception filter까지는 도입하지 않습니다.
+- 현재는 Nest 기본 예외 처리를 기본으로 두되, Prisma `P2002`만 전역 `PrismaConflictExceptionFilter`에서 도메인 의미가 있는 `409 Conflict`로 좁게 변환합니다.
 
 이 선택은 현재 프로젝트의 목적과 맞습니다.
 
 - 과한 추상화나 공통 예외 래퍼를 늘리지 않습니다.
 - 대신 `예상 가능한 실패만 명시적으로 다루고`, 나머지는 숨기지 않습니다.
+
+현재 기준 코드:
+
+- [`apps/api/src/common/prisma/prisma-conflict-exception.filter.ts`](../apps/api/src/common/prisma/prisma-conflict-exception.filter.ts#L1)
+- [`apps/api/src/main.ts`](../apps/api/src/main.ts#L1)
 
 ## 현재 Web 예외 처리 원칙
 
@@ -101,6 +106,7 @@
 - API 경계에서는 `[module] METHOD path status duration requestId=...` 형식의 최소 요청 로그를 남깁니다.
 - 보안 이벤트는 `SecurityEvent` 로거에서 `event=... key=value ...` 형식으로 남깁니다.
 - readiness 점검은 `GET /api/health/ready`에서 수행하고, DB 연결 실패 시 `503`으로 드러냅니다.
+- Prisma unique 충돌은 요청 경계에서 raw 500 대신 도메인 `409 Conflict` 메시지로 정리합니다.
 
 ### 현재 기록하는 대표 보안 이벤트
 
@@ -195,12 +201,13 @@
 
 ## 현재 단계에서 의도적으로 하지 않은 것
 
-- 전역 custom exception filter 도입
+- 모든 예외를 포괄하는 전역 custom exception filter 도입
 - 구조화 로그 플랫폼 도입
 - 모든 예외를 공통 에러 객체로 강제 래핑
 - OpenTelemetry, 중앙 로그 수집기, 분산 추적 인프라 도입
 
 이 항목들은 규모가 더 커지면 고려할 수 있지만, 현재 프로젝트에서는 실무 감각과 복잡도 균형을 위해 아직 넣지 않았습니다.
+현재 전역 필터는 Prisma `P2002` 충돌을 `409`로 변환하는 좁은 예외만 담당합니다.
 
 ## 한 줄 요약
 

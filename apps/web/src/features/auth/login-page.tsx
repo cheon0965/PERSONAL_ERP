@@ -168,7 +168,7 @@ export function LoginPage() {
                           lineHeight: 1.06
                         }}
                       >
-                        Owner ERP는
+                        PERSONAL ERP는
                         <br />
                         사업 운영 화면으로
                         <br />
