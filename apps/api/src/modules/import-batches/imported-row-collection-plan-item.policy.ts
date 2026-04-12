@@ -1,14 +1,14 @@
 import { resolvePlanItemAutoMatch } from './imported-row-plan-item-match.policy';
-import type { DraftPlanItemCandidate } from './imported-row-collection.types';
+import type { PlanItemCollectionCandidate } from './imported-row-collection.types';
 
 export function resolveMatchedPlanItemCandidate(input: {
-  candidates: DraftPlanItemCandidate[];
+  candidates: PlanItemCollectionCandidate[];
   amount: number;
   occurredOn: Date;
   fundingAccountId: string;
   ledgerTransactionTypeId: string;
   categoryId: string | null;
-}): DraftPlanItemCandidate | null {
+}): PlanItemCollectionCandidate | null {
   const planItemMatch = resolvePlanItemAutoMatch({
     candidates: input.candidates,
     collected: {

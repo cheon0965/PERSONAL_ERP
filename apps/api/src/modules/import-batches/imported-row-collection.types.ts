@@ -69,7 +69,7 @@ export type CollectingPeriodRecord = Prisma.AccountingPeriodGetPayload<{
   select: typeof collectingPeriodSelect;
 }>;
 
-export type DraftPlanItemCandidate = {
+export type PlanItemCollectionCandidate = {
   id: string;
   title: string;
   plannedAmount: number;
@@ -77,4 +77,5 @@ export type DraftPlanItemCandidate = {
   fundingAccountId: string;
   ledgerTransactionTypeId: string;
   categoryId: string | null;
+  existingCollectedTransactionId: string | null;
 };

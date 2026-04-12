@@ -99,10 +99,10 @@ docs/          -> 개발, 운영, ADR, 아키텍처 문서
 | Recurring Automation | `recurring-rules`, `plan-items`                                                                                                                                                                                                             | 반복규칙 정의, 계획 항목 생성과 추적성                        | 쓰기 + Ledger 참조 | Ledger 다음 후보                  |
 | Asset & Coverage     | `vehicles`, `insurance-policies`                                                                                                                                                                                                            | 운영비 성격의 자산/보장 도메인                                | 현재는 조회 중심   | 별도 도메인 후보                  |
 | Insight & Planning   | `dashboard`, `forecast`                                                                                                                                                                                                                     | 여러 컨텍스트를 읽어 요약/예측                                | 읽기/조합 중심     | 나중에 BFF 또는 read service 후보 |
-| Platform & Contracts | `packages/contracts`, env, Prisma, health, 공통 외부 의존성 조립                                                                                                                                                                            | 계약 원천, 런타임 기반선                                      | 지원 계층          | 공통 플랫폼 성격                  |
+| Platform & Contracts | `packages/contracts`, `packages/money`, env, Prisma, health, 공통 외부 의존성 조립                                                                                                                                                          | 계약 원천, 금액 값 기준, 런타임 기반선                        | 지원 계층          | 공통 플랫폼 성격                  |
 
 여기서 `Ledger`는 현재 코드베이스의 컨텍스트 이름입니다.  
-현재 API 모듈명은 `funding-accounts`, `accounting-periods`, `collected-transactions`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`, `plan-items` 등이 있고, Web 화면/라우트는 사용자 경험 관점의 shorthand로 `transactions`, `periods`, `imports`, `reference-data` 등을 함께 사용합니다.  
+현재 API 모듈명은 `funding-accounts`, `accounting-periods`, `insurance-policies`, `vehicles`, `recurring-rules`, `plan-items`, `collected-transactions`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`, `dashboard`, `forecast` 등이 있고, Web 화면/라우트는 사용자 경험 관점의 shorthand로 `transactions`, `periods`, `imports`, `reference-data`, `insurances` 등을 함께 사용합니다.
 회계 도메인의 상세 엔티티/상태/권한 기준은 `docs/domain/business-logic-draft.md`, `docs/domain/core-entity-definition.md`를 우선합니다.
 
 면접이나 포트폴리오 설명에서는 이렇게 정리하면 된다.
@@ -324,13 +324,14 @@ controller -> use-case -> port -> adapter
 
 ## 현재 단계 결론
 
-2026-04-05 기준으로 이 프로젝트는 다음 상태로 보는 것이 가장 정확하다.
+2026-04-12 기준으로 이 프로젝트는 다음 상태로 보는 것이 가장 정확하다.
 
 - MSA-ready P0 `Context Map와 금지선`: 완료
 - MSA-ready P1 `Module Public API / Internal Implementation 경계`: 완료
 - MSA-ready P2 `Dashboard / Forecast를 Insight Context로 재정의`: 완료
 - MSA-ready P3 `운영 신호 보강`: 완료
 - MSA-ready P4 `내부 Integration Event 계약`: 의도적으로 보류
+- 제품 운영 사이클 `기준 데이터 -> 월 운영 -> 보험/차량 -> 반복 규칙 -> 계획 항목 -> 수집/업로드 -> 전표 -> 재무제표 -> 차기 이월 -> 기간 전망`: 현재 기준 문서와 화면 순서에 반영 완료
 
 즉, 지금은 `MSA처럼 보이기 위한 구조 추가`보다 `현재 경계를 명확히 유지한 채 제품 완성도와 운영 준비를 높이는 단계`다.
 

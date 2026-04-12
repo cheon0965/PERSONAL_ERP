@@ -21,6 +21,7 @@
     "db:generate": "npm run prisma:generate --workspace @personal-erp/api",
     "db:migrate": "npm run prisma:migrate:dev --workspace @personal-erp/api",
     "db:deploy": "npm run prisma:migrate:deploy --workspace @personal-erp/api",
+    "db:deploy:latest-baseline": "npm run prisma:migrate:deploy:latest-baseline --workspace @personal-erp/api",
     "db:reset": "npm run prisma:migrate:reset --workspace @personal-erp/api",
     "db:status": "npm run prisma:migrate:status --workspace @personal-erp/api",
     "db:push:unsafe": "npm run prisma:push:unsafe --workspace @personal-erp/api",

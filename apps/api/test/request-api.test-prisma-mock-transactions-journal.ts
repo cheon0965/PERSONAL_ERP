@@ -373,14 +373,28 @@ export function createTransactionsJournalPrismaMock(
         };
       },
       findMany: async (args: {
-        where?: { tenantId?: string; ledgerId?: string };
+        where?: {
+          tenantId?: string;
+          ledgerId?: string;
+          periodId?: string | null;
+          importBatchId?: string | null;
+          importedRowId?: string | null;
+          matchedPlanItemId?: {
+            not?: null;
+          };
+          status?: {
+            in?: CollectedTransactionStatus[];
+          };
+        };
         select?: {
           id?: boolean;
+          periodId?: boolean;
           occurredOn?: boolean;
           title?: boolean;
           amount?: boolean;
           status?: boolean;
           importBatchId?: boolean;
+          importedRowId?: boolean;
           matchedPlanItemId?: boolean;
           matchedPlanItem?: {
             select?: {
@@ -388,6 +402,9 @@ export function createTransactionsJournalPrismaMock(
               title?: boolean;
             };
           };
+          fundingAccountId?: boolean;
+          ledgerTransactionTypeId?: boolean;
+          categoryId?: boolean;
           postedJournalEntry?: {
             select?: {
               id?: boolean;
@@ -415,8 +432,31 @@ export function createTransactionsJournalPrismaMock(
             !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
           const matchesLedger =
             !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesPeriod =
+            args.where?.periodId === undefined ||
+            candidate.periodId === args.where.periodId;
+          const matchesImportBatch =
+            args.where?.importBatchId === undefined ||
+            candidate.importBatchId === args.where.importBatchId;
+          const matchesImportedRow =
+            args.where?.importedRowId === undefined ||
+            candidate.importedRowId === args.where.importedRowId;
+          const matchesMatchedPlanItem =
+            args.where?.matchedPlanItemId?.not !== null ||
+            candidate.matchedPlanItemId !== null;
+          const matchesStatus =
+            !args.where?.status?.in ||
+            args.where.status.in.includes(candidate.status);
 
-          return matchesTenant && matchesLedger;
+          return (
+            matchesTenant &&
+            matchesLedger &&
+            matchesPeriod &&
+            matchesImportBatch &&
+            matchesImportedRow &&
+            matchesMatchedPlanItem &&
+            matchesStatus
+          );
         });
 
         items = sortCollectedTransactions(items);
@@ -446,6 +486,7 @@ export function createTransactionsJournalPrismaMock(
 
           return {
             ...(args.select.id ? { id: candidate.id } : {}),
+            ...(args.select.periodId ? { periodId: candidate.periodId } : {}),
             ...(args.select.occurredOn
               ? { occurredOn: candidate.occurredOn }
               : {}),
@@ -454,6 +495,9 @@ export function createTransactionsJournalPrismaMock(
             ...(args.select.status ? { status: candidate.status } : {}),
             ...(args.select.importBatchId
               ? { importBatchId: candidate.importBatchId }
+              : {}),
+            ...(args.select.importedRowId
+              ? { importedRowId: candidate.importedRowId }
               : {}),
             ...(args.select.matchedPlanItemId
               ? { matchedPlanItemId: candidate.matchedPlanItemId }
@@ -471,6 +515,15 @@ export function createTransactionsJournalPrismaMock(
                       }
                     : null
                 }
+              : {}),
+            ...(args.select.fundingAccountId
+              ? { fundingAccountId: candidate.fundingAccountId }
+              : {}),
+            ...(args.select.ledgerTransactionTypeId
+              ? { ledgerTransactionTypeId: candidate.ledgerTransactionTypeId }
+              : {}),
+            ...(args.select.categoryId
+              ? { categoryId: candidate.categoryId }
               : {}),
             ...(args.select.postedJournalEntry
               ? {
@@ -690,6 +743,8 @@ export function createTransactionsJournalPrismaMock(
         where: { id: string };
         data: {
           periodId?: string | null;
+          importBatchId?: string | null;
+          importedRowId?: string | null;
           ledgerTransactionTypeId?: string;
           fundingAccountId?: string;
           categoryId?: string | null;
@@ -697,6 +752,7 @@ export function createTransactionsJournalPrismaMock(
           occurredOn?: Date;
           amount?: number;
           status?: CollectedTransactionStatus;
+          sourceFingerprint?: string | null;
           memo?: string | null;
         };
         select?: {
@@ -741,6 +797,12 @@ export function createTransactionsJournalPrismaMock(
         if ('periodId' in args.data) {
           candidate.periodId = args.data.periodId ?? null;
         }
+        if ('importBatchId' in args.data) {
+          candidate.importBatchId = args.data.importBatchId ?? null;
+        }
+        if ('importedRowId' in args.data) {
+          candidate.importedRowId = args.data.importedRowId ?? null;
+        }
         if (args.data.ledgerTransactionTypeId) {
           candidate.ledgerTransactionTypeId = args.data.ledgerTransactionTypeId;
         }
@@ -761,6 +823,9 @@ export function createTransactionsJournalPrismaMock(
         }
         if (args.data.status) {
           candidate.status = args.data.status;
+        }
+        if ('sourceFingerprint' in args.data) {
+          candidate.sourceFingerprint = args.data.sourceFingerprint ?? null;
         }
         if ('memo' in args.data) {
           candidate.memo = args.data.memo ?? null;

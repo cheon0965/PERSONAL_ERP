@@ -10,7 +10,11 @@ import type {
   CollectImportedRowRequest,
   CollectImportedRowResponse
 } from '@personal-erp/contracts';
-import { PlanItemStatus, Prisma } from '@prisma/client';
+import {
+  CollectedTransactionStatus,
+  PlanItemStatus,
+  Prisma
+} from '@prisma/client';
 import { fromPrismaMoneyWon } from '../../common/money/prisma-money';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
@@ -38,7 +42,7 @@ import {
   type CollectableImportedRow,
   type CollectingPeriodRecord,
   type CreatedCollectedTransactionRecord,
-  type DraftPlanItemCandidate
+  type PlanItemCollectionCandidate
 } from './imported-row-collection.types';
 
 type WorkspaceContext = ReturnType<typeof requireCurrentWorkspace>;
@@ -55,7 +59,7 @@ type RowCollectionAssessment = {
     id: string;
     name: string;
   };
-  matchedPlanItem: DraftPlanItemCandidate | null;
+  matchedPlanItem: PlanItemCollectionCandidate | null;
   effectiveCategory: {
     id: string;
     name: string;
@@ -161,30 +165,49 @@ export class ImportedRowCollectionService {
       input: input.input,
       currentPeriodId: input.currentPeriodId
     });
-    const matchedPlanItemId =
-      assessment.preview.autoPreparation.allowPlanItemMatch &&
-      assessment.matchedPlanItem
-        ? assessment.matchedPlanItem.id
+    const matchedPlanItem =
+      assessment.preview.autoPreparation.allowPlanItemMatch
+        ? assessment.matchedPlanItem
         : null;
+    const matchedPlanItemId = matchedPlanItem?.id ?? null;
     const createdCollectedTransaction =
-      await this.createCollectedTransactionRecord({
-        tx: input.tx,
-        workspace: input.workspace,
-        importBatchId: input.importBatchId,
-        importedRowId: input.importedRowId,
-        periodId: input.currentPeriodId,
-        matchedPlanItemId,
-        ledgerTransactionTypeId: assessment.ledgerTransactionTypeId,
-        fundingAccountId: assessment.fundingAccount.id,
-        categoryId: assessment.effectiveCategory?.id ?? null,
-        title: assessment.normalizedRow.title,
-        occurredOn: assessment.occurredOn,
-        amount: assessment.normalizedRow.amount,
-        status: assessment.preview.autoPreparation
-          .nextWorkflowStatus as Prisma.CollectedTransactionCreateInput['status'],
-        sourceFingerprint: assessment.sourceFingerprint,
-        memo: input.input.memo
-      });
+      matchedPlanItem?.existingCollectedTransactionId
+        ? await this.absorbImportedRowIntoCollectedTransactionRecord({
+            tx: input.tx,
+            collectedTransactionId:
+              matchedPlanItem.existingCollectedTransactionId,
+            importBatchId: input.importBatchId,
+            importedRowId: input.importedRowId,
+            periodId: input.currentPeriodId,
+            ledgerTransactionTypeId: assessment.ledgerTransactionTypeId,
+            fundingAccountId: assessment.fundingAccount.id,
+            categoryId: assessment.effectiveCategory?.id ?? null,
+            title: assessment.normalizedRow.title,
+            occurredOn: assessment.occurredOn,
+            amount: assessment.normalizedRow.amount,
+            status: assessment.preview.autoPreparation
+              .nextWorkflowStatus as Prisma.CollectedTransactionCreateInput['status'],
+            sourceFingerprint: assessment.sourceFingerprint,
+            memo: input.input.memo
+          })
+        : await this.createCollectedTransactionRecord({
+            tx: input.tx,
+            workspace: input.workspace,
+            importBatchId: input.importBatchId,
+            importedRowId: input.importedRowId,
+            periodId: input.currentPeriodId,
+            matchedPlanItemId,
+            ledgerTransactionTypeId: assessment.ledgerTransactionTypeId,
+            fundingAccountId: assessment.fundingAccount.id,
+            categoryId: assessment.effectiveCategory?.id ?? null,
+            title: assessment.normalizedRow.title,
+            occurredOn: assessment.occurredOn,
+            amount: assessment.normalizedRow.amount,
+            status: assessment.preview.autoPreparation
+              .nextWorkflowStatus as Prisma.CollectedTransactionCreateInput['status'],
+            sourceFingerprint: assessment.sourceFingerprint,
+            memo: input.input.memo
+          });
 
     await this.markPlanItemMatched(input.tx, matchedPlanItemId);
 
@@ -405,7 +428,7 @@ export class ImportedRowCollectionService {
     tx: PrismaClientLike,
     workspace: WorkspaceContext,
     periodId: string
-  ): Promise<DraftPlanItemCandidate[]> {
+  ): Promise<PlanItemCollectionCandidate[]> {
     const records = await tx.planItem.findMany({
       where: {
         tenantId: workspace.tenantId,
@@ -429,8 +452,79 @@ export class ImportedRowCollectionService {
 
     return records.map((record) => ({
       ...record,
-      plannedAmount: fromPrismaMoneyWon(record.plannedAmount)
+      plannedAmount: fromPrismaMoneyWon(record.plannedAmount),
+      existingCollectedTransactionId: null
     }));
+  }
+
+  private async readRecurringCollectedTransactionCandidates(
+    tx: PrismaClientLike,
+    workspace: WorkspaceContext,
+    periodId: string
+  ): Promise<PlanItemCollectionCandidate[]> {
+    const records = await tx.collectedTransaction.findMany({
+      where: {
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId,
+        periodId,
+        importBatchId: null,
+        importedRowId: null,
+        matchedPlanItemId: {
+          not: null
+        },
+        status: {
+          in: [
+            CollectedTransactionStatus.COLLECTED,
+            CollectedTransactionStatus.REVIEWED,
+            CollectedTransactionStatus.READY_TO_POST
+          ]
+        }
+      },
+      select: {
+        id: true,
+        occurredOn: true,
+        amount: true,
+        fundingAccountId: true,
+        ledgerTransactionTypeId: true,
+        categoryId: true,
+        matchedPlanItem: {
+          select: {
+            id: true,
+            title: true
+          }
+        }
+      }
+    });
+
+    return records.flatMap((record) =>
+      record.matchedPlanItem
+        ? [
+            {
+              id: record.matchedPlanItem.id,
+              title: record.matchedPlanItem.title,
+              plannedAmount: fromPrismaMoneyWon(record.amount),
+              plannedDate: record.occurredOn,
+              fundingAccountId: record.fundingAccountId,
+              ledgerTransactionTypeId: record.ledgerTransactionTypeId,
+              categoryId: record.categoryId,
+              existingCollectedTransactionId: record.id
+            }
+          ]
+        : []
+    );
+  }
+
+  private async readPlanItemCollectionCandidates(
+    tx: PrismaClientLike,
+    workspace: WorkspaceContext,
+    periodId: string
+  ): Promise<PlanItemCollectionCandidate[]> {
+    const [draftCandidates, recurringCandidates] = await Promise.all([
+      this.readDraftPlanItemCandidates(tx, workspace, periodId),
+      this.readRecurringCollectedTransactionCandidates(tx, workspace, periodId)
+    ]);
+
+    return [...draftCandidates, ...recurringCandidates];
   }
 
   private async readMatchedPlanItemCandidate(
@@ -442,8 +536,8 @@ export class ImportedRowCollectionService {
     fundingAccountId: string,
     ledgerTransactionTypeId: string,
     categoryId: string | null
-  ): Promise<DraftPlanItemCandidate | null> {
-    const candidates = await this.readDraftPlanItemCandidates(
+  ): Promise<PlanItemCollectionCandidate | null> {
+    const candidates = await this.readPlanItemCollectionCandidates(
       tx,
       workspace,
       periodId
@@ -512,6 +606,44 @@ export class ImportedRowCollectionService {
         status: input.status,
         sourceFingerprint: input.sourceFingerprint,
         memo: input.memo
+      },
+      select: createdCollectedTransactionSelect
+    });
+  }
+
+  private async absorbImportedRowIntoCollectedTransactionRecord(input: {
+    tx: Prisma.TransactionClient;
+    collectedTransactionId: string;
+    importBatchId: string;
+    importedRowId: string;
+    periodId: string;
+    ledgerTransactionTypeId: string;
+    fundingAccountId: string;
+    categoryId: string | null;
+    title: string;
+    occurredOn: Date;
+    amount: number;
+    status: Prisma.CollectedTransactionCreateInput['status'];
+    sourceFingerprint: string;
+    memo: string | undefined;
+  }): Promise<CreatedCollectedTransactionRecord> {
+    return input.tx.collectedTransaction.update({
+      where: {
+        id: input.collectedTransactionId
+      },
+      data: {
+        periodId: input.periodId,
+        importBatchId: input.importBatchId,
+        importedRowId: input.importedRowId,
+        ledgerTransactionTypeId: input.ledgerTransactionTypeId,
+        fundingAccountId: input.fundingAccountId,
+        categoryId: input.categoryId,
+        title: input.title,
+        occurredOn: input.occurredOn,
+        amount: input.amount,
+        status: input.status,
+        sourceFingerprint: input.sourceFingerprint,
+        ...(input.memo !== undefined ? { memo: input.memo } : {})
       },
       select: createdCollectedTransactionSelect
     });

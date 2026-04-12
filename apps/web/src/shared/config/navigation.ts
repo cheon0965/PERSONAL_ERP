@@ -14,7 +14,6 @@ import UploadFileRoundedIcon from '@mui/icons-material/UploadFileRounded';
 import ViewListRoundedIcon from '@mui/icons-material/ViewListRounded';
 
 export const navigationItems = [
-  { label: '대시보드', href: '/dashboard', icon: DashboardRoundedIcon },
   { label: '작업 문맥', href: '/settings', icon: SettingsRoundedIcon },
   {
     label: '기준 데이터',
@@ -22,6 +21,8 @@ export const navigationItems = [
     icon: Inventory2RoundedIcon
   },
   { label: '월 운영', href: '/periods', icon: CalendarMonthRoundedIcon },
+  { label: '보험 계약', href: '/insurances', icon: HealthAndSafetyRoundedIcon },
+  { label: '차량 운영', href: '/vehicles', icon: DirectionsCarRoundedIcon },
   { label: '반복 규칙', href: '/recurring', icon: AutorenewRoundedIcon },
   { label: '계획 항목', href: '/plan-items', icon: ViewListRoundedIcon },
   { label: '업로드 배치', href: '/imports', icon: UploadFileRoundedIcon },
@@ -34,6 +35,5 @@ export const navigationItems = [
   },
   { label: '차기 이월', href: '/carry-forwards', icon: SwapHorizRoundedIcon },
   { label: '기간 전망', href: '/forecast', icon: AutoGraphRoundedIcon },
-  { label: '보험 계약', href: '/insurances', icon: HealthAndSafetyRoundedIcon },
-  { label: '차량 운영', href: '/vehicles', icon: DirectionsCarRoundedIcon }
+  { label: '대시보드', href: '/dashboard', icon: DashboardRoundedIcon }
 ] as const;

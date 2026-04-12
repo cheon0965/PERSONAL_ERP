@@ -4,6 +4,7 @@ import { ForbiddenException } from '@nestjs/common';
 import type { AuthenticatedUser } from '@personal-erp/contracts';
 import {
   AccountingPeriodStatus,
+  CollectedTransactionStatus,
   CategoryKind,
   PlanItemStatus
 } from '@prisma/client';
@@ -86,15 +87,15 @@ test('GeneratePlanItemsUseCase generates plan items for recurring rules inside t
     title: '휴대폰 요금',
     plannedDate: '2026-03-10',
     plannedAmount: 75_000,
-    status: 'DRAFT',
+    status: 'MATCHED',
     recurringRuleId: 'rr-1',
     recurringRuleTitle: '휴대폰 요금',
     ledgerTransactionTypeName: '기본 지출',
     fundingAccountName: '주거래 통장',
     categoryName: '통신비',
-    matchedCollectedTransactionId: null,
-    matchedCollectedTransactionTitle: null,
-    matchedCollectedTransactionStatus: null,
+    matchedCollectedTransactionId: 'ctx-1',
+    matchedCollectedTransactionTitle: '휴대폰 요금',
+    matchedCollectedTransactionStatus: 'READY_TO_POST',
     postedJournalEntryId: null,
     postedJournalEntryNumber: null
   });
@@ -338,6 +339,12 @@ function createPlanItemTestState(input: {
   return {
     recurringRules: input.recurringRules,
     planItems: [...input.planItems],
+    collectedTransactions: [] as Array<{
+      id: string;
+      matchedPlanItemId: string | null;
+      title: string;
+      status: CollectedTransactionStatus;
+    }>,
     transactionTypes: [
       {
         id: 'ltt-income',
@@ -364,7 +371,10 @@ function createPrismaMock(
   period: ReturnType<typeof createPeriod>,
   state: ReturnType<typeof createPlanItemTestState>
 ) {
-  return {
+  const prisma = {
+    $transaction: async <T>(
+      callback: (tx: Record<string, unknown>) => Promise<T>
+    ) => callback(prisma),
     accountingPeriod: {
       findFirst: async () => period
     },
@@ -393,47 +403,60 @@ function createPrismaMock(
         }
 
         return state.planItems
-          .map((item) => ({
-            id: item.id,
-            periodId: item.periodId,
-            title: item.title,
-            plannedDate: item.plannedDate,
-            plannedAmount: item.plannedAmount,
-            status: item.status,
-            recurringRule:
-              item.recurringRuleId == null
-                ? null
-                : (state.recurringRules
-                    .filter((rule) => rule.id === item.recurringRuleId)
-                    .map((rule) => ({
-                      id: rule.id,
-                      title: rule.title
-                    }))[0] ?? null),
-            ledgerTransactionType: state.transactionTypes.find(
-              (transactionType) =>
-                transactionType.id === item.ledgerTransactionTypeId
-            ) ?? { name: '알 수 없는 유형' },
-            fundingAccount: state.accounts.find(
-              (account) => account.id === item.fundingAccountId
-            ) ?? { name: '알 수 없는 자금수단' },
-            category:
-              item.categoryId == null
-                ? null
-                : (state.categories
-                    .filter((category) => category.id === item.categoryId)
-                    .map((category) => ({
-                      name: category.name
-                    }))[0] ?? null),
-            matchedCollectedTransaction: null,
-            postedJournalEntry: null
-          }))
+          .map((item) => {
+            const matchedCollectedTransaction =
+              state.collectedTransactions.find(
+                (transaction) => transaction.matchedPlanItemId === item.id
+              ) ?? null;
+
+            return {
+              id: item.id,
+              periodId: item.periodId,
+              title: item.title,
+              plannedDate: item.plannedDate,
+              plannedAmount: item.plannedAmount,
+              status: item.status,
+              recurringRule:
+                item.recurringRuleId == null
+                  ? null
+                  : (state.recurringRules
+                      .filter((rule) => rule.id === item.recurringRuleId)
+                      .map((rule) => ({
+                        id: rule.id,
+                        title: rule.title
+                      }))[0] ?? null),
+              ledgerTransactionType: state.transactionTypes.find(
+                (transactionType) =>
+                  transactionType.id === item.ledgerTransactionTypeId
+              ) ?? { name: '알 수 없는 유형' },
+              fundingAccount: state.accounts.find(
+                (account) => account.id === item.fundingAccountId
+              ) ?? { name: '알 수 없는 자금수단' },
+              category:
+                item.categoryId == null
+                  ? null
+                  : (state.categories
+                      .filter((category) => category.id === item.categoryId)
+                      .map((category) => ({
+                        name: category.name
+                      }))[0] ?? null),
+              matchedCollectedTransaction: matchedCollectedTransaction
+                ? {
+                    id: matchedCollectedTransaction.id,
+                    title: matchedCollectedTransaction.title,
+                    status: matchedCollectedTransaction.status
+                  }
+                : null,
+              postedJournalEntry: null
+            };
+          })
           .sort(
             (left, right) =>
               left.plannedDate.getTime() - right.plannedDate.getTime()
           );
       },
-      createMany: async (args: {
-        data: Array<{
+      create: async (args: {
+        data: {
           tenantId: string;
           ledgerId: string;
           periodId: string;
@@ -444,29 +467,55 @@ function createPrismaMock(
           title: string;
           plannedAmount: number;
           plannedDate: Date;
-        }>;
+          status: PlanItemStatus;
+          matchedCollectedTransaction?: {
+            create: {
+              tenantId: string;
+              ledgerId: string;
+              periodId: string;
+              ledgerTransactionTypeId: string;
+              fundingAccountId: string;
+              categoryId?: string;
+              title: string;
+              occurredOn: Date;
+              amount: number;
+              status: CollectedTransactionStatus;
+            };
+          };
+        };
       }) => {
-        args.data.forEach((item, index) => {
-          state.planItems.push({
-            id: `plan-${state.planItems.length + index + 1}`,
-            tenantId: item.tenantId,
-            ledgerId: item.ledgerId,
-            periodId: item.periodId,
-            recurringRuleId: item.recurringRuleId,
-            ledgerTransactionTypeId: item.ledgerTransactionTypeId,
-            fundingAccountId: item.fundingAccountId,
-            categoryId: item.categoryId ?? null,
-            title: item.title,
-            plannedAmount: item.plannedAmount,
-            plannedDate: item.plannedDate,
-            status: PlanItemStatus.DRAFT
-          });
+        const createdPlanItemId = `plan-${state.planItems.length + 1}`;
+
+        state.planItems.push({
+          id: createdPlanItemId,
+          tenantId: args.data.tenantId,
+          ledgerId: args.data.ledgerId,
+          periodId: args.data.periodId,
+          recurringRuleId: args.data.recurringRuleId,
+          ledgerTransactionTypeId: args.data.ledgerTransactionTypeId,
+          fundingAccountId: args.data.fundingAccountId,
+          categoryId: args.data.categoryId ?? null,
+          title: args.data.title,
+          plannedAmount: args.data.plannedAmount,
+          plannedDate: args.data.plannedDate,
+          status: args.data.status
         });
 
+        if (args.data.matchedCollectedTransaction?.create) {
+          state.collectedTransactions.push({
+            id: `ctx-${state.collectedTransactions.length + 1}`,
+            matchedPlanItemId: createdPlanItemId,
+            title: args.data.matchedCollectedTransaction.create.title,
+            status: args.data.matchedCollectedTransaction.create.status
+          });
+        }
+
         return {
-          count: args.data.length
+          id: createdPlanItemId
         };
       }
     }
   };
+
+  return prisma;
 }

@@ -311,6 +311,8 @@ test('Real API/DB integration covers recurring rule -> plan items -> auto-matche
         id: string;
         status: string;
         title: string;
+        matchedCollectedTransactionId: string | null;
+        matchedCollectedTransactionStatus: string | null;
       }>;
     };
 
@@ -319,8 +321,13 @@ test('Real API/DB integration covers recurring rule -> plan items -> auto-matche
     assert.equal(generatedPlanItems.generation.skippedExistingCount, 0);
     assert.equal(generatedPlanItems.generation.excludedRuleCount, 0);
     assert.equal(generatedPlanItems.items.length, 1);
-    assert.equal(generatedPlanItems.items[0]?.status, 'DRAFT');
+    assert.equal(generatedPlanItems.items[0]?.status, 'MATCHED');
     assert.equal(generatedPlanItems.items[0]?.title, 'Phone bill');
+    assert.ok(generatedPlanItems.items[0]?.matchedCollectedTransactionId);
+    assert.equal(
+      generatedPlanItems.items[0]?.matchedCollectedTransactionStatus,
+      'READY_TO_POST'
+    );
 
     const uploadResponse = await context.request('/import-batches', {
       method: 'POST',
@@ -396,6 +403,10 @@ test('Real API/DB integration covers recurring rule -> plan items -> auto-matche
       'Phone bill'
     );
     assert.equal(collected.collectedTransaction.postingStatus, 'READY_TO_POST');
+    assert.equal(
+      collected.collectedTransaction.id,
+      generatedPlanItems.items[0]?.matchedCollectedTransactionId
+    );
 
     const planItemsAfterCollectResponse = await context.request(
       `/plan-items?periodId=${openedPeriod.id}`,

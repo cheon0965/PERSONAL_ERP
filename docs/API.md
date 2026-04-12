@@ -65,7 +65,7 @@
 - 운영/원장 조회 범위는 `accounting-periods`, `collected-transactions`, `journal-entries`, `plan-items`, `financial-statements`, `carry-forwards`, `import-batches`까지 포함합니다.
 - 집계/보고 조회 범위는 `dashboard/summary`, `forecast/monthly`까지 포함합니다.
 - 현재 쓰기/명령 범위는 `funding-accounts`, `categories`, `insurance-policies`, `vehicles`, `vehicle maintenance logs`, `accounting-periods`, `collected-transactions`, `recurring-rules`, `plan-items`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`까지 확장되어 있습니다.
-- 즉, 현재 저장소의 API surface는 초기 reference-data/transactions 수준을 넘어 월 운영, 수집, 전표, 계획, 공식 보고, 차기 이월, 업로드 배치까지 포함합니다.
+- 즉, 현재 저장소의 API surface는 초기 reference-data/transactions 수준을 넘어 기준 데이터, 보험/차량 운영 기준, 반복 계획, 수집, 업로드 배치, 전표, 공식 보고, 차기 이월, 기간 전망까지 포함합니다.
 
 ## 보호 엔드포인트
 
@@ -385,7 +385,7 @@
 - 계약: `CollectImportedRowRequest -> CollectImportedRowResponse`
 - 파싱 완료된 업로드 행을 수집 거래로 승격합니다.
 - 현재 응답은 생성된 `CollectedTransactionItem`뿐 아니라, 같은 요청 기준의 자동 판정 preview도 함께 돌려줍니다.
-- 현재 구현은 source fingerprint 기반 중복 감지, draft `PlanItem` 자동 매칭, 카테고리/상태 자동 준비를 포함합니다.
+- 현재 구현은 source fingerprint 기반 중복 감지, 미확정 계획 항목(`PlanItem`) 자동 매칭, 카테고리/상태 자동 준비를 포함합니다.
 
 ### `POST /journal-entries/:id/reverse`
 
@@ -410,25 +410,29 @@
 
 ## 현재 구현 흐름
 
-### `accounting-periods -> collected-transactions -> journal-entries -> financial-statements -> carry-forwards`
+### `reference-data -> accounting-periods -> insurance/vehicles -> recurring-rules -> plan-items -> collected-transactions/imports -> journal-entries -> financial-statements -> carry-forwards -> forecast`
 
-1. `POST /accounting-periods`로 운영 기간을 엽니다.
-2. `POST /collected-transactions` 또는 `POST /import-batches/:id/rows/:rowId/collect`로 현재 기간의 수집 거래를 만듭니다.
-3. 필요하면 `GET/PATCH/DELETE /collected-transactions/:id`로 미확정(`COLLECTED`, `REVIEWED`, `READY_TO_POST`) 수집 거래를 상세 조회, 수정, 삭제합니다.
-4. `POST /collected-transactions/:id/confirm`로 수집 거래를 `JournalEntry`로 확정합니다.
-5. 필요하면 `POST /journal-entries/:id/reverse` 또는 `POST /journal-entries/:id/correct`로 전표 조정을 수행합니다.
-6. `POST /accounting-periods/:id/close`로 운영 기간을 잠그고 closing snapshot을 만듭니다.
-7. `POST /financial-statements/generate`로 잠금 기간의 공식 재무제표 snapshot을 생성합니다.
-8. `POST /carry-forwards/generate`로 다음 기간 opening balance snapshot과 carry-forward record를 생성합니다.
-9. 필요하면 `POST /accounting-periods/:id/reopen`로 잠금 기간을 다시 엽니다.
+1. `GET /reference-data/readiness`, `POST /funding-accounts`, `POST /categories`로 기준 데이터 준비 상태를 확인하고 필요한 자금수단/카테고리를 정리합니다.
+2. `POST /accounting-periods`로 운영 기간을 엽니다.
+3. `POST /insurance-policies`, `POST /vehicles`, `POST /vehicles/:id/fuel-logs`, `POST /vehicles/:id/maintenance-logs`로 보험 계약과 차량 운영 기준을 정리합니다.
+4. `POST /recurring-rules`와 `POST /plan-items/generate`로 반복 규칙을 현재 월 계획 항목으로 펼치고, 계획 기반 수집 거래까지 생성합니다.
+5. `POST /collected-transactions` 또는 `POST /import-batches/:id/rows/:rowId/collect`로 현재 기간의 수집 거래를 만들거나 업로드 행을 계획 기반 수집 거래에 흡수/매칭합니다.
+6. 필요하면 `GET/PATCH/DELETE /collected-transactions/:id`로 미확정(`COLLECTED`, `REVIEWED`, `READY_TO_POST`) 수집 거래를 상세 조회, 수정, 삭제합니다.
+7. `POST /collected-transactions/:id/confirm`로 수집 거래를 `JournalEntry`로 확정합니다. 계획 항목 화면의 바로 확정도 내부적으로 이 경로를 사용합니다.
+8. 필요하면 `POST /journal-entries/:id/reverse` 또는 `POST /journal-entries/:id/correct`로 전표 조정을 수행합니다.
+9. `POST /accounting-periods/:id/close`로 운영 기간을 잠그고 closing snapshot을 만듭니다.
+10. `POST /financial-statements/generate`로 잠금 기간의 공식 재무제표 snapshot을 생성합니다.
+11. `POST /carry-forwards/generate`로 다음 기간 opening balance snapshot과 carry-forward record를 생성합니다.
+12. `GET /forecast/monthly`로 현재 월과 다음 달 전망을 확인합니다.
+13. 필요하면 `POST /accounting-periods/:id/reopen`로 잠금 기간을 다시 엽니다.
 
 ### `recurring-rules -> plan-items -> collected-transactions`
 
 1. `POST /recurring-rules`로 반복 규칙을 등록합니다.
 2. 필요하면 `GET/PATCH/DELETE /recurring-rules/:id`로 기존 반복 규칙을 상세 조회, 수정, 삭제합니다.
-3. `POST /plan-items/generate`로 특정 기간의 draft `PlanItem`을 생성합니다.
+3. `POST /plan-items/generate`로 특정 기간의 `PlanItem`과 연결된 반복성 수집 거래를 생성합니다.
 4. 현재 `PlanItemsView.items[]`는 매칭된 수집 거래 ID/제목/상태와 생성된 전표 ID/번호까지 함께 실어 보냅니다.
-5. import collect 단계에서 현재 구현은 `collect-preview`와 `collect` 모두에서 draft `PlanItem` 자동 매칭을 수행할 수 있습니다.
+5. import collect 단계에서 현재 구현은 `collect-preview`와 `collect` 모두에서 미확정 계획 항목(`PlanItem`) 자동 매칭을 수행할 수 있습니다.
 6. `POST /collected-transactions/:id/confirm`가 실행되면 매칭된 `PlanItem`은 `CONFIRMED`로 갱신됩니다.
 7. `GET /dashboard/summary`와 `GET /forecast/monthly`는 위 운영/계획 데이터를 projection한 읽기 모델이며, 직접 쓰기 흐름에 참여하지 않습니다.
 
