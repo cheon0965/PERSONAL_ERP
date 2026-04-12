@@ -14,6 +14,7 @@ import { CategoryKind, type Prisma, RecurrenceFrequency } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { requirePositiveMoneyWon } from '../../common/money/money-won';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { normalizeCaseInsensitiveText } from '../../common/utils/normalize-unique-key.util';
 import {
   prepareRecurringRuleSchedule,
   resolveMissingOwnedRecurringRuleReference
@@ -102,20 +103,26 @@ export class InsurancePoliciesService {
         input: normalizedInput
       });
 
-      return tx.insurancePolicy.create({
-        data: {
-          userId: workspace.userId,
-          tenantId: workspace.tenantId,
-          ledgerId: workspace.ledgerId,
-          accountId: normalizedInput.fundingAccountId,
-          categoryId: normalizedInput.categoryId,
-          recurringStartDate: normalizedInput.recurringStartDate,
-          linkedRecurringRuleId,
-          provider: normalizedInput.provider,
-          productName: normalizedInput.productName,
-          monthlyPremiumWon: normalizedInput.monthlyPremiumWon,
-          paymentDay: normalizedInput.paymentDay,
-          cycle: normalizedInput.cycle,
+        return tx.insurancePolicy.create({
+          data: {
+            userId: workspace.userId,
+            tenantId: workspace.tenantId,
+            ledgerId: workspace.ledgerId,
+            accountId: normalizedInput.fundingAccountId,
+            categoryId: normalizedInput.categoryId,
+            recurringStartDate: normalizedInput.recurringStartDate,
+            linkedRecurringRuleId,
+            provider: normalizedInput.provider,
+            normalizedProvider: normalizeCaseInsensitiveText(
+              normalizedInput.provider
+            ),
+            productName: normalizedInput.productName,
+            normalizedProductName: normalizeCaseInsensitiveText(
+              normalizedInput.productName
+            ),
+            monthlyPremiumWon: normalizedInput.monthlyPremiumWon,
+            paymentDay: normalizedInput.paymentDay,
+            cycle: normalizedInput.cycle,
           renewalDate: normalizedInput.renewalDate,
           maturityDate: normalizedInput.maturityDate,
           isActive: normalizedInput.isActive
@@ -169,20 +176,26 @@ export class InsurancePoliciesService {
         existingLinkedRecurringRuleId: existing.linkedRecurringRuleId
       });
 
-      return tx.insurancePolicy.update({
-        where: {
-          id: insurancePolicyId
-        },
-        data: {
-          accountId: normalizedInput.fundingAccountId,
-          categoryId: normalizedInput.categoryId,
-          recurringStartDate: normalizedInput.recurringStartDate,
-          linkedRecurringRuleId,
-          provider: normalizedInput.provider,
-          productName: normalizedInput.productName,
-          monthlyPremiumWon: normalizedInput.monthlyPremiumWon,
-          paymentDay: normalizedInput.paymentDay,
-          cycle: normalizedInput.cycle,
+        return tx.insurancePolicy.update({
+          where: {
+            id: insurancePolicyId
+          },
+          data: {
+            accountId: normalizedInput.fundingAccountId,
+            categoryId: normalizedInput.categoryId,
+            recurringStartDate: normalizedInput.recurringStartDate,
+            linkedRecurringRuleId,
+            provider: normalizedInput.provider,
+            normalizedProvider: normalizeCaseInsensitiveText(
+              normalizedInput.provider
+            ),
+            productName: normalizedInput.productName,
+            normalizedProductName: normalizeCaseInsensitiveText(
+              normalizedInput.productName
+            ),
+            monthlyPremiumWon: normalizedInput.monthlyPremiumWon,
+            paymentDay: normalizedInput.paymentDay,
+            cycle: normalizedInput.cycle,
           renewalDate: normalizedInput.renewalDate,
           maturityDate: normalizedInput.maturityDate,
           isActive: normalizedInput.isActive
@@ -249,10 +262,10 @@ export class InsurancePoliciesService {
     const duplicate = items.find(
       (candidate) =>
         candidate.id !== input.excludeInsurancePolicyId &&
-        candidate.provider.trim().toLowerCase() ===
-          input.provider.toLowerCase() &&
-        candidate.productName.trim().toLowerCase() ===
-          input.productName.toLowerCase()
+        normalizeCaseInsensitiveText(candidate.provider) ===
+          normalizeCaseInsensitiveText(input.provider) &&
+        normalizeCaseInsensitiveText(candidate.productName) ===
+          normalizeCaseInsensitiveText(input.productName)
     );
 
     if (!duplicate) {

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Owner ERP',
+  title: 'PERSONAL ERP',
   description: '1인 사업자·소상공인을 위한 월 운영 ERP'
 };
 

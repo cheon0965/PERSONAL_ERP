@@ -5,6 +5,7 @@ import { Test } from '@nestjs/testing';
 import { AccountType, CategoryKind } from '@prisma/client';
 import { configureApiApp } from '../src/bootstrap/configure-api-app';
 import { PrismaService } from '../src/common/prisma/prisma.service';
+import { normalizeCaseInsensitiveText } from '../src/common/utils/normalize-unique-key.util';
 import { getApiEnv, resetApiEnvCache } from '../src/config/api-env';
 import { listenOnSafeTestPort } from './http-test-port';
 import { ensurePhase1BackboneForUser } from '../prisma/phase1-backbone';
@@ -204,6 +205,7 @@ export async function createIntegrationWorkspaceFixture(
       tenantId: backbone.tenantId,
       ledgerId: backbone.ledgerId,
       name: fundingAccountName,
+      normalizedName: normalizeCaseInsensitiveText(fundingAccountName),
       type: AccountType.BANK,
       balanceWon: 2_000_000,
       sortOrder: 1
@@ -215,6 +217,7 @@ export async function createIntegrationWorkspaceFixture(
       tenantId: backbone.tenantId,
       ledgerId: backbone.ledgerId,
       name: expenseCategoryName,
+      normalizedName: normalizeCaseInsensitiveText(expenseCategoryName),
       kind: CategoryKind.EXPENSE,
       sortOrder: 1
     }

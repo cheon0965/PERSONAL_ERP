@@ -16,6 +16,7 @@ export async function createRequestTestState(): Promise<RequestTestState> {
     databaseReady: true,
     failOpeningBalanceSnapshotCreate: false,
     simulateCollectedTransactionAlreadyPostedOnNextTransactionId: null,
+    simulateCollectedTransactionAlreadyLinkedOnNextImportClaimId: null,
     users: [
       {
         id: 'user-1',

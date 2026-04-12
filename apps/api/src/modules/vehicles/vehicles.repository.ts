@@ -6,6 +6,7 @@ import type {
   UpdateVehicleRequest
 } from '@personal-erp/contracts';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { normalizeCaseInsensitiveText } from '../../common/utils/normalize-unique-key.util';
 
 @Injectable()
 export class VehiclesRepository {
@@ -40,6 +41,7 @@ export class VehiclesRepository {
         tenantId,
         ledgerId,
         name: input.name,
+        normalizedName: normalizeCaseInsensitiveText(input.name),
         manufacturer: input.manufacturer,
         fuelType: input.fuelType,
         initialOdometerKm: input.initialOdometerKm,
@@ -56,6 +58,7 @@ export class VehiclesRepository {
       },
       data: {
         name: input.name,
+        normalizedName: normalizeCaseInsensitiveText(input.name),
         manufacturer: input.manufacturer,
         fuelType: input.fuelType,
         initialOdometerKm: input.initialOdometerKm,

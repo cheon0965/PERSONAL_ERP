@@ -190,6 +190,98 @@ export class AccountingPeriodsService {
     );
   }
 
+  async allocateJournalEntryNumberInTransaction(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    ledgerId: string,
+    periodId: string
+  ): Promise<{
+    period: {
+      id: string;
+      tenantId: string;
+      ledgerId: string;
+      year: number;
+      month: number;
+      startDate: Date;
+      endDate: Date;
+      status: AccountingPeriodStatus;
+    };
+    sequence: number;
+  }> {
+    const period = await tx.accountingPeriod.findFirst({
+      where: {
+        id: periodId,
+        tenantId,
+        ledgerId
+      }
+    });
+
+    if (!period) {
+      throw new BadRequestException(
+        '전표를 기록할 운영 기간을 찾을 수 없습니다.'
+      );
+    }
+
+    assertJournalWritePeriodClaimable(period.status);
+
+    const allocatedPeriod = await tx.accountingPeriod.updateMany({
+      where: {
+        id: period.id,
+        tenantId,
+        ledgerId,
+        status: {
+          in: [AccountingPeriodStatus.OPEN, AccountingPeriodStatus.IN_REVIEW]
+        }
+      },
+      data: {
+        nextJournalEntrySequence: {
+          increment: 1
+        }
+      }
+    });
+
+    if (allocatedPeriod.count !== 1) {
+      const latestPeriod = await tx.accountingPeriod.findFirst({
+        where: {
+          id: periodId,
+          tenantId,
+          ledgerId
+        }
+      });
+
+      if (!latestPeriod) {
+        throw new BadRequestException(
+          '전표를 기록할 운영 기간을 찾을 수 없습니다.'
+        );
+      }
+
+      assertJournalWritePeriodClaimable(latestPeriod.status);
+
+      throw new ConflictException(
+        '운영 기간 상태가 변경되어 전표 번호를 할당하지 못했습니다. 다시 시도해 주세요.'
+      );
+    }
+
+    const latestPeriod = await tx.accountingPeriod.findFirst({
+      where: {
+        id: periodId,
+        tenantId,
+        ledgerId
+      }
+    });
+
+    if (!latestPeriod) {
+      throw new BadRequestException(
+        '전표를 기록할 운영 기간을 찾을 수 없습니다.'
+      );
+    }
+
+    return {
+      period: latestPeriod,
+      sequence: latestPeriod.nextJournalEntrySequence - 1
+    };
+  }
+
   private async findCurrentPeriodRecord(
     user: AuthenticatedUser
   ): Promise<AccountingPeriodRecord | null> {

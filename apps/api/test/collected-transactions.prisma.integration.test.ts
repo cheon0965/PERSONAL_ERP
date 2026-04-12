@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import { AccountType, CategoryKind, TransactionType } from '@prisma/client';
 import { PrismaService } from '../src/common/prisma/prisma.service';
+import { normalizeCaseInsensitiveText } from '../src/common/utils/normalize-unique-key.util';
 import { CreateCollectedTransactionUseCase } from '../src/modules/collected-transactions/application/use-cases/create-collected-transaction.use-case';
 import { ListCollectedTransactionsUseCase } from '../src/modules/collected-transactions/application/use-cases/list-collected-transactions.use-case';
 import { PrismaReferenceOwnershipAdapter } from '../src/modules/collected-transactions/infrastructure/prisma/prisma-reference-ownership.adapter';
@@ -95,6 +96,9 @@ test(
             tenantId: ownerBackbone.tenantId,
             ledgerId: ownerBackbone.ledgerId,
             name: 'Integration Main Account',
+            normalizedName: normalizeCaseInsensitiveText(
+              'Integration Main Account'
+            ),
             type: AccountType.BANK,
             balanceWon: 500000,
             sortOrder: 1
@@ -106,6 +110,9 @@ test(
             tenantId: outsiderBackbone.tenantId,
             ledgerId: outsiderBackbone.ledgerId,
             name: 'Integration Outsider Account',
+            normalizedName: normalizeCaseInsensitiveText(
+              'Integration Outsider Account'
+            ),
             type: AccountType.BANK,
             balanceWon: 200000,
             sortOrder: 1
@@ -117,6 +124,7 @@ test(
             tenantId: ownerBackbone.tenantId,
             ledgerId: ownerBackbone.ledgerId,
             name: 'Integration Fuel',
+            normalizedName: normalizeCaseInsensitiveText('Integration Fuel'),
             kind: CategoryKind.EXPENSE,
             sortOrder: 1
           }
@@ -127,6 +135,9 @@ test(
             tenantId: outsiderBackbone.tenantId,
             ledgerId: outsiderBackbone.ledgerId,
             name: 'Integration Outsider Category',
+            normalizedName: normalizeCaseInsensitiveText(
+              'Integration Outsider Category'
+            ),
             kind: CategoryKind.EXPENSE,
             sortOrder: 1
           }

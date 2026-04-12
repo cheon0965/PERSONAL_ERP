@@ -12,7 +12,8 @@ import type {
 import {
   AccountingPeriodStatus,
   LedgerTransactionFlowKind,
-  PlanItemStatus
+  PlanItemStatus,
+  Prisma
 } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
@@ -154,6 +155,7 @@ export class GeneratePlanItemsUseCase {
     );
 
     const createData: PlanItemCreateDraft[] = [];
+    let createdCount = 0;
     let skippedExistingCount = 0;
     let excludedRuleCount = 0;
 
@@ -212,38 +214,48 @@ export class GeneratePlanItemsUseCase {
     if (createData.length > 0) {
       await this.prisma.$transaction(async (tx) => {
         for (const item of createData) {
-          await tx.planItem.create({
-            data: {
-              tenantId: item.tenantId,
-              ledgerId: item.ledgerId,
-              periodId: item.periodId,
-              recurringRuleId: item.recurringRuleId,
-              ledgerTransactionTypeId: item.ledgerTransactionTypeId,
-              fundingAccountId: item.fundingAccountId,
-              categoryId: item.categoryId,
-              title: item.title,
-              plannedAmount: item.plannedAmount,
-              plannedDate: item.plannedDate,
-              status: PlanItemStatus.MATCHED,
-              matchedCollectedTransaction: {
-                create: {
-                  tenantId: item.tenantId,
-                  ledgerId: item.ledgerId,
-                  periodId: item.periodId,
-                  ledgerTransactionTypeId: item.ledgerTransactionTypeId,
-                  fundingAccountId: item.fundingAccountId,
-                  categoryId: item.categoryId,
-                  title: item.title,
-                  occurredOn: item.plannedDate,
-                  amount: item.plannedAmount,
-                  status: resolveAutoCollectedTransactionStatus({
-                    type: item.collectedTransactionType,
-                    categoryId: item.categoryId
-                  })
+          try {
+            await tx.planItem.create({
+              data: {
+                tenantId: item.tenantId,
+                ledgerId: item.ledgerId,
+                periodId: item.periodId,
+                recurringRuleId: item.recurringRuleId,
+                ledgerTransactionTypeId: item.ledgerTransactionTypeId,
+                fundingAccountId: item.fundingAccountId,
+                categoryId: item.categoryId,
+                title: item.title,
+                plannedAmount: item.plannedAmount,
+                plannedDate: item.plannedDate,
+                status: PlanItemStatus.MATCHED,
+                matchedCollectedTransaction: {
+                  create: {
+                    tenantId: item.tenantId,
+                    ledgerId: item.ledgerId,
+                    periodId: item.periodId,
+                    ledgerTransactionTypeId: item.ledgerTransactionTypeId,
+                    fundingAccountId: item.fundingAccountId,
+                    categoryId: item.categoryId,
+                    title: item.title,
+                    occurredOn: item.plannedDate,
+                    amount: item.plannedAmount,
+                    status: resolveAutoCollectedTransactionStatus({
+                      type: item.collectedTransactionType,
+                      categoryId: item.categoryId
+                    })
+                  }
                 }
               }
+            });
+            createdCount += 1;
+          } catch (error) {
+            if (isPlanItemDuplicateError(error)) {
+              skippedExistingCount += 1;
+              continue;
             }
-          });
+
+            throw error;
+          }
         }
       });
     }
@@ -263,7 +275,7 @@ export class GeneratePlanItemsUseCase {
     return {
       ...view,
       generation: {
-        createdCount: createData.length,
+        createdCount,
         skippedExistingCount,
         excludedRuleCount
       }
@@ -292,6 +304,17 @@ function mapLedgerTransactionFlowKindToCollectedTransactionType(
     default:
       return 'EXPENSE';
   }
+}
+
+function isPlanItemDuplicateError(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2002' &&
+    Array.isArray(error.meta?.target) &&
+    error.meta.target.includes('periodId') &&
+    error.meta.target.includes('recurringRuleId') &&
+    error.meta.target.includes('plannedDate')
+  );
 }
 
 function resolveAutoCollectedTransactionStatus(input: {

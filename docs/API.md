@@ -26,6 +26,18 @@
 - 클라이언트가 `x-request-id`를 보내면 같은 값을 그대로 유지합니다.
 - 운영 추적이나 문제 재현 시 이 값을 기준으로 요청 로그를 연결합니다.
 
+## 동시성/충돌 응답 원칙
+
+- 현재 구현은 주요 unique 충돌을 Prisma raw 500으로 그대로 내보내지 않고 `409 Conflict`로 정리합니다.
+- 전표 번호, 계획 항목 recurring occurrence, 업로드 행 재수집, 반복 수집 거래 흡수, 기간/차기 이월 중복, 주요 마스터 이름 중복이 여기에 포함됩니다.
+- 대표 메시지 예:
+  - `동시에 다른 전표가 먼저 기록되었습니다. 다시 시도해 주세요.`
+  - `해당 반복 규칙과 예정일의 계획 항목이 이미 생성되었습니다.`
+  - `이미 수집 거래로 승격된 업로드 행입니다.`
+  - `이미 다른 업로드 행과 연결된 반복 수집 거래입니다. 다시 새로고침해 주세요.`
+  - `같은 이름의 자금수단이 이미 있습니다.`
+  - `같은 구분에 동일한 카테고리 이름이 이미 있습니다.`
+
 ## 금액 계약
 
 - HTTP 요청/응답의 금액은 1차 마이그레이션 범위에서 계속 `number`를 사용하되, 의미는 `MoneyWon`으로 고정합니다.
@@ -171,6 +183,8 @@
 
 - 계약: `ReopenAccountingPeriodRequest -> AccountingPeriodItem`
 - 잠금된 운영 기간을 사유와 함께 다시 엽니다.
+- 재오픈 시 해당 기간의 공식 재무제표 snapshot과 closing snapshot을 정리하고 상태를 `OPEN`으로 되돌립니다.
+- 이미 차기 이월 record가 생성되었거나 다음 운영 기간에 opening balance snapshot이 있으면 `409 Conflict`로 막습니다.
 
 ### `GET /reference-data/readiness`
 
@@ -190,6 +204,7 @@
 - 계약: `CreateFundingAccountRequest -> FundingAccountItem`
 - 현재 작업 문맥의 Owner/Manager만 새 자금수단을 생성할 수 있습니다.
 - 현재 범위는 `name`, `type` 생성과 활성 상태 기본값(`ACTIVE`), 초기 잔액 `0원`까지로 한정합니다.
+- 이름은 trim/lower 기준 normalized key로 중복을 판정하며, 동시 생성 충돌은 `409 Conflict`로 정리합니다.
 
 ### `PATCH /funding-accounts/:id`
 
@@ -198,6 +213,7 @@
 - 현재 범위에서 `CLOSED` 전환은 `INACTIVE -> CLOSED`일 때만 허용합니다.
 - `CLOSED` 자금수단은 기존 거래/반복 규칙 기록 보존용 읽기 전용 상태로 유지하며, 현재 범위에서는 다시 수정하거나 재활성화할 수 없습니다.
 - 현재 범위는 `type` 변경, 잔액 직접 수정, 하드 삭제를 지원하지 않습니다.
+- 이름 중복이나 상태 경합은 `409 Conflict`로 응답합니다.
 
 ### `GET /categories`
 
@@ -210,12 +226,14 @@
 - 계약: `CreateCategoryRequest -> CategoryItem`
 - 현재 작업 문맥의 Owner/Manager만 새 카테고리를 생성할 수 있습니다.
 - 현재 범위는 `name`, `kind` 생성과 활성 상태 기본값(`true`)까지로 한정합니다.
+- 이름은 `kind + normalizedName` 기준으로 중복을 판정하며, 동시 생성 충돌은 `409 Conflict`로 정리합니다.
 
 ### `PATCH /categories/:id`
 
 - 계약: `UpdateCategoryRequest -> CategoryItem`
 - 현재 작업 문맥의 Owner/Manager만 카테고리 이름 변경과 활성/비활성 전환을 수행할 수 있습니다.
 - 현재 범위는 `kind` 변경과 하드 삭제를 지원하지 않습니다.
+- 같은 구분 안의 이름 중복이나 경합은 `409 Conflict`로 응답합니다.
 
 ### `GET /insurance-policies`
 
@@ -228,12 +246,14 @@
 - 계약: `CreateInsurancePolicyRequest -> InsurancePolicyItem`
 - 현재 작업 문맥의 Owner/Manager만 새 보험 계약을 생성할 수 있습니다.
 - 현재 범위는 `provider`, `productName`, `monthlyPremiumWon`, `paymentDay`, `cycle`, `renewalDate`, `maturityDate`, `isActive`까지의 운영 보조 필드 관리로 한정합니다.
+- 보험 중복은 `normalizedProvider + normalizedProductName` 기준으로 막으며, 동시 생성 충돌은 `409 Conflict`로 정리합니다.
 
 ### `PATCH /insurance-policies/:id`
 
 - 계약: `UpdateInsurancePolicyRequest -> InsurancePolicyItem`
 - 현재 작업 문맥의 Owner/Manager만 보험 계약 기준 필드와 활성/비활성 상태를 수정할 수 있습니다.
 - 현재 범위는 비활성 계약도 `?includeInactive=true` 목록과 수정 흐름에서 계속 관리할 수 있으며, 삭제가 필요하면 별도 `DELETE /insurance-policies/:id` 흐름을 사용합니다.
+- 같은 보험사/상품명 조합 충돌은 `409 Conflict`로 응답합니다.
 
 ### `DELETE /insurance-policies/:id`
 
@@ -261,6 +281,7 @@
 - 현재 작업 문맥의 Owner/Manager만 새 차량 기본 정보를 생성할 수 있습니다.
 - 현재 범위는 `name`, `manufacturer`, `fuelType`, `initialOdometerKm`, `estimatedFuelEfficiencyKmPerLiter`까지의 차량 기본 프로필 관리로 한정하며 연료/정비 이력 생성은 별도 계약으로 분리합니다.
 - 운영비 요약은 `VehicleItem`이 아니라 `/vehicles/operating-summary` projection에서 읽습니다.
+- 차량 이름은 normalized key 기준으로 중복을 막고, 동시 생성 충돌은 `409 Conflict`로 정리합니다.
 
 ### `PATCH /vehicles/:id`
 
@@ -269,6 +290,7 @@
 - 현재 범위는 차량 프로필 필드만 조정하며, 차량 세부 운영 이력과 하드 삭제는 지원하지 않습니다.
 - 즉, 현재 수정 흐름은 차량 프로필 관리에만 집중하고, 연료/정비 이력은 별도 운영 모델로 관리합니다.
 - 운영비/연비 보조 지표는 수정 응답이 아니라 별도 summary projection에서 해석합니다.
+- 같은 이름 충돌은 `409 Conflict`로 응답합니다.
 
 ### `GET /vehicles/fuel-logs`
 
@@ -337,6 +359,8 @@
 - 계약: request body 없음 -> `JournalEntryItem`
 - 수집 거래를 확정해 `JournalEntry`를 생성합니다.
 - 연결된 `PlanItem`이 있으면 현재 구현은 해당 항목을 `CONFIRMED`로 갱신합니다.
+- 전표 번호는 현재 운영 기간의 원자적 sequence로 할당합니다.
+- 같은 수집 거래 재확정, 전표 번호 경합, 잠금/상태 경합은 `409 Conflict` 또는 `400 Bad Request`로 정리합니다.
 
 ### `POST /recurring-rules`
 
@@ -367,6 +391,7 @@
 - 계약: `GeneratePlanItemsRequest -> GeneratePlanItemsResponse`
 - 선택한 운영 기간에 대해 활성 `RecurringRule`로부터 `PlanItem`을 생성합니다.
 - 같은 규칙/예정일 조합이 이미 있으면 건너뛰고, 기본 거래유형을 해석할 수 없는 규칙은 제외합니다.
+- 최종 중복 방지는 `periodId + recurringRuleId + plannedDate` DB unique 기준으로 수행하며, 경합 시 응답 집계는 실제 commit 결과를 반영합니다.
 
 ### `POST /import-batches`
 
@@ -386,16 +411,20 @@
 - 파싱 완료된 업로드 행을 수집 거래로 승격합니다.
 - 현재 응답은 생성된 `CollectedTransactionItem`뿐 아니라, 같은 요청 기준의 자동 판정 preview도 함께 돌려줍니다.
 - 현재 구현은 source fingerprint 기반 중복 감지, 미확정 계획 항목(`PlanItem`) 자동 매칭, 카테고리/상태 자동 준비를 포함합니다.
+- 같은 업로드 행 재수집은 `importedRowId` 기준으로 막고, 반복 수집 거래 흡수는 조건부 claim으로 덮어쓰기를 방지합니다.
+- 중복/경합은 `409 Conflict`로 정리합니다.
 
 ### `POST /journal-entries/:id/reverse`
 
 - 계약: `ReverseJournalEntryRequest -> JournalEntryItem`
 - 기존 전표에 대한 reversal adjustment 전표를 생성합니다.
+- reversal 전표 번호는 period-local sequence로 할당하며, 이미 역분개된 전표나 경합은 `409 Conflict`로 정리합니다.
 
 ### `POST /journal-entries/:id/correct`
 
 - 계약: `CorrectJournalEntryRequest -> JournalEntryItem`
 - 수정 사유와 line 입력으로 correction 전표를 생성합니다.
+- correction 전표 번호는 period-local sequence로 할당하며, 상태/경합 충돌은 `409 Conflict`로 정리합니다.
 
 ### `POST /financial-statements/generate`
 
@@ -422,9 +451,9 @@
 8. 필요하면 `POST /journal-entries/:id/reverse` 또는 `POST /journal-entries/:id/correct`로 전표 조정을 수행합니다.
 9. `POST /accounting-periods/:id/close`로 운영 기간을 잠그고 closing snapshot을 만듭니다.
 10. `POST /financial-statements/generate`로 잠금 기간의 공식 재무제표 snapshot을 생성합니다.
-11. `POST /carry-forwards/generate`로 다음 기간 opening balance snapshot과 carry-forward record를 생성합니다.
-12. `GET /forecast/monthly`로 현재 월과 다음 달 전망을 확인합니다.
-13. 필요하면 `POST /accounting-periods/:id/reopen`로 잠금 기간을 다시 엽니다.
+11. 차기 이월 전 수정이 필요하면 `POST /accounting-periods/:id/reopen`로 잠금 기간을 다시 열고 재무제표/마감 snapshot을 정리합니다.
+12. `POST /carry-forwards/generate`로 다음 기간 opening balance snapshot과 carry-forward record를 생성합니다.
+13. `GET /forecast/monthly`로 현재 월과 다음 달 전망을 확인합니다.
 
 ### `recurring-rules -> plan-items -> collected-transactions`
 

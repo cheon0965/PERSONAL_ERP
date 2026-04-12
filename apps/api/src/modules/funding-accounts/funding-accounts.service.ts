@@ -10,6 +10,7 @@ import type {
   UpdateFundingAccountRequest
 } from '@personal-erp/contracts';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
+import { normalizeCaseInsensitiveText } from '../../common/utils/normalize-unique-key.util';
 import { mapFundingAccountRecordToItem } from './funding-account.mapper';
 import { FundingAccountsRepository } from './funding-accounts.repository';
 
@@ -124,8 +125,8 @@ export class FundingAccountsService {
     const duplicate = accounts.find(
       (candidate) =>
         candidate.id !== input.excludeFundingAccountId &&
-        candidate.name.trim().toLowerCase() ===
-          input.normalizedName.toLowerCase()
+        normalizeCaseInsensitiveText(candidate.name) ===
+          normalizeCaseInsensitiveText(input.normalizedName)
     );
 
     if (!duplicate) {

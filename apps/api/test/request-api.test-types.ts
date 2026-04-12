@@ -28,6 +28,7 @@ export type RequestTestState = {
   databaseReady: boolean;
   failOpeningBalanceSnapshotCreate: boolean;
   simulateCollectedTransactionAlreadyPostedOnNextTransactionId: string | null;
+  simulateCollectedTransactionAlreadyLinkedOnNextImportClaimId: string | null;
   users: RequestTestUser[];
   tenants: Array<{
     id: string;
@@ -80,6 +81,7 @@ export type RequestTestState = {
     startDate: Date;
     endDate: Date;
     status: AccountingPeriodStatus;
+    nextJournalEntrySequence?: number;
     openedAt: Date;
     lockedAt: Date | null;
     createdAt: Date;
@@ -205,6 +207,7 @@ export type RequestTestState = {
     tenantId: string;
     ledgerId: string;
     name: string;
+    normalizedName?: string;
     type?: 'BANK' | 'CASH' | 'CARD';
     balanceWon: number;
     sortOrder?: number;
@@ -216,6 +219,7 @@ export type RequestTestState = {
     tenantId: string;
     ledgerId: string;
     name: string;
+    normalizedName?: string;
     kind?: 'INCOME' | 'EXPENSE' | 'TRANSFER';
     isActive: boolean;
   }>;
@@ -312,7 +316,9 @@ export type RequestTestState = {
     tenantId: string;
     ledgerId: string;
     provider: string;
+    normalizedProvider?: string;
     productName: string;
+    normalizedProductName?: string;
     monthlyPremiumWon: number;
     paymentDay: number;
     cycle: 'MONTHLY' | 'YEARLY';
@@ -330,6 +336,7 @@ export type RequestTestState = {
     tenantId: string;
     ledgerId: string;
     name: string;
+    normalizedName?: string;
     manufacturer: string | null;
     fuelType: 'GASOLINE' | 'DIESEL' | 'LPG' | 'HYBRID' | 'ELECTRIC';
     initialOdometerKm: number;

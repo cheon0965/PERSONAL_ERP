@@ -128,9 +128,9 @@ export function AccountingPeriodsPage() {
       ];
 
   useDomainHelp({
-    title: '운영 기간 관리 개요',
+    title: '월 운영 사용 가이드',
     description:
-      '운영 기간은 모든 수집 거래, 전표 확정, 마감, 재무제표의 기준 월을 고정합니다. 월 운영 시작부터 잠금, 재오픈까지의 상태 흐름을 이 화면에서 관리합니다.',
+      '이 화면은 한 달 운영을 열고 닫는 기준점입니다. 운영 기간을 열어야 계획 항목, 업로드 승격, 수집 거래 입력, 전표 확정이 같은 월 안에서 움직입니다.',
     primaryEntity: '운영 기간',
     relatedEntities: [
       '기간 상태 이력',
@@ -139,7 +139,7 @@ export function AccountingPeriodsPage() {
       '사용자 권한'
     ],
     truthSource:
-      '운영 월의 공식 시작 기준은 운영 기간이며, 첫 월 시작은 기초 잔액 생성 여부까지 함께 남깁니다.',
+      '운영 기간의 상태가 월별 쓰기 가능 여부를 결정하며, 첫 월 시작 시 입력한 기초 잔액이 이후 마감과 이월의 시작 기준이 됩니다.',
     supplementarySections: [
       {
         title: '현재 작업 문맥',
@@ -169,6 +169,18 @@ export function AccountingPeriodsPage() {
         ]
       },
       {
+        title: '바로 쓰는 순서',
+        description:
+          '월 운영은 시작, 진행, 마감, 필요 시 재오픈 순서로 다룹니다.',
+        items: [
+          '열린 기간이 없으면 기준 데이터 readiness를 확인한 뒤 월 운영 시작에서 대상 월을 엽니다.',
+          '첫 월이면 기초 잔액 라인을 1건 이상 입력해 시작 기준을 남깁니다.',
+          '열린 기간이 있으면 계획 항목, 업로드 배치, 수집 거래 화면에서 월 운영을 진행합니다.',
+          '전표 준비 거래를 모두 확정한 뒤 월 마감에서 현재 열린 월을 잠급니다.',
+          '마감 후 정정이 필요할 때만 재오픈 사유를 남기고 다시 엽니다.'
+        ]
+      },
+      {
         title: '최근 마감 스냅샷',
         description: latestClosingResult
           ? '가장 최근에 실행한 월 마감 요약입니다.'
@@ -178,7 +190,7 @@ export function AccountingPeriodsPage() {
       }
     ],
     readModelNote:
-      '현재 목록은 운영 기간 상태를 중심으로 확인하고, 최근 마감 상세는 도메인 가이드에서 검토하는 관리 화면입니다.'
+      '마감은 미확정 수집 거래가 남아 있으면 실패할 수 있습니다. 막히면 수집 거래 화면에서 전표 준비와 확정 상태를 먼저 정리합니다.'
   });
 
   const form = useForm<PeriodFormInput>({

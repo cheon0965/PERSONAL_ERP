@@ -126,8 +126,8 @@ export class CorrectJournalEntryUseCase {
       );
 
     const createdJournalEntry = await this.prisma.$transaction(async (tx) => {
-      const writablePeriod =
-        await this.accountingPeriodsService.claimJournalWritePeriodInTransaction(
+      const allocatedEntryNumber =
+        await this.accountingPeriodsService.allocateJournalEntryNumberInTransaction(
           tx,
           workspace.tenantId,
           workspace.ledgerId,
@@ -233,23 +233,15 @@ export class CorrectJournalEntryUseCase {
         }
       }
 
-      const existingCount = await tx.journalEntry.count({
-        where: {
-          tenantId: workspace.tenantId,
-          ledgerId: workspace.ledgerId,
-          periodId: writablePeriod.id
-        }
-      });
-
       const created = await tx.journalEntry.create({
         data: {
           tenantId: workspace.tenantId,
           ledgerId: workspace.ledgerId,
-          periodId: writablePeriod.id,
+          periodId: allocatedEntryNumber.period.id,
           entryNumber: buildJournalEntryEntryNumber(
-            writablePeriod.year,
-            writablePeriod.month,
-            existingCount + 1
+            allocatedEntryNumber.period.year,
+            allocatedEntryNumber.period.month,
+            allocatedEntryNumber.sequence
           ),
           entryDate: buildJournalEntryDate(input.entryDate),
           sourceKind: JournalEntrySourceKind.MANUAL_ADJUSTMENT,

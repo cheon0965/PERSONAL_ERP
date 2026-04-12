@@ -100,8 +100,8 @@ export class ConfirmCollectedTransactionUseCase {
           latestCollectedTransaction.postedJournalEntry?.id ?? null
       });
 
-      const writablePeriod =
-        await this.accountingPeriodsService.claimJournalWritePeriodInTransaction(
+      const allocatedEntryNumber =
+        await this.accountingPeriodsService.allocateJournalEntryNumberInTransaction(
           tx,
           workspace.tenantId,
           workspace.ledgerId,
@@ -128,25 +128,17 @@ export class ConfirmCollectedTransactionUseCase {
         updatedCount: claimedCollectedTransaction.count
       });
 
-      const existingCount = await tx.journalEntry.count({
-        where: {
-          tenantId: workspace.tenantId,
-          ledgerId: workspace.ledgerId,
-          periodId: writablePeriod.id
-        }
-      });
-
       const entryNumber = buildConfirmationEntryNumber({
-        year: writablePeriod.year,
-        month: writablePeriod.month,
-        existingCount
+        year: allocatedEntryNumber.period.year,
+        month: allocatedEntryNumber.period.month,
+        sequence: allocatedEntryNumber.sequence
       });
 
       const created = await tx.journalEntry.create({
         data: {
           tenantId: workspace.tenantId,
           ledgerId: workspace.ledgerId,
-          periodId: writablePeriod.id,
+          periodId: allocatedEntryNumber.period.id,
           entryNumber,
           entryDate: latestCollectedTransaction.occurredOn,
           sourceKind: JournalEntrySourceKind.COLLECTED_TRANSACTION,

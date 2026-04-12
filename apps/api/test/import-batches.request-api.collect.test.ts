@@ -222,6 +222,73 @@ test('POST /import-batches/:id/rows/:rowId/collect absorbs a recurring collected
   }
 });
 
+test('POST /import-batches/:id/rows/:rowId/collect returns 409 when the matched recurring transaction is already linked to another import row', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const seeded = seedCollectableImportScenario(context, {
+      periodId: 'period-open-recurring-conflict',
+      batchId: 'import-batch-recurring-conflict',
+      rowId: 'imported-row-recurring-conflict',
+      planItemId: 'plan-item-recurring-conflict',
+      title: 'Streaming bill',
+      amount: 21_000,
+      planItemTitle: 'Streaming bill'
+    });
+
+    context.state.planItems = context.state.planItems.map((candidate) =>
+      candidate.id === seeded.planItem.id
+        ? {
+            ...candidate,
+            status: PlanItemStatus.MATCHED,
+            updatedAt: new Date()
+          }
+        : candidate
+    );
+
+    pushCollectedTransaction(context, {
+      id: 'ctx-recurring-conflict',
+      periodId: seeded.period.id,
+      matchedPlanItemId: seeded.planItem.id,
+      title: 'Streaming bill',
+      amount: 21_000,
+      occurredOn: new Date('2026-03-11T00:00:00.000Z'),
+      status: CollectedTransactionStatus.READY_TO_POST
+    });
+    context.state.simulateCollectedTransactionAlreadyLinkedOnNextImportClaimId =
+      'ctx-recurring-conflict';
+
+    const response = await context.request(
+      '/import-batches/import-batch-recurring-conflict/rows/imported-row-recurring-conflict/collect',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          type: TransactionType.EXPENSE,
+          fundingAccountId: 'acc-1',
+          memo: 'Retry imported recurring bill'
+        }
+      }
+    );
+
+    assert.equal(response.status, 409);
+    assert.deepEqual(response.body, {
+      statusCode: 409,
+      message:
+        '이미 다른 업로드 행과 연결된 반복 수집 거래입니다. 다시 새로고침해 주세요.',
+      error: 'Conflict'
+    });
+    assert.equal(
+      context.state.collectedTransactions.filter(
+        (candidate) => candidate.matchedPlanItemId === seeded.planItem.id
+      ).length,
+      1
+    );
+  } finally {
+    await context.close();
+  }
+});
+
 test('POST /import-batches/:id/rows/:rowId/collect returns 400 for a failed imported row', async () => {
   const context = await createRequestTestContext();
 

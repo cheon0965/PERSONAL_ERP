@@ -345,6 +345,7 @@ model Account {
   tenantId              String
   ledgerId              String
   name                  String
+  normalizedName        String              @db.VarChar(191)
   type                  AccountType
   balanceWon            Decimal             @default(0) @db.Decimal(19, 0)
   sortOrder             Int                 @default(0)
@@ -361,6 +362,7 @@ model Account {
   journalLines          JournalLine[]
   balanceSnapshotLines  BalanceSnapshotLine[]
 
+  @@unique([ledgerId, normalizedName])
   @@index([userId, sortOrder])
   @@index([tenantId, ledgerId, sortOrder])
 }
@@ -371,6 +373,7 @@ model Category {
   tenantId              String
   ledgerId              String
   name                  String
+  normalizedName        String               @db.VarChar(191)
   kind                  CategoryKind
   sortOrder             Int                  @default(0)
   isActive              Boolean              @default(true)
@@ -384,6 +387,7 @@ model Category {
   planItems             PlanItem[]
   collectedTransactions CollectedTransaction[]
 
+  @@unique([ledgerId, kind, normalizedName])
   @@index([userId, kind, sortOrder])
   @@index([tenantId, ledgerId, kind, sortOrder])
 }
@@ -428,6 +432,7 @@ model AccountingPeriod {
   startDate             DateTime
   endDate               DateTime
   status                AccountingPeriodStatus @default(OPEN)
+  nextJournalEntrySequence Int                 @default(1)
   openedAt              DateTime               @default(now())
   lockedAt              DateTime?
   createdAt             DateTime               @default(now())
@@ -540,6 +545,7 @@ model PlanItem {
   matchedCollectedTransaction CollectedTransaction? @relation("PlanItemMatchedCollectedTransaction")
   postedJournalEntry       JournalEntry?   @relation("JournalEntrySourcePlanItem")
 
+  @@unique([periodId, recurringRuleId, plannedDate])
   @@index([periodId, status, plannedDate])
   @@index([tenantId, ledgerId, plannedDate])
 }
@@ -767,7 +773,9 @@ model InsurancePolicy {
   recurringStartDate    DateTime?
   linkedRecurringRuleId String?        @unique
   provider              String
+  normalizedProvider    String         @db.VarChar(191)
   productName           String
+  normalizedProductName String         @db.VarChar(191)
   monthlyPremiumWon     Decimal        @db.Decimal(19, 0)
   paymentDay            Int
   cycle                 InsuranceCycle @default(MONTHLY)
@@ -783,6 +791,7 @@ model InsurancePolicy {
   category              Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   linkedRecurringRule   RecurringRule? @relation("InsurancePolicyLinkedRecurringRule", fields: [linkedRecurringRuleId], references: [id], onDelete: SetNull)
 
+  @@unique([ledgerId, normalizedProvider, normalizedProductName])
   @@index([userId, isActive])
   @@index([tenantId, ledgerId, isActive])
   @@index([accountId])
@@ -795,6 +804,7 @@ model Vehicle {
   tenantId                          String
   ledgerId                          String
   name                              String
+  normalizedName                    String    @db.VarChar(191)
   manufacturer                      String?
   fuelType                          FuelType
   initialOdometerKm                 Int
@@ -807,6 +817,7 @@ model Vehicle {
   fuelLogs                          FuelLog[]
   maintenanceLogs                   VehicleMaintenanceLog[]
 
+  @@unique([ledgerId, normalizedName])
   @@index([userId, name])
   @@index([tenantId, ledgerId, name])
 }

@@ -39,7 +39,7 @@ export function configureApiApp(
 
   if (env.SWAGGER_ENABLED) {
     const swaggerConfig = new DocumentBuilder()
-      .setTitle('Owner ERP API')
+      .setTitle('PERSONAL ERP API')
       .setDescription(
         'Monthly operations ERP starter API for sole proprietors and small businesses'
       )

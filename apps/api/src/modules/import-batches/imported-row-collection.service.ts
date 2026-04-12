@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   NotFoundException
@@ -171,11 +172,12 @@ export class ImportedRowCollectionService {
         : null;
     const matchedPlanItemId = matchedPlanItem?.id ?? null;
     const createdCollectedTransaction =
-      matchedPlanItem?.existingCollectedTransactionId
+      matchedPlanItem?.existingCollectedTransactionId && matchedPlanItem
         ? await this.absorbImportedRowIntoCollectedTransactionRecord({
             tx: input.tx,
             collectedTransactionId:
               matchedPlanItem.existingCollectedTransactionId,
+            matchedPlanItemId: matchedPlanItem.id,
             importBatchId: input.importBatchId,
             importedRowId: input.importedRowId,
             periodId: input.currentPeriodId,
@@ -614,6 +616,7 @@ export class ImportedRowCollectionService {
   private async absorbImportedRowIntoCollectedTransactionRecord(input: {
     tx: Prisma.TransactionClient;
     collectedTransactionId: string;
+    matchedPlanItemId: string;
     importBatchId: string;
     importedRowId: string;
     periodId: string;
@@ -627,9 +630,19 @@ export class ImportedRowCollectionService {
     sourceFingerprint: string;
     memo: string | undefined;
   }): Promise<CreatedCollectedTransactionRecord> {
-    return input.tx.collectedTransaction.update({
+    const claimed = await input.tx.collectedTransaction.updateMany({
       where: {
-        id: input.collectedTransactionId
+        id: input.collectedTransactionId,
+        matchedPlanItemId: input.matchedPlanItemId,
+        importBatchId: null,
+        importedRowId: null,
+        status: {
+          in: [
+            CollectedTransactionStatus.COLLECTED,
+            CollectedTransactionStatus.REVIEWED,
+            CollectedTransactionStatus.READY_TO_POST
+          ]
+        }
       },
       data: {
         periodId: input.periodId,
@@ -644,9 +657,53 @@ export class ImportedRowCollectionService {
         status: input.status,
         sourceFingerprint: input.sourceFingerprint,
         ...(input.memo !== undefined ? { memo: input.memo } : {})
+      }
+    });
+
+    if (claimed.count !== 1) {
+      const latest = await input.tx.collectedTransaction.findFirst({
+        where: {
+          id: input.collectedTransactionId
+        },
+        select: {
+          id: true,
+          importBatchId: true,
+          importedRowId: true,
+          matchedPlanItemId: true
+        }
+      });
+
+      if (!latest) {
+        throw new NotFoundException('수집 거래를 찾을 수 없습니다.');
+      }
+
+      if (
+        latest.importBatchId ||
+        latest.importedRowId ||
+        latest.matchedPlanItemId !== input.matchedPlanItemId
+      ) {
+        throw new ConflictException(
+          '이미 다른 업로드 행과 연결된 반복 수집 거래입니다. 다시 새로고침해 주세요.'
+        );
+      }
+
+      throw new ConflictException(
+        '반복 수집 거래 상태가 변경되어 업로드 행을 연결하지 못했습니다. 다시 시도해 주세요.'
+      );
+    }
+
+    const updated = await input.tx.collectedTransaction.findFirst({
+      where: {
+        id: input.collectedTransactionId
       },
       select: createdCollectedTransactionSelect
     });
+
+    if (!updated) {
+      throw new NotFoundException('수집 거래를 찾을 수 없습니다.');
+    }
+
+    return updated;
   }
 
   private async markPlanItemMatched(

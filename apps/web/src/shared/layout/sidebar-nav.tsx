@@ -44,7 +44,7 @@ export function SidebarNav() {
     >
       <Toolbar>
         <Box>
-          <Typography variant="h6">Owner ERP</Typography>
+          <Typography variant="h6">PERSONAL ERP</Typography>
           <Typography variant="body2" color="text.secondary">
             1인 사업자·소상공인 월 운영 시스템
           </Typography>

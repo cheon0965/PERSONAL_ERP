@@ -6,7 +6,8 @@ import {
   AccountingPeriodStatus,
   CollectedTransactionStatus,
   CategoryKind,
-  PlanItemStatus
+  PlanItemStatus,
+  Prisma
 } from '@prisma/client';
 import { GeneratePlanItemsUseCase } from '../src/modules/plan-items/generate-plan-items.use-case';
 import { PlanItemsService } from '../src/modules/plan-items/plan-items.service';
@@ -237,6 +238,94 @@ test('GeneratePlanItemsUseCase rejects editor role because plan generation is li
   await assert.rejects(
     () => useCase.execute(editorUser, { periodId: period.id }),
     ForbiddenException
+  );
+});
+
+test('GeneratePlanItemsUseCase treats duplicate plan item inserts as skipped and continues with the remaining rules', async () => {
+  const period = createPeriod({
+    id: 'period-2026-06',
+    year: 2026,
+    month: 6
+  });
+  const state = createPlanItemTestState({
+    recurringRules: [
+      {
+        id: 'rr-duplicate',
+        accountId: 'acc-1',
+        categoryId: 'cat-expense',
+        title: '정기 구독',
+        amountWon: 21_000,
+        frequency: 'MONTHLY',
+        dayOfMonth: 10,
+        startDate: new Date('2026-01-10T00:00:00.000Z'),
+        endDate: null,
+        account: {
+          id: 'acc-1',
+          name: '주거래 통장'
+        },
+        category: {
+          id: 'cat-expense',
+          name: '구독',
+          kind: CategoryKind.EXPENSE
+        },
+        ledgerTransactionType: null
+      },
+      {
+        id: 'rr-created-after-duplicate',
+        accountId: 'acc-1',
+        categoryId: 'cat-expense',
+        title: '인터넷 요금',
+        amountWon: 33_000,
+        frequency: 'MONTHLY',
+        dayOfMonth: 20,
+        startDate: new Date('2026-01-20T00:00:00.000Z'),
+        endDate: null,
+        account: {
+          id: 'acc-1',
+          name: '주거래 통장'
+        },
+        category: {
+          id: 'cat-expense',
+          name: '통신비',
+          kind: CategoryKind.EXPENSE
+        },
+        ledgerTransactionType: null
+      }
+    ],
+    planItems: []
+  });
+
+  const prisma = createPrismaMock(period, state);
+  const originalCreate = prisma.planItem.create;
+  let duplicateInjected = false;
+  prisma.planItem.create = async (args) => {
+    const duplicateKey = `${args.data.recurringRuleId}:${args.data.plannedDate.toISOString().slice(0, 10)}`;
+    if (!duplicateInjected && duplicateKey === 'rr-duplicate:2026-06-10') {
+      duplicateInjected = true;
+      throw new Prisma.PrismaClientKnownRequestError('duplicate plan item', {
+        code: 'P2002',
+        clientVersion: 'test',
+        meta: {
+          target: ['periodId', 'recurringRuleId', 'plannedDate']
+        }
+      });
+    }
+
+    return originalCreate(args);
+  };
+
+  const useCase = new GeneratePlanItemsUseCase(
+    prisma as never,
+    new PlanItemsService(prisma as never)
+  );
+  const result = await useCase.execute(user, { periodId: period.id });
+
+  assert.equal(result.generation.createdCount, 1);
+  assert.equal(result.generation.skippedExistingCount, 1);
+  assert.equal(result.generation.excludedRuleCount, 0);
+  assert.deepEqual(
+    result.items.map((item) => item.title),
+    ['인터넷 요금']
   );
 });
 

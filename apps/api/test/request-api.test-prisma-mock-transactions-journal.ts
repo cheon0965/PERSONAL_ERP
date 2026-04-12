@@ -932,12 +932,17 @@ export function createTransactionsJournalPrismaMock(
           id?: string;
           tenantId?: string;
           ledgerId?: string;
+          matchedPlanItemId?: string | null;
+          importBatchId?: string | null;
+          importedRowId?: string | null;
           status?: {
             in?: CollectedTransactionStatus[];
           };
         };
         data: {
           periodId?: string | null;
+          importBatchId?: string | null;
+          importedRowId?: string | null;
           ledgerTransactionTypeId?: string;
           fundingAccountId?: string;
           categoryId?: string | null;
@@ -945,27 +950,64 @@ export function createTransactionsJournalPrismaMock(
           occurredOn?: Date;
           amount?: number;
           status?: CollectedTransactionStatus;
+          sourceFingerprint?: string | null;
           memo?: string | null;
         };
       }) => {
         let updatedCount = 0;
 
         state.collectedTransactions.forEach((candidate) => {
+          if (
+            state.simulateCollectedTransactionAlreadyLinkedOnNextImportClaimId ===
+            candidate.id
+          ) {
+            state.simulateCollectedTransactionAlreadyLinkedOnNextImportClaimId =
+              null;
+            candidate.importBatchId = 'simulated-import-batch';
+            candidate.importedRowId = 'simulated-imported-row';
+            candidate.updatedAt = new Date();
+          }
+
           const matchesId = !args.where?.id || candidate.id === args.where.id;
           const matchesTenant =
             !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
           const matchesLedger =
             !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesMatchedPlanItem =
+            args.where?.matchedPlanItemId === undefined ||
+            candidate.matchedPlanItemId === args.where.matchedPlanItemId;
+          const matchesImportBatch =
+            args.where?.importBatchId === undefined ||
+            candidate.importBatchId === args.where.importBatchId;
+          const matchesImportedRow =
+            args.where?.importedRowId === undefined ||
+            candidate.importedRowId === args.where.importedRowId;
           const matchesStatus =
             !args.where?.status?.in ||
             args.where.status.in.includes(candidate.status);
 
-          if (!(matchesId && matchesTenant && matchesLedger && matchesStatus)) {
+          if (
+            !(
+              matchesId &&
+              matchesTenant &&
+              matchesLedger &&
+              matchesMatchedPlanItem &&
+              matchesImportBatch &&
+              matchesImportedRow &&
+              matchesStatus
+            )
+          ) {
             return;
           }
 
           if ('periodId' in args.data) {
             candidate.periodId = args.data.periodId ?? null;
+          }
+          if ('importBatchId' in args.data) {
+            candidate.importBatchId = args.data.importBatchId ?? null;
+          }
+          if ('importedRowId' in args.data) {
+            candidate.importedRowId = args.data.importedRowId ?? null;
           }
           if (args.data.ledgerTransactionTypeId) {
             candidate.ledgerTransactionTypeId =
@@ -988,6 +1030,9 @@ export function createTransactionsJournalPrismaMock(
           }
           if (args.data.status) {
             candidate.status = args.data.status;
+          }
+          if ('sourceFingerprint' in args.data) {
+            candidate.sourceFingerprint = args.data.sourceFingerprint ?? null;
           }
           if ('memo' in args.data) {
             candidate.memo = args.data.memo ?? null;

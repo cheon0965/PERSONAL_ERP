@@ -37,7 +37,7 @@
 - `npm run test:e2e:smoke:build:browser`는 루트 래퍼 명령이며, 내부적으로 Web workspace의 browser build smoke를 호출합니다.
 - 이 명령은 필요할 때 로그인/세션 복원/운영 체크리스트/문맥 fallback까지 포함한 브라우저 build smoke를 별도로 다시 확인합니다.
 - `npm run test:e2e`는 기준 데이터 CRUD, 반복 규칙 CRUD까지 포함한 전체 브라우저 대표 흐름 검증입니다.
-- `npm run test:prisma`는 기본 루프와 분리된 실DB Prisma/HTTP 통합 검증이며, 로컬에서는 `PRISMA_INTEGRATION_DATABASE_URL`을 우선하고 없으면 `DATABASE_URL`로 fallback 합니다. CI에서는 `PRISMA_INTEGRATION_DATABASE_URL` 전용으로 동작합니다. 현재는 대표적으로 `운영기간 open -> 업로드 배치 -> 수집 -> 전표 확정 -> close`와 `반복규칙 -> plan item 생성 -> import collect 자동 매칭 -> confirm -> 재무제표 생성` 시나리오를 포함합니다.
+- `npm run test:prisma`는 기본 루프와 분리된 실DB Prisma/HTTP 통합 검증이며, 로컬에서는 `PRISMA_INTEGRATION_DATABASE_URL`을 우선하고 없으면 `DATABASE_URL`로 fallback 합니다. CI에서는 `PRISMA_INTEGRATION_DATABASE_URL` 전용으로 동작합니다. 현재는 수집 거래 저장소 경계 1개와 실제 API/DB 월 운영 workflow 4개를 포함합니다. workflow는 `운영기간 open -> 업로드 배치 -> 수집 -> 전표 확정 -> close`, `반복규칙 -> plan item 생성 -> import collect 자동 매칭 -> confirm -> 재무제표 생성`, `close -> 재무제표 생성 -> reopen -> 전표 reverse/correct`, `carry-forward 생성 이후 source period reopen 409 보호` 시나리오를 검증합니다.
 - `npm run audit:runtime:full`은 `critical` gate 없이 현재 runtime advisory 전체를 다시 확인할 때 사용하는 follow-up 명령입니다.
 - 현재 기본 `npm run test`에서는 Prisma 통합 테스트가 안내 문구와 함께 skip됩니다.
 
@@ -93,11 +93,13 @@
 - `POST /categories`, `PATCH /categories/:id`
   Owner/Manager 전용 카테고리 생성, 이름 변경, 비활성화/재활성화와 workspace 범위 접근통제를 검증
 - `GET /accounting-periods`, `GET /accounting-periods/current`, `POST /accounting-periods`, `POST /accounting-periods/:id/close`, `POST /accounting-periods/:id/reopen`
-  기간 open/close/reopen, snapshot 생성/정리, role 기반 접근통제를 검증
+  기간 open/close/reopen, snapshot 생성/정리, 차기 이월 이후 reopen 차단, role 기반 접근통제를 검증
 - `GET /collected-transactions`, `POST /collected-transactions`, `POST /collected-transactions/:id/confirm`
   DTO validation, 현재 workspace 접근 범위 내 참조 검증, 생성/확정 응답 shape와 전표 연계를 검증
+- `POST /collected-transactions/:id/confirm`
+  운영 기간 `nextJournalEntrySequence` 기반 전표 번호 할당과 transaction boundary 안 재검증을 검증
 - `GET /journal-entries`, `POST /journal-entries/:id/reverse`, `POST /journal-entries/:id/correct`
-  최근 전표 조회, reverse/correct 조정 흐름, role 기반 접근통제를 검증
+  최근 전표 조회, reverse/correct 조정 흐름, period-local 전표 번호 sequence, role 기반 접근통제를 검증
 - `POST /recurring-rules`
   DTO validation, 현재 workspace 접근 범위 내 계정/카테고리 검증, 생성 응답 shape
 - 계획 항목 생성 정책과 service/view 조합
@@ -105,6 +107,10 @@
 - 거래/반복규칙 use-case 생성 로직
 - `GET /import-batches`, `GET /import-batches/:id`, `POST /import-batches`, `POST /import-batches/:id/rows/:rowId/collect-preview`, `POST /import-batches/:id/rows/:rowId/collect`
   UTF-8 텍스트 업로드 파싱, row collect preview, duplicate fingerprint 처리, 자동 계획 매칭/카테고리 보완 설명, role 기반 접근통제를 검증
+- `POST /import-batches/:id/rows/:rowId/collect`
+  반복 수집 거래 흡수 claim, 이미 다른 업로드 행과 연결된 대상의 `409 Conflict`, 같은 업로드 행 재수집 방지를 검증
+- 계획 항목 generate use case
+  `periodId + recurringRuleId + plannedDate` DB unique 경합을 `skip`으로 해석하고 `createdCount/skippedExistingCount`가 실제 commit 결과와 맞는지 검증
 - `POST /financial-statements/generate`, `GET /financial-statements`
   잠금 기간 공식 snapshot 생성/조회와 비교 view 조합을 검증
 - `POST /carry-forwards/generate`, `GET /carry-forwards`
@@ -118,7 +124,7 @@
 - allowlist 밖 origin의 cookie-auth 요청 차단(`403 Origin not allowed`)
 - 로그인 실패, refresh 재사용, bearer 누락, scope 거부, readiness 실패에 대한 보안 이벤트 로그 기록
 - `test:prisma`
-  실제 MySQL 기준으로 현재 workspace 접근 범위 확인, 수집 거래 저장소 경계, 실제 API를 통한 기간/업로드/수집/전표/보고 대표 시나리오를 함께 검증
+  실제 MySQL 기준으로 현재 workspace 접근 범위 확인, 수집 거래 저장소 경계, 실제 API를 통한 기간/업로드/수집/전표/보고/재오픈/차기 이월 보호 대표 시나리오를 함께 검증
 - `GET /collected-transactions`
   현재 구현 기준 current workspace 범위만 반환하는지, 내부 접근 제어 필드를 노출하지 않는지 검증
 - `GET /recurring-rules`
@@ -158,6 +164,7 @@
 - 차량 연료/정비 이력 분리, `GET /vehicles/operating-summary` projection 추가, 차량 `Vehicle` 물리 필드/응답/계약에서 `monthlyExpenseWon` 제거, 레거시 `Transaction` 물리 제거와 active reference guard, 메인 월 운영 루프의 `reference-data -> accounting-periods -> insurance/vehicles -> recurring-rules -> plan-items -> collected-transactions/imports -> journal-entries -> financial-statements -> carry-forwards -> forecast` 브라우저 시나리오, `imports -> collected-transactions -> journal-entries` cross-feature 브라우저 시나리오, Next.js ESLint plugin explicit registration까지는 반영됨
 - 저장소 안 우선순위로 선별했던 작업은 현재 문서 기준 모두 닫혔음
 - `.github/workflows/ci.yml`의 `prisma-integration` job wiring은 반영되었지만, 실제 GitHub 저장소/조직 secret `PRISMA_INTEGRATION_DATABASE_URL` 등록과 첫 통과 증적 확보는 저장소 밖 후속 작업으로 남아 있음
+- `2026-04-12` 기준 로컬 `npm run test:prisma`는 `DATABASE_URL (mysql://220.122.169.122:1409/personal_erp)`가 현재 실행 환경에서 reachable하지 않아 5개 Prisma integration 테스트가 skip되었음
 - Docker가 없는 개발 PC에서는 `semgrep-ce`, `gitleaks`를 로컬에서 CI와 동일하게 재현하기 어려움
 - Windows `core.autocrlf=true` checkout에서는 `npm run check:quick`의 Prettier 단계가 CI(Ubuntu LF 기준)와 다르게 보일 수 있음
 - `npm run audit:runtime`는 현재 `critical` 기준으로 gate를 걸고 있으며, 2026-04-05 재검증 기준 runtime `high` 4건은 upstream Nest 패키지의 exact dependency pin으로 남아 있어 예외 추적으로 관리 중임

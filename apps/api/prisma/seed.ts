@@ -8,6 +8,7 @@ import {
   VehicleMaintenanceCategory
 } from '@prisma/client';
 import { getApiEnv } from '../src/config/api-env';
+import { normalizeCaseInsensitiveText } from '../src/common/utils/normalize-unique-key.util';
 import { ensurePhase1BackboneForUser } from './phase1-backbone';
 
 const prisma = new PrismaClient();
@@ -354,6 +355,7 @@ async function ensureDemoAccounts(
         tenantId,
         ledgerId,
         name: account.name,
+        normalizedName: normalizeCaseInsensitiveText(account.name),
         type: account.type,
         balanceWon: account.balanceWon,
         sortOrder: account.sortOrder
@@ -406,6 +408,7 @@ async function ensureDemoCategories(
         tenantId,
         ledgerId,
         name: category.name,
+        normalizedName: normalizeCaseInsensitiveText(category.name),
         kind: category.kind,
         sortOrder: category.sortOrder
       },
@@ -550,7 +553,9 @@ async function ensureDemoInsurancePolicies(
         recurringStartDate: policy.recurringStartDate,
         linkedRecurringRuleId,
         provider: policy.provider,
+        normalizedProvider: normalizeCaseInsensitiveText(policy.provider),
         productName: policy.productName,
+        normalizedProductName: normalizeCaseInsensitiveText(policy.productName),
         monthlyPremiumWon: policy.monthlyPremiumWon,
         paymentDay: policy.paymentDay,
         cycle: policy.cycle,
@@ -588,6 +593,7 @@ async function ensureDemoVehicle(
       userId,
       tenantId,
       ledgerId,
+      normalizedName: normalizeCaseInsensitiveText(DEMO_VEHICLE.name),
       ...DEMO_VEHICLE
     },
     select: { id: true }

@@ -33,13 +33,8 @@
 
 ## 완료 문서
 
-- `completed/`: 이미 수행했거나 특정 단계의 실행 기준으로 사용했던 문서를 보관한다.
-- `completed/IN_REPO_EXECUTION_PLAN.md`: 저장소 안에서 선별한 후속 작업의 완료 상태와 검증 기준
-- `completed/VEHICLE_OPERATIONS_MODEL_PLAN.md`: 차량 기본 정보와 연료/정비 운영 이력 분리 설계 완료 문서
-- `completed/ALIGNMENT_PATCH_EXECUTION_PLAN.md`: 내부 정합성 패치와 설계 모델 분리를 완료하고 보관한 실행 계획
-- `completed/BUSINESS_FLOW_IMPROVEMENT_EXECUTION_PLAN.md`: 완료된 메인 비즈니스 흐름 고도화 실행 계획 및 반영 현황
-- `completed/MONEY_INTEGRITY_EXECUTION_PLAN.md`: `MoneyWon`, 금액 컬럼 승격, exact arithmetic 통일을 완료하고 보관한 실행계획
-- `completed/`: 단계별 제거 준비 메모와 완료된 체크리스트 같은 이력성 문서도 함께 보관한다.
+- [`completed/README.md`](./completed/README.md): 완료된 실행 계획, 설계 기록, 단계별 기준선의 인덱스
+- `completed/`: 이미 수행했거나 특정 단계의 실행 기준으로 사용했던 이력성 문서를 보관한다.
 - 완료 문서는 배경 맥락과 의사결정 이력을 남기기 위한 용도이며, 현재 기준 문서를 대체하지 않는다.
 
-현재 `phase-1` 실행 계획 문서는 `completed/phase-1/`로 분리해 두었다.
+완료 문서의 개별 링크는 상위 문서에 반복 등록하지 않고 [`completed/README.md`](./completed/README.md)에서 관리한다.
