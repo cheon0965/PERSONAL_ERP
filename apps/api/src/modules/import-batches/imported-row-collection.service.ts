@@ -1,28 +1,15 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type {
   AuthenticatedUser,
   CollectImportedRowPreview,
   CollectImportedRowRequest,
   CollectImportedRowResponse
 } from '@personal-erp/contracts';
-import {
-  CollectedTransactionStatus,
-  PlanItemStatus,
-  Prisma
-} from '@prisma/client';
-import { fromPrismaMoneyWon } from '../../common/money/prisma-money';
+import { Prisma } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AccountingPeriodsService } from '../accounting-periods/accounting-periods.service';
-import { readCollectingAccountingPeriodStatuses } from '../accounting-periods/accounting-period-transition.policy';
-import { mapCollectedTransactionTypeToLedgerTransactionCode } from '../collected-transactions/public';
 import { resolveImportedRowAutoPreparation } from './imported-row-auto-preparation.policy';
 import {
   buildCollectImportedRowPreview,
@@ -30,24 +17,17 @@ import {
 } from './imported-row-auto-preparation-summary';
 import { mapCreatedCollectedTransactionToItem } from './imported-row-collection.mapper';
 import {
-  assertImportedRowCanBeCollected,
   assertOccurredOnWithinPeriod,
   readNormalizedImportedRow
 } from './imported-row-collection.normalization.policy';
-import { resolveMatchedPlanItemCandidate } from './imported-row-collection-plan-item.policy';
 import { resolveCollectedSourceFingerprint } from './imported-row-collection-source-fingerprint.policy';
 import {
-  collectableImportedRowSelect,
-  collectingPeriodSelect,
-  createdCollectedTransactionSelect,
-  type CollectableImportedRow,
-  type CollectingPeriodRecord,
-  type CreatedCollectedTransactionRecord,
-  type PlanItemCollectionCandidate
-} from './imported-row-collection.types';
+  ImportedRowCollectionRepository,
+  type PrismaClientLike,
+  type WorkspaceContext
+} from './imported-row-collection.repository';
+import type { PlanItemCollectionCandidate } from './imported-row-collection.types';
 
-type WorkspaceContext = ReturnType<typeof requireCurrentWorkspace>;
-type PrismaClientLike = PrismaService | Prisma.TransactionClient;
 type RowCollectionAssessment = {
   occurredOn: Date;
   normalizedRow: {
@@ -73,7 +53,8 @@ type RowCollectionAssessment = {
 export class ImportedRowCollectionService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly accountingPeriodsService: AccountingPeriodsService
+    private readonly accountingPeriodsService: AccountingPeriodsService,
+    private readonly collectionRepository: ImportedRowCollectionRepository
   ) {}
 
   async collectRow(
@@ -88,12 +69,13 @@ export class ImportedRowCollectionService {
       'collected_transaction.create'
     );
 
-    const importedRow = await this.readCollectableImportedRow(
-      this.prisma,
-      workspace,
-      importBatchId,
-      importedRowId
-    );
+    const importedRow =
+      await this.collectionRepository.readCollectableImportedRow(
+        this.prisma,
+        workspace,
+        importBatchId,
+        importedRowId
+      );
     const parsedRow = readNormalizedImportedRow(importedRow);
     const currentPeriod =
       await this.accountingPeriodsService.assertCollectingDateAllowed(
@@ -125,12 +107,13 @@ export class ImportedRowCollectionService {
       'collected_transaction.create'
     );
 
-    const importedRow = await this.readCollectableImportedRow(
-      this.prisma,
-      workspace,
-      importBatchId,
-      importedRowId
-    );
+    const importedRow =
+      await this.collectionRepository.readCollectableImportedRow(
+        this.prisma,
+        workspace,
+        importBatchId,
+        importedRowId
+      );
     const parsedRow = readNormalizedImportedRow(importedRow);
     const currentPeriod =
       await this.accountingPeriodsService.assertCollectingDateAllowed(
@@ -166,33 +149,35 @@ export class ImportedRowCollectionService {
       input: input.input,
       currentPeriodId: input.currentPeriodId
     });
-    const matchedPlanItem =
-      assessment.preview.autoPreparation.allowPlanItemMatch
-        ? assessment.matchedPlanItem
-        : null;
+    const matchedPlanItem = assessment.preview.autoPreparation
+      .allowPlanItemMatch
+      ? assessment.matchedPlanItem
+      : null;
     const matchedPlanItemId = matchedPlanItem?.id ?? null;
     const createdCollectedTransaction =
       matchedPlanItem?.existingCollectedTransactionId && matchedPlanItem
-        ? await this.absorbImportedRowIntoCollectedTransactionRecord({
-            tx: input.tx,
-            collectedTransactionId:
-              matchedPlanItem.existingCollectedTransactionId,
-            matchedPlanItemId: matchedPlanItem.id,
-            importBatchId: input.importBatchId,
-            importedRowId: input.importedRowId,
-            periodId: input.currentPeriodId,
-            ledgerTransactionTypeId: assessment.ledgerTransactionTypeId,
-            fundingAccountId: assessment.fundingAccount.id,
-            categoryId: assessment.effectiveCategory?.id ?? null,
-            title: assessment.normalizedRow.title,
-            occurredOn: assessment.occurredOn,
-            amount: assessment.normalizedRow.amount,
-            status: assessment.preview.autoPreparation
-              .nextWorkflowStatus as Prisma.CollectedTransactionCreateInput['status'],
-            sourceFingerprint: assessment.sourceFingerprint,
-            memo: input.input.memo
-          })
-        : await this.createCollectedTransactionRecord({
+        ? await this.collectionRepository.absorbImportedRowIntoCollectedTransactionRecord(
+            {
+              tx: input.tx,
+              collectedTransactionId:
+                matchedPlanItem.existingCollectedTransactionId,
+              matchedPlanItemId: matchedPlanItem.id,
+              importBatchId: input.importBatchId,
+              importedRowId: input.importedRowId,
+              periodId: input.currentPeriodId,
+              ledgerTransactionTypeId: assessment.ledgerTransactionTypeId,
+              fundingAccountId: assessment.fundingAccount.id,
+              categoryId: assessment.effectiveCategory?.id ?? null,
+              title: assessment.normalizedRow.title,
+              occurredOn: assessment.occurredOn,
+              amount: assessment.normalizedRow.amount,
+              status: assessment.preview.autoPreparation
+                .nextWorkflowStatus as Prisma.CollectedTransactionCreateInput['status'],
+              sourceFingerprint: assessment.sourceFingerprint,
+              memo: input.input.memo
+            }
+          )
+        : await this.collectionRepository.createCollectedTransactionRecord({
             tx: input.tx,
             workspace: input.workspace,
             importBatchId: input.importBatchId,
@@ -211,7 +196,10 @@ export class ImportedRowCollectionService {
             memo: input.input.memo
           });
 
-    await this.markPlanItemMatched(input.tx, matchedPlanItemId);
+    await this.collectionRepository.markPlanItemMatched(
+      input.tx,
+      matchedPlanItemId
+    );
 
     return {
       collectedTransaction: mapCreatedCollectedTransactionToItem(
@@ -230,42 +218,45 @@ export class ImportedRowCollectionService {
     input: CollectImportedRowRequest;
     currentPeriodId: string;
   }): Promise<RowCollectionAssessment> {
-    const row = await this.readCollectableImportedRow(
+    const row = await this.collectionRepository.readCollectableImportedRow(
       input.client,
       input.workspace,
       input.importBatchId,
       input.importedRowId
     );
     const normalizedRow = readNormalizedImportedRow(row);
-    const currentCollectingPeriod = await this.readCurrentCollectingPeriod(
-      input.client,
-      input.workspace,
-      input.currentPeriodId
-    );
+    const currentCollectingPeriod =
+      await this.collectionRepository.readCurrentCollectingPeriod(
+        input.client,
+        input.workspace,
+        input.currentPeriodId
+      );
     const occurredOn = assertOccurredOnWithinPeriod(
       normalizedRow.occurredOn,
       currentCollectingPeriod
     );
-    const fundingAccount = await this.readFundingAccount(
+    const fundingAccount = await this.collectionRepository.readFundingAccount(
       input.client,
       input.workspace,
       input.input.fundingAccountId
     );
-    const ledgerTransactionTypeId = await this.readLedgerTransactionTypeId(
-      input.client,
-      input.workspace,
-      input.input.type
-    );
-    const matchedPlanItem = await this.readMatchedPlanItemCandidate(
-      input.client,
-      input.workspace,
-      currentCollectingPeriod.id,
-      normalizedRow.amount,
-      occurredOn,
-      fundingAccount.id,
-      ledgerTransactionTypeId,
-      input.input.categoryId ?? null
-    );
+    const ledgerTransactionTypeId =
+      await this.collectionRepository.readLedgerTransactionTypeId(
+        input.client,
+        input.workspace,
+        input.input.type
+      );
+    const matchedPlanItem =
+      await this.collectionRepository.readMatchedPlanItemCandidate(
+        input.client,
+        input.workspace,
+        currentCollectingPeriod.id,
+        normalizedRow.amount,
+        occurredOn,
+        fundingAccount.id,
+        ledgerTransactionTypeId,
+        input.input.categoryId ?? null
+      );
     const sourceFingerprint = resolveCollectedSourceFingerprint({
       existingSourceFingerprint: row.sourceFingerprint,
       sourceKind: row.batch.sourceKind,
@@ -274,7 +265,7 @@ export class ImportedRowCollectionService {
       title: normalizedRow.title
     });
     const hasDuplicateSourceFingerprint =
-      await this.hasDuplicateSourceFingerprint(
+      await this.collectionRepository.hasDuplicateSourceFingerprint(
         input.client,
         input.workspace,
         sourceFingerprint
@@ -285,11 +276,12 @@ export class ImportedRowCollectionService {
       matchedPlanItemCategoryId: matchedPlanItem?.categoryId ?? null,
       hasDuplicateSourceFingerprint
     });
-    const effectiveCategory = await this.readEffectiveCategory(
-      input.client,
-      input.workspace,
-      autoPreparation.effectiveCategoryId
-    );
+    const effectiveCategory =
+      await this.collectionRepository.readEffectiveCategory(
+        input.client,
+        input.workspace,
+        autoPreparation.effectiveCategoryId
+      );
     const requestedCategoryName = input.input.categoryId
       ? (effectiveCategory?.name ?? null)
       : null;
@@ -326,429 +318,5 @@ export class ImportedRowCollectionService {
         autoPreparation: autoPreparationSummary
       })
     };
-  }
-
-  private async readCollectableImportedRow(
-    client: PrismaClientLike,
-    workspace: WorkspaceContext,
-    importBatchId: string,
-    importedRowId: string
-  ): Promise<CollectableImportedRow> {
-    const row = await client.importedRow.findFirst({
-      where: {
-        id: importedRowId,
-        batchId: importBatchId,
-        batch: {
-          tenantId: workspace.tenantId,
-          ledgerId: workspace.ledgerId
-        }
-      },
-      select: collectableImportedRowSelect
-    });
-
-    assertImportedRowCanBeCollected(row);
-    return row;
-  }
-
-  private async readCurrentCollectingPeriod(
-    tx: PrismaClientLike,
-    workspace: WorkspaceContext,
-    periodId: string
-  ): Promise<CollectingPeriodRecord> {
-    const currentCollectingPeriod = await tx.accountingPeriod.findFirst({
-      where: {
-        id: periodId,
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId,
-        status: {
-          in: [...readCollectingAccountingPeriodStatuses()]
-        }
-      },
-      select: collectingPeriodSelect
-    });
-
-    if (!currentCollectingPeriod) {
-      throw new BadRequestException(
-        '현재 Ledger에 열린 운영 기간이 없어 수집 거래를 등록할 수 없습니다.'
-      );
-    }
-
-    return currentCollectingPeriod;
-  }
-
-  private async readFundingAccount(
-    tx: PrismaClientLike,
-    workspace: WorkspaceContext,
-    fundingAccountId: string
-  ): Promise<{ id: string; name: string }> {
-    const fundingAccount = await tx.account.findFirst({
-      where: {
-        id: fundingAccountId,
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId
-      },
-      select: {
-        id: true,
-        name: true
-      }
-    });
-
-    if (!fundingAccount) {
-      throw new NotFoundException('Funding account not found');
-    }
-
-    return fundingAccount;
-  }
-
-  private async readLedgerTransactionTypeId(
-    tx: PrismaClientLike,
-    workspace: WorkspaceContext,
-    type: CollectImportedRowRequest['type']
-  ): Promise<string> {
-    const ledgerTransactionType = await tx.ledgerTransactionType.findFirst({
-      where: {
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId,
-        code: mapCollectedTransactionTypeToLedgerTransactionCode(type),
-        isActive: true
-      },
-      select: {
-        id: true
-      }
-    });
-
-    if (!ledgerTransactionType) {
-      throw new InternalServerErrorException(
-        '현재 Ledger에 수집 거래용 기본 거래유형 마스터가 준비되어 있지 않습니다.'
-      );
-    }
-
-    return ledgerTransactionType.id;
-  }
-
-  private async readDraftPlanItemCandidates(
-    tx: PrismaClientLike,
-    workspace: WorkspaceContext,
-    periodId: string
-  ): Promise<PlanItemCollectionCandidate[]> {
-    const records = await tx.planItem.findMany({
-      where: {
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId,
-        periodId,
-        status: PlanItemStatus.DRAFT,
-        matchedCollectedTransaction: {
-          is: null
-        }
-      },
-      select: {
-        id: true,
-        title: true,
-        plannedAmount: true,
-        plannedDate: true,
-        fundingAccountId: true,
-        ledgerTransactionTypeId: true,
-        categoryId: true
-      }
-    });
-
-    return records.map((record) => ({
-      ...record,
-      plannedAmount: fromPrismaMoneyWon(record.plannedAmount),
-      existingCollectedTransactionId: null
-    }));
-  }
-
-  private async readRecurringCollectedTransactionCandidates(
-    tx: PrismaClientLike,
-    workspace: WorkspaceContext,
-    periodId: string
-  ): Promise<PlanItemCollectionCandidate[]> {
-    const records = await tx.collectedTransaction.findMany({
-      where: {
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId,
-        periodId,
-        importBatchId: null,
-        importedRowId: null,
-        matchedPlanItemId: {
-          not: null
-        },
-        status: {
-          in: [
-            CollectedTransactionStatus.COLLECTED,
-            CollectedTransactionStatus.REVIEWED,
-            CollectedTransactionStatus.READY_TO_POST
-          ]
-        }
-      },
-      select: {
-        id: true,
-        occurredOn: true,
-        amount: true,
-        fundingAccountId: true,
-        ledgerTransactionTypeId: true,
-        categoryId: true,
-        matchedPlanItem: {
-          select: {
-            id: true,
-            title: true
-          }
-        }
-      }
-    });
-
-    return records.flatMap((record) =>
-      record.matchedPlanItem
-        ? [
-            {
-              id: record.matchedPlanItem.id,
-              title: record.matchedPlanItem.title,
-              plannedAmount: fromPrismaMoneyWon(record.amount),
-              plannedDate: record.occurredOn,
-              fundingAccountId: record.fundingAccountId,
-              ledgerTransactionTypeId: record.ledgerTransactionTypeId,
-              categoryId: record.categoryId,
-              existingCollectedTransactionId: record.id
-            }
-          ]
-        : []
-    );
-  }
-
-  private async readPlanItemCollectionCandidates(
-    tx: PrismaClientLike,
-    workspace: WorkspaceContext,
-    periodId: string
-  ): Promise<PlanItemCollectionCandidate[]> {
-    const [draftCandidates, recurringCandidates] = await Promise.all([
-      this.readDraftPlanItemCandidates(tx, workspace, periodId),
-      this.readRecurringCollectedTransactionCandidates(tx, workspace, periodId)
-    ]);
-
-    return [...draftCandidates, ...recurringCandidates];
-  }
-
-  private async readMatchedPlanItemCandidate(
-    tx: PrismaClientLike,
-    workspace: WorkspaceContext,
-    periodId: string,
-    amount: number,
-    occurredOn: Date,
-    fundingAccountId: string,
-    ledgerTransactionTypeId: string,
-    categoryId: string | null
-  ): Promise<PlanItemCollectionCandidate | null> {
-    const candidates = await this.readPlanItemCollectionCandidates(
-      tx,
-      workspace,
-      periodId
-    );
-
-    return resolveMatchedPlanItemCandidate({
-      candidates,
-      amount,
-      occurredOn,
-      fundingAccountId,
-      ledgerTransactionTypeId,
-      categoryId
-    });
-  }
-
-  private async hasDuplicateSourceFingerprint(
-    tx: PrismaClientLike,
-    workspace: WorkspaceContext,
-    sourceFingerprint: string
-  ): Promise<boolean> {
-    const duplicateSourceFingerprint = await tx.collectedTransaction.findFirst({
-      where: {
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId,
-        sourceFingerprint
-      },
-      select: {
-        id: true
-      }
-    });
-
-    return Boolean(duplicateSourceFingerprint);
-  }
-
-  private async createCollectedTransactionRecord(input: {
-    tx: Prisma.TransactionClient;
-    workspace: WorkspaceContext;
-    importBatchId: string;
-    importedRowId: string;
-    periodId: string;
-    matchedPlanItemId: string | null;
-    ledgerTransactionTypeId: string;
-    fundingAccountId: string;
-    categoryId: string | null;
-    title: string;
-    occurredOn: Date;
-    amount: number;
-    status: Prisma.CollectedTransactionCreateInput['status'];
-    sourceFingerprint: string;
-    memo: string | undefined;
-  }): Promise<CreatedCollectedTransactionRecord> {
-    return input.tx.collectedTransaction.create({
-      data: {
-        tenantId: input.workspace.tenantId,
-        ledgerId: input.workspace.ledgerId,
-        periodId: input.periodId,
-        importBatchId: input.importBatchId,
-        importedRowId: input.importedRowId,
-        matchedPlanItemId: input.matchedPlanItemId,
-        ledgerTransactionTypeId: input.ledgerTransactionTypeId,
-        fundingAccountId: input.fundingAccountId,
-        categoryId: input.categoryId,
-        title: input.title,
-        occurredOn: input.occurredOn,
-        amount: input.amount,
-        status: input.status,
-        sourceFingerprint: input.sourceFingerprint,
-        memo: input.memo
-      },
-      select: createdCollectedTransactionSelect
-    });
-  }
-
-  private async absorbImportedRowIntoCollectedTransactionRecord(input: {
-    tx: Prisma.TransactionClient;
-    collectedTransactionId: string;
-    matchedPlanItemId: string;
-    importBatchId: string;
-    importedRowId: string;
-    periodId: string;
-    ledgerTransactionTypeId: string;
-    fundingAccountId: string;
-    categoryId: string | null;
-    title: string;
-    occurredOn: Date;
-    amount: number;
-    status: Prisma.CollectedTransactionCreateInput['status'];
-    sourceFingerprint: string;
-    memo: string | undefined;
-  }): Promise<CreatedCollectedTransactionRecord> {
-    const claimed = await input.tx.collectedTransaction.updateMany({
-      where: {
-        id: input.collectedTransactionId,
-        matchedPlanItemId: input.matchedPlanItemId,
-        importBatchId: null,
-        importedRowId: null,
-        status: {
-          in: [
-            CollectedTransactionStatus.COLLECTED,
-            CollectedTransactionStatus.REVIEWED,
-            CollectedTransactionStatus.READY_TO_POST
-          ]
-        }
-      },
-      data: {
-        periodId: input.periodId,
-        importBatchId: input.importBatchId,
-        importedRowId: input.importedRowId,
-        ledgerTransactionTypeId: input.ledgerTransactionTypeId,
-        fundingAccountId: input.fundingAccountId,
-        categoryId: input.categoryId,
-        title: input.title,
-        occurredOn: input.occurredOn,
-        amount: input.amount,
-        status: input.status,
-        sourceFingerprint: input.sourceFingerprint,
-        ...(input.memo !== undefined ? { memo: input.memo } : {})
-      }
-    });
-
-    if (claimed.count !== 1) {
-      const latest = await input.tx.collectedTransaction.findFirst({
-        where: {
-          id: input.collectedTransactionId
-        },
-        select: {
-          id: true,
-          importBatchId: true,
-          importedRowId: true,
-          matchedPlanItemId: true
-        }
-      });
-
-      if (!latest) {
-        throw new NotFoundException('수집 거래를 찾을 수 없습니다.');
-      }
-
-      if (
-        latest.importBatchId ||
-        latest.importedRowId ||
-        latest.matchedPlanItemId !== input.matchedPlanItemId
-      ) {
-        throw new ConflictException(
-          '이미 다른 업로드 행과 연결된 반복 수집 거래입니다. 다시 새로고침해 주세요.'
-        );
-      }
-
-      throw new ConflictException(
-        '반복 수집 거래 상태가 변경되어 업로드 행을 연결하지 못했습니다. 다시 시도해 주세요.'
-      );
-    }
-
-    const updated = await input.tx.collectedTransaction.findFirst({
-      where: {
-        id: input.collectedTransactionId
-      },
-      select: createdCollectedTransactionSelect
-    });
-
-    if (!updated) {
-      throw new NotFoundException('수집 거래를 찾을 수 없습니다.');
-    }
-
-    return updated;
-  }
-
-  private async markPlanItemMatched(
-    tx: Prisma.TransactionClient,
-    matchedPlanItemId: string | null
-  ): Promise<void> {
-    if (!matchedPlanItemId) {
-      return;
-    }
-
-    await tx.planItem.update({
-      where: {
-        id: matchedPlanItemId
-      },
-      data: {
-        status: PlanItemStatus.MATCHED
-      }
-    });
-  }
-
-  private async readEffectiveCategory(
-    tx: PrismaClientLike,
-    workspace: WorkspaceContext,
-    categoryId: string | null
-  ): Promise<{ id: string; name: string } | null> {
-    if (!categoryId) {
-      return null;
-    }
-
-    const category = await tx.category.findFirst({
-      where: {
-        id: categoryId,
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId
-      },
-      select: {
-        id: true,
-        name: true
-      }
-    });
-
-    if (!category) {
-      throw new NotFoundException('Category not found');
-    }
-
-    return category;
   }
 }
