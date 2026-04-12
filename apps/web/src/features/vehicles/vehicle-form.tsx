@@ -9,7 +9,8 @@ import type {
   UpdateVehicleRequest,
   VehicleFuelLogItem,
   VehicleMaintenanceLogItem,
-  VehicleItem
+  VehicleItem,
+  VehicleOperatingSummaryView
 } from '@personal-erp/contracts';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -22,8 +23,10 @@ import {
   updateVehicle,
   vehicleFuelLogsQueryKey,
   vehicleMaintenanceLogsQueryKey,
+  vehicleOperatingSummaryQueryKey,
   vehiclesQueryKey
 } from './vehicles.api';
+import { buildVehicleOperatingSummaryView } from './vehicles.summary';
 
 const vehicleFormSchema = z.object({
   name: z.string().trim().min(2, '차량 이름은 2자 이상이어야 합니다.'),
@@ -33,10 +36,6 @@ const vehicleFormSchema = z.object({
     .number()
     .int()
     .min(0, '초기 주행거리는 0 이상이어야 합니다.'),
-  monthlyExpenseWon: z.coerce
-    .number()
-    .int()
-    .min(0, '월 차량 운영비는 0 이상이어야 합니다.'),
   estimatedFuelEfficiencyKmPerLiter: z
     .string()
     .trim()
@@ -122,6 +121,21 @@ export function VehicleForm({
               : maintenanceLog
           ) ?? current
       );
+      queryClient.setQueryData<VehicleOperatingSummaryView>(
+        vehicleOperatingSummaryQueryKey,
+        buildVehicleOperatingSummaryView({
+          vehicles:
+            queryClient.getQueryData<VehicleItem[]>(vehiclesQueryKey) ?? [],
+          fuelLogs:
+            queryClient.getQueryData<VehicleFuelLogItem[]>(
+              vehicleFuelLogsQueryKey
+            ) ?? [],
+          maintenanceLogs:
+            queryClient.getQueryData<VehicleMaintenanceLogItem[]>(
+              vehicleMaintenanceLogsQueryKey
+            ) ?? []
+        })
+      );
 
       if (!webRuntime.demoFallbackEnabled) {
         await queryClient.invalidateQueries({
@@ -132,6 +146,9 @@ export function VehicleForm({
         });
         await queryClient.invalidateQueries({
           queryKey: vehicleMaintenanceLogsQueryKey
+        });
+        await queryClient.invalidateQueries({
+          queryKey: vehicleOperatingSummaryQueryKey
         });
       }
     }
@@ -161,7 +178,6 @@ export function VehicleForm({
           manufacturer: values.manufacturer.trim() || null,
           fuelType: values.fuelType,
           initialOdometerKm: values.initialOdometerKm,
-          monthlyExpenseWon: values.monthlyExpenseWon,
           estimatedFuelEfficiencyKmPerLiter:
             values.estimatedFuelEfficiencyKmPerLiter.length > 0
               ? Number(values.estimatedFuelEfficiencyKmPerLiter)
@@ -272,15 +288,6 @@ export function VehicleForm({
               {...form.register('initialOdometerKm')}
             />
           </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <TextField
-              label="월 차량 운영비 (원)"
-              type="number"
-              error={Boolean(form.formState.errors.monthlyExpenseWon)}
-              helperText={form.formState.errors.monthlyExpenseWon?.message}
-              {...form.register('monthlyExpenseWon')}
-            />
-          </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               label="예상 연비 (km/L)"
@@ -319,7 +326,6 @@ function buildDefaultValues(): VehicleFormInput {
     manufacturer: '',
     fuelType: 'DIESEL',
     initialOdometerKm: 0,
-    monthlyExpenseWon: 0,
     estimatedFuelEfficiencyKmPerLiter: ''
   };
 }
@@ -330,7 +336,6 @@ function mapVehicleToFormInput(vehicle: VehicleItem): VehicleFormInput {
     manufacturer: vehicle.manufacturer ?? '',
     fuelType: vehicle.fuelType,
     initialOdometerKm: vehicle.initialOdometerKm,
-    monthlyExpenseWon: vehicle.monthlyExpenseWon,
     estimatedFuelEfficiencyKmPerLiter:
       vehicle.estimatedFuelEfficiencyKmPerLiter?.toString() ?? ''
   };

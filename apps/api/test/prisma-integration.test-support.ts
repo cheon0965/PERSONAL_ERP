@@ -6,6 +6,7 @@ import { AccountType, CategoryKind } from '@prisma/client';
 import { configureApiApp } from '../src/bootstrap/configure-api-app';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { getApiEnv, resetApiEnvCache } from '../src/config/api-env';
+import { listenOnSafeTestPort } from './http-test-port';
 import { ensurePhase1BackboneForUser } from '../prisma/phase1-backbone';
 import {
   getPrismaIntegrationMissingDatabaseMessage,
@@ -95,16 +96,8 @@ export async function createRealApiPrismaIntegrationContext(
     const app = moduleRef.createNestApplication();
 
     configureApiApp(app, getApiEnv());
-    await app.listen(0, '127.0.0.1');
-
-    const address = app.getHttpServer().address();
-    if (!address || typeof address === 'string') {
-      throw new Error(
-        'Could not resolve the Prisma integration server address.'
-      );
-    }
-
-    const baseUrl = `http://127.0.0.1:${address.port}/api`;
+    const port = await listenOnSafeTestPort(app);
+    const baseUrl = `http://127.0.0.1:${port}/api`;
     const prisma = app.get(PrismaService);
 
     return {

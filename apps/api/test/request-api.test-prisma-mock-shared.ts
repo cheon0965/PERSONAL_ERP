@@ -4,17 +4,6 @@ import type {
 } from './request-api.test-types';
 
 export function createRequestPrismaMockContext(state: RequestTestState) {
-  const sortTransactions = (
-    items: RequestTestState['transactions']
-  ): RequestTestState['transactions'] =>
-    [...items].sort((left, right) => {
-      if (left.businessDate.getTime() !== right.businessDate.getTime()) {
-        return right.businessDate.getTime() - left.businessDate.getTime();
-      }
-
-      return right.createdAt.getTime() - left.createdAt.getTime();
-    });
-
   const sortCollectedTransactions = (
     items: RequestTestState['collectedTransactions']
   ): RequestTestState['collectedTransactions'] =>
@@ -397,7 +386,6 @@ export function createRequestPrismaMockContext(state: RequestTestState) {
 
   return {
     state,
-    sortTransactions,
     sortCollectedTransactions,
     sortRecurringRules,
     sortAccountingPeriods,

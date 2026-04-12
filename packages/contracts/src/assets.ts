@@ -84,8 +84,36 @@ export type VehicleItem = {
   manufacturer: string | null;
   fuelType: FuelType;
   initialOdometerKm: number;
-  monthlyExpenseWon: MoneyWon;
   estimatedFuelEfficiencyKmPerLiter: number | null;
+};
+
+export type VehicleOperatingSummaryItem = {
+  vehicleId: string;
+  vehicleName: string;
+  fuelType: FuelType;
+  fuelExpenseWon: MoneyWon;
+  maintenanceExpenseWon: MoneyWon;
+  recordedOperatingExpenseWon: MoneyWon;
+  estimatedFuelEfficiencyKmPerLiter: number | null;
+  recordedFuelEfficiencyKmPerLiter: number | null;
+  fuelLogCount: number;
+  maintenanceLogCount: number;
+  lastFueledOn: string | null;
+  lastMaintainedOn: string | null;
+};
+
+export type VehicleOperatingSummaryTotals = {
+  vehicleCount: number;
+  fuelExpenseWon: MoneyWon;
+  maintenanceExpenseWon: MoneyWon;
+  recordedOperatingExpenseWon: MoneyWon;
+  averageEstimatedFuelEfficiencyKmPerLiter: number | null;
+  averageRecordedFuelEfficiencyKmPerLiter: number | null;
+};
+
+export type VehicleOperatingSummaryView = {
+  totals: VehicleOperatingSummaryTotals;
+  items: VehicleOperatingSummaryItem[];
 };
 
 export type CreateVehicleRequest = {
@@ -93,7 +121,6 @@ export type CreateVehicleRequest = {
   manufacturer?: string | null;
   fuelType: FuelType;
   initialOdometerKm: number;
-  monthlyExpenseWon: MoneyWon;
   estimatedFuelEfficiencyKmPerLiter?: number | null;
 };
 

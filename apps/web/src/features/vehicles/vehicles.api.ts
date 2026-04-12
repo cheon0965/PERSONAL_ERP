@@ -7,11 +7,16 @@ import type {
   UpdateVehicleRequest,
   VehicleFuelLogItem,
   VehicleItem,
-  VehicleMaintenanceLogItem
+  VehicleMaintenanceLogItem,
+  VehicleOperatingSummaryView
 } from '@personal-erp/contracts';
 import { fetchJson, patchJson, postJson } from '@/shared/api/fetch-json';
+import { buildVehicleOperatingSummaryView } from './vehicles.summary';
 
 export const vehiclesQueryKey = ['vehicles'] as const;
+export const vehicleOperatingSummaryQueryKey = [
+  'vehicle-operating-summary'
+] as const;
 export const vehicleFuelLogsQueryKey = ['vehicle-fuel-logs'] as const;
 export const vehicleMaintenanceLogsQueryKey = [
   'vehicle-maintenance-logs'
@@ -24,7 +29,6 @@ export const mockVehicles: VehicleItem[] = [
     manufacturer: 'Hyundai',
     fuelType: 'DIESEL',
     initialOdometerKm: 128000,
-    monthlyExpenseWon: 286000,
     estimatedFuelEfficiencyKmPerLiter: 10.8
   },
   {
@@ -33,7 +37,6 @@ export const mockVehicles: VehicleItem[] = [
     manufacturer: 'Kia',
     fuelType: 'GASOLINE',
     initialOdometerKm: 32400,
-    monthlyExpenseWon: 91000,
     estimatedFuelEfficiencyKmPerLiter: 15.4
   }
 ];
@@ -90,8 +93,22 @@ export const mockVehicleMaintenanceLogs: VehicleMaintenanceLogItem[] = [
   }
 ];
 
+export const mockVehicleOperatingSummary: VehicleOperatingSummaryView =
+  buildVehicleOperatingSummaryView({
+    vehicles: mockVehicles,
+    fuelLogs: mockVehicleFuelLogs,
+    maintenanceLogs: mockVehicleMaintenanceLogs
+  });
+
 export function getVehicles() {
   return fetchJson<VehicleItem[]>('/vehicles', mockVehicles);
+}
+
+export function getVehicleOperatingSummary() {
+  return fetchJson<VehicleOperatingSummaryView>(
+    '/vehicles/operating-summary',
+    mockVehicleOperatingSummary
+  );
 }
 
 export function getVehicleFuelLogs() {
@@ -195,7 +212,6 @@ export function buildVehicleFallbackItem(
     manufacturer: input.manufacturer ?? null,
     fuelType: input.fuelType,
     initialOdometerKm: input.initialOdometerKm,
-    monthlyExpenseWon: input.monthlyExpenseWon,
     estimatedFuelEfficiencyKmPerLiter:
       input.estimatedFuelEfficiencyKmPerLiter ?? null
   };

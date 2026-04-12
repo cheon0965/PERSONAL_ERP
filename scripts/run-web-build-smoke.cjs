@@ -45,6 +45,10 @@ function delay(ms) {
 }
 
 function waitForChildExit(child, timeoutMs) {
+  if (!child || child.exitCode !== null) {
+    return Promise.resolve();
+  }
+
   return Promise.race([
     new Promise((resolve) => {
       child.once('exit', () => resolve());
@@ -187,18 +191,26 @@ async function main() {
     ]);
   } finally {
     await cleanup();
-    await serverExitPromise.catch(() => undefined);
+    await waitForChildExit(server, 5_000);
   }
 }
 
-Promise.race([
-  main(),
-  delay(buildTimeoutMs).then(() => {
-    throw new Error(
+const timeoutHandle = setTimeout(() => {
+  console.error(
+    new Error(
       '[run-web-build-smoke] Timed out waiting for the smoke script to finish.'
-    );
-  })
-]).catch((error) => {
-  console.error(error);
+    )
+  );
   process.exit(1);
-});
+}, buildTimeoutMs);
+
+main()
+  .then(() => {
+    clearTimeout(timeoutHandle);
+    process.exit(0);
+  })
+  .catch((error) => {
+    clearTimeout(timeoutHandle);
+    console.error(error);
+    process.exit(1);
+  });

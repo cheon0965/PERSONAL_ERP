@@ -25,18 +25,6 @@ enum TransactionType {
   TRANSFER
 }
 
-enum TransactionOrigin {
-  MANUAL
-  RECURRING
-  IMPORT
-}
-
-enum TransactionStatus {
-  POSTED
-  PENDING
-  CANCELLED
-}
-
 enum RecurrenceFrequency {
   WEEKLY
   MONTHLY
@@ -236,7 +224,6 @@ model User {
   settings           UserSetting?
   accounts           Account[]
   categories         Category[]
-  legacyTransactions LegacyTransaction[]
   recurringRules     RecurringRule[]
   insurancePolicies  InsurancePolicy[]
   vehicles           Vehicle[]
@@ -258,7 +245,6 @@ model Tenant {
   accounts                 Account[]             @relation("TenantAccounts")
   categories               Category[]            @relation("TenantCategories")
   recurringRules           RecurringRule[]       @relation("TenantRecurringRules")
-  legacyTransactions       LegacyTransaction[]   @relation("TenantLegacyTransactions")
   insurancePolicies        InsurancePolicy[]
   vehicles                 Vehicle[]
   periods                  AccountingPeriod[]
@@ -309,7 +295,6 @@ model Ledger {
   accounts                Account[]             @relation("LedgerAccounts")
   categories              Category[]            @relation("LedgerCategories")
   recurringRules          RecurringRule[]       @relation("LedgerRecurringRules")
-  legacyTransactions      LegacyTransaction[]   @relation("LedgerLegacyTransactions")
   insurancePolicies       InsurancePolicy[]
   vehicles                Vehicle[]
   periods                 AccountingPeriod[]
@@ -369,7 +354,6 @@ model Account {
   user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenant                Tenant              @relation("TenantAccounts", fields: [tenantId], references: [id], onDelete: Cascade)
   ledger                Ledger              @relation("LedgerAccounts", fields: [ledgerId], references: [id], onDelete: Cascade)
-  legacyTransactions    LegacyTransaction[]
   recurringRules        RecurringRule[]
   insurancePolicies     InsurancePolicy[]
   planItems             PlanItem[]
@@ -395,7 +379,6 @@ model Category {
   user                  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenant                Tenant               @relation("TenantCategories", fields: [tenantId], references: [id], onDelete: Cascade)
   ledger                Ledger               @relation("LedgerCategories", fields: [ledgerId], references: [id], onDelete: Cascade)
-  legacyTransactions    LegacyTransaction[]
   recurringRules        RecurringRule[]
   insurancePolicies     InsurancePolicy[]
   planItems             PlanItem[]
@@ -403,36 +386,6 @@ model Category {
 
   @@index([userId, kind, sortOrder])
   @@index([tenantId, ledgerId, kind, sortOrder])
-}
-
-// Legacy bridge model mapped to the existing `Transaction` table.
-// Do not add new write/read flows here; use CollectedTransaction and JournalEntry.
-model LegacyTransaction {
-  id           String            @id @default(cuid())
-  userId       String
-  tenantId     String
-  ledgerId     String
-  title        String
-  type         TransactionType
-  amountWon    Decimal          @db.Decimal(19, 0)
-  businessDate DateTime
-  accountId    String
-  categoryId   String?
-  origin       TransactionOrigin @default(MANUAL)
-  status       TransactionStatus @default(POSTED)
-  memo         String?           @db.Text
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant       Tenant            @relation("TenantLegacyTransactions", fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger       Ledger            @relation("LedgerLegacyTransactions", fields: [ledgerId], references: [id], onDelete: Cascade)
-  account      Account           @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  category     Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-
-  @@index([userId, businessDate])
-  @@index([userId, type, businessDate])
-  @@index([tenantId, ledgerId, businessDate])
-  @@map("Transaction")
 }
 
 model RecurringRule {
@@ -845,7 +798,6 @@ model Vehicle {
   manufacturer                      String?
   fuelType                          FuelType
   initialOdometerKm                 Int
-  monthlyExpenseWon                 Decimal   @default(0) @db.Decimal(19, 0)
   estimatedFuelEfficiencyKmPerLiter Decimal?  @db.Decimal(10, 2)
   createdAt                         DateTime  @default(now())
   updatedAt                         DateTime  @updatedAt

@@ -2,10 +2,7 @@ import {
   AuditActorType,
   CollectedTransactionStatus,
   PlanItemStatus,
-  RecurrenceFrequency,
-  TransactionOrigin,
-  TransactionStatus,
-  TransactionType
+  RecurrenceFrequency
 } from '@prisma/client';
 import { createAccountingPeriodsPrismaMock } from './request-api.test-prisma-mock-accounting-periods';
 import { createAssetsPrismaMock } from './request-api.test-prisma-mock-assets';
@@ -72,13 +69,8 @@ export function createPrismaMock(
   state: RequestTestState
 ): Record<string, unknown> {
   const context = createRequestPrismaMockContext(state);
-  const {
-    sortTransactions,
-    sortRecurringRules,
-    findPlanItem,
-    resolveAccount,
-    resolveCategory
-  } = context;
+  const { sortRecurringRules, findPlanItem, resolveAccount, resolveCategory } =
+    context;
 
   const resolveLinkedInsurancePolicy = (recurringRuleId?: string | null) => {
     if (!recurringRuleId) {
@@ -695,103 +687,6 @@ export function createPrismaMock(
       }
     },
     ...createTransactionsJournalPrismaMock(context),
-    transaction: {
-      findMany: async (args: {
-        where?: {
-          userId?: string;
-          tenantId?: string;
-          ledgerId?: string;
-          status?: TransactionStatus;
-        };
-        include?: { account?: boolean; category?: boolean };
-        select?: { type?: boolean; amountWon?: boolean };
-        orderBy?: Array<{
-          businessDate?: 'asc' | 'desc';
-          createdAt?: 'asc' | 'desc';
-        }>;
-        take?: number;
-      }) => {
-        let items = state.transactions.filter((candidate) => {
-          const matchesUser =
-            !args.where?.userId || candidate.userId === args.where.userId;
-          const matchesTenant =
-            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
-          const matchesLedger =
-            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
-          const matchesStatus =
-            !args.where?.status || candidate.status === args.where.status;
-          return matchesUser && matchesTenant && matchesLedger && matchesStatus;
-        });
-
-        items = sortTransactions(items);
-
-        if (args.take !== undefined) {
-          items = items.slice(0, args.take);
-        }
-
-        return items.map((candidate) => {
-          if (args.select) {
-            return {
-              ...(args.select.type ? { type: candidate.type } : {}),
-              ...(args.select.amountWon
-                ? { amountWon: candidate.amountWon }
-                : {})
-            };
-          }
-
-          const account = resolveAccount(candidate.accountId);
-          const category = resolveCategory(candidate.categoryId);
-
-          if (args.include) {
-            return {
-              ...candidate,
-              account: args.include.account ? account : undefined,
-              category: args.include.category ? category : undefined
-            };
-          }
-
-          return candidate;
-        });
-      },
-      create: async (args: {
-        data: Record<string, unknown>;
-        include?: {
-          account?: boolean;
-          category?: boolean;
-          linkedInsurancePolicy?: {
-            select?: {
-              id?: boolean;
-            };
-          };
-        };
-      }) => {
-        const account = resolveAccount(String(args.data.accountId));
-        const category = resolveCategory(String(args.data.categoryId));
-        const created = {
-          id: `txn-${state.transactions.length + 1}`,
-          userId: String(args.data.userId),
-          tenantId: String(args.data.tenantId),
-          ledgerId: String(args.data.ledgerId),
-          title: String(args.data.title),
-          type: args.data.type as TransactionType,
-          amountWon: Number(args.data.amountWon),
-          businessDate: new Date(String(args.data.businessDate)),
-          accountId: String(args.data.accountId),
-          categoryId: String(args.data.categoryId),
-          memo: args.data.memo === undefined ? null : String(args.data.memo),
-          origin: args.data.origin as TransactionOrigin,
-          status: args.data.status as TransactionStatus,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        state.transactions.push(created);
-        return {
-          ...created,
-          account,
-          category
-        };
-      }
-    },
     recurringRule: {
       findFirst: async (args: {
         where?: {

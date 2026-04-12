@@ -43,7 +43,6 @@ export class VehiclesRepository {
         manufacturer: input.manufacturer,
         fuelType: input.fuelType,
         initialOdometerKm: input.initialOdometerKm,
-        monthlyExpenseWon: input.monthlyExpenseWon,
         estimatedFuelEfficiencyKmPerLiter:
           input.estimatedFuelEfficiencyKmPerLiter
       }
@@ -60,7 +59,6 @@ export class VehiclesRepository {
         manufacturer: input.manufacturer,
         fuelType: input.fuelType,
         initialOdometerKm: input.initialOdometerKm,
-        monthlyExpenseWon: input.monthlyExpenseWon,
         estimatedFuelEfficiencyKmPerLiter:
           input.estimatedFuelEfficiencyKmPerLiter
       }

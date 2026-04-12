@@ -48,6 +48,7 @@ import {
   mergeVehicleMaintenanceLogsForE2E,
   mergeVehiclesForE2E
 } from './support/auth-transactions-fixtures';
+import { buildVehicleOperatingSummaryView } from '../src/features/vehicles/vehicles.summary';
 const e2eApiRoutePattern = '**/api/**';
 
 function expectNoPageErrors(pageErrors: string[]) {
@@ -1734,6 +1735,24 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
       return;
     }
 
+    if (
+      path === '/api/vehicles/operating-summary' &&
+      request.method() === 'GET'
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(
+          buildVehicleOperatingSummaryView({
+            vehicles,
+            fuelLogs,
+            maintenanceLogs
+          })
+        )
+      });
+      return;
+    }
+
     if (path === '/api/vehicles' && request.method() === 'POST') {
       const payload = request.postDataJSON() as CreateVehicleRequest;
       const created = buildVehicleItemFromPayload(payload, {
@@ -1940,6 +1959,15 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
     page.getByRole('heading', { name: '차량 운영', exact: true })
   ).toBeVisible();
   await expect(page.getByRole('button', { name: '차량 등록' })).toBeVisible();
+  const vehicleTableCard = page
+    .getByRole('heading', { name: '차량 기본 정보', exact: true })
+    .locator('xpath=ancestor::div[contains(@class,"MuiCard-root")][1]');
+  const fuelTableCard = page
+    .getByRole('heading', { name: '주유 / 충전 기록', exact: true })
+    .locator('xpath=ancestor::div[contains(@class,"MuiCard-root")][1]');
+  const maintenanceTableCard = page
+    .getByRole('heading', { name: '정비 이력', exact: true })
+    .locator('xpath=ancestor::div[contains(@class,"MuiCard-root")][1]');
 
   await page.getByRole('button', { name: '차량 등록' }).click();
   await expect(page.getByRole('heading', { name: '차량 등록' })).toBeVisible();
@@ -1949,7 +1977,6 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
     .fill(newVehicleName);
   await vehicleForm.getByRole('textbox', { name: '제조사' }).fill('Kia');
   await vehicleForm.getByLabel('초기 주행거리 (km)').fill('12400');
-  await vehicleForm.getByLabel('월 차량 운영비 (원)').fill('215000');
   await vehicleForm.getByLabel('예상 연비 (km/L)').fill('14.8');
   await vehicleForm.getByRole('button', { name: '차량 저장' }).click();
 
@@ -1960,7 +1987,7 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
     page.getByRole('gridcell', { name: newVehicleName, exact: true })
   ).toBeVisible();
 
-  const newVehicleRow = page.getByRole('row', {
+  const newVehicleRow = vehicleTableCard.getByRole('row', {
     name: new RegExp(newVehicleName)
   });
   await newVehicleRow.getByRole('button', { name: '수정' }).click();
@@ -1968,7 +1995,6 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
   await vehicleForm
     .getByRole('textbox', { name: '차량명' })
     .fill(renamedVehicleName);
-  await vehicleForm.getByLabel('월 차량 운영비 (원)').fill('238000');
   await vehicleForm.getByRole('button', { name: '차량 수정' }).click();
 
   await expect(
@@ -1978,7 +2004,7 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
     page.getByRole('gridcell', { name: renamedVehicleName, exact: true })
   ).toBeVisible();
 
-  const renamedVehicleRow = page.getByRole('row', {
+  const renamedVehicleRow = vehicleTableCard.getByRole('row', {
     name: new RegExp(renamedVehicleName)
   });
   await renamedVehicleRow.getByRole('button', { name: '연료 기록' }).click();
@@ -1996,7 +2022,7 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
   await expect(
     page.getByText(`${renamedVehicleName} 연료 기록을 추가했습니다.`)
   ).toBeVisible();
-  const createdFuelRow = page.getByRole('row', {
+  const createdFuelRow = fuelTableCard.getByRole('row', {
     name: new RegExp(`${renamedVehicleName}.*76,431`)
   });
   await expect(createdFuelRow).toBeVisible();
@@ -2024,7 +2050,7 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
   await expect(
     page.getByText(`${renamedVehicleName} 연료 기록을 수정했습니다.`)
   ).toBeVisible();
-  const updatedFuelRow = page.getByRole('row', {
+  const updatedFuelRow = fuelTableCard.getByRole('row', {
     name: new RegExp(`${renamedVehicleName}.*81,234`)
   });
   await expect(updatedFuelRow).toBeVisible();
@@ -2057,7 +2083,7 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
   await expect(
     page.getByText(`${renamedVehicleName} 정비 기록을 추가했습니다.`)
   ).toBeVisible();
-  const createdMaintenanceRow = page.getByRole('row', {
+  const createdMaintenanceRow = maintenanceTableCard.getByRole('row', {
     name: new RegExp(newMaintenanceDescription)
   });
   await expect(createdMaintenanceRow).toBeVisible();
@@ -2082,7 +2108,7 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
   await expect(
     page.getByText(`${renamedVehicleName} 정비 기록을 수정했습니다.`)
   ).toBeVisible();
-  const renamedMaintenanceRow = page.getByRole('row', {
+  const renamedMaintenanceRow = maintenanceTableCard.getByRole('row', {
     name: new RegExp(renamedMaintenanceDescription)
   });
   await expect(renamedMaintenanceRow).toBeVisible();

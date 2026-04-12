@@ -26,9 +26,8 @@ type VehicleFuelLogRecord = Omit<
 
 type VehicleRecord = Omit<
   VehicleItem,
-  'monthlyExpenseWon' | 'estimatedFuelEfficiencyKmPerLiter'
+  'estimatedFuelEfficiencyKmPerLiter'
 > & {
-  monthlyExpenseWon: PrismaMoneyLike;
   estimatedFuelEfficiencyKmPerLiter: DecimalLike | null;
 };
 
@@ -71,7 +70,6 @@ export function mapVehicleToItem(vehicle: VehicleRecord): VehicleItem {
     manufacturer: vehicle.manufacturer,
     fuelType: vehicle.fuelType,
     initialOdometerKm: vehicle.initialOdometerKm,
-    monthlyExpenseWon: fromPrismaMoneyWon(vehicle.monthlyExpenseWon),
     estimatedFuelEfficiencyKmPerLiter:
       vehicle.estimatedFuelEfficiencyKmPerLiter === null
         ? null

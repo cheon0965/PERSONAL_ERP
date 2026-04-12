@@ -9,7 +9,6 @@ import {
   IsString,
   Min
 } from 'class-validator';
-import { moneyWonApiProperty } from '../../../common/money/swagger-money';
 
 export class CreateVehicleDto implements CreateVehicleRequest {
   @ApiProperty()
@@ -29,11 +28,6 @@ export class CreateVehicleDto implements CreateVehicleRequest {
   @IsInt()
   @Min(0)
   initialOdometerKm!: number;
-
-  @ApiProperty(moneyWonApiProperty({ example: 300000, minimum: 0 }))
-  @IsInt()
-  @Min(0)
-  monthlyExpenseWon!: number;
 
   @ApiProperty({ required: false, nullable: true })
   @IsOptional()

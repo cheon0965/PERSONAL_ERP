@@ -1,6 +1,6 @@
 # 금액 정합성 실행계획
 
-> 보관 상태: `2026-04-11` 기준 실행 완료 후 `docs/archive/`로 이동했다. 현재 운영 기준은 `docs/API.md`, `docs/VALIDATION_NOTES.md`, `docs/ARCHITECTURE.md`, `packages/contracts`, `packages/money`를 우선한다.
+> 보관 상태: `2026-04-11` 기준 실행 완료 후 `docs/completed/`로 이동했다. 현재 운영 기준은 `docs/API.md`, `docs/VALIDATION_NOTES.md`, `docs/ARCHITECTURE.md`, `packages/contracts`, `packages/money`를 우선한다.
 
 ## 목적
 

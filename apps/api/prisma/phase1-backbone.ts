@@ -11,6 +11,8 @@ import {
   TenantStatus
 } from '@prisma/client';
 
+// This file keeps the phase-1 workspace/ledger backbone bootstrap alive
+// after the legacy Transaction table removal.
 const DEFAULT_LEDGER_NAME = '기본 장부';
 
 const DEFAULT_ACCOUNT_SUBJECTS = [
@@ -132,10 +134,9 @@ export type Phase1BackboneSummary = {
   tenantsCreated: number;
   ledgersCreated: number;
   membershipsCreated: number;
-  legacyRowsBackfilled: {
+  rowsBackfilled: {
     accounts: number;
     categories: number;
-    legacyTransactions: number;
     recurringRules: number;
     insurancePolicies: number;
     vehicles: number;
@@ -148,10 +149,9 @@ function createSummary(): Phase1BackboneSummary {
     tenantsCreated: 0,
     ledgersCreated: 0,
     membershipsCreated: 0,
-    legacyRowsBackfilled: {
+    rowsBackfilled: {
       accounts: 0,
       categories: 0,
-      legacyTransactions: 0,
       recurringRules: 0,
       insurancePolicies: 0,
       vehicles: 0
@@ -189,17 +189,7 @@ async function resolveOpenedFromYearMonth(
   prisma: PrismaClient,
   user: BackboneUser
 ) {
-  const [
-    firstLegacyTransaction,
-    firstRecurringRule,
-    firstAccount,
-    firstCategory
-  ] = await Promise.all([
-    prisma.legacyTransaction.findFirst({
-      where: { userId: user.id },
-      orderBy: { businessDate: 'asc' },
-      select: { businessDate: true }
-    }),
+  const [firstRecurringRule, firstAccount, firstCategory] = await Promise.all([
     prisma.recurringRule.findFirst({
       where: { userId: user.id },
       orderBy: { startDate: 'asc' },
@@ -219,7 +209,6 @@ async function resolveOpenedFromYearMonth(
 
   const candidates = [
     user.createdAt,
-    firstLegacyTransaction?.businessDate,
     firstRecurringRule?.startDate,
     firstAccount?.createdAt,
     firstCategory?.createdAt
@@ -297,30 +286,20 @@ async function ensureBaseMasters(
   }
 }
 
-async function backfillLegacyData(
+async function backfillWorkspaceScopedData(
   prisma: PrismaClient,
   userId: string,
   tenantId: string,
   ledgerId: string,
   summary: Phase1BackboneSummary
 ) {
-  const [
-    accounts,
-    categories,
-    legacyTransactions,
-    recurringRules,
-    insurancePolicies,
-    vehicles
-  ] = await Promise.all([
+  const [accounts, categories, recurringRules, insurancePolicies, vehicles] =
+    await Promise.all([
     prisma.account.updateMany({
       where: { userId },
       data: { tenantId, ledgerId }
     }),
     prisma.category.updateMany({
-      where: { userId },
-      data: { tenantId, ledgerId }
-    }),
-    prisma.legacyTransaction.updateMany({
       where: { userId },
       data: { tenantId, ledgerId }
     }),
@@ -338,12 +317,11 @@ async function backfillLegacyData(
     })
   ]);
 
-  summary.legacyRowsBackfilled.accounts += accounts.count;
-  summary.legacyRowsBackfilled.categories += categories.count;
-  summary.legacyRowsBackfilled.legacyTransactions += legacyTransactions.count;
-  summary.legacyRowsBackfilled.recurringRules += recurringRules.count;
-  summary.legacyRowsBackfilled.insurancePolicies += insurancePolicies.count;
-  summary.legacyRowsBackfilled.vehicles += vehicles.count;
+  summary.rowsBackfilled.accounts += accounts.count;
+  summary.rowsBackfilled.categories += categories.count;
+  summary.rowsBackfilled.recurringRules += recurringRules.count;
+  summary.rowsBackfilled.insurancePolicies += insurancePolicies.count;
+  summary.rowsBackfilled.vehicles += vehicles.count;
 
   const transactionTypeByCode = new Map(
     (
@@ -521,7 +499,7 @@ export async function ensurePhase1BackboneForUser(
   const backbone = await ensureTenantAndLedger(prisma, user, summary);
 
   await ensureBaseMasters(prisma, backbone.tenantId, backbone.ledgerId);
-  await backfillLegacyData(
+  await backfillWorkspaceScopedData(
     prisma,
     user.id,
     backbone.tenantId,
@@ -566,11 +544,10 @@ export function formatPhase1BackboneSummary(summary: Phase1BackboneSummary) {
     `  - tenants created: ${summary.tenantsCreated}`,
     `  - ledgers created: ${summary.ledgersCreated}`,
     `  - memberships created: ${summary.membershipsCreated}`,
-    `  - accounts backfilled: ${summary.legacyRowsBackfilled.accounts}`,
-    `  - categories backfilled: ${summary.legacyRowsBackfilled.categories}`,
-    `  - legacy transactions backfilled: ${summary.legacyRowsBackfilled.legacyTransactions}`,
-    `  - recurring rules backfilled: ${summary.legacyRowsBackfilled.recurringRules}`,
-    `  - insurance policies backfilled: ${summary.legacyRowsBackfilled.insurancePolicies}`,
-    `  - vehicles backfilled: ${summary.legacyRowsBackfilled.vehicles}`
+    `  - accounts backfilled: ${summary.rowsBackfilled.accounts}`,
+    `  - categories backfilled: ${summary.rowsBackfilled.categories}`,
+    `  - recurring rules backfilled: ${summary.rowsBackfilled.recurringRules}`,
+    `  - insurance policies backfilled: ${summary.rowsBackfilled.insurancePolicies}`,
+    `  - vehicles backfilled: ${summary.rowsBackfilled.vehicles}`
   ].join('\n');
 }

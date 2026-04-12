@@ -1,5 +1,5 @@
 import js from '@eslint/js';
-import { FlatCompat } from '@eslint/eslintrc';
+import nextPlugin from '@next/eslint-plugin-next';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 import globals from 'globals';
@@ -9,16 +9,22 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-  recommendedConfig: js.configs.recommended
-});
-
-const nextWebConfig = compat.extends('next/core-web-vitals').map((config) => ({
-  ...config,
-  files: ['apps/web/**/*.{js,jsx,ts,tsx}']
-}));
+const nextWebConfig = {
+  files: ['apps/web/**/*.{js,jsx,ts,tsx}'],
+  plugins: {
+    '@next/next': nextPlugin
+  },
+  settings: {
+    next: {
+      rootDir: 'apps/web'
+    }
+  },
+  rules: {
+    ...nextPlugin.configs.recommended.rules,
+    ...nextPlugin.configs['core-web-vitals'].rules,
+    '@next/next/no-html-link-for-pages': 'off'
+  }
+};
 
 const modulePublicApiNames = [
   'collected-transactions',
@@ -215,5 +221,5 @@ export default [
       }
     }
   },
-  ...nextWebConfig
+  nextWebConfig
 ];

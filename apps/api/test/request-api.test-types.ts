@@ -10,10 +10,7 @@ import {
   LedgerTransactionFlowKind,
   RecurrenceFrequency,
   OpeningBalanceSourceKind,
-  PlanItemStatus,
-  TransactionOrigin,
-  TransactionStatus,
-  TransactionType
+  PlanItemStatus
 } from '@prisma/client';
 
 export type RequestTestUser = {
@@ -242,23 +239,6 @@ export type RequestTestState = {
     createdAt: Date;
     updatedAt: Date;
   }>;
-  transactions: Array<{
-    id: string;
-    userId: string;
-    tenantId: string;
-    ledgerId: string;
-    title: string;
-    type: TransactionType;
-    amountWon: number;
-    businessDate: Date;
-    accountId: string;
-    categoryId: string;
-    memo: string | null;
-    origin: TransactionOrigin;
-    status: TransactionStatus;
-    createdAt: Date;
-    updatedAt: Date;
-  }>;
   recurringRules: Array<{
     id: string;
     userId: string;
@@ -353,7 +333,6 @@ export type RequestTestState = {
     manufacturer: string | null;
     fuelType: 'GASOLINE' | 'DIESEL' | 'LPG' | 'HYBRID' | 'ELECTRIC';
     initialOdometerKm: number;
-    monthlyExpenseWon: number;
     estimatedFuelEfficiencyKmPerLiter: number | null;
     createdAt: Date;
     fuelLogs: Array<{

@@ -210,7 +210,6 @@ export function createE2EVehicles(): VehicleItem[] {
       manufacturer: 'Hyundai',
       fuelType: 'DIESEL',
       initialOdometerKm: 58_200,
-      monthlyExpenseWon: 130_000,
       estimatedFuelEfficiencyKmPerLiter: 11.2
     }
   ];
@@ -443,7 +442,6 @@ export function buildVehicleItemFromPayload(
     manufacturer: payload.manufacturer ?? null,
     fuelType: payload.fuelType,
     initialOdometerKm: payload.initialOdometerKm,
-    monthlyExpenseWon: payload.monthlyExpenseWon,
     estimatedFuelEfficiencyKmPerLiter:
       payload.estimatedFuelEfficiencyKmPerLiter ?? null
   };

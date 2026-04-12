@@ -17,7 +17,6 @@ export function normalizeVehicleInput(
     manufacturer: normalizeOptionalText(input.manufacturer),
     fuelType: input.fuelType,
     initialOdometerKm: input.initialOdometerKm,
-    monthlyExpenseWon: input.monthlyExpenseWon,
     estimatedFuelEfficiencyKmPerLiter: normalizeOptionalPositiveNumber(
       input.estimatedFuelEfficiencyKmPerLiter
     )

@@ -4,6 +4,7 @@ import {
   formatPhase1BackboneSummary
 } from './phase1-backbone';
 
+// This script remains as the manual phase-1 backbone repair runner.
 const prisma = new PrismaClient();
 
 async function main() {

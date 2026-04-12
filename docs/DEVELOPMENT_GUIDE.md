@@ -139,6 +139,37 @@ npm run test:prisma
 - 테스트 DB가 준비되지 않은 경우에는 어떤 env가 없거나 닿지 않는지 skip 메시지에 바로 드러납니다.
 - 둘 다 기본 개발 루프와 분리된 선택 실행입니다.
 
+로컬 CI 재현:
+
+GitHub Actions의 주요 job을 로컬에서 같은 순서로 다시 따라가려면 아래 스크립트를 기준으로 실행합니다.
+
+| GitHub job               | 로컬 명령                    | 비고                                                                                             |
+| ------------------------ | ---------------------------- | ------------------------------------------------------------------------------------------------ |
+| `validate`               | `npm run ci:local:validate`  | `db:generate -> check:quick -> test` 순서로 CI validate job을 따라갑니다.                        |
+| `e2e-smoke`              | `npm run ci:local:e2e-smoke` | build 결과물 기준 HTTP smoke를 다시 확인합니다.                                                  |
+| `security-regression`    | `npm run ci:local:security`  | `db:generate` 후 API 보안 회귀를 다시 돌립니다.                                                  |
+| `prisma-integration`     | `npm run ci:local:prisma`    | 로컬에서는 `PRISMA_INTEGRATION_DATABASE_URL` 우선, 없으면 `DATABASE_URL` fallback 이 허용됩니다. |
+| `audit-runtime`          | `npm run ci:local:audit`     | runtime dependency audit gate를 다시 확인합니다.                                                 |
+| `semgrep-ce`             | `npm run ci:local:semgrep`   | Docker 필요                                                                                      |
+| `gitleaks`               | `npm run ci:local:gitleaks`  | Docker 필요                                                                                      |
+| validate + smoke + audit | `npm run ci:local:core`      | DB secret 없이도 따라가기 쉬운 기본 루프입니다.                                                  |
+| Docker scans             | `npm run ci:local:docker`    | Semgrep + Gitleaks를 묶어서 실행합니다.                                                          |
+| 전체 로컬 CI             | `npm run ci:local:all`       | DB env와 Docker가 모두 준비된 환경에서만 권장합니다.                                             |
+
+권장 실행 순서:
+
+```bash
+npm ci
+npm run ci:local:core
+npm run ci:local:prisma
+npm run ci:local:docker
+```
+
+- Docker가 없는 환경에서는 `npm run ci:local:core`까지만 먼저 확인하고, 스캔 job은 CI 결과를 기준 증적으로 봅니다.
+- `ci:local:prisma`는 실제 DB 연결이 필요하므로 `npm run db:up` 또는 별도 MySQL 준비가 선행돼야 합니다.
+- `ci:local:semgrep`, `ci:local:gitleaks`는 workflow와 같은 Docker image/args를 그대로 감싼 얇은 래퍼입니다.
+- `apps/web/eslint.config.mjs`는 Web workspace 기준 flat config 진입점이다. `@next/next` plugin과 `rootDir='.'`를 직접 등록하고, app router-only 구성이므로 `@next/next/no-html-link-for-pages`는 끈 상태를 유지한다.
+
 전체 CI 수준 검증:
 
 ```bash

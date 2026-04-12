@@ -17,7 +17,9 @@ import type {
   CreateVehicleFuelLogRequest,
   UpdateVehicleFuelLogRequest,
   VehicleFuelLogItem,
-  VehicleItem
+  VehicleItem,
+  VehicleMaintenanceLogItem,
+  VehicleOperatingSummaryView
 } from '@personal-erp/contracts';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -29,8 +31,12 @@ import {
   createVehicleFuelLog,
   mergeVehicleFuelLogItem,
   updateVehicleFuelLog,
-  vehicleFuelLogsQueryKey
+  vehicleFuelLogsQueryKey,
+  vehicleMaintenanceLogsQueryKey,
+  vehicleOperatingSummaryQueryKey,
+  vehiclesQueryKey
 } from './vehicles.api';
+import { buildVehicleOperatingSummaryView } from './vehicles.summary';
 
 const vehicleFuelLogFormSchema = z.object({
   vehicleId: z.string().trim().min(1, '차량을 선택해 주세요.'),
@@ -107,10 +113,28 @@ export function VehicleFuelLogForm({
         vehicleFuelLogsQueryKey,
         (current) => mergeVehicleFuelLogItem(current, saved)
       );
+      queryClient.setQueryData<VehicleOperatingSummaryView>(
+        vehicleOperatingSummaryQueryKey,
+        buildVehicleOperatingSummaryView({
+          vehicles:
+            queryClient.getQueryData<VehicleItem[]>(vehiclesQueryKey) ?? [],
+          fuelLogs:
+            queryClient.getQueryData<VehicleFuelLogItem[]>(
+              vehicleFuelLogsQueryKey
+            ) ?? [],
+          maintenanceLogs:
+            queryClient.getQueryData<VehicleMaintenanceLogItem[]>(
+              vehicleMaintenanceLogsQueryKey
+            ) ?? []
+        })
+      );
 
       if (!webRuntime.demoFallbackEnabled) {
         await queryClient.invalidateQueries({
           queryKey: vehicleFuelLogsQueryKey
+        });
+        await queryClient.invalidateQueries({
+          queryKey: vehicleOperatingSummaryQueryKey
         });
       }
     }
