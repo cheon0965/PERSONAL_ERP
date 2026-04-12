@@ -144,18 +144,18 @@
 - 실제 브라우저 상호작용으로 `/recurring`에서 반복 규칙 생성, 수정, 삭제와 목록 반영이 동작하는지 검증
 - 실제 브라우저 상호작용으로 `/insurances`에서 보험 계약 생성, 수정, 비활성화와 목록 반영이 동작하는지 검증
 - 실제 브라우저 상호작용으로 `/vehicles`에서 차량 생성, 수정, 연료 이력 생성/수정, 정비 이력 생성/수정과 목록 반영이 동작하는지 검증
-- 실제 브라우저 상호작용으로 `/plan-items` 생성, `dashboard`/`forecast` 반영, `/financial-statements` 생성, `/carry-forwards` 생성과 차기 이월 basis note 반영이 동작하는지 검증
-- 실제 브라우저 상호작용으로 `/imports` 업로드 배치에서 행을 승격한 뒤 `/transactions`에서 전표 확정을 실행하고 `/journal-entries`에서 생성 전표를 여는 월 운영 cross-feature 흐름을 검증
+- 실제 브라우저 상호작용으로 `/plan-items`에서 현재 월 계획 항목과 연결 반복성 수집 거래를 생성하고, `dashboard`/`forecast` 반영, `/financial-statements` 생성, `/carry-forwards` 생성과 차기 이월 basis note 반영이 동작하는지 검증
+- 실제 브라우저 상호작용으로 `/imports` 업로드 배치에서 행을 기존 계획 기반 수집 거래에 흡수/매칭하거나 새 수집 거래로 승격한 뒤 `/transactions`에서 전표 확정을 실행하고 `/journal-entries`에서 생성 전표를 여는 월 운영 cross-feature 흐름을 검증
 - 루트 `ci:local:*` 스크립트와 `docs/DEVELOPMENT_GUIDE.md` 매핑표로 GitHub Actions 주요 job을 로컬에서 다시 따를 수 있는 진입점을 제공
 - `npm run test:e2e:smoke:build`로 in-process production build/start 경로에 결과물을 올린 뒤 health route 응답 기준 최소 HTTP smoke를 자동 검증
 - `npm run test:e2e:smoke:build:browser`로는 로그인/세션 복원, 운영 체크리스트 핵심 CTA, 작업 문맥 fallback 같은 브라우저 build smoke를 루트 래퍼 경로로 필요 시 별도로 검증
 - CI의 `e2e-smoke` 잡은 개발 서버가 아니라 build 결과물 기준 HTTP smoke를 실행
-- 실제 브라우저 상호작용으로 `dashboard`, `transactions`, `reference-data`, `financial-statements`, `carry-forwards`, `settings`의 대표 운영 체크리스트 empty state, readiness 경고, fallback CTA가 유지되는지 검증
+- 실제 브라우저 상호작용으로 `dashboard`, `reference-data`, `periods`, `insurances`, `vehicles`, `recurring`, `plan-items`, `imports`, `transactions`, `journal-entries`, `financial-statements`, `carry-forwards`, `forecast`, `settings`의 대표 운영 체크리스트 empty state, readiness 경고, fallback CTA가 유지되는지 검증
 - 기준 데이터 CRUD, 반복 규칙 CRUD, 보험 계약 CRUD, 차량 기본 정보 CRUD 브라우저 검증은 현재 `npm run test:e2e` 전체 브라우저 회귀 범위에 남기고, CI smoke에서는 제외합니다.
 
 ## 현재 남아 있는 공백
 
-- 차량 연료/정비 이력 분리, `GET /vehicles/operating-summary` projection 추가, 차량 `Vehicle` 물리 필드/응답/계약에서 `monthlyExpenseWon` 제거, 레거시 `Transaction` 물리 제거와 active reference guard, 메인 월 운영 루프의 `plan-items -> dashboard/forecast -> financial-statements -> carry-forwards` 브라우저 시나리오, `imports -> collected-transactions -> journal-entries` cross-feature 브라우저 시나리오, Next.js ESLint plugin explicit registration까지는 반영됨
+- 차량 연료/정비 이력 분리, `GET /vehicles/operating-summary` projection 추가, 차량 `Vehicle` 물리 필드/응답/계약에서 `monthlyExpenseWon` 제거, 레거시 `Transaction` 물리 제거와 active reference guard, 메인 월 운영 루프의 `reference-data -> accounting-periods -> insurance/vehicles -> recurring-rules -> plan-items -> collected-transactions/imports -> journal-entries -> financial-statements -> carry-forwards -> forecast` 브라우저 시나리오, `imports -> collected-transactions -> journal-entries` cross-feature 브라우저 시나리오, Next.js ESLint plugin explicit registration까지는 반영됨
 - 저장소 안 우선순위로 선별했던 작업은 현재 문서 기준 모두 닫혔음
 - `.github/workflows/ci.yml`의 `prisma-integration` job wiring은 반영되었지만, 실제 GitHub 저장소/조직 secret `PRISMA_INTEGRATION_DATABASE_URL` 등록과 첫 통과 증적 확보는 저장소 밖 후속 작업으로 남아 있음
 - Docker가 없는 개발 PC에서는 `semgrep-ce`, `gitleaks`를 로컬에서 CI와 동일하게 재현하기 어려움

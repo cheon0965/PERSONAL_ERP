@@ -73,16 +73,21 @@
 - `/login` 화면이 열리는지 확인합니다.
 - 로그인 후 대시보드로 이동하는지 확인합니다.
 - `/reference-data`에서 readiness 요약과 자금수단/카테고리 관리 화면이 정상적으로 열리는지 확인합니다.
-- 대시보드, 거래, 반복규칙 화면이 모두 데이터를 불러오는지 확인합니다.
-- 거래 Quick Add 저장 후 목록이 갱신되는지 확인합니다.
-- 반복규칙 Quick Add 저장 후 목록이 갱신되는지 확인합니다.
+- `/periods`에서 현재 운영 기간을 열거나 열린 기간을 확인할 수 있는지 확인합니다.
+- `/insurances`, `/vehicles`, `/recurring`에서 보험 계약, 차량 운영, 반복 규칙 화면이 데이터를 불러오는지 확인합니다.
+- `/plan-items`에서 현재 월 계획 항목을 생성하고 연결된 수집 거래 상태를 추적할 수 있는지 확인합니다.
+- `/imports`에서 업로드 행의 collect preview와 수집 거래 승격 흐름이 열리는지 확인합니다.
+- `/transactions`에서 거래 Quick Add 저장 후 목록이 갱신되고, 전표 준비 거래를 확정할 수 있는지 확인합니다.
+- `/journal-entries`에서 확정 전표를 조회하고 반전/정정 전표 CTA가 유지되는지 확인합니다.
+- `/financial-statements`, `/carry-forwards`, `/forecast`에서 재무제표 생성, 차기 이월 생성, 현재 월/다음 달 전망 확인 흐름이 깨지지 않았는지 확인합니다.
 - 브라우저 새로고침 후 `POST /auth/refresh` 기반 세션 복원이 되는지 확인합니다.
-- `dashboard`, `transactions`, `financial-statements`, `carry-forwards`의 운영 안내 empty state와 CTA가 깨지지 않았는지 확인합니다.
+- `dashboard`, `reference-data`, `periods`, `plan-items`, `transactions`, `journal-entries`, `financial-statements`, `carry-forwards`, `forecast`의 운영 안내 empty state와 CTA가 깨지지 않았는지 확인합니다.
 
 ## DB와 시드 데이터 경계
 
 - `npm run db:deploy`는 운영 반영용 migration 명령으로 사용합니다.
 - `npm run db:migrate`는 개발 환경 기준 명령으로 사용합니다.
+- `npm run db:deploy:latest-baseline`은 새 빈 DB 전용 최신 스키마 1회 적용 명령입니다. 기존 DB나 운영 DB에는 사용하지 않습니다.
 - `npm run db:seed`는 현재 구현상 기존 데이터를 지우고 데모 데이터를 다시 넣습니다.
 - 따라서 `npm run db:seed`는 운영 DB에 절대 실행하지 않습니다.
 - 운영 반영 전에는 대상 DB가 진짜 운영 DB인지, 로컬/스테이징 DB인지 다시 확인합니다.

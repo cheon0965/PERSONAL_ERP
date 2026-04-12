@@ -4,13 +4,15 @@ import {
   NotFoundException
 } from '@nestjs/common';
 import type {
+  CollectedTransactionType,
   AuthenticatedUser,
   GeneratePlanItemsRequest,
   GeneratePlanItemsResponse
 } from '@personal-erp/contracts';
 import {
   AccountingPeriodStatus,
-  LedgerTransactionFlowKind
+  LedgerTransactionFlowKind,
+  PlanItemStatus
 } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
@@ -33,6 +35,7 @@ type PlanItemCreateDraft = {
   title: string;
   plannedAmount: number;
   plannedDate: Date;
+  collectedTransactionType: CollectedTransactionType;
 };
 
 @Injectable()
@@ -130,10 +133,15 @@ export class GeneratePlanItemsUseCase {
     );
 
     const defaultTypeIdByFlow = new Map<LedgerTransactionFlowKind, string>();
+    const flowKindByTransactionTypeId = new Map<string, LedgerTransactionFlowKind>();
     for (const transactionType of transactionTypes) {
       if (!defaultTypeIdByFlow.has(transactionType.flowKind)) {
         defaultTypeIdByFlow.set(transactionType.flowKind, transactionType.id);
       }
+      flowKindByTransactionTypeId.set(
+        transactionType.id,
+        transactionType.flowKind
+      );
     }
 
     const existingKeys = new Set(
@@ -170,6 +178,12 @@ export class GeneratePlanItemsUseCase {
         continue;
       }
 
+      const flowKind = flowKindByTransactionTypeId.get(ledgerTransactionTypeId);
+      if (!flowKind) {
+        excludedRuleCount += 1;
+        continue;
+      }
+
       for (const plannedDate of plannedDates) {
         const duplicateKey = `${rule.id}:${plannedDate.toISOString().slice(0, 10)}`;
         if (existingKeys.has(duplicateKey)) {
@@ -188,14 +202,49 @@ export class GeneratePlanItemsUseCase {
           categoryId: rule.categoryId ?? undefined,
           title: rule.title,
           plannedAmount: fromPrismaMoneyWon(rule.amountWon),
-          plannedDate
+          plannedDate,
+          collectedTransactionType:
+            mapLedgerTransactionFlowKindToCollectedTransactionType(flowKind)
         });
       }
     }
 
     if (createData.length > 0) {
-      await this.prisma.planItem.createMany({
-        data: createData
+      await this.prisma.$transaction(async (tx) => {
+        for (const item of createData) {
+          await tx.planItem.create({
+            data: {
+              tenantId: item.tenantId,
+              ledgerId: item.ledgerId,
+              periodId: item.periodId,
+              recurringRuleId: item.recurringRuleId,
+              ledgerTransactionTypeId: item.ledgerTransactionTypeId,
+              fundingAccountId: item.fundingAccountId,
+              categoryId: item.categoryId,
+              title: item.title,
+              plannedAmount: item.plannedAmount,
+              plannedDate: item.plannedDate,
+              status: PlanItemStatus.MATCHED,
+              matchedCollectedTransaction: {
+                create: {
+                  tenantId: item.tenantId,
+                  ledgerId: item.ledgerId,
+                  periodId: item.periodId,
+                  ledgerTransactionTypeId: item.ledgerTransactionTypeId,
+                  fundingAccountId: item.fundingAccountId,
+                  categoryId: item.categoryId,
+                  title: item.title,
+                  occurredOn: item.plannedDate,
+                  amount: item.plannedAmount,
+                  status: resolveAutoCollectedTransactionStatus({
+                    type: item.collectedTransactionType,
+                    categoryId: item.categoryId
+                  })
+                }
+              }
+            }
+          });
+        }
       });
     }
 
@@ -226,4 +275,32 @@ function assertGeneratePermission(
   membershipRole: ReturnType<typeof requireCurrentWorkspace>['membershipRole']
 ) {
   return assertWorkspaceActionAllowed(membershipRole, 'plan_item.generate');
+}
+
+function mapLedgerTransactionFlowKindToCollectedTransactionType(
+  flowKind: LedgerTransactionFlowKind
+): CollectedTransactionType {
+  switch (flowKind) {
+    case LedgerTransactionFlowKind.INCOME:
+      return 'INCOME';
+    case LedgerTransactionFlowKind.TRANSFER:
+    case LedgerTransactionFlowKind.OPENING_BALANCE:
+    case LedgerTransactionFlowKind.CARRY_FORWARD:
+      return 'TRANSFER';
+    case LedgerTransactionFlowKind.ADJUSTMENT:
+    case LedgerTransactionFlowKind.EXPENSE:
+    default:
+      return 'EXPENSE';
+  }
+}
+
+function resolveAutoCollectedTransactionStatus(input: {
+  type: CollectedTransactionType;
+  categoryId?: string;
+}) {
+  if (input.type === 'TRANSFER') {
+    return 'READY_TO_POST' as const;
+  }
+
+  return input.categoryId?.trim() ? ('READY_TO_POST' as const) : ('REVIEWED' as const);
 }

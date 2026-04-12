@@ -28,7 +28,7 @@
 - 공용 금액 계층: `packages/money`의 `MoneyWon` parser/helper를 기준으로 원 단위 safe integer, `Decimal(19,0)` 영속 컬럼, `HALF_UP` 반올림/배분 잔차 보정을 통일
 - 인증 기본 정책: `auth/login`, `auth/refresh`, `auth/logout`, `health`, `health/ready`를 제외한 API는 기본적으로 보호
 - Web 인증 세션: `/login`, 메모리 기반 access token 유지, `POST /auth/refresh` 기반 사용자 복원
-- 핵심 운영 흐름: 운영 기간 open/close/reopen, 수집 거래 생성/확정, 업로드 배치 수집, 반복규칙 -> 계획 항목 생성, 공식 재무제표/차기 이월 생성까지 연결됨
+- 핵심 운영 흐름: 기준 데이터 준비 -> 월 운영 시작 -> 보험/차량 운영 기준 정리 -> 반복규칙 -> 계획 항목 -> 수집 거래/업로드 배치 -> 전표 확정/반전/정정 -> 월 마감 -> 재무제표 -> 차기 이월 -> 기간 전망까지 한 달 사이클로 연결됨
 - 기준 데이터 운영: readiness 요약, 자금수단/카테고리 제한적 관리, 자금수단 `ACTIVE/INACTIVE/CLOSED` lifecycle 일부 지원
 - 요청 단위 검증: auth, reference-data, accounting-periods, collected-transactions/journal-entries, import-batches, financial-statements/carry-forwards, dashboard/forecast의 현재 workspace 접근 범위와 계약 검증 포함
 - 대표 브라우저 E2E: 보호 라우트, 로그인/세션 복원, 거래 저장, 기준 데이터 관리, 반복 규칙 관리, 운영 체크리스트 empty state와 fallback CTA까지 대표 smoke 자동 검증

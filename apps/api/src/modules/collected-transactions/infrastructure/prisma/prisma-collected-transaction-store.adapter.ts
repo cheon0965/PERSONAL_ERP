@@ -12,6 +12,7 @@ import type {
 import {
   CollectedTransactionStatus,
   LedgerTransactionFlowKind,
+  PlanItemStatus,
   Prisma
 } from '@prisma/client';
 import {
@@ -256,6 +257,32 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
     collectedTransactionId: string
   ): Promise<boolean> {
     return this.prisma.$transaction(async (tx) => {
+      const current = await tx.collectedTransaction.findFirst({
+        where: {
+          id: collectedTransactionId,
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId
+        },
+        select: {
+          matchedPlanItemId: true,
+          status: true,
+          postedJournalEntry: {
+            select: {
+              id: true
+            }
+          }
+        }
+      });
+
+      if (!current) {
+        return false;
+      }
+
+      assertCollectedTransactionCanBeDeleted({
+        postingStatus: mapCollectedTransactionPostingStatus(current.status),
+        postedJournalEntryId: current.postedJournalEntry?.id ?? null
+      });
+
       const result = await tx.collectedTransaction.deleteMany({
         where: {
           id: collectedTransactionId,
@@ -272,33 +299,19 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
       });
 
       if (result.count > 0) {
+        if (current.matchedPlanItemId) {
+          await tx.planItem.update({
+            where: {
+              id: current.matchedPlanItemId
+            },
+            data: {
+              status: PlanItemStatus.DRAFT
+            }
+          });
+        }
+
         return true;
       }
-
-      const latest = await tx.collectedTransaction.findFirst({
-        where: {
-          id: collectedTransactionId,
-          tenantId: workspace.tenantId,
-          ledgerId: workspace.ledgerId
-        },
-        select: {
-          status: true,
-          postedJournalEntry: {
-            select: {
-              id: true
-            }
-          }
-        }
-      });
-
-      if (!latest) {
-        return false;
-      }
-
-      assertCollectedTransactionCanBeDeleted({
-        postingStatus: mapCollectedTransactionPostingStatus(latest.status),
-        postedJournalEntryId: latest.postedJournalEntry?.id ?? null
-      });
 
       return false;
     });

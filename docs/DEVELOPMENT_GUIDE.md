@@ -92,6 +92,8 @@ API나 공유 계약이 바뀌면 아래 순서를 같은 PR 안에서 닫습니
 - 스키마 변경은 `npm run db:migrate`를 기본으로 사용합니다.
 - migration 파일을 함께 커밋합니다.
 - `db:push:unsafe`는 기본 워크플로로 사용하지 않습니다.
+- 새 빈 DB에 과거 레거시 히스토리 없이 최신 스키마만 1회 적용해야 할 때는 `npm run db:deploy:latest-baseline`을 사용합니다.
+- `db:deploy:latest-baseline`은 대상 DB에 테이블이 하나라도 있으면 중단하므로, 기존 DB에는 `npm run db:deploy`를 사용합니다.
 
 ## 7. env 변경 규칙
 
