@@ -215,49 +215,64 @@ enum FinancialStatementKind {
 }
 
 model User {
-  id                 String            @id @default(cuid())
-  email              String            @unique
-  passwordHash       String
-  name               String
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  settings           UserSetting?
-  accounts           Account[]
-  categories         Category[]
-  recurringRules     RecurringRule[]
-  insurancePolicies  InsurancePolicy[]
-  vehicles           Vehicle[]
-  authSessions       AuthSession[]
-  memberships        TenantMembership[]
+  id                      String                   @id @default(cuid())
+  email                   String                   @unique
+  passwordHash            String
+  name                    String
+  emailVerifiedAt         DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  settings                UserSetting?
+  emailVerificationTokens EmailVerificationToken[]
+  accounts                Account[]
+  categories              Category[]
+  recurringRules          RecurringRule[]
+  insurancePolicies       InsurancePolicy[]
+  vehicles                Vehicle[]
+  authSessions            AuthSession[]
+  memberships             TenantMembership[]
+}
+
+model EmailVerificationToken {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([userId, consumedAt])
 }
 
 model Tenant {
-  id                       String                @id @default(cuid())
-  slug                     String                @unique
-  name                     String
-  status                   TenantStatus          @default(ACTIVE)
-  defaultLedgerId          String?               @unique
-  createdAt                DateTime              @default(now())
-  updatedAt                DateTime              @updatedAt
-  defaultLedger            Ledger?               @relation("TenantDefaultLedger", fields: [defaultLedgerId], references: [id], onDelete: SetNull)
-  memberships              TenantMembership[]
-  ledgers                  Ledger[]              @relation("TenantLedgers")
-  accounts                 Account[]             @relation("TenantAccounts")
-  categories               Category[]            @relation("TenantCategories")
-  recurringRules           RecurringRule[]       @relation("TenantRecurringRules")
-  insurancePolicies        InsurancePolicy[]
-  vehicles                 Vehicle[]
-  periods                  AccountingPeriod[]
-  periodStatusHistory      PeriodStatusHistory[]
-  accountSubjects          AccountSubject[]
-  ledgerTransactionTypes   LedgerTransactionType[]
-  planItems                PlanItem[]
-  importBatches            ImportBatch[]
-  collectedTransactions    CollectedTransaction[]
-  journalEntries           JournalEntry[]
-  openingBalanceSnapshots  OpeningBalanceSnapshot[]
-  closingSnapshots         ClosingSnapshot[]
-  carryForwardRecords      CarryForwardRecord[]
+  id                          String                       @id @default(cuid())
+  slug                        String                       @unique
+  name                        String
+  status                      TenantStatus                 @default(ACTIVE)
+  defaultLedgerId             String?                      @unique
+  createdAt                   DateTime                     @default(now())
+  updatedAt                   DateTime                     @updatedAt
+  defaultLedger               Ledger?                      @relation("TenantDefaultLedger", fields: [defaultLedgerId], references: [id], onDelete: SetNull)
+  memberships                 TenantMembership[]
+  ledgers                     Ledger[]                     @relation("TenantLedgers")
+  accounts                    Account[]                    @relation("TenantAccounts")
+  categories                  Category[]                   @relation("TenantCategories")
+  recurringRules              RecurringRule[]              @relation("TenantRecurringRules")
+  insurancePolicies           InsurancePolicy[]
+  vehicles                    Vehicle[]
+  periods                     AccountingPeriod[]
+  periodStatusHistory         PeriodStatusHistory[]
+  accountSubjects             AccountSubject[]
+  ledgerTransactionTypes      LedgerTransactionType[]
+  planItems                   PlanItem[]
+  importBatches               ImportBatch[]
+  collectedTransactions       CollectedTransaction[]
+  journalEntries              JournalEntry[]
+  openingBalanceSnapshots     OpeningBalanceSnapshot[]
+  closingSnapshots            ClosingSnapshot[]
+  carryForwardRecords         CarryForwardRecord[]
   financialStatementSnapshots FinancialStatementSnapshot[]
 }
 
@@ -280,34 +295,34 @@ model TenantMembership {
 }
 
 model Ledger {
-  id                      String                @id @default(cuid())
-  tenantId                String
-  name                    String
-  baseCurrency            String                @default("KRW") @db.VarChar(3)
-  timezone                String                @default("Asia/Seoul")
-  status                  LedgerStatus          @default(ACTIVE)
-  openedFromYearMonth     String                @db.VarChar(7)
-  closedThroughYearMonth  String?               @db.VarChar(7)
-  createdAt               DateTime              @default(now())
-  updatedAt               DateTime              @updatedAt
-  tenant                  Tenant                @relation("TenantLedgers", fields: [tenantId], references: [id], onDelete: Cascade)
-  defaultForTenant        Tenant?               @relation("TenantDefaultLedger")
-  accounts                Account[]             @relation("LedgerAccounts")
-  categories              Category[]            @relation("LedgerCategories")
-  recurringRules          RecurringRule[]       @relation("LedgerRecurringRules")
-  insurancePolicies       InsurancePolicy[]
-  vehicles                Vehicle[]
-  periods                 AccountingPeriod[]
-  periodStatusHistory     PeriodStatusHistory[]
-  accountSubjects         AccountSubject[]
-  ledgerTransactionTypes  LedgerTransactionType[]
-  planItems               PlanItem[]
-  importBatches           ImportBatch[]
-  collectedTransactions   CollectedTransaction[]
-  journalEntries          JournalEntry[]
-  openingBalanceSnapshots OpeningBalanceSnapshot[]
-  closingSnapshots        ClosingSnapshot[]
-  carryForwardRecords     CarryForwardRecord[]
+  id                          String                       @id @default(cuid())
+  tenantId                    String
+  name                        String
+  baseCurrency                String                       @default("KRW") @db.VarChar(3)
+  timezone                    String                       @default("Asia/Seoul")
+  status                      LedgerStatus                 @default(ACTIVE)
+  openedFromYearMonth         String                       @db.VarChar(7)
+  closedThroughYearMonth      String?                      @db.VarChar(7)
+  createdAt                   DateTime                     @default(now())
+  updatedAt                   DateTime                     @updatedAt
+  tenant                      Tenant                       @relation("TenantLedgers", fields: [tenantId], references: [id], onDelete: Cascade)
+  defaultForTenant            Tenant?                      @relation("TenantDefaultLedger")
+  accounts                    Account[]                    @relation("LedgerAccounts")
+  categories                  Category[]                   @relation("LedgerCategories")
+  recurringRules              RecurringRule[]              @relation("LedgerRecurringRules")
+  insurancePolicies           InsurancePolicy[]
+  vehicles                    Vehicle[]
+  periods                     AccountingPeriod[]
+  periodStatusHistory         PeriodStatusHistory[]
+  accountSubjects             AccountSubject[]
+  ledgerTransactionTypes      LedgerTransactionType[]
+  planItems                   PlanItem[]
+  importBatches               ImportBatch[]
+  collectedTransactions       CollectedTransaction[]
+  journalEntries              JournalEntry[]
+  openingBalanceSnapshots     OpeningBalanceSnapshot[]
+  closingSnapshots            ClosingSnapshot[]
+  carryForwardRecords         CarryForwardRecord[]
   financialStatementSnapshots FinancialStatementSnapshot[]
 
   @@unique([tenantId, name])
@@ -315,14 +330,14 @@ model Ledger {
 }
 
 model AuthSession {
-  id               String   @id
+  id               String    @id
   userId           String
-  refreshTokenHash String   @db.Text
+  refreshTokenHash String    @db.Text
   expiresAt        DateTime
   revokedAt        DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
   @@index([userId, revokedAt])
@@ -340,21 +355,21 @@ model UserSetting {
 }
 
 model Account {
-  id                    String              @id @default(cuid())
+  id                    String                 @id @default(cuid())
   userId                String
   tenantId              String
   ledgerId              String
   name                  String
-  normalizedName        String              @db.VarChar(191)
+  normalizedName        String                 @db.VarChar(191)
   type                  AccountType
-  balanceWon            Decimal             @default(0) @db.Decimal(19, 0)
-  sortOrder             Int                 @default(0)
-  status                FundingAccountStatus @default(ACTIVE)
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
-  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant                Tenant              @relation("TenantAccounts", fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger                Ledger              @relation("LedgerAccounts", fields: [ledgerId], references: [id], onDelete: Cascade)
+  balanceWon            Decimal                @default(0) @db.Decimal(19, 0)
+  sortOrder             Int                    @default(0)
+  status                FundingAccountStatus   @default(ACTIVE)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant                Tenant                 @relation("TenantAccounts", fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                Ledger                 @relation("LedgerAccounts", fields: [ledgerId], references: [id], onDelete: Cascade)
   recurringRules        RecurringRule[]
   insurancePolicies     InsurancePolicy[]
   planItems             PlanItem[]
@@ -368,20 +383,20 @@ model Account {
 }
 
 model Category {
-  id                    String               @id @default(cuid())
+  id                    String                 @id @default(cuid())
   userId                String
   tenantId              String
   ledgerId              String
   name                  String
-  normalizedName        String               @db.VarChar(191)
+  normalizedName        String                 @db.VarChar(191)
   kind                  CategoryKind
-  sortOrder             Int                  @default(0)
-  isActive              Boolean              @default(true)
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
-  user                  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant                Tenant               @relation("TenantCategories", fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger                Ledger               @relation("LedgerCategories", fields: [ledgerId], references: [id], onDelete: Cascade)
+  sortOrder             Int                    @default(0)
+  isActive              Boolean                @default(true)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant                Tenant                 @relation("TenantCategories", fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                Ledger                 @relation("LedgerCategories", fields: [ledgerId], references: [id], onDelete: Cascade)
   recurringRules        RecurringRule[]
   insurancePolicies     InsurancePolicy[]
   planItems             PlanItem[]
@@ -424,30 +439,30 @@ model RecurringRule {
 }
 
 model AccountingPeriod {
-  id                    String                 @id @default(cuid())
-  tenantId              String
-  ledgerId              String
-  year                  Int
-  month                 Int
-  startDate             DateTime
-  endDate               DateTime
-  status                AccountingPeriodStatus @default(OPEN)
-  nextJournalEntrySequence Int                 @default(1)
-  openedAt              DateTime               @default(now())
-  lockedAt              DateTime?
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  tenant                Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger                Ledger                 @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
-  statusHistory         PeriodStatusHistory[]
-  planItems             PlanItem[]
-  importBatches         ImportBatch[]
-  collectedTransactions CollectedTransaction[]
-  journalEntries        JournalEntry[]
-  openingBalanceSnapshot OpeningBalanceSnapshot?
-  closingSnapshot       ClosingSnapshot?
-  carryForwardSourceRecord CarryForwardRecord? @relation("CarryForwardFromPeriod")
-  carryForwardTargetRecord CarryForwardRecord? @relation("CarryForwardToPeriod")
+  id                          String                       @id @default(cuid())
+  tenantId                    String
+  ledgerId                    String
+  year                        Int
+  month                       Int
+  startDate                   DateTime
+  endDate                     DateTime
+  status                      AccountingPeriodStatus       @default(OPEN)
+  nextJournalEntrySequence    Int                          @default(1)
+  openedAt                    DateTime                     @default(now())
+  lockedAt                    DateTime?
+  createdAt                   DateTime                     @default(now())
+  updatedAt                   DateTime                     @updatedAt
+  tenant                      Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                      Ledger                       @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  statusHistory               PeriodStatusHistory[]
+  planItems                   PlanItem[]
+  importBatches               ImportBatch[]
+  collectedTransactions       CollectedTransaction[]
+  journalEntries              JournalEntry[]
+  openingBalanceSnapshot      OpeningBalanceSnapshot?
+  closingSnapshot             ClosingSnapshot?
+  carryForwardSourceRecord    CarryForwardRecord?          @relation("CarryForwardFromPeriod")
+  carryForwardTargetRecord    CarryForwardRecord?          @relation("CarryForwardToPeriod")
   financialStatementSnapshots FinancialStatementSnapshot[]
 
   @@unique([ledgerId, year, month])
@@ -455,20 +470,20 @@ model AccountingPeriod {
 }
 
 model PeriodStatusHistory {
-  id                String                 @id @default(cuid())
+  id                String                    @id @default(cuid())
   tenantId          String
   ledgerId          String
   periodId          String
   fromStatus        AccountingPeriodStatus?
   toStatus          AccountingPeriodStatus
   eventType         AccountingPeriodEventType
-  reason            String?                @db.Text
+  reason            String?                   @db.Text
   actorType         AuditActorType
   actorMembershipId String?
-  changedAt         DateTime               @default(now())
-  tenant            Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger            Ledger                 @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
-  period            AccountingPeriod       @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  changedAt         DateTime                  @default(now())
+  tenant            Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger            Ledger                    @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  period            AccountingPeriod          @relation(fields: [periodId], references: [id], onDelete: Cascade)
 
   @@index([periodId, changedAt])
 }
@@ -521,29 +536,29 @@ model LedgerTransactionType {
 }
 
 model PlanItem {
-  id                       String          @id @default(cuid())
-  tenantId                 String
-  ledgerId                 String
-  periodId                 String
-  recurringRuleId          String?
-  ledgerTransactionTypeId  String
-  fundingAccountId         String
-  categoryId               String?
-  title                    String
-  plannedAmount            Decimal          @db.Decimal(19, 0)
-  plannedDate              DateTime
-  status                   PlanItemStatus  @default(DRAFT)
-  createdAt                DateTime        @default(now())
-  updatedAt                DateTime        @updatedAt
-  tenant                   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger                   Ledger          @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
-  period                   AccountingPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  recurringRule            RecurringRule?  @relation(fields: [recurringRuleId], references: [id], onDelete: SetNull)
-  ledgerTransactionType    LedgerTransactionType @relation(fields: [ledgerTransactionTypeId], references: [id], onDelete: Restrict)
-  fundingAccount           Account         @relation(fields: [fundingAccountId], references: [id], onDelete: Restrict)
-  category                 Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  id                          String                @id @default(cuid())
+  tenantId                    String
+  ledgerId                    String
+  periodId                    String
+  recurringRuleId             String?
+  ledgerTransactionTypeId     String
+  fundingAccountId            String
+  categoryId                  String?
+  title                       String
+  plannedAmount               Decimal               @db.Decimal(19, 0)
+  plannedDate                 DateTime
+  status                      PlanItemStatus        @default(DRAFT)
+  createdAt                   DateTime              @default(now())
+  updatedAt                   DateTime              @updatedAt
+  tenant                      Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                      Ledger                @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  period                      AccountingPeriod      @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  recurringRule               RecurringRule?        @relation(fields: [recurringRuleId], references: [id], onDelete: SetNull)
+  ledgerTransactionType       LedgerTransactionType @relation(fields: [ledgerTransactionTypeId], references: [id], onDelete: Restrict)
+  fundingAccount              Account               @relation(fields: [fundingAccountId], references: [id], onDelete: Restrict)
+  category                    Category?             @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   matchedCollectedTransaction CollectedTransaction? @relation("PlanItemMatchedCollectedTransaction")
-  postedJournalEntry       JournalEntry?   @relation("JournalEntrySourcePlanItem")
+  postedJournalEntry          JournalEntry?         @relation("JournalEntrySourcePlanItem")
 
   @@unique([periodId, recurringRuleId, plannedDate])
   @@index([periodId, status, plannedDate])
@@ -551,106 +566,106 @@ model PlanItem {
 }
 
 model ImportBatch {
-  id                    String               @id @default(cuid())
-  tenantId              String
-  ledgerId              String
-  periodId              String?
-  sourceKind            ImportSourceKind
-  fileName              String
-  fileHash              String               @db.VarChar(191)
-  rowCount              Int                  @default(0)
-  parseStatus           ImportBatchParseStatus @default(PENDING)
+  id                     String                 @id @default(cuid())
+  tenantId               String
+  ledgerId               String
+  periodId               String?
+  sourceKind             ImportSourceKind
+  fileName               String
+  fileHash               String                 @db.VarChar(191)
+  rowCount               Int                    @default(0)
+  parseStatus            ImportBatchParseStatus @default(PENDING)
   uploadedByMembershipId String
-  uploadedAt            DateTime             @default(now())
-  tenant                Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger                Ledger               @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
-  period                AccountingPeriod?    @relation(fields: [periodId], references: [id], onDelete: SetNull)
-  rows                  ImportedRow[]
-  collectedTransactions CollectedTransaction[]
+  uploadedAt             DateTime               @default(now())
+  tenant                 Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                 Ledger                 @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  period                 AccountingPeriod?      @relation(fields: [periodId], references: [id], onDelete: SetNull)
+  rows                   ImportedRow[]
+  collectedTransactions  CollectedTransaction[]
 
   @@index([ledgerId, uploadedAt])
   @@index([fileHash])
 }
 
 model ImportedRow {
-  id                         String                 @id @default(cuid())
-  batchId                    String
-  rowNumber                  Int
-  rawPayload                 Json
-  parseStatus                ImportedRowParseStatus @default(PENDING)
-  parseError                 String?                @db.Text
-  sourceFingerprint          String?                @db.VarChar(191)
-  batch                      ImportBatch            @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  createdCollectedTransaction CollectedTransaction? @relation("ImportedRowCreatedCollectedTransaction")
+  id                          String                 @id @default(cuid())
+  batchId                     String
+  rowNumber                   Int
+  rawPayload                  Json
+  parseStatus                 ImportedRowParseStatus @default(PENDING)
+  parseError                  String?                @db.Text
+  sourceFingerprint           String?                @db.VarChar(191)
+  batch                       ImportBatch            @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  createdCollectedTransaction CollectedTransaction?  @relation("ImportedRowCreatedCollectedTransaction")
 
   @@unique([batchId, rowNumber])
   @@index([sourceFingerprint])
 }
 
 model CollectedTransaction {
-  id                       String                     @id @default(cuid())
-  tenantId                 String
-  ledgerId                 String
-  periodId                 String?
-  importBatchId            String?
-  importedRowId            String?                    @unique
-  ledgerTransactionTypeId  String
-  fundingAccountId         String
-  categoryId               String?
-  matchedPlanItemId        String?                    @unique
-  title                    String
-  occurredOn               DateTime
-  amount                   Decimal                   @db.Decimal(19, 0)
-  status                   CollectedTransactionStatus @default(COLLECTED)
-  sourceFingerprint        String?                    @db.VarChar(191)
-  memo                     String?                    @db.Text
-  createdAt                DateTime                   @default(now())
-  updatedAt                DateTime                   @updatedAt
-  tenant                   Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger                   Ledger                     @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
-  period                   AccountingPeriod?          @relation(fields: [periodId], references: [id], onDelete: SetNull)
-  importBatch              ImportBatch?               @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
-  importedRow              ImportedRow?               @relation("ImportedRowCreatedCollectedTransaction", fields: [importedRowId], references: [id], onDelete: SetNull)
-  ledgerTransactionType    LedgerTransactionType      @relation(fields: [ledgerTransactionTypeId], references: [id], onDelete: Restrict)
-  fundingAccount           Account                    @relation(fields: [fundingAccountId], references: [id], onDelete: Restrict)
-  category                 Category?                  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  matchedPlanItem          PlanItem?                  @relation("PlanItemMatchedCollectedTransaction", fields: [matchedPlanItemId], references: [id], onDelete: SetNull)
-  postedJournalEntry       JournalEntry?              @relation("JournalEntrySourceCollectedTransaction")
+  id                      String                     @id @default(cuid())
+  tenantId                String
+  ledgerId                String
+  periodId                String?
+  importBatchId           String?
+  importedRowId           String?                    @unique
+  ledgerTransactionTypeId String
+  fundingAccountId        String
+  categoryId              String?
+  matchedPlanItemId       String?                    @unique
+  title                   String
+  occurredOn              DateTime
+  amount                  Decimal                    @db.Decimal(19, 0)
+  status                  CollectedTransactionStatus @default(COLLECTED)
+  sourceFingerprint       String?                    @db.VarChar(191)
+  memo                    String?                    @db.Text
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
+  tenant                  Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                  Ledger                     @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  period                  AccountingPeriod?          @relation(fields: [periodId], references: [id], onDelete: SetNull)
+  importBatch             ImportBatch?               @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  importedRow             ImportedRow?               @relation("ImportedRowCreatedCollectedTransaction", fields: [importedRowId], references: [id], onDelete: SetNull)
+  ledgerTransactionType   LedgerTransactionType      @relation(fields: [ledgerTransactionTypeId], references: [id], onDelete: Restrict)
+  fundingAccount          Account                    @relation(fields: [fundingAccountId], references: [id], onDelete: Restrict)
+  category                Category?                  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  matchedPlanItem         PlanItem?                  @relation("PlanItemMatchedCollectedTransaction", fields: [matchedPlanItemId], references: [id], onDelete: SetNull)
+  postedJournalEntry      JournalEntry?              @relation("JournalEntrySourceCollectedTransaction")
 
   @@index([ledgerId, status, occurredOn])
   @@index([ledgerId, sourceFingerprint])
 }
 
 model JournalEntry {
-  id                          String                 @id @default(cuid())
-  tenantId                    String
-  ledgerId                    String
-  periodId                    String
-  entryNumber                 String                 @db.VarChar(50)
-  entryDate                   DateTime
-  sourceKind                  JournalEntrySourceKind
-  sourceCollectedTransactionId String?               @unique
-  sourcePlanItemId            String?                @unique
-  status                      JournalEntryStatus     @default(POSTED)
-  memo                        String?                @db.Text
-  reversesJournalEntryId      String?                @unique
-  correctsJournalEntryId      String?
-  correctionReason            String?                @db.Text
-  createdByActorType          AuditActorType
-  createdByMembershipId       String?
-  createdAt                   DateTime               @default(now())
-  updatedAt                   DateTime               @updatedAt
-  tenant                      Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger                      Ledger                 @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
-  period                      AccountingPeriod       @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  sourceCollectedTransaction  CollectedTransaction?  @relation("JournalEntrySourceCollectedTransaction", fields: [sourceCollectedTransactionId], references: [id], onDelete: SetNull)
-  sourcePlanItem              PlanItem?              @relation("JournalEntrySourcePlanItem", fields: [sourcePlanItemId], references: [id], onDelete: SetNull)
-  reversesJournalEntry        JournalEntry?          @relation("JournalEntryReversal", fields: [reversesJournalEntryId], references: [id], onDelete: SetNull)
-  reversedByJournalEntry      JournalEntry?          @relation("JournalEntryReversal")
-  correctsJournalEntry        JournalEntry?          @relation("JournalEntryCorrection", fields: [correctsJournalEntryId], references: [id], onDelete: SetNull)
-  correctionEntries           JournalEntry[]         @relation("JournalEntryCorrection")
-  createdCarryForwardRecord   CarryForwardRecord?    @relation("CarryForwardCreatedJournalEntry")
-  lines                       JournalLine[]
+  id                           String                 @id @default(cuid())
+  tenantId                     String
+  ledgerId                     String
+  periodId                     String
+  entryNumber                  String                 @db.VarChar(50)
+  entryDate                    DateTime
+  sourceKind                   JournalEntrySourceKind
+  sourceCollectedTransactionId String?                @unique
+  sourcePlanItemId             String?                @unique
+  status                       JournalEntryStatus     @default(POSTED)
+  memo                         String?                @db.Text
+  reversesJournalEntryId       String?                @unique
+  correctsJournalEntryId       String?
+  correctionReason             String?                @db.Text
+  createdByActorType           AuditActorType
+  createdByMembershipId        String?
+  createdAt                    DateTime               @default(now())
+  updatedAt                    DateTime               @updatedAt
+  tenant                       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                       Ledger                 @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  period                       AccountingPeriod       @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  sourceCollectedTransaction   CollectedTransaction?  @relation("JournalEntrySourceCollectedTransaction", fields: [sourceCollectedTransactionId], references: [id], onDelete: SetNull)
+  sourcePlanItem               PlanItem?              @relation("JournalEntrySourcePlanItem", fields: [sourcePlanItemId], references: [id], onDelete: SetNull)
+  reversesJournalEntry         JournalEntry?          @relation("JournalEntryReversal", fields: [reversesJournalEntryId], references: [id], onDelete: SetNull)
+  reversedByJournalEntry       JournalEntry?          @relation("JournalEntryReversal")
+  correctsJournalEntry         JournalEntry?          @relation("JournalEntryCorrection", fields: [correctsJournalEntryId], references: [id], onDelete: SetNull)
+  correctionEntries            JournalEntry[]         @relation("JournalEntryCorrection")
+  createdCarryForwardRecord    CarryForwardRecord?    @relation("CarryForwardCreatedJournalEntry")
+  lines                        JournalLine[]
 
   @@unique([ledgerId, entryNumber])
   @@index([periodId, entryDate])
@@ -708,17 +723,17 @@ model ClosingSnapshot {
 }
 
 model BalanceSnapshotLine {
-  id               String              @id @default(cuid())
-  snapshotKind     BalanceSnapshotKind
+  id                String                  @id @default(cuid())
+  snapshotKind      BalanceSnapshotKind
   openingSnapshotId String?
   closingSnapshotId String?
-  accountSubjectId String
-  fundingAccountId String?
-  balanceAmount    Decimal             @db.Decimal(19, 0)
-  openingSnapshot  OpeningBalanceSnapshot? @relation("OpeningSnapshotLines", fields: [openingSnapshotId], references: [id], onDelete: Cascade)
-  closingSnapshot  ClosingSnapshot?        @relation("ClosingSnapshotLines", fields: [closingSnapshotId], references: [id], onDelete: Cascade)
-  accountSubject   AccountSubject          @relation(fields: [accountSubjectId], references: [id], onDelete: Restrict)
-  fundingAccount   Account?                @relation(fields: [fundingAccountId], references: [id], onDelete: SetNull)
+  accountSubjectId  String
+  fundingAccountId  String?
+  balanceAmount     Decimal                 @db.Decimal(19, 0)
+  openingSnapshot   OpeningBalanceSnapshot? @relation("OpeningSnapshotLines", fields: [openingSnapshotId], references: [id], onDelete: Cascade)
+  closingSnapshot   ClosingSnapshot?        @relation("ClosingSnapshotLines", fields: [closingSnapshotId], references: [id], onDelete: Cascade)
+  accountSubject    AccountSubject          @relation(fields: [accountSubjectId], references: [id], onDelete: Restrict)
+  fundingAccount    Account?                @relation(fields: [fundingAccountId], references: [id], onDelete: SetNull)
 
   @@index([openingSnapshotId, accountSubjectId])
   @@index([closingSnapshotId, accountSubjectId])
@@ -743,22 +758,22 @@ model FinancialStatementSnapshot {
 }
 
 model CarryForwardRecord {
-  id                      String                 @id @default(cuid())
+  id                      String           @id @default(cuid())
   tenantId                String
   ledgerId                String
-  fromPeriodId            String                 @unique
-  toPeriodId              String                 @unique
-  sourceClosingSnapshotId String                 @unique
-  createdJournalEntryId   String?                @unique
-  createdAt               DateTime               @default(now())
+  fromPeriodId            String           @unique
+  toPeriodId              String           @unique
+  sourceClosingSnapshotId String           @unique
+  createdJournalEntryId   String?          @unique
+  createdAt               DateTime         @default(now())
   createdByActorType      AuditActorType
   createdByMembershipId   String?
-  tenant                  Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger                  Ledger                 @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
-  fromPeriod              AccountingPeriod       @relation("CarryForwardFromPeriod", fields: [fromPeriodId], references: [id], onDelete: Cascade)
-  toPeriod                AccountingPeriod       @relation("CarryForwardToPeriod", fields: [toPeriodId], references: [id], onDelete: Cascade)
-  sourceClosingSnapshot   ClosingSnapshot        @relation(fields: [sourceClosingSnapshotId], references: [id], onDelete: Cascade)
-  createdJournalEntry     JournalEntry?          @relation("CarryForwardCreatedJournalEntry", fields: [createdJournalEntryId], references: [id], onDelete: SetNull)
+  tenant                  Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                  Ledger           @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  fromPeriod              AccountingPeriod @relation("CarryForwardFromPeriod", fields: [fromPeriodId], references: [id], onDelete: Cascade)
+  toPeriod                AccountingPeriod @relation("CarryForwardToPeriod", fields: [toPeriodId], references: [id], onDelete: Cascade)
+  sourceClosingSnapshot   ClosingSnapshot  @relation(fields: [sourceClosingSnapshotId], references: [id], onDelete: Cascade)
+  createdJournalEntry     JournalEntry?    @relation("CarryForwardCreatedJournalEntry", fields: [createdJournalEntryId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, ledgerId, createdAt])
 }
@@ -799,21 +814,21 @@ model InsurancePolicy {
 }
 
 model Vehicle {
-  id                                String    @id @default(cuid())
+  id                                String                  @id @default(cuid())
   userId                            String
   tenantId                          String
   ledgerId                          String
   name                              String
-  normalizedName                    String    @db.VarChar(191)
+  normalizedName                    String                  @db.VarChar(191)
   manufacturer                      String?
   fuelType                          FuelType
   initialOdometerKm                 Int
-  estimatedFuelEfficiencyKmPerLiter Decimal?  @db.Decimal(10, 2)
-  createdAt                         DateTime  @default(now())
-  updatedAt                         DateTime  @updatedAt
-  user                              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant                            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger                            Ledger    @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  estimatedFuelEfficiencyKmPerLiter Decimal?                @db.Decimal(10, 2)
+  createdAt                         DateTime                @default(now())
+  updatedAt                         DateTime                @updatedAt
+  user                              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant                            Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                            Ledger                  @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
   fuelLogs                          FuelLog[]
   maintenanceLogs                   VehicleMaintenanceLog[]
 
@@ -854,6 +869,3 @@ model VehicleMaintenanceLog {
 
   @@index([vehicleId, performedOn])
 }
-
-
-

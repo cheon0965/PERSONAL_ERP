@@ -13,6 +13,9 @@ export function createAuthPrismaMock(
           id?: boolean;
           email?: boolean;
           name?: boolean;
+          passwordHash?: boolean;
+          emailVerifiedAt?: boolean;
+          createdAt?: boolean;
           settings?: {
             select?: {
               minimumReserveWon?: boolean;
@@ -28,6 +31,57 @@ export function createAuthPrismaMock(
         }
 
         return projectUser(user, args.select);
+      },
+      create: async (args: {
+        data: {
+          email: string;
+          name: string;
+          passwordHash: string;
+          settings?: { create?: Record<string, never> };
+        };
+      }) => {
+        if (
+          state.users.some((candidate) => candidate.email === args.data.email)
+        ) {
+          throw new Error('Unique constraint failed on User.email');
+        }
+
+        const now = new Date();
+        const created = {
+          id: `user-${state.users.length + 1}`,
+          email: args.data.email,
+          name: args.data.name,
+          passwordHash: args.data.passwordHash,
+          emailVerifiedAt: null,
+          createdAt: now,
+          settings: args.data.settings
+            ? {
+                minimumReserveWon: 400_000,
+                monthlySinkingFundWon: 140_000
+              }
+            : undefined
+        };
+        state.users.push(created);
+        return created;
+      },
+      update: async (args: {
+        where: { id: string };
+        data: {
+          name?: string;
+          passwordHash?: string;
+          emailVerifiedAt?: Date | null;
+        };
+      }) => {
+        const user = state.users.find(
+          (candidate) => candidate.id === args.where.id
+        );
+
+        if (!user) {
+          throw new Error('User not found');
+        }
+
+        Object.assign(user, args.data);
+        return user;
       },
       findUniqueOrThrow: async (args: {
         where: { id: string };
@@ -47,6 +101,96 @@ export function createAuthPrismaMock(
         }
 
         return projectUser(user, args.select);
+      }
+    },
+    emailVerificationToken: {
+      create: async (args: {
+        data: {
+          userId: string;
+          tokenHash: string;
+          expiresAt: Date;
+        };
+      }) => {
+        const created = {
+          id: `email-verification-token-${state.emailVerificationTokens.length + 1}`,
+          userId: args.data.userId,
+          tokenHash: args.data.tokenHash,
+          expiresAt: args.data.expiresAt,
+          consumedAt: null,
+          createdAt: new Date()
+        };
+        state.emailVerificationTokens.push(created);
+        return created;
+      },
+      findUnique: async (args: {
+        where: { tokenHash?: string; id?: string };
+        include?: { user?: boolean };
+      }) => {
+        const token =
+          state.emailVerificationTokens.find((candidate) => {
+            const { id, tokenHash } = args.where;
+            return (
+              (!id || candidate.id === id) &&
+              (!tokenHash || candidate.tokenHash === tokenHash)
+            );
+          }) ?? null;
+
+        if (!token) {
+          return null;
+        }
+
+        return {
+          ...token,
+          ...(args.include?.user
+            ? { user: findUser({ id: token.userId }) ?? null }
+            : {})
+        };
+      },
+      update: async (args: {
+        where: { id: string };
+        data: { consumedAt?: Date | null };
+      }) => {
+        const token = state.emailVerificationTokens.find(
+          (candidate) => candidate.id === args.where.id
+        );
+
+        if (!token) {
+          throw new Error('Email verification token not found');
+        }
+
+        Object.assign(token, args.data);
+        return token;
+      },
+      updateMany: async (args: {
+        where: {
+          userId?: string;
+          consumedAt?: Date | null;
+        };
+        data: { consumedAt?: Date | null };
+      }) => {
+        let count = 0;
+
+        state.emailVerificationTokens = state.emailVerificationTokens.map(
+          (candidate) => {
+            const matchesUser =
+              !args.where.userId || candidate.userId === args.where.userId;
+            const matchesConsumedAt =
+              args.where.consumedAt === undefined ||
+              candidate.consumedAt === args.where.consumedAt;
+
+            if (!(matchesUser && matchesConsumedAt)) {
+              return candidate;
+            }
+
+            count += 1;
+            return {
+              ...candidate,
+              ...args.data
+            };
+          }
+        );
+
+        return { count };
       }
     },
     authSession: {
@@ -107,6 +251,59 @@ export function createAuthPrismaMock(
       }
     },
     tenantMembership: {
+      findUnique: async (args: {
+        where: {
+          tenantId_userId: {
+            tenantId: string;
+            userId: string;
+          };
+        };
+      }) => {
+        return (
+          state.memberships.find(
+            (candidate) =>
+              candidate.tenantId === args.where.tenantId_userId.tenantId &&
+              candidate.userId === args.where.tenantId_userId.userId
+          ) ?? null
+        );
+      },
+      create: async (args: {
+        data: {
+          tenantId: string;
+          userId: string;
+          role: 'OWNER' | 'MANAGER' | 'EDITOR' | 'VIEWER';
+          status: 'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'REMOVED';
+        };
+      }) => {
+        const created = {
+          id: `membership-${state.memberships.length + 1}`,
+          tenantId: args.data.tenantId,
+          userId: args.data.userId,
+          role: args.data.role,
+          status: args.data.status,
+          joinedAt: new Date()
+        };
+        state.memberships.push(created);
+        return created;
+      },
+      update: async (args: {
+        where: { id: string };
+        data: {
+          role?: 'OWNER' | 'MANAGER' | 'EDITOR' | 'VIEWER';
+          status?: 'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'REMOVED';
+        };
+      }) => {
+        const membership = state.memberships.find(
+          (candidate) => candidate.id === args.where.id
+        );
+
+        if (!membership) {
+          throw new Error('Tenant membership not found');
+        }
+
+        Object.assign(membership, args.data);
+        return membership;
+      },
       findMany: async (args: {
         where?: {
           userId?: string;
@@ -142,6 +339,40 @@ export function createAuthPrismaMock(
       }
     },
     tenant: {
+      findFirst: async (args: {
+        where?: {
+          memberships?: {
+            some?: { userId?: string };
+          };
+        };
+      }) => {
+        const userId = args.where?.memberships?.some?.userId;
+        if (!userId) {
+          return state.tenants[0] ?? null;
+        }
+
+        const membership = state.memberships.find(
+          (candidate) => candidate.userId === userId
+        );
+        return membership ? (findTenant(membership.tenantId) ?? null) : null;
+      },
+      create: async (args: {
+        data: {
+          slug: string;
+          name: string;
+          status: 'ACTIVE' | 'TRIAL' | 'SUSPENDED' | 'ARCHIVED';
+        };
+      }) => {
+        const created = {
+          id: `tenant-${state.tenants.length + 1}`,
+          slug: args.data.slug,
+          name: args.data.name,
+          status: args.data.status,
+          defaultLedgerId: null
+        };
+        state.tenants.push(created);
+        return created;
+      },
       findUnique: async (args: {
         where: { id: string };
         select?: {
@@ -170,6 +401,24 @@ export function createAuthPrismaMock(
             ? { defaultLedgerId: tenant.defaultLedgerId }
             : {})
         };
+      },
+      update: async (args: {
+        where: { id: string };
+        data: {
+          defaultLedgerId?: string | null;
+          status?: 'ACTIVE' | 'TRIAL' | 'SUSPENDED' | 'ARCHIVED';
+        };
+      }) => {
+        const tenant = state.tenants.find(
+          (candidate) => candidate.id === args.where.id
+        );
+
+        if (!tenant) {
+          throw new Error('Tenant not found');
+        }
+
+        Object.assign(tenant, args.data);
+        return tenant;
       }
     },
     ledger: {
@@ -236,6 +485,140 @@ export function createAuthPrismaMock(
           ...(args.select.timezone ? { timezone: ledger.timezone } : {}),
           ...(args.select.status ? { status: ledger.status } : {})
         };
+      },
+      create: async (args: {
+        data: {
+          tenantId: string;
+          name: string;
+          baseCurrency: string;
+          timezone: string;
+          status: 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED';
+          openedFromYearMonth: string;
+        };
+      }) => {
+        const created = {
+          id: `ledger-${state.ledgers.length + 1}`,
+          tenantId: args.data.tenantId,
+          name: args.data.name,
+          baseCurrency: args.data.baseCurrency,
+          timezone: args.data.timezone,
+          status: args.data.status,
+          createdAt: new Date()
+        };
+        state.ledgers.push(created);
+        return created;
+      }
+    },
+    accountSubject: {
+      upsert: async (args: {
+        where: { ledgerId_code: { ledgerId: string; code: string } };
+        update: {
+          name: string;
+          statementType: 'BALANCE_SHEET' | 'PROFIT_AND_LOSS';
+          normalSide: 'DEBIT' | 'CREDIT';
+          subjectKind: 'ASSET' | 'LIABILITY' | 'EQUITY' | 'INCOME' | 'EXPENSE';
+          isSystem: boolean;
+          isActive: boolean;
+          sortOrder: number;
+        };
+        create: {
+          tenantId: string;
+          ledgerId: string;
+          code: string;
+          name: string;
+          statementType: 'BALANCE_SHEET' | 'PROFIT_AND_LOSS';
+          normalSide: 'DEBIT' | 'CREDIT';
+          subjectKind: 'ASSET' | 'LIABILITY' | 'EQUITY' | 'INCOME' | 'EXPENSE';
+          isSystem: boolean;
+          isActive: boolean;
+          sortOrder: number;
+        };
+      }) => {
+        const existing = state.accountSubjects.find(
+          (candidate) =>
+            candidate.ledgerId === args.where.ledgerId_code.ledgerId &&
+            candidate.code === args.where.ledgerId_code.code
+        );
+
+        if (existing) {
+          Object.assign(existing, args.update);
+          return existing;
+        }
+
+        const created = {
+          id: `account-subject-${state.accountSubjects.length + 1}`,
+          ...args.create
+        };
+        state.accountSubjects.push(created);
+        return created;
+      }
+    },
+    ledgerTransactionType: {
+      upsert: async (args: {
+        where: { ledgerId_code: { ledgerId: string; code: string } };
+        update: {
+          name: string;
+          flowKind:
+            | 'INCOME'
+            | 'EXPENSE'
+            | 'TRANSFER'
+            | 'ADJUSTMENT'
+            | 'OPENING_BALANCE'
+            | 'CARRY_FORWARD';
+          postingPolicyKey:
+            | 'INCOME_BASIC'
+            | 'EXPENSE_BASIC'
+            | 'TRANSFER_BASIC'
+            | 'CARD_SPEND'
+            | 'CARD_PAYMENT'
+            | 'OPENING_BALANCE'
+            | 'CARRY_FORWARD'
+            | 'MANUAL_ADJUSTMENT';
+          isActive: boolean;
+          sortOrder: number;
+        };
+        create: {
+          tenantId: string;
+          ledgerId: string;
+          code: string;
+          name: string;
+          flowKind:
+            | 'INCOME'
+            | 'EXPENSE'
+            | 'TRANSFER'
+            | 'ADJUSTMENT'
+            | 'OPENING_BALANCE'
+            | 'CARRY_FORWARD';
+          postingPolicyKey:
+            | 'INCOME_BASIC'
+            | 'EXPENSE_BASIC'
+            | 'TRANSFER_BASIC'
+            | 'CARD_SPEND'
+            | 'CARD_PAYMENT'
+            | 'OPENING_BALANCE'
+            | 'CARRY_FORWARD'
+            | 'MANUAL_ADJUSTMENT';
+          isActive: boolean;
+          sortOrder: number;
+        };
+      }) => {
+        const existing = state.ledgerTransactionTypes.find(
+          (candidate) =>
+            candidate.ledgerId === args.where.ledgerId_code.ledgerId &&
+            candidate.code === args.where.ledgerId_code.code
+        );
+
+        if (existing) {
+          Object.assign(existing, args.update);
+          return existing;
+        }
+
+        const created = {
+          id: `ledger-transaction-type-${state.ledgerTransactionTypes.length + 1}`,
+          ...args.create
+        };
+        state.ledgerTransactionTypes.push(created);
+        return created;
       }
     }
   };

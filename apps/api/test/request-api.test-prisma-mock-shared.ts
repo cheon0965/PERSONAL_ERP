@@ -147,6 +147,9 @@ export function createRequestPrismaMockContext(state: RequestTestState) {
           id?: boolean;
           email?: boolean;
           name?: boolean;
+          passwordHash?: boolean;
+          emailVerifiedAt?: boolean;
+          createdAt?: boolean;
           settings?: {
             select?: {
               minimumReserveWon?: boolean;
@@ -172,6 +175,18 @@ export function createRequestPrismaMockContext(state: RequestTestState) {
 
     if (select.name) {
       projected.name = user.name;
+    }
+
+    if (select.passwordHash) {
+      projected.passwordHash = user.passwordHash;
+    }
+
+    if (select.emailVerifiedAt) {
+      projected.emailVerifiedAt = user.emailVerifiedAt;
+    }
+
+    if (select.createdAt) {
+      projected.createdAt = user.createdAt;
     }
 
     if (select.settings) {

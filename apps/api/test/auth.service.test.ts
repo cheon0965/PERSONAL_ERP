@@ -13,7 +13,8 @@ test('AuthService.login returns the issued session for valid credentials', async
         id: 'user-1',
         email: 'demo@example.com',
         name: 'Demo User',
-        passwordHash
+        passwordHash,
+        emailVerifiedAt: new Date('2026-03-01T00:00:00.000Z')
       })
     }
   };
@@ -78,6 +79,19 @@ test('AuthService.login returns the issued session for valid credentials', async
       log: () => undefined,
       warn: () => undefined,
       error: () => undefined
+    } as never,
+    {
+      send: async () => undefined
+    } as never,
+    {
+      now: () => new Date('2026-04-13T00:00:00.000Z')
+    } as never,
+    {
+      ensureForUser: async () => ({
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        membershipId: 'membership-1'
+      })
     } as never
   );
 
@@ -111,7 +125,8 @@ test('AuthService.login rejects invalid credentials', async () => {
         id: 'user-1',
         email: 'demo@example.com',
         name: 'Demo User',
-        passwordHash
+        passwordHash,
+        emailVerifiedAt: new Date('2026-03-01T00:00:00.000Z')
       })
     }
   };
@@ -135,6 +150,19 @@ test('AuthService.login rejects invalid credentials', async () => {
       log: () => undefined,
       warn: () => undefined,
       error: () => undefined
+    } as never,
+    {
+      send: async () => undefined
+    } as never,
+    {
+      now: () => new Date('2026-04-13T00:00:00.000Z')
+    } as never,
+    {
+      ensureForUser: async () => ({
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        membershipId: 'membership-1'
+      })
     } as never
   );
 

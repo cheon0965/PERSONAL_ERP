@@ -73,6 +73,8 @@
 ### API
 
 - 인증 로그인 성공/실패
+- 회원가입 `POST /auth/register`, 이메일 인증 `POST /auth/verify-email`, 인증 메일 재발송 `POST /auth/resend-verification`
+  회원가입 성공 시 refresh cookie를 발급하지 않는지, 인증 전 로그인 차단, 인증 완료 후 workspace/ledger/OWNER membership bootstrap, 중복 이메일 일반화 응답, 잘못된/만료/소비된 토큰, 재발송 토큰 교체, register/verify/resend rate limit, allowlist 밖 origin 차단을 검증
 - 인증 세션 생성/회전/로그아웃
 - 보호 라우트의 `401`
 - `GET /auth/me`
@@ -124,7 +126,7 @@
 - allowlist 밖 origin의 cookie-auth 요청 차단(`403 Origin not allowed`)
 - 로그인 실패, refresh 재사용, bearer 누락, scope 거부, readiness 실패에 대한 보안 이벤트 로그 기록
 - `test:prisma`
-  실제 MySQL 기준으로 현재 workspace 접근 범위 확인, 수집 거래 저장소 경계, 실제 API를 통한 기간/업로드/수집/전표/보고/재오픈/차기 이월 보호 대표 시나리오를 함께 검증
+  실제 MySQL 기준으로 현재 workspace 접근 범위 확인, 수집 거래 저장소 경계, 실제 API를 통한 `register -> verify-email -> login -> auth/me`, 기간/업로드/수집/전표/보고/재오픈/차기 이월 보호 대표 시나리오를 함께 검증
 - `GET /collected-transactions`
   현재 구현 기준 current workspace 범위만 반환하는지, 내부 접근 제어 필드를 노출하지 않는지 검증
 - `GET /recurring-rules`
@@ -141,6 +143,7 @@
 - 보호 요청의 Bearer 토큰 주입
 - `401` 응답 시 세션 정리 정책
 - mutation 요청의 JSON body 직렬화
+- 회원가입/이메일 인증/인증 메일 재발송 auth API helper의 요청 path와 body 직렬화
 - 요청 실패 메시지 안내
 - 브라우저에서 `/transactions` 보호 라우트(Collected Transactions 화면) 리다이렉트
 - 브라우저 기준 로그인 후 세션 복원

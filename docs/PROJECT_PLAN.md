@@ -27,6 +27,9 @@
 18. build 결과물 기준 smoke와 운영 체크리스트 일부 자동화
 19. 금액 정합성 기준 고정
     `packages/money`의 `MoneyWon` 공용 모듈, Prisma 금액 컬럼 `Decimal(19,0)` 승격, `decimal.js` 기반 `HALF_UP`/배분 잔차 보정, `npm run money:check` 가드까지 완료
+20. 회원가입 및 Gmail API 이메일 인증 도입
+    회원가입/이메일 인증/재발송 API, Gmail API/console mail sender 경계, 이메일 인증 후 workspace bootstrap, Web `/register`/`/verify-email`, 테스트/문서 동기화까지 완료.
+    실행 계획은 [`completed/AUTH_REGISTRATION_GMAIL_PLAN.md`](./completed/AUTH_REGISTRATION_GMAIL_PLAN.md)에 보관합니다.
 
 ## 현재 MVP 범위
 
@@ -55,8 +58,9 @@
 ## 다음 중기 우선순위
 
 1. 운영 HTTPS/HSTS/Swagger 배포 리허설과 보안 증적 정리
-2. Docker 기반 로컬 CI 재현성 보강
-3. `PRISMA_INTEGRATION_DATABASE_URL` GitHub secret 등록과 첫 `prisma-integration` 통과 증적 확보
+2. Gmail API 운영 secret 등록과 실제 수신 확인
+3. Docker 기반 로컬 CI 재현성 보강
+4. `PRISMA_INTEGRATION_DATABASE_URL` GitHub secret 등록과 첫 `prisma-integration` 통과 증적 확보
 
 ## 범위 밖 항목
 

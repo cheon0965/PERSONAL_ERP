@@ -7,6 +7,48 @@ export function createAccountSubjectsPrismaMock(
 
   return {
     accountSubject: {
+      upsert: async (args: {
+        where: { ledgerId_code: { ledgerId: string; code: string } };
+        update: {
+          name: string;
+          statementType: 'BALANCE_SHEET' | 'PROFIT_AND_LOSS';
+          normalSide: 'DEBIT' | 'CREDIT';
+          subjectKind: 'ASSET' | 'LIABILITY' | 'EQUITY' | 'INCOME' | 'EXPENSE';
+          isSystem: boolean;
+          isActive: boolean;
+          sortOrder: number;
+        };
+        create: {
+          tenantId: string;
+          ledgerId: string;
+          code: string;
+          name: string;
+          statementType: 'BALANCE_SHEET' | 'PROFIT_AND_LOSS';
+          normalSide: 'DEBIT' | 'CREDIT';
+          subjectKind: 'ASSET' | 'LIABILITY' | 'EQUITY' | 'INCOME' | 'EXPENSE';
+          isSystem: boolean;
+          isActive: boolean;
+          sortOrder: number;
+        };
+      }) => {
+        const existing = state.accountSubjects.find(
+          (candidate) =>
+            candidate.ledgerId === args.where.ledgerId_code.ledgerId &&
+            candidate.code === args.where.ledgerId_code.code
+        );
+
+        if (existing) {
+          Object.assign(existing, args.update);
+          return existing;
+        }
+
+        const created = {
+          id: `account-subject-${state.accountSubjects.length + 1}`,
+          ...args.create
+        };
+        state.accountSubjects.push(created);
+        return created;
+      },
       findMany: async (args: {
         where?: {
           tenantId?: string;
