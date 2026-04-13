@@ -69,6 +69,7 @@ export function LoginPage() {
     () => resolveNextPath(searchParams?.get('next') ?? null),
     [searchParams]
   );
+  const emailVerified = searchParams?.get('verified') === '1';
   const { login, status } = useAuthSession();
   const [submitError, setSubmitError] = React.useState<string | null>(null);
 
@@ -186,9 +187,9 @@ export function LoginPage() {
                       >
                         로그인 이후에는 현재 사용자를 복원하고, 보호된 API
                         호출과 대시보드 화면을 실제 워크스페이스 세션에
-                        연결합니다. 장식보다는 월 운영, 거래 검토, 마감
-                        흐름이 먼저 읽히는 1인 사업자·소상공인용 ERP 경험을
-                        목표로 구성했습니다.
+                        연결합니다. 장식보다는 월 운영, 거래 검토, 마감 흐름이
+                        먼저 읽히는 1인 사업자·소상공인용 ERP 경험을 목표로
+                        구성했습니다.
                       </Typography>
                     </Stack>
 
@@ -356,6 +357,13 @@ export function LoginPage() {
                     </Alert>
                   ) : null}
 
+                  {emailVerified ? (
+                    <Alert severity="success" variant="outlined">
+                      이메일 인증이 완료되었습니다. 가입한 이메일과 비밀번호로
+                      로그인해 주세요.
+                    </Alert>
+                  ) : null}
+
                   <form
                     onSubmit={form.handleSubmit(async (values) => {
                       setSubmitError(null);
@@ -396,6 +404,14 @@ export function LoginPage() {
                         disabled={isBusy}
                       >
                         {isBusy ? '세션 확인 중...' : '로그인'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outlined"
+                        size="large"
+                        onClick={() => router.push('/register' as Route)}
+                      >
+                        새 계정 만들기
                       </Button>
                     </Stack>
                   </form>

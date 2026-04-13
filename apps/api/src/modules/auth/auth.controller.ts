@@ -27,6 +27,9 @@ import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { Public } from '../../common/auth/public.decorator';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
 
 const REFRESH_COOKIE_NAME = 'refreshToken';
 const REFRESH_COOKIE_PATH = '/api/auth';
@@ -52,6 +55,57 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly securityEvents: SecurityEventLogger
   ) {}
+
+  @Public()
+  @HttpCode(200)
+  @Post('register')
+  async register(
+    @Body() dto: RegisterDto,
+    @Req() request: RequestWithContext,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    this.ensureAllowedCookieOrigin(request);
+    const result = await this.authService.register(dto, {
+      clientIp: readClientIp(request),
+      requestId: readRequestId(request)
+    });
+    response.setHeader('Cache-Control', 'no-store');
+    return result;
+  }
+
+  @Public()
+  @HttpCode(200)
+  @Post('verify-email')
+  async verifyEmail(
+    @Body() dto: VerifyEmailDto,
+    @Req() request: RequestWithContext,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    this.ensureAllowedCookieOrigin(request);
+    const result = await this.authService.verifyEmail(dto, {
+      clientIp: readClientIp(request),
+      requestId: readRequestId(request)
+    });
+    response.setHeader('Cache-Control', 'no-store');
+    return result;
+  }
+
+  @Public()
+  @HttpCode(200)
+  @Post('resend-verification')
+  async resendVerificationEmail(
+    @Body() dto: ResendVerificationDto,
+    @Req() request: RequestWithContext,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    this.ensureAllowedCookieOrigin(request);
+    const result = await this.authService.resendVerificationEmail(dto, {
+      clientIp: readClientIp(request),
+      requestId: readRequestId(request)
+    });
+    response.setHeader('Cache-Control', 'no-store');
+    return result;
+  }
 
   @Public()
   @HttpCode(200)

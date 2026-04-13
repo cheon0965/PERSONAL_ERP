@@ -179,6 +179,7 @@ API는 아래 값을 필수로 사용합니다.
 - `JWT_REFRESH_SECRET`
 - `ACCESS_TOKEN_TTL`
 - `REFRESH_TOKEN_TTL`
+- `EMAIL_VERIFICATION_TTL`
 
 권장 원칙:
 
@@ -191,6 +192,7 @@ API는 아래 값을 필수로 사용합니다.
 ```env
 ACCESS_TOKEN_TTL=15m
 REFRESH_TOKEN_TTL=7d
+EMAIL_VERIFICATION_TTL=30m
 ```
 
 참고:
@@ -198,7 +200,42 @@ REFRESH_TOKEN_TTL=7d
 - 여기서 저장하는 것은 `JWT 서명용 비밀키`입니다.
 - 로그인 후 발급되는 `accessToken`, `refreshToken` 자체를 env 파일에 넣는 것은 아닙니다.
 
-### 5순위. Demo 옵션 확인
+### 5순위. 회원가입 인증 메일 발송 설정
+
+회원가입 이메일 인증은 메일 발송 port를 통해 동작하며, 로컬 기본값은 콘솔/fake 발송에 가까운 `console` provider입니다.
+Gmail API는 운영 또는 실제 발송 확인이 필요할 때만 켭니다.
+
+로컬 기본 예시:
+
+```env
+MAIL_PROVIDER=console
+MAIL_FROM_EMAIL=no-reply@example.com
+MAIL_FROM_NAME=PERSONAL_ERP
+GMAIL_CLIENT_ID=
+GMAIL_CLIENT_SECRET=
+GMAIL_REFRESH_TOKEN=
+GMAIL_SENDER_EMAIL=
+```
+
+Gmail API 전환 예시:
+
+```env
+MAIL_PROVIDER=gmail-api
+MAIL_FROM_EMAIL=your-gmail@gmail.com
+MAIL_FROM_NAME=PERSONAL_ERP
+GMAIL_CLIENT_ID=replace-with-google-oauth-client-id
+GMAIL_CLIENT_SECRET=replace-with-google-oauth-client-secret
+GMAIL_REFRESH_TOKEN=replace-with-google-oauth-refresh-token
+GMAIL_SENDER_EMAIL=your-gmail@gmail.com
+```
+
+주의:
+
+- Gmail API 값은 모두 `C:\secrets\personal-erp\api.env` 같은 저장소 밖 SECRET 파일에 둡니다.
+- Gmail API scope는 최소 `https://www.googleapis.com/auth/gmail.send`를 사용합니다.
+- `MAIL_PROVIDER=gmail-api`일 때 Gmail 관련 값이 비어 있으면 API가 부팅 단계에서 실패합니다.
+
+### 6순위. Demo 옵션 확인
 
 웹은 개발 중에만 demo fallback을 제한적으로 허용합니다.
 
@@ -234,9 +271,17 @@ JWT_ACCESS_SECRET=replace-with-a-long-random-string
 JWT_REFRESH_SECRET=replace-with-another-long-random-string
 ACCESS_TOKEN_TTL=15m
 REFRESH_TOKEN_TTL=7d
+EMAIL_VERIFICATION_TTL=30m
 DATABASE_URL=mysql://erp_user:local_erp_not_for_prod@localhost:3306/personal_erp
 PRISMA_INTEGRATION_DATABASE_URL=mysql://erp_user:local_erp_not_for_prod@localhost:3306/personal_erp
 DEMO_EMAIL=demo@example.com
+MAIL_PROVIDER=console
+MAIL_FROM_EMAIL=no-reply@example.com
+MAIL_FROM_NAME=PERSONAL_ERP
+GMAIL_CLIENT_ID=
+GMAIL_CLIENT_SECRET=
+GMAIL_REFRESH_TOKEN=
+GMAIL_SENDER_EMAIL=
 ```
 
 ### C:\secrets\personal-erp\web.env
@@ -271,8 +316,16 @@ JWT_ACCESS_SECRET=replace-with-production-access-secret
 JWT_REFRESH_SECRET=replace-with-production-refresh-secret
 ACCESS_TOKEN_TTL=15m
 REFRESH_TOKEN_TTL=7d
+EMAIL_VERIFICATION_TTL=30m
 DATABASE_URL=mysql://erp_user:replace-with-production-password@db.example.com:3306/personal_erp
 DEMO_EMAIL=demo@example.com
+MAIL_PROVIDER=gmail-api
+MAIL_FROM_EMAIL=your-gmail@gmail.com
+MAIL_FROM_NAME=PERSONAL_ERP
+GMAIL_CLIENT_ID=replace-with-google-oauth-client-id
+GMAIL_CLIENT_SECRET=replace-with-google-oauth-client-secret
+GMAIL_REFRESH_TOKEN=replace-with-google-oauth-refresh-token
+GMAIL_SENDER_EMAIL=your-gmail@gmail.com
 ```
 
 ### 운영용 web.env 예시

@@ -22,6 +22,8 @@ export function createRequestIdentityStateFixtures(input: {
         email: 'demo@example.com',
         name: 'Demo User',
         passwordHash,
+        emailVerifiedAt: new Date('2026-03-01T00:00:00.000Z'),
+        createdAt: new Date('2026-03-01T00:00:00.000Z'),
         settings: {
           minimumReserveWon: 500_000,
           monthlySinkingFundWon: 210_000
@@ -32,6 +34,8 @@ export function createRequestIdentityStateFixtures(input: {
         email: 'other@example.com',
         name: 'Other User',
         passwordHash,
+        emailVerifiedAt: new Date('2026-03-01T00:00:00.000Z'),
+        createdAt: new Date('2026-03-01T00:00:00.000Z'),
         settings: {
           minimumReserveWon: 900_000,
           monthlySinkingFundWon: 310_000

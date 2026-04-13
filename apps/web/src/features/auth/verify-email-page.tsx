@@ -1,0 +1,237 @@
+'use client';
+
+import * as React from 'react';
+import type { Route } from 'next';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import ErrorOutlineRoundedIcon from '@mui/icons-material/ErrorOutlineRounded';
+import MarkEmailUnreadRoundedIcon from '@mui/icons-material/MarkEmailUnreadRounded';
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CircularProgress,
+  Container,
+  Stack,
+  TextField,
+  Typography
+} from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { resendVerificationEmail, verifyEmail } from '@/features/auth/auth.api';
+import { appLayout } from '@/shared/ui/layout-metrics';
+
+const resendSchema = z.object({
+  email: z.string().email('올바른 이메일 주소를 입력해 주세요.')
+});
+
+type ResendFormInput = z.infer<typeof resendSchema>;
+
+export function VerifyEmailPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams?.get('token')?.trim() ?? '';
+  const didVerifyRef = React.useRef(false);
+  const [status, setStatus] = React.useState<'loading' | 'verified' | 'failed'>(
+    'loading'
+  );
+  const [message, setMessage] = React.useState<string | null>(null);
+  const [resendMessage, setResendMessage] = React.useState<string | null>(null);
+
+  const form = useForm<ResendFormInput>({
+    resolver: zodResolver(resendSchema),
+    defaultValues: { email: '' }
+  });
+
+  React.useEffect(() => {
+    if (didVerifyRef.current) {
+      return;
+    }
+
+    didVerifyRef.current = true;
+
+    if (!token) {
+      setStatus('failed');
+      setMessage('이메일 인증 토큰이 없습니다.');
+      return;
+    }
+
+    void verifyEmail({ token })
+      .then(() => {
+        setStatus('verified');
+        setMessage('이메일 인증이 완료되었습니다. 이제 로그인할 수 있습니다.');
+      })
+      .catch((error) => {
+        setStatus('failed');
+        setMessage(
+          error instanceof Error ? error.message : '이메일 인증에 실패했습니다.'
+        );
+      });
+  }, [token]);
+
+  return (
+    <Box
+      sx={{
+        minHeight: '100vh',
+        py: appLayout.authPagePaddingY,
+        background:
+          'radial-gradient(circle at top right, rgba(34,197,94,0.2), transparent 32%), radial-gradient(circle at bottom left, rgba(15,23,42,0.12), transparent 30%), linear-gradient(180deg, #fbfdf9 0%, #eff7ec 100%)'
+      }}
+    >
+      <Container maxWidth="sm">
+        <Card
+          sx={{
+            overflow: 'hidden',
+            boxShadow: '0 22px 48px rgba(15, 23, 42, 0.14)',
+            background:
+              'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98))',
+            '&::before': {
+              content: '""',
+              display: 'block',
+              height: 5,
+              background:
+                'linear-gradient(90deg, rgba(34,197,94,1), rgba(14,165,233,0.9))'
+            }
+          }}
+        >
+          <CardContent sx={{ p: appLayout.authSurfacePadding }}>
+            <Stack spacing={appLayout.authSurfaceGap} alignItems="stretch">
+              <Box
+                sx={{
+                  alignSelf: 'flex-start',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 56,
+                  height: 56,
+                  borderRadius: 4,
+                  backgroundColor:
+                    status === 'failed'
+                      ? alpha('#dc2626', 0.08)
+                      : alpha('#16a34a', 0.1),
+                  color: status === 'failed' ? 'error.main' : 'success.main'
+                }}
+              >
+                {status === 'loading' ? (
+                  <CircularProgress size={26} />
+                ) : status === 'verified' ? (
+                  <CheckCircleRoundedIcon />
+                ) : (
+                  <ErrorOutlineRoundedIcon />
+                )}
+              </Box>
+
+              <Stack spacing={1.25}>
+                <Typography variant="h4" sx={{ fontWeight: 800 }}>
+                  이메일 인증
+                </Typography>
+                <Typography color="text.secondary" sx={{ lineHeight: 1.75 }}>
+                  인증이 완료되면 회원가입 시 만든 계정으로 로그인할 수
+                  있습니다.
+                </Typography>
+              </Stack>
+
+              {message ? (
+                <Alert
+                  severity={status === 'verified' ? 'success' : 'error'}
+                  variant="outlined"
+                >
+                  {message}
+                </Alert>
+              ) : null}
+
+              {status === 'verified' ? (
+                <Button
+                  variant="contained"
+                  size="large"
+                  onClick={() => router.push('/login?verified=1' as Route)}
+                >
+                  로그인하러 가기
+                </Button>
+              ) : null}
+
+              {status === 'failed' ? (
+                <Box
+                  sx={{
+                    p: 2.25,
+                    borderRadius: 4,
+                    backgroundColor: alpha('#0ea5e9', 0.05),
+                    border: `1px solid ${alpha('#0ea5e9', 0.12)}`
+                  }}
+                >
+                  <form
+                    onSubmit={form.handleSubmit(async (values) => {
+                      setResendMessage(null);
+
+                      try {
+                        await resendVerificationEmail({
+                          email: values.email.trim()
+                        });
+                        setResendMessage(
+                          '입력한 이메일로 새 인증 메일을 보냈습니다.'
+                        );
+                      } catch (error) {
+                        setResendMessage(
+                          error instanceof Error
+                            ? error.message
+                            : '인증 메일 재발송에 실패했습니다.'
+                        );
+                      }
+                    })}
+                  >
+                    <Stack spacing={appLayout.fieldGap}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                        인증 메일 다시 받기
+                      </Typography>
+                      {resendMessage ? (
+                        <Alert
+                          severity={
+                            resendMessage.includes('보냈습니다')
+                              ? 'success'
+                              : 'error'
+                          }
+                          variant="outlined"
+                        >
+                          {resendMessage}
+                        </Alert>
+                      ) : null}
+                      <TextField
+                        label="이메일"
+                        type="email"
+                        autoComplete="email"
+                        error={Boolean(form.formState.errors.email)}
+                        helperText={form.formState.errors.email?.message}
+                        {...form.register('email')}
+                      />
+                      <Button
+                        type="submit"
+                        variant="contained"
+                        startIcon={<MarkEmailUnreadRoundedIcon />}
+                        disabled={form.formState.isSubmitting}
+                      >
+                        {form.formState.isSubmitting
+                          ? '재발송 중...'
+                          : '인증 메일 재발송'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="text"
+                        onClick={() => router.push('/login' as Route)}
+                      >
+                        로그인으로 돌아가기
+                      </Button>
+                    </Stack>
+                  </form>
+                </Box>
+              ) : null}
+            </Stack>
+          </CardContent>
+        </Card>
+      </Container>
+    </Box>
+  );
+}

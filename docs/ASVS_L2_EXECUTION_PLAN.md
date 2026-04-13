@@ -61,12 +61,11 @@
 
 ### 지금은 N/A 또는 보류
 
-- 회원가입
-- 비밀번호 재설정/이메일 인증
+- 비밀번호 재설정
 - MFA/2FA
 - 관리자 전용 권한 체계
 - binary multipart/file storage 보안
-- 외부 결제/외부 메일/SMS 연동
+- 외부 결제/SMS 연동
 - 모바일 앱 전용 토큰 저장소
 
 위 항목들은 기능이 생기기 전까지 억지로 구현하지 않습니다.
@@ -223,7 +222,7 @@ P2 결과 요약:
 - API는 CORS allowlist, `Content-Security-Policy`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`를 기본으로 보냅니다.
 - `APP_ORIGIN`이 HTTPS일 때만 `Strict-Transport-Security`를 추가하고, `/api/docs` 노출은 `SWAGGER_ENABLED`로 제어합니다.
 - 인증/세션 응답과 Bearer 인증이 포함된 응답에는 `Cache-Control: no-store`를 적용했습니다.
-- `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`은 allowlist 밖 browser `Origin` 또는 `Referer`를 `403 Origin not allowed`로 차단합니다.
+- `POST /auth/register`, `POST /auth/verify-email`, `POST /auth/resend-verification`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`은 allowlist 밖 browser `Origin` 또는 `Referer`를 `403 Origin not allowed`로 차단합니다.
 - 요청 단위 API 테스트와 브라우저 E2E를 다시 돌려 새 경계 정책이 실제 흐름을 깨지 않는지 확인했습니다.
 
 ### P3. CI 보안 게이트 추가

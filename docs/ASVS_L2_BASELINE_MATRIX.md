@@ -130,10 +130,10 @@
 
 ### 회원가입/비밀번호 재설정
 
-- 현재 상태: 현재 제품 범위에 없음
-- 근거 파일: `README.md`, 현재 코드베이스
-- 판정: `N/A`
-- 다음 단계: 기능 생길 때 재판정
+- 현재 상태: 회원가입과 이메일 인증은 구현됨. 비밀번호 재설정은 아직 없음
+- 근거 파일: `apps/api/src/modules/auth/*`, `apps/web/src/features/auth/*`, `docs/API.md`
+- 판정: `부분 적용`
+- 다음 단계: 비밀번호 재설정 도입 시 토큰 저장/재발송 제한/메일 발송 실패 복구 흐름 추가 검토
 
 ### MFA/2FA
 
@@ -151,10 +151,10 @@
 
 ### 외부 결제/메일/SMS 보안
 
-- 현재 상태: 외부 연동 없음
-- 근거 파일: 현재 코드베이스
-- 판정: `N/A`
-- 다음 단계: 연동 도입 시 별도 설계
+- 현재 상태: 회원가입 이메일 인증용 Gmail API mail sender adapter와 로컬 console sender 경계가 존재함. 외부 결제/SMS는 없음
+- 근거 파일: `apps/api/src/common/application/ports/email-sender.port.ts`, `apps/api/src/common/infrastructure/email/*`, `ENVIRONMENT_SETUP.md`
+- 판정: `부분 적용`
+- 다음 단계: 운영 Gmail API secret 등록, 발송 실패 모니터링, 대량 발송/재시도 outbox가 필요해지는 시점의 별도 ADR 검토
 
 ## 현재 단계에서 가장 큰 갭
 

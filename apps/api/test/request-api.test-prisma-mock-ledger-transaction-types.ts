@@ -7,6 +7,72 @@ export function createLedgerTransactionTypesPrismaMock(
 
   return {
     ledgerTransactionType: {
+      upsert: async (args: {
+        where: { ledgerId_code: { ledgerId: string; code: string } };
+        update: {
+          name: string;
+          flowKind:
+            | 'INCOME'
+            | 'EXPENSE'
+            | 'TRANSFER'
+            | 'ADJUSTMENT'
+            | 'OPENING_BALANCE'
+            | 'CARRY_FORWARD';
+          postingPolicyKey:
+            | 'INCOME_BASIC'
+            | 'EXPENSE_BASIC'
+            | 'TRANSFER_BASIC'
+            | 'CARD_SPEND'
+            | 'CARD_PAYMENT'
+            | 'OPENING_BALANCE'
+            | 'CARRY_FORWARD'
+            | 'MANUAL_ADJUSTMENT';
+          isActive: boolean;
+          sortOrder: number;
+        };
+        create: {
+          tenantId: string;
+          ledgerId: string;
+          code: string;
+          name: string;
+          flowKind:
+            | 'INCOME'
+            | 'EXPENSE'
+            | 'TRANSFER'
+            | 'ADJUSTMENT'
+            | 'OPENING_BALANCE'
+            | 'CARRY_FORWARD';
+          postingPolicyKey:
+            | 'INCOME_BASIC'
+            | 'EXPENSE_BASIC'
+            | 'TRANSFER_BASIC'
+            | 'CARD_SPEND'
+            | 'CARD_PAYMENT'
+            | 'OPENING_BALANCE'
+            | 'CARRY_FORWARD'
+            | 'MANUAL_ADJUSTMENT';
+          isActive: boolean;
+          sortOrder: number;
+        };
+      }) => {
+        const existing = state.ledgerTransactionTypes.find(
+          (candidate) =>
+            candidate.ledgerId === args.where.ledgerId_code.ledgerId &&
+            candidate.code === args.where.ledgerId_code.code
+        );
+
+        if (existing) {
+          Object.assign(existing, args.update);
+          return existing;
+        }
+
+        const created = {
+          id: `ledger-transaction-type-${state.ledgerTransactionTypes.length + 1}`,
+          ...args.create
+        };
+        state.ledgerTransactionTypes.push(created);
+        return created;
+      },
       findFirst: async (args: {
         where: {
           tenantId?: string;

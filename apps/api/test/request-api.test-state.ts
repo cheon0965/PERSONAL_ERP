@@ -29,6 +29,8 @@ export async function createRequestTestState(): Promise<RequestTestState> {
     balanceSnapshotLines: [],
     financialStatementSnapshots: [],
     carryForwardRecords: [],
+    emailVerificationTokens: [],
+    sentEmails: [],
     importBatches: [],
     importedRows: [],
     ...createRequestReferenceDataStateFixtures(),

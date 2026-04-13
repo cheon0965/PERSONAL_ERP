@@ -7,6 +7,7 @@ import { AuthRateLimitService } from './auth-rate-limit.service';
 import { AuthController } from './auth.controller';
 import { AuthSessionService } from './auth-session.service';
 import { AuthService } from './auth.service';
+import { WorkspaceBootstrapService } from './workspace-bootstrap.service';
 
 @Global()
 @Module({
@@ -17,12 +18,18 @@ import { AuthService } from './auth.service';
     AuthRateLimitService,
     AuthSessionService,
     AuthService,
+    WorkspaceBootstrapService,
     JwtAuthGuard,
     {
       provide: APP_GUARD,
       useExisting: JwtAuthGuard
     }
   ],
-  exports: [AuthService, JwtModule, AuthenticatedWorkspaceResolver]
+  exports: [
+    AuthService,
+    JwtModule,
+    AuthenticatedWorkspaceResolver,
+    WorkspaceBootstrapService
+  ]
 })
 export class AuthModule {}

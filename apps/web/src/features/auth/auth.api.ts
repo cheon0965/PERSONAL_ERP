@@ -1,13 +1,18 @@
 import type {
   AuthenticatedUser,
   LoginRequest,
-  LoginResponse
+  LoginResponse,
+  RegisterRequest,
+  RegisterResponse,
+  ResendVerificationRequest,
+  VerifyEmailRequest,
+  VerifyEmailResponse
 } from '@personal-erp/contracts';
 import {
   ApiRequestError,
   UnauthorizedRequestError
-} from '@/shared/api/fetch-json';
-import { webEnv } from '@/shared/config/env';
+} from '../../shared/api/fetch-json';
+import { webEnv } from '../../shared/config/env';
 
 const API_BASE_URL = webEnv.NEXT_PUBLIC_API_BASE_URL;
 
@@ -15,6 +20,33 @@ export async function loginWithPassword(
   input: LoginRequest
 ): Promise<LoginResponse> {
   return requestAuthJson<LoginResponse>('/auth/login', {
+    method: 'POST',
+    body: input
+  });
+}
+
+export async function registerWithPassword(
+  input: RegisterRequest
+): Promise<RegisterResponse> {
+  return requestAuthJson<RegisterResponse>('/auth/register', {
+    method: 'POST',
+    body: input
+  });
+}
+
+export async function verifyEmail(
+  input: VerifyEmailRequest
+): Promise<VerifyEmailResponse> {
+  return requestAuthJson<VerifyEmailResponse>('/auth/verify-email', {
+    method: 'POST',
+    body: input
+  });
+}
+
+export async function resendVerificationEmail(
+  input: ResendVerificationRequest
+): Promise<RegisterResponse> {
+  return requestAuthJson<RegisterResponse>('/auth/resend-verification', {
     method: 'POST',
     body: input
   });

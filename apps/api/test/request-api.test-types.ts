@@ -18,6 +18,8 @@ export type RequestTestUser = {
   email: string;
   name: string;
   passwordHash: string;
+  emailVerifiedAt: Date | null;
+  createdAt: Date;
   settings?: {
     minimumReserveWon: number | null;
     monthlySinkingFundWon: number | null;
@@ -200,6 +202,20 @@ export type RequestTestState = {
     refreshTokenHash: string;
     expiresAt: Date;
     revokedAt: Date | null;
+  }>;
+  emailVerificationTokens: Array<{
+    id: string;
+    userId: string;
+    tokenHash: string;
+    expiresAt: Date;
+    consumedAt: Date | null;
+    createdAt: Date;
+  }>;
+  sentEmails: Array<{
+    to: string;
+    subject: string;
+    text: string;
+    html?: string;
   }>;
   accounts: Array<{
     id: string;

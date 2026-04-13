@@ -13,6 +13,7 @@
 ## 완료 문서
 
 - [`ALIGNMENT_PATCH_EXECUTION_PLAN.md`](./ALIGNMENT_PATCH_EXECUTION_PLAN.md): 내부 정합성 패치와 설계 모델 분리를 완료하고 보관한 실행 계획
+- [`AUTH_REGISTRATION_GMAIL_PLAN.md`](./AUTH_REGISTRATION_GMAIL_PLAN.md): 회원가입, 이메일 인증, Gmail API/console mail sender 경계, Web 가입/인증 화면, 관련 테스트와 문서 동기화를 완료하고 보관한 실행 계획
 - [`BUSINESS_FLOW_IMPROVEMENT_EXECUTION_PLAN.md`](./BUSINESS_FLOW_IMPROVEMENT_EXECUTION_PLAN.md): 현재 범위 완료 후 보관한 메인 비즈니스 흐름 개선 실행 계획 및 반영 현황
 - [`CONCURRENCY_AND_IDEMPOTENCY_EXECUTION_PLAN.md`](./CONCURRENCY_AND_IDEMPOTENCY_EXECUTION_PLAN.md): 전표 번호 allocator, 업로드 행 흡수 claim, 계획 항목 DB 멱등화, 주요 마스터 normalized unique까지 반영 후 보관한 실행 계획
 - [`IN_REPO_EXECUTION_PLAN.md`](./IN_REPO_EXECUTION_PLAN.md): 저장소 안에서 선별한 후속 작업을 모두 완료한 뒤 보관한 실행계획

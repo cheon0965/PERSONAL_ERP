@@ -48,16 +48,19 @@
 
 ## 인증 흐름
 
-1. `POST /auth/login`으로 access token을 받고, HttpOnly refresh token 쿠키를 설정합니다.
-2. 이후 보호 요청에는 `Authorization: Bearer <accessToken>`을 사용합니다.
-3. Web은 access token을 메모리 런타임 상태에만 유지합니다.
-4. 새로고침이나 `401` 이후 복구가 필요하면 `POST /auth/refresh`로 새 access token을 받습니다.
-5. 현재 사용자 확인은 `GET /auth/me`를 사용합니다.
+1. 신규 사용자는 `POST /auth/register`로 가입 요청을 만들고 이메일 인증 메일을 받습니다.
+2. 인증 링크는 Web `/verify-email?token=<token>`으로 열리고, Web은 `POST /auth/verify-email`로 토큰을 검증합니다.
+3. 인증 링크가 만료되었거나 다시 받아야 하면 `POST /auth/resend-verification`을 사용합니다.
+4. 이메일 인증이 끝난 사용자는 `POST /auth/login`으로 access token을 받고, HttpOnly refresh token 쿠키를 설정합니다.
+5. 이후 보호 요청에는 `Authorization: Bearer <accessToken>`을 사용합니다.
+6. Web은 access token을 메모리 런타임 상태에만 유지합니다.
+7. 새로고침이나 `401` 이후 복구가 필요하면 `POST /auth/refresh`로 새 access token을 받습니다.
+8. 현재 사용자 확인은 `GET /auth/me`를 사용합니다.
 
 ## 브라우저/API 경계 보안
 
 - CORS는 `APP_ORIGIN` 또는 `CORS_ALLOWED_ORIGINS` allowlist만 허용하고, credential 요청을 지원합니다.
-- `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`은 browser `Origin` 또는 `Referer`가 allowlist에 없으면 `403 Origin not allowed`를 반환합니다.
+- `POST /auth/register`, `POST /auth/verify-email`, `POST /auth/resend-verification`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`은 browser `Origin` 또는 `Referer`가 allowlist에 없으면 `403 Origin not allowed`를 반환합니다.
 - 주요 API 응답에는 `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`가 포함됩니다.
 - `/api/docs`를 제외한 API 응답에는 기본 `Content-Security-Policy`가 포함됩니다.
 - `APP_ORIGIN`이 HTTPS일 때는 `Strict-Transport-Security`를 함께 보냅니다.
@@ -67,13 +70,17 @@
 
 - `GET /health`
 - `GET /health/ready`
+- `POST /auth/register`
+- `POST /auth/verify-email`
+- `POST /auth/resend-verification`
 - `POST /auth/login`
 - `POST /auth/refresh`
 - `POST /auth/logout`
 
 ## 현재 구현 범위 요약
 
-- 기준/참조 범위는 조회 `auth/me`, `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`, `vehicles/operating-summary`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/차량 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `DELETE /insurance-policies/:id`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
+- 인증 범위는 회원가입, 이메일 인증, 인증 메일 재발송, 로그인, 세션 refresh/logout, `auth/me` 조회까지 포함합니다.
+- 기준/참조 범위는 조회 `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`, `vehicles/operating-summary`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/차량 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `DELETE /insurance-policies/:id`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
 - 운영/원장 조회 범위는 `accounting-periods`, `collected-transactions`, `journal-entries`, `plan-items`, `financial-statements`, `carry-forwards`, `import-batches`까지 포함합니다.
 - 집계/보고 조회 범위는 `dashboard/summary`, `forecast/monthly`까지 포함합니다.
 - 현재 쓰기/명령 범위는 `funding-accounts`, `categories`, `insurance-policies`, `vehicles`, `vehicle maintenance logs`, `accounting-periods`, `collected-transactions`, `recurring-rules`, `plan-items`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`까지 확장되어 있습니다.
@@ -150,6 +157,8 @@
 
 ## Web 화면 경로와 API 모듈 대응
 
+- Web `/register` -> API `POST /auth/register`
+- Web `/verify-email` -> API `POST /auth/verify-email`, `POST /auth/resend-verification`
 - Web `/dashboard` -> API `GET /dashboard/summary`
 - Web `/periods` -> API `/accounting-periods`
 - Web `/reference-data` -> API `/reference-data/readiness`, `/funding-accounts`, `/categories`, `/account-subjects`, `/ledger-transaction-types`

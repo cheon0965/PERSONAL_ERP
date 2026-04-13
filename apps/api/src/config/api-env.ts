@@ -9,8 +9,16 @@ export type ApiEnv = {
   JWT_REFRESH_SECRET: string;
   ACCESS_TOKEN_TTL: string;
   REFRESH_TOKEN_TTL: string;
+  EMAIL_VERIFICATION_TTL: string;
   DATABASE_URL: string;
   DEMO_EMAIL: string;
+  MAIL_PROVIDER: 'console' | 'gmail-api';
+  MAIL_FROM_EMAIL: string;
+  MAIL_FROM_NAME: string;
+  GMAIL_CLIENT_ID: string | null;
+  GMAIL_CLIENT_SECRET: string | null;
+  GMAIL_REFRESH_TOKEN: string | null;
+  GMAIL_SENDER_EMAIL: string | null;
 };
 
 const JWT_DURATION_PATTERN = /^\d+(ms|s|m|h|d|w|y)?$/;
@@ -42,6 +50,12 @@ function readString(
   }
 
   return value;
+}
+
+function readOptionalString(source: EnvSource, key: string): string | null {
+  const rawValue = source[key];
+  const value = typeof rawValue === 'string' ? rawValue.trim() : '';
+  return value || null;
 }
 
 function readPort(source: EnvSource): number {
@@ -132,8 +146,59 @@ function readJwtDuration(source: EnvSource, key: string): string {
   return value;
 }
 
+function readJwtDurationWithFallback(
+  source: EnvSource,
+  key: string,
+  fallback: string
+): string {
+  const rawValue = source[key];
+  const value =
+    typeof rawValue === 'string' && rawValue.trim()
+      ? rawValue.trim()
+      : fallback;
+
+  if (!JWT_DURATION_PATTERN.test(value)) {
+    throw new Error(
+      `[api env] ${key} must be a positive integer or a duration like 15m, 7d, or 3600.`
+    );
+  }
+
+  return value;
+}
+
+function readMailProvider(source: EnvSource): ApiEnv['MAIL_PROVIDER'] {
+  const rawValue = source.MAIL_PROVIDER;
+  const value =
+    typeof rawValue === 'string' && rawValue.trim()
+      ? rawValue.trim().toLowerCase()
+      : 'console';
+
+  if (value === 'console' || value === 'gmail-api') {
+    return value;
+  }
+
+  throw new Error('[api env] MAIL_PROVIDER must be console or gmail-api.');
+}
+
+function readRequiredGmailString(
+  source: EnvSource,
+  key: string,
+  mailProvider: ApiEnv['MAIL_PROVIDER']
+): string | null {
+  const value = readOptionalString(source, key);
+
+  if (mailProvider === 'gmail-api' && !value) {
+    throw new Error(
+      `[api env] ${key} is required when MAIL_PROVIDER=gmail-api.`
+    );
+  }
+
+  return value;
+}
+
 export function parseApiEnv(source: EnvSource): ApiEnv {
   const appOrigin = readUrl(source, 'APP_ORIGIN');
+  const mailProvider = readMailProvider(source);
 
   return {
     PORT: readPort(source),
@@ -148,10 +213,42 @@ export function parseApiEnv(source: EnvSource): ApiEnv {
     }),
     ACCESS_TOKEN_TTL: readJwtDuration(source, 'ACCESS_TOKEN_TTL'),
     REFRESH_TOKEN_TTL: readJwtDuration(source, 'REFRESH_TOKEN_TTL'),
+    EMAIL_VERIFICATION_TTL: readJwtDurationWithFallback(
+      source,
+      'EMAIL_VERIFICATION_TTL',
+      '30m'
+    ),
     DATABASE_URL: readUrl(source, 'DATABASE_URL'),
     DEMO_EMAIL: readString(source, 'DEMO_EMAIL', {
       fallback: 'demo@example.com'
-    })
+    }),
+    MAIL_PROVIDER: mailProvider,
+    MAIL_FROM_EMAIL: readString(source, 'MAIL_FROM_EMAIL', {
+      fallback: 'no-reply@example.com'
+    }),
+    MAIL_FROM_NAME: readString(source, 'MAIL_FROM_NAME', {
+      fallback: 'PERSONAL_ERP'
+    }),
+    GMAIL_CLIENT_ID: readRequiredGmailString(
+      source,
+      'GMAIL_CLIENT_ID',
+      mailProvider
+    ),
+    GMAIL_CLIENT_SECRET: readRequiredGmailString(
+      source,
+      'GMAIL_CLIENT_SECRET',
+      mailProvider
+    ),
+    GMAIL_REFRESH_TOKEN: readRequiredGmailString(
+      source,
+      'GMAIL_REFRESH_TOKEN',
+      mailProvider
+    ),
+    GMAIL_SENDER_EMAIL: readRequiredGmailString(
+      source,
+      'GMAIL_SENDER_EMAIL',
+      mailProvider
+    )
   };
 }
 
@@ -165,7 +262,11 @@ export function validateApiEnv(
     ...env,
     PORT: String(env.PORT),
     CORS_ALLOWED_ORIGINS: env.CORS_ALLOWED_ORIGINS.join(','),
-    SWAGGER_ENABLED: String(env.SWAGGER_ENABLED)
+    SWAGGER_ENABLED: String(env.SWAGGER_ENABLED),
+    GMAIL_CLIENT_ID: env.GMAIL_CLIENT_ID ?? '',
+    GMAIL_CLIENT_SECRET: env.GMAIL_CLIENT_SECRET ?? '',
+    GMAIL_REFRESH_TOKEN: env.GMAIL_REFRESH_TOKEN ?? '',
+    GMAIL_SENDER_EMAIL: env.GMAIL_SENDER_EMAIL ?? ''
   };
 }
 

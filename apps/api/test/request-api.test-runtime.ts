@@ -1,6 +1,7 @@
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import { configureApiApp } from '../src/bootstrap/configure-api-app';
+import { EmailSenderPort } from '../src/common/application/ports/email-sender.port';
 import { SecurityEventLogger } from '../src/common/infrastructure/operational/security-event.logger';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { getApiEnv, resetApiEnvCache } from '../src/config/api-env';
@@ -31,8 +32,16 @@ function setJwtEnv() {
     JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
     ACCESS_TOKEN_TTL: process.env.ACCESS_TOKEN_TTL,
     REFRESH_TOKEN_TTL: process.env.REFRESH_TOKEN_TTL,
+    EMAIL_VERIFICATION_TTL: process.env.EMAIL_VERIFICATION_TTL,
     DATABASE_URL: process.env.DATABASE_URL,
-    DEMO_EMAIL: process.env.DEMO_EMAIL
+    DEMO_EMAIL: process.env.DEMO_EMAIL,
+    MAIL_PROVIDER: process.env.MAIL_PROVIDER,
+    MAIL_FROM_EMAIL: process.env.MAIL_FROM_EMAIL,
+    MAIL_FROM_NAME: process.env.MAIL_FROM_NAME,
+    GMAIL_CLIENT_ID: process.env.GMAIL_CLIENT_ID,
+    GMAIL_CLIENT_SECRET: process.env.GMAIL_CLIENT_SECRET,
+    GMAIL_REFRESH_TOKEN: process.env.GMAIL_REFRESH_TOKEN,
+    GMAIL_SENDER_EMAIL: process.env.GMAIL_SENDER_EMAIL
   };
 
   process.env.PORT = '4000';
@@ -44,9 +53,17 @@ function setJwtEnv() {
   process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-2';
   process.env.ACCESS_TOKEN_TTL = '15m';
   process.env.REFRESH_TOKEN_TTL = '7d';
+  process.env.EMAIL_VERIFICATION_TTL = '30m';
   process.env.DATABASE_URL =
     'mysql://test:test@localhost:3306/personal_erp_test';
   process.env.DEMO_EMAIL = 'demo@example.com';
+  process.env.MAIL_PROVIDER = 'console';
+  process.env.MAIL_FROM_EMAIL = 'no-reply@example.com';
+  process.env.MAIL_FROM_NAME = 'PERSONAL_ERP';
+  process.env.GMAIL_CLIENT_ID = '';
+  process.env.GMAIL_CLIENT_SECRET = '';
+  process.env.GMAIL_REFRESH_TOKEN = '';
+  process.env.GMAIL_SENDER_EMAIL = '';
   resetApiEnvCache();
 
   return () => {
@@ -58,8 +75,16 @@ function setJwtEnv() {
     restoreEnvVar('JWT_REFRESH_SECRET', previous.JWT_REFRESH_SECRET);
     restoreEnvVar('ACCESS_TOKEN_TTL', previous.ACCESS_TOKEN_TTL);
     restoreEnvVar('REFRESH_TOKEN_TTL', previous.REFRESH_TOKEN_TTL);
+    restoreEnvVar('EMAIL_VERIFICATION_TTL', previous.EMAIL_VERIFICATION_TTL);
     restoreEnvVar('DATABASE_URL', previous.DATABASE_URL);
     restoreEnvVar('DEMO_EMAIL', previous.DEMO_EMAIL);
+    restoreEnvVar('MAIL_PROVIDER', previous.MAIL_PROVIDER);
+    restoreEnvVar('MAIL_FROM_EMAIL', previous.MAIL_FROM_EMAIL);
+    restoreEnvVar('MAIL_FROM_NAME', previous.MAIL_FROM_NAME);
+    restoreEnvVar('GMAIL_CLIENT_ID', previous.GMAIL_CLIENT_ID);
+    restoreEnvVar('GMAIL_CLIENT_SECRET', previous.GMAIL_CLIENT_SECRET);
+    restoreEnvVar('GMAIL_REFRESH_TOKEN', previous.GMAIL_REFRESH_TOKEN);
+    restoreEnvVar('GMAIL_SENDER_EMAIL', previous.GMAIL_SENDER_EMAIL);
     resetApiEnvCache();
   };
 }
@@ -164,6 +189,17 @@ export async function createRequestTestContext(): Promise<RequestTestContext> {
         },
         error: (event: string, details: Record<string, unknown> = {}) => {
           securityEvents.push({ level: 'error', event, details });
+        }
+      })
+      .overrideProvider(EmailSenderPort)
+      .useValue({
+        send: async (message: {
+          to: string;
+          subject: string;
+          text: string;
+          html?: string;
+        }) => {
+          state.sentEmails.push(message);
         }
       })
       .overrideProvider(JwtService)

@@ -47,3 +47,25 @@ export type LoginResponse = {
   accessToken: string;
   user: AuthenticatedUser;
 };
+
+export type RegisterRequest = {
+  email: string;
+  password: string;
+  name: string;
+};
+
+export type RegisterResponse = {
+  status: 'verification_sent';
+};
+
+export type VerifyEmailRequest = {
+  token: string;
+};
+
+export type VerifyEmailResponse = {
+  status: 'verified';
+};
+
+export type ResendVerificationRequest = {
+  email: string;
+};
