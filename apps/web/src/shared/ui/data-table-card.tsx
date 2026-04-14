@@ -9,6 +9,7 @@ type DataTableCardProps<T extends { id: string }> = {
   title: string;
   description?: string;
   actions?: ReactNode;
+  toolbar?: ReactNode;
   rows: T[];
   columns: GridColDef<T>[];
   height?: number;
@@ -18,6 +19,7 @@ export function DataTableCard<T extends { id: string }>({
   title,
   description,
   actions,
+  toolbar,
   rows,
   columns,
   height = 440
@@ -46,6 +48,7 @@ export function DataTableCard<T extends { id: string }>({
             </div>
             {actions ? <div>{actions}</div> : null}
           </Stack>
+          {toolbar ? <div>{toolbar}</div> : null}
           <div style={{ width: '100%', height }}>
             <DataGrid
               rows={rows}

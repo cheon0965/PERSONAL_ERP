@@ -1,6 +1,6 @@
 'use client';
 
-import { Grid } from '@mui/material';
+import { Chip, Grid, Stack, Typography } from '@mui/material';
 import type { AccountSubjectItem, LedgerTransactionTypeItem } from '@personal-erp/contracts';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
@@ -22,6 +22,23 @@ export function ReferenceDataLookupsSection({
         <DataTableCard
           title="계정과목"
           description="전표 라인과 마감 잔액 계산에서 공통으로 쓰는 공식 계정과목입니다."
+          toolbar={
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              spacing={1.5}
+              justifyContent="space-between"
+              alignItems={{ xs: 'flex-start', md: 'center' }}
+            >
+              <Chip
+                label={`총 ${accountSubjects.length}개`}
+                size="small"
+                variant="outlined"
+              />
+              <Typography variant="body2" color="text.secondary">
+                직접 수정하지 않고 입력 정책 확인용으로 조회합니다.
+              </Typography>
+            </Stack>
+          }
           rows={accountSubjects}
           columns={accountSubjectColumns}
           height={360}
@@ -30,7 +47,24 @@ export function ReferenceDataLookupsSection({
       <Grid size={{ xs: 12, xl: 6 }}>
         <DataTableCard
           title="거래유형"
-          description="계획 항목과 수집 거래가 공통으로 참조하는 사업 거래 유형입니다."
+          description="계획 항목과 수집 거래가 공통으로 참조하는 공식 거래 유형입니다."
+          toolbar={
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              spacing={1.5}
+              justifyContent="space-between"
+              alignItems={{ xs: 'flex-start', md: 'center' }}
+            >
+              <Chip
+                label={`총 ${ledgerTransactionTypes.length}개`}
+                size="small"
+                variant="outlined"
+              />
+              <Typography variant="body2" color="text.secondary">
+                전표 정책과 흐름 기준을 확인하는 읽기 전용 참조 목록입니다.
+              </Typography>
+            </Stack>
+          }
           rows={ledgerTransactionTypes}
           columns={ledgerTransactionTypeColumns}
           height={360}

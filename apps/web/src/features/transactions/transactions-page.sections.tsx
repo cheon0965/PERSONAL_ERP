@@ -2,6 +2,7 @@ import Link from 'next/link';
 import * as React from 'react';
 import {
   Button,
+  Chip,
   Grid,
   MenuItem,
   Stack,
@@ -17,7 +18,6 @@ import type { GridColDef } from '@mui/x-data-grid';
 import { formatWon } from '@/shared/lib/format';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
-import { SectionCard } from '@/shared/ui/section-card';
 import { resolveStatusLabel, StatusChip } from '@/shared/ui/status-chip';
 import {
   resolveLatestLinkedJournalEntry,
@@ -31,177 +31,23 @@ import {
   resolveCollectedTransactionActionHint
 } from './transaction-workflow';
 
-export function CurrentPeriodSection({
-  currentPeriod
-}: {
-  currentPeriod: AccountingPeriodItem | null;
-}) {
-  return (
-    <SectionCard
-      title="현재 운영 월"
-      description="수집 거래 입력과 전표 확정은 현재 열린 운영 월 안에서만 진행됩니다."
-    >
-      {currentPeriod ? (
-        <Grid container spacing={appLayout.fieldGap} alignItems="center">
-          <Grid size={{ xs: 12, md: 3 }}>
-            <Stack spacing={0.5}>
-              <Typography variant="caption" color="text.secondary">
-                상태
-              </Typography>
-              <div>
-                <StatusChip label={currentPeriod.status} />
-              </div>
-            </Stack>
-          </Grid>
-          <Grid size={{ xs: 12, md: 3 }}>
-            <Stack spacing={0.5}>
-              <Typography variant="caption" color="text.secondary">
-                운영 월
-              </Typography>
-              <Typography variant="body1">
-                {currentPeriod.monthLabel}
-              </Typography>
-            </Stack>
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Stack spacing={0.5}>
-              <Typography variant="caption" color="text.secondary">
-                허용 거래일 범위
-              </Typography>
-              <Typography variant="body1">
-                {currentPeriod.startDate.slice(0, 10)} ~{' '}
-                {currentPeriod.endDate.slice(0, 10)}
-              </Typography>
-            </Stack>
-          </Grid>
-        </Grid>
-      ) : (
-        <Stack spacing={1.2}>
-          <Typography variant="body2" color="text.secondary">
-            현재 열린 운영 기간이 없습니다. 먼저 `월 운영` 화면에서 월을
-            시작해 주세요.
-          </Typography>
-          <div>
-            <Button component={Link} href="/periods" size="small" variant="outlined">
-              운영 월 보기
-            </Button>
-          </div>
-        </Stack>
-      )}
-    </SectionCard>
-  );
-}
-
-export function TransactionsFilterSection({
+export function TransactionsTableSection({
   currentPeriod,
+  rows,
+  journalEntriesById,
   keyword,
   fundingAccountName,
   categoryName,
   postingStatus,
   fundingAccountOptions,
   categoryOptions,
+  confirmPending,
+  confirmingTransactionId,
   onKeywordChange,
   onFundingAccountChange,
   onCategoryChange,
-  onPostingStatusChange
-}: {
-  currentPeriod: AccountingPeriodItem | null;
-  keyword: string;
-  fundingAccountName: string;
-  categoryName: string;
-  postingStatus: string;
-  fundingAccountOptions: string[];
-  categoryOptions: string[];
-  onKeywordChange: (value: string) => void;
-  onFundingAccountChange: (value: string) => void;
-  onCategoryChange: (value: string) => void;
-  onPostingStatusChange: (value: string) => void;
-}) {
-  return (
-    <SectionCard
-      title="필터"
-      description={
-        currentPeriod
-          ? `${currentPeriod.monthLabel} 운영 월의 수집 거래를 검색어, 자금수단, 카테고리, 상태 기준으로 좁혀 볼 수 있습니다.`
-          : '운영 월이 열리면 해당 월의 수집 거래를 필터링할 수 있습니다.'
-      }
-    >
-      <Grid container spacing={appLayout.fieldGap}>
-        <Grid size={{ xs: 12, md: 3 }}>
-          <TextField
-            label="검색어"
-            size="small"
-            value={keyword}
-            onChange={(event) => {
-              onKeywordChange(event.target.value);
-            }}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
-          <TextField
-            select
-            label="자금수단"
-            size="small"
-            value={fundingAccountName}
-            onChange={(event) => {
-              onFundingAccountChange(event.target.value);
-            }}
-          >
-            <MenuItem value="">전체</MenuItem>
-            {fundingAccountOptions.map((option) => (
-              <MenuItem key={option} value={option}>
-                {option}
-              </MenuItem>
-            ))}
-          </TextField>
-        </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
-          <TextField
-            select
-            label="카테고리"
-            size="small"
-            value={categoryName}
-            onChange={(event) => {
-              onCategoryChange(event.target.value);
-            }}
-          >
-            <MenuItem value="">전체</MenuItem>
-            {categoryOptions.map((option) => (
-              <MenuItem key={option} value={option}>
-                {option}
-              </MenuItem>
-            ))}
-          </TextField>
-        </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
-          <TextField
-            select
-            label="상태"
-            size="small"
-            value={postingStatus}
-            onChange={(event) => {
-              onPostingStatusChange(event.target.value);
-            }}
-          >
-            <MenuItem value="">전체</MenuItem>
-            {collectedTransactionStatusFilterOptions.map((option) => (
-              <MenuItem key={option} value={option}>
-                {resolveStatusLabel(option)}
-              </MenuItem>
-            ))}
-          </TextField>
-        </Grid>
-      </Grid>
-    </SectionCard>
-  );
-}
-
-export function TransactionsTableSection({
-  currentPeriod,
-  rows,
-  journalEntriesById,
-  confirmPending,
-  confirmingTransactionId,
+  onPostingStatusChange,
+  onClearFilters,
   onConfirm,
   onEdit,
   onDelete
@@ -209,12 +55,29 @@ export function TransactionsTableSection({
   currentPeriod: AccountingPeriodItem | null;
   rows: CollectedTransactionItem[];
   journalEntriesById: Map<string, JournalEntryItem>;
+  keyword: string;
+  fundingAccountName: string;
+  categoryName: string;
+  postingStatus: string;
+  fundingAccountOptions: string[];
+  categoryOptions: string[];
   confirmPending: boolean;
   confirmingTransactionId: string | undefined;
+  onKeywordChange: (value: string) => void;
+  onFundingAccountChange: (value: string) => void;
+  onCategoryChange: (value: string) => void;
+  onPostingStatusChange: (value: string) => void;
+  onClearFilters: () => void;
   onConfirm: (transaction: CollectedTransactionItem) => void;
   onEdit: (transaction: CollectedTransactionItem) => void;
   onDelete: (transaction: CollectedTransactionItem) => void;
 }) {
+  const activeFilterCount = [
+    keyword,
+    fundingAccountName,
+    categoryName,
+    postingStatus
+  ].filter((value) => value.trim().length > 0).length;
   const columns = React.useMemo<GridColDef<CollectedTransactionItem>[]>(
     () => [
       { field: 'businessDate', headerName: '거래일', flex: 0.8 },
@@ -377,8 +240,151 @@ export function TransactionsTableSection({
       title="수집 거래 목록"
       description={
         currentPeriod
-          ? `${currentPeriod.monthLabel} 운영 월 안의 수집 거래를 확인하고, 수집·검토·전표 준비 상태 거래를 수정하거나 삭제할 수 있습니다. 원계획과 전표 연결도 함께 추적할 수 있으며, 전표 확정은 전표 준비 상태에서만 가능합니다.`
+          ? `${currentPeriod.monthLabel} 운영 월의 수집 거래를 한 곳에서 검토하고 전표 준비 흐름으로 넘깁니다.`
           : '현재 열린 운영 월이 없으므로 목록이 비어 있습니다.'
+      }
+      toolbar={
+        <Stack
+          spacing={2}
+          sx={{
+            p: appLayout.cardPadding,
+            borderRadius: 2,
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.default'
+          }}
+        >
+          <Stack
+            direction={{ xs: 'column', lg: 'row' }}
+            spacing={1.5}
+            justifyContent="space-between"
+            alignItems={{ xs: 'flex-start', lg: 'center' }}
+          >
+            <Stack spacing={0.75}>
+              <Stack
+                direction="row"
+                spacing={1}
+                useFlexGap
+                flexWrap="wrap"
+                alignItems="center"
+              >
+                {currentPeriod ? (
+                  <StatusChip label={currentPeriod.status} />
+                ) : (
+                  <Chip
+                    label="운영 월 없음"
+                    size="small"
+                    color="warning"
+                    variant="outlined"
+                  />
+                )}
+                <Typography variant="body2" fontWeight={600}>
+                  {currentPeriod
+                    ? `${currentPeriod.monthLabel} 운영 월`
+                    : '입력 가능한 운영 월이 아직 열리지 않았습니다.'}
+                </Typography>
+                {activeFilterCount > 0 ? (
+                  <Chip
+                    label={`필터 ${activeFilterCount}개`}
+                    size="small"
+                    variant="outlined"
+                  />
+                ) : null}
+              </Stack>
+              <Typography variant="body2" color="text.secondary">
+                {currentPeriod
+                  ? `${currentPeriod.startDate.slice(0, 10)} ~ ${currentPeriod.endDate.slice(0, 10)} 범위의 거래를 확인합니다. 이 표에서 수정, 삭제, 전표 확정을 바로 처리할 수 있습니다.`
+                  : '먼저 월 운영 화면에서 운영 월을 시작하면 수집 거래 입력과 전표 확정 흐름이 열립니다.'}
+              </Typography>
+            </Stack>
+            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+              <Button
+                component={Link}
+                href="/periods"
+                size="small"
+                variant="outlined"
+              >
+                운영 월 보기
+              </Button>
+              {activeFilterCount > 0 ? (
+                <Button size="small" onClick={onClearFilters}>
+                  필터 초기화
+                </Button>
+              ) : null}
+            </Stack>
+          </Stack>
+
+          <Grid container spacing={appLayout.fieldGap}>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <TextField
+                fullWidth
+                label="검색어"
+                size="small"
+                value={keyword}
+                onChange={(event) => {
+                  onKeywordChange(event.target.value);
+                }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <TextField
+                select
+                fullWidth
+                label="자금수단"
+                size="small"
+                value={fundingAccountName}
+                onChange={(event) => {
+                  onFundingAccountChange(event.target.value);
+                }}
+              >
+                <MenuItem value="">전체</MenuItem>
+                {fundingAccountOptions.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <TextField
+                select
+                fullWidth
+                label="카테고리"
+                size="small"
+                value={categoryName}
+                onChange={(event) => {
+                  onCategoryChange(event.target.value);
+                }}
+              >
+                <MenuItem value="">전체</MenuItem>
+                {categoryOptions.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <TextField
+                select
+                fullWidth
+                label="상태"
+                size="small"
+                value={postingStatus}
+                onChange={(event) => {
+                  onPostingStatusChange(event.target.value);
+                }}
+              >
+                <MenuItem value="">전체</MenuItem>
+                {collectedTransactionStatusFilterOptions.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {resolveStatusLabel(option)}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+          </Grid>
+        </Stack>
       }
       rows={currentPeriod ? rows : []}
       columns={columns}

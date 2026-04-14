@@ -1,20 +1,13 @@
 'use client';
 
-import Link from 'next/link';
-import { Button, Stack } from '@mui/material';
+import { SectionTabs } from '@/shared/ui/section-tabs';
+
+const settingsSectionItems = [
+  { href: '/settings', label: '작업 기준' },
+  { href: '/settings/workspace', label: '사업장' },
+  { href: '/settings/account', label: '내 계정' }
+] as const;
 
 export function SettingsSectionNav() {
-  return (
-    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-      <Button component={Link} href="/settings" variant="outlined">
-        작업 문맥
-      </Button>
-      <Button component={Link} href="/settings/workspace" variant="outlined">
-        사업장 설정
-      </Button>
-      <Button component={Link} href="/settings/account" variant="outlined">
-        내 계정 / 보안
-      </Button>
-    </Stack>
-  );
+  return <SectionTabs items={settingsSectionItems} ariaLabel="설정 하위 화면 이동" />;
 }

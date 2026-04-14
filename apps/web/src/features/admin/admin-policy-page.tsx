@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Alert, Grid, Stack, Typography } from '@mui/material';
+import { Alert, Chip, Stack, Typography } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import type {
   AdminPolicySurfaceItem,
@@ -13,7 +13,6 @@ import { DataTableCard } from '@/shared/ui/data-table-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
-import { SectionCard } from '@/shared/ui/section-card';
 import {
   getAdminPolicySummary,
   adminPolicyQueryKey
@@ -49,6 +48,11 @@ export function AdminPolicyPage() {
     ...item,
     id: item.key
   }));
+  const currentRoleLabel = readMembershipRoleLabel(role);
+  const visibleSurfaceCount =
+    policyQuery.data?.items.filter((item) =>
+      role ? item.allowedRoles.includes(role) : false
+    ).length ?? 0;
 
   const columns = useMemo<GridColDef<AdminPolicyRow>[]>(
     () => [
@@ -78,7 +82,27 @@ export function AdminPolicyPage() {
       <PageHeader
         eyebrow="관리자"
         title="권한 정책 요약"
-        description="설정, 관리자, 운영 핵심 화면의 역할별 접근 기준과 CTA 노출 정책을 정리합니다."
+        description="설정, 관리자, 운영 핵심 화면의 역할별 접근 기준과 CTA 노출 정책을 표 중심으로 확인합니다."
+        badges={[
+          {
+            label: canReadPolicy ? '조회 가능' : '조회 권한 없음',
+            color: canReadPolicy ? 'success' : 'warning'
+          }
+        ]}
+        metadata={[
+          {
+            label: '현재 역할',
+            value: currentRoleLabel
+          },
+          {
+            label: '정책 표면',
+            value: `${rows.length}개`
+          },
+          {
+            label: '현재 역할 기준 접근',
+            value: `${visibleSurfaceCount}개`
+          }
+        ]}
       />
 
       <AdminSectionNav />
@@ -97,29 +121,34 @@ export function AdminPolicyPage() {
       />
       ) : null}
 
-      <Grid container spacing={appLayout.sectionGap}>
-        {policyRoles.map((candidate) => {
-          const count =
-            policyQuery.data?.items.filter((item) =>
-              item.allowedRoles.includes(candidate)
-            ).length ?? 0;
-
-          return (
-            <Grid key={candidate} size={{ xs: 12, sm: 6, lg: 3 }}>
-              <SectionCard
-                title={readMembershipRoleLabel(candidate)}
-                description="현재 정책 기준에서 접근 가능한 화면 수"
-              >
-                <Typography variant="h4">{count}</Typography>
-              </SectionCard>
-            </Grid>
-          );
-        })}
-      </Grid>
-
       <DataTableCard
         title="운영 화면 권한 매트릭스"
         description={`총 ${policyQuery.data?.items.length ?? 0}개 화면/영역 기준`}
+        toolbar={
+          <Stack spacing={1.5}>
+            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+              {policyRoles.map((candidate) => {
+                const count =
+                  policyQuery.data?.items.filter((item) =>
+                    item.allowedRoles.includes(candidate)
+                  ).length ?? 0;
+
+                return (
+                  <Chip
+                    key={candidate}
+                    label={`${readMembershipRoleLabel(candidate)} ${count}개`}
+                    size="small"
+                    variant="outlined"
+                  />
+                );
+              })}
+            </Stack>
+            <Typography variant="body2" color="text.secondary">
+              표에서는 화면 경로, 허용 역할, CTA 정책을 한 줄에서 함께 읽고,
+              현재 역할로 실제 접근 가능한 범위를 위 칩에서 먼저 확인합니다.
+            </Typography>
+          </Stack>
+        }
         rows={rows}
         columns={columns}
         height={560}

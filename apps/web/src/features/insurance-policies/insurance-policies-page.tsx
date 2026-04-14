@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Grid, Stack } from '@mui/material';
+import { Alert, Button, Stack } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import type { InsurancePolicyItem } from '@personal-erp/contracts';
 import { sumMoneyWon } from '@personal-erp/money';
@@ -16,7 +16,6 @@ import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { StatusChip } from '@/shared/ui/status-chip';
-import { SummaryCard } from '@/shared/ui/summary-card';
 import {
   deleteInsurancePolicy,
   getInsurancePolicies,
@@ -280,9 +279,38 @@ export function InsurancePoliciesPage() {
       <PageHeader
         eyebrow="보조 운영 영역"
         title="보험 계약"
-        description="보험 계약은 보조 운영 데이터이지만, 저장 시 반복 규칙과 연결해 이후 계획 생성 기준으로 함께 관리합니다."
+        description="보험 계약은 반복 규칙과 함께 관리하는 기준 목록이며, 이후 계획 생성의 출발점으로 사용됩니다."
+        badges={[
+          {
+            label: linkedPolicyCount
+              ? `연결 완료 ${linkedPolicyCount}건`
+              : '연결 규칙 점검 필요',
+            color: linkedPolicyCount > 0 ? 'success' : 'warning'
+          },
+          {
+            label: inactivePolicyCount
+              ? `비활성 ${inactivePolicyCount}건`
+              : '활성 계약만 관리 중'
+          }
+        ]}
+        metadata={[
+          {
+            label: '활성 월 보험료',
+            value: formatWon(totalPremium)
+          },
+          {
+            label: '전체 계약',
+            value: `${data.length}건`
+          },
+          {
+            label: '미연결 계약',
+            value: `${unlinkedPolicyCount}건`
+          }
+        ]}
         primaryActionLabel="보험 계약 등록"
         primaryActionOnClick={handleCreateOpen}
+        secondaryActionLabel="반복 규칙 보기"
+        secondaryActionHref="/recurring"
       />
       {feedback ? (
         <Alert severity={feedback.severity} variant="outlined">
@@ -299,32 +327,9 @@ export function InsurancePoliciesPage() {
       {error ? (
         <QueryErrorAlert title="보험 정보 조회에 실패했습니다." error={error} />
       ) : null}
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <SummaryCard
-            title="활성 월 보험 계획액"
-            value={formatWon(totalPremium)}
-            subtitle="현재 활성 보험 계약 기준 월 계획액 합계"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <SummaryCard
-            title="관리 중 계약 수"
-            value={String(data.length)}
-            subtitle="활성/비활성 포함 전체 보험 계약"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <SummaryCard
-            title="연결 완료 / 비활성"
-            value={`${linkedPolicyCount} / ${inactivePolicyCount}`}
-            subtitle="반복 규칙 연결 완료 계약 수와 비활성 계약 수"
-          />
-        </Grid>
-      </Grid>
       <DataTableCard
         title="보험 계약 목록"
-        description="보험 계약 저장 시 연결된 반복 규칙도 함께 관리합니다. 계약을 삭제하면 연결된 반복 규칙도 함께 정리됩니다."
+        description="보험 계약 저장 시 연결된 반복 규칙도 함께 관리합니다. 표에서 바로 수정하거나 삭제해 목록 중심으로 정리할 수 있습니다."
         rows={data}
         columns={columns}
       />

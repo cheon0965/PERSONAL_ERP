@@ -60,6 +60,7 @@ export function RecurringRulesPage() {
     queryKey: recurringRulesQueryKey,
     queryFn: getRecurringRules
   });
+  const activeRuleCount = data.filter((recurringRule) => recurringRule.isActive).length;
   const insuranceManagedRuleCount = data.filter(
     (recurringRule) => recurringRule.linkedInsurancePolicyId
   ).length;
@@ -313,16 +314,29 @@ export function RecurringRulesPage() {
       <PageHeader
         eyebrow="계획 기준"
         title="반복 규칙"
-        description="반복 규칙은 월별 계획 항목을 만드는 기준이며, 실제 수집 거래와 전표와는 구분되는 계획 정보입니다."
+        description="반복 규칙은 월별 계획 항목을 만드는 기준 목록이며, 실제 수집 거래와 전표와는 구분되는 계획 정보입니다."
+        badges={[
+          {
+            label: insuranceManagedRuleCount
+              ? `보험 연동 ${insuranceManagedRuleCount}건`
+              : '직접 관리 중심'
+          }
+        ]}
+        metadata={[
+          {
+            label: '전체 규칙',
+            value: `${data.length}건`
+          },
+          {
+            label: '활성 규칙',
+            value: `${activeRuleCount}건`
+          }
+        ]}
         primaryActionLabel="반복 규칙 등록"
         primaryActionOnClick={handleCreateOpen}
+        secondaryActionLabel="계획 항목 보기"
+        secondaryActionHref="/plan-items"
       />
-
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-        <Button component={Link} href="/plan-items" variant="outlined">
-          계획 항목 보기
-        </Button>
-      </Stack>
 
       {feedback ? (
         <Alert severity={feedback.severity} variant="outlined">

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { alpha } from '@mui/material/styles';
 import {
   Box,
   Divider,
@@ -13,7 +14,7 @@ import {
   Toolbar,
   Typography
 } from '@mui/material';
-import { navigationItems } from '@/shared/config/navigation';
+import { navigationSections } from '@/shared/config/navigation';
 
 const drawerWidth = 264;
 
@@ -37,50 +38,85 @@ export function SidebarNav() {
           borderBottomRightRadius: 20,
           borderRight: '1px solid',
           borderColor: 'divider',
-          backgroundColor: 'background.paper'
+          background: 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.94))',
+          overflowY: 'auto'
         }
       }}
       open
     >
-      <Toolbar>
-        <Box>
-          <Typography variant="h6">PERSONAL ERP</Typography>
-          <Typography variant="body2" color="text.secondary">
-            1인 사업자·소상공인 월 운영 시스템
+      <Toolbar sx={{ alignItems: 'flex-start', minHeight: 86 }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="overline" color="primary.main">
+            월별 운영
+          </Typography>
+          <Typography variant="h6" sx={{ fontWeight: 800, letterSpacing: '-0.02em' }}>
+            PERSONAL ERP
+          </Typography>
+          <Typography variant="body2" color="text.secondary" noWrap>
+            월 운영 ERP
           </Typography>
         </Box>
       </Toolbar>
       <Divider />
-      <List sx={{ p: 2 }}>
-        {navigationItems.map((item) => {
-          const Icon = item.icon;
-          const selected =
-            currentPath === item.href ||
-            currentPath.startsWith(`${item.href}/`);
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              style={{
-                textDecoration: 'none',
-                color: 'inherit',
-                display: 'block'
-              }}
+      <Box sx={{ px: 1.5, py: 2 }}>
+        {navigationSections.map((section, sectionIndex) => (
+          <Box key={section.label} sx={{ mb: sectionIndex === navigationSections.length - 1 ? 0 : 2 }}>
+            {sectionIndex > 0 ? <Divider sx={{ mb: 2 }} /> : null}
+            <Typography
+              variant="overline"
+              color="text.secondary"
+              sx={{ px: 1.5, display: 'block' }}
             >
-              <ListItemButton
-                selected={selected}
-                sx={{ borderRadius: 3, mb: 0.5 }}
-              >
-                <ListItemIcon sx={{ minWidth: 40 }}>
-                  <Icon color={selected ? 'primary' : 'inherit'} />
-                </ListItemIcon>
-                <ListItemText primary={item.label} />
-              </ListItemButton>
-            </Link>
-          );
-        })}
-      </List>
+              {section.label}
+            </Typography>
+            <List disablePadding sx={{ mt: 0.75 }}>
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                const selected =
+                  currentPath === item.href ||
+                  currentPath.startsWith(`${item.href}/`);
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    style={{
+                      textDecoration: 'none',
+                      color: 'inherit',
+                      display: 'block'
+                    }}
+                  >
+                    <ListItemButton
+                      selected={selected}
+                      sx={(theme) => ({
+                        borderRadius: 3,
+                        mb: 0.5,
+                        px: 1.5,
+                        ...(selected
+                          ? {
+                              backgroundColor: alpha(
+                                theme.palette.primary.main,
+                                0.1
+                              )
+                            }
+                          : null)
+                      })}
+                    >
+                      <ListItemIcon sx={{ minWidth: 40 }}>
+                        <Icon color={selected ? 'primary' : 'inherit'} />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={item.label}
+                        primaryTypographyProps={{ noWrap: true }}
+                      />
+                    </ListItemButton>
+                  </Link>
+                );
+              })}
+            </List>
+          </Box>
+        ))}
+      </Box>
     </Drawer>
   );
 }

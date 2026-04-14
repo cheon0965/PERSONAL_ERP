@@ -16,24 +16,46 @@ import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { TransactionForm } from './transaction-form';
 import { readTransactionsDeleteDescription } from './transactions-page.commands';
-import {
-  CurrentPeriodSection,
-  TransactionsFilterSection,
-  TransactionsTableSection
-} from './transactions-page.sections';
+import { TransactionsTableSection } from './transactions-page.sections';
 import { useTransactionsPage } from './use-transactions-page';
 
 export function TransactionsPage() {
   const page = useTransactionsPage();
+  const readiness =
+    page.referenceDataReadinessQuery.data?.isReadyForTransactionEntry ?? false;
 
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
         eyebrow="수집/확정"
         title="수집 거래"
-        description="현재 열린 운영 월 안에서 사업 거래를 입력하고, 수집·검토·전표 준비 상태를 구분해 보완한 뒤 전표로 확정하는 화면입니다. 원계획과 전표 연결도 함께 추적합니다."
+        description="현재 열린 운영 월의 거래를 입력하고 보완한 뒤, 전표 준비 상태까지 정리하는 핵심 작업 화면입니다."
+        badges={[
+          {
+            label: page.currentPeriod
+              ? `${page.currentPeriod.monthLabel} 운영 월`
+              : '열린 운영 월 없음',
+            color: page.currentPeriod ? 'primary' : 'warning'
+          },
+          {
+            label: readiness ? '입력 준비됨' : '기준 데이터 점검 필요',
+            color: readiness ? 'success' : 'warning'
+          }
+        ]}
+        metadata={[
+          {
+            label: '표시 거래',
+            value: `${page.visibleTransactions.length}건`
+          },
+          {
+            label: '상태 필터',
+            value: page.postingStatus || '전체'
+          }
+        ]}
         primaryActionLabel="수집 거래 등록"
         primaryActionOnClick={page.openCreateDrawer}
+        secondaryActionLabel="계획 항목 보기"
+        secondaryActionHref="/plan-items"
       />
 
       {page.highlightedTransactionId || page.highlightedPlanItemId ? (
@@ -79,29 +101,23 @@ export function TransactionsPage() {
           </Button>
         </Alert>
       ) : null}
-
-      <CurrentPeriodSection currentPeriod={page.currentPeriod} />
-
-      <TransactionsFilterSection
+      <TransactionsTableSection
         currentPeriod={page.currentPeriod}
+        rows={page.visibleTransactions}
+        journalEntriesById={page.journalEntriesById}
         keyword={page.keyword}
         fundingAccountName={page.fundingAccountName}
         categoryName={page.categoryName}
         postingStatus={page.postingStatus}
         fundingAccountOptions={page.fundingAccountOptions}
         categoryOptions={page.categoryOptions}
+        confirmPending={page.confirmPending}
+        confirmingTransactionId={page.confirmingTransactionId}
         onKeywordChange={page.setKeyword}
         onFundingAccountChange={page.setFundingAccountName}
         onCategoryChange={page.setCategoryName}
         onPostingStatusChange={page.setPostingStatus}
-      />
-
-      <TransactionsTableSection
-        currentPeriod={page.currentPeriod}
-        rows={page.visibleTransactions}
-        journalEntriesById={page.journalEntriesById}
-        confirmPending={page.confirmPending}
-        confirmingTransactionId={page.confirmingTransactionId}
+        onClearFilters={page.clearFilters}
         onConfirm={page.confirmTransaction}
         onEdit={page.openEditDrawer}
         onDelete={page.openDeleteDialog}

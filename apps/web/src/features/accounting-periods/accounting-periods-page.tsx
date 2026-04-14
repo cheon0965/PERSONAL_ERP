@@ -8,7 +8,7 @@ import {
   useQuery,
   useQueryClient
 } from '@tanstack/react-query';
-import { Alert, Grid, Stack } from '@mui/material';
+import { Alert, Chip, Grid, Stack, Typography } from '@mui/material';
 import type {
   AccountingPeriodItem,
   CloseAccountingPeriodResponse,
@@ -88,6 +88,10 @@ export function AccountingPeriodsPage() {
   });
   const currentWorkspace = user?.currentWorkspace ?? null;
   const membershipRole = currentWorkspace?.membership.role ?? null;
+  const workspaceLabel = currentWorkspace
+    ? `${currentWorkspace.tenant.name} (${currentWorkspace.tenant.slug})`
+    : '-';
+  const ledgerLabel = currentWorkspace?.ledger?.name ?? '-';
   const latestClosingSnapshotFacts = latestClosingResult
     ? [
         {
@@ -149,13 +153,11 @@ export function AccountingPeriodsPage() {
         facts: [
           {
             label: '사업장',
-            value: currentWorkspace
-              ? `${currentWorkspace.tenant.name} (${currentWorkspace.tenant.slug})`
-              : '-'
+            value: workspaceLabel
           },
           {
             label: '장부',
-            value: currentWorkspace?.ledger?.name ?? '-'
+            value: ledgerLabel
           },
           {
             label: '권한',
@@ -226,6 +228,24 @@ export function AccountingPeriodsPage() {
   const latestPeriod = periods[0] ?? null;
   const reopenPeriod = latestPeriod?.status === 'LOCKED' ? latestPeriod : null;
   const currentPeriod = openPeriod ?? latestPeriod ?? null;
+  const lockedPeriodCount = React.useMemo(
+    () => periods.filter((period) => period.status === 'LOCKED').length,
+    [periods]
+  );
+  const periodStatusSummary = React.useMemo(() => {
+    const counts = {
+      OPEN: 0,
+      IN_REVIEW: 0,
+      CLOSING: 0,
+      LOCKED: 0
+    };
+
+    periods.forEach((period) => {
+      counts[period.status] += 1;
+    });
+
+    return counts;
+  }, [periods]);
   const balanceSheetAccountSubjects = React.useMemo(
     () =>
       (accountSubjectsQuery.data ?? []).filter((accountSubject) =>
@@ -413,11 +433,47 @@ export function AccountingPeriodsPage() {
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
-        eyebrow="월 운영 시작"
-        title="운영 기간 관리"
-        description="현재 사업 장부의 운영 기간을 열고 상태를 관리합니다. 최근 마감 상세는 도메인 가이드에서 확인할 수 있습니다."
-        primaryActionLabel="운영 작업 보기"
-        primaryActionHref="#accounting-period-operations"
+        eyebrow="월 운영"
+        title="운영 기간"
+        description="현재 운영 월을 열고 닫고, 필요할 때만 최근 잠금 월을 재오픈합니다."
+        badges={[
+          {
+            label: currentPeriod ? currentPeriod.monthLabel : '운영 기간 없음',
+            color: currentPeriod ? 'primary' : 'default'
+          },
+          {
+            label:
+              referenceDataReadinessQuery.data?.isReadyForMonthlyOperation ?? false
+                ? '시작 준비됨'
+                : '기준 데이터 점검 필요',
+            color:
+              referenceDataReadinessQuery.data?.isReadyForMonthlyOperation ?? false
+                ? 'success'
+                : 'warning'
+          }
+        ]}
+        metadata={[
+          {
+            label: '사업장',
+            value: workspaceLabel
+          },
+          {
+            label: '장부',
+            value: ledgerLabel
+          },
+          {
+            label: '현재 운영 월',
+            value: currentPeriod?.monthLabel ?? '-'
+          },
+          {
+            label: '권한',
+            value: readMembershipRoleLabel(membershipRole)
+          }
+        ]}
+        primaryActionLabel={openPeriod ? '운영 작업 보기' : '월 운영 시작'}
+        primaryActionHref="#accounting-period-workbench"
+        secondaryActionLabel="기간 이력"
+        secondaryActionHref="#period-history"
       />
       {error ? (
         <QueryErrorAlert
@@ -460,20 +516,22 @@ export function AccountingPeriodsPage() {
         </Alert>
       ) : null}
 
-      <CurrentPeriodStatusSection currentPeriod={currentPeriod} />
-
       <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, xl: 7 }}>
-          <DataTableCard
-            title="운영 기간 목록"
-            description="현재 사업 장부에 생성된 운영 기간과 기초 잔액 준비 여부를 최신 월 순서로 확인합니다."
-            rows={periods}
-            columns={periodColumns}
-            height={360}
+        <Grid size={{ xs: 12, xl: 5 }}>
+          <CurrentPeriodStatusSection
+            currentPeriod={currentPeriod}
+            openPeriod={openPeriod}
+            reopenPeriod={reopenPeriod}
+            canClosePeriod={canClosePeriod}
+            canReopenPeriod={canReopenPeriod}
+            isReadyForMonthlyOperation={
+              referenceDataReadinessQuery.data?.isReadyForMonthlyOperation ??
+              false
+            }
           />
         </Grid>
 
-        <Grid size={{ xs: 12, xl: 5 }}>
+        <Grid size={{ xs: 12, xl: 7 }}>
           <PeriodOperationsSection
             form={form}
             initializeOpeningBalance={initializeOpeningBalance}
@@ -512,6 +570,60 @@ export function AccountingPeriodsPage() {
           />
         </Grid>
       </Grid>
+
+      <div id="period-history">
+        <DataTableCard
+          title="기간 이력"
+          description="최신 월 순서로 운영 기간 상태와 기초 잔액 기준 여부를 확인합니다."
+          toolbar={
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              spacing={1.5}
+              justifyContent="space-between"
+              alignItems={{ xs: 'flex-start', md: 'center' }}
+            >
+              <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                {periodStatusSummary.OPEN > 0 ? (
+                  <Chip
+                    label={`열림 ${periodStatusSummary.OPEN}건`}
+                    size="small"
+                    color="primary"
+                    variant="filled"
+                  />
+                ) : null}
+                {periodStatusSummary.IN_REVIEW > 0 ? (
+                  <Chip
+                    label={`검토 ${periodStatusSummary.IN_REVIEW}건`}
+                    size="small"
+                    color="warning"
+                    variant="outlined"
+                  />
+                ) : null}
+                {periodStatusSummary.CLOSING > 0 ? (
+                  <Chip
+                    label={`마감 중 ${periodStatusSummary.CLOSING}건`}
+                    size="small"
+                    color="warning"
+                    variant="outlined"
+                  />
+                ) : null}
+                <Chip
+                  label={`잠금 ${lockedPeriodCount}건`}
+                  size="small"
+                  variant="outlined"
+                />
+              </Stack>
+              <Typography variant="body2" color="text.secondary">
+                현재 작업대에서 월 시작, 마감, 재오픈을 처리하고 여기서는 상태
+                이력을 확인합니다.
+              </Typography>
+            </Stack>
+          }
+          rows={periods}
+          columns={periodColumns}
+          height={360}
+        />
+      </div>
     </Stack>
   );
 }

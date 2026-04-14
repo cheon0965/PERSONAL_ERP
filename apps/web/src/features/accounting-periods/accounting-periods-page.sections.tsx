@@ -5,6 +5,7 @@ import {
   Box,
   Button,
   Checkbox,
+  Chip,
   FormControlLabel,
   Grid,
   IconButton,
@@ -56,14 +57,24 @@ export const periodColumns: GridColDef<AccountingPeriodItem>[] = [
 ];
 
 export function CurrentPeriodStatusSection({
-  currentPeriod
+  currentPeriod,
+  openPeriod,
+  reopenPeriod,
+  canClosePeriod,
+  canReopenPeriod,
+  isReadyForMonthlyOperation
 }: {
   currentPeriod: AccountingPeriodItem | null;
+  openPeriod: AccountingPeriodItem | null;
+  reopenPeriod: AccountingPeriodItem | null;
+  canClosePeriod: boolean;
+  canReopenPeriod: boolean;
+  isReadyForMonthlyOperation: boolean;
 }) {
   return (
     <SectionCard
-      title="현재 기간 상태"
-      description="가장 최근 운영 기간 또는 현재 열린 기간의 상태를 빠르게 확인합니다."
+      title="현재 운영 월"
+      description="지금 기준이 되는 운영 월 상태와 다음 작업 방향을 먼저 확인합니다."
     >
       {currentPeriod ? (
         <Stack spacing={1.5}>
@@ -79,11 +90,54 @@ export function CurrentPeriodStatusSection({
             </Grid>
             <Grid size={{ xs: 12, md: 4 }}>
               <InfoRow
-                label="기초 잔액 기준"
+                label="다음 작업"
+                value={readNextPeriodAction({
+                  openPeriod,
+                  reopenPeriod,
+                  canClosePeriod,
+                  canReopenPeriod
+                })}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <InfoRow label="시작일" value={formatDate(currentPeriod.openedAt)} />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <InfoRow
+                label="잠금일"
+                value={
+                  currentPeriod.lockedAt
+                    ? formatDate(currentPeriod.lockedAt)
+                    : '아직 열림'
+                }
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <InfoRow
+                label="기초 잔액"
                 value={readOpeningBalanceSource(currentPeriod)}
               />
             </Grid>
           </Grid>
+          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+            <Chip
+              label={isReadyForMonthlyOperation ? '기준 데이터 준비됨' : '기준 데이터 점검 필요'}
+              size="small"
+              color={isReadyForMonthlyOperation ? 'success' : 'warning'}
+              variant={isReadyForMonthlyOperation ? 'filled' : 'outlined'}
+            />
+            <Chip
+              label={
+                openPeriod
+                  ? '현재 열린 운영 월 있음'
+                  : reopenPeriod
+                    ? '최근 잠금 월 검토 가능'
+                    : '첫 월 시작 필요'
+              }
+              size="small"
+              variant="outlined"
+            />
+          </Stack>
           <Stack spacing={1}>
             <Typography variant="subtitle2">최근 상태 이력</Typography>
             {currentPeriod.statusHistory.length > 0 ? (
@@ -108,9 +162,23 @@ export function CurrentPeriodStatusSection({
           </Stack>
         </Stack>
       ) : (
-        <Typography variant="body2" color="text.secondary">
-          아직 시작된 운영 기간이 없습니다. 첫 월 운영 시작을 진행해 주세요.
-        </Typography>
+        <Stack spacing={1.5}>
+          <Typography variant="body2" color="text.secondary">
+            아직 시작된 운영 기간이 없습니다. 첫 월 운영 시작에서 대상 월과
+            기초 잔액 기준을 먼저 준비해 주세요.
+          </Typography>
+          <Chip
+            label={
+              isReadyForMonthlyOperation
+                ? '기준 데이터 준비됨'
+                : '기준 데이터 점검 필요'
+            }
+            size="small"
+            color={isReadyForMonthlyOperation ? 'success' : 'warning'}
+            variant={isReadyForMonthlyOperation ? 'filled' : 'outlined'}
+            sx={{ alignSelf: 'flex-start' }}
+          />
+        </Stack>
       )}
     </SectionCard>
   );
@@ -162,7 +230,11 @@ export function OpenAccountingPeriodSection({
     <div id="open-accounting-period-form">
       <SectionCard
         title="월 운영 시작"
-        description="첫 월은 오프닝 잔액 라인을 함께 저장하고, 이후 월은 이전 기간 잠금 이후에만 열 수 있습니다."
+        description={
+          isFirstPeriod
+            ? '첫 월은 기초 잔액 라인을 함께 저장해 시작 기준을 만듭니다.'
+            : '이전 기간이 잠긴 뒤 다음 운영 월을 엽니다.'
+        }
       >
         <form onSubmit={onSubmit}>
           <Stack spacing={appLayout.cardGap}>
@@ -481,4 +553,21 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
       )}
     </Stack>
   );
+}
+
+function readNextPeriodAction(input: {
+  openPeriod: AccountingPeriodItem | null;
+  reopenPeriod: AccountingPeriodItem | null;
+  canClosePeriod: boolean;
+  canReopenPeriod: boolean;
+}) {
+  if (input.openPeriod) {
+    return input.canClosePeriod ? '월 마감 준비' : '운영 진행 확인';
+  }
+
+  if (input.reopenPeriod) {
+    return input.canReopenPeriod ? '재오픈 검토' : '잠금 상태 확인';
+  }
+
+  return '첫 월 시작';
 }

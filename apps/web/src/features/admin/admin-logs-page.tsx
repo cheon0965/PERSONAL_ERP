@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import {
   Alert,
   Button,
+  Grid,
   MenuItem,
   Stack,
   TextField,
@@ -49,6 +50,15 @@ export function AdminLogsPage() {
   const [draftRequestId, setDraftRequestId] = useState('');
   const [draftResult, setDraftResult] = useState('');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const activeFilterCount = [
+    filters.eventCategory,
+    filters.action,
+    filters.actorMembershipId,
+    filters.resourceType,
+    filters.resourceId,
+    filters.requestId,
+    filters.result
+  ].filter(Boolean).length;
 
   const auditEventsQuery = useQuery({
     queryKey: [...adminAuditEventsQueryKey, filters],
@@ -73,6 +83,34 @@ export function AdminLogsPage() {
       requestId: initialRequestId
     });
   }, [initialRequestId]);
+
+  function applyFilters() {
+    setFilters({
+      limit: 50,
+      offset: 0,
+      eventCategory: draftEventCategory.trim() || undefined,
+      action: draftAction.trim() || undefined,
+      actorMembershipId: draftActorMembershipId.trim() || undefined,
+      resourceType: draftResourceType.trim() || undefined,
+      resourceId: draftResourceId.trim() || undefined,
+      requestId: draftRequestId.trim() || undefined,
+      result: draftResult ? (draftResult as AdminAuditEventQuery['result']) : undefined
+    });
+  }
+
+  function clearFilters() {
+    setDraftEventCategory('');
+    setDraftAction('');
+    setDraftActorMembershipId('');
+    setDraftResourceType('');
+    setDraftResourceId('');
+    setDraftRequestId('');
+    setDraftResult('');
+    setFilters({
+      limit: 50,
+      offset: 0
+    });
+  }
 
   const columns = useMemo<GridColDef<AdminAuditEventItem>[]>(
     () => [
@@ -126,6 +164,29 @@ export function AdminLogsPage() {
         eyebrow="관리자"
         title="로그관리"
         description="현재 사업장 문맥의 감사 이벤트를 조회합니다."
+        badges={[
+          {
+            label: canReadLogs ? '소유자 전용 조회' : '조회 권한 없음',
+            color: canReadLogs ? 'success' : 'warning'
+          },
+          ...(filters.requestId
+            ? [{ label: `Request ID ${filters.requestId}` }]
+            : [])
+        ]}
+        metadata={[
+          {
+            label: '표시 로그',
+            value: `${auditEventsQuery.data?.items.length ?? 0}건`
+          },
+          {
+            label: '전체 로그',
+            value: `${auditEventsQuery.data?.total ?? 0}건`
+          },
+          {
+            label: '적용 필터',
+            value: `${activeFilterCount}개`
+          }
+        ]}
       />
 
       <AdminSectionNav />
@@ -137,79 +198,6 @@ export function AdminLogsPage() {
         </Alert>
       ) : null}
 
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
-        <TextField
-          label="분류"
-          value={draftEventCategory}
-          onChange={(event) => setDraftEventCategory(event.target.value)}
-          size="small"
-        />
-        <TextField
-          label="액션"
-          value={draftAction}
-          onChange={(event) => setDraftAction(event.target.value)}
-          size="small"
-        />
-        <TextField
-          label="Actor Membership"
-          value={draftActorMembershipId}
-          onChange={(event) => setDraftActorMembershipId(event.target.value)}
-          size="small"
-        />
-        <TextField
-          label="리소스 유형"
-          value={draftResourceType}
-          onChange={(event) => setDraftResourceType(event.target.value)}
-          size="small"
-        />
-        <TextField
-          label="리소스 ID"
-          value={draftResourceId}
-          onChange={(event) => setDraftResourceId(event.target.value)}
-          size="small"
-        />
-        <TextField
-          label="Request ID"
-          value={draftRequestId}
-          onChange={(event) => setDraftRequestId(event.target.value)}
-          size="small"
-        />
-        <TextField
-          select
-          label="결과"
-          value={draftResult}
-          onChange={(event) => setDraftResult(event.target.value)}
-          size="small"
-          sx={{ minWidth: 140 }}
-        >
-          <MenuItem value="">전체</MenuItem>
-          <MenuItem value="SUCCESS">성공</MenuItem>
-          <MenuItem value="DENIED">거부</MenuItem>
-          <MenuItem value="FAILED">실패</MenuItem>
-        </TextField>
-        <Button
-          variant="contained"
-          disabled={!canReadLogs}
-          onClick={() =>
-            setFilters({
-              limit: 50,
-              offset: 0,
-              eventCategory: draftEventCategory.trim() || undefined,
-              action: draftAction.trim() || undefined,
-              actorMembershipId: draftActorMembershipId.trim() || undefined,
-              resourceType: draftResourceType.trim() || undefined,
-              resourceId: draftResourceId.trim() || undefined,
-              requestId: draftRequestId.trim() || undefined,
-              result: draftResult
-                ? (draftResult as AdminAuditEventQuery['result'])
-                : undefined
-            })
-          }
-        >
-          필터 적용
-        </Button>
-      </Stack>
-
       {auditEventsQuery.error ? (
         <QueryErrorAlert
           title="감사 로그를 불러오지 못했습니다."
@@ -220,6 +208,110 @@ export function AdminLogsPage() {
       <DataTableCard
         title="감사 로그"
         description={`총 ${auditEventsQuery.data?.total ?? 0}건`}
+        toolbar={
+          <Stack
+            spacing={2}
+            sx={{
+              p: appLayout.cardPadding,
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'background.default'
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              분류, 액션, 리소스, Request ID 기준으로 로그를 좁혀 본 뒤 표에서 바로
+              상세를 확인합니다.
+            </Typography>
+            <Grid container spacing={appLayout.fieldGap}>
+              <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+                <TextField
+                  fullWidth
+                  label="분류"
+                  value={draftEventCategory}
+                  onChange={(event) => setDraftEventCategory(event.target.value)}
+                  size="small"
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+                <TextField
+                  fullWidth
+                  label="액션"
+                  value={draftAction}
+                  onChange={(event) => setDraftAction(event.target.value)}
+                  size="small"
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+                <TextField
+                  fullWidth
+                  label="Actor Membership"
+                  value={draftActorMembershipId}
+                  onChange={(event) =>
+                    setDraftActorMembershipId(event.target.value)
+                  }
+                  size="small"
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+                <TextField
+                  fullWidth
+                  label="리소스 유형"
+                  value={draftResourceType}
+                  onChange={(event) => setDraftResourceType(event.target.value)}
+                  size="small"
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+                <TextField
+                  fullWidth
+                  label="리소스 ID"
+                  value={draftResourceId}
+                  onChange={(event) => setDraftResourceId(event.target.value)}
+                  size="small"
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+                <TextField
+                  fullWidth
+                  label="Request ID"
+                  value={draftRequestId}
+                  onChange={(event) => setDraftRequestId(event.target.value)}
+                  size="small"
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+                <TextField
+                  select
+                  fullWidth
+                  label="결과"
+                  value={draftResult}
+                  onChange={(event) => setDraftResult(event.target.value)}
+                  size="small"
+                >
+                  <MenuItem value="">전체</MenuItem>
+                  <MenuItem value="SUCCESS">성공</MenuItem>
+                  <MenuItem value="DENIED">거부</MenuItem>
+                  <MenuItem value="FAILED">실패</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    variant="contained"
+                    disabled={!canReadLogs}
+                    onClick={applyFilters}
+                  >
+                    필터 적용
+                  </Button>
+                  {activeFilterCount > 0 ? (
+                    <Button onClick={clearFilters}>초기화</Button>
+                  ) : null}
+                </Stack>
+              </Grid>
+            </Grid>
+          </Stack>
+        }
         rows={auditEventsQuery.data?.items ?? []}
         columns={columns}
         height={560}

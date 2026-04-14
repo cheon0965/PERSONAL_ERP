@@ -2,13 +2,14 @@
 
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Button, Grid, Stack, Typography } from '@mui/material';
+import { Alert, Button, Grid, Stack, Tab, Tabs, Typography } from '@mui/material';
 import { BarChart } from '@mui/x-charts/BarChart';
 import type {
   VehicleFuelLogItem,
   VehicleItem,
   VehicleMaintenanceLogItem
 } from '@personal-erp/contracts';
+import { subtractMoneyWon } from '@personal-erp/money';
 import { formatNumber, formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { ChartCard } from '@/shared/ui/chart-card';
@@ -17,6 +18,7 @@ import { FormDrawer } from '@/shared/ui/form-drawer';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
+import { SectionCard } from '@/shared/ui/section-card';
 import { SummaryCard } from '@/shared/ui/summary-card';
 import { VehicleFuelLogForm } from './vehicle-fuel-log-form';
 import { VehicleMaintenanceForm } from './vehicle-maintenance-form';
@@ -58,8 +60,12 @@ type VehicleFuelDrawerState =
   | { mode: 'edit'; fuelLog: VehicleFuelLogItem }
   | null;
 
+type VehicleWorkspaceTab = 'overview' | 'vehicles' | 'fuel' | 'maintenance';
+
 export function VehiclesPage() {
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
+  const [activeTab, setActiveTab] =
+    React.useState<VehicleWorkspaceTab>('overview');
   const [drawerState, setDrawerState] =
     React.useState<VehicleDrawerState>(null);
   const [fuelDrawerState, setFuelDrawerState] =
@@ -97,6 +103,50 @@ export function VehiclesPage() {
   const operatingSummaryByVehicleId = new Map(
     operatingSummary.items.map((item) => [item.vehicleId, item])
   );
+  const latestFuelLog =
+    fuelLogRows.length > 0
+      ? [...fuelLogRows].sort((left, right) => left.filledOn.localeCompare(right.filledOn)).at(-1) ?? null
+      : null;
+  const latestMaintenanceLog =
+    maintenanceLogRows.length > 0
+      ? [...maintenanceLogRows]
+          .sort((left, right) => left.performedOn.localeCompare(right.performedOn))
+          .at(-1) ?? null
+      : null;
+  const mostExpensiveVehicle =
+    operatingSummary.items.length > 0
+      ? [...operatingSummary.items].sort(
+          (left, right) =>
+            subtractMoneyWon(
+              right.recordedOperatingExpenseWon,
+              left.recordedOperatingExpenseWon
+            )
+        )[0]
+      : null;
+  const activeTabLabel =
+    activeTab === 'overview'
+      ? '개요'
+      : activeTab === 'vehicles'
+        ? '차량'
+        : activeTab === 'fuel'
+          ? '연료'
+          : '정비';
+  const contextualAction =
+    activeTab === 'maintenance'
+      ? {
+          label: '정비 기록 추가',
+          onClick: () => {
+            handleMaintenanceCreateOpen(vehicles[0]?.id ?? null);
+          }
+        }
+      : activeTab === 'vehicles'
+        ? null
+        : {
+            label: '연료 기록 추가',
+            onClick: () => {
+              handleFuelCreateOpen(vehicles[0]?.id ?? null);
+            }
+          };
 
   const handleCreateOpen = () => {
     setFeedback(null);
@@ -241,9 +291,48 @@ export function VehiclesPage() {
       <PageHeader
         eyebrow="보조 운영 영역"
         title="차량 운영"
-        description="차량과 주유 기록은 핵심 회계 데이터가 아니라 차량비를 더 정확하게 분류하고 검토하기 위한 운영 보조 데이터입니다."
+        description="차량 프로필, 연료 기록, 정비 이력을 분리해 관리하고 차량별 운영비를 점검하는 화면입니다."
+        badges={[
+          {
+            label: `현재 보기 · ${activeTabLabel}`,
+            color: 'primary'
+          },
+          {
+            label: `연료 ${fuelLogRows.length}건`
+          },
+          {
+            label: `정비 ${maintenanceLogRows.length}건`
+          }
+        ]}
+        metadata={[
+          {
+            label: '관리 차량',
+            value: `${operatingSummary.totals.vehicleCount}대`
+          },
+          {
+            label: '기록 운영비',
+            value: formatWon(operatingSummary.totals.recordedOperatingExpenseWon)
+          },
+          {
+            label: '최근 연료',
+            value: latestFuelLog
+              ? `${latestFuelLog.filledOn.slice(0, 10)} · ${latestFuelLog.vehicleName}`
+              : '-'
+          },
+          {
+            label: '최근 정비',
+            value: latestMaintenanceLog
+              ? `${latestMaintenanceLog.performedOn.slice(0, 10)} · ${latestMaintenanceLog.vehicleName}`
+              : '-'
+          }
+        ]}
         primaryActionLabel="차량 등록"
         primaryActionOnClick={handleCreateOpen}
+        secondaryActionLabel={contextualAction?.label}
+        secondaryActionOnClick={contextualAction?.onClick}
+        secondaryActionDisabled={
+          contextualAction ? vehicles.length === 0 : undefined
+        }
       />
 
       {feedback ? (
@@ -269,117 +358,213 @@ export function VehiclesPage() {
           error={maintenanceLogsError}
         />
       ) : null}
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, md: 3 }}>
-          <SummaryCard
-            title="기록 운영비"
-            value={formatWon(
-              operatingSummary.totals.recordedOperatingExpenseWon
-            )}
-            subtitle={`연료 ${formatWon(operatingSummary.totals.fuelExpenseWon)} 및 정비 ${formatWon(
-              operatingSummary.totals.maintenanceExpenseWon
-            )} 누적 합계입니다.`}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
-          <SummaryCard
-            title="연료 / 충전 비용"
-            value={formatWon(operatingSummary.totals.fuelExpenseWon)}
-            subtitle="주유 / 충전 기록에서 집계한 누적 비용입니다."
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
-          <SummaryCard
-            title="정비 비용"
-            value={formatWon(operatingSummary.totals.maintenanceExpenseWon)}
-            subtitle="정비 이력에서 집계한 누적 비용입니다."
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
-          <SummaryCard
-            title="관리 중 차량 수"
-            value={`${operatingSummary.totals.vehicleCount}대`}
-            subtitle={
-              manufacturers.length > 0
-                ? manufacturers.join(' / ')
-                : '등록된 차량이 없습니다.'
-            }
-          />
-        </Grid>
-      </Grid>
+      <Tabs
+        value={activeTab}
+        onChange={(_event, nextValue: VehicleWorkspaceTab) => {
+          setActiveTab(nextValue);
+        }}
+        variant="scrollable"
+        allowScrollButtonsMobile
+      >
+        <Tab value="overview" label="개요" />
+        <Tab value="vehicles" label={`차량 ${vehicles.length}`} />
+        <Tab value="fuel" label={`연료 ${fuelLogRows.length}`} />
+        <Tab value="maintenance" label={`정비 ${maintenanceLogRows.length}`} />
+      </Tabs>
 
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <SummaryCard
-            title="평균 입력 연비"
-            value={
-              operatingSummary.totals.averageEstimatedFuelEfficiencyKmPerLiter
-                ? `${formatNumber(
-                    operatingSummary.totals
-                      .averageEstimatedFuelEfficiencyKmPerLiter
-                  )} km/L`
-                : '-'
-            }
-            subtitle="차량 프로필에 입력된 기준 연비의 평균값입니다."
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <SummaryCard
-            title="평균 기록 연비"
-            value={
-              operatingSummary.totals.averageRecordedFuelEfficiencyKmPerLiter
-                ? `${formatNumber(
-                    operatingSummary.totals
-                      .averageRecordedFuelEfficiencyKmPerLiter
-                  )} km/L`
-                : '-'
-            }
-            subtitle="주유 기록 누적 거리와 연료량으로 계산한 평균값입니다."
-          />
-        </Grid>
-      </Grid>
-
-      <DataTableCard
-        title="차량 기본 정보"
-        description="차량 프로필은 기본 정보만 관리하고, 운영비와 연비 보조 지표는 별도 운영 요약 projection으로 함께 읽습니다."
-        rows={vehicles}
-        columns={vehicleColumns}
-      />
-
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, xl: 5 }}>
-          <ChartCard
-            title="차량별 기록 운영비"
-            description="차량별 연료비와 정비비 누적 합계를 운영 요약 projection으로 비교합니다."
-            chart={
-              <BarChart
-                height={320}
-                xAxis={[
-                  {
-                    scaleType: 'band',
-                    data: operatingSummary.items.map((item) => item.vehicleName)
-                  }
-                ]}
-                series={[
-                  {
-                    data: operatingSummary.items.map(
-                      (item) => item.recordedOperatingExpenseWon
-                    )
-                  }
-                ]}
+      {activeTab === 'overview' ? (
+        <Stack spacing={appLayout.sectionGap}>
+          <Grid container spacing={appLayout.sectionGap}>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <SummaryCard
+                title="기록 운영비"
+                value={formatWon(
+                  operatingSummary.totals.recordedOperatingExpenseWon
+                )}
+                subtitle={`연료 ${formatWon(operatingSummary.totals.fuelExpenseWon)} 및 정비 ${formatWon(
+                  operatingSummary.totals.maintenanceExpenseWon
+                )} 누적 합계입니다.`}
               />
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <SummaryCard
+                title="연료 / 충전 비용"
+                value={formatWon(operatingSummary.totals.fuelExpenseWon)}
+                subtitle="주유 / 충전 기록에서 집계한 누적 비용입니다."
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <SummaryCard
+                title="정비 비용"
+                value={formatWon(operatingSummary.totals.maintenanceExpenseWon)}
+                subtitle="정비 이력에서 집계한 누적 비용입니다."
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <SummaryCard
+                title="관리 차량 수"
+                value={`${operatingSummary.totals.vehicleCount}대`}
+                subtitle={
+                  manufacturers.length > 0
+                    ? manufacturers.join(' / ')
+                    : '등록된 차량이 없습니다.'
+                }
+              />
+            </Grid>
+          </Grid>
+
+          <Grid container spacing={appLayout.sectionGap}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <SummaryCard
+                title="평균 입력 연비"
+                value={
+                  operatingSummary.totals.averageEstimatedFuelEfficiencyKmPerLiter
+                    ? `${formatNumber(
+                        operatingSummary.totals
+                          .averageEstimatedFuelEfficiencyKmPerLiter
+                      )} km/L`
+                    : '-'
+                }
+                subtitle="차량 프로필에 입력된 기준 연비의 평균값입니다."
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <SummaryCard
+                title="평균 기록 연비"
+                value={
+                  operatingSummary.totals.averageRecordedFuelEfficiencyKmPerLiter
+                    ? `${formatNumber(
+                        operatingSummary.totals
+                          .averageRecordedFuelEfficiencyKmPerLiter
+                      )} km/L`
+                    : '-'
+                }
+                subtitle="주유 기록 누적 거리와 연료량으로 계산한 평균값입니다."
+              />
+            </Grid>
+          </Grid>
+
+          <Grid container spacing={appLayout.sectionGap}>
+            <Grid size={{ xs: 12, xl: 7 }}>
+              <ChartCard
+                title="차량별 기록 운영비"
+                description="차량별 연료비와 정비비 누적 합계를 운영 요약 projection으로 비교합니다."
+                chart={
+                  <BarChart
+                    height={320}
+                    xAxis={[
+                      {
+                        scaleType: 'band',
+                        data: operatingSummary.items.map((item) => item.vehicleName)
+                      }
+                    ]}
+                    series={[
+                      {
+                        data: operatingSummary.items.map(
+                          (item) => item.recordedOperatingExpenseWon
+                        )
+                      }
+                    ]}
+                  />
+                }
+              />
+            </Grid>
+            <Grid size={{ xs: 12, xl: 5 }}>
+              <SectionCard
+                title="운영 포인트"
+                description="차량 프로필과 운영 기록을 분리해 보고, 비용 판단은 항상 수집 거래와 전표 흐름까지 함께 확인합니다."
+              >
+                <Stack spacing={1.5}>
+                  <VehicleInfoRow
+                    label="기록 운영비 최대 차량"
+                    value={
+                      mostExpensiveVehicle
+                        ? `${mostExpensiveVehicle.vehicleName} · ${formatWon(
+                            mostExpensiveVehicle.recordedOperatingExpenseWon
+                          )}`
+                        : '기록이 아직 없습니다.'
+                    }
+                  />
+                  <VehicleInfoRow
+                    label="최근 연료 기록"
+                    value={
+                      latestFuelLog
+                        ? `${latestFuelLog.filledOn.slice(0, 10)} · ${latestFuelLog.vehicleName}`
+                        : '연료 기록이 없습니다.'
+                    }
+                  />
+                  <VehicleInfoRow
+                    label="최근 정비 기록"
+                    value={
+                      latestMaintenanceLog
+                        ? `${latestMaintenanceLog.performedOn.slice(0, 10)} · ${latestMaintenanceLog.vehicleName}`
+                        : '정비 기록이 없습니다.'
+                    }
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    차량 기본 정보, 연료 이력, 정비 이력은 각각 분리해 저장하고,
+                    운영비와 연비 요약은 `operating-summary` projection으로 따로
+                    읽습니다.
+                  </Typography>
+                </Stack>
+              </SectionCard>
+            </Grid>
+          </Grid>
+        </Stack>
+      ) : null}
+
+      {activeTab === 'vehicles' ? (
+        <Stack spacing={appLayout.sectionGap}>
+          <DataTableCard
+            title="차량 기본 정보"
+            description="차량 프로필은 이 탭에서만 관리하고, 연료와 정비 이력은 각각 전용 탭에서 누적합니다."
+            rows={vehicles}
+            columns={vehicleColumns}
+            actions={
+              <Button variant="contained" onClick={handleCreateOpen}>
+                차량 등록
+              </Button>
             }
           />
-        </Grid>
-        <Grid size={{ xs: 12, xl: 7 }}>
+          <Typography variant="body2" color="text.secondary">
+            각 차량 행에서 연료 기록과 정비 기록을 바로 추가할 수 있습니다.
+          </Typography>
+        </Stack>
+      ) : null}
+
+      {activeTab === 'fuel' ? (
+        <Stack spacing={appLayout.sectionGap}>
+          <Grid container spacing={appLayout.sectionGap}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <SummaryCard
+                title="누적 연료 / 충전 비용"
+                value={formatWon(operatingSummary.totals.fuelExpenseWon)}
+                subtitle={`${fuelLogRows.length}건의 기록을 기준으로 집계했습니다.`}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <SummaryCard
+                title="최근 연료 기록"
+                value={
+                  latestFuelLog ? latestFuelLog.filledOn.slice(0, 10) : '-'
+                }
+                subtitle={
+                  latestFuelLog
+                    ? `${latestFuelLog.vehicleName} · ${formatWon(latestFuelLog.amountWon)}`
+                    : '등록된 연료 기록이 없습니다.'
+                }
+              />
+            </Grid>
+          </Grid>
+
           <DataTableCard
             title="주유 / 충전 기록"
-            description="차량 기본 정보와 분리된 별도 운영 기록으로 최근 주유 / 충전 이력을 관리합니다."
+            description="연료 사용과 충전 이력은 이 탭에서만 관리해 차량비 검토 흐름을 단순화합니다."
             rows={fuelLogRows}
             columns={fuelTableColumns}
             actions={
               <Button
-                variant="outlined"
+                variant="contained"
                 onClick={() => {
                   handleFuelCreateOpen(vehicles[0]?.id ?? null);
                 }}
@@ -388,36 +573,59 @@ export function VehiclesPage() {
                 연료 기록 추가
               </Button>
             }
-            height={320}
+            height={360}
           />
-        </Grid>
-      </Grid>
+        </Stack>
+      ) : null}
 
-      <DataTableCard
-        title="정비 이력"
-        description="차량별 정비 내용을 누적 기록해 향후 수집 거래 분류와 운영 계획 판단에 참고합니다."
-        rows={maintenanceLogRows}
-        columns={maintenanceTableColumns}
-        actions={
-          <Button
-            variant="outlined"
-            onClick={() => {
-              handleMaintenanceCreateOpen(vehicles[0]?.id ?? null);
-            }}
-            disabled={vehicles.length === 0}
-          >
-            정비 기록 추가
-          </Button>
-        }
-        height={360}
-      />
+      {activeTab === 'maintenance' ? (
+        <Stack spacing={appLayout.sectionGap}>
+          <Grid container spacing={appLayout.sectionGap}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <SummaryCard
+                title="누적 정비 비용"
+                value={formatWon(operatingSummary.totals.maintenanceExpenseWon)}
+                subtitle={`${maintenanceLogRows.length}건의 기록을 기준으로 집계했습니다.`}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <SummaryCard
+                title="최근 정비 기록"
+                value={
+                  latestMaintenanceLog
+                    ? latestMaintenanceLog.performedOn.slice(0, 10)
+                    : '-'
+                }
+                subtitle={
+                  latestMaintenanceLog
+                    ? `${latestMaintenanceLog.vehicleName} · ${formatWon(
+                        latestMaintenanceLog.amountWon
+                      )}`
+                    : '등록된 정비 기록이 없습니다.'
+                }
+              />
+            </Grid>
+          </Grid>
 
-      {vehicles.length > 0 ? (
-        <Typography variant="body2" color="text.secondary">
-          차량 기본 정보, 연료 이력, 정비 이력은 각각 분리해 저장하고,
-          운영비/연비 요약은 `operating-summary` projection으로 기록 기준에 맞춰
-          따로 읽습니다.
-        </Typography>
+          <DataTableCard
+            title="정비 이력"
+            description="정비 항목과 금액은 이 탭에서만 누적해 향후 비용 분류와 계획 판단 기준으로 사용합니다."
+            rows={maintenanceLogRows}
+            columns={maintenanceTableColumns}
+            actions={
+              <Button
+                variant="contained"
+                onClick={() => {
+                  handleMaintenanceCreateOpen(vehicles[0]?.id ?? null);
+                }}
+                disabled={vehicles.length === 0}
+              >
+                정비 기록 추가
+              </Button>
+            }
+            height={360}
+          />
+        </Stack>
       ) : null}
 
       <FormDrawer
@@ -498,6 +706,23 @@ export function VehiclesPage() {
           />
         )}
       </FormDrawer>
+    </Stack>
+  );
+}
+
+function VehicleInfoRow({
+  label,
+  value
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <Stack spacing={0.5}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body2">{value}</Typography>
     </Stack>
   );
 }

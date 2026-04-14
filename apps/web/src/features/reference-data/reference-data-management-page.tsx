@@ -16,13 +16,41 @@ import { useReferenceDataPage } from './use-reference-data-page';
 
 export function ReferenceDataManagementPage() {
   const page = useReferenceDataPage();
+  const activeFundingAccountsCount = page.fundingAccounts.filter(
+    (item) => item.status === 'ACTIVE'
+  ).length;
+  const activeCategoriesCount = page.categories.filter(
+    (item) => item.isActive
+  ).length;
 
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
         eyebrow="기준 데이터"
-        title="기준 데이터 관리와 참조 입력"
-        description="현재 사업 장부에서 사용하는 자금수단, 카테고리, 계정과목, 거래유형을 확인하고 직접 관리하는 화면입니다."
+        title="기준 데이터 관리"
+        description="직접 관리하는 자금수단과 카테고리를 먼저 정리하고, 공식 참조값은 아래에서 확인합니다."
+        badges={[
+          {
+            label: page.canManageReferenceData ? '관리 가능' : '조회 전용',
+            color: page.canManageReferenceData ? 'primary' : 'default'
+          }
+        ]}
+        metadata={[
+          { label: '사업장', value: page.workspaceLabel },
+          { label: '장부', value: page.ledgerLabel },
+          {
+            label: '편집 대상',
+            value: `자금수단 ${activeFundingAccountsCount}/${page.fundingAccounts.length}개, 카테고리 ${activeCategoriesCount}/${page.categories.length}개 활성`
+          },
+          {
+            label: '공식 참조',
+            value: `계정과목 ${page.accountSubjects.length}개, 거래유형 ${page.ledgerTransactionTypes.length}개`
+          }
+        ]}
+        secondaryActionLabel="공식 참조값"
+        secondaryActionHref="#reference-lookups"
+        primaryActionLabel="준비 상태 보기"
+        primaryActionHref="/reference-data"
       />
 
       <ReferenceDataSectionNav />
@@ -61,10 +89,17 @@ export function ReferenceDataManagementPage() {
         </Grid>
       </Grid>
 
-      <ReferenceDataLookupsSection
-        accountSubjects={page.accountSubjects}
-        ledgerTransactionTypes={page.ledgerTransactionTypes}
-      />
+      <Alert severity="info" variant="outlined">
+        위 두 목록은 직접 관리하는 기준 데이터이고, 아래 공식 참조값은 전표/입력
+        정책 확인용 읽기 전용 목록입니다.
+      </Alert>
+
+      <Stack id="reference-lookups">
+        <ReferenceDataLookupsSection
+          accountSubjects={page.accountSubjects}
+          ledgerTransactionTypes={page.ledgerTransactionTypes}
+        />
+      </Stack>
 
       <FundingAccountEditorDrawer
         editorState={page.fundingAccountEditorState}

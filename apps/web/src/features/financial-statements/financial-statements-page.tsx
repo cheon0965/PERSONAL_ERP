@@ -22,7 +22,6 @@ import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { SectionCard } from '@/shared/ui/section-card';
-import { SummaryCard } from '@/shared/ui/summary-card';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import {
   accountingPeriodsQueryKey,
@@ -156,6 +155,39 @@ export function FinancialStatementsPage() {
         eyebrow="공식 보고"
         title="재무제표"
         description="잠금된 운영 월의 공식 재무제표와 전기 대비 비교, 기초 잔액 기준선을 함께 확인합니다."
+        badges={[
+          {
+            label: selectedPeriod
+              ? `${selectedPeriod.monthLabel} 보고 대상`
+              : '잠금 기간 선택 필요',
+            color: selectedPeriod ? 'primary' : 'warning'
+          },
+          {
+            label: canGenerate ? '생성 권한 있음' : '생성 권한 없음',
+            color: canGenerate ? 'success' : 'default'
+          }
+        ]}
+        metadata={[
+          {
+            label: '잠금 기간',
+            value: `${lockedPeriods.length}개`
+          },
+          {
+            label: '표시 스냅샷',
+            value: `${view?.snapshots.length ?? 0}개`
+          },
+          {
+            label: '전기 비교',
+            value: view?.previousPeriod?.monthLabel ?? '없음'
+          }
+        ]}
+        primaryActionLabel="공식 재무제표 생성"
+        primaryActionOnClick={() => {
+          void handleGenerateSnapshot();
+        }}
+        primaryActionDisabled={!selectedPeriod || !canGenerate || mutation.isPending}
+        secondaryActionLabel="차기 이월 보기"
+        secondaryActionHref="/carry-forwards"
       />
 
       {feedback ? (
@@ -179,43 +211,57 @@ export function FinancialStatementsPage() {
       ) : null}
 
       <SectionCard
-        title="보고 대상 선택"
-        description="공식 재무제표는 잠금된 기간에 대해서만 생성하고 비교할 수 있습니다."
+        title="보고 기준"
+        description="잠금된 운영 기간을 고르고, 같은 흐름에서 스냅샷 생성과 조회를 이어갑니다."
       >
-        <Stack spacing={appLayout.cardGap}>
-          <TextField
-            select
-            label="잠금된 운영 기간"
-            value={selectedPeriodId}
-            onChange={(event) => {
-              setSelectedPeriodId(event.target.value);
-              setFeedback(null);
-            }}
-            helperText={
-              lockedPeriods.length > 0
-                ? '잠금된 기간을 선택하면 스냅샷 생성, 조회, 전기 비교를 함께 확인할 수 있습니다.'
-                : '아직 잠금된 운영 기간이 없습니다.'
-            }
-            disabled={lockedPeriods.length === 0}
-          >
-            {lockedPeriods.map((period) => (
-              <MenuItem key={period.id} value={period.id}>
-                {period.monthLabel}
-              </MenuItem>
-            ))}
-          </TextField>
-
-          <div>
-            <Button
-              variant="contained"
-              color="inherit"
-              onClick={handleGenerateSnapshot}
-              disabled={!selectedPeriod || !canGenerate || mutation.isPending}
+        <Grid container spacing={appLayout.fieldGap} alignItems="flex-start">
+          <Grid size={{ xs: 12, md: 5 }}>
+            <TextField
+              select
+              fullWidth
+              label="잠금된 운영 기간"
+              value={selectedPeriodId}
+              onChange={(event) => {
+                setSelectedPeriodId(event.target.value);
+                setFeedback(null);
+              }}
+              helperText={
+                lockedPeriods.length > 0
+                  ? '잠금된 기간을 선택하면 스냅샷 생성, 조회, 전기 비교를 함께 확인할 수 있습니다.'
+                  : '아직 잠금된 운영 기간이 없습니다.'
+              }
+              disabled={lockedPeriods.length === 0}
             >
-              {mutation.isPending ? '스냅샷 생성 중...' : '공식 재무제표 생성'}
-            </Button>
-          </div>
-        </Stack>
+              {lockedPeriods.map((period) => (
+                <MenuItem key={period.id} value={period.id}>
+                  {period.monthLabel}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 12, md: 7 }}>
+            <Stack spacing={1.25}>
+              <Typography variant="body2" color="text.secondary">
+                {selectedPeriod
+                  ? `${selectedPeriod.monthLabel} 기간은 ${readPeriodStatusLabel(selectedPeriod.status)} 상태입니다. 공식 재무제표는 잠금된 기간만 생성할 수 있고, 운영 해석 화면과 분리된 공식 보고 기준으로 읽습니다.`
+                  : '잠금된 기간이 준비되면 여기서 바로 스냅샷 생성과 조회를 이어갈 수 있습니다.'}
+              </Typography>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={1}
+                useFlexGap
+                flexWrap="wrap"
+              >
+                <Button component={Link} href="/periods" variant="outlined">
+                  운영 월 보기
+                </Button>
+                <Button component={Link} href="/journal-entries" variant="text">
+                  전표 보기
+                </Button>
+              </Stack>
+            </Stack>
+          </Grid>
+        </Grid>
       </SectionCard>
 
       {!selectedPeriod ? (
@@ -284,42 +330,44 @@ export function FinancialStatementsPage() {
             </Alert>
           ))}
 
-          <Grid container spacing={appLayout.sectionGap}>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <SummaryCard
-                eyebrow="현재 기간"
-                title="보고 대상"
-                value={view.period.monthLabel}
-                subtitle={`상태: ${readPeriodStatusLabel(view.period.status)}`}
-              />
+          <SectionCard
+            title="보고 기준 요약"
+            description="생성 대상, 전기 비교, 기초 잔액 기준선을 먼저 확인한 뒤 상세 보고서로 내려갑니다."
+          >
+            <Grid container spacing={appLayout.fieldGap}>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <ReportInfoItem
+                  label="보고 대상"
+                  value={view.period.monthLabel}
+                  description={`상태: ${readPeriodStatusLabel(view.period.status)}`}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <ReportInfoItem
+                  label="직전 잠금 기간"
+                  value={view.previousPeriod?.monthLabel ?? '없음'}
+                  description={
+                    view.previousPeriod
+                      ? '전기 대비 비교 카드와 지표에 사용합니다.'
+                      : '비교 가능한 직전 잠금 기간이 아직 없습니다.'
+                  }
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <ReportInfoItem
+                  label="기초 잔액 출처"
+                  value={readOpeningSourceLabel(
+                    view.basis.openingBalanceSourceKind
+                  )}
+                  description={
+                    view.basis.sourceMonthLabel
+                      ? `${view.basis.sourceMonthLabel} 마감/이월에서 이어졌습니다.`
+                      : '초기 설정 또는 직접 생성 기준입니다.'
+                  }
+                />
+              </Grid>
             </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <SummaryCard
-                eyebrow="전기 비교"
-                title="직전 잠금 기간"
-                value={view.previousPeriod?.monthLabel ?? '없음'}
-                subtitle={
-                  view.previousPeriod
-                    ? '전기 대비 비교 카드와 지표에 사용합니다.'
-                    : '비교 가능한 직전 잠금 기간이 아직 없습니다.'
-                }
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <SummaryCard
-                eyebrow="기준선"
-                title="기초 잔액 출처"
-                value={readOpeningSourceLabel(
-                  view.basis.openingBalanceSourceKind
-                )}
-                subtitle={
-                  view.basis.sourceMonthLabel
-                    ? `${view.basis.sourceMonthLabel} 마감/이월에서 이어졌습니다.`
-                    : '초기 설정 또는 직접 생성 기준입니다.'
-                }
-              />
-            </Grid>
-          </Grid>
+          </SectionCard>
 
           <SectionCard
             title="이월 및 기준선"
@@ -462,6 +510,28 @@ function readStatementKindLabel(statementKind: FinancialStatementKind) {
     default:
       return statementKind;
   }
+}
+
+function ReportInfoItem({
+  label,
+  value,
+  description
+}: {
+  label: string;
+  value: string;
+  description: string;
+}) {
+  return (
+    <Stack spacing={0.5}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="subtitle1">{value}</Typography>
+      <Typography variant="body2" color="text.secondary">
+        {description}
+      </Typography>
+    </Stack>
+  );
 }
 
 function readOpeningSourceLabel(sourceKind: string | null) {

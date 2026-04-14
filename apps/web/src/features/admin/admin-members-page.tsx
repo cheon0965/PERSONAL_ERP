@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
+  Chip,
   MenuItem,
   Stack,
   TextField,
@@ -12,7 +13,8 @@ import {
 import type { GridColDef } from '@mui/x-data-grid';
 import type {
   AdminMemberItem,
-  TenantMembershipRole
+  TenantMembershipRole,
+  TenantMembershipStatus
 } from '@personal-erp/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthSession } from '@/shared/auth/auth-provider';
@@ -69,6 +71,44 @@ export function AdminMembersPage() {
     queryFn: getAdminMembers,
     enabled: canReadMembers
   });
+  const members = membersQuery.data ?? [];
+  const memberSummary = useMemo(() => {
+    const counts: Record<TenantMembershipStatus, number> = {
+      ACTIVE: 0,
+      INVITED: 0,
+      SUSPENDED: 0,
+      REMOVED: 0
+    };
+    let privilegedCount = 0;
+
+    members.forEach((member) => {
+      counts[member.status] += 1;
+
+      if (member.role === 'OWNER' || member.role === 'MANAGER') {
+        privilegedCount += 1;
+      }
+    });
+
+    const statusOrder: TenantMembershipStatus[] = [
+      'ACTIVE',
+      'INVITED',
+      'SUSPENDED',
+      'REMOVED'
+    ];
+
+    return {
+      activeCount: counts.ACTIVE,
+      invitedCount: counts.INVITED,
+      privilegedCount,
+      statusItems: statusOrder
+        .map((status) => ({
+          status,
+          count: counts[status]
+        }))
+        .filter((item) => item.count > 0),
+      totalCount: members.length
+    };
+  }, [members]);
 
   const invalidateMembers = async () => {
     await queryClient.invalidateQueries({ queryKey: adminMembersQueryKey });
@@ -209,8 +249,37 @@ export function AdminMembersPage() {
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
         eyebrow="관리자"
-        title="회원관리"
-        description="현재 사업장 멤버의 역할과 상태를 관리합니다."
+        title="회원 관리"
+        description="사업장 멤버 목록을 먼저 확인하고, 필요한 경우에만 역할과 상태를 조정합니다."
+        badges={[
+          {
+            label: !canReadMembers
+              ? '권한 필요'
+              : canManageMembers
+                ? '역할·상태 변경 가능'
+                : '조회 전용',
+            color: !canReadMembers
+              ? 'warning'
+              : canManageMembers
+                ? 'primary'
+                : 'default'
+          }
+        ]}
+        metadata={[
+          { label: '현재 권한', value: readMembershipRoleLabel(role) },
+          { label: '전체 멤버', value: `${memberSummary.totalCount}명` },
+          {
+            label: '활성 / 초대',
+            value: `${memberSummary.activeCount}명 / ${memberSummary.invitedCount}명`
+          },
+          {
+            label: '관리 역할',
+            value: `${memberSummary.privilegedCount}명`
+          }
+        ]}
+        primaryActionLabel="멤버 초대"
+        primaryActionOnClick={() => setInviteOpen(true)}
+        primaryActionDisabled={!canManageMembers}
       />
 
       <AdminSectionNav />
@@ -232,20 +301,42 @@ export function AdminMembersPage() {
       ) : null}
 
       <DataTableCard
-        title="사업장 멤버"
-        description="역할 변경과 제거는 소유자만 실행할 수 있습니다."
-        rows={membersQuery.data ?? []}
+        title="멤버 목록"
+        description="역할과 상태를 먼저 검토한 뒤, 필요한 멤버만 수정합니다."
+        toolbar={
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={1.5}
+            justifyContent="space-between"
+            alignItems={{ xs: 'flex-start', md: 'center' }}
+          >
+            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+              {memberSummary.statusItems.map((item) => (
+                <Chip
+                  key={item.status}
+                  label={`${readMembershipStatusLabel(item.status)} ${item.count}명`}
+                  size="small"
+                  color={
+                    item.status === 'ACTIVE'
+                      ? 'success'
+                      : item.status === 'INVITED'
+                        ? 'primary'
+                        : item.status === 'SUSPENDED'
+                          ? 'warning'
+                          : 'default'
+                  }
+                  variant={item.status === 'ACTIVE' ? 'filled' : 'outlined'}
+                />
+              ))}
+            </Stack>
+            <Typography variant="body2" color="text.secondary">
+              역할 변경과 제거는 소유자만 실행할 수 있습니다.
+            </Typography>
+          </Stack>
+        }
+        rows={members}
         columns={columns}
         height={520}
-        actions={
-          <Button
-            variant="contained"
-            disabled={!canManageMembers}
-            onClick={() => setInviteOpen(true)}
-          >
-            멤버 초대
-          </Button>
-        }
       />
 
       <FormDrawer
