@@ -42,9 +42,9 @@ C:\secrets\personal-erp\web.env
 
 예시 파일:
 
-- 루트 secret-dir 예시: [`.env.example`](./.env.example)
-- API fallback 예시: [`apps/api/.env.example`](./apps/api/.env.example)
-- Web fallback 예시: [`apps/web/.env.local.example`](./apps/web/.env.local.example)
+- 루트 secret-dir 예시: [`env-examples/secret-dir.local.example`](./env-examples/secret-dir.local.example)
+- API env 예시: [`env-examples/api.env.example`](./env-examples/api.env.example)
+- Web env 예시: [`env-examples/web.env.example`](./env-examples/web.env.example)
 
 ## 3. 적용 편의성 순위
 
@@ -200,7 +200,26 @@ EMAIL_VERIFICATION_TTL=30m
 - 여기서 저장하는 것은 `JWT 서명용 비밀키`입니다.
 - 로그인 후 발급되는 `accessToken`, `refreshToken` 자체를 env 파일에 넣는 것은 아닙니다.
 
-### 5순위. 회원가입 인증 메일 발송 설정
+### 5순위. 데모 계정과 초기 관리자 계정 설정
+
+seed는 기존 데모 계정을 계속 만들고, `INITIAL_ADMIN_*` 값이 모두 있을 때만 별도의 첫 로그인용 workspace `OWNER` 계정을 추가로 만듭니다. 현재 schema에는 별도 platform admin role이 없으므로, 초기 관리자 값은 운영 초기 소유자 계정 기준으로 봅니다.
+
+```env
+DEMO_EMAIL=demo@example.com
+INITIAL_ADMIN_EMAIL=owner@example.com
+INITIAL_ADMIN_NAME=Initial Admin
+INITIAL_ADMIN_PASSWORD=replace-with-local-initial-admin-password
+```
+
+주의:
+
+- 데모 계정은 `DEMO_EMAIL`과 로컬 데모 비밀번호 `Demo1234!` 기준으로 유지합니다.
+- `INITIAL_ADMIN_EMAIL`을 `DEMO_EMAIL`과 같게 두면 별도 초기 관리자 계정은 추가로 만들지 않습니다.
+- `INITIAL_ADMIN_PASSWORD`는 저장소 안이 아니라 `C:\secrets\personal-erp\api.env` 같은 저장소 밖 SECRET 파일에 둡니다.
+- seed는 이 비밀번호를 그대로 저장하지 않고 실행 시 argon2 hash로 변환합니다.
+- 운영에서는 예시 비밀번호를 재사용하지 말고 환경별 최초 로그인 비밀번호를 별도로 발급합니다.
+
+### 6순위. 회원가입 인증 메일 발송 설정
 
 회원가입 이메일 인증은 메일 발송 port를 통해 동작하며, 로컬 기본값은 콘솔/fake 발송에 가까운 `console` provider입니다.
 Gmail API는 운영 또는 실제 발송 확인이 필요할 때만 켭니다.
@@ -235,7 +254,7 @@ GMAIL_SENDER_EMAIL=your-gmail@gmail.com
 - Gmail API scope는 최소 `https://www.googleapis.com/auth/gmail.send`를 사용합니다.
 - `MAIL_PROVIDER=gmail-api`일 때 Gmail 관련 값이 비어 있으면 API가 부팅 단계에서 실패합니다.
 
-### 6순위. Demo 옵션 확인
+### 7순위. Demo 옵션 확인
 
 웹은 개발 중에만 demo fallback을 제한적으로 허용합니다.
 
@@ -260,6 +279,8 @@ fallback 경로:
 
 ## 5. 로컬 개발용 권장 설정
 
+아래 값은 루트 [`env-examples`](./env-examples) 폴더의 예시 파일과 같은 기준입니다.
+
 ### C:\secrets\personal-erp\api.env
 
 ```env
@@ -275,6 +296,9 @@ EMAIL_VERIFICATION_TTL=30m
 DATABASE_URL=mysql://erp_user:local_erp_not_for_prod@localhost:3306/personal_erp
 PRISMA_INTEGRATION_DATABASE_URL=mysql://erp_user:local_erp_not_for_prod@localhost:3306/personal_erp
 DEMO_EMAIL=demo@example.com
+INITIAL_ADMIN_EMAIL=owner@example.com
+INITIAL_ADMIN_NAME=Initial Admin
+INITIAL_ADMIN_PASSWORD=replace-with-local-initial-admin-password
 MAIL_PROVIDER=console
 MAIL_FROM_EMAIL=no-reply@example.com
 MAIL_FROM_NAME=PERSONAL_ERP
@@ -319,6 +343,9 @@ REFRESH_TOKEN_TTL=7d
 EMAIL_VERIFICATION_TTL=30m
 DATABASE_URL=mysql://erp_user:replace-with-production-password@db.example.com:3306/personal_erp
 DEMO_EMAIL=demo@example.com
+INITIAL_ADMIN_EMAIL=owner@example.com
+INITIAL_ADMIN_NAME=Initial Admin
+INITIAL_ADMIN_PASSWORD=replace-with-production-initial-admin-password
 MAIL_PROVIDER=gmail-api
 MAIL_FROM_EMAIL=your-gmail@gmail.com
 MAIL_FROM_NAME=PERSONAL_ERP

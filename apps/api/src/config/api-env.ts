@@ -12,6 +12,9 @@ export type ApiEnv = {
   EMAIL_VERIFICATION_TTL: string;
   DATABASE_URL: string;
   DEMO_EMAIL: string;
+  INITIAL_ADMIN_EMAIL: string | null;
+  INITIAL_ADMIN_NAME: string | null;
+  INITIAL_ADMIN_PASSWORD: string | null;
   MAIL_PROVIDER: 'console' | 'gmail-api';
   MAIL_FROM_EMAIL: string;
   MAIL_FROM_NAME: string;
@@ -52,10 +55,35 @@ function readString(
   return value;
 }
 
-function readOptionalString(source: EnvSource, key: string): string | null {
+function readOptionalString(
+  source: EnvSource,
+  key: string,
+  options?: {
+    minLength?: number;
+    maxLength?: number;
+  }
+): string | null {
   const rawValue = source[key];
   const value = typeof rawValue === 'string' ? rawValue.trim() : '';
-  return value || null;
+  if (!value) {
+    return null;
+  }
+
+  const minLength = options?.minLength;
+  if (minLength !== undefined && value.length < minLength) {
+    throw new Error(
+      `[api env] ${key} must be at least ${minLength} characters long.`
+    );
+  }
+
+  const maxLength = options?.maxLength;
+  if (maxLength !== undefined && value.length > maxLength) {
+    throw new Error(
+      `[api env] ${key} must be at most ${maxLength} characters long.`
+    );
+  }
+
+  return value;
 }
 
 function readPort(source: EnvSource): number {
@@ -199,7 +227,6 @@ function readRequiredGmailString(
 export function parseApiEnv(source: EnvSource): ApiEnv {
   const appOrigin = readUrl(source, 'APP_ORIGIN');
   const mailProvider = readMailProvider(source);
-
   return {
     PORT: readPort(source),
     APP_ORIGIN: appOrigin,
@@ -222,6 +249,20 @@ export function parseApiEnv(source: EnvSource): ApiEnv {
     DEMO_EMAIL: readString(source, 'DEMO_EMAIL', {
       fallback: 'demo@example.com'
     }),
+    INITIAL_ADMIN_EMAIL: readOptionalString(source, 'INITIAL_ADMIN_EMAIL', {
+      maxLength: 191
+    }),
+    INITIAL_ADMIN_NAME: readOptionalString(source, 'INITIAL_ADMIN_NAME', {
+      maxLength: 80
+    }),
+    INITIAL_ADMIN_PASSWORD: readOptionalString(
+      source,
+      'INITIAL_ADMIN_PASSWORD',
+      {
+        minLength: 8,
+        maxLength: 128
+      }
+    ),
     MAIL_PROVIDER: mailProvider,
     MAIL_FROM_EMAIL: readString(source, 'MAIL_FROM_EMAIL', {
       fallback: 'no-reply@example.com'
@@ -263,6 +304,9 @@ export function validateApiEnv(
     PORT: String(env.PORT),
     CORS_ALLOWED_ORIGINS: env.CORS_ALLOWED_ORIGINS.join(','),
     SWAGGER_ENABLED: String(env.SWAGGER_ENABLED),
+    INITIAL_ADMIN_EMAIL: env.INITIAL_ADMIN_EMAIL ?? '',
+    INITIAL_ADMIN_NAME: env.INITIAL_ADMIN_NAME ?? '',
+    INITIAL_ADMIN_PASSWORD: env.INITIAL_ADMIN_PASSWORD ?? '',
     GMAIL_CLIENT_ID: env.GMAIL_CLIENT_ID ?? '',
     GMAIL_CLIENT_SECRET: env.GMAIL_CLIENT_SECRET ?? '',
     GMAIL_REFRESH_TOKEN: env.GMAIL_REFRESH_TOKEN ?? '',

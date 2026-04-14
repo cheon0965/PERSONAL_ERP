@@ -67,7 +67,9 @@
 - 현재 상태: env validation, secret-dir, contracts 중심 shape 관리, `no-store`, 최소 응답 shape, 집계 전용 read 응답
 - 근거 파일:
   `apps/api/src/config/api-env.ts`
-  `.env.example`
+  `env-examples/secret-dir.local.example`
+  `env-examples/api.env.example`
+  `env-examples/web.env.example`
   `ENVIRONMENT_SETUP.md`
   `apps/web/src/shared/auth/auth-session-store.ts`
   `docs/API.md`
@@ -112,6 +114,9 @@
 - 현재 상태: env parse/validate, example 파일, secret-dir 문서화
 - 근거 파일:
   `apps/api/src/config/api-env.ts`
+  `env-examples/secret-dir.local.example`
+  `env-examples/api.env.example`
+  `env-examples/web.env.example`
   `README.md`
   `ENVIRONMENT_SETUP.md`
 - 판정: `적용`
