@@ -92,6 +92,9 @@ test('AuthService.login returns the issued session for valid credentials', async
         ledgerId: 'ledger-1',
         membershipId: 'membership-1'
       })
+    } as never,
+    {
+      record: async () => undefined
     } as never
   );
 
@@ -163,6 +166,9 @@ test('AuthService.login rejects invalid credentials', async () => {
         ledgerId: 'ledger-1',
         membershipId: 'membership-1'
       })
+    } as never,
+    {
+      record: async () => undefined
     } as never
   );
 

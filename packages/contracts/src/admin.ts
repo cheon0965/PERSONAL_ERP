@@ -61,9 +61,12 @@ export type AdminAuditEventItem = {
 
 export type AdminAuditEventQuery = {
   eventCategory?: string;
+  eventName?: string;
   action?: string;
   result?: AdminAuditEventResult;
   actorMembershipId?: string;
+  resourceType?: string;
+  resourceId?: string;
   requestId?: string;
   from?: string;
   to?: string;
@@ -76,4 +79,31 @@ export type AdminAuditEventListResponse = {
   total: number;
   offset: number;
   limit: number;
+};
+
+export type AdminPolicySurfaceSection =
+  | 'SETTINGS'
+  | 'ADMIN'
+  | 'REFERENCE_DATA'
+  | 'MONTHLY_OPERATIONS'
+  | 'IMPORTS'
+  | 'TRANSACTIONS'
+  | 'REPORTING'
+  | 'DASHBOARD';
+
+export type AdminPolicyCtaPolicy = 'ALLOW' | 'READ_ONLY' | 'HIDE';
+
+export type AdminPolicySurfaceItem = {
+  key: string;
+  section: AdminPolicySurfaceSection;
+  sectionLabel: string;
+  surfaceLabel: string;
+  href: string;
+  description: string;
+  allowedRoles: TenantMembershipRole[];
+  ctaPolicy: AdminPolicyCtaPolicy;
+};
+
+export type AdminPolicySummary = {
+  items: AdminPolicySurfaceItem[];
 };

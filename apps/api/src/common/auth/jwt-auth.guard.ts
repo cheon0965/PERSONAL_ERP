@@ -30,6 +30,7 @@ type JwtAccessPayload = {
 
 type AuthenticatedRequest = Request & {
   user?: AuthenticatedUser;
+  authSessionId?: string;
 };
 
 @Injectable()
@@ -62,7 +63,9 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Missing bearer token');
     }
 
-    request.user = await this.resolveUser(token, request);
+    const resolved = await this.resolveUser(token, request);
+    request.user = resolved.user;
+    request.authSessionId = resolved.sessionId;
     return true;
   }
 
@@ -84,7 +87,7 @@ export class JwtAuthGuard implements CanActivate {
   private async resolveUser(
     token: string,
     request: RequestWithContext
-  ): Promise<AuthenticatedUser> {
+  ): Promise<{ user: AuthenticatedUser; sessionId: string }> {
     let payload: JwtAccessPayload;
 
     try {
@@ -125,7 +128,12 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('User not found');
     }
 
-    return this.authenticatedWorkspaceResolver.buildAuthenticatedUser(user);
+    return {
+      user: await this.authenticatedWorkspaceResolver.buildAuthenticatedUser(
+        user
+      ),
+      sessionId: session.id
+    };
   }
 
   private logAccessDenied(

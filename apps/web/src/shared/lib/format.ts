@@ -18,3 +18,14 @@ export const formatDate = (value: string | null) => {
     day: '2-digit'
   }).format(new Date(value));
 };
+
+export const formatDateTime = (value: string | null) => {
+  if (!value) return '-';
+  return new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(new Date(value));
+};

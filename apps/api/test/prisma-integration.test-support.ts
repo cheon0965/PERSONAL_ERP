@@ -292,6 +292,11 @@ export async function cleanupIntegrationWorkspaceFixture(
       tenantId: fixture.tenantId
     }
   });
+  await prisma.workspaceOperationalNote.deleteMany({
+    where: {
+      tenantId: fixture.tenantId
+    }
+  });
   await prisma.carryForwardRecord.deleteMany({
     where: {
       tenantId: fixture.tenantId

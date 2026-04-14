@@ -1,9 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Header,
   HttpCode,
+  Param,
+  Patch,
   Post,
   ForbiddenException,
   Req,
@@ -13,7 +16,14 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
+import { CurrentSessionId } from '../../common/auth/current-session-id.decorator';
 import { getRefreshTokenMaxAgeMs } from '../../common/auth/jwt-config';
+import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
+import {
+  assertWorkspaceActionAllowed,
+  readAllowedWorkspaceRoles,
+  type WorkspaceAction
+} from '../../common/auth/workspace-action.policy';
 import {
   readClientIp,
   readRequestId,
@@ -21,6 +31,10 @@ import {
   RequestWithContext
 } from '../../common/infrastructure/operational/request-context';
 import { SecurityEventLogger } from '../../common/infrastructure/operational/security-event.logger';
+import {
+  logWorkspaceActionDenied,
+  logWorkspaceActionSucceeded
+} from '../../common/infrastructure/operational/workspace-action.audit';
 import { assertAllowedBrowserOrigin } from '../../common/infrastructure/security/browser-boundary';
 import { getApiEnv } from '../../config/api-env';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
@@ -28,8 +42,10 @@ import { Public } from '../../common/auth/public.decorator';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { AcceptInvitationDto } from './dto/accept-invitation.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
+import { UpdateAccountProfileDto } from './dto/update-account-profile.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 
 const REFRESH_COOKIE_NAME = 'refreshToken';
@@ -193,6 +209,145 @@ export class AuthController {
     return user;
   }
 
+  @Get('account-security')
+  @ApiBearerAuth()
+  @Header('Cache-Control', 'no-store')
+  async getAccountSecurity(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentSessionId() currentSessionId?: string
+  ) {
+    const workspace = requireCurrentWorkspace(user);
+    await this.assertAllowed({
+      action: 'account_security.read',
+      request,
+      workspace
+    });
+
+    const response = await this.authService.getAccountSecurity(
+      user,
+      workspace,
+      currentSessionId ?? ''
+    );
+    logWorkspaceActionSucceeded(this.securityEvents, {
+      action: 'account_security.read',
+      request,
+      workspace,
+      details: {
+        sessionCount: response.sessions.length
+      }
+    });
+
+    return response;
+  }
+
+  @Patch('account-profile')
+  @ApiBearerAuth()
+  @Header('Cache-Control', 'no-store')
+  async updateAccountProfile(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateAccountProfileDto
+  ) {
+    const workspace = requireCurrentWorkspace(user);
+    await this.assertAllowed({
+      action: 'account_profile.update',
+      request,
+      workspace
+    });
+
+    const response = await this.authService.updateAccountProfile(
+      user,
+      workspace,
+      request,
+      dto
+    );
+    logWorkspaceActionSucceeded(this.securityEvents, {
+      action: 'account_profile.update',
+      request,
+      workspace,
+      persist: false,
+      details: {
+        userId: response.id
+      }
+    });
+
+    return response;
+  }
+
+  @Post('change-password')
+  @ApiBearerAuth()
+  @Header('Cache-Control', 'no-store')
+  async changePassword(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentSessionId() currentSessionId: string | undefined,
+    @Body() dto: ChangePasswordDto
+  ) {
+    const workspace = requireCurrentWorkspace(user);
+    await this.assertAllowed({
+      action: 'account_security.change_password',
+      request,
+      workspace
+    });
+
+    const response = await this.authService.changePassword(
+      user,
+      workspace,
+      request,
+      currentSessionId ?? '',
+      dto
+    );
+    logWorkspaceActionSucceeded(this.securityEvents, {
+      action: 'account_security.change_password',
+      request,
+      workspace,
+      persist: false,
+      details: {
+        userId: user.id
+      }
+    });
+
+    return response;
+  }
+
+  @Delete('sessions/:sessionId')
+  @ApiBearerAuth()
+  @HttpCode(200)
+  @Header('Cache-Control', 'no-store')
+  async revokeOtherSession(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentSessionId() currentSessionId: string | undefined,
+    @Param('sessionId') sessionId: string
+  ) {
+    const workspace = requireCurrentWorkspace(user);
+    await this.assertAllowed({
+      action: 'account_security.revoke_session',
+      request,
+      workspace
+    });
+
+    const response = await this.authService.revokeOtherSession(
+      user,
+      workspace,
+      request,
+      currentSessionId ?? '',
+      sessionId
+    );
+    logWorkspaceActionSucceeded(this.securityEvents, {
+      action: 'account_security.revoke_session',
+      request,
+      workspace,
+      persist: false,
+      details: {
+        sessionId
+      }
+    });
+
+    return response;
+  }
+
   private readRequiredRefreshTokenCookie(request: RequestWithContext): string {
     const refreshToken = readOptionalRefreshTokenCookie(request);
     if (refreshToken) {
@@ -226,6 +381,32 @@ export class AuthController {
       }
 
       throw new ForbiddenException('Origin not allowed');
+    }
+  }
+
+  private async assertAllowed(input: {
+    action: WorkspaceAction;
+    request: RequestWithContext;
+    workspace: ReturnType<typeof requireCurrentWorkspace>;
+  }): Promise<void> {
+    try {
+      assertWorkspaceActionAllowed(
+        input.workspace.membershipRole,
+        input.action
+      );
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: input.action,
+          request: input.request,
+          workspace: input.workspace,
+          details: {
+            requiredRoles: readAllowedWorkspaceRoles(input.action).join(',')
+          }
+        });
+      }
+
+      throw error;
     }
   }
 }

@@ -154,6 +154,7 @@ export function createRequestPrismaMockContext(state: RequestTestState) {
             select?: {
               minimumReserveWon?: boolean;
               monthlySinkingFundWon?: boolean;
+              timezone?: boolean;
             };
           };
         }
@@ -197,6 +198,9 @@ export function createRequestPrismaMockContext(state: RequestTestState) {
               : undefined,
             monthlySinkingFundWon: select.settings.select?.monthlySinkingFundWon
               ? user.settings.monthlySinkingFundWon
+              : undefined,
+            timezone: select.settings.select?.timezone
+              ? user.settings.timezone
               : undefined
           }
         : null;

@@ -106,6 +106,7 @@
 - API 경계에서는 `[module] METHOD path status duration requestId=...` 형식의 최소 요청 로그를 남깁니다.
 - 보안 이벤트는 `SecurityEvent` 로거에서 `event=... key=value ...` 형식으로 남깁니다.
 - 관리자 회원관리에서 발생한 workspace-scoped 감사 이벤트는 `WorkspaceAuditEvent`에 저장하고, `/admin/logs` 화면에서 조회합니다.
+- 운영 지원의 수동 CSV 반출과 운영 메모 생성도 `WorkspaceAuditEvent`에 저장하고, `/admin/logs`에서 `operations_export.run`, `operations_note.create`로 추적합니다.
 - readiness 점검은 `GET /api/health/ready`에서 수행하고, DB 연결 실패 시 `503`으로 드러냅니다.
 - Prisma unique 충돌은 요청 경계에서 raw 500 대신 도메인 `409 Conflict` 메시지로 정리합니다.
 
@@ -144,6 +145,10 @@
   영속 감사 이벤트, `tenantId`, `ledgerId`, `actorMembershipId`, `targetMembershipId`, `previousRole`, `nextRole`
 - `admin.member_status_updated` / `admin.member_removed`
   영속 감사 이벤트, `tenantId`, `ledgerId`, `actorMembershipId`, `targetMembershipId`, `previousStatus`, `nextStatus`
+- `operations_export.run`
+  영속 감사 이벤트, `tenantId`, `ledgerId`, `actorMembershipId`, `scope`, `rowCount`
+- `operations_note.create`
+  영속 감사 이벤트, `tenantId`, `ledgerId`, `actorMembershipId`, `kind`, `periodId`
 - `system.readiness_failed`
   `error` 레벨, `requestId`, `path`, `check=database`
 

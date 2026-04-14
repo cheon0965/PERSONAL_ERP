@@ -86,6 +86,7 @@ export function createAuthPrismaMock(
             select?: {
               minimumReserveWon?: boolean;
               monthlySinkingFundWon?: boolean;
+              timezone?: boolean;
             };
           };
         };
@@ -123,7 +124,8 @@ export function createAuthPrismaMock(
           settings: args.data.settings
             ? {
                 minimumReserveWon: 400_000,
-                monthlySinkingFundWon: 140_000
+                monthlySinkingFundWon: 140_000,
+                timezone: 'Asia/Seoul'
               }
             : undefined
         };
@@ -156,6 +158,7 @@ export function createAuthPrismaMock(
             select?: {
               minimumReserveWon?: boolean;
               monthlySinkingFundWon?: boolean;
+              timezone?: boolean;
             };
           };
         };
@@ -268,9 +271,12 @@ export function createAuthPrismaMock(
           expiresAt: Date;
         };
       }) => {
+        const now = new Date();
         const created = {
           ...args.data,
-          revokedAt: null
+          revokedAt: null,
+          createdAt: now,
+          updatedAt: now
         };
         state.authSessions.push(created);
         return created;
@@ -282,9 +288,19 @@ export function createAuthPrismaMock(
           ) ?? null
         );
       },
+      findMany: async (args: {
+        where?: {
+          userId?: string;
+        };
+      }) => {
+        return state.authSessions.filter(
+          (candidate) =>
+            !args.where?.userId || candidate.userId === args.where.userId
+        );
+      },
       updateMany: async (args: {
         where: {
-          id?: string;
+          id?: string | { not?: string };
           userId?: string;
           revokedAt?: null;
         };
@@ -295,7 +311,11 @@ export function createAuthPrismaMock(
         let count = 0;
 
         state.authSessions = state.authSessions.map((candidate) => {
-          const matchesId = !args.where.id || candidate.id === args.where.id;
+          const matchesId =
+            !args.where.id ||
+            (typeof args.where.id === 'string'
+              ? candidate.id === args.where.id
+              : !args.where.id.not || candidate.id !== args.where.id.not);
           const matchesUser =
             !args.where.userId || candidate.userId === args.where.userId;
           const matchesRevoked =
@@ -309,7 +329,8 @@ export function createAuthPrismaMock(
           count += 1;
           return {
             ...candidate,
-            ...args.data
+            ...args.data,
+            updatedAt: args.data.revokedAt ?? candidate.updatedAt
           };
         });
 
@@ -539,8 +560,17 @@ export function createAuthPrismaMock(
       update: async (args: {
         where: { id: string };
         data: {
+          name?: string;
+          slug?: string;
           defaultLedgerId?: string | null;
           status?: 'ACTIVE' | 'TRIAL' | 'SUSPENDED' | 'ARCHIVED';
+        };
+        select?: {
+          id?: boolean;
+          slug?: boolean;
+          name?: boolean;
+          status?: boolean;
+          defaultLedgerId?: boolean;
         };
       }) => {
         const tenant = state.tenants.find(
@@ -552,7 +582,20 @@ export function createAuthPrismaMock(
         }
 
         Object.assign(tenant, args.data);
-        return tenant;
+
+        if (!args.select) {
+          return tenant;
+        }
+
+        return {
+          ...(args.select.id ? { id: tenant.id } : {}),
+          ...(args.select.slug ? { slug: tenant.slug } : {}),
+          ...(args.select.name ? { name: tenant.name } : {}),
+          ...(args.select.status ? { status: tenant.status } : {}),
+          ...(args.select.defaultLedgerId
+            ? { defaultLedgerId: tenant.defaultLedgerId }
+            : {})
+        };
       }
     },
     ledger: {
@@ -560,10 +603,13 @@ export function createAuthPrismaMock(
         where: { id: string };
         select?: {
           id?: boolean;
+          tenantId?: boolean;
           name?: boolean;
           baseCurrency?: boolean;
           timezone?: boolean;
           status?: boolean;
+          openedFromYearMonth?: boolean;
+          closedThroughYearMonth?: boolean;
         };
       }) => {
         const ledger = findLedger(args.where.id);
@@ -577,22 +623,32 @@ export function createAuthPrismaMock(
 
         return {
           ...(args.select.id ? { id: ledger.id } : {}),
+          ...(args.select.tenantId ? { tenantId: ledger.tenantId } : {}),
           ...(args.select.name ? { name: ledger.name } : {}),
           ...(args.select.baseCurrency
             ? { baseCurrency: ledger.baseCurrency }
             : {}),
           ...(args.select.timezone ? { timezone: ledger.timezone } : {}),
-          ...(args.select.status ? { status: ledger.status } : {})
+          ...(args.select.status ? { status: ledger.status } : {}),
+          ...(args.select.openedFromYearMonth
+            ? { openedFromYearMonth: '2026-01' }
+            : {}),
+          ...(args.select.closedThroughYearMonth
+            ? { closedThroughYearMonth: null }
+            : {})
         };
       },
       findFirst: async (args: {
         where?: { tenantId?: string };
         select?: {
           id?: boolean;
+          tenantId?: boolean;
           name?: boolean;
           baseCurrency?: boolean;
           timezone?: boolean;
           status?: boolean;
+          openedFromYearMonth?: boolean;
+          closedThroughYearMonth?: boolean;
         };
       }) => {
         const ledger =
@@ -612,12 +668,72 @@ export function createAuthPrismaMock(
 
         return {
           ...(args.select.id ? { id: ledger.id } : {}),
+          ...(args.select.tenantId ? { tenantId: ledger.tenantId } : {}),
           ...(args.select.name ? { name: ledger.name } : {}),
           ...(args.select.baseCurrency
             ? { baseCurrency: ledger.baseCurrency }
             : {}),
           ...(args.select.timezone ? { timezone: ledger.timezone } : {}),
-          ...(args.select.status ? { status: ledger.status } : {})
+          ...(args.select.status ? { status: ledger.status } : {}),
+          ...(args.select.openedFromYearMonth
+            ? { openedFromYearMonth: '2026-01' }
+            : {}),
+          ...(args.select.closedThroughYearMonth
+            ? { closedThroughYearMonth: null }
+            : {})
+        };
+      },
+      update: async (args: {
+        where: { id: string };
+        data: {
+          name?: string;
+          baseCurrency?: string;
+          timezone?: string;
+        };
+        select?: {
+          id?: boolean;
+          tenantId?: boolean;
+          name?: boolean;
+          baseCurrency?: boolean;
+          timezone?: boolean;
+          status?: boolean;
+          openedFromYearMonth?: boolean;
+          closedThroughYearMonth?: boolean;
+        };
+      }) => {
+        const ledger = state.ledgers.find(
+          (candidate) => candidate.id === args.where.id
+        );
+
+        if (!ledger) {
+          throw new Error('Ledger not found');
+        }
+
+        Object.assign(ledger, args.data);
+
+        if (!args.select) {
+          return {
+            ...ledger,
+            openedFromYearMonth: '2026-01',
+            closedThroughYearMonth: null
+          };
+        }
+
+        return {
+          ...(args.select.id ? { id: ledger.id } : {}),
+          ...(args.select.tenantId ? { tenantId: ledger.tenantId } : {}),
+          ...(args.select.name ? { name: ledger.name } : {}),
+          ...(args.select.baseCurrency
+            ? { baseCurrency: ledger.baseCurrency }
+            : {}),
+          ...(args.select.timezone ? { timezone: ledger.timezone } : {}),
+          ...(args.select.status ? { status: ledger.status } : {}),
+          ...(args.select.openedFromYearMonth
+            ? { openedFromYearMonth: '2026-01' }
+            : {}),
+          ...(args.select.closedThroughYearMonth
+            ? { closedThroughYearMonth: null }
+            : {})
         };
       },
       create: async (args: {

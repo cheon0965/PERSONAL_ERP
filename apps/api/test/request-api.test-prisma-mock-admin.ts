@@ -190,9 +190,12 @@ type WorkspaceAuditEventWhere = {
   id?: string;
   tenantId?: string;
   eventCategory?: string;
+  eventName?: string;
   action?: string;
   result?: 'SUCCESS' | 'DENIED' | 'FAILED';
   actorMembershipId?: string;
+  resourceType?: string;
+  resourceId?: string;
   requestId?: string;
   occurredAt?: {
     gte?: Date;
@@ -209,11 +212,17 @@ function matchesWorkspaceAuditEventWhere(
     !where?.tenantId || candidate.tenantId === where.tenantId;
   const matchesCategory =
     !where?.eventCategory || candidate.eventCategory === where.eventCategory;
+  const matchesEventName =
+    !where?.eventName || candidate.eventName === where.eventName;
   const matchesAction = !where?.action || candidate.action === where.action;
   const matchesResult = !where?.result || candidate.result === where.result;
   const matchesActor =
     !where?.actorMembershipId ||
     candidate.actorMembershipId === where.actorMembershipId;
+  const matchesResourceType =
+    !where?.resourceType || candidate.resourceType === where.resourceType;
+  const matchesResourceId =
+    !where?.resourceId || candidate.resourceId === where.resourceId;
   const matchesRequest =
     !where?.requestId || candidate.requestId === where.requestId;
   const matchesFrom =
@@ -227,9 +236,12 @@ function matchesWorkspaceAuditEventWhere(
     matchesId &&
     matchesTenant &&
     matchesCategory &&
+    matchesEventName &&
     matchesAction &&
     matchesResult &&
     matchesActor &&
+    matchesResourceType &&
+    matchesResourceId &&
     matchesRequest &&
     matchesFrom &&
     matchesTo

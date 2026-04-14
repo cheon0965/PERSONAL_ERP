@@ -38,6 +38,44 @@ export type AuthenticatedUser = {
   currentWorkspace: AuthenticatedWorkspace | null;
 };
 
+export type AccountProfileItem = {
+  id: string;
+  email: string;
+  name: string;
+  emailVerifiedAt: string | null;
+  preferredTimezone: string;
+};
+
+export type AccountSessionItem = {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  expiresAt: string;
+  revokedAt: string | null;
+  isCurrent: boolean;
+};
+
+export type AccountSecurityEventKind =
+  | 'SESSION_CREATED'
+  | 'SESSION_REVOKED'
+  | 'PASSWORD_CHANGED'
+  | 'PROFILE_UPDATED';
+
+export type AccountSecurityEventItem = {
+  id: string;
+  kind: AccountSecurityEventKind;
+  occurredAt: string;
+  requestId: string | null;
+  sessionId: string | null;
+  metadata: Record<string, string | number | boolean | null> | null;
+};
+
+export type AccountSecurityOverview = {
+  profile: AccountProfileItem;
+  sessions: AccountSessionItem[];
+  recentEvents: AccountSecurityEventItem[];
+};
+
 export type LoginRequest = {
   email: string;
   password: string;
@@ -54,8 +92,25 @@ export type RegisterRequest = {
   name: string;
 };
 
+export type UpdateAccountProfileRequest = {
+  name: string;
+};
+
+export type ChangePasswordRequest = {
+  currentPassword: string;
+  nextPassword: string;
+};
+
 export type RegisterResponse = {
   status: 'verification_sent';
+};
+
+export type ChangePasswordResponse = {
+  status: 'changed';
+};
+
+export type RevokeAccountSessionResponse = {
+  status: 'revoked';
 };
 
 export type VerifyEmailRequest = {

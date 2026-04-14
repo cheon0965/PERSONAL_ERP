@@ -49,3 +49,16 @@ export function readAuditResultLabel(result: string | null) {
       return result ?? '-';
   }
 }
+
+export function readPolicyCtaLabel(policy: string | null) {
+  switch (policy) {
+    case 'ALLOW':
+      return '버튼 노출';
+    case 'READ_ONLY':
+      return '읽기 중심';
+    case 'HIDE':
+      return 'CTA 숨김';
+    default:
+      return policy ?? '-';
+  }
+}

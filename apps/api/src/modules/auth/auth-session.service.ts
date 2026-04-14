@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
+import type { AccountSessionItem } from '@personal-erp/contracts';
 import {
   getAccessTokenSecret,
   getAccessTokenTtl,
@@ -38,6 +39,8 @@ type AuthSessionRecord = {
   refreshTokenHash: string;
   expiresAt: Date;
   revokedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 @Injectable()
@@ -172,6 +175,98 @@ export class AuthSessionService {
         revokedAt: this.clock.now()
       }
     });
+  }
+
+  async listUserSessions(
+    userId: string,
+    currentSessionId: string
+  ): Promise<AccountSessionItem[]> {
+    const sessions = await this.prisma.authSession.findMany({
+      where: { userId }
+    });
+
+    return [...sessions]
+      .sort((left, right) => {
+        const leftRank = left.revokedAt ? 1 : 0;
+        const rightRank = right.revokedAt ? 1 : 0;
+        if (leftRank !== rightRank) {
+          return leftRank - rightRank;
+        }
+
+        return right.updatedAt.getTime() - left.updatedAt.getTime();
+      })
+      .map((session) => ({
+        id: session.id,
+        createdAt: session.createdAt.toISOString(),
+        updatedAt: session.updatedAt.toISOString(),
+        expiresAt: session.expiresAt.toISOString(),
+        revokedAt: session.revokedAt?.toISOString() ?? null,
+        isCurrent: session.id === currentSessionId
+      }));
+  }
+
+  async revokeOtherUserSessions(
+    userId: string,
+    currentSessionId: string
+  ): Promise<number> {
+    const result = await this.prisma.authSession.updateMany({
+      where: {
+        userId,
+        revokedAt: null,
+        id: {
+          not: currentSessionId
+        }
+      },
+      data: {
+        revokedAt: this.clock.now()
+      }
+    });
+
+    return result.count;
+  }
+
+  async revokeUserSession(
+    userId: string,
+    sessionId: string
+  ): Promise<{
+    session: AuthSessionRecord;
+    wasAlreadyRevoked: boolean;
+  } | null> {
+    const session = await this.prisma.authSession.findUnique({
+      where: { id: sessionId }
+    });
+
+    if (!session || session.userId !== userId) {
+      return null;
+    }
+
+    if (session.revokedAt) {
+      return {
+        session,
+        wasAlreadyRevoked: true
+      };
+    }
+
+    const revokedAt = this.clock.now();
+    await this.prisma.authSession.updateMany({
+      where: {
+        id: session.id,
+        userId,
+        revokedAt: null
+      },
+      data: {
+        revokedAt
+      }
+    });
+
+    return {
+      session: {
+        ...session,
+        revokedAt,
+        updatedAt: revokedAt
+      },
+      wasAlreadyRevoked: false
+    };
   }
 
   private async revokeAllUserSessions(userId: string): Promise<void> {

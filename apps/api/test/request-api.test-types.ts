@@ -8,6 +8,7 @@ import {
   ImportedRowParseStatus,
   ImportSourceKind,
   LedgerTransactionFlowKind,
+  OperationalNoteKind,
   RecurrenceFrequency,
   OpeningBalanceSourceKind,
   PlanItemStatus
@@ -23,6 +24,7 @@ export type RequestTestUser = {
   settings?: {
     minimumReserveWon: number | null;
     monthlySinkingFundWon: number | null;
+    timezone: string;
   };
 };
 
@@ -204,6 +206,8 @@ export type RequestTestState = {
     refreshTokenHash: string;
     expiresAt: Date;
     revokedAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
   }>;
   emailVerificationTokens: Array<{
     id: string;
@@ -245,6 +249,19 @@ export type RequestTestState = {
     clientIpHash: string | null;
     metadata: Record<string, string | number | boolean | null> | null;
     occurredAt: Date;
+  }>;
+  workspaceOperationalNotes: Array<{
+    id: string;
+    tenantId: string;
+    ledgerId: string;
+    periodId: string | null;
+    authorMembershipId: string;
+    kind: OperationalNoteKind;
+    title: string;
+    body: string;
+    relatedHref: string | null;
+    createdAt: Date;
+    updatedAt: Date;
   }>;
   sentEmails: Array<{
     to: string;

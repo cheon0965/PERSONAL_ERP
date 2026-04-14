@@ -5,6 +5,16 @@ export type WorkspaceMembershipRole =
   RequiredWorkspaceContext['membershipRole'];
 
 export type WorkspaceAction =
+  | 'workspace_settings.read'
+  | 'workspace_settings.update'
+  | 'account_security.read'
+  | 'account_profile.update'
+  | 'account_security.change_password'
+  | 'account_security.revoke_session'
+  | 'admin_policy.read'
+  | 'operations_console.read'
+  | 'operations_export.run'
+  | 'operations_note.create'
   | 'admin_member.read'
   | 'admin_member.invite'
   | 'admin_member.update_role'
@@ -45,6 +55,16 @@ const workspaceActionAllowedRoles: Record<
   WorkspaceAction,
   readonly WorkspaceMembershipRole[]
 > = {
+  'workspace_settings.read': ['OWNER', 'MANAGER', 'EDITOR', 'VIEWER'],
+  'workspace_settings.update': ['OWNER', 'MANAGER'],
+  'account_security.read': ['OWNER', 'MANAGER', 'EDITOR', 'VIEWER'],
+  'account_profile.update': ['OWNER', 'MANAGER', 'EDITOR', 'VIEWER'],
+  'account_security.change_password': ['OWNER', 'MANAGER', 'EDITOR', 'VIEWER'],
+  'account_security.revoke_session': ['OWNER', 'MANAGER', 'EDITOR', 'VIEWER'],
+  'admin_policy.read': ['OWNER', 'MANAGER'],
+  'operations_console.read': ['OWNER', 'MANAGER', 'EDITOR', 'VIEWER'],
+  'operations_export.run': ['OWNER', 'MANAGER'],
+  'operations_note.create': ['OWNER', 'MANAGER', 'EDITOR'],
   'admin_member.read': ['OWNER', 'MANAGER'],
   'admin_member.invite': ['OWNER'],
   'admin_member.update_role': ['OWNER'],
@@ -83,6 +103,26 @@ const workspaceActionAllowedRoles: Record<
 };
 
 const workspaceActionDeniedMessages: Record<WorkspaceAction, string> = {
+  'workspace_settings.read':
+    'All active workspace members can read workspace settings.',
+  'workspace_settings.update':
+    'Only owners and managers can update workspace settings.',
+  'account_security.read':
+    'All active workspace members can read their own account security summary.',
+  'account_profile.update':
+    'All active workspace members can update their own account profile.',
+  'account_security.change_password':
+    'All active workspace members can change their own password.',
+  'account_security.revoke_session':
+    'All active workspace members can revoke their own other sessions.',
+  'admin_policy.read':
+    'Only owners and managers can read the admin policy summary.',
+  'operations_console.read':
+    'All active workspace members can read the operations console.',
+  'operations_export.run':
+    'Only owners and managers can run operations CSV exports.',
+  'operations_note.create':
+    'Only owners, managers, and editors can create operations handoff notes.',
   'admin_member.read': 'Only owners and managers can read workspace members.',
   'admin_member.invite': 'Only owners can invite workspace members.',
   'admin_member.update_role': 'Only owners can update workspace member roles.',

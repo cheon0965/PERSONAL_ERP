@@ -7,6 +7,7 @@ import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
 import DirectionsCarRoundedIcon from '@mui/icons-material/DirectionsCarRounded';
 import HealthAndSafetyRoundedIcon from '@mui/icons-material/HealthAndSafetyRounded';
 import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded';
+import RuleFolderRoundedIcon from '@mui/icons-material/RuleFolderRounded';
 import ReceiptLongRoundedIcon from '@mui/icons-material/ReceiptLongRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import SummarizeRoundedIcon from '@mui/icons-material/SummarizeRounded';
@@ -17,6 +18,7 @@ import ViewListRoundedIcon from '@mui/icons-material/ViewListRounded';
 export const navigationItems = [
   { label: '작업 문맥', href: '/settings', icon: SettingsRoundedIcon },
   { label: '관리자', href: '/admin', icon: AdminPanelSettingsRoundedIcon },
+  { label: '운영 지원', href: '/operations', icon: RuleFolderRoundedIcon },
   {
     label: '기준 데이터',
     href: '/reference-data',

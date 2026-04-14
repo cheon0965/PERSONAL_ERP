@@ -24,11 +24,14 @@ export class AdminAuditEventsService {
     const where = {
       tenantId: workspace.tenantId,
       ...(query.eventCategory ? { eventCategory: query.eventCategory } : {}),
+      ...(query.eventName ? { eventName: query.eventName } : {}),
       ...(query.action ? { action: query.action } : {}),
       ...(query.result ? { result: query.result } : {}),
       ...(query.actorMembershipId
         ? { actorMembershipId: query.actorMembershipId }
         : {}),
+      ...(query.resourceType ? { resourceType: query.resourceType } : {}),
+      ...(query.resourceId ? { resourceId: query.resourceId } : {}),
       ...(query.requestId ? { requestId: query.requestId } : {}),
       ...buildOccurredAtFilter(query)
     };

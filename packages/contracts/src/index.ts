@@ -1,5 +1,7 @@
 export * from './auth';
 export * from './admin';
+export * from './settings';
+export * from './operations';
 export * from './reference-data';
 export * from './money';
 export * from './accounting';

@@ -70,11 +70,20 @@
 - 허용되지 않은 origin으로 cookie-auth 요청을 보냈을 때 `403 Origin not allowed`가 나는지 확인합니다.
 - 보호 엔드포인트 호출 시 Bearer 토큰 없이 `401`이 오는지 확인합니다.
 - 차단된 인증/권한 시나리오를 한 번 실행해 `auth.*`, `authorization.scope_denied`, `system.readiness_failed` 로그가 남는지 확인합니다.
+- 로그인 후 `GET /api/operations/summary`, `GET /api/operations/system-status`, `GET /api/operations/alerts`가 현재 workspace 기준으로 응답하는지 확인합니다.
+- 운영 반출을 허용한 계정으로 `POST /api/operations/exports`를 실행했을 때 UTF-8 CSV payload가 내려오고 `operations_export.run` 감사 이벤트가 남는지 확인합니다.
+- 운영 메모를 허용한 계정으로 `POST /api/operations/notes`를 실행했을 때 메모가 저장되고 `operations_note.create` 감사 이벤트가 남는지 확인합니다.
 
 ### Web
 
 - `/login` 화면이 열리는지 확인합니다.
 - 로그인 후 대시보드로 이동하는지 확인합니다.
+- `/settings/workspace`에서 사업장/장부 설정이 열리고, Owner/Manager 수정 권한 안내가 맞는지 확인합니다.
+- `/settings/account`에서 내 계정/보안, 활성 세션, 비밀번호 변경 화면이 열리는지 확인합니다.
+- `/admin/policy`에서 권한 정책 요약이 열리는지 확인합니다.
+- `/operations`, `/operations/checklist`, `/operations/exceptions`, `/operations/month-end`, `/operations/imports`에서 운영 지원 read model이 정상 표시되는지 확인합니다.
+- `/operations/status`, `/operations/alerts`에서 시스템 상태와 파생 알림이 정상 표시되는지 확인합니다.
+- `/operations/exports`에서 수동 CSV 반출 CTA가 동작하고, `/operations/notes`에서 운영 메모 저장 흐름이 동작하는지 확인합니다.
 - `/reference-data`에서 readiness 요약과 자금수단/카테고리 관리 화면이 정상적으로 열리는지 확인합니다.
 - `/periods`에서 현재 운영 기간을 열거나 열린 기간을 확인할 수 있는지 확인합니다.
 - `/insurances`, `/vehicles`, `/recurring`에서 보험 계약, 차량 운영, 반복 규칙 화면이 데이터를 불러오는지 확인합니다.

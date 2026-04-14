@@ -6,6 +6,7 @@ import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { SectionCard } from '@/shared/ui/section-card';
+import { SettingsSectionNav } from '@/features/settings/settings-section-nav';
 
 const sessionStatusLabelMap: Record<string, string> = {
   loading: '확인 중',
@@ -86,6 +87,7 @@ export default function SettingsPage() {
         title="현재 작업 문맥"
         description="현재 로그인 사용자가 어떤 사업장과 장부 문맥 안에서 작업 중인지 확인합니다."
       />
+      <SettingsSectionNav />
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, lg: 6 }}>
           <SectionCard
