@@ -214,6 +214,14 @@ enum FinancialStatementKind {
   NET_WORTH_MOVEMENT
 }
 
+enum OperationalNoteKind {
+  GENERAL
+  MONTH_END
+  EXCEPTION
+  ALERT
+  FOLLOW_UP
+}
+
 model User {
   id                      String                   @id @default(cuid())
   email                   String                   @unique
@@ -274,6 +282,7 @@ model Tenant {
   closingSnapshots            ClosingSnapshot[]
   carryForwardRecords         CarryForwardRecord[]
   financialStatementSnapshots FinancialStatementSnapshot[]
+  operationalNotes            WorkspaceOperationalNote[]
 }
 
 model TenantMembership {
@@ -341,6 +350,7 @@ model Ledger {
   closingSnapshots            ClosingSnapshot[]
   carryForwardRecords         CarryForwardRecord[]
   financialStatementSnapshots FinancialStatementSnapshot[]
+  operationalNotes            WorkspaceOperationalNote[]
 
   @@unique([tenantId, name])
   @@index([tenantId, status])
@@ -385,6 +395,27 @@ model WorkspaceAuditEvent {
   @@index([tenantId, action, occurredAt])
   @@index([tenantId, actorMembershipId, occurredAt])
   @@index([tenantId, requestId])
+}
+
+model WorkspaceOperationalNote {
+  id                 String              @id @default(cuid())
+  tenantId           String
+  ledgerId           String
+  periodId           String?
+  authorMembershipId String
+  kind               OperationalNoteKind @default(GENERAL)
+  title              String              @db.VarChar(191)
+  body               String              @db.Text
+  relatedHref        String?             @db.VarChar(300)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger             Ledger              @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  period             AccountingPeriod?   @relation(fields: [periodId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, ledgerId, createdAt])
+  @@index([tenantId, periodId, createdAt])
+  @@index([tenantId, kind, createdAt])
 }
 
 model UserSetting {
@@ -508,6 +539,7 @@ model AccountingPeriod {
   carryForwardSourceRecord    CarryForwardRecord?          @relation("CarryForwardFromPeriod")
   carryForwardTargetRecord    CarryForwardRecord?          @relation("CarryForwardToPeriod")
   financialStatementSnapshots FinancialStatementSnapshot[]
+  operationalNotes            WorkspaceOperationalNote[]
 
   @@unique([ledgerId, year, month])
   @@index([tenantId, ledgerId, status])

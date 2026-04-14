@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Alert,
   Button,
@@ -30,14 +31,21 @@ import { readAuditResultLabel, readMembershipRoleLabel } from './admin-labels';
 import { AdminSectionNav } from './admin-section-nav';
 
 export function AdminLogsPage() {
+  const searchParams = useSearchParams();
+  const initialRequestId = searchParams?.get('requestId') ?? '';
   const { user } = useAuthSession();
   const role = user?.currentWorkspace?.membership.role ?? null;
   const canReadLogs = role === 'OWNER';
   const [filters, setFilters] = useState<AdminAuditEventQuery>({
     limit: 50,
-    offset: 0
+    offset: 0,
+    requestId: initialRequestId || undefined
   });
+  const [draftEventCategory, setDraftEventCategory] = useState('');
   const [draftAction, setDraftAction] = useState('');
+  const [draftActorMembershipId, setDraftActorMembershipId] = useState('');
+  const [draftResourceType, setDraftResourceType] = useState('');
+  const [draftResourceId, setDraftResourceId] = useState('');
   const [draftRequestId, setDraftRequestId] = useState('');
   const [draftResult, setDraftResult] = useState('');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -52,6 +60,19 @@ export function AdminLogsPage() {
     queryFn: () => getAdminAuditEvent(String(selectedEventId)),
     enabled: Boolean(selectedEventId)
   });
+
+  useEffect(() => {
+    if (!initialRequestId) {
+      return;
+    }
+
+    setDraftRequestId(initialRequestId);
+    setFilters({
+      limit: 50,
+      offset: 0,
+      requestId: initialRequestId
+    });
+  }, [initialRequestId]);
 
   const columns = useMemo<GridColDef<AdminAuditEventItem>[]>(
     () => [
@@ -68,7 +89,9 @@ export function AdminLogsPage() {
         valueFormatter: (value) => readAuditResultLabel(String(value))
       },
       { field: 'eventName', headerName: '이벤트', flex: 1, minWidth: 220 },
+      { field: 'eventCategory', headerName: '분류', width: 130 },
       { field: 'action', headerName: '액션', flex: 1, minWidth: 200 },
+      { field: 'resourceType', headerName: '리소스', width: 140 },
       {
         field: 'actorRole',
         headerName: '역할',
@@ -116,9 +139,33 @@ export function AdminLogsPage() {
 
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
         <TextField
+          label="분류"
+          value={draftEventCategory}
+          onChange={(event) => setDraftEventCategory(event.target.value)}
+          size="small"
+        />
+        <TextField
           label="액션"
           value={draftAction}
           onChange={(event) => setDraftAction(event.target.value)}
+          size="small"
+        />
+        <TextField
+          label="Actor Membership"
+          value={draftActorMembershipId}
+          onChange={(event) => setDraftActorMembershipId(event.target.value)}
+          size="small"
+        />
+        <TextField
+          label="리소스 유형"
+          value={draftResourceType}
+          onChange={(event) => setDraftResourceType(event.target.value)}
+          size="small"
+        />
+        <TextField
+          label="리소스 ID"
+          value={draftResourceId}
+          onChange={(event) => setDraftResourceId(event.target.value)}
           size="small"
         />
         <TextField
@@ -147,7 +194,11 @@ export function AdminLogsPage() {
             setFilters({
               limit: 50,
               offset: 0,
+              eventCategory: draftEventCategory.trim() || undefined,
               action: draftAction.trim() || undefined,
+              actorMembershipId: draftActorMembershipId.trim() || undefined,
+              resourceType: draftResourceType.trim() || undefined,
+              resourceId: draftResourceId.trim() || undefined,
               requestId: draftRequestId.trim() || undefined,
               result: draftResult
                 ? (draftResult as AdminAuditEventQuery['result'])
@@ -186,10 +237,13 @@ export function AdminLogsPage() {
               label="결과"
               value={readAuditResultLabel(selectedEvent.result)}
             />
+            <Detail label="분류" value={selectedEvent.eventCategory} />
+            <Detail label="이벤트" value={selectedEvent.eventName} />
             <Detail label="액션" value={selectedEvent.action ?? '-'} />
             <Detail label="리소스" value={selectedEvent.resourceType ?? '-'} />
             <Detail label="리소스 ID" value={selectedEvent.resourceId ?? '-'} />
             <Detail label="Request ID" value={selectedEvent.requestId ?? '-'} />
+            <Detail label="사유" value={selectedEvent.reason ?? '-'} />
             <Detail label="경로" value={selectedEvent.path ?? '-'} />
             <Detail
               label="Actor"
@@ -203,6 +257,22 @@ export function AdminLogsPage() {
                   : '-'
               }
             />
+            {selectedEvent.requestId ? (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setDraftRequestId(selectedEvent.requestId ?? '');
+                  setFilters({
+                    limit: 50,
+                    offset: 0,
+                    requestId: selectedEvent.requestId ?? undefined
+                  });
+                  setSelectedEventId(null);
+                }}
+              >
+                같은 Request ID로 보기
+              </Button>
+            ) : null}
           </Stack>
         ) : (
           <Typography variant="body2" color="text.secondary">

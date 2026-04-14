@@ -78,8 +78,14 @@
 - 인증 세션 생성/회전/로그아웃
 - 보호 라우트의 `401`
 - `GET /auth/me`
+- `GET /auth/account-security`, `PATCH /auth/account-profile`, `POST /auth/change-password`, `DELETE /auth/sessions/:sessionId`
+  현재 사용자 프로필/세션/최근 이벤트 조회, 이름 수정, 비밀번호 변경, 다른 활성 세션 종료를 검증
+- `GET /settings/workspace`, `PATCH /settings/workspace`
+  현재 workspace/ledger 설정 조회와 Owner/Manager 수정, Viewer 거부를 검증
 - 관리자 `GET /admin/members`, `POST /admin/members/invitations`, `PATCH /admin/members/:membershipId/role`, `GET /admin/audit-events`
   current workspace 멤버 목록, 초대 메일 발송, 역할 변경, 마지막 활성 Owner 보호, 권한 거부 감사 이벤트, 감사 로그 조회를 검증
+- 관리자 `GET /admin/policy`
+  현재 workspace의 Owner/Manager가 권한 정책 요약을 조회할 수 있는지 검증
 - `GET /funding-accounts`, `GET /categories`, `GET /account-subjects`, `GET /ledger-transaction-types`, `GET /insurance-policies`, `GET /vehicles`, `GET /vehicles/operating-summary`
   현재 workspace/ledger 기준 활성 참조 데이터와 운영 보조 자산 데이터만 반환하는지 검증
 - `GET /insurance-policies?includeInactive=true`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`
@@ -137,6 +143,8 @@
   다른 workspace/ledger 데이터가 집계에 섞이지 않고 raw read model을 노출하지 않는지 검증
 - `GET /forecast/monthly`
   현재 구현 기준 current workspace 집계만 사용하고 month query를 그대로 반영하는지 검증
+- `GET /operations/summary`, `GET /operations/checklist`, `GET /operations/exceptions`, `GET /operations/month-end`, `GET /operations/import-status`, `GET /operations/system-status`, `GET /operations/alerts`, `GET/POST /operations/exports`, `GET/POST /operations/notes`
+  운영 허브 read model, 체크리스트/예외/마감/업로드 현황, 시스템 상태/알림, 수동 UTF-8 CSV 반출, 운영 메모 저장과 감사 로그 기록을 검증
 
 ### Web
 
@@ -146,7 +154,9 @@
 - `401` 응답 시 세션 정리 정책
 - mutation 요청의 JSON body 직렬화
 - 회원가입/이메일 인증/인증 메일 재발송 auth API helper의 요청 path와 body 직렬화
-- `/accept-invitation`, `/admin`, `/admin/members`, `/admin/logs` 관리자/초대 route와 admin API helper의 보호 요청 path, Bearer token, mutation body 직렬화
+- `/accept-invitation`, `/admin`, `/admin/members`, `/admin/logs`, `/admin/policy` 관리자/초대/권한 정책 route와 admin API helper의 보호 요청 path, Bearer token, mutation body 직렬화
+- `/settings/workspace`, `/settings/account` 설정 route와 workspace/account API helper의 보호 요청 path, Bearer token, mutation body 직렬화
+- `/operations`, `/operations/checklist`, `/operations/exceptions`, `/operations/month-end`, `/operations/imports`, `/operations/status`, `/operations/alerts`, `/operations/exports`, `/operations/notes` 운영 지원 route와 operations API helper의 보호 요청 path, Bearer token, mutation body 직렬화
 - 요청 실패 메시지 안내
 - 브라우저에서 `/transactions` 보호 라우트(Collected Transactions 화면) 리다이렉트
 - 브라우저 기준 로그인 후 세션 복원
@@ -162,7 +172,7 @@
 - `npm run test:e2e:smoke:build`로 in-process production build/start 경로에 결과물을 올린 뒤 health route 응답 기준 최소 HTTP smoke를 자동 검증
 - `npm run test:e2e:smoke:build:browser`로는 로그인/세션 복원, 운영 체크리스트 핵심 CTA, 작업 문맥 fallback 같은 브라우저 build smoke를 루트 래퍼 경로로 필요 시 별도로 검증
 - CI의 `e2e-smoke` 잡은 개발 서버가 아니라 build 결과물 기준 HTTP smoke를 실행
-- 실제 브라우저 상호작용으로 `dashboard`, `reference-data`, `periods`, `insurances`, `vehicles`, `recurring`, `plan-items`, `imports`, `transactions`, `journal-entries`, `financial-statements`, `carry-forwards`, `forecast`, `settings`의 대표 운영 체크리스트 empty state, readiness 경고, fallback CTA가 유지되는지 검증
+- 실제 브라우저 상호작용으로 `dashboard`, `reference-data`, `periods`, `insurances`, `vehicles`, `recurring`, `plan-items`, `imports`, `transactions`, `journal-entries`, `financial-statements`, `carry-forwards`, `forecast`, `settings`, `admin`, `operations`의 대표 운영 체크리스트 empty state, readiness 경고, fallback CTA가 유지되는지 검증
 - 기준 데이터 CRUD, 반복 규칙 CRUD, 보험 계약 CRUD, 차량 기본 정보 CRUD 브라우저 검증은 현재 `npm run test:e2e` 전체 브라우저 회귀 범위에 남기고, CI smoke에서는 제외합니다.
 
 ## 현재 남아 있는 공백

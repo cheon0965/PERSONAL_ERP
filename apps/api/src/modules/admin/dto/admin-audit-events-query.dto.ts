@@ -12,6 +12,11 @@ export class AdminAuditEventsQueryDto implements AdminAuditEventQuery {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
+  eventName?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
   action?: string;
 
   @ApiProperty({ required: false, enum: ['SUCCESS', 'DENIED', 'FAILED'] })
@@ -23,6 +28,16 @@ export class AdminAuditEventsQueryDto implements AdminAuditEventQuery {
   @IsOptional()
   @IsString()
   actorMembershipId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  resourceType?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  resourceId?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

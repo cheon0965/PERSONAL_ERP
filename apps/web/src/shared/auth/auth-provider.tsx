@@ -3,11 +3,13 @@
 import * as React from 'react';
 import type { AuthenticatedUser, LoginRequest } from '@personal-erp/contracts';
 import {
+  getCurrentUser,
   loginWithPassword,
   logoutSession,
   refreshSession
 } from '@/features/auth/auth.api';
 import {
+  getStoredAccessToken,
   clearStoredAccessToken,
   setRefreshSessionHandler,
   setStoredAccessToken,
@@ -22,6 +24,7 @@ type AuthSessionContextValue = {
   user: AuthenticatedUser | null;
   login: (input: LoginRequest) => Promise<AuthenticatedUser>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<AuthenticatedUser | null>;
 };
 
 const AuthSessionContext = React.createContext<AuthSessionContextValue | null>(
@@ -131,14 +134,35 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     }
   }, [applyUnauthenticatedState]);
 
+  const refreshUser = React.useCallback(async () => {
+    const accessToken = getStoredAccessToken();
+    if (!accessToken) {
+      applyUnauthenticatedState();
+      return null;
+    }
+
+    try {
+      const nextUser = await getCurrentUser(accessToken);
+      React.startTransition(() => {
+        setUser(nextUser);
+        setStatus('authenticated');
+      });
+      return nextUser;
+    } catch {
+      applyUnauthenticatedState();
+      return null;
+    }
+  }, [applyUnauthenticatedState]);
+
   const value = React.useMemo<AuthSessionContextValue>(
     () => ({
       status,
       user,
       login,
-      logout
+      logout,
+      refreshUser
     }),
-    [login, logout, status, user]
+    [login, logout, refreshUser, status, user]
   );
 
   return (

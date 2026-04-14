@@ -21,5 +21,6 @@
 - [`LEGACY_TRANSACTION_REMOVAL_PREP.md`](./LEGACY_TRANSACTION_REMOVAL_PREP.md): 구형 `Transaction` 제거 직전 인벤토리, backfill/rollback, 삭제 순서를 남긴 준비 메모
 - [`LEGACY_TRANSACTION_SCHEMA_REMOVAL_CHECKLIST.md`](./LEGACY_TRANSACTION_SCHEMA_REMOVAL_CHECKLIST.md): 구형 `Transaction` 물리 제거에서 정리한 schema/code touchpoint 체크리스트
 - [`MONEY_INTEGRITY_EXECUTION_PLAN.md`](./MONEY_INTEGRITY_EXECUTION_PLAN.md): `MoneyWon`, 금액 컬럼 `Decimal(19,0)` 승격, exact arithmetic, 금액 raw 연산 가드까지 완료 후 보관한 실행 계획
+- [`OPERATIONS_SUPPORT_SURFACES_EXECUTION_PLAN.md`](./OPERATIONS_SUPPORT_SURFACES_EXECUTION_PLAN.md): 사업장 설정, 내 계정/보안, 권한 정책 요약, 운영 허브/체크리스트/예외/마감/업로드 현황, 시스템 상태/알림, 수동 CSV 반출, 운영 메모/인수인계까지 완료 후 보관한 실행 계획
 - [`REFACTORING_ROADMAP.md`](./REFACTORING_ROADMAP.md): 대형 테스트, API mock/state, 서비스/UI 파일 분리 3단계 리팩토링 완료 후 보관한 실행 로드맵
 - [`VEHICLE_OPERATIONS_MODEL_PLAN.md`](./VEHICLE_OPERATIONS_MODEL_PLAN.md): 차량 운영 모델 분리 작업 완료 후 보관한 설계 문서

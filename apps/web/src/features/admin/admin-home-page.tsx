@@ -14,6 +14,7 @@ export function AdminHomePage() {
   const role = user?.currentWorkspace?.membership.role ?? null;
   const canReadMembers = role === 'OWNER' || role === 'MANAGER';
   const canReadLogs = role === 'OWNER';
+  const canReadPolicy = role === 'OWNER' || role === 'MANAGER';
 
   return (
     <Stack spacing={appLayout.pageGap}>
@@ -71,6 +72,28 @@ export function AdminHomePage() {
                 disabled={!canReadLogs}
               >
                 로그관리 열기
+              </Button>
+            </Stack>
+          </SectionCard>
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 6 }}>
+          <SectionCard
+            title="권한 정책 요약"
+            description="역할별 CTA 노출 기준과 주요 운영 화면 접근 기준을 한곳에서 확인합니다."
+          >
+            <Stack spacing={2}>
+              <Typography variant="body2" color="text.secondary">
+                운영 화면 구현이 늘어나도 같은 권한 기준을 재사용할 수 있도록
+                현재 정책을 표로 정리해 둡니다.
+              </Typography>
+              <Button
+                component={Link}
+                href="/admin/policy"
+                variant="contained"
+                disabled={!canReadPolicy}
+              >
+                권한 정책 열기
               </Button>
             </Stack>
           </SectionCard>

@@ -3,17 +3,31 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  NotFoundException,
   ServiceUnavailableException,
   UnauthorizedException
 } from '@nestjs/common';
 import { createHash, randomBytes } from 'node:crypto';
-import type { AcceptInvitationResponse } from '@personal-erp/contracts';
+import type {
+  AcceptInvitationResponse,
+  AccountProfileItem,
+  AccountSecurityEventItem,
+  AccountSecurityOverview,
+  ChangePasswordResponse
+} from '@personal-erp/contracts';
 import { Prisma } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { ClockPort } from '../../common/application/ports/clock.port';
 import { EmailSenderPort } from '../../common/application/ports/email-sender.port';
 import { parseJwtDurationToMs } from '../../common/auth/jwt-config';
+import type { RequiredWorkspaceContext } from '../../common/auth/required-workspace.util';
+import {
+  readClientIp,
+  readRequestId,
+  type RequestWithContext
+} from '../../common/infrastructure/operational/request-context';
 import { SecurityEventLogger } from '../../common/infrastructure/operational/security-event.logger';
+import { WorkspaceAuditEventsService } from '../../common/infrastructure/operational/workspace-audit-events.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { getApiEnv } from '../../config/api-env';
 import { AuthRateLimitService } from './auth-rate-limit.service';
@@ -42,7 +56,8 @@ export class AuthService {
     private readonly securityEvents: SecurityEventLogger,
     private readonly emailSender: EmailSenderPort,
     private readonly clock: ClockPort,
-    private readonly workspaceBootstrap: WorkspaceBootstrapService
+    private readonly workspaceBootstrap: WorkspaceBootstrapService,
+    private readonly auditEvents: WorkspaceAuditEventsService
   ) {}
 
   async register(dto: RegisterDto, context: AuthRequestContext) {
@@ -393,6 +408,312 @@ export class AuthService {
     }
   }
 
+  async getAccountSecurity(
+    user: { id: string; email: string; name: string },
+    workspace: RequiredWorkspaceContext,
+    currentSessionId: string
+  ): Promise<AccountSecurityOverview> {
+    const userRecord = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        emailVerifiedAt: true,
+        settings: {
+          select: {
+            timezone: true
+          }
+        }
+      }
+    });
+
+    if (!userRecord) {
+      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+    }
+
+    const sessions = await this.authSessions.listUserSessions(
+      user.id,
+      currentSessionId
+    );
+    const recentEvents = await this.buildAccountSecurityEvents(
+      user.id,
+      workspace,
+      sessions
+    );
+
+    return {
+      profile: mapAccountProfileItem(userRecord, workspace.timezone),
+      sessions,
+      recentEvents
+    };
+  }
+
+  async updateAccountProfile(
+    user: { id: string },
+    workspace: RequiredWorkspaceContext,
+    request: RequestWithContext,
+    input: { name: string }
+  ): Promise<AccountProfileItem> {
+    const nextName = normalizeDisplayName(input.name);
+    const currentUser = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        emailVerifiedAt: true,
+        settings: {
+          select: {
+            timezone: true
+          }
+        }
+      }
+    });
+
+    if (!currentUser) {
+      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+    }
+
+    if (currentUser.name !== nextName) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          name: nextName
+        }
+      });
+
+      await this.auditEvents.record({
+        workspace,
+        request,
+        eventCategory: 'account_profile',
+        eventName: 'account.profile_updated',
+        action: 'account_profile.update',
+        resourceType: 'user',
+        resourceId: user.id,
+        result: 'SUCCESS',
+        metadata: {
+          previousName: currentUser.name,
+          nextName
+        }
+      });
+      this.securityEvents.log('auth.account_profile_updated', {
+        requestId: readRequestId(request),
+        clientIp: readClientIp(request),
+        userId: user.id
+      });
+    }
+
+    return {
+      id: currentUser.id,
+      email: currentUser.email,
+      name: nextName,
+      emailVerifiedAt: currentUser.emailVerifiedAt?.toISOString() ?? null,
+      preferredTimezone: currentUser.settings?.timezone ?? workspace.timezone
+    };
+  }
+
+  async changePassword(
+    user: { id: string; email: string },
+    workspace: RequiredWorkspaceContext,
+    request: RequestWithContext,
+    currentSessionId: string,
+    input: { currentPassword: string; nextPassword: string }
+  ): Promise<ChangePasswordResponse> {
+    const currentUser = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        id: true,
+        passwordHash: true
+      }
+    });
+
+    if (!currentUser) {
+      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+    }
+
+    const currentPasswordMatches = await argon2.verify(
+      currentUser.passwordHash,
+      input.currentPassword
+    );
+    if (!currentPasswordMatches) {
+      this.securityEvents.warn('auth.password_change_failed', {
+        requestId: readRequestId(request),
+        clientIp: readClientIp(request),
+        userId: user.id,
+        reason: 'invalid_current_password'
+      });
+      throw new UnauthorizedException(
+        '현재 비밀번호가 올바르지 않습니다.'
+      );
+    }
+
+    const nextPasswordMatchesCurrent = await argon2.verify(
+      currentUser.passwordHash,
+      input.nextPassword
+    );
+    if (nextPasswordMatchesCurrent) {
+      throw new BadRequestException(
+        '새 비밀번호는 현재 비밀번호와 달라야 합니다.'
+      );
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash: await argon2.hash(input.nextPassword)
+      }
+    });
+    const revokedSessionCount = await this.authSessions.revokeOtherUserSessions(
+      user.id,
+      currentSessionId
+    );
+
+    await this.auditEvents.record({
+      workspace,
+      request,
+      eventCategory: 'account_security',
+      eventName: 'account.password_changed',
+      action: 'account_security.change_password',
+      resourceType: 'user',
+      resourceId: user.id,
+      result: 'SUCCESS',
+      metadata: {
+        revokedSessionCount
+      }
+    });
+    this.securityEvents.log('auth.password_changed', {
+      requestId: readRequestId(request),
+      clientIp: readClientIp(request),
+      userId: user.id,
+      sessionId: currentSessionId,
+      revokedSessionCount
+    });
+
+    return { status: 'changed' };
+  }
+
+  async revokeOtherSession(
+    user: { id: string },
+    workspace: RequiredWorkspaceContext,
+    request: RequestWithContext,
+    currentSessionId: string,
+    targetSessionId: string
+  ): Promise<{ status: 'revoked' }> {
+    if (targetSessionId === currentSessionId) {
+      throw new BadRequestException(
+        '현재 사용 중인 세션은 여기서 종료할 수 없습니다.'
+      );
+    }
+
+    const revokedSession = await this.authSessions.revokeUserSession(
+      user.id,
+      targetSessionId
+    );
+    if (!revokedSession) {
+      throw new NotFoundException('세션을 찾을 수 없습니다.');
+    }
+
+    if (!revokedSession.wasAlreadyRevoked) {
+      await this.auditEvents.record({
+        workspace,
+        request,
+        eventCategory: 'account_security',
+        eventName: 'account.session_revoked',
+        action: 'account_security.revoke_session',
+        resourceType: 'auth_session',
+        resourceId: targetSessionId,
+        result: 'SUCCESS',
+        metadata: {
+          sessionId: targetSessionId
+        }
+      });
+      this.securityEvents.log('auth.session_revoked', {
+        requestId: readRequestId(request),
+        clientIp: readClientIp(request),
+        userId: user.id,
+        sessionId: targetSessionId
+      });
+    }
+
+    return { status: 'revoked' };
+  }
+
+  private async buildAccountSecurityEvents(
+    userId: string,
+    workspace: RequiredWorkspaceContext,
+    sessions: Array<{
+      id: string;
+      createdAt: string;
+      revokedAt: string | null;
+      isCurrent: boolean;
+    }>
+  ): Promise<AccountSecurityEventItem[]> {
+    const accountAuditEvents = (
+      await this.prisma.workspaceAuditEvent.findMany({
+        where: {
+          tenantId: workspace.tenantId
+        },
+        take: 50
+      })
+    )
+      .filter(
+        (candidate) =>
+          candidate.actorUserId === userId &&
+          (candidate.action === 'account_profile.update' ||
+            candidate.action === 'account_security.change_password')
+      )
+      .map<AccountSecurityEventItem>((candidate) => ({
+        id: candidate.id,
+        kind:
+          candidate.action === 'account_security.change_password'
+            ? 'PASSWORD_CHANGED'
+            : 'PROFILE_UPDATED',
+        occurredAt: candidate.occurredAt.toISOString(),
+        requestId: candidate.requestId ?? null,
+        sessionId: null,
+        metadata: normalizeAccountEventMetadata(candidate.metadata)
+      }));
+
+    const sessionEvents = sessions.flatMap<AccountSecurityEventItem>((session) => {
+      const createdEvent: AccountSecurityEventItem = {
+        id: `session-created:${session.id}`,
+        kind: 'SESSION_CREATED',
+        occurredAt: session.createdAt,
+        requestId: null,
+        sessionId: session.id,
+        metadata: {
+          isCurrent: session.isCurrent
+        }
+      };
+
+      if (!session.revokedAt) {
+        return [createdEvent];
+      }
+
+      return [
+        createdEvent,
+        {
+          id: `session-revoked:${session.id}`,
+          kind: 'SESSION_REVOKED',
+          occurredAt: session.revokedAt,
+          requestId: null,
+          sessionId: session.id,
+          metadata: {
+            isCurrent: session.isCurrent
+          }
+        }
+      ];
+    });
+
+    return [...accountAuditEvents, ...sessionEvents]
+      .sort(
+        (left, right) =>
+          new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime()
+      )
+      .slice(0, 10);
+  }
+
   private assertRegisterAttemptAllowed(
     context: AuthRequestContext,
     email: string
@@ -695,6 +1016,48 @@ function isUniqueConstraintError(error: unknown): boolean {
   return (
     error instanceof Prisma.PrismaClientKnownRequestError &&
     error.code === 'P2002'
+  );
+}
+
+function mapAccountProfileItem(
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    emailVerifiedAt: Date | null;
+    settings: { timezone?: string } | null;
+  },
+  fallbackTimezone: string
+): AccountProfileItem {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
+    preferredTimezone: user.settings?.timezone ?? fallbackTimezone
+  };
+}
+
+function normalizeAccountEventMetadata(
+  value: unknown
+): Record<string, string | number | boolean | null> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([key, candidate]) => {
+      if (
+        typeof candidate === 'string' ||
+        typeof candidate === 'number' ||
+        typeof candidate === 'boolean' ||
+        candidate === null
+      ) {
+        return [[key, candidate]];
+      }
+
+      return [];
+    })
   );
 }
 

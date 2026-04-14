@@ -42,20 +42,26 @@ docs/
 [ Platform & Contracts ] -> 모든 컨텍스트의 계약/공통 인프라 지원
 [ Identity & Access ] -> 모든 컨텍스트의 인증/요청 주체 기준선
 
+[ Workspace Administration ] -> workspace-scoped 설정/멤버/권한/감사
+[ Operations Support ] -> 운영 체크리스트/예외/상태/알림/반출/메모 read model
+
 [ Recurring Automation ] -- reference only --> [ Ledger ]
 [ Ledger ] -------------------- read -------> [ Insight & Planning ]
+[ Ledger ] -------------------- read -------> [ Operations Support ]
 [ Recurring Automation ] ------- read ------> [ Insight & Planning ]
 [ Asset & Coverage ] ----------- read ------> [ Insight & Planning ]
 ```
 
-| Context              | 현재 모듈                                                                                                                                                                                                                                   | 역할                                                                  |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| Identity & Access    | `auth`, `common/auth`                                                                                                                                                                                                                       | 로그인, 토큰, 요청 주체 인증 기준선                                   |
-| Ledger               | `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `reference-data-readiness`, `accounting-periods`, `collected-transactions`, `journal-entries`, `import-batches`, `financial-statements`, `carry-forwards` | 기준 데이터, 월 운영, 업로드 수집/전표, 공식 보고, 차기 이월 컨텍스트 |
-| Recurring Automation | `recurring-rules`, `plan-items`                                                                                                                                                                                                             | 반복규칙 정의와 기간별 계획 항목 생성/정합성                          |
-| Asset & Coverage     | `vehicles`, `insurance-policies`                                                                                                                                                                                                            | 운영비 성격의 자산/보장 도메인                                        |
-| Insight & Planning   | `dashboard`, `forecast`                                                                                                                                                                                                                     | 읽기 기반 요약/예측 조합                                              |
-| Platform & Contracts | `packages/contracts`, `packages/money`, env, Prisma, health, 공통 외부 의존성 조립                                                                                                                                                          | 계약, 금액 값 기준, 런타임 기반선                                     |
+| Context                  | 현재 모듈                                                                                                                                                                                                                                   | 역할                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Identity & Access        | `auth`, `common/auth`                                                                                                                                                                                                                       | 로그인, 토큰, 계정 보안, 요청 주체 인증 기준선                           |
+| Workspace Administration | `workspace-settings`, `admin`, `common/infrastructure/operational`                                                                                                                                                                          | workspace 설정, 멤버/권한 정책, 감사 이벤트 저장과 조회                  |
+| Ledger                   | `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `reference-data-readiness`, `accounting-periods`, `collected-transactions`, `journal-entries`, `import-batches`, `financial-statements`, `carry-forwards` | 기준 데이터, 월 운영, 업로드 수집/전표, 공식 보고, 차기 이월 컨텍스트    |
+| Recurring Automation     | `recurring-rules`, `plan-items`                                                                                                                                                                                                             | 반복규칙 정의와 기간별 계획 항목 생성/정합성                             |
+| Asset & Coverage         | `vehicles`, `insurance-policies`                                                                                                                                                                                                            | 운영비 성격의 자산/보장 도메인                                           |
+| Insight & Planning       | `dashboard`, `forecast`                                                                                                                                                                                                                     | 읽기 기반 요약/예측 조합                                                 |
+| Operations Support       | `operations-console`                                                                                                                                                                                                                        | 운영 체크리스트, 예외, 월 마감/업로드 현황, 시스템 상태, 알림, 반출/메모 |
+| Platform & Contracts     | `packages/contracts`, `packages/money`, env, Prisma, health, 공통 외부 의존성 조립                                                                                                                                                          | 계약, 금액 값 기준, 런타임 기반선                                        |
 
 여기서 `Ledger`는 현재 코드베이스의 컨텍스트 이름입니다.  
 현재 API 모듈명은 `accounting-periods`, `collected-transactions`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`, `recurring-rules`, `plan-items` 등이고, Web feature/route는 shorthand로 `periods`, `transactions`, `imports`, `recurring`, `insurances` 같은 화면 경로를 함께 사용합니다.  
@@ -66,6 +72,7 @@ docs/
 - Web은 HTTP + `packages/contracts`를 통해서만 API와 연결합니다.
 - `Recurring Automation`은 `Ledger`의 참조 상태를 읽을 수 있습니다.
 - `Insight & Planning`은 `Ledger`, `Recurring Automation`, `Asset & Coverage`를 읽어 조합합니다.
+- `Operations Support`는 `Ledger`, `Workspace Administration`, `health` 경계를 읽어 운영자가 처리할 위험 신호와 인수인계 기록을 조합합니다.
 - `Identity & Access`는 인증과 요청 주체 기준선만 제공하고, 도메인 write 흐름의 `TenantMembership` / `ActorRef` 판정 자체를 소유하지 않습니다.
 - `Platform & Contracts`는 공통 지원 계층으로만 동작합니다.
 

@@ -28,6 +28,7 @@ import {
 } from '../../common/infrastructure/operational/workspace-action.audit';
 import { AdminAuditEventsService } from './admin-audit-events.service';
 import { AdminMembersService } from './admin-members.service';
+import { AdminPolicyService } from './admin-policy.service';
 import { AdminAuditEventsQueryDto } from './dto/admin-audit-events-query.dto';
 import { InviteTenantMemberDto } from './dto/invite-tenant-member.dto';
 import { UpdateTenantMemberRoleDto } from './dto/update-tenant-member-role.dto';
@@ -40,6 +41,7 @@ export class AdminController {
   constructor(
     private readonly membersService: AdminMembersService,
     private readonly auditEventsService: AdminAuditEventsService,
+    private readonly policyService: AdminPolicyService,
     private readonly securityEvents: SecurityEventLogger
   ) {}
 
@@ -223,6 +225,31 @@ export class AdminController {
     });
 
     return response;
+  }
+
+  @Get('policy')
+  async getPolicySummary(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
+    const workspace = requireCurrentWorkspace(user);
+    await this.assertAllowed({
+      action: 'admin_policy.read',
+      request,
+      workspace
+    });
+
+    const summary = this.policyService.getSummary();
+    logWorkspaceActionSucceeded(this.securityEvents, {
+      action: 'admin_policy.read',
+      request,
+      workspace,
+      details: {
+        itemCount: summary.items.length
+      }
+    });
+
+    return summary;
   }
 
   @Get('audit-events/:auditEventId')

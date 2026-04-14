@@ -33,6 +33,9 @@
 21. 관리자 회원관리와 로그관리 1차 범위 구현
     workspace-scoped 관리자 화면, 멤버 초대/역할/상태 관리, 초대 수락 흐름, 감사 이벤트 영속화/조회, 공통 감사 저장 경계, 테스트/문서 동기화까지 완료.
     실행 계획은 [`completed/ADMIN_MEMBER_LOG_MANAGEMENT_PLAN.md`](./completed/ADMIN_MEMBER_LOG_MANAGEMENT_PLAN.md)에 보관합니다.
+22. 운영 보조 화면 1차 체계 구현
+    사업장 설정, 내 계정/보안, 권한 정책 요약, 운영 체크리스트, 예외 처리함, 월 마감 대시보드, 업로드 운영 현황, 시스템 상태/헬스, 감사 로그 고도화, 알림 센터, 수동 UTF-8 CSV 반출, 운영 메모/인수인계까지 완료.
+    실행 계획은 [`completed/OPERATIONS_SUPPORT_SURFACES_EXECUTION_PLAN.md`](./completed/OPERATIONS_SUPPORT_SURFACES_EXECUTION_PLAN.md)에 보관합니다.
 
 ## 현재 MVP 범위
 
@@ -51,6 +54,10 @@
 - 차량 조회/생성/수정
 - 대시보드 요약
 - 기간 운영 전망(현재 월/다음 달 예측)
+- 사업장 설정과 내 계정/보안
+- 관리자 권한 정책 요약과 감사 로그 고도화
+- 운영 지원 허브, 체크리스트, 예외 처리함, 월 마감/업로드 운영 현황
+- 시스템 상태/헬스, 알림 센터, 수동 CSV 내보내기, 운영 메모/인수인계
 - 디자인 시스템 공통 컴포넌트와 대시보드형 화면 패턴
 
 ## 문서 역할 경계

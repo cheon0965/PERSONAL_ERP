@@ -15,6 +15,9 @@ export function AdminSectionNav() {
       <Button component={Link} href="/admin/logs" variant="outlined">
         로그관리
       </Button>
+      <Button component={Link} href="/admin/policy" variant="outlined">
+        권한 정책
+      </Button>
     </Stack>
   );
 }

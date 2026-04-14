@@ -4,6 +4,7 @@ import { createAdminPrismaMock } from './request-api.test-prisma-mock-admin';
 import { createAssetsPrismaMock } from './request-api.test-prisma-mock-assets';
 import { createAuthPrismaMock } from './request-api.test-prisma-mock-auth';
 import { createImportsPrismaMock } from './request-api.test-prisma-mock-imports';
+import { createOperationsPrismaMock } from './request-api.test-prisma-mock-operations';
 import { createPlanItemsPrismaMock } from './request-api.test-prisma-mock-plan-items';
 import { createRecurringRulesPrismaMock } from './request-api.test-prisma-mock-recurring-rules';
 import { createReferenceDataPrismaMock } from './request-api.test-prisma-mock-reference-data';
@@ -88,6 +89,7 @@ export function createPrismaMock(
     ...createAuthPrismaMock(context),
     ...createAdminPrismaMock(context),
     ...createImportsPrismaMock(context),
+    ...createOperationsPrismaMock(context),
     ...createPlanItemsPrismaMock(context),
     ...createAccountingPeriodsPrismaMock(context),
     ...createReportingPrismaMock(context),

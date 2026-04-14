@@ -15,7 +15,8 @@ test('GET /admin/members returns members only in the current workspace', async (
       createdAt: new Date('2026-03-02T00:00:00.000Z'),
       settings: {
         minimumReserveWon: 400_000,
-        monthlySinkingFundWon: 140_000
+        monthlySinkingFundWon: 140_000,
+        timezone: 'Asia/Seoul'
       }
     });
     context.state.memberships.push({
@@ -264,6 +265,34 @@ test('GET /admin/audit-events records a denied event for non-owner users', async
           event.eventName === 'authorization.action_denied' &&
           event.action === 'admin_audit_log.read' &&
           event.result === 'DENIED'
+      ),
+      true
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('GET /admin/policy returns the current policy summary for owners and managers', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/admin/policy', {
+      headers: context.authHeaders()
+    });
+
+    assert.equal(response.status, 200);
+    const body = response.body as {
+      items: Array<{ key: string; allowedRoles: string[] }>;
+    };
+    assert.equal(
+      body.items.some((item) => item.key === 'settings-workspace'),
+      true
+    );
+    assert.equal(
+      body.items.some(
+        (item) =>
+          item.key === 'admin-logs' && item.allowedRoles.includes('OWNER')
       ),
       true
     );

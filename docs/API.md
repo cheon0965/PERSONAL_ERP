@@ -82,7 +82,10 @@
 ## 현재 구현 범위 요약
 
 - 인증 범위는 회원가입, 이메일 인증, 인증 메일 재발송, 로그인, 세션 refresh/logout, `auth/me` 조회까지 포함합니다.
-- 관리자 범위는 현재 workspace의 멤버 목록/초대/역할·상태 관리와 workspace 감사 로그 조회까지 포함합니다.
+- 인증/계정 범위는 회원가입, 이메일 인증, 인증 메일 재발송, 로그인, 세션 refresh/logout, `auth/me`, 계정 보안, 프로필 수정, 비밀번호 변경, 세션 종료까지 포함합니다.
+- 설정 범위는 현재 workspace의 사업장/기본 장부 설정 조회와 Owner/Manager 수정까지 포함합니다.
+- 관리자 범위는 현재 workspace의 멤버 목록/초대/역할·상태 관리, workspace 감사 로그 조회, 권한 정책 요약까지 포함합니다.
+- 운영 지원 범위는 체크리스트, 예외 처리함, 월 마감 대시보드, 업로드 운영 현황, 시스템 상태, 알림 센터, 수동 CSV 반출, 운영 메모까지 포함합니다.
 - 기준/참조 범위는 조회 `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`, `vehicles/operating-summary`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/차량 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `DELETE /insurance-policies/:id`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
 - 운영/원장 조회 범위는 `accounting-periods`, `collected-transactions`, `journal-entries`, `plan-items`, `financial-statements`, `carry-forwards`, `import-batches`까지 포함합니다.
 - 집계/보고 조회 범위는 `dashboard/summary`, `forecast/monthly`까지 포함합니다.
@@ -96,11 +99,18 @@
 ### 인증/기준 데이터
 
 - `GET /auth/me`
+- `GET /auth/account-security`
+- `PATCH /auth/account-profile`
+- `POST /auth/change-password`
+- `DELETE /auth/sessions/:sessionId`
+- `GET /settings/workspace`
+- `PATCH /settings/workspace`
 - `GET /admin/members`
 - `POST /admin/members/invitations`
 - `PATCH /admin/members/:membershipId/role`
 - `PATCH /admin/members/:membershipId/status`
 - `DELETE /admin/members/:membershipId`
+- `GET /admin/policy`
 - `GET /admin/audit-events`
 - `GET /admin/audit-events/:auditEventId`
 - `GET /reference-data/readiness`
@@ -149,6 +159,20 @@
 - `POST /journal-entries/:id/reverse`
 - `POST /journal-entries/:id/correct`
 
+### 운영 지원
+
+- `GET /operations/summary`
+- `GET /operations/checklist`
+- `GET /operations/exceptions`
+- `GET /operations/month-end`
+- `GET /operations/import-status`
+- `GET /operations/system-status`
+- `GET /operations/alerts`
+- `GET /operations/exports`
+- `POST /operations/exports`
+- `GET /operations/notes`
+- `POST /operations/notes`
+
 ### 계획/보고
 
 - `GET /recurring-rules`
@@ -173,6 +197,18 @@
 - Web `/admin` -> API `/admin/members`, `/admin/audit-events`
 - Web `/admin/members` -> API `GET /admin/members`, `POST /admin/members/invitations`, `PATCH /admin/members/:membershipId/role`, `PATCH /admin/members/:membershipId/status`, `DELETE /admin/members/:membershipId`
 - Web `/admin/logs` -> API `GET /admin/audit-events`, `GET /admin/audit-events/:auditEventId`
+- Web `/admin/policy` -> API `GET /admin/policy`
+- Web `/settings/workspace` -> API `GET /settings/workspace`, `PATCH /settings/workspace`
+- Web `/settings/account` -> API `GET /auth/account-security`, `PATCH /auth/account-profile`, `POST /auth/change-password`, `DELETE /auth/sessions/:sessionId`
+- Web `/operations` -> API `GET /operations/summary`
+- Web `/operations/checklist` -> API `GET /operations/checklist`
+- Web `/operations/exceptions` -> API `GET /operations/exceptions`
+- Web `/operations/month-end` -> API `GET /operations/month-end`
+- Web `/operations/imports` -> API `GET /operations/import-status`
+- Web `/operations/status` -> API `GET /operations/system-status`
+- Web `/operations/alerts` -> API `GET /operations/alerts`
+- Web `/operations/exports` -> API `GET /operations/exports`, `POST /operations/exports`
+- Web `/operations/notes` -> API `GET /operations/notes`, `POST /operations/notes`
 - Web `/dashboard` -> API `GET /dashboard/summary`
 - Web `/periods` -> API `/accounting-periods`
 - Web `/reference-data` -> API `/reference-data/readiness`, `/funding-accounts`, `/categories`, `/account-subjects`, `/ledger-transaction-types`
@@ -551,9 +587,11 @@
 - 쓰기 권한은 workspace membership role로 제어합니다.
 - `OWNER`, `MANAGER`: `admin_member.read`
 - `OWNER`: `admin_member.invite`, `admin_member.update_role`, `admin_member.update_status`, `admin_member.remove`, `admin_audit_log.read`
+- `OWNER`, `MANAGER`: `workspace_settings.update`, `admin_policy.read`, `operations_export.run`
+- `OWNER`, `MANAGER`, `EDITOR`, `VIEWER`: `workspace_settings.read`, `account_security.read`, `account_profile.update`, `account_security.change_password`, `account_security.revoke_session`, `operations_console.read`
 - `OWNER`, `MANAGER`: `funding_account.create`, `funding_account.update`, `category.create`, `category.update`, `insurance_policy.create`, `insurance_policy.update`, `insurance_policy.delete`, `vehicle.create`, `vehicle.update`, `accounting_period.open`, `recurring_rule.create`, `plan_item.generate`, `financial_statement.generate`, `carry_forward.generate`, `journal_entry.reverse`, `journal_entry.correct`
 - `OWNER`: `accounting_period.close`, `accounting_period.reopen`
-- `OWNER`, `MANAGER`, `EDITOR`: `collected_transaction.create`, `collected_transaction.confirm`, `import_batch.upload`
+- `OWNER`, `MANAGER`, `EDITOR`: `collected_transaction.create`, `collected_transaction.confirm`, `import_batch.upload`, `operations_note.create`
 - `CollectedTransactionItem`, `RecurringRuleItem`, `JournalEntryItem`, `PlanItemsView`, `FinancialStatementsView`, `CarryForwardView`, `DashboardSummary`, `ForecastResponse`는 raw table 전체가 아니라 API view/projection shape를 응답합니다.
 - 예외적으로 `ImportBatchItem.rows[].rawPayload`는 업로드 검수 목적상 현재 응답에 포함됩니다.
 - 접근통제 실패는 `404` 또는 `401/403`으로 처리하고, 보안 이벤트 로그와 함께 남깁니다.

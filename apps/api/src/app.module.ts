@@ -23,6 +23,8 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { DashboardModule } from './modules/dashboard/public';
 import { ForecastModule } from './modules/forecast/public';
 import { ReferenceDataReadinessModule } from './modules/reference-data-readiness/reference-data-readiness.module';
+import { WorkspaceSettingsModule } from './modules/workspace-settings/workspace-settings.module';
+import { OperationsConsoleModule } from './modules/operations-console/operations-console.module';
 
 @Module({
   imports: [
@@ -35,8 +37,10 @@ import { ReferenceDataReadinessModule } from './modules/reference-data-readiness
     ExternalDependenciesModule,
     HealthModule,
     AuthModule,
+    WorkspaceSettingsModule,
     AdminModule,
     ReferenceDataReadinessModule,
+    OperationsConsoleModule,
     AccountSubjectsModule,
     FundingAccountsModule,
     CategoriesModule,

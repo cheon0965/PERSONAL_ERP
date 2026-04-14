@@ -78,7 +78,7 @@ export function createJournalEntriesPrismaMock(
         });
       },
       findMany: async (args: {
-        where?: { tenantId?: string; ledgerId?: string };
+        where?: { tenantId?: string; ledgerId?: string; periodId?: string };
         include?: JournalEntryInclude;
         orderBy?: Array<{
           entryDate?: 'asc' | 'desc';
@@ -91,8 +91,10 @@ export function createJournalEntriesPrismaMock(
             !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
           const matchesLedger =
             !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesPeriod =
+            !args.where?.periodId || candidate.periodId === args.where.periodId;
 
-          return matchesTenant && matchesLedger;
+          return matchesTenant && matchesLedger && matchesPeriod;
         });
 
         items = [...items].sort((left, right) => {

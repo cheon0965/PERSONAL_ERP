@@ -1,6 +1,7 @@
 import type {
   AdminAuditEventItem,
   AdminAuditEventListResponse,
+  AdminPolicySummary,
   AdminAuditEventQuery,
   AdminMemberItem,
   InviteTenantMemberRequest,
@@ -17,6 +18,7 @@ import {
 
 export const adminMembersQueryKey = ['admin', 'members'] as const;
 export const adminAuditEventsQueryKey = ['admin', 'audit-events'] as const;
+export const adminPolicyQueryKey = ['admin', 'policy'] as const;
 
 export function getAdminMembers() {
   return fetchJson<AdminMemberItem[]>('/admin/members', []);
@@ -113,5 +115,11 @@ export function getAdminAuditEvent(auditEventId: string) {
     path: null,
     metadata: null,
     occurredAt: new Date().toISOString()
+  });
+}
+
+export function getAdminPolicySummary() {
+  return fetchJson<AdminPolicySummary>('/admin/policy', {
+    items: []
   });
 }

@@ -26,7 +26,8 @@ export function createRequestIdentityStateFixtures(input: {
         createdAt: new Date('2026-03-01T00:00:00.000Z'),
         settings: {
           minimumReserveWon: 500_000,
-          monthlySinkingFundWon: 210_000
+          monthlySinkingFundWon: 210_000,
+          timezone: 'Asia/Seoul'
         }
       },
       {
@@ -38,7 +39,8 @@ export function createRequestIdentityStateFixtures(input: {
         createdAt: new Date('2026-03-01T00:00:00.000Z'),
         settings: {
           minimumReserveWon: 900_000,
-          monthlySinkingFundWon: 310_000
+          monthlySinkingFundWon: 310_000,
+          timezone: 'Asia/Seoul'
         }
       }
     ],
@@ -148,14 +150,18 @@ export function createRequestIdentityStateFixtures(input: {
         userId: 'user-1',
         refreshTokenHash: 'existing-session-hash',
         expiresAt: activeSessionExpiresAt,
-        revokedAt: null
+        revokedAt: null,
+        createdAt: new Date('2026-03-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-03-01T00:00:00.000Z')
       },
       {
         id: 'session-user-2',
         userId: 'user-2',
         refreshTokenHash: 'existing-session-hash',
         expiresAt: activeSessionExpiresAt,
-        revokedAt: null
+        revokedAt: null,
+        createdAt: new Date('2026-03-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-03-01T00:00:00.000Z')
       }
     ]
   };
