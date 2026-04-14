@@ -5,6 +5,7 @@ import { validateApiEnv } from './config/api-env';
 import { ExternalDependenciesModule } from './common/infrastructure/external-dependencies.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { AccountSubjectsModule } from './modules/account-subjects/account-subjects.module';
 import { FundingAccountsModule } from './modules/funding-accounts/funding-accounts.module';
 import { CategoriesModule } from './modules/categories/categories.module';
@@ -34,6 +35,7 @@ import { ReferenceDataReadinessModule } from './modules/reference-data-readiness
     ExternalDependenciesModule,
     HealthModule,
     AuthModule,
+    AdminModule,
     ReferenceDataReadinessModule,
     AccountSubjectsModule,
     FundingAccountsModule,

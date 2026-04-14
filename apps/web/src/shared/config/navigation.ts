@@ -1,4 +1,5 @@
 import ArticleRoundedIcon from '@mui/icons-material/ArticleRounded';
+import AdminPanelSettingsRoundedIcon from '@mui/icons-material/AdminPanelSettingsRounded';
 import AutoGraphRoundedIcon from '@mui/icons-material/AutoGraphRounded';
 import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded';
 import CalendarMonthRoundedIcon from '@mui/icons-material/CalendarMonthRounded';
@@ -15,6 +16,7 @@ import ViewListRoundedIcon from '@mui/icons-material/ViewListRounded';
 
 export const navigationItems = [
   { label: '작업 문맥', href: '/settings', icon: SettingsRoundedIcon },
+  { label: '관리자', href: '/admin', icon: AdminPanelSettingsRoundedIcon },
   {
     label: '기준 데이터',
     href: '/reference-data',

@@ -4,6 +4,72 @@ export function createAuthPrismaMock(
   context: RequestPrismaMockContext
 ): Record<string, unknown> {
   const { state, findUser, projectUser, findTenant, findLedger } = context;
+  const matchesMembershipWhere = (
+    candidate: RequestPrismaMockContext['state']['memberships'][number],
+    where:
+      | {
+          id?: string;
+          userId?: string;
+          tenantId?: string;
+          status?: 'ACTIVE' | 'INVITED' | 'SUSPENDED' | 'REMOVED';
+          role?: 'OWNER' | 'MANAGER' | 'EDITOR' | 'VIEWER';
+        }
+      | undefined
+  ) => {
+    const matchesId = !where?.id || candidate.id === where.id;
+    const matchesUser = !where?.userId || candidate.userId === where.userId;
+    const matchesTenant =
+      !where?.tenantId || candidate.tenantId === where.tenantId;
+    const matchesStatus = !where?.status || candidate.status === where.status;
+    const matchesRole = !where?.role || candidate.role === where.role;
+    return (
+      matchesId && matchesUser && matchesTenant && matchesStatus && matchesRole
+    );
+  };
+  const projectMembership = (
+    membership: RequestPrismaMockContext['state']['memberships'][number],
+    args?: {
+      select?: {
+        id?: boolean;
+        role?: boolean;
+        status?: boolean;
+        tenantId?: boolean;
+        joinedAt?: boolean;
+      };
+      include?: {
+        user?: {
+          select?: {
+            id?: boolean;
+            email?: boolean;
+            name?: boolean;
+            emailVerifiedAt?: boolean;
+          };
+        };
+      };
+    }
+  ) => {
+    if (args?.select) {
+      return {
+        ...(args.select.id ? { id: membership.id } : {}),
+        ...(args.select.role ? { role: membership.role } : {}),
+        ...(args.select.status ? { status: membership.status } : {}),
+        ...(args.select.tenantId ? { tenantId: membership.tenantId } : {}),
+        ...(args.select.joinedAt ? { joinedAt: membership.joinedAt } : {})
+      };
+    }
+
+    return {
+      ...membership,
+      ...(args?.include?.user
+        ? {
+            user: projectUser(
+              findUser({ id: membership.userId })!,
+              args.include.user.select
+            )
+          }
+        : {})
+    };
+  };
 
   return {
     user: {
@@ -253,19 +319,78 @@ export function createAuthPrismaMock(
     tenantMembership: {
       findUnique: async (args: {
         where: {
-          tenantId_userId: {
+          id?: string;
+          tenantId_userId?: {
             tenantId: string;
             userId: string;
           };
         };
       }) => {
+        if (args.where.id) {
+          return (
+            state.memberships.find(
+              (candidate) => candidate.id === args.where.id
+            ) ?? null
+          );
+        }
+
+        if (!args.where.tenantId_userId) {
+          return null;
+        }
+
         return (
           state.memberships.find(
             (candidate) =>
-              candidate.tenantId === args.where.tenantId_userId.tenantId &&
-              candidate.userId === args.where.tenantId_userId.userId
+              candidate.tenantId === args.where.tenantId_userId?.tenantId &&
+              candidate.userId === args.where.tenantId_userId?.userId
           ) ?? null
         );
+      },
+      findFirst: async (args: {
+        where?: {
+          id?: string;
+          tenantId?: string;
+          userId?: string;
+          role?: 'OWNER' | 'MANAGER' | 'EDITOR' | 'VIEWER';
+          status?: 'ACTIVE' | 'INVITED' | 'SUSPENDED' | 'REMOVED';
+        };
+        include?: {
+          user?: {
+            select?: {
+              id?: boolean;
+              email?: boolean;
+              name?: boolean;
+              emailVerifiedAt?: boolean;
+            };
+          };
+        };
+      }) => {
+        const membership =
+          state.memberships.find((candidate) =>
+            matchesMembershipWhere(candidate, args.where)
+          ) ?? null;
+        return membership ? projectMembership(membership, args) : null;
+      },
+      count: async (args: {
+        where?: {
+          tenantId?: string;
+          role?: 'OWNER' | 'MANAGER' | 'EDITOR' | 'VIEWER';
+          status?: 'ACTIVE' | 'INVITED' | 'SUSPENDED' | 'REMOVED';
+          id?: { not?: string };
+        };
+      }) => {
+        return state.memberships.filter((candidate) => {
+          const matchesId =
+            !args.where?.id?.not || candidate.id !== args.where.id.not;
+          return (
+            matchesId &&
+            matchesMembershipWhere(candidate, {
+              tenantId: args.where?.tenantId,
+              role: args.where?.role,
+              status: args.where?.status
+            })
+          );
+        }).length;
       },
       create: async (args: {
         data: {
@@ -273,6 +398,7 @@ export function createAuthPrismaMock(
           userId: string;
           role: 'OWNER' | 'MANAGER' | 'EDITOR' | 'VIEWER';
           status: 'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'REMOVED';
+          invitedByMembershipId?: string | null;
         };
       }) => {
         const created = {
@@ -281,7 +407,9 @@ export function createAuthPrismaMock(
           userId: args.data.userId,
           role: args.data.role,
           status: args.data.status,
-          joinedAt: new Date()
+          joinedAt: new Date(),
+          invitedByMembershipId: args.data.invitedByMembershipId ?? null,
+          lastAccessAt: null
         };
         state.memberships.push(created);
         return created;
@@ -291,6 +419,17 @@ export function createAuthPrismaMock(
         data: {
           role?: 'OWNER' | 'MANAGER' | 'EDITOR' | 'VIEWER';
           status?: 'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'REMOVED';
+          invitedByMembershipId?: string | null;
+        };
+        include?: {
+          user?: {
+            select?: {
+              id?: boolean;
+              email?: boolean;
+              name?: boolean;
+              emailVerifiedAt?: boolean;
+            };
+          };
         };
       }) => {
         const membership = state.memberships.find(
@@ -302,11 +441,12 @@ export function createAuthPrismaMock(
         }
 
         Object.assign(membership, args.data);
-        return membership;
+        return projectMembership(membership, args);
       },
       findMany: async (args: {
         where?: {
           userId?: string;
+          tenantId?: string;
           status?: 'ACTIVE' | 'INVITED' | 'SUSPENDED' | 'REMOVED';
         };
         select?: {
@@ -316,26 +456,20 @@ export function createAuthPrismaMock(
           tenantId?: boolean;
           joinedAt?: boolean;
         };
+        include?: {
+          user?: {
+            select?: {
+              id?: boolean;
+              email?: boolean;
+              name?: boolean;
+              emailVerifiedAt?: boolean;
+            };
+          };
+        };
       }) => {
-        const items = state.memberships.filter((candidate) => {
-          const matchesUser =
-            !args.where?.userId || candidate.userId === args.where.userId;
-          const matchesStatus =
-            !args.where?.status || candidate.status === args.where.status;
-          return matchesUser && matchesStatus;
-        });
-
-        if (!args.select) {
-          return items;
-        }
-
-        return items.map((candidate) => ({
-          ...(args.select?.id ? { id: candidate.id } : {}),
-          ...(args.select?.role ? { role: candidate.role } : {}),
-          ...(args.select?.status ? { status: candidate.status } : {}),
-          ...(args.select?.tenantId ? { tenantId: candidate.tenantId } : {}),
-          ...(args.select?.joinedAt ? { joinedAt: candidate.joinedAt } : {})
-        }));
+        return state.memberships
+          .filter((candidate) => matchesMembershipWhere(candidate, args.where))
+          .map((candidate) => projectMembership(candidate, args));
       }
     },
     tenant: {

@@ -65,7 +65,9 @@ export function createRequestIdentityStateFixtures(input: {
         userId: 'user-1',
         role: 'OWNER',
         status: 'ACTIVE',
-        joinedAt: new Date('2026-03-01T00:00:00.000Z')
+        joinedAt: new Date('2026-03-01T00:00:00.000Z'),
+        invitedByMembershipId: null,
+        lastAccessAt: null
       },
       {
         id: 'membership-2',
@@ -73,7 +75,9 @@ export function createRequestIdentityStateFixtures(input: {
         userId: 'user-2',
         role: 'OWNER',
         status: 'ACTIVE',
-        joinedAt: new Date('2026-03-01T00:00:00.000Z')
+        joinedAt: new Date('2026-03-01T00:00:00.000Z'),
+        invitedByMembershipId: null,
+        lastAccessAt: null
       }
     ],
     ledgers: [

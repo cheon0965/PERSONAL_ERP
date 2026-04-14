@@ -69,3 +69,11 @@ export type VerifyEmailResponse = {
 export type ResendVerificationRequest = {
   email: string;
 };
+
+export type AcceptInvitationRequest = {
+  token: string;
+};
+
+export type AcceptInvitationResponse = {
+  status: 'accepted' | 'registration_required';
+};

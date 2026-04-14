@@ -1,5 +1,7 @@
 import type {
   AuthenticatedUser,
+  AcceptInvitationRequest,
+  AcceptInvitationResponse,
   LoginRequest,
   LoginResponse,
   RegisterRequest,
@@ -47,6 +49,15 @@ export async function resendVerificationEmail(
   input: ResendVerificationRequest
 ): Promise<RegisterResponse> {
   return requestAuthJson<RegisterResponse>('/auth/resend-verification', {
+    method: 'POST',
+    body: input
+  });
+}
+
+export async function acceptInvitation(
+  input: AcceptInvitationRequest
+): Promise<AcceptInvitationResponse> {
+  return requestAuthJson<AcceptInvitationResponse>('/auth/accept-invitation', {
     method: 'POST',
     body: input
   });

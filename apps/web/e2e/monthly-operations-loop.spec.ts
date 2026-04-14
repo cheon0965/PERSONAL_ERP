@@ -331,7 +331,9 @@ test('@smoke generates plan items and reflects them in the live dashboard and fo
 
   await page.goto('/plan-items');
   await expect(page).toHaveURL(/\/plan-items$/);
-  await expect(page.getByRole('heading', { name: '계획 항목' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '계획 항목', exact: true })
+  ).toBeVisible();
 
   await page.getByRole('button', { name: '계획 항목 생성' }).click();
 

@@ -46,6 +46,8 @@ export type RequestTestState = {
     role: 'OWNER' | 'MANAGER' | 'EDITOR' | 'VIEWER';
     status: 'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'REMOVED';
     joinedAt: Date;
+    invitedByMembershipId: string | null;
+    lastAccessAt: Date | null;
   }>;
   ledgers: Array<{
     id: string;
@@ -210,6 +212,39 @@ export type RequestTestState = {
     expiresAt: Date;
     consumedAt: Date | null;
     createdAt: Date;
+  }>;
+  tenantMembershipInvitations: Array<{
+    id: string;
+    tenantId: string;
+    email: string;
+    normalizedEmail: string;
+    role: 'OWNER' | 'MANAGER' | 'EDITOR' | 'VIEWER';
+    tokenHash: string;
+    expiresAt: Date;
+    acceptedAt: Date | null;
+    revokedAt: Date | null;
+    invitedByMembershipId: string;
+    createdAt: Date;
+  }>;
+  workspaceAuditEvents: Array<{
+    id: string;
+    tenantId: string;
+    ledgerId: string | null;
+    actorUserId: string | null;
+    actorMembershipId: string | null;
+    actorRole: string | null;
+    eventCategory: string;
+    eventName: string;
+    action: string | null;
+    resourceType: string | null;
+    resourceId: string | null;
+    result: 'SUCCESS' | 'DENIED' | 'FAILED';
+    reason: string | null;
+    requestId: string | null;
+    path: string | null;
+    clientIpHash: string | null;
+    metadata: Record<string, string | number | boolean | null> | null;
+    occurredAt: Date;
   }>;
   sentEmails: Array<{
     to: string;
