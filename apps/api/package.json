@@ -16,15 +16,13 @@
     "prisma:migrate:dev": "node ../../scripts/run-with-root-env.cjs prisma migrate dev",
     "prisma:migrate:deploy": "node ../../scripts/run-with-root-env.cjs prisma migrate deploy",
     "prisma:migrate:deploy:latest-baseline": "node ../../scripts/run-with-root-env.cjs node ../../scripts/deploy-latest-prisma-baseline.cjs",
+    "prisma:migrate:repair:concurrency-guardrails": "node ../../scripts/run-with-root-env.cjs node ../../scripts/repair-concurrency-guardrails-migration.cjs",
     "prisma:migrate:reset": "node ../../scripts/run-with-root-env.cjs prisma migrate reset",
     "prisma:migrate:status": "node ../../scripts/run-with-root-env.cjs prisma migrate status",
     "prisma:push:unsafe": "node ../../scripts/run-with-root-env.cjs prisma db push",
     "prisma:backfill:phase1": "node ../../scripts/run-with-root-env.cjs tsx prisma/backfill-phase1-backbone.ts",
     "prisma:seed": "node ../../scripts/run-with-root-env.cjs tsx prisma/seed.ts",
     "prisma:seed:reset": "node ../../scripts/run-with-root-env.cjs tsx prisma/seed.ts --reset"
-  },
-  "prisma": {
-    "seed": "node ../../scripts/run-with-root-env.cjs tsx prisma/seed.ts"
   },
   "dependencies": {
     "@personal-erp/money": "0.1.0",

@@ -43,7 +43,7 @@ SET
   `normalizedProvider` = LOWER(TRIM(`provider`)),
   `normalizedProductName` = LOWER(TRIM(`productName`));
 
-CREATE UNIQUE INDEX `InsurancePolicy_ledgerId_normalizedProvider_normalizedProductName_key`
+CREATE UNIQUE INDEX `InsurancePolicy_ledger_normprov_normprod_key`
   ON `InsurancePolicy`(`ledgerId`, `normalizedProvider`, `normalizedProductName`);
 
 ALTER TABLE `Vehicle`

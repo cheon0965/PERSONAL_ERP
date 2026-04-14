@@ -850,7 +850,7 @@ model InsurancePolicy {
   category              Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   linkedRecurringRule   RecurringRule? @relation("InsurancePolicyLinkedRecurringRule", fields: [linkedRecurringRuleId], references: [id], onDelete: SetNull)
 
-  @@unique([ledgerId, normalizedProvider, normalizedProductName])
+  @@unique([ledgerId, normalizedProvider, normalizedProductName], map: "InsurancePolicy_ledger_normprov_normprod_key")
   @@index([userId, isActive])
   @@index([tenantId, ledgerId, isActive])
   @@index([accountId])
