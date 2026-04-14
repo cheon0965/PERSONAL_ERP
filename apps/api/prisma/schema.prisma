@@ -294,6 +294,23 @@ model TenantMembership {
   @@index([userId, status])
 }
 
+model TenantMembershipInvitation {
+  id                    String               @id @default(cuid())
+  tenantId              String
+  email                 String
+  normalizedEmail       String               @db.VarChar(191)
+  role                  TenantMembershipRole
+  tokenHash             String               @unique
+  expiresAt             DateTime
+  acceptedAt            DateTime?
+  revokedAt             DateTime?
+  invitedByMembershipId String
+  createdAt             DateTime             @default(now())
+
+  @@index([tenantId, normalizedEmail])
+  @@index([tenantId, expiresAt])
+}
+
 model Ledger {
   id                          String                       @id @default(cuid())
   tenantId                    String
@@ -341,6 +358,33 @@ model AuthSession {
 
   @@index([userId, expiresAt])
   @@index([userId, revokedAt])
+}
+
+model WorkspaceAuditEvent {
+  id                String   @id @default(cuid())
+  tenantId          String
+  ledgerId          String?
+  actorUserId       String?
+  actorMembershipId String?
+  actorRole         String?  @db.VarChar(50)
+  eventCategory     String   @db.VarChar(50)
+  eventName         String   @db.VarChar(100)
+  action            String?  @db.VarChar(100)
+  resourceType      String?  @db.VarChar(100)
+  resourceId        String?
+  result            String   @db.VarChar(30)
+  reason            String?  @db.VarChar(191)
+  requestId         String?  @db.VarChar(191)
+  path              String?  @db.VarChar(300)
+  clientIpHash      String?  @db.VarChar(191)
+  metadata          Json?
+  occurredAt        DateTime @default(now())
+
+  @@index([tenantId, occurredAt])
+  @@index([tenantId, eventCategory, occurredAt])
+  @@index([tenantId, action, occurredAt])
+  @@index([tenantId, actorMembershipId, occurredAt])
+  @@index([tenantId, requestId])
 }
 
 model UserSetting {

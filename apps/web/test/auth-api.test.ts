@@ -31,7 +31,9 @@ test('auth API helpers call the registration and verification endpoints', async 
     const path = new URL(String(input)).pathname;
     const responseBody = path.endsWith('/verify-email')
       ? { status: 'verified' }
-      : { status: 'verification_sent' };
+      : path.endsWith('/accept-invitation')
+        ? { status: 'accepted' }
+        : { status: 'verification_sent' };
 
     return new Response(JSON.stringify(responseBody), {
       status: 200,
@@ -40,8 +42,12 @@ test('auth API helpers call the registration and verification endpoints', async 
   };
 
   try {
-    const { registerWithPassword, resendVerificationEmail, verifyEmail } =
-      await import('../src/features/auth/auth.api');
+    const {
+      acceptInvitation,
+      registerWithPassword,
+      resendVerificationEmail,
+      verifyEmail
+    } = await import('../src/features/auth/auth.api');
 
     assert.deepEqual(
       await registerWithPassword({
@@ -57,6 +63,12 @@ test('auth API helpers call the registration and verification endpoints', async 
     assert.deepEqual(
       await resendVerificationEmail({ email: 'owner@example.com' }),
       { status: 'verification_sent' }
+    );
+    assert.deepEqual(
+      await acceptInvitation({ token: 'invitation-token-123' }),
+      {
+        status: 'accepted'
+      }
     );
 
     assert.deepEqual(capturedRequests, [
@@ -90,6 +102,16 @@ test('auth API helpers call the registration and verification endpoints', async 
         contentType: 'application/json',
         body: {
           email: 'owner@example.com'
+        }
+      },
+      {
+        url: 'http://localhost:4000/api/auth/accept-invitation',
+        method: 'POST',
+        credentials: 'include',
+        cache: 'no-store',
+        contentType: 'application/json',
+        body: {
+          token: 'invitation-token-123'
         }
       }
     ]);

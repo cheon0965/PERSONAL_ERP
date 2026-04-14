@@ -122,6 +122,16 @@ test('POST /funding-accounts creates a funding account for the current workspace
         status: 'ACTIVE'
       }
     );
+    assert.equal(
+      context.state.workspaceAuditEvents.some(
+        (event) =>
+          event.action === 'funding_account.create' &&
+          event.eventName === 'audit.action_succeeded' &&
+          event.result === 'SUCCESS' &&
+          event.resourceId === 'acc-generated-4'
+      ),
+      true
+    );
   } finally {
     await context.close();
   }
@@ -143,6 +153,15 @@ test('POST /funding-accounts returns 403 when the current membership cannot crea
     });
 
     assert.equal(response.status, 403);
+    assert.equal(
+      context.state.workspaceAuditEvents.some(
+        (event) =>
+          event.action === 'funding_account.create' &&
+          event.eventName === 'authorization.action_denied' &&
+          event.result === 'DENIED'
+      ),
+      true
+    );
   } finally {
     await context.close();
   }

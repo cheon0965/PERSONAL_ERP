@@ -105,6 +105,7 @@
 - 클라이언트가 이미 `x-request-id`를 보내면 그 값을 그대로 유지합니다.
 - API 경계에서는 `[module] METHOD path status duration requestId=...` 형식의 최소 요청 로그를 남깁니다.
 - 보안 이벤트는 `SecurityEvent` 로거에서 `event=... key=value ...` 형식으로 남깁니다.
+- 관리자 회원관리에서 발생한 workspace-scoped 감사 이벤트는 `WorkspaceAuditEvent`에 저장하고, `/admin/logs` 화면에서 조회합니다.
 - readiness 점검은 `GET /api/health/ready`에서 수행하고, DB 연결 실패 시 `503`으로 드러냅니다.
 - Prisma unique 충돌은 요청 경계에서 raw 500 대신 도메인 `409 Conflict` 메시지로 정리합니다.
 
@@ -127,12 +128,22 @@
   `warn` 레벨, `requestId`, `clientIp`, `userId`, `sessionId`
 - `auth.logout_succeeded`
   `log` 레벨, `requestId`, `clientIp`, `userId`, `sessionId`
+- `auth.invitation_accepted`
+  `log` 레벨, `requestId`, `clientIp`, `status`
+- `auth.invitation_accept_failed`
+  `warn` 레벨, `requestId`, `clientIp`, `reason`
 - `auth.browser_origin_blocked`
   `warn` 레벨, `requestId`, `clientIp`, `path`, `origin`
 - `auth.access_denied`
   `warn` 레벨, `requestId`, `clientIp`, `path`, `reason`, 선택적 `userId`, `tenantId`
 - `authorization.scope_denied`
   `warn` 레벨, `requestId`, `path`, 선택적 `userId`, `tenantId`, `membershipId`, `resource`
+- `admin.member_invited`
+  영속 감사 이벤트, `tenantId`, `ledgerId`, `actorMembershipId`, `role`
+- `admin.member_role_updated`
+  영속 감사 이벤트, `tenantId`, `ledgerId`, `actorMembershipId`, `targetMembershipId`, `previousRole`, `nextRole`
+- `admin.member_status_updated` / `admin.member_removed`
+  영속 감사 이벤트, `tenantId`, `ledgerId`, `actorMembershipId`, `targetMembershipId`, `previousStatus`, `nextStatus`
 - `system.readiness_failed`
   `error` 레벨, `requestId`, `path`, `check=database`
 
@@ -175,6 +186,7 @@
 - 필요한 경우 안전한 식별자만
   예: `userId`/`platformUserId`, `tenantId`, `membershipId`, request path
 - 가능하면 `requestId`
+- 관리자 감사 로그의 `metadata`는 allowlist 값만 저장하고, IP는 원문 대신 hash 형태만 저장합니다.
 
 ### 로그를 남기지 않는 위치
 

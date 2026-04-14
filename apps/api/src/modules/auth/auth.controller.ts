@@ -27,6 +27,7 @@ import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { Public } from '../../common/auth/public.decorator';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { AcceptInvitationDto } from './dto/accept-invitation.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
@@ -100,6 +101,23 @@ export class AuthController {
   ) {
     this.ensureAllowedCookieOrigin(request);
     const result = await this.authService.resendVerificationEmail(dto, {
+      clientIp: readClientIp(request),
+      requestId: readRequestId(request)
+    });
+    response.setHeader('Cache-Control', 'no-store');
+    return result;
+  }
+
+  @Public()
+  @HttpCode(200)
+  @Post('accept-invitation')
+  async acceptInvitation(
+    @Body() dto: AcceptInvitationDto,
+    @Req() request: RequestWithContext,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    this.ensureAllowedCookieOrigin(request);
+    const result = await this.authService.acceptInvitation(dto, {
       clientIp: readClientIp(request),
       requestId: readRequestId(request)
     });

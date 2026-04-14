@@ -51,16 +51,17 @@
 1. 신규 사용자는 `POST /auth/register`로 가입 요청을 만들고 이메일 인증 메일을 받습니다.
 2. 인증 링크는 Web `/verify-email?token=<token>`으로 열리고, Web은 `POST /auth/verify-email`로 토큰을 검증합니다.
 3. 인증 링크가 만료되었거나 다시 받아야 하면 `POST /auth/resend-verification`을 사용합니다.
-4. 이메일 인증이 끝난 사용자는 `POST /auth/login`으로 access token을 받고, HttpOnly refresh token 쿠키를 설정합니다.
-5. 이후 보호 요청에는 `Authorization: Bearer <accessToken>`을 사용합니다.
-6. Web은 access token을 메모리 런타임 상태에만 유지합니다.
-7. 새로고침이나 `401` 이후 복구가 필요하면 `POST /auth/refresh`로 새 access token을 받습니다.
-8. 현재 사용자 확인은 `GET /auth/me`를 사용합니다.
+4. 사업장 초대 링크는 Web `/accept-invitation?token=<token>`으로 열리고, Web은 `POST /auth/accept-invitation`으로 토큰을 검증합니다.
+5. 이메일 인증이나 초대 수락이 끝난 사용자는 `POST /auth/login`으로 access token을 받고, HttpOnly refresh token 쿠키를 설정합니다.
+6. 이후 보호 요청에는 `Authorization: Bearer <accessToken>`을 사용합니다.
+7. Web은 access token을 메모리 런타임 상태에만 유지합니다.
+8. 새로고침이나 `401` 이후 복구가 필요하면 `POST /auth/refresh`로 새 access token을 받습니다.
+9. 현재 사용자 확인은 `GET /auth/me`를 사용합니다.
 
 ## 브라우저/API 경계 보안
 
 - CORS는 `APP_ORIGIN` 또는 `CORS_ALLOWED_ORIGINS` allowlist만 허용하고, credential 요청을 지원합니다.
-- `POST /auth/register`, `POST /auth/verify-email`, `POST /auth/resend-verification`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`은 browser `Origin` 또는 `Referer`가 allowlist에 없으면 `403 Origin not allowed`를 반환합니다.
+- `POST /auth/register`, `POST /auth/verify-email`, `POST /auth/resend-verification`, `POST /auth/accept-invitation`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`은 browser `Origin` 또는 `Referer`가 allowlist에 없으면 `403 Origin not allowed`를 반환합니다.
 - 주요 API 응답에는 `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`가 포함됩니다.
 - `/api/docs`를 제외한 API 응답에는 기본 `Content-Security-Policy`가 포함됩니다.
 - `APP_ORIGIN`이 HTTPS일 때는 `Strict-Transport-Security`를 함께 보냅니다.
@@ -73,6 +74,7 @@
 - `POST /auth/register`
 - `POST /auth/verify-email`
 - `POST /auth/resend-verification`
+- `POST /auth/accept-invitation`
 - `POST /auth/login`
 - `POST /auth/refresh`
 - `POST /auth/logout`
@@ -80,6 +82,7 @@
 ## 현재 구현 범위 요약
 
 - 인증 범위는 회원가입, 이메일 인증, 인증 메일 재발송, 로그인, 세션 refresh/logout, `auth/me` 조회까지 포함합니다.
+- 관리자 범위는 현재 workspace의 멤버 목록/초대/역할·상태 관리와 workspace 감사 로그 조회까지 포함합니다.
 - 기준/참조 범위는 조회 `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`, `vehicles/operating-summary`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/차량 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `DELETE /insurance-policies/:id`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
 - 운영/원장 조회 범위는 `accounting-periods`, `collected-transactions`, `journal-entries`, `plan-items`, `financial-statements`, `carry-forwards`, `import-batches`까지 포함합니다.
 - 집계/보고 조회 범위는 `dashboard/summary`, `forecast/monthly`까지 포함합니다.
@@ -93,6 +96,13 @@
 ### 인증/기준 데이터
 
 - `GET /auth/me`
+- `GET /admin/members`
+- `POST /admin/members/invitations`
+- `PATCH /admin/members/:membershipId/role`
+- `PATCH /admin/members/:membershipId/status`
+- `DELETE /admin/members/:membershipId`
+- `GET /admin/audit-events`
+- `GET /admin/audit-events/:auditEventId`
 - `GET /reference-data/readiness`
 - `GET /funding-accounts`
 - `POST /funding-accounts`
@@ -159,6 +169,10 @@
 
 - Web `/register` -> API `POST /auth/register`
 - Web `/verify-email` -> API `POST /auth/verify-email`, `POST /auth/resend-verification`
+- Web `/accept-invitation` -> API `POST /auth/accept-invitation`
+- Web `/admin` -> API `/admin/members`, `/admin/audit-events`
+- Web `/admin/members` -> API `GET /admin/members`, `POST /admin/members/invitations`, `PATCH /admin/members/:membershipId/role`, `PATCH /admin/members/:membershipId/status`, `DELETE /admin/members/:membershipId`
+- Web `/admin/logs` -> API `GET /admin/audit-events`, `GET /admin/audit-events/:auditEventId`
 - Web `/dashboard` -> API `GET /dashboard/summary`
 - Web `/periods` -> API `/accounting-periods`
 - Web `/reference-data` -> API `/reference-data/readiness`, `/funding-accounts`, `/categories`, `/account-subjects`, `/ledger-transaction-types`
@@ -176,6 +190,60 @@
 - Web 라우트의 shorthand 이름과 Swagger/API module 이름이 다를 수 있으며, 계약과 백엔드 모듈명은 API 경로 기준으로 봅니다.
 
 ## 현재 쓰기/명령 엔드포인트
+
+### `GET /admin/members`
+
+- 계약: response `AdminMemberItem[]`
+- 현재 작업 문맥의 Owner/Manager가 현재 Tenant 멤버 목록을 조회합니다.
+- 응답에는 멤버십 ID, 사용자 ID, 이름, 이메일, 역할, 상태, 참여일, 마지막 접근 시각, 이메일 인증 여부만 포함하고 비밀번호 hash, session, token 계열 값은 노출하지 않습니다.
+
+### `POST /admin/members/invitations`
+
+- 계약: `InviteTenantMemberRequest -> TenantMemberInvitationItem`
+- 현재 작업 문맥의 Owner만 새 멤버 초대 메일을 보낼 수 있습니다.
+- 초대 token 원문은 DB에 저장하지 않고 hash만 저장합니다.
+- 이미 같은 Tenant에 활성 또는 초대 상태로 연결된 사용자는 중복 초대를 막습니다.
+- 초대 성공과 메일 발송 실패는 workspace 감사 이벤트로 기록합니다.
+
+### `POST /auth/accept-invitation`
+
+- 계약: `AcceptInvitationRequest -> AcceptInvitationResponse`
+- 초대 메일의 token을 검증하고, 초대 이메일과 일치하는 기존 사용자가 있으면 해당 Tenant membership을 `ACTIVE` 상태로 연결합니다.
+- 아직 가입된 사용자가 없으면 `registration_required` 상태를 반환합니다.
+- 초대 token 원문은 DB에 저장하지 않고, 소비된 초대는 다시 사용할 수 없습니다.
+
+### `PATCH /admin/members/:membershipId/role`
+
+- 계약: `UpdateTenantMemberRoleRequest -> AdminMemberItem`
+- 현재 작업 문맥의 Owner만 멤버 역할을 변경할 수 있습니다.
+- 마지막 활성 Owner를 다른 역할로 낮추는 요청은 `400 Bad Request`로 막습니다.
+- 역할 변경 성공은 workspace 감사 이벤트로 기록합니다.
+
+### `PATCH /admin/members/:membershipId/status`
+
+- 계약: `UpdateTenantMemberStatusRequest -> AdminMemberItem`
+- 현재 작업 문맥의 Owner만 멤버 상태를 `ACTIVE`, `SUSPENDED`, `REMOVED`로 변경할 수 있습니다.
+- 마지막 활성 Owner를 중지 또는 제거 상태로 바꾸는 요청은 `400 Bad Request`로 막습니다.
+- 상태 변경 성공은 workspace 감사 이벤트로 기록합니다.
+
+### `DELETE /admin/members/:membershipId`
+
+- 계약: response body 없음 (`204 No Content`)
+- 현재 작업 문맥의 Owner만 멤버를 하드 삭제하지 않고 `REMOVED` 상태로 전환합니다.
+- 마지막 활성 Owner 제거 요청은 `400 Bad Request`로 막습니다.
+- 제거 성공은 workspace 감사 이벤트로 기록합니다.
+
+### `GET /admin/audit-events`
+
+- 계약: `AdminAuditEventQuery -> AdminAuditEventListResponse`
+- 현재 작업 문맥의 Owner만 현재 Tenant 감사 이벤트 목록을 조회할 수 있습니다.
+- `eventCategory`, `action`, `result`, `actorMembershipId`, `requestId`, `from`, `to`, `offset`, `limit` query를 지원합니다.
+- 조회 응답은 민감정보를 제외한 allowlist metadata만 포함합니다.
+
+### `GET /admin/audit-events/:auditEventId`
+
+- 계약: response `AdminAuditEventItem`
+- 현재 작업 문맥의 Owner만 현재 Tenant에 속한 감사 이벤트 상세를 조회할 수 있습니다.
 
 ### `POST /accounting-periods`
 
@@ -481,6 +549,8 @@
 - 조회 엔드포인트는 인증된 workspace 범위 내 데이터만 반환합니다.
 - `insurance-policies`, `vehicles`도 개인 생활용 고정 데이터가 아니라 현재 workspace/ledger 기준 사업 운영 보조 자산 데이터만 반환합니다.
 - 쓰기 권한은 workspace membership role로 제어합니다.
+- `OWNER`, `MANAGER`: `admin_member.read`
+- `OWNER`: `admin_member.invite`, `admin_member.update_role`, `admin_member.update_status`, `admin_member.remove`, `admin_audit_log.read`
 - `OWNER`, `MANAGER`: `funding_account.create`, `funding_account.update`, `category.create`, `category.update`, `insurance_policy.create`, `insurance_policy.update`, `insurance_policy.delete`, `vehicle.create`, `vehicle.update`, `accounting_period.open`, `recurring_rule.create`, `plan_item.generate`, `financial_statement.generate`, `carry_forward.generate`, `journal_entry.reverse`, `journal_entry.correct`
 - `OWNER`: `accounting_period.close`, `accounting_period.reopen`
 - `OWNER`, `MANAGER`, `EDITOR`: `collected_transaction.create`, `collected_transaction.confirm`, `import_batch.upload`

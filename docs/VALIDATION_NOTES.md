@@ -73,11 +73,13 @@
 ### API
 
 - 인증 로그인 성공/실패
-- 회원가입 `POST /auth/register`, 이메일 인증 `POST /auth/verify-email`, 인증 메일 재발송 `POST /auth/resend-verification`
-  회원가입 성공 시 refresh cookie를 발급하지 않는지, 인증 전 로그인 차단, 인증 완료 후 workspace/ledger/OWNER membership bootstrap, 중복 이메일 일반화 응답, 잘못된/만료/소비된 토큰, 재발송 토큰 교체, register/verify/resend rate limit, allowlist 밖 origin 차단을 검증
+- 회원가입 `POST /auth/register`, 이메일 인증 `POST /auth/verify-email`, 인증 메일 재발송 `POST /auth/resend-verification`, 초대 수락 `POST /auth/accept-invitation`
+  회원가입 성공 시 refresh cookie를 발급하지 않는지, 인증 전 로그인 차단, 인증 완료 후 workspace/ledger/OWNER membership bootstrap, 중복 이메일 일반화 응답, 잘못된/만료/소비된 토큰, 재발송 토큰 교체, 초대 수락 후 membership 활성화, register/verify/resend rate limit, allowlist 밖 origin 차단을 검증
 - 인증 세션 생성/회전/로그아웃
 - 보호 라우트의 `401`
 - `GET /auth/me`
+- 관리자 `GET /admin/members`, `POST /admin/members/invitations`, `PATCH /admin/members/:membershipId/role`, `GET /admin/audit-events`
+  current workspace 멤버 목록, 초대 메일 발송, 역할 변경, 마지막 활성 Owner 보호, 권한 거부 감사 이벤트, 감사 로그 조회를 검증
 - `GET /funding-accounts`, `GET /categories`, `GET /account-subjects`, `GET /ledger-transaction-types`, `GET /insurance-policies`, `GET /vehicles`, `GET /vehicles/operating-summary`
   현재 workspace/ledger 기준 활성 참조 데이터와 운영 보조 자산 데이터만 반환하는지 검증
 - `GET /insurance-policies?includeInactive=true`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`
@@ -144,6 +146,7 @@
 - `401` 응답 시 세션 정리 정책
 - mutation 요청의 JSON body 직렬화
 - 회원가입/이메일 인증/인증 메일 재발송 auth API helper의 요청 path와 body 직렬화
+- `/accept-invitation`, `/admin`, `/admin/members`, `/admin/logs` 관리자/초대 route와 admin API helper의 보호 요청 path, Bearer token, mutation body 직렬화
 - 요청 실패 메시지 안내
 - 브라우저에서 `/transactions` 보호 라우트(Collected Transactions 화면) 리다이렉트
 - 브라우저 기준 로그인 후 세션 복원

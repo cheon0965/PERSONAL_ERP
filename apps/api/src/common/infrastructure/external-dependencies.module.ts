@@ -8,6 +8,7 @@ import { ConsoleEmailSenderAdapter } from './email/console-email-sender.adapter'
 import { GmailApiEmailSenderAdapter } from './email/gmail-api-email-sender.adapter';
 import { RequestContextInterceptor } from './operational/request-context.interceptor';
 import { SecurityEventLogger } from './operational/security-event.logger';
+import { WorkspaceAuditEventsService } from './operational/workspace-audit-events.service';
 import { SystemClockAdapter } from './time/system-clock.adapter';
 
 @Global()
@@ -16,6 +17,7 @@ import { SystemClockAdapter } from './time/system-clock.adapter';
   providers: [
     RequestContextInterceptor,
     SecurityEventLogger,
+    WorkspaceAuditEventsService,
     SystemClockAdapter,
     {
       provide: ClockPort,
@@ -36,6 +38,12 @@ import { SystemClockAdapter } from './time/system-clock.adapter';
       useExisting: RequestContextInterceptor
     }
   ],
-  exports: [PrismaModule, ClockPort, EmailSenderPort, SecurityEventLogger]
+  exports: [
+    PrismaModule,
+    ClockPort,
+    EmailSenderPort,
+    SecurityEventLogger,
+    WorkspaceAuditEventsService
+  ]
 })
 export class ExternalDependenciesModule {}

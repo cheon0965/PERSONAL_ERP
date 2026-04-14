@@ -5,6 +5,12 @@ export type WorkspaceMembershipRole =
   RequiredWorkspaceContext['membershipRole'];
 
 export type WorkspaceAction =
+  | 'admin_member.read'
+  | 'admin_member.invite'
+  | 'admin_member.update_role'
+  | 'admin_member.update_status'
+  | 'admin_member.remove'
+  | 'admin_audit_log.read'
   | 'funding_account.create'
   | 'funding_account.update'
   | 'category.create'
@@ -39,6 +45,12 @@ const workspaceActionAllowedRoles: Record<
   WorkspaceAction,
   readonly WorkspaceMembershipRole[]
 > = {
+  'admin_member.read': ['OWNER', 'MANAGER'],
+  'admin_member.invite': ['OWNER'],
+  'admin_member.update_role': ['OWNER'],
+  'admin_member.update_status': ['OWNER'],
+  'admin_member.remove': ['OWNER'],
+  'admin_audit_log.read': ['OWNER'],
   'funding_account.create': ['OWNER', 'MANAGER'],
   'funding_account.update': ['OWNER', 'MANAGER'],
   'category.create': ['OWNER', 'MANAGER'],
@@ -71,6 +83,13 @@ const workspaceActionAllowedRoles: Record<
 };
 
 const workspaceActionDeniedMessages: Record<WorkspaceAction, string> = {
+  'admin_member.read': 'Only owners and managers can read workspace members.',
+  'admin_member.invite': 'Only owners can invite workspace members.',
+  'admin_member.update_role': 'Only owners can update workspace member roles.',
+  'admin_member.update_status':
+    'Only owners can update workspace member statuses.',
+  'admin_member.remove': 'Only owners can remove workspace members.',
+  'admin_audit_log.read': 'Only owners can read workspace audit logs.',
   'funding_account.create':
     'Only owners and managers can create funding accounts.',
   'funding_account.update':

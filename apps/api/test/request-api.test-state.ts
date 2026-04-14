@@ -30,6 +30,8 @@ export async function createRequestTestState(): Promise<RequestTestState> {
     financialStatementSnapshots: [],
     carryForwardRecords: [],
     emailVerificationTokens: [],
+    tenantMembershipInvitations: [],
+    workspaceAuditEvents: [],
     sentEmails: [],
     importBatches: [],
     importedRows: [],

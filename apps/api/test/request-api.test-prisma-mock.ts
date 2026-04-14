@@ -1,5 +1,6 @@
 import { AuditActorType, CollectedTransactionStatus } from '@prisma/client';
 import { createAccountingPeriodsPrismaMock } from './request-api.test-prisma-mock-accounting-periods';
+import { createAdminPrismaMock } from './request-api.test-prisma-mock-admin';
 import { createAssetsPrismaMock } from './request-api.test-prisma-mock-assets';
 import { createAuthPrismaMock } from './request-api.test-prisma-mock-auth';
 import { createImportsPrismaMock } from './request-api.test-prisma-mock-imports';
@@ -85,6 +86,7 @@ export function createPrismaMock(
       return result;
     },
     ...createAuthPrismaMock(context),
+    ...createAdminPrismaMock(context),
     ...createImportsPrismaMock(context),
     ...createPlanItemsPrismaMock(context),
     ...createAccountingPeriodsPrismaMock(context),

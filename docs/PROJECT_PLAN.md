@@ -30,6 +30,9 @@
 20. 회원가입 및 Gmail API 이메일 인증 도입
     회원가입/이메일 인증/재발송 API, Gmail API/console mail sender 경계, 이메일 인증 후 workspace bootstrap, Web `/register`/`/verify-email`, 테스트/문서 동기화까지 완료.
     실행 계획은 [`completed/AUTH_REGISTRATION_GMAIL_PLAN.md`](./completed/AUTH_REGISTRATION_GMAIL_PLAN.md)에 보관합니다.
+21. 관리자 회원관리와 로그관리 1차 범위 구현
+    workspace-scoped 관리자 화면, 멤버 초대/역할/상태 관리, 초대 수락 흐름, 감사 이벤트 영속화/조회, 공통 감사 저장 경계, 테스트/문서 동기화까지 완료.
+    실행 계획은 [`completed/ADMIN_MEMBER_LOG_MANAGEMENT_PLAN.md`](./completed/ADMIN_MEMBER_LOG_MANAGEMENT_PLAN.md)에 보관합니다.
 
 ## 현재 MVP 범위
 
