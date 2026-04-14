@@ -184,8 +184,8 @@ WHERE `emailVerifiedAt` IS NULL;
 수정 대상:
 
 - `apps/api/src/config/api-env.ts`
-- `apps/api/.env.example`
-- `.env.example`
+- `env-examples/api.env.example`
+- `env-examples/secret-dir.local.example`
 - `ENVIRONMENT_SETUP.md`
 
 추가할 env 초안:

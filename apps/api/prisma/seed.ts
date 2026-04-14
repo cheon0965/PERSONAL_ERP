@@ -7,6 +7,7 @@ import {
   RecurrenceFrequency,
   VehicleMaintenanceCategory
 } from '@prisma/client';
+import * as argon2 from 'argon2';
 import { getApiEnv } from '../src/config/api-env';
 import { normalizeCaseInsensitiveText } from '../src/common/utils/normalize-unique-key.util';
 import { ensurePhase1BackboneForUser } from './phase1-backbone';
@@ -252,7 +253,7 @@ function printSummary(summary: SeedSummary) {
   const lines = [
     '[INFO] Demo seed summary',
     `  - demo user reset: ${summary.resetDemoUser ? 'yes' : 'no'}`,
-    `  - user: created ${summary.user.created}, skipped ${summary.user.skipped}`,
+    `  - users: created ${summary.user.created}, skipped ${summary.user.skipped}`,
     `  - settings: created ${summary.settings.created}, skipped ${summary.settings.skipped}`,
     `  - accounts: created ${summary.accounts.created}, skipped ${summary.accounts.skipped}`,
     `  - categories: created ${summary.categories.created}, skipped ${summary.categories.skipped}`,
@@ -268,6 +269,7 @@ function printSummary(summary: SeedSummary) {
 }
 
 async function ensureDemoUser(summary: SeedSummary) {
+  const emailVerifiedAt = new Date();
   const existingUser = await prisma.user.findUnique({
     where: { email: env.DEMO_EMAIL },
     select: { id: true }
@@ -278,7 +280,8 @@ async function ensureDemoUser(summary: SeedSummary) {
       where: { id: existingUser.id },
       data: {
         name: DEMO_USER_NAME,
-        passwordHash: DEMO_PASSWORD_HASH
+        passwordHash: DEMO_PASSWORD_HASH,
+        emailVerifiedAt
       }
     });
 
@@ -290,7 +293,50 @@ async function ensureDemoUser(summary: SeedSummary) {
     data: {
       email: env.DEMO_EMAIL,
       passwordHash: DEMO_PASSWORD_HASH,
-      name: DEMO_USER_NAME
+      name: DEMO_USER_NAME,
+      emailVerifiedAt
+    },
+    select: { id: true }
+  });
+
+  summary.user.created += 1;
+  return createdUser.id;
+}
+
+async function ensureInitialAdminUser(summary: SeedSummary) {
+  const admin = readInitialAdminSeedCredentials();
+
+  if (!admin || admin.email === env.DEMO_EMAIL) {
+    return null;
+  }
+
+  const passwordHash = await argon2.hash(admin.password);
+  const emailVerifiedAt = new Date();
+  const existingUser = await prisma.user.findUnique({
+    where: { email: admin.email },
+    select: { id: true }
+  });
+
+  if (existingUser) {
+    await prisma.user.update({
+      where: { id: existingUser.id },
+      data: {
+        name: admin.name,
+        passwordHash,
+        emailVerifiedAt
+      }
+    });
+
+    summary.user.skipped += 1;
+    return existingUser.id;
+  }
+
+  const createdUser = await prisma.user.create({
+    data: {
+      email: admin.email,
+      passwordHash,
+      name: admin.name,
+      emailVerifiedAt
     },
     select: { id: true }
   });
@@ -681,6 +727,29 @@ async function resetDemoUserIfRequested(summary: SeedSummary) {
   summary.resetDemoUser = true;
 }
 
+function readInitialAdminSeedCredentials():
+  | { email: string; name: string; password: string }
+  | null {
+  const email = env.INITIAL_ADMIN_EMAIL;
+  const password = env.INITIAL_ADMIN_PASSWORD;
+
+  if (!email && !password && !env.INITIAL_ADMIN_NAME) {
+    return null;
+  }
+
+  if (!email || !password) {
+    throw new Error(
+      '[seed] INITIAL_ADMIN_EMAIL and INITIAL_ADMIN_PASSWORD must both be set to seed an additional initial admin account.'
+    );
+  }
+
+  return {
+    email,
+    name: env.INITIAL_ADMIN_NAME ?? 'Initial Admin',
+    password
+  };
+}
+
 async function main() {
   const summary = createSummary();
 
@@ -689,6 +758,12 @@ async function main() {
   const userId = await ensureDemoUser(summary);
   await ensureDemoSettings(userId, summary);
   const backbone = await ensurePhase1BackboneForUser(prisma, userId);
+  const initialAdminUserId = await ensureInitialAdminUser(summary);
+
+  if (initialAdminUserId) {
+    await ensureDemoSettings(initialAdminUserId, summary);
+    await ensurePhase1BackboneForUser(prisma, initialAdminUserId);
+  }
 
   const accountIds = await ensureDemoAccounts(
     userId,

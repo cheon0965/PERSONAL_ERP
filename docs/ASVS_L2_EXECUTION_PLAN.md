@@ -32,7 +32,7 @@
 - 인증은 전역 guard 기반이며 보호 엔드포인트는 Bearer 토큰이 필요합니다.
 - 핵심 쓰기 흐름에는 workspace 기준 접근통제가 들어가 있습니다.
 - 비밀번호 검증은 `argon2`를 사용합니다.
-- 환경변수는 런타임에서 검증되고 `.env.example` 계열 문서가 있습니다.
+- 환경변수는 런타임에서 검증되고 `env-examples` 계열 예시 파일이 있습니다.
 - 모든 API 응답에 `x-request-id`가 붙고 `GET /api/health/ready`가 있습니다.
 - 테스트는 use-case, 요청 단위 API, 브라우저 E2E, Prisma 대표 통합 테스트 경로까지 분리되어 있습니다.
 
