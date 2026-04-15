@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Button, Grid, Stack, Tab, Tabs, Typography } from '@mui/material';
+import { Alert, Button, Chip, Grid, Stack, Tab, Tabs, Typography } from '@mui/material';
 import { BarChart } from '@mui/x-charts/BarChart';
 import type {
   VehicleFuelLogItem,
@@ -518,6 +518,35 @@ export function VehiclesPage() {
           <DataTableCard
             title="차량 기본 정보"
             description="차량 프로필은 이 탭에서만 관리하고, 연료와 정비 이력은 각각 전용 탭에서 누적합니다."
+            toolbar={
+              <Stack
+                direction={{ xs: 'column', md: 'row' }}
+                spacing={1.5}
+                justifyContent="space-between"
+                alignItems={{ xs: 'flex-start', md: 'center' }}
+              >
+                <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                  <Chip
+                    label={`관리 차량 ${vehicles.length}대`}
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                  />
+                  <Chip
+                    label={
+                      manufacturers.length > 0
+                        ? `제조사 ${manufacturers.join(' / ')}`
+                        : '제조사 정보 없음'
+                    }
+                    size="small"
+                    variant="outlined"
+                  />
+                </Stack>
+                <Typography variant="body2" color="text.secondary">
+                  각 차량 행에서 연료 기록과 정비 기록을 바로 추가할 수 있습니다.
+                </Typography>
+              </Stack>
+            }
             rows={vehicles}
             columns={vehicleColumns}
             actions={
@@ -526,40 +555,48 @@ export function VehiclesPage() {
               </Button>
             }
           />
-          <Typography variant="body2" color="text.secondary">
-            각 차량 행에서 연료 기록과 정비 기록을 바로 추가할 수 있습니다.
-          </Typography>
         </Stack>
       ) : null}
 
       {activeTab === 'fuel' ? (
         <Stack spacing={appLayout.sectionGap}>
-          <Grid container spacing={appLayout.sectionGap}>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <SummaryCard
-                title="누적 연료 / 충전 비용"
-                value={formatWon(operatingSummary.totals.fuelExpenseWon)}
-                subtitle={`${fuelLogRows.length}건의 기록을 기준으로 집계했습니다.`}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <SummaryCard
-                title="최근 연료 기록"
-                value={
-                  latestFuelLog ? latestFuelLog.filledOn.slice(0, 10) : '-'
-                }
-                subtitle={
-                  latestFuelLog
-                    ? `${latestFuelLog.vehicleName} · ${formatWon(latestFuelLog.amountWon)}`
-                    : '등록된 연료 기록이 없습니다.'
-                }
-              />
-            </Grid>
-          </Grid>
-
           <DataTableCard
             title="주유 / 충전 기록"
             description="연료 사용과 충전 이력은 이 탭에서만 관리해 차량비 검토 흐름을 단순화합니다."
+            toolbar={
+              <Stack
+                direction={{ xs: 'column', md: 'row' }}
+                spacing={1.5}
+                justifyContent="space-between"
+                alignItems={{ xs: 'flex-start', md: 'center' }}
+              >
+                <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                  <Chip
+                    label={`누적 비용 ${formatWon(operatingSummary.totals.fuelExpenseWon)}`}
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                  />
+                  <Chip
+                    label={`기록 ${fuelLogRows.length}건`}
+                    size="small"
+                    variant="outlined"
+                  />
+                  <Chip
+                    label={
+                      latestFuelLog
+                        ? `최근 ${latestFuelLog.filledOn.slice(0, 10)} · ${latestFuelLog.vehicleName}`
+                        : '최근 기록 없음'
+                    }
+                    size="small"
+                    variant="outlined"
+                  />
+                </Stack>
+                <Typography variant="body2" color="text.secondary">
+                  연료 기록은 이 표에서 먼저 보고, 추가와 수정은 드로어에서 이어서 처리합니다.
+                </Typography>
+              </Stack>
+            }
             rows={fuelLogRows}
             columns={fuelTableColumns}
             actions={
@@ -580,36 +617,43 @@ export function VehiclesPage() {
 
       {activeTab === 'maintenance' ? (
         <Stack spacing={appLayout.sectionGap}>
-          <Grid container spacing={appLayout.sectionGap}>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <SummaryCard
-                title="누적 정비 비용"
-                value={formatWon(operatingSummary.totals.maintenanceExpenseWon)}
-                subtitle={`${maintenanceLogRows.length}건의 기록을 기준으로 집계했습니다.`}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <SummaryCard
-                title="최근 정비 기록"
-                value={
-                  latestMaintenanceLog
-                    ? latestMaintenanceLog.performedOn.slice(0, 10)
-                    : '-'
-                }
-                subtitle={
-                  latestMaintenanceLog
-                    ? `${latestMaintenanceLog.vehicleName} · ${formatWon(
-                        latestMaintenanceLog.amountWon
-                      )}`
-                    : '등록된 정비 기록이 없습니다.'
-                }
-              />
-            </Grid>
-          </Grid>
-
           <DataTableCard
             title="정비 이력"
             description="정비 항목과 금액은 이 탭에서만 누적해 향후 비용 분류와 계획 판단 기준으로 사용합니다."
+            toolbar={
+              <Stack
+                direction={{ xs: 'column', md: 'row' }}
+                spacing={1.5}
+                justifyContent="space-between"
+                alignItems={{ xs: 'flex-start', md: 'center' }}
+              >
+                <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                  <Chip
+                    label={`누적 정비 비용 ${formatWon(operatingSummary.totals.maintenanceExpenseWon)}`}
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                  />
+                  <Chip
+                    label={`기록 ${maintenanceLogRows.length}건`}
+                    size="small"
+                    variant="outlined"
+                  />
+                  <Chip
+                    label={
+                      latestMaintenanceLog
+                        ? `최근 ${latestMaintenanceLog.performedOn.slice(0, 10)} · ${latestMaintenanceLog.vehicleName}`
+                        : '최근 기록 없음'
+                    }
+                    size="small"
+                    variant="outlined"
+                  />
+                </Stack>
+                <Typography variant="body2" color="text.secondary">
+                  정비 기록은 이 표를 기준으로 확인하고, 추가와 수정은 드로어에서 이어서 처리합니다.
+                </Typography>
+              </Stack>
+            }
             rows={maintenanceLogRows}
             columns={maintenanceTableColumns}
             actions={

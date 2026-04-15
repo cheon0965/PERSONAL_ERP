@@ -8,7 +8,6 @@ import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { SectionCard } from '@/shared/ui/section-card';
-import { SummaryCard } from '@/shared/ui/summary-card';
 import {
   getOperationsChecklist,
   operationsChecklistQueryKey
@@ -31,7 +30,39 @@ export function OperationsChecklistPage() {
       <PageHeader
         eyebrow="운영 지원"
         title="운영 체크리스트"
-        description="월 시작 전, 일일 점검, 월 마감 전, 배포/운영 점검 순서로 현재 처리 상태와 이동 CTA를 확인합니다."
+        description="월 시작, 일일 점검, 월 마감, 배포 점검 순서로 현재 처리 상태와 이동 경로를 확인합니다."
+        badges={[
+          {
+            label: checklist?.currentPeriod?.monthLabel ?? '운영 기간 없음',
+            color: checklist?.currentPeriod ? 'primary' : 'default'
+          },
+          {
+            label:
+              (checklist?.totals.actionRequired ?? 0) > 0
+                ? '처리 필요 항목 있음'
+                : '즉시 처리 항목 없음',
+            color:
+              (checklist?.totals.actionRequired ?? 0) > 0 ? 'warning' : 'success'
+          }
+        ]}
+        metadata={[
+          {
+            label: '준비됨',
+            value: `${formatNumber(checklist?.totals.ready ?? 0, 0)}건`
+          },
+          {
+            label: '처리 필요',
+            value: `${formatNumber(checklist?.totals.actionRequired ?? 0, 0)}건`
+          },
+          {
+            label: '차단',
+            value: `${formatNumber(checklist?.totals.blocked ?? 0, 0)}건`
+          }
+        ]}
+        primaryActionLabel="월 마감 보기"
+        primaryActionHref="/operations/month-end"
+        secondaryActionLabel="예외 처리함"
+        secondaryActionHref="/operations/exceptions"
       />
 
       <OperationsSectionNav />
@@ -44,26 +75,59 @@ export function OperationsChecklistPage() {
       ) : null}
 
       <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <SummaryCard
-            title="준비됨"
-            value={formatNumber(checklist?.totals.ready ?? 0, 0)}
-            tone="success"
-          />
+        <Grid size={{ xs: 12, lg: 7 }}>
+          <SectionCard
+            title="지금 우선 확인"
+            description="운영자가 먼저 확인해야 할 현재 월 기준과 점검 규모를 빠르게 보여줍니다."
+          >
+            <Grid container spacing={appLayout.fieldGap}>
+              <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+                <ChecklistInfoItem
+                  label="운영 월"
+                  value={checklist?.currentPeriod?.monthLabel ?? '운영 기간 없음'}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+                <ChecklistInfoItem
+                  label="준비됨"
+                  value={`${formatNumber(checklist?.totals.ready ?? 0, 0)}건`}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+                <ChecklistInfoItem
+                  label="처리 필요"
+                  value={`${formatNumber(checklist?.totals.actionRequired ?? 0, 0)}건`}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+                <ChecklistInfoItem
+                  label="차단"
+                  value={`${formatNumber(checklist?.totals.blocked ?? 0, 0)}건`}
+                />
+              </Grid>
+            </Grid>
+          </SectionCard>
         </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <SummaryCard
-            title="처리 필요"
-            value={formatNumber(checklist?.totals.actionRequired ?? 0, 0)}
-            tone="warning"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <SummaryCard
-            title="차단"
-            value={formatNumber(checklist?.totals.blocked ?? 0, 0)}
-            tone="warning"
-          />
+        <Grid size={{ xs: 12, lg: 5 }}>
+          <SectionCard
+            title="자주 여는 후속 화면"
+            description="체크리스트를 확인한 뒤 바로 이어서 처리하는 대표 운영 화면입니다."
+          >
+            <Stack spacing={1.25}>
+              <OperationsNavCard
+                title="월 마감"
+                description="현재 월 마감 기준과 차단 사유를 다시 확인합니다."
+                href="/operations/month-end"
+                actionLabel="월 마감 보기"
+              />
+              <OperationsNavCard
+                title="예외 처리함"
+                description="처리 필요 또는 차단 항목이 실제로 어떤 예외에서 왔는지 추적합니다."
+                href="/operations/exceptions"
+                actionLabel="예외 처리 보기"
+              />
+            </Stack>
+          </SectionCard>
         </Grid>
       </Grid>
 
@@ -123,6 +187,60 @@ export function OperationsChecklistPage() {
           </Grid>
         ))}
       </Grid>
+    </Stack>
+  );
+}
+
+function ChecklistInfoItem({
+  label,
+  value
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <Stack spacing={0.35}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body2" fontWeight={600}>
+        {value}
+      </Typography>
+    </Stack>
+  );
+}
+
+function OperationsNavCard({
+  title,
+  description,
+  href,
+  actionLabel
+}: {
+  title: string;
+  description: string;
+  href: string;
+  actionLabel: string;
+}) {
+  return (
+    <Stack
+      spacing={1}
+      sx={{
+        p: appLayout.cardPadding,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        backgroundColor: 'background.default'
+      }}
+    >
+      <Typography variant="subtitle2">{title}</Typography>
+      <Typography variant="body2" color="text.secondary">
+        {description}
+      </Typography>
+      <div>
+        <Button component={Link} href={href} variant="outlined">
+          {actionLabel}
+        </Button>
+      </div>
     </Stack>
   );
 }

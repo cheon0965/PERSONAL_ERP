@@ -8,7 +8,6 @@ import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { SectionCard } from '@/shared/ui/section-card';
-import { SummaryCard } from '@/shared/ui/summary-card';
 import {
   getOperationsMonthEnd,
   operationsMonthEndQueryKey
@@ -30,10 +29,40 @@ export function OperationsMonthEndPage() {
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
         eyebrow="운영 지원"
-        title="월 마감 대시보드"
-        description="현재 월의 마감 가능 여부, 미확정 거래, 업로드 실패, 남은 계획, 재무제표와 차기 이월 생성 상태를 요약합니다."
+        title="월 마감"
+        description="현재 월의 마감 가능 여부를 확인하고, 차단 사유와 후속 작업을 바로 정리합니다."
+        badges={[
+          {
+            label: monthEnd?.period?.monthLabel ?? '운영 기간 없음',
+            color: monthEnd?.period ? 'primary' : 'default'
+          },
+          {
+            label: readOperationsStatusLabel(monthEnd?.closeReadiness ?? 'INFO'),
+            color: readOperationsStatusColor(monthEnd?.closeReadiness ?? 'INFO')
+          }
+        ]}
+        metadata={[
+          {
+            label: '미확정 거래',
+            value: `${formatNumber(monthEnd?.unresolvedTransactionCount ?? 0, 0)}건`
+          },
+          {
+            label: '업로드 실패 행',
+            value: `${formatNumber(monthEnd?.failedImportRowCount ?? 0, 0)}건`
+          },
+          {
+            label: '남은 계획',
+            value: `${formatNumber(monthEnd?.remainingPlanItemCount ?? 0, 0)}건`
+          },
+          {
+            label: '남은 계획 지출',
+            value: formatWon(monthEnd?.remainingPlannedExpenseWon ?? 0)
+          }
+        ]}
         primaryActionLabel="월 운영 화면"
         primaryActionHref="/periods"
+        secondaryActionLabel="예외 처리함"
+        secondaryActionHref="/operations/exceptions"
       />
 
       <OperationsSectionNav />
@@ -52,46 +81,74 @@ export function OperationsMonthEndPage() {
         {monthEnd?.closeReadinessLabel ?? '월 마감 상태를 계산하는 중입니다.'}
       </Alert>
 
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <SummaryCard
-            title="마감 상태"
-            value={readOperationsStatusLabel(monthEnd?.closeReadiness ?? 'INFO')}
-            subtitle={monthEnd?.period?.monthLabel ?? '운영 기간 없음'}
-            tone={monthEnd?.closeReadiness === 'READY' ? 'success' : 'warning'}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <SummaryCard
-            title="미확정 거래"
-            value={formatNumber(monthEnd?.unresolvedTransactionCount ?? 0, 0)}
-            tone="warning"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <SummaryCard
-            title="남은 계획 지출"
-            value={formatWon(monthEnd?.remainingPlannedExpenseWon ?? 0)}
-            tone="neutral"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <SummaryCard
-            title="업로드 실패 행"
-            value={formatNumber(monthEnd?.failedImportRowCount ?? 0, 0)}
-            tone="warning"
-          />
-        </Grid>
-      </Grid>
+      <SectionCard
+        title="현재 마감 기준"
+        description="요약 카드보다 먼저, 지금 월 마감 판단에 직접 영향을 주는 기준을 한 번에 봅니다."
+      >
+        <Stack spacing={appLayout.cardGap}>
+          <Grid container spacing={appLayout.fieldGap}>
+            <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+              <MonthEndInfoItem
+                label="운영 월"
+                value={monthEnd?.period?.monthLabel ?? '운영 기간 없음'}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+              <MonthEndInfoItem
+                label="마감 상태"
+                value={readOperationsStatusLabel(monthEnd?.closeReadiness ?? 'INFO')}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+              <MonthEndInfoItem
+                label="미확정 거래"
+                value={`${formatNumber(monthEnd?.unresolvedTransactionCount ?? 0, 0)}건`}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+              <MonthEndInfoItem
+                label="업로드 실패 행"
+                value={`${formatNumber(monthEnd?.failedImportRowCount ?? 0, 0)}건`}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+              <MonthEndInfoItem
+                label="남은 계획"
+                value={`${formatNumber(monthEnd?.remainingPlanItemCount ?? 0, 0)}건`}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+              <MonthEndInfoItem
+                label="남은 계획 지출"
+                value={formatWon(monthEnd?.remainingPlannedExpenseWon ?? 0)}
+              />
+            </Grid>
+          </Grid>
+          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+            <Chip
+              label={`재무제표 ${formatNumber(monthEnd?.financialStatementSnapshotCount ?? 0, 0)}개`}
+              color={readOperationsStatusColor(
+                (monthEnd?.financialStatementSnapshotCount ?? 0) > 0
+                  ? 'READY'
+                  : 'INFO'
+              )}
+            />
+            <Chip
+              label={monthEnd?.carryForwardCreated ? '차기 이월 생성됨' : '차기 이월 확인 필요'}
+              color={monthEnd?.carryForwardCreated ? 'success' : 'info'}
+            />
+          </Stack>
+        </Stack>
+      </SectionCard>
 
       <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, lg: 6 }}>
-          <SectionCard title="마감 차단 사유" description="마감 전 반드시 처리해야 할 항목입니다.">
+        <Grid size={{ xs: 12, lg: 7 }}>
+          <SectionCard title="마감 차단 사유" description="마감 전에 반드시 처리해야 할 항목입니다.">
             <Stack spacing={1.25}>
               {(monthEnd?.blockers ?? []).length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
+                <Alert severity="success" variant="outlined">
                   현재 마감 차단 사유가 없습니다.
-                </Typography>
+                </Alert>
               ) : null}
               {(monthEnd?.blockers ?? []).map((blocker) => (
                 <Alert key={blocker} severity="error" variant="outlined">
@@ -104,37 +161,113 @@ export function OperationsMonthEndPage() {
             </Stack>
           </SectionCard>
         </Grid>
-        <Grid size={{ xs: 12, lg: 6 }}>
-          <SectionCard title="마감 전 경고" description="차단은 아니지만 운영자가 확인해야 할 항목입니다.">
+        <Grid size={{ xs: 12, lg: 5 }}>
+          <SectionCard
+            title="바로 확인할 후속 작업"
+            description="월 마감 준비에서 자주 함께 열어보는 화면을 묶어 둡니다."
+          >
             <Stack spacing={1.25}>
-              {(monthEnd?.warnings ?? []).length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  현재 추가 경고가 없습니다.
-                </Typography>
-              ) : null}
-              {(monthEnd?.warnings ?? []).map((warning) => (
-                <Alert key={warning} severity="warning" variant="outlined">
-                  {warning}
-                </Alert>
-              ))}
-              <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                <Chip
-                  label={`재무제표 ${formatNumber(monthEnd?.financialStatementSnapshotCount ?? 0, 0)}개`}
-                  color={readOperationsStatusColor(
-                    (monthEnd?.financialStatementSnapshotCount ?? 0) > 0
-                      ? 'READY'
-                      : 'INFO'
-                  )}
-                />
-                <Chip
-                  label={monthEnd?.carryForwardCreated ? '차기 이월 생성됨' : '차기 이월 확인 필요'}
-                  color={monthEnd?.carryForwardCreated ? 'success' : 'info'}
-                />
-              </Stack>
+              <MonthEndActionItem
+                title="예외 처리함"
+                description={`미확정 거래 ${formatNumber(monthEnd?.unresolvedTransactionCount ?? 0, 0)}건과 차단 사유를 먼저 정리합니다.`}
+                href="/operations/exceptions"
+                actionLabel="예외 처리함 보기"
+              />
+              <MonthEndActionItem
+                title="업로드 운영 현황"
+                description={`업로드 실패 행 ${formatNumber(monthEnd?.failedImportRowCount ?? 0, 0)}건을 다시 확인합니다.`}
+                href="/operations/imports"
+                actionLabel="업로드 현황 보기"
+              />
+              <MonthEndActionItem
+                title="재무제표"
+                description={`현재 생성된 스냅샷 ${formatNumber(monthEnd?.financialStatementSnapshotCount ?? 0, 0)}개를 확인합니다.`}
+                href="/financial-statements"
+                actionLabel="재무제표 보기"
+              />
+              <MonthEndActionItem
+                title="차기 이월"
+                description={
+                  monthEnd?.carryForwardCreated
+                    ? '다음 월 연결 기준이 이미 생성되어 있습니다.'
+                    : '월 마감 후 다음 월 연결 기준 생성을 확인합니다.'
+                }
+                href="/carry-forwards"
+                actionLabel="차기 이월 보기"
+              />
             </Stack>
           </SectionCard>
         </Grid>
       </Grid>
+
+      <SectionCard title="마감 전 경고" description="차단은 아니지만 운영자가 확인해야 할 항목입니다.">
+        <Stack spacing={1.25}>
+          {(monthEnd?.warnings ?? []).length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              현재 추가 경고가 없습니다.
+            </Typography>
+          ) : null}
+          {(monthEnd?.warnings ?? []).map((warning) => (
+            <Alert key={warning} severity="warning" variant="outlined">
+              {warning}
+            </Alert>
+          ))}
+        </Stack>
+      </SectionCard>
+    </Stack>
+  );
+}
+
+function MonthEndInfoItem({
+  label,
+  value
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <Stack spacing={0.35}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body2" fontWeight={600}>
+        {value}
+      </Typography>
+    </Stack>
+  );
+}
+
+function MonthEndActionItem({
+  title,
+  description,
+  href,
+  actionLabel
+}: {
+  title: string;
+  description: string;
+  href: string;
+  actionLabel: string;
+}) {
+  return (
+    <Stack
+      spacing={1}
+      sx={{
+        p: appLayout.cardPadding,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        backgroundColor: 'background.default'
+      }}
+    >
+      <Typography variant="subtitle2">{title}</Typography>
+      <Typography variant="body2" color="text.secondary">
+        {description}
+      </Typography>
+      <div>
+        <Button component={Link} href={href} variant="outlined">
+          {actionLabel}
+        </Button>
+      </div>
     </Stack>
   );
 }

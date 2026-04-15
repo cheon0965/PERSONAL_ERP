@@ -8,7 +8,6 @@ import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { SectionCard } from '@/shared/ui/section-card';
-import { SummaryCard } from '@/shared/ui/summary-card';
 import {
   getOperationsExceptions,
   operationsExceptionsQueryKey
@@ -32,7 +31,36 @@ export function OperationsExceptionsPage() {
       <PageHeader
         eyebrow="운영 지원"
         title="예외 처리함"
-        description="기준 데이터 부족, 미확정 거래, 업로드 미수집 행, 마감 차단 사유, 실패 이벤트를 처리 우선순위 중심으로 모아봅니다."
+        description="기준 데이터 부족, 미확정 거래, 업로드 미수집 행, 마감 차단 사유를 처리 우선순위 기준으로 모아봅니다."
+        badges={[
+          {
+            label:
+              (exceptions?.criticalCount ?? 0) > 0 ? '긴급 예외 있음' : '긴급 예외 없음',
+            color: (exceptions?.criticalCount ?? 0) > 0 ? 'warning' : 'success'
+          },
+          {
+            label: `${formatNumber(exceptions?.totalCount ?? 0, 0)}건`,
+            color: (exceptions?.totalCount ?? 0) > 0 ? 'primary' : 'default'
+          }
+        ]}
+        metadata={[
+          {
+            label: '전체 예외',
+            value: `${formatNumber(exceptions?.totalCount ?? 0, 0)}건`
+          },
+          {
+            label: '긴급',
+            value: `${formatNumber(exceptions?.criticalCount ?? 0, 0)}건`
+          },
+          {
+            label: '경고',
+            value: `${formatNumber(exceptions?.warningCount ?? 0, 0)}건`
+          }
+        ]}
+        primaryActionLabel="월 마감 보기"
+        primaryActionHref="/operations/month-end"
+        secondaryActionLabel="업로드 현황"
+        secondaryActionHref="/operations/imports"
       />
 
       <OperationsSectionNav />
@@ -45,26 +73,53 @@ export function OperationsExceptionsPage() {
       ) : null}
 
       <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <SummaryCard
-            title="전체 예외"
-            value={formatNumber(exceptions?.totalCount ?? 0, 0)}
-            tone="warning"
-          />
+        <Grid size={{ xs: 12, lg: 7 }}>
+          <SectionCard
+            title="지금 우선 처리"
+            description="운영자가 먼저 확인해야 할 예외 우선순위를 상단에서 바로 읽습니다."
+          >
+            <Grid container spacing={appLayout.fieldGap}>
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <ExceptionInfoItem
+                  label="전체 예외"
+                  value={`${formatNumber(exceptions?.totalCount ?? 0, 0)}건`}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <ExceptionInfoItem
+                  label="긴급"
+                  value={`${formatNumber(exceptions?.criticalCount ?? 0, 0)}건`}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <ExceptionInfoItem
+                  label="경고"
+                  value={`${formatNumber(exceptions?.warningCount ?? 0, 0)}건`}
+                />
+              </Grid>
+            </Grid>
+          </SectionCard>
         </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <SummaryCard
-            title="긴급"
-            value={formatNumber(exceptions?.criticalCount ?? 0, 0)}
-            tone="warning"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <SummaryCard
-            title="경고"
-            value={formatNumber(exceptions?.warningCount ?? 0, 0)}
-            tone="neutral"
-          />
+        <Grid size={{ xs: 12, lg: 5 }}>
+          <SectionCard
+            title="자주 여는 후속 화면"
+            description="예외를 읽고 바로 이어서 처리하는 대표 운영 화면입니다."
+          >
+            <Stack spacing={1.25}>
+              <OperationsQuickLink
+                title="월 마감"
+                description="마감 차단 사유와 현재 월 준비 상태를 다시 확인합니다."
+                href="/operations/month-end"
+                actionLabel="월 마감 보기"
+              />
+              <OperationsQuickLink
+                title="업로드 현황"
+                description="미수집 행과 실패 배치 기준으로 업로드 관련 예외를 점검합니다."
+                href="/operations/imports"
+                actionLabel="업로드 현황 보기"
+              />
+            </Stack>
+          </SectionCard>
         </Grid>
       </Grid>
 
@@ -133,6 +188,60 @@ export function OperationsExceptionsPage() {
           ))}
         </Stack>
       </SectionCard>
+    </Stack>
+  );
+}
+
+function ExceptionInfoItem({
+  label,
+  value
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <Stack spacing={0.35}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body2" fontWeight={600}>
+        {value}
+      </Typography>
+    </Stack>
+  );
+}
+
+function OperationsQuickLink({
+  title,
+  description,
+  href,
+  actionLabel
+}: {
+  title: string;
+  description: string;
+  href: string;
+  actionLabel: string;
+}) {
+  return (
+    <Stack
+      spacing={1}
+      sx={{
+        p: appLayout.cardPadding,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        backgroundColor: 'background.default'
+      }}
+    >
+      <Typography variant="subtitle2">{title}</Typography>
+      <Typography variant="body2" color="text.secondary">
+        {description}
+      </Typography>
+      <div>
+        <Button component={Link} href={href} variant="outlined">
+          {actionLabel}
+        </Button>
+      </div>
     </Stack>
   );
 }

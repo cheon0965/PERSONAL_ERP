@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   Alert,
   Button,
+  Chip,
   Grid,
   List,
   ListItem,
@@ -23,7 +24,6 @@ import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { SectionCard } from '@/shared/ui/section-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
-import { SummaryCard } from '@/shared/ui/summary-card';
 import {
   accountingPeriodsQueryKey,
   getAccountingPeriods
@@ -257,35 +257,65 @@ export function ForecastPage() {
             </Alert>
           ))}
 
-          <Grid container spacing={appLayout.sectionGap}>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <SummaryCard
-                title="현재 자금 잔액"
-                value={formatWon(forecast.actualBalanceWon)}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <SummaryCard
-                title="예상 수입"
-                value={formatWon(forecast.expectedIncomeWon)}
-                subtitle="아직 확정되지 않은 계획 항목 중 수입 방향 금액입니다."
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <SummaryCard
-                title="남은 계획 지출"
-                value={formatWon(forecast.remainingPlannedExpenseWon)}
-                subtitle="확정되지 않은 계획 항목 중 지출 방향 금액입니다."
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <SummaryCard
-                title="안전 잉여"
-                value={formatWon(forecast.safetySurplusWon)}
-                subtitle="최소 예비자금과 적립금을 반영한 뒤 남는 여력입니다."
-              />
-            </Grid>
-          </Grid>
+          <SectionCard
+            title="전망 핵심 수치"
+            description="차트로 내려가기 전에 현재 기간 전망을 해석하는 핵심 기준만 먼저 읽습니다."
+          >
+            <Stack spacing={appLayout.cardGap}>
+              <Grid container spacing={appLayout.fieldGap}>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <ForecastInfoItem
+                    label="현재 자금 잔액"
+                    value={formatWon(forecast.actualBalanceWon)}
+                    description="현재 운영 월 기준 잔액입니다."
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <ForecastInfoItem
+                    label="예상 수입"
+                    value={formatWon(forecast.expectedIncomeWon)}
+                    description="아직 확정되지 않은 수입 계획 금액입니다."
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <ForecastInfoItem
+                    label="남은 계획 지출"
+                    value={formatWon(forecast.remainingPlannedExpenseWon)}
+                    description="확정되지 않은 지출 계획 금액입니다."
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <ForecastInfoItem
+                    label="안전 잉여"
+                    value={formatWon(forecast.safetySurplusWon)}
+                    description="예비자금을 반영하고 남는 여력입니다."
+                  />
+                </Grid>
+              </Grid>
+              <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                <Chip
+                  label={`최소 예비자금 ${formatWon(forecast.minimumReserveWon)}`}
+                  size="small"
+                  variant="outlined"
+                />
+                <Chip
+                  label={`적립금 ${formatWon(forecast.sinkingFundWon)}`}
+                  size="small"
+                  variant="outlined"
+                />
+                <Chip
+                  label={
+                    forecast.officialComparison
+                      ? `공식 비교 ${forecast.officialComparison.monthLabel}`
+                      : '공식 비교 없음'
+                  }
+                  size="small"
+                  color={forecast.officialComparison ? 'info' : 'default'}
+                  variant="outlined"
+                />
+              </Stack>
+            </Stack>
+          </SectionCard>
 
           <Grid container spacing={appLayout.sectionGap}>
             <Grid size={{ xs: 12, lg: 7 }}>
@@ -426,6 +456,30 @@ export function ForecastPage() {
           </Grid>
         </Stack>
       )}
+    </Stack>
+  );
+}
+
+function ForecastInfoItem({
+  label,
+  value,
+  description
+}: {
+  label: string;
+  value: string;
+  description: string;
+}) {
+  return (
+    <Stack spacing={0.35}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body1" fontWeight={700}>
+        {value}
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        {description}
+      </Typography>
     </Stack>
   );
 }

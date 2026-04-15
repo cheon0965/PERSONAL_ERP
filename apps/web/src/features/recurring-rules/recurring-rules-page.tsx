@@ -6,7 +6,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
   Button,
+  Chip,
   CircularProgress,
+  Grid,
   Stack,
   Typography
 } from '@mui/material';
@@ -354,9 +356,53 @@ export function RecurringRulesPage() {
         <QueryErrorAlert title="반복 규칙 조회에 실패했습니다." error={error} />
       ) : null}
 
+      <Grid container spacing={appLayout.sectionGap}>
+        <Grid size={{ xs: 12, lg: 7 }}>
+          <RecurringRulesInfoCard
+            totalCount={data.length}
+            activeCount={activeRuleCount}
+            insuranceManagedCount={insuranceManagedRuleCount}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, lg: 5 }}>
+          <RecurringRulesSupportCard />
+        </Grid>
+      </Grid>
+
       <DataTableCard
         title="계획 생성 규칙"
         description="각 규칙은 앞으로 생성될 계획 항목의 기준입니다. 필요하면 드로어에서 바로 수정하거나 삭제할 수 있습니다."
+        toolbar={
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={1.5}
+            justifyContent="space-between"
+            alignItems={{ xs: 'flex-start', md: 'center' }}
+          >
+            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+              <Chip
+                label={`활성 ${activeRuleCount}건`}
+                size="small"
+                color="success"
+                variant="filled"
+              />
+              <Chip
+                label={`보험 연동 ${insuranceManagedRuleCount}건`}
+                size="small"
+                color={insuranceManagedRuleCount > 0 ? 'primary' : 'default'}
+                variant="outlined"
+              />
+              <Chip
+                label={`직접 관리 ${data.length - insuranceManagedRuleCount}건`}
+                size="small"
+                variant="outlined"
+              />
+            </Stack>
+            <Typography variant="body2" color="text.secondary">
+              규칙은 목록에서 먼저 확인하고, 생성과 수정은 드로어에서 이어서 처리합니다.
+            </Typography>
+          </Stack>
+        }
         rows={data}
         columns={columns}
       />
@@ -419,6 +465,136 @@ export function RecurringRulesPage() {
         onClose={handleDeleteClose}
         onConfirm={handleDeleteConfirm}
       />
+    </Stack>
+  );
+}
+
+function RecurringRulesInfoCard({
+  totalCount,
+  activeCount,
+  insuranceManagedCount
+}: {
+  totalCount: number;
+  activeCount: number;
+  insuranceManagedCount: number;
+}) {
+  return (
+    <Stack
+      spacing={appLayout.cardGap}
+      sx={{
+        p: appLayout.cardPadding,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        backgroundColor: 'background.paper'
+      }}
+    >
+      <Typography variant="h6">현재 관리 기준</Typography>
+      <Grid container spacing={appLayout.fieldGap}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <RecurringInfoItem label="전체 규칙" value={`${totalCount}건`} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <RecurringInfoItem label="활성 규칙" value={`${activeCount}건`} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <RecurringInfoItem
+            label="보험 연동"
+            value={`${insuranceManagedCount}건`}
+          />
+        </Grid>
+      </Grid>
+      <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+        <Chip label={`활성 ${activeCount}건`} size="small" color="success" />
+        <Chip
+          label={`직접 관리 ${totalCount - insuranceManagedCount}건`}
+          size="small"
+          variant="outlined"
+        />
+      </Stack>
+    </Stack>
+  );
+}
+
+function RecurringRulesSupportCard() {
+  return (
+    <Stack
+      spacing={1.25}
+      sx={{
+        p: appLayout.cardPadding,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        backgroundColor: 'background.paper'
+      }}
+    >
+      <Typography variant="h6">자주 여는 후속 화면</Typography>
+      <RecurringSupportLink
+        title="계획 항목"
+        description="현재 운영 월 기준으로 반복 규칙이 실제 계획으로 생성됐는지 확인합니다."
+        href="/plan-items"
+        actionLabel="계획 항목 보기"
+      />
+      <RecurringSupportLink
+        title="보험 계약"
+        description="보험 연동 규칙은 보험 계약 화면에서 함께 관리합니다."
+        href="/insurances"
+        actionLabel="보험 계약 보기"
+      />
+    </Stack>
+  );
+}
+
+function RecurringSupportLink({
+  title,
+  description,
+  href,
+  actionLabel
+}: {
+  title: string;
+  description: string;
+  href: string;
+  actionLabel: string;
+}) {
+  return (
+    <Stack
+      spacing={1}
+      sx={{
+        p: appLayout.cardPadding,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        backgroundColor: 'background.default'
+      }}
+    >
+      <Typography variant="subtitle2">{title}</Typography>
+      <Typography variant="body2" color="text.secondary">
+        {description}
+      </Typography>
+      <div>
+        <Button component={Link} href={href} variant="outlined">
+          {actionLabel}
+        </Button>
+      </div>
+    </Stack>
+  );
+}
+
+function RecurringInfoItem({
+  label,
+  value
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <Stack spacing={0.35}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body2" fontWeight={600}>
+        {value}
+      </Typography>
     </Stack>
   );
 }

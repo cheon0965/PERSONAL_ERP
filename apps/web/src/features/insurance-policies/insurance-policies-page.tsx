@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Stack } from '@mui/material';
+import { Alert, Button, Chip, Grid, Stack, Typography } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import type { InsurancePolicyItem } from '@personal-erp/contracts';
 import { sumMoneyWon } from '@personal-erp/money';
@@ -327,9 +327,57 @@ export function InsurancePoliciesPage() {
       {error ? (
         <QueryErrorAlert title="보험 정보 조회에 실패했습니다." error={error} />
       ) : null}
+
+      <Grid container spacing={appLayout.sectionGap}>
+        <Grid size={{ xs: 12, lg: 7 }}>
+          <InsuranceInfoCard
+            totalPremium={formatWon(totalPremium)}
+            totalCount={data.length}
+            linkedCount={linkedPolicyCount}
+            unlinkedCount={unlinkedPolicyCount}
+            inactiveCount={inactivePolicyCount}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, lg: 5 }}>
+          <InsuranceSupportCard />
+        </Grid>
+      </Grid>
+
       <DataTableCard
         title="보험 계약 목록"
         description="보험 계약 저장 시 연결된 반복 규칙도 함께 관리합니다. 표에서 바로 수정하거나 삭제해 목록 중심으로 정리할 수 있습니다."
+        toolbar={
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={1.5}
+            justifyContent="space-between"
+            alignItems={{ xs: 'flex-start', md: 'center' }}
+          >
+            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+              <Chip
+                label={`활성 ${activePolicies.length}건`}
+                size="small"
+                color="success"
+                variant="filled"
+              />
+              <Chip
+                label={`연결 완료 ${linkedPolicyCount}건`}
+                size="small"
+                color={linkedPolicyCount > 0 ? 'primary' : 'default'}
+                variant="outlined"
+              />
+              <Chip
+                label={`미연결 ${unlinkedPolicyCount}건`}
+                size="small"
+                color={unlinkedPolicyCount > 0 ? 'warning' : 'default'}
+                variant="outlined"
+              />
+            </Stack>
+            <Typography variant="body2" color="text.secondary">
+              보험 계약은 표에서 먼저 확인하고, 생성과 수정은 드로어에서 이어서 처리합니다.
+            </Typography>
+          </Stack>
+        }
         rows={data}
         columns={columns}
       />
@@ -371,6 +419,138 @@ export function InsurancePoliciesPage() {
         onClose={handleDeleteClose}
         onConfirm={handleDeleteConfirm}
       />
+    </Stack>
+  );
+}
+
+function InsuranceInfoCard({
+  totalPremium,
+  totalCount,
+  linkedCount,
+  unlinkedCount,
+  inactiveCount
+}: {
+  totalPremium: string;
+  totalCount: number;
+  linkedCount: number;
+  unlinkedCount: number;
+  inactiveCount: number;
+}) {
+  return (
+    <Stack
+      spacing={appLayout.cardGap}
+      sx={{
+        p: appLayout.cardPadding,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        backgroundColor: 'background.paper'
+      }}
+    >
+      <Typography variant="h6">현재 관리 기준</Typography>
+      <Grid container spacing={appLayout.fieldGap}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <InfoItem label="활성 월 보험료" value={totalPremium} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <InfoItem label="전체 계약" value={`${totalCount}건`} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <InfoItem label="비활성" value={`${inactiveCount}건`} />
+        </Grid>
+      </Grid>
+      <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+        <Chip label={`연결 완료 ${linkedCount}건`} size="small" color="success" />
+        <Chip
+          label={`미연결 ${unlinkedCount}건`}
+          size="small"
+          color={unlinkedCount > 0 ? 'warning' : 'default'}
+          variant="outlined"
+        />
+      </Stack>
+    </Stack>
+  );
+}
+
+function InsuranceSupportCard() {
+  return (
+    <Stack
+      spacing={1.25}
+      sx={{
+        p: appLayout.cardPadding,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        backgroundColor: 'background.paper'
+      }}
+    >
+      <Typography variant="h6">자주 여는 후속 화면</Typography>
+      <SupportLink
+        title="반복 규칙"
+        description="보험 계약과 연결된 반복 규칙 상태를 함께 확인합니다."
+        href="/recurring"
+        actionLabel="반복 규칙 보기"
+      />
+      <SupportLink
+        title="계획 항목"
+        description="현재 운영 월에서 보험료 계획이 실제 생성됐는지 확인합니다."
+        href="/plan-items"
+        actionLabel="계획 항목 보기"
+      />
+    </Stack>
+  );
+}
+
+function SupportLink({
+  title,
+  description,
+  href,
+  actionLabel
+}: {
+  title: string;
+  description: string;
+  href: string;
+  actionLabel: string;
+}) {
+  return (
+    <Stack
+      spacing={1}
+      sx={{
+        p: appLayout.cardPadding,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        backgroundColor: 'background.default'
+      }}
+    >
+      <Typography variant="subtitle2">{title}</Typography>
+      <Typography variant="body2" color="text.secondary">
+        {description}
+      </Typography>
+      <div>
+        <Button href={href} variant="outlined">
+          {actionLabel}
+        </Button>
+      </div>
+    </Stack>
+  );
+}
+
+function InfoItem({
+  label,
+  value
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <Stack spacing={0.35}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body2" fontWeight={600}>
+        {value}
+      </Typography>
     </Stack>
   );
 }
