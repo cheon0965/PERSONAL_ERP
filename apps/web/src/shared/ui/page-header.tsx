@@ -72,12 +72,33 @@ export function PageHeader({
       direction="column"
       gap={appLayout.pageHeaderGap}
       sx={{
+        position: 'relative',
+        overflow: 'hidden',
         px: appLayout.pageHeaderPadding,
         py: appLayout.pageHeaderPadding,
         borderRadius: appLayout.pageHeaderSurfaceRadius,
         border: '1px solid',
         borderColor: 'divider',
-        background: `linear-gradient(180deg, ${alpha('#ffffff', 0.98)}, ${alpha('#f8fafc', 0.96)})`
+        background: `linear-gradient(160deg, ${alpha('#ffffff', 0.98)}, ${alpha('#f8fafc', 0.94)})`,
+        boxShadow: '0 22px 50px rgba(15, 23, 42, 0.08)',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          inset: '-30% auto auto 58%',
+          width: 280,
+          height: 280,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${alpha('#60a5fa', 0.18)}, transparent 70%)`,
+          pointerEvents: 'none'
+        },
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          inset: 0,
+          borderRadius: appLayout.pageHeaderSurfaceRadius,
+          background: `linear-gradient(180deg, transparent, ${alpha('#e2e8f0', 0.12)})`,
+          pointerEvents: 'none'
+        }
       }}
     >
       <Stack
@@ -88,11 +109,22 @@ export function PageHeader({
       >
         <Box sx={{ maxWidth: appLayout.pageHeaderContentMaxWidth }}>
           {eyebrow ? (
-            <Typography variant="overline" color="text.secondary">
+            <Typography
+              variant="overline"
+              color="primary.main"
+              sx={{ fontWeight: 700, letterSpacing: '0.08em' }}
+            >
               {eyebrow}
             </Typography>
           ) : null}
-          <Typography variant="h4" sx={{ mt: appLayout.pageHeaderTitleOffset }}>
+          <Typography
+            variant="h4"
+            sx={{
+              mt: appLayout.pageHeaderTitleOffset,
+              fontWeight: 800,
+              letterSpacing: '-0.03em'
+            }}
+          >
             {title}
           </Typography>
           {description ? (
@@ -165,7 +197,20 @@ export function PageHeader({
           flexWrap="wrap"
         >
           {metadata.map((item) => (
-            <Stack key={item.label} spacing={0.35} sx={{ minWidth: 128 }}>
+            <Stack
+              key={item.label}
+              spacing={0.35}
+              sx={{
+                minWidth: 128,
+                px: 1.5,
+                py: 1.1,
+                borderRadius: 3,
+                border: '1px solid',
+                borderColor: alpha('#cbd5e1', 0.7),
+                bgcolor: alpha('#ffffff', 0.72),
+                backdropFilter: 'blur(10px)'
+              }}
+            >
               <Typography variant="caption" color="text.secondary">
                 {item.label}
               </Typography>
@@ -208,6 +253,7 @@ function renderActionButton({
           variant={variant}
           color={color}
           disabled={disabled}
+          sx={buttonSurfaceSx}
         >
           {label}
         </Button>
@@ -221,6 +267,7 @@ function renderActionButton({
         variant={variant}
         color={color}
         disabled={disabled}
+        sx={buttonSurfaceSx}
       >
         {label}
       </Button>
@@ -228,8 +275,23 @@ function renderActionButton({
   }
 
   return (
-    <Button variant={variant} color={color} disabled={disabled} onClick={onClick}>
+    <Button
+      variant={variant}
+      color={color}
+      disabled={disabled}
+      onClick={onClick}
+      sx={buttonSurfaceSx}
+    >
       {label}
     </Button>
   );
 }
+
+const buttonSurfaceSx = {
+  borderRadius: 999,
+  px: 2,
+  textTransform: 'none',
+  fontWeight: 700,
+  whiteSpace: 'nowrap',
+  boxShadow: 'none'
+} as const;

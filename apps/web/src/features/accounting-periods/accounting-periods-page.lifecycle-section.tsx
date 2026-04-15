@@ -22,16 +22,34 @@ type PeriodLifecycleActionProps = {
   onClosePeriod: () => Promise<void> | void;
   onReopenPeriod: () => Promise<void> | void;
 };
+
 export function PeriodOperationsSection(
   props: Parameters<typeof OpenAccountingPeriodSection>[0] &
-    PeriodLifecycleActionProps
+    PeriodLifecycleActionProps & {
+      forcedTab?: PeriodOperationTab;
+      hideTabs?: boolean;
+      headingTitle?: string;
+      headingDescription?: string;
+    }
 ) {
-  const { openPeriod, reopenPeriod } = props;
+  const {
+    openPeriod,
+    reopenPeriod,
+    forcedTab,
+    hideTabs = false,
+    headingTitle = '운영 작업',
+    headingDescription
+  } = props;
   const [activeTab, setActiveTab] = React.useState<PeriodOperationTab>(() =>
-    pickDefaultPeriodOperationTab({ openPeriod, reopenPeriod })
+    forcedTab ?? pickDefaultPeriodOperationTab({ openPeriod, reopenPeriod })
   );
 
   React.useEffect(() => {
+    if (forcedTab) {
+      setActiveTab(forcedTab);
+      return;
+    }
+
     setActiveTab((currentTab) => {
       if (currentTab === 'close' && !openPeriod) {
         return pickDefaultPeriodOperationTab({ openPeriod, reopenPeriod });
@@ -43,32 +61,35 @@ export function PeriodOperationsSection(
 
       return currentTab;
     });
-  }, [openPeriod, reopenPeriod]);
+  }, [forcedTab, openPeriod, reopenPeriod]);
 
   return (
     <Stack spacing={appLayout.cardGap} id="accounting-period-workbench">
       <Stack spacing={0.5}>
-        <Typography variant="h6">운영 작업</Typography>
+        <Typography variant="h6">{headingTitle}</Typography>
         <Typography variant="body2" color="text.secondary">
-          {openPeriod
-            ? `${openPeriod.monthLabel} 월 기준으로 마감 준비 또는 운영 메모를 처리합니다.`
-            : reopenPeriod
-              ? `${reopenPeriod.monthLabel} 잠금 월 재오픈 여부를 검토합니다.`
-              : '새 운영 월을 열 준비를 진행합니다.'}
+          {headingDescription ??
+            (openPeriod
+              ? `${openPeriod.monthLabel} 월 기준으로 마감 준비 또는 운영 메모를 처리합니다.`
+              : reopenPeriod
+                ? `${reopenPeriod.monthLabel} 잠금 월 재오픈 여부를 검토합니다.`
+                : '새 운영 월을 열 준비를 진행합니다.')}
         </Typography>
       </Stack>
-      <Tabs
-        value={activeTab}
-        onChange={(_event, nextValue: PeriodOperationTab) => {
-          setActiveTab(nextValue);
-        }}
-        variant="scrollable"
-        allowScrollButtonsMobile
-      >
-        <Tab value="open" label="운영 시작" />
-        <Tab value="close" label="월 마감" />
-        <Tab value="reopen" label="재오픈" />
-      </Tabs>
+      {!hideTabs ? (
+        <Tabs
+          value={activeTab}
+          onChange={(_event, nextValue: PeriodOperationTab) => {
+            setActiveTab(nextValue);
+          }}
+          variant="scrollable"
+          allowScrollButtonsMobile
+        >
+          <Tab value="open" label="운영 시작" />
+          <Tab value="close" label="월 마감" />
+          <Tab value="reopen" label="재오픈" />
+        </Tabs>
+      ) : null}
 
       {activeTab === 'open' ? <OpenAccountingPeriodSection {...props} /> : null}
 
@@ -238,7 +259,7 @@ function ReopenAccountingPeriodSection({
   );
 }
 
-type PeriodOperationTab = 'open' | 'close' | 'reopen';
+export type PeriodOperationTab = 'open' | 'close' | 'reopen';
 
 function pickDefaultPeriodOperationTab(input: {
   openPeriod: AccountingPeriodItem | null;

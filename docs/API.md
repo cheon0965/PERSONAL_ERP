@@ -84,7 +84,8 @@
 - 인증 범위는 회원가입, 이메일 인증, 인증 메일 재발송, 로그인, 세션 refresh/logout, `auth/me` 조회까지 포함합니다.
 - 인증/계정 범위는 회원가입, 이메일 인증, 인증 메일 재발송, 로그인, 세션 refresh/logout, `auth/me`, 계정 보안, 프로필 수정, 비밀번호 변경, 세션 종료까지 포함합니다.
 - 설정 범위는 현재 workspace의 사업장/기본 장부 설정 조회와 Owner/Manager 수정까지 포함합니다.
-- 관리자 범위는 현재 workspace의 멤버 목록/초대/역할·상태 관리, workspace 감사 로그 조회, 권한 정책 요약까지 포함합니다.
+- 관리자 범위는 현재 workspace의 멤버 목록/초대/역할·상태 관리, DB 메뉴 트리/메뉴 권한 관리, workspace 감사 로그 조회, 권한 정책 요약까지 포함합니다.
+- 내비게이션 범위는 현재 workspace의 DB 메뉴 트리를 현재 멤버 역할 기준으로 필터링해 반환하는 `navigation/tree`까지 포함합니다.
 - 운영 지원 범위는 체크리스트, 예외 처리함, 월 마감 대시보드, 업로드 운영 현황, 시스템 상태, 알림 센터, 수동 CSV 반출, 운영 메모까지 포함합니다.
 - 기준/참조 범위는 조회 `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`, `vehicles/operating-summary`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/차량 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `DELETE /insurance-policies/:id`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
 - 운영/원장 조회 범위는 `accounting-periods`, `collected-transactions`, `journal-entries`, `plan-items`, `financial-statements`, `carry-forwards`, `import-batches`까지 포함합니다.
@@ -110,9 +111,12 @@
 - `PATCH /admin/members/:membershipId/role`
 - `PATCH /admin/members/:membershipId/status`
 - `DELETE /admin/members/:membershipId`
+- `GET /admin/navigation`
+- `PATCH /admin/navigation/:menuItemId`
 - `GET /admin/policy`
 - `GET /admin/audit-events`
 - `GET /admin/audit-events/:auditEventId`
+- `GET /navigation/tree`
 - `GET /reference-data/readiness`
 - `GET /funding-accounts`
 - `POST /funding-accounts`
@@ -196,6 +200,7 @@
 - Web `/accept-invitation` -> API `POST /auth/accept-invitation`
 - Web `/admin` -> API `/admin/members`, `/admin/audit-events`
 - Web `/admin/members` -> API `GET /admin/members`, `POST /admin/members/invitations`, `PATCH /admin/members/:membershipId/role`, `PATCH /admin/members/:membershipId/status`, `DELETE /admin/members/:membershipId`
+- Web `/admin/navigation` -> API `GET /admin/navigation`, `PATCH /admin/navigation/:menuItemId`
 - Web `/admin/logs` -> API `GET /admin/audit-events`, `GET /admin/audit-events/:auditEventId`
 - Web `/admin/policy` -> API `GET /admin/policy`
 - Web `/settings/workspace` -> API `GET /settings/workspace`, `PATCH /settings/workspace`
@@ -211,17 +216,27 @@
 - Web `/operations/notes` -> API `GET /operations/notes`, `POST /operations/notes`
 - Web `/dashboard` -> API `GET /dashboard/summary`
 - Web `/periods` -> API `/accounting-periods`
+- Web `/periods/open` -> API `GET /accounting-periods`, `GET /accounting-periods/current`, `POST /accounting-periods`
+- Web `/periods/close` -> API `GET /accounting-periods`, `POST /accounting-periods/:id/close`, `POST /accounting-periods/:id/reopen`
+- Web `/periods/history` -> API `GET /accounting-periods`
 - Web `/reference-data` -> API `/reference-data/readiness`, `/funding-accounts`, `/categories`, `/account-subjects`, `/ledger-transaction-types`
 - Web `/reference-data/manage` -> API `/funding-accounts`, `/categories`, `/account-subjects`, `/ledger-transaction-types`
 - Web `/recurring` -> API `/recurring-rules`
 - Web `/plan-items` -> API `/plan-items`
 - Web `/transactions` -> API `/collected-transactions`
 - Web `/imports` -> API `/import-batches`
+- Web `/imports/[batchId]` -> API `GET /import-batches/:id`, `POST /import-batches/:id/rows/:rowId/collect-preview`, `POST /import-batches/:id/rows/:rowId/collect`
 - Web `/journal-entries` -> API `/journal-entries`
+- Web `/journal-entries/[entryId]` -> API `GET /journal-entries`, `POST /journal-entries/:id/reverse`, `POST /journal-entries/:id/correct`
 - Web `/financial-statements` -> API `/financial-statements`
+- Web `/financial-statements/[periodId]` -> API `GET /financial-statements?periodId=<id>`, `POST /financial-statements/generate`
 - Web `/carry-forwards` -> API `/carry-forwards`
+- Web `/carry-forwards/[periodId]` -> API `GET /carry-forwards?fromPeriodId=<id>`, `POST /carry-forwards/generate`
 - Web `/insurances` -> API `/insurance-policies`
 - Web `/vehicles` -> API `/vehicles`
+- Web `/vehicles/fleet` -> API `GET /vehicles`, `POST /vehicles`, `PATCH /vehicles/:id`
+- Web `/vehicles/fuel` -> API `GET /vehicles/fuel-logs`, `POST /vehicles/:id/fuel-logs`, `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`
+- Web `/vehicles/maintenance` -> API `GET /vehicles/maintenance-logs`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`
 - Web `/forecast` -> API `GET /forecast/monthly`
 - Web 라우트의 shorthand 이름과 Swagger/API module 이름이 다를 수 있으며, 계약과 백엔드 모듈명은 API 경로 기준으로 봅니다.
 

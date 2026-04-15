@@ -16,11 +16,16 @@ export function AdminHomePage() {
     ? `${user.currentWorkspace.tenant.name} (${user.currentWorkspace.tenant.slug})`
     : '-';
   const canReadMembers = role === 'OWNER' || role === 'MANAGER';
+  const canReadNavigation = role === 'OWNER' || role === 'MANAGER';
+  const canUpdateNavigation = role === 'OWNER';
   const canReadLogs = role === 'OWNER';
   const canReadPolicy = role === 'OWNER' || role === 'MANAGER';
-  const accessibleCount = [canReadMembers, canReadLogs, canReadPolicy].filter(
-    Boolean
-  ).length;
+  const accessibleCount = [
+    canReadMembers,
+    canReadNavigation,
+    canReadLogs,
+    canReadPolicy
+  ].filter(Boolean).length;
   const priorityCards = [
     {
       eyebrow: '멤버 운영',
@@ -32,6 +37,23 @@ export function AdminHomePage() {
       href: '/admin/members',
       actionLabel: '회원 관리 열기',
       tone: canReadMembers ? 'success' : 'warning'
+    },
+    {
+      eyebrow: '메뉴 권한',
+      title: '메뉴 / 권한',
+      value: canUpdateNavigation
+        ? '편집 가능'
+        : canReadNavigation
+          ? '조회 가능'
+          : '권한 필요',
+      detail: canUpdateNavigation
+        ? 'DB에 저장된 트리 메뉴와 메뉴별 역할 노출을 바로 조정할 수 있습니다.'
+        : canReadNavigation
+          ? '메뉴 권한 구조는 확인할 수 있고, 변경은 소유자에게 요청합니다.'
+          : '메뉴 권한 관리는 소유자 또는 관리자 권한에서 확인할 수 있습니다.',
+      href: '/admin/navigation',
+      actionLabel: '메뉴 권한 열기',
+      tone: canReadNavigation ? 'success' : 'warning'
     },
     {
       eyebrow: '감사 추적',
@@ -49,7 +71,7 @@ export function AdminHomePage() {
       title: '권한 정책',
       value: canReadPolicy ? '표 기준 확인 가능' : '권한 필요',
       detail: canReadPolicy
-        ? '역할별 CTA 노출과 접근 기준을 표로 확인해 운영 화면 정책을 맞출 수 있습니다.'
+        ? '역할별 메뉴 노출과 접근 기준을 표로 확인해 운영 화면 정책을 맞출 수 있습니다.'
         : '정책 기준표는 소유자 또는 관리자 권한에서만 확인할 수 있습니다.',
       href: '/admin/policy',
       actionLabel: '권한 정책 열기',
@@ -68,6 +90,14 @@ export function AdminHomePage() {
           href: '/admin/members',
           actionLabel: '회원 관리 열기',
           disabled: !canReadMembers
+        },
+        {
+          title: '메뉴 / 권한',
+          description:
+            '사이드바 트리 메뉴와 메뉴별 허용 역할을 DB 기준으로 관리합니다.',
+          href: '/admin/navigation',
+          actionLabel: '메뉴 권한 열기',
+          disabled: !canReadNavigation
         },
         {
           title: '권한 정책',
@@ -118,6 +148,14 @@ export function AdminHomePage() {
             value: canReadMembers ? '확인 가능' : '권한 필요'
           },
           {
+            label: '메뉴 권한',
+            value: canReadNavigation
+              ? canUpdateNavigation
+                ? '편집 가능'
+                : '조회 가능'
+              : '권한 필요'
+          },
+          {
             label: '감사 로그',
             value: canReadLogs ? '조회 가능' : '소유자 전용'
           },
@@ -149,7 +187,7 @@ export function AdminHomePage() {
       >
         <Grid container spacing={appLayout.sectionGap}>
           {priorityCards.map((item) => (
-            <Grid key={item.title} size={{ xs: 12, md: 4 }}>
+            <Grid key={item.title} size={{ xs: 12, md: 6, xl: 3 }}>
               <AdminPriorityCard {...item} />
             </Grid>
           ))}

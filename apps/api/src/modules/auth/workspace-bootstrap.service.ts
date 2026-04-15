@@ -12,6 +12,7 @@ import {
   TenantStatus
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { ensureDefaultWorkspaceNavigation } from '../../common/navigation/workspace-navigation-defaults';
 
 const DEFAULT_LEDGER_NAME = '기본 장부';
 
@@ -138,6 +139,7 @@ export class WorkspaceBootstrapService {
     const { tenantId, ledgerId, membershipId } =
       await this.ensureTenantAndLedger(prisma, user);
     await this.ensureBaseMasters(prisma, tenantId, ledgerId);
+    await ensureDefaultWorkspaceNavigation(prisma, tenantId);
     return { tenantId, ledgerId, membershipId };
   }
 

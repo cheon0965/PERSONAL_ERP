@@ -5,6 +5,7 @@ import {
   Alert,
   Button,
   Chip,
+  Grid,
   MenuItem,
   Stack,
   TextField,
@@ -24,6 +25,7 @@ import { FormDrawer } from '@/shared/ui/form-drawer';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
+import { SectionCard } from '@/shared/ui/section-card';
 import {
   adminMembersQueryKey,
   getAdminMembers,
@@ -280,6 +282,8 @@ export function AdminMembersPage() {
         primaryActionLabel="멤버 초대"
         primaryActionOnClick={() => setInviteOpen(true)}
         primaryActionDisabled={!canManageMembers}
+        secondaryActionLabel="멤버 목록 보기"
+        secondaryActionHref="#member-table"
       />
 
       <AdminSectionNav />
@@ -300,44 +304,83 @@ export function AdminMembersPage() {
         />
       ) : null}
 
-      <DataTableCard
-        title="멤버 목록"
-        description="역할과 상태를 먼저 검토한 뒤, 필요한 멤버만 수정합니다."
-        toolbar={
-          <Stack
-            direction={{ xs: 'column', md: 'row' }}
-            spacing={1.5}
-            justifyContent="space-between"
-            alignItems={{ xs: 'flex-start', md: 'center' }}
-          >
-            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-              {memberSummary.statusItems.map((item) => (
-                <Chip
-                  key={item.status}
-                  label={`${readMembershipStatusLabel(item.status)} ${item.count}명`}
-                  size="small"
-                  color={
-                    item.status === 'ACTIVE'
-                      ? 'success'
-                      : item.status === 'INVITED'
-                        ? 'primary'
-                        : item.status === 'SUSPENDED'
-                          ? 'warning'
-                          : 'default'
-                  }
-                  variant={item.status === 'ACTIVE' ? 'filled' : 'outlined'}
-                />
-              ))}
+      <SectionCard
+        title="멤버 운영 기준"
+        description="멤버 목록을 먼저 읽고, 선택한 멤버에 대해서만 역할과 상태를 조정하는 흐름으로 정리했습니다."
+      >
+        <Stack spacing={appLayout.cardGap}>
+          <Grid container spacing={appLayout.fieldGap}>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <MemberInfoItem
+                label="전체 멤버"
+                value={`${memberSummary.totalCount}명`}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <MemberInfoItem
+                label="활성 멤버"
+                value={`${memberSummary.activeCount}명`}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <MemberInfoItem
+                label="초대 대기"
+                value={`${memberSummary.invitedCount}명`}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <MemberInfoItem
+                label="관리 역할"
+                value={`${memberSummary.privilegedCount}명`}
+              />
+            </Grid>
+          </Grid>
+          <Typography variant="body2" color="text.secondary">
+            역할 변경과 제거는 소유자만 실행할 수 있고, 관리자 권한은 조회와 일부 운영 판단에 집중합니다.
+          </Typography>
+        </Stack>
+      </SectionCard>
+
+      <div id="member-table">
+        <DataTableCard
+          title="멤버 목록"
+          description="역할과 상태를 먼저 검토한 뒤, 필요한 멤버만 수정합니다."
+          toolbar={
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              spacing={1.5}
+              justifyContent="space-between"
+              alignItems={{ xs: 'flex-start', md: 'center' }}
+            >
+              <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                {memberSummary.statusItems.map((item) => (
+                  <Chip
+                    key={item.status}
+                    label={`${readMembershipStatusLabel(item.status)} ${item.count}명`}
+                    size="small"
+                    color={
+                      item.status === 'ACTIVE'
+                        ? 'success'
+                        : item.status === 'INVITED'
+                          ? 'primary'
+                          : item.status === 'SUSPENDED'
+                            ? 'warning'
+                            : 'default'
+                    }
+                    variant={item.status === 'ACTIVE' ? 'filled' : 'outlined'}
+                  />
+                ))}
+              </Stack>
+              <Typography variant="body2" color="text.secondary">
+                역할 변경과 제거는 소유자만 실행할 수 있습니다.
+              </Typography>
             </Stack>
-            <Typography variant="body2" color="text.secondary">
-              역할 변경과 제거는 소유자만 실행할 수 있습니다.
-            </Typography>
-          </Stack>
-        }
-        rows={members}
-        columns={columns}
-        height={520}
-      />
+          }
+          rows={members}
+          columns={columns}
+          height={520}
+        />
+      </div>
 
       <FormDrawer
         open={inviteOpen}
@@ -378,69 +421,108 @@ export function AdminMembersPage() {
       <FormDrawer
         open={Boolean(editingMember)}
         onClose={() => setEditingMember(null)}
-        title="멤버 권한 변경"
+        title="선택 멤버 작업"
         description={
-          editingMember ? `${editingMember.name}의 역할과 상태` : undefined
+          editingMember ? `${editingMember.name}의 역할과 상태를 각각 분리해 조정합니다.` : undefined
         }
       >
         {editingMember ? (
-          <>
-            <Typography variant="body2" color="text.secondary">
-              {editingMember.email}
-            </Typography>
-            <TextField
-              select
-              label="역할"
-              value={nextRole}
-              onChange={(event) =>
-                setNextRole(event.target.value as TenantMembershipRole)
-              }
+          <Stack spacing={2}>
+            <Stack
+              spacing={0.5}
+              sx={{
+                p: 2,
+                borderRadius: 3,
+                border: '1px solid',
+                borderColor: 'divider',
+                backgroundColor: 'background.default'
+              }}
             >
-              {memberRoles.map((candidate) => (
-                <MenuItem key={candidate} value={candidate}>
-                  {readMembershipRoleLabel(candidate)}
-                </MenuItem>
-              ))}
-            </TextField>
-            <Button
-              variant="contained"
-              disabled={roleMutation.isPending}
-              onClick={() =>
-                roleMutation.mutate({ member: editingMember, role: nextRole })
-              }
-            >
-              역할 변경
-            </Button>
+              <Typography variant="subtitle2">{editingMember.name}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {editingMember.email}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                현재 역할 {readMembershipRoleLabel(editingMember.role)} / 현재 상태{' '}
+                {readMembershipStatusLabel(editingMember.status)}
+              </Typography>
+            </Stack>
 
-            <TextField
-              select
-              label="상태"
-              value={nextStatus}
-              onChange={(event) =>
-                setNextStatus(
-                  event.target.value as (typeof editableStatuses)[number]
-                )
-              }
+            <Stack
+              spacing={1.25}
+              sx={{
+                p: 2,
+                borderRadius: 3,
+                border: '1px solid',
+                borderColor: 'divider'
+              }}
             >
-              {editableStatuses.map((candidate) => (
-                <MenuItem key={candidate} value={candidate}>
-                  {readMembershipStatusLabel(candidate)}
-                </MenuItem>
-              ))}
-            </TextField>
-            <Button
-              variant="outlined"
-              disabled={statusMutation.isPending}
-              onClick={() =>
-                statusMutation.mutate({
-                  member: editingMember,
-                  status: nextStatus
-                })
-              }
+              <Typography variant="subtitle2">역할 조정</Typography>
+              <TextField
+                select
+                label="역할"
+                value={nextRole}
+                onChange={(event) =>
+                  setNextRole(event.target.value as TenantMembershipRole)
+                }
+              >
+                {memberRoles.map((candidate) => (
+                  <MenuItem key={candidate} value={candidate}>
+                    {readMembershipRoleLabel(candidate)}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <Button
+                variant="contained"
+                disabled={roleMutation.isPending}
+                onClick={() =>
+                  roleMutation.mutate({ member: editingMember, role: nextRole })
+                }
+              >
+                역할 변경
+              </Button>
+            </Stack>
+
+            <Stack
+              spacing={1.25}
+              sx={{
+                p: 2,
+                borderRadius: 3,
+                border: '1px solid',
+                borderColor: 'divider'
+              }}
             >
-              상태 변경
-            </Button>
-          </>
+              <Typography variant="subtitle2">상태 조정</Typography>
+              <TextField
+                select
+                label="상태"
+                value={nextStatus}
+                onChange={(event) =>
+                  setNextStatus(
+                    event.target.value as (typeof editableStatuses)[number]
+                  )
+                }
+              >
+                {editableStatuses.map((candidate) => (
+                  <MenuItem key={candidate} value={candidate}>
+                    {readMembershipStatusLabel(candidate)}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <Button
+                variant="outlined"
+                disabled={statusMutation.isPending}
+                onClick={() =>
+                  statusMutation.mutate({
+                    member: editingMember,
+                    status: nextStatus
+                  })
+                }
+              >
+                상태 변경
+              </Button>
+            </Stack>
+          </Stack>
         ) : null}
       </FormDrawer>
 
@@ -473,4 +555,23 @@ function formatDate(value: string) {
   }
 
   return date.toISOString().slice(0, 10);
+}
+
+function MemberInfoItem({
+  label,
+  value
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <Stack spacing={0.35}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body2" fontWeight={600}>
+        {value}
+      </Typography>
+    </Stack>
+  );
 }

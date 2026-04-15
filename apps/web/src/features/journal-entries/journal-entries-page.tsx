@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import type { Route } from 'next';
 import type { GridColDef } from '@mui/x-data-grid';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
@@ -13,7 +14,7 @@ import {
   Typography
 } from '@mui/material';
 import type { AccountingPeriodItem, JournalEntryItem } from '@personal-erp/contracts';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import {
   currentAccountingPeriodQueryKey,
   getCurrentAccountingPeriod
@@ -45,10 +46,16 @@ type AdjustmentSelection = {
   entry: JournalEntryItem;
 } | null;
 
-export function JournalEntriesPage() {
+type JournalEntriesLayout = 'list' | 'split' | 'detail';
+
+export function JournalEntriesPage({
+  highlightedEntryId = null,
+  layout = highlightedEntryId ? 'split' : 'list'
+}: {
+  highlightedEntryId?: string | null;
+  layout?: JournalEntriesLayout;
+}) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const highlightedEntryId = searchParams?.get('entryId') ?? null;
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const [selectedAdjustment, setSelectedAdjustment] =
     React.useState<AdjustmentSelection>(null);
@@ -88,10 +95,27 @@ export function JournalEntriesPage() {
       return entries[0] ?? null;
     }
 
-    return entries.find((entry) => entry.id === highlightedEntryId) ?? entries[0]!;
-  }, [entries, highlightedEntryId]);
+    const highlightedEntry =
+      entries.find((entry) => entry.id === highlightedEntryId) ?? null;
+
+    if (highlightedEntry) {
+      return highlightedEntry;
+    }
+
+    return layout === 'detail' ? null : (entries[0] ?? null);
+  }, [entries, highlightedEntryId, layout]);
   const selectedEntryCanAdjust =
     selectedEntry?.status === 'POSTED' && Boolean(currentPeriod);
+  const isDetailLayout = layout === 'detail';
+  const isSplitLayout = layout === 'split';
+  const pageTitle = isDetailLayout
+    ? selectedEntry
+      ? `${selectedEntry.entryNumber} 전표 상세`
+      : '전표 상세'
+    : '전표 조회';
+  const pageDescription = isDetailLayout
+    ? '선택한 전표의 라인, 조정 계보, 후속 조정 액션을 한 화면에서 집중해서 검토합니다.'
+    : '전표 목록에서 대상을 고른 뒤 상세 라인과 조정 이력을 검토하는 공식 회계 확인 화면입니다.';
 
   const journalEntryColumns = React.useMemo<GridColDef<JournalEntryItem>[]>(
     () => [
@@ -104,7 +128,7 @@ export function JournalEntriesPage() {
           <Button
             size="small"
             component={Link}
-            href={`/journal-entries?entryId=${params.row.id}`}
+            href={`/journal-entries/${params.row.id}`}
           >
             {params.row.entryNumber}
           </Button>
@@ -170,7 +194,7 @@ export function JournalEntriesPage() {
             <Button
               size="small"
               component={Link}
-              href={`/journal-entries?entryId=${params.row.id}`}
+              href={`/journal-entries/${params.row.id}`}
             >
               상세
             </Button>
@@ -223,8 +247,8 @@ export function JournalEntriesPage() {
       <Stack spacing={appLayout.pageGap}>
         <PageHeader
           eyebrow="전표"
-          title="전표 조회"
-          description="전표 목록에서 대상을 고른 뒤 상세 라인과 조정 이력을 검토하는 공식 회계 확인 화면입니다."
+          title={pageTitle}
+          description={pageDescription}
           badges={[
             {
               label: currentPeriod?.monthLabel ?? '열린 운영 월 없음',
@@ -246,7 +270,7 @@ export function JournalEntriesPage() {
               value: `${entries.length}건`
             },
             {
-              label: '선택 전표',
+              label: isDetailLayout ? '현재 전표' : '선택 전표',
               value: selectedEntry?.entryNumber ?? '-'
             },
             {
@@ -340,17 +364,71 @@ export function JournalEntriesPage() {
               </Stack>
             </Stack>
           </SectionCard>
+        ) : isDetailLayout ? (
+          selectedEntry ? (
+            <Stack spacing={appLayout.sectionGap}>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={1}
+                useFlexGap
+                flexWrap="wrap"
+              >
+                <Button component={Link} href="/journal-entries" variant="outlined">
+                  전표 목록으로
+                </Button>
+                {selectedEntry.sourceCollectedTransactionId ? (
+                  <Button
+                    component={Link}
+                    href={`/transactions?transactionId=${selectedEntry.sourceCollectedTransactionId}`}
+                    variant="text"
+                  >
+                    원본 거래 보기
+                  </Button>
+                ) : null}
+              </Stack>
+              <JournalEntryDetailCard
+                entry={selectedEntry}
+                currentPeriod={currentPeriod}
+                onReverse={() => {
+                  setFeedback(null);
+                  setSelectedAdjustment({ mode: 'reverse', entry: selectedEntry });
+                }}
+                onCorrect={() => {
+                  setFeedback(null);
+                  setSelectedAdjustment({ mode: 'correct', entry: selectedEntry });
+                }}
+              />
+            </Stack>
+          ) : (
+            <SectionCard
+              title="선택한 전표를 찾지 못했습니다"
+              description="전표가 삭제되었거나 현재 목록에 없는 경우일 수 있습니다."
+            >
+              <Stack spacing={1.5}>
+                <Typography variant="body2" color="text.secondary">
+                  최신 전표 목록으로 돌아가서 다시 선택해 주세요.
+                </Typography>
+                <Button component={Link} href="/journal-entries" variant="contained">
+                  전표 목록 보기
+                </Button>
+              </Stack>
+            </SectionCard>
+          )
         ) : (
           <Stack spacing={appLayout.sectionGap}>
             <DataTableCard
               title="전표 목록"
-              description="전표 번호를 선택하면 아래에서 상세 라인, 조정 계보, 후속 조정 액션을 확인할 수 있습니다."
+              description={
+                isSplitLayout
+                  ? '전표 번호를 선택하면 아래에서 상세 라인, 조정 계보, 후속 조정 액션을 확인할 수 있습니다.'
+                  : '목록에서 전표 번호를 선택하면 전용 상세 화면으로 이동해 라인과 조정 이력을 검토합니다.'
+              }
               rows={entries}
               columns={journalEntryColumns}
               height={420}
             />
 
-            {selectedEntry ? (
+            {isSplitLayout && selectedEntry ? (
               <JournalEntryDetailCard
                 entry={selectedEntry}
                 currentPeriod={currentPeriod}
@@ -383,7 +461,7 @@ export function JournalEntriesPage() {
                 : `${createdEntry.entryNumber} 정정 전표를 생성했습니다.`
           });
           setSelectedAdjustment(null);
-          router.replace(`/journal-entries?entryId=${createdEntry.id}`);
+          router.replace(`/journal-entries/${createdEntry.id}` as Route);
         }}
       />
     </>

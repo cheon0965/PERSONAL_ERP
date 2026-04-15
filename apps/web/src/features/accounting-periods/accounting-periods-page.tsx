@@ -8,7 +8,7 @@ import {
   useQuery,
   useQueryClient
 } from '@tanstack/react-query';
-import { Alert, Chip, Grid, Stack, Typography } from '@mui/material';
+import { Alert, Button, Chip, Grid, Stack, Typography } from '@mui/material';
 import type {
   AccountingPeriodItem,
   CloseAccountingPeriodResponse,
@@ -33,6 +33,7 @@ import { DataTableCard } from '@/shared/ui/data-table-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
+import { SectionCard } from '@/shared/ui/section-card';
 import {
   accountingPeriodsQueryKey,
   buildCloseAccountingPeriodFallback,
@@ -53,7 +54,14 @@ import {
   normalizeOptionalIdentifier,
   readMembershipRoleLabel
 } from './accounting-periods-page.helpers';
-import { PeriodOperationsSection } from './accounting-periods-page.lifecycle-section';
+import {
+  PeriodOperationsSection,
+  type PeriodOperationTab
+} from './accounting-periods-page.lifecycle-section';
+import {
+  PeriodsSectionNav,
+  type PeriodWorkspaceSection
+} from './periods-section-nav';
 import {
   createEmptyOpeningBalanceLine,
   periodFormSchema,
@@ -62,7 +70,11 @@ import {
   type SubmitFeedback
 } from './accounting-periods-page.types';
 
-export function AccountingPeriodsPage() {
+export function AccountingPeriodsPage({
+  section = 'overview'
+}: {
+  section?: PeriodWorkspaceSection;
+}) {
   const queryClient = useQueryClient();
   const { user } = useAuthSession();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
@@ -260,6 +272,70 @@ export function AccountingPeriodsPage() {
       ),
     [fundingAccountsQuery.data]
   );
+  const focusedOperationTab: PeriodOperationTab =
+    section === 'open'
+      ? 'open'
+      : openPeriod
+        ? 'close'
+        : reopenPeriod
+          ? 'reopen'
+          : 'close';
+  const pageTitle =
+    section === 'overview'
+      ? '운영 기간'
+      : section === 'open'
+        ? '월 운영 시작'
+        : section === 'close'
+          ? '월 마감 / 재오픈'
+          : '운영 기간 이력';
+  const pageDescription =
+    section === 'overview'
+      ? '현재 운영 월 상태와 다음 작업을 먼저 확인하고, 실제 시작·마감·이력 화면으로 이어지는 기준 허브입니다.'
+      : section === 'open'
+        ? '새 운영 월과 기초 잔액 기준을 집중해서 준비하는 화면입니다.'
+        : section === 'close'
+          ? '열린 운영 월의 마감과 최근 잠금 월 재오픈 여부를 별도 작업 화면에서 관리합니다.'
+          : '운영 기간 상태 이력과 기초 잔액 출처를 이력 중심으로 검토하는 화면입니다.';
+  const primaryAction =
+    section === 'overview'
+      ? openPeriod
+        ? {
+            label: '월 마감 작업',
+            href: '/periods/close' as const
+          }
+        : {
+            label: '월 운영 시작',
+            href: '/periods/open' as const
+          }
+      : section === 'open'
+        ? openPeriod
+          ? {
+              label: '현재 상태 보기',
+              href: '/periods' as const
+            }
+          : {
+              label: '입력 작업대로 이동',
+              href: '#open-accounting-period-form' as const
+            }
+        : section === 'close'
+          ? {
+              label: '마감 작업대로 이동',
+              href: '#accounting-period-workbench' as const
+            }
+          : {
+              label: '월 운영 시작',
+              href: '/periods/open' as const
+            };
+  const secondaryAction =
+    section === 'history'
+      ? {
+          label: '현재 상태 보기',
+          href: '/periods' as const
+        }
+      : {
+          label: '기간 이력',
+          href: '/periods/history' as const
+        };
 
   React.useEffect(() => {
     form.setValue('initializeOpeningBalance', isFirstPeriod, {
@@ -434,11 +510,20 @@ export function AccountingPeriodsPage() {
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
         eyebrow="월 운영"
-        title="운영 기간"
-        description="현재 운영 월을 열고 닫고, 필요할 때만 최근 잠금 월을 재오픈합니다."
+        title={pageTitle}
+        description={pageDescription}
         badges={[
           {
-            label: currentPeriod ? currentPeriod.monthLabel : '운영 기간 없음',
+            label:
+              section === 'overview'
+                ? currentPeriod
+                  ? currentPeriod.monthLabel
+                  : '운영 기간 없음'
+                : section === 'open'
+                  ? '운영 시작 작업'
+                  : section === 'close'
+                    ? '마감 / 재오픈 작업'
+                    : '기간 이력 검토',
             color: currentPeriod ? 'primary' : 'default'
           },
           {
@@ -462,19 +547,24 @@ export function AccountingPeriodsPage() {
             value: ledgerLabel
           },
           {
-            label: '현재 운영 월',
-            value: currentPeriod?.monthLabel ?? '-'
+            label:
+              section === 'history' ? '운영 기간 수' : '현재 운영 월',
+            value:
+              section === 'history'
+                ? `${periods.length}개`
+                : currentPeriod?.monthLabel ?? '-'
           },
           {
             label: '권한',
             value: readMembershipRoleLabel(membershipRole)
           }
         ]}
-        primaryActionLabel={openPeriod ? '운영 작업 보기' : '월 운영 시작'}
-        primaryActionHref="#accounting-period-workbench"
-        secondaryActionLabel="기간 이력"
-        secondaryActionHref="#period-history"
+        primaryActionLabel={primaryAction.label}
+        primaryActionHref={primaryAction.href}
+        secondaryActionLabel={secondaryAction.label}
+        secondaryActionHref={secondaryAction.href}
       />
+      <PeriodsSectionNav />
       {error ? (
         <QueryErrorAlert
           title="운영 기간 목록을 불러오지 못했습니다."
@@ -516,114 +606,268 @@ export function AccountingPeriodsPage() {
         </Alert>
       ) : null}
 
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, xl: 5 }}>
-          <CurrentPeriodStatusSection
-            currentPeriod={currentPeriod}
-            openPeriod={openPeriod}
-            reopenPeriod={reopenPeriod}
-            canClosePeriod={canClosePeriod}
-            canReopenPeriod={canReopenPeriod}
-            isReadyForMonthlyOperation={
-              referenceDataReadinessQuery.data?.isReadyForMonthlyOperation ??
-              false
-            }
-          />
-        </Grid>
+      {section === 'overview' ? (
+        <Stack spacing={appLayout.sectionGap}>
+          <Grid container spacing={appLayout.sectionGap}>
+            <Grid size={{ xs: 12, xl: 5 }}>
+              <CurrentPeriodStatusSection
+                currentPeriod={currentPeriod}
+                openPeriod={openPeriod}
+                reopenPeriod={reopenPeriod}
+                canClosePeriod={canClosePeriod}
+                canReopenPeriod={canReopenPeriod}
+                isReadyForMonthlyOperation={
+                  referenceDataReadinessQuery.data?.isReadyForMonthlyOperation ??
+                  false
+                }
+              />
+            </Grid>
 
-        <Grid size={{ xs: 12, xl: 7 }}>
-          <PeriodOperationsSection
-            form={form}
-            initializeOpeningBalance={initializeOpeningBalance}
-            isFirstPeriod={isFirstPeriod}
-            isBusy={openFormBusy}
-            canOpenPeriod={canOpenPeriod}
-            canSubmitOpeningBalance={canSubmitOpeningBalance}
-            isSubmitting={openMutation.isPending}
-            openingBalanceFields={openingBalanceFields}
-            openingBalanceLineCount={openingBalanceFields.length}
-            openingBalanceAccountSubjects={balanceSheetAccountSubjects}
-            openingBalanceFundingAccounts={openingBalanceFundingAccounts}
-            openingBalanceTotals={openingBalanceTotals}
-            openingBalanceReferenceError={openingBalanceReferenceError}
-            onAppendOpeningBalanceLine={() => {
-              appendOpeningBalanceLine(createEmptyOpeningBalanceLine(), {
-                shouldFocus: true
-              });
-            }}
-            onRemoveOpeningBalanceLine={removeOpeningBalanceLine}
-            onSubmit={handleOpenPeriodSubmit}
-            openPeriod={openPeriod}
-            reopenPeriod={reopenPeriod}
-            membershipRole={membershipRole}
-            canClosePeriod={canClosePeriod}
-            canReopenPeriod={canReopenPeriod}
-            hasWorkspace={hasWorkspace}
-            closeNote={closeNote}
-            reopenReason={reopenReason}
-            closePending={closeMutation.isPending}
-            reopenPending={reopenMutation.isPending}
-            onCloseNoteChange={setCloseNote}
-            onReopenReasonChange={setReopenReason}
-            onClosePeriod={handleClosePeriod}
-            onReopenPeriod={handleReopenPeriod}
-          />
-        </Grid>
-      </Grid>
+            <Grid size={{ xs: 12, xl: 7 }}>
+              <SectionCard
+                title="다음 작업 바로가기"
+                description="월 운영 홈에서는 현재 상태와 다음 행동만 보여주고, 실제 입력과 마감은 각각의 전용 화면으로 나눕니다."
+              >
+                <Stack spacing={appLayout.cardGap}>
+                  <Grid container spacing={appLayout.fieldGap}>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <OverviewActionCard
+                        title="월 운영 시작"
+                        description="새 운영 월과 기초 잔액 기준을 준비합니다."
+                        href="/periods/open"
+                        buttonLabel="시작 화면 열기"
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <OverviewActionCard
+                        title="월 마감 / 재오픈"
+                        description="열린 월 마감이나 최근 잠금 월 재오픈만 집중해서 처리합니다."
+                        href="/periods/close"
+                        buttonLabel="마감 화면 열기"
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <OverviewActionCard
+                        title="기간 이력"
+                        description="운영 기간 상태, 잠금일, 기초 잔액 출처를 이력 중심으로 확인합니다."
+                        href="/periods/history"
+                        buttonLabel="이력 보기"
+                      />
+                    </Grid>
+                  </Grid>
+                  <Typography variant="body2" color="text.secondary">
+                    현재 홈 화면은 기준 확인과 이동에만 집중하고, 실제 시작과 마감
+                    작업은 별도 화면에서 처리합니다.
+                  </Typography>
+                </Stack>
+              </SectionCard>
+            </Grid>
+          </Grid>
 
-      <div id="period-history">
-        <DataTableCard
-          title="기간 이력"
-          description="최신 월 순서로 운영 기간 상태와 기초 잔액 기준 여부를 확인합니다."
-          toolbar={
-            <Stack
-              direction={{ xs: 'column', md: 'row' }}
-              spacing={1.5}
-              justifyContent="space-between"
-              alignItems={{ xs: 'flex-start', md: 'center' }}
-            >
-              <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                {periodStatusSummary.OPEN > 0 ? (
-                  <Chip
-                    label={`열림 ${periodStatusSummary.OPEN}건`}
-                    size="small"
-                    color="primary"
-                    variant="filled"
-                  />
-                ) : null}
-                {periodStatusSummary.IN_REVIEW > 0 ? (
-                  <Chip
-                    label={`검토 ${periodStatusSummary.IN_REVIEW}건`}
-                    size="small"
-                    color="warning"
-                    variant="outlined"
-                  />
-                ) : null}
-                {periodStatusSummary.CLOSING > 0 ? (
-                  <Chip
-                    label={`마감 중 ${periodStatusSummary.CLOSING}건`}
-                    size="small"
-                    color="warning"
-                    variant="outlined"
-                  />
-                ) : null}
-                <Chip
-                  label={`잠금 ${lockedPeriodCount}건`}
-                  size="small"
-                  variant="outlined"
-                />
-              </Stack>
-              <Typography variant="body2" color="text.secondary">
-                현재 작업대에서 월 시작, 마감, 재오픈을 처리하고 여기서는 상태
-                이력을 확인합니다.
-              </Typography>
-            </Stack>
-          }
-          rows={periods}
-          columns={periodColumns}
-          height={360}
-        />
-      </div>
+          <div id="period-history">
+            <DataTableCard
+              title="최근 운영 기간"
+              description="최신 월 몇 건만 빠르게 보고, 전체 이력은 전용 화면에서 이어서 확인합니다."
+              toolbar={renderPeriodHistoryToolbar({
+                periodStatusSummary,
+                lockedPeriodCount,
+                compact: true
+              })}
+              rows={periods.slice(0, 5)}
+              columns={periodColumns}
+              height={320}
+            />
+          </div>
+        </Stack>
+      ) : null}
+
+      {section === 'open' ? (
+        <Grid container spacing={appLayout.sectionGap}>
+          <Grid size={{ xs: 12, xl: 4.5 }}>
+            <CurrentPeriodStatusSection
+              currentPeriod={currentPeriod}
+              openPeriod={openPeriod}
+              reopenPeriod={reopenPeriod}
+              canClosePeriod={canClosePeriod}
+              canReopenPeriod={canReopenPeriod}
+              isReadyForMonthlyOperation={
+                referenceDataReadinessQuery.data?.isReadyForMonthlyOperation ??
+                false
+              }
+            />
+          </Grid>
+
+          <Grid size={{ xs: 12, xl: 7.5 }}>
+            <PeriodOperationsSection
+              form={form}
+              initializeOpeningBalance={initializeOpeningBalance}
+              isFirstPeriod={isFirstPeriod}
+              isBusy={openFormBusy}
+              canOpenPeriod={canOpenPeriod}
+              canSubmitOpeningBalance={canSubmitOpeningBalance}
+              isSubmitting={openMutation.isPending}
+              openingBalanceFields={openingBalanceFields}
+              openingBalanceLineCount={openingBalanceFields.length}
+              openingBalanceAccountSubjects={balanceSheetAccountSubjects}
+              openingBalanceFundingAccounts={openingBalanceFundingAccounts}
+              openingBalanceTotals={openingBalanceTotals}
+              openingBalanceReferenceError={openingBalanceReferenceError}
+              onAppendOpeningBalanceLine={() => {
+                appendOpeningBalanceLine(createEmptyOpeningBalanceLine(), {
+                  shouldFocus: true
+                });
+              }}
+              onRemoveOpeningBalanceLine={removeOpeningBalanceLine}
+              onSubmit={handleOpenPeriodSubmit}
+              openPeriod={openPeriod}
+              reopenPeriod={reopenPeriod}
+              membershipRole={membershipRole}
+              canClosePeriod={canClosePeriod}
+              canReopenPeriod={canReopenPeriod}
+              hasWorkspace={hasWorkspace}
+              closeNote={closeNote}
+              reopenReason={reopenReason}
+              closePending={closeMutation.isPending}
+              reopenPending={reopenMutation.isPending}
+              onCloseNoteChange={setCloseNote}
+              onReopenReasonChange={setReopenReason}
+              onClosePeriod={handleClosePeriod}
+              onReopenPeriod={handleReopenPeriod}
+              forcedTab="open"
+              hideTabs
+              headingTitle="월 운영 시작 작업대"
+              headingDescription="새 운영 월과 기초 잔액 기준을 이 화면에서만 집중해서 준비합니다."
+            />
+          </Grid>
+        </Grid>
+      ) : null}
+
+      {section === 'close' ? (
+        <Grid container spacing={appLayout.sectionGap}>
+          <Grid size={{ xs: 12, xl: 4.5 }}>
+            <CurrentPeriodStatusSection
+              currentPeriod={currentPeriod}
+              openPeriod={openPeriod}
+              reopenPeriod={reopenPeriod}
+              canClosePeriod={canClosePeriod}
+              canReopenPeriod={canReopenPeriod}
+              isReadyForMonthlyOperation={
+                referenceDataReadinessQuery.data?.isReadyForMonthlyOperation ??
+                false
+              }
+            />
+          </Grid>
+
+          <Grid size={{ xs: 12, xl: 7.5 }}>
+            <PeriodOperationsSection
+              form={form}
+              initializeOpeningBalance={initializeOpeningBalance}
+              isFirstPeriod={isFirstPeriod}
+              isBusy={openFormBusy}
+              canOpenPeriod={canOpenPeriod}
+              canSubmitOpeningBalance={canSubmitOpeningBalance}
+              isSubmitting={openMutation.isPending}
+              openingBalanceFields={openingBalanceFields}
+              openingBalanceLineCount={openingBalanceFields.length}
+              openingBalanceAccountSubjects={balanceSheetAccountSubjects}
+              openingBalanceFundingAccounts={openingBalanceFundingAccounts}
+              openingBalanceTotals={openingBalanceTotals}
+              openingBalanceReferenceError={openingBalanceReferenceError}
+              onAppendOpeningBalanceLine={() => {
+                appendOpeningBalanceLine(createEmptyOpeningBalanceLine(), {
+                  shouldFocus: true
+                });
+              }}
+              onRemoveOpeningBalanceLine={removeOpeningBalanceLine}
+              onSubmit={handleOpenPeriodSubmit}
+              openPeriod={openPeriod}
+              reopenPeriod={reopenPeriod}
+              membershipRole={membershipRole}
+              canClosePeriod={canClosePeriod}
+              canReopenPeriod={canReopenPeriod}
+              hasWorkspace={hasWorkspace}
+              closeNote={closeNote}
+              reopenReason={reopenReason}
+              closePending={closeMutation.isPending}
+              reopenPending={reopenMutation.isPending}
+              onCloseNoteChange={setCloseNote}
+              onReopenReasonChange={setReopenReason}
+              onClosePeriod={handleClosePeriod}
+              onReopenPeriod={handleReopenPeriod}
+              forcedTab={focusedOperationTab}
+              hideTabs
+              headingTitle="월 마감 / 재오픈 작업대"
+              headingDescription={
+                openPeriod
+                  ? `${openPeriod.monthLabel} 운영 월 마감 준비를 이 화면에서만 집중해서 처리합니다.`
+                  : reopenPeriod
+                    ? `${reopenPeriod.monthLabel} 최근 잠금 월 재오픈 여부를 이 화면에서 검토합니다.`
+                    : '현재 열린 운영 월이 없어 최근 잠금 월 재오픈 가능 여부만 확인합니다.'
+              }
+            />
+          </Grid>
+        </Grid>
+      ) : null}
+
+      {section === 'history' ? (
+        <Stack spacing={appLayout.sectionGap}>
+          <Grid container spacing={appLayout.sectionGap}>
+            <Grid size={{ xs: 12, xl: 4.5 }}>
+              <CurrentPeriodStatusSection
+                currentPeriod={currentPeriod}
+                openPeriod={openPeriod}
+                reopenPeriod={reopenPeriod}
+                canClosePeriod={canClosePeriod}
+                canReopenPeriod={canReopenPeriod}
+                isReadyForMonthlyOperation={
+                  referenceDataReadinessQuery.data?.isReadyForMonthlyOperation ??
+                  false
+                }
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12, xl: 7.5 }}>
+              <SectionCard
+                title="이력 읽는 순서"
+                description="운영 월 상태, 잠금 시점, 기초 잔액 출처를 차례대로 읽으면 마감과 차기 이월 연결을 가장 빠르게 확인할 수 있습니다."
+              >
+                <Stack spacing={1.25}>
+                  <Typography variant="body2" color="text.secondary">
+                    최신 월부터 상태와 잠금 여부를 보고, 필요한 경우 최근 잠금 월만
+                    재오픈 검토 대상으로 삼습니다.
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    첫 월은 `초기 설정`, 이후 월은 `이월` 기초 잔액 출처가 자연스럽게
+                    이어지는지 함께 확인합니다.
+                  </Typography>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                    <Button href="/periods/open" variant="contained">
+                      월 운영 시작
+                    </Button>
+                    <Button href="/periods/close" variant="outlined">
+                      마감 작업 보기
+                    </Button>
+                  </Stack>
+                </Stack>
+              </SectionCard>
+            </Grid>
+          </Grid>
+
+          <div id="period-history">
+            <DataTableCard
+              title="기간 이력"
+              description="최신 월 순서로 운영 기간 상태와 기초 잔액 기준 여부를 확인합니다."
+              toolbar={renderPeriodHistoryToolbar({
+                periodStatusSummary,
+                lockedPeriodCount
+              })}
+              rows={periods}
+              columns={periodColumns}
+              height={420}
+            />
+          </div>
+        </Stack>
+      ) : null}
     </Stack>
   );
 }
@@ -635,4 +879,99 @@ async function invalidateAccountingPeriodQueries(queryClient: QueryClient) {
   await queryClient.invalidateQueries({
     queryKey: currentAccountingPeriodQueryKey
   });
+}
+
+function renderPeriodHistoryToolbar({
+  periodStatusSummary,
+  lockedPeriodCount,
+  compact = false
+}: {
+  periodStatusSummary: {
+    OPEN: number;
+    IN_REVIEW: number;
+    CLOSING: number;
+    LOCKED: number;
+  };
+  lockedPeriodCount: number;
+  compact?: boolean;
+}) {
+  return (
+    <Stack
+      direction={{ xs: 'column', md: 'row' }}
+      spacing={1.5}
+      justifyContent="space-between"
+      alignItems={{ xs: 'flex-start', md: 'center' }}
+    >
+      <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+        {periodStatusSummary.OPEN > 0 ? (
+          <Chip
+            label={`열림 ${periodStatusSummary.OPEN}건`}
+            size="small"
+            color="primary"
+            variant="filled"
+          />
+        ) : null}
+        {periodStatusSummary.IN_REVIEW > 0 ? (
+          <Chip
+            label={`검토 ${periodStatusSummary.IN_REVIEW}건`}
+            size="small"
+            color="warning"
+            variant="outlined"
+          />
+        ) : null}
+        {periodStatusSummary.CLOSING > 0 ? (
+          <Chip
+            label={`마감 중 ${periodStatusSummary.CLOSING}건`}
+            size="small"
+            color="warning"
+            variant="outlined"
+          />
+        ) : null}
+        <Chip
+          label={`잠금 ${lockedPeriodCount}건`}
+          size="small"
+          variant="outlined"
+        />
+      </Stack>
+      <Typography variant="body2" color="text.secondary">
+        {compact
+          ? '최근 운영 월만 먼저 확인하고, 전체 이력은 전용 화면에서 이어서 봅니다.'
+          : '상태 이력은 읽기 전용으로 확인하고, 실제 시작/마감 작업은 각 전용 화면에서 처리합니다.'}
+      </Typography>
+    </Stack>
+  );
+}
+
+function OverviewActionCard({
+  title,
+  description,
+  href,
+  buttonLabel
+}: {
+  title: string;
+  description: string;
+  href: '/periods/open' | '/periods/close' | '/periods/history';
+  buttonLabel: string;
+}) {
+  return (
+    <Stack
+      spacing={1.25}
+      sx={{
+        p: appLayout.cardPadding,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        bgcolor: 'background.default',
+        height: '100%'
+      }}
+    >
+      <Typography variant="subtitle2">{title}</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
+        {description}
+      </Typography>
+      <Button href={href} variant="outlined" sx={{ alignSelf: 'flex-start' }}>
+        {buttonLabel}
+      </Button>
+    </Stack>
+  );
 }

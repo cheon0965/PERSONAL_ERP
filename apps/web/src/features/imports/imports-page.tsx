@@ -1,6 +1,8 @@
 'use client';
 
-import { Alert, Grid, Stack, Typography } from '@mui/material';
+import type { Route } from 'next';
+import { Alert, Button, Grid, Stack, Typography } from '@mui/material';
+import { useRouter } from 'next/navigation';
 import { ReferenceDataReadinessAlert } from '@/features/reference-data/reference-data-readiness';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
@@ -13,21 +15,38 @@ import { ImportsCurrentPeriodSection } from './imports-current-period-section';
 import { ImportUploadDialog } from './import-upload-dialog';
 import { useImportsPage } from './use-imports-page';
 
-export function ImportsPage() {
-  const page = useImportsPage();
+type ImportsLayout = 'list' | 'detail';
+
+export function ImportsPage({
+  mode = 'list',
+  selectedBatchId = null
+}: {
+  mode?: ImportsLayout;
+  selectedBatchId?: string | null;
+}) {
+  const router = useRouter();
+  const page = useImportsPage(selectedBatchId);
+  const isDetailMode = mode === 'detail';
   const collectableRowCount = page.selectedBatchRows.filter(
     (row) => row.parseStatus === 'PARSED' && !row.createdCollectedTransactionId
   ).length;
   const collectedRowCount = page.selectedBatchRows.filter(
     (row) => Boolean(row.createdCollectedTransactionId)
   ).length;
+  const selectedBatchWorkbenchHref = page.selectedBatch
+    ? `/imports/${page.selectedBatch.id}`
+    : null;
+  const pageTitle = isDetailMode ? '업로드 배치 작업대' : '업로드 배치';
+  const pageDescription = isDetailMode
+    ? '선택한 업로드 배치의 행을 검토하고, 필요한 항목만 수집 거래로 승격하는 전용 작업 화면입니다.'
+    : '원본을 업로드 배치로 보관하고, 검토할 배치를 선택해 작업대로 이어집니다.';
 
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
         eyebrow="업로드/자동화"
-        title="업로드 배치"
-        description="원본을 업로드 배치로 보관하고, 필요한 행만 수집 거래로 승격합니다."
+        title={pageTitle}
+        description={pageDescription}
         badges={[
           {
             label: page.currentPeriod?.monthLabel ?? '열린 운영 월 없음',
@@ -50,7 +69,7 @@ export function ImportsPage() {
             value: `${page.batches.length}건`
           },
           {
-            label: '선택 배치',
+            label: isDetailMode ? '현재 배치' : '선택 배치',
             value: page.selectedBatch?.fileName ?? '-'
           },
           {
@@ -64,8 +83,8 @@ export function ImportsPage() {
         ]}
         primaryActionLabel="업로드 배치 등록"
         primaryActionOnClick={page.openUploadDrawer}
-        secondaryActionLabel="수집 거래 보기"
-        secondaryActionHref="/transactions"
+        secondaryActionLabel={isDetailMode ? '배치 목록 보기' : '수집 거래 보기'}
+        secondaryActionHref={isDetailMode ? '/imports' : '/transactions'}
       />
 
       {page.feedback ? (
@@ -92,10 +111,12 @@ export function ImportsPage() {
         </Grid>
         <Grid size={{ xs: 12, xl: 7 }}>
           <ImportsSelectionSummaryCard
+            isDetailMode={isDetailMode}
             selectedBatchFileName={page.selectedBatch?.fileName ?? null}
             rowCount={page.selectedBatchRows.length}
             collectableRowCount={collectableRowCount}
             collectedRowCount={collectedRowCount}
+            selectedBatchWorkbenchHref={selectedBatchWorkbenchHref}
           />
         </Grid>
       </Grid>
@@ -105,24 +126,48 @@ export function ImportsPage() {
         context="import-collection"
       />
 
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, xl: 5 }}>
-          <ImportBatchesGrid
-            batches={page.batches}
-            selectedBatchId={page.selectedBatch?.id ?? null}
-            onSelectBatch={page.selectBatch}
-          />
-        </Grid>
+      {!isDetailMode ? (
+        <ImportBatchesGrid
+          batches={page.batches}
+          selectedBatchId={page.selectedBatch?.id ?? null}
+          onSelectBatch={page.selectBatch}
+          helperText="목록에서 배치를 선택한 뒤 선택 배치 작업대로 이동하면 업로드 행 검토와 승격을 이어서 진행할 수 있습니다."
+          actionLabel="배치 선택"
+        />
+      ) : page.selectedBatch ? (
+        <Grid container spacing={appLayout.sectionGap}>
+          <Grid size={{ xs: 12, xl: 4.5 }}>
+            <ImportBatchesGrid
+              batches={page.batches}
+              selectedBatchId={page.selectedBatch?.id ?? null}
+              onSelectBatch={(batch) => {
+                page.selectBatch(batch);
+                router.push(`/imports/${batch.id}` as Route);
+              }}
+              helperText="다른 배치를 선택하면 동일한 작업대 레이아웃 안에서 해당 배치로 바로 전환합니다."
+              actionLabel="작업대로 전환"
+            />
+          </Grid>
 
-        <Grid size={{ xs: 12, xl: 7 }}>
-          <ImportedRowsGrid
-            selectedBatch={page.selectedBatch}
-            rows={page.selectedBatchRows}
-            selectedRowId={page.selectedRow?.id ?? null}
-            onPrepareCollect={page.prepareCollectRow}
-          />
+          <Grid size={{ xs: 12, xl: 7.5 }}>
+            <ImportedRowsGrid
+              selectedBatch={page.selectedBatch}
+              rows={page.selectedBatchRows}
+              selectedRowId={page.selectedRow?.id ?? null}
+              onPrepareCollect={page.prepareCollectRow}
+            />
+          </Grid>
         </Grid>
-      </Grid>
+      ) : (
+        <SectionCard
+          title="선택한 배치를 찾지 못했습니다"
+          description="배치가 삭제되었거나 아직 목록에 없는 경우일 수 있습니다."
+        >
+          <Typography variant="body2" color="text.secondary">
+            배치 목록으로 돌아가 다시 선택해 주세요.
+          </Typography>
+        </SectionCard>
+      )}
 
       <ImportUploadDialog
         open={page.isUploadDrawerOpen}
@@ -153,36 +198,62 @@ export function ImportsPage() {
 }
 
 function ImportsSelectionSummaryCard({
+  isDetailMode,
   selectedBatchFileName,
   rowCount,
   collectableRowCount,
-  collectedRowCount
+  collectedRowCount,
+  selectedBatchWorkbenchHref
 }: {
+  isDetailMode: boolean;
   selectedBatchFileName: string | null;
   rowCount: number;
   collectableRowCount: number;
   collectedRowCount: number;
+  selectedBatchWorkbenchHref: string | null;
 }) {
   return (
     <SectionCard
       title="선택 배치 작업대"
-      description="현재 선택한 배치 기준으로 업로드 행 검토와 승격 가능 상태를 바로 확인합니다."
+      description={
+        isDetailMode
+          ? '현재 배치 기준으로 업로드 행 검토와 승격 가능 상태를 바로 확인합니다.'
+          : '현재 선택한 배치를 기준으로 작업대 이동 전 검토 범위와 승격 가능 상태를 미리 확인합니다.'
+      }
     >
       {selectedBatchFileName ? (
-        <Grid container spacing={appLayout.fieldGap}>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <SummaryInfoItem label="배치 파일" value={selectedBatchFileName} />
+        <Stack spacing={appLayout.fieldGap}>
+          <Grid container spacing={appLayout.fieldGap}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <SummaryInfoItem label="배치 파일" value={selectedBatchFileName} />
+            </Grid>
+            <Grid size={{ xs: 12, md: 2 }}>
+              <SummaryInfoItem label="행 수" value={`${rowCount}건`} />
+            </Grid>
+            <Grid size={{ xs: 12, md: 2 }}>
+              <SummaryInfoItem label="승격 가능" value={`${collectableRowCount}건`} />
+            </Grid>
+            <Grid size={{ xs: 12, md: 2 }}>
+              <SummaryInfoItem label="연결 완료" value={`${collectedRowCount}건`} />
+            </Grid>
           </Grid>
-          <Grid size={{ xs: 12, md: 2 }}>
-            <SummaryInfoItem label="행 수" value={`${rowCount}건`} />
-          </Grid>
-          <Grid size={{ xs: 12, md: 2 }}>
-            <SummaryInfoItem label="승격 가능" value={`${collectableRowCount}건`} />
-          </Grid>
-          <Grid size={{ xs: 12, md: 2 }}>
-            <SummaryInfoItem label="연결 완료" value={`${collectedRowCount}건`} />
-          </Grid>
-        </Grid>
+          {!isDetailMode && selectedBatchWorkbenchHref ? (
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              justifyContent="space-between"
+              alignItems={{ xs: 'flex-start', sm: 'center' }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                배치를 고른 뒤 작업대로 이동하면 업로드 행별 자동 판정 preview와
+                수집 거래 승격을 같은 흐름에서 이어서 처리할 수 있습니다.
+              </Typography>
+              <Button href={selectedBatchWorkbenchHref} variant="outlined">
+                선택 배치 작업대
+              </Button>
+            </Stack>
+          ) : null}
+        </Stack>
       ) : (
         <Typography variant="body2" color="text.secondary">
           먼저 업로드 배치를 선택하면, 이 영역에서 현재 검토 범위와 승격 가능
