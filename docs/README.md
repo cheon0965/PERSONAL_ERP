@@ -18,7 +18,7 @@
 - `API.md`: 구현된 엔드포인트와 인증/쓰기 흐름 요약
 - `ARCHITECTURE.md`: 워크스페이스 구조와 컨텍스트 경계
 - `SCREEN_FLOW_GUIDE.md`: 현재 화면 기준 월 운영 한 사이클과 추천 메뉴 진행 순서
-- `UI_REORGANIZATION_EXECUTION_PLAN.md`: 1차 UI 정리 이후 남아 있는 장문 화면과 다기능 화면을 하위 라우트 기준으로 다시 분리하기 위한 2차 실행계획
+- `UI_REORGANIZATION_EXECUTION_PLAN.md`: 현재 적용된 2차 UI 화면 분리 기준선, DB 메뉴 트리 기반 정보구조, 간결 화면/도메인 가이드 원칙
 - `ACCOUNTING_MODEL_BOUNDARY.md`: 레거시 `Transaction` 제거 이후 회계 경계와 현재 기준 원장
 - `DEVELOPMENT_GUIDE.md`: 구현 순서와 문서 동기화 절차
 - `OPERATIONS_CHECKLIST.md`: 배포와 운영 점검 절차
