@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Box, Button, Chip, Grid, Stack, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { formatDateTime, formatNumber } from '@/shared/lib/format';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -25,6 +26,25 @@ export function OperationsExceptionsPage() {
     queryFn: getOperationsExceptions
   });
   const exceptions = exceptionsQuery.data;
+
+  useDomainHelp({
+    title: '예외 처리함 가이드',
+    description:
+      '예외 처리함은 미확정 거래, 업로드 문제, 마감 차단 사유를 우선순위대로 모아 보는 화면입니다.',
+    primaryEntity: 'OperationsExceptionItem',
+    relatedEntities: ['CollectedTransaction', 'ImportBatch', 'AccountingPeriod'],
+    truthSource:
+      '예외 항목은 현재 운영 상태에서 즉시 조치가 필요한 객체를 모은 운영 read model입니다.',
+    supplementarySections: [
+      {
+        title: '기본 순서',
+        items: [
+          '긴급/경고 수량을 먼저 확인합니다.',
+          '각 예외에서 바로 해결 화면으로 이동합니다.'
+        ]
+      }
+    ]
+  });
 
   return (
     <Stack spacing={appLayout.pageGap}>
@@ -234,7 +254,17 @@ function OperationsQuickLink({
       }}
     >
       <Typography variant="subtitle2">{title}</Typography>
-      <Typography variant="body2" color="text.secondary">
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{
+          display: '-webkit-box',
+          overflow: 'hidden',
+          WebkitBoxOrient: 'vertical',
+          WebkitLineClamp: 2,
+          lineHeight: 1.7
+        }}
+      >
         {description}
       </Typography>
       <div>

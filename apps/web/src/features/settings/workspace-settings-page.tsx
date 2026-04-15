@@ -13,6 +13,7 @@ import {
 import type { UpdateWorkspaceSettingsRequest } from '@personal-erp/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthSession } from '@/shared/auth/auth-provider';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -81,6 +82,25 @@ export function WorkspaceSettingsPage() {
           : '사업장 설정 저장에 실패했습니다.'
       );
     }
+  });
+
+  useDomainHelp({
+    title: '사업장 설정 가이드',
+    description:
+      '사업장 설정은 현재 워크스페이스 이름, 상태, 기본 장부 기준값을 관리하는 화면입니다.',
+    primaryEntity: 'Tenant / Ledger',
+    relatedEntities: ['AccountingPeriod', 'FinancialStatementSnapshot'],
+    truthSource:
+      '여기서 저장한 사업장 상태, 기본 장부 이름, 통화, 시간대가 운영 월과 보고 화면의 기본 기준이 됩니다.',
+    supplementarySections: [
+      {
+        title: '변경 전에 확인할 것',
+        items: [
+          '현재 운영 중인 장부가 맞는지 확인합니다.',
+          '통화와 시간대는 월 운영과 보고 기준에 영향을 줍니다.'
+        ]
+      }
+    ]
   });
 
   return (

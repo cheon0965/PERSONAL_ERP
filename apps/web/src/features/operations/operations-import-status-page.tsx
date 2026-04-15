@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Box, Button, Chip, Grid, LinearProgress, Stack, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { formatDateTime, formatNumber } from '@/shared/lib/format';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -24,6 +25,22 @@ export function OperationsImportStatusPage() {
     queryFn: getOperationsImportStatus
   });
   const importStatus = importStatusQuery.data;
+
+  useDomainHelp({
+    title: '업로드 운영 현황 가이드',
+    description:
+      '업로드 운영 현황은 최근 배치의 실패 행과 미수집 행을 운영 관점에서 점검하는 화면입니다.',
+    primaryEntity: 'ImportBatch',
+    relatedEntities: ['ImportedRow', 'CollectedTransaction'],
+    truthSource:
+      '업로드 현황 수치는 배치와 행 상태를 기준으로 계산된 운영 요약입니다.',
+    supplementarySections: [
+      {
+        title: '기본 확인 항목',
+        items: ['최근 업로드 시각', '미수집 행', '실패 행', '승격률']
+      }
+    ]
+  });
 
   return (
     <Stack spacing={appLayout.pageGap}>

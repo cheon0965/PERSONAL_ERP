@@ -6,6 +6,7 @@ import type { GridColDef } from '@mui/x-data-grid';
 import type { AccountSessionItem, ChangePasswordRequest } from '@personal-erp/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthSession } from '@/shared/auth/auth-provider';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
@@ -144,6 +145,27 @@ export function AccountSettingsPage() {
   );
 
   const profile = accountQuery.data?.profile ?? null;
+
+  useDomainHelp({
+    title: '내 계정 / 보안 가이드',
+    description:
+      '내 계정 화면은 프로필, 세션, 비밀번호, 최근 보안 이벤트를 확인하는 개인 보안 화면입니다.',
+    primaryEntity: 'User / AuthSession',
+    relatedEntities: ['SecurityEvent', 'RefreshSession'],
+    truthSource:
+      '현재 로그인 상태와 세션 목록은 인증 서비스가 발급한 실제 세션 정보를 기준으로 표시됩니다.',
+    supplementarySections: [
+      {
+        title: '자주 하는 작업',
+        items: [
+          '이름 변경',
+          '비밀번호 변경',
+          '다른 세션 종료',
+          '최근 보안 이벤트 확인'
+        ]
+      }
+    ]
+  });
 
   return (
     <Stack spacing={appLayout.pageGap}>

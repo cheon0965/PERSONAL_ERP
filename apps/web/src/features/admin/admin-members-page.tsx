@@ -19,6 +19,7 @@ import type {
 } from '@personal-erp/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthSession } from '@/shared/auth/auth-provider';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { ConfirmActionDialog } from '@/shared/ui/confirm-action-dialog';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { FormDrawer } from '@/shared/ui/form-drawer';
@@ -246,6 +247,32 @@ export function AdminMembersPage() {
     ],
     [canManageMembers]
   );
+
+  useDomainHelp({
+    title: '회원 관리 가이드',
+    description:
+      '회원 관리는 현재 워크스페이스 멤버를 읽고, 필요할 때만 초대·역할·상태를 조정하는 화면입니다.',
+    primaryEntity: 'TenantMembership',
+    relatedEntities: ['User', 'TenantMembershipInvitation', 'WorkspaceAuditEvent'],
+    truthSource:
+      '실제 권한은 멤버 역할과 상태로 결정되며, 변경 이력은 감사 이벤트로 함께 남습니다.',
+    supplementarySections: [
+      {
+        title: '기본 순서',
+        items: [
+          '먼저 멤버 목록에서 역할과 상태를 확인합니다.',
+          '필요한 경우에만 초대, 역할 변경, 상태 변경, 제거를 수행합니다.'
+        ]
+      },
+      {
+        title: '권한 기준',
+        items: [
+          'OWNER는 초대와 역할·상태 변경을 수행합니다.',
+          'MANAGER는 목록을 읽고 운영 판단에 활용합니다.'
+        ]
+      }
+    ]
+  });
 
   return (
     <Stack spacing={appLayout.pageGap}>

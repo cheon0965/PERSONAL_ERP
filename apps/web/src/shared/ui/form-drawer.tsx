@@ -52,9 +52,9 @@ export function FormDrawer({
           <Typography variant="h6">{title}</Typography>
           {description ? (
             <Typography
-              variant="body2"
+              variant="caption"
               color="text.secondary"
-              sx={{ mt: 0.75 }}
+              sx={{ mt: 0.75, display: 'block', lineHeight: 1.7 }}
             >
               {description}
             </Typography>

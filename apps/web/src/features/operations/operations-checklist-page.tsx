@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Box, Button, Chip, Grid, Stack, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { formatNumber } from '@/shared/lib/format';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -24,6 +25,25 @@ export function OperationsChecklistPage() {
     queryFn: getOperationsChecklist
   });
   const checklist = checklistQuery.data;
+
+  useDomainHelp({
+    title: '운영 체크리스트 가이드',
+    description:
+      '운영 체크리스트는 월 시작, 일일 점검, 월 마감 준비 항목을 상태별로 읽는 화면입니다.',
+    primaryEntity: 'OperationsChecklistItem',
+    relatedEntities: ['AccountingPeriod', 'CollectedTransaction', 'ImportBatch'],
+    truthSource:
+      '체크리스트 상태는 현재 운영 월과 관련 예외, 수집, 마감 read model을 기준으로 계산됩니다.',
+    supplementarySections: [
+      {
+        title: '사용 방식',
+        items: [
+          '상단 합계와 현재 운영 월을 먼저 확인합니다.',
+          '그룹별 항목에서 차단 사유와 이동 경로를 확인합니다.'
+        ]
+      }
+    ]
+  });
 
   return (
     <Stack spacing={appLayout.pageGap}>
@@ -233,7 +253,17 @@ function OperationsNavCard({
       }}
     >
       <Typography variant="subtitle2">{title}</Typography>
-      <Typography variant="body2" color="text.secondary">
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{
+          display: '-webkit-box',
+          overflow: 'hidden',
+          WebkitBoxOrient: 'vertical',
+          WebkitLineClamp: 2,
+          lineHeight: 1.7
+        }}
+      >
         {description}
       </Typography>
       <div>

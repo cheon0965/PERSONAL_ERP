@@ -108,7 +108,7 @@ export function Topbar() {
                 </>
               ) : (
                 <Typography variant="caption" color="text.secondary">
-                  Tenant, Ledger, Role 문맥이 아직 연결되지 않았습니다.
+                  연결된 문맥 없음
                 </Typography>
               )}
             </Stack>
@@ -136,7 +136,7 @@ export function Topbar() {
               variant="outlined"
               onClick={(event) => setContextAnchorEl(event.currentTarget)}
             >
-              문맥 상세
+              문맥
             </Button>
 
             <Tooltip
@@ -202,11 +202,7 @@ export function Topbar() {
         <Box sx={{ width: 360, maxWidth: 'calc(100vw - 32px)', p: 2 }}>
           <Stack spacing={1.5}>
             <div>
-              <Typography variant="subtitle2">현재 작업 문맥 상세</Typography>
-              <Typography variant="body2" color="text.secondary">
-                이 문맥을 기준으로 월 운영, 수집 거래, 전표, 보고 화면이 함께
-                이어집니다.
-              </Typography>
+              <Typography variant="subtitle2">현재 작업 문맥</Typography>
             </div>
 
             <Divider flexItem />
@@ -278,9 +274,7 @@ export function Topbar() {
             ) : (
               <Stack spacing={1.5}>
                 <Typography variant="body2" color="text.secondary">
-                  아직 현재 사업장/장부 문맥이 연결되지 않았습니다. 설정
-                  화면에서 로그인 상태와 현재 워크스페이스 구성을 먼저 확인해
-                  주세요.
+                  현재 워크스페이스를 먼저 확인해 주세요.
                 </Typography>
                 <div>
                   <Button

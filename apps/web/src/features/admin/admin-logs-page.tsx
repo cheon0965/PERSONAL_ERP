@@ -18,6 +18,7 @@ import type {
 } from '@personal-erp/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthSession } from '@/shared/auth/auth-provider';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { FormDrawer } from '@/shared/ui/form-drawer';
 import { appLayout } from '@/shared/ui/layout-metrics';
@@ -69,6 +70,28 @@ export function AdminLogsPage() {
     queryKey: [...adminAuditEventsQueryKey, selectedEventId],
     queryFn: () => getAdminAuditEvent(String(selectedEventId)),
     enabled: Boolean(selectedEventId)
+  });
+
+  useDomainHelp({
+    title: '감사 로그 가이드',
+    description:
+      '감사 로그는 관리자 작업과 보안 관련 이벤트를 requestId 기준으로 추적하는 화면입니다.',
+    primaryEntity: 'WorkspaceAuditEvent',
+    relatedEntities: ['TenantMembership', 'User'],
+    truthSource:
+      '감사 로그는 서버에서 기록한 이벤트를 그대로 읽는 추적 기록입니다.',
+    supplementarySections: [
+      {
+        title: '자주 확인하는 기준',
+        items: [
+          'requestId',
+          'event category',
+          'action',
+          'actor membership',
+          'resource type / resource id'
+        ]
+      }
+    ]
   });
 
   useEffect(() => {

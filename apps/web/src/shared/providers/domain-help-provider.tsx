@@ -23,6 +23,7 @@ export type DomainHelpContextType = {
 type DomainHelpStore = {
   activeContext: DomainHelpContextType | null;
   setContext: (context: DomainHelpContextType | null) => void;
+  clearContext: (context: DomainHelpContextType) => void;
   isDrawerOpen: boolean;
   setDrawerOpen: (open: boolean) => void;
 };
@@ -47,13 +48,30 @@ export function DomainHelpProvider({
     []
   );
 
+  const clearContext = React.useCallback((context: DomainHelpContextType) => {
+    const serializedContext = JSON.stringify(context);
+    setActiveContext((current) => {
+      if (!current) {
+        return null;
+      }
+
+      return JSON.stringify(current) === serializedContext ? null : current;
+    });
+  }, []);
+
   const setDrawerOpen = React.useCallback((open: boolean) => {
     setIsDrawerOpen(open);
   }, []);
 
   const value = React.useMemo(
-    () => ({ activeContext, setContext, isDrawerOpen, setDrawerOpen }),
-    [activeContext, setContext, isDrawerOpen, setDrawerOpen]
+    () => ({
+      activeContext,
+      setContext,
+      clearContext,
+      isDrawerOpen,
+      setDrawerOpen
+    }),
+    [activeContext, setContext, clearContext, isDrawerOpen, setDrawerOpen]
   );
 
   return (

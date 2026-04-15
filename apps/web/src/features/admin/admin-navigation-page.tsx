@@ -19,6 +19,7 @@ import type {
 } from '@personal-erp/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthSession } from '@/shared/auth/auth-provider';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { resolveNavigationIcon } from '@/shared/navigation/navigation-icons';
 import { workspaceNavigationQueryKey } from '@/shared/navigation/workspace-navigation.api';
 import { appLayout } from '@/shared/ui/layout-metrics';
@@ -111,6 +112,32 @@ export function AdminNavigationPage() {
       [item.id]: updater(readDraft(item))
     }));
   };
+
+  useDomainHelp({
+    title: '메뉴 권한 가이드',
+    description:
+      '메뉴 권한 관리는 DB에 저장된 트리 메뉴와 메뉴별 허용 역할을 조정하는 화면입니다.',
+    primaryEntity: 'WorkspaceNavigationMenuItem',
+    relatedEntities: ['WorkspaceNavigationMenuRole', 'TenantMembershipRole'],
+    truthSource:
+      '사이드바 노출과 직접 URL 접근 제한은 모두 저장된 메뉴 트리와 허용 역할을 기준으로 판정합니다.',
+    supplementarySections: [
+      {
+        title: '이 화면에서 읽는 것',
+        items: [
+          '그룹과 페이지 메뉴 구조를 트리로 확인합니다.',
+          '각 메뉴의 노출 여부와 허용 역할을 함께 점검합니다.'
+        ]
+      },
+      {
+        title: '운영 원칙',
+        items: [
+          '상위 메뉴를 숨기면 하위 메뉴도 함께 노출되지 않습니다.',
+          '최소 한 개 이상의 허용 역할을 남겨야 합니다.'
+        ]
+      }
+    ]
+  });
 
   return (
     <Stack spacing={appLayout.pageGap}>

@@ -158,9 +158,16 @@ export function SummaryCard({
 
           {subtitle ? (
             <Typography
-              variant="body2"
+              variant="caption"
               color="text.secondary"
-              sx={{ minHeight: 40 }}
+              sx={{
+                display: '-webkit-box',
+                minHeight: 34,
+                overflow: 'hidden',
+                WebkitBoxOrient: 'vertical',
+                WebkitLineClamp: 2,
+                lineHeight: 1.7
+              }}
             >
               {subtitle}
             </Typography>

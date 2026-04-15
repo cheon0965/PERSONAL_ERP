@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Box, Button, Chip, Grid, Stack, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { formatDateTime, formatNumber } from '@/shared/lib/format';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -25,6 +26,16 @@ export function OperationsAlertsPage() {
     queryFn: getOperationsAlerts
   });
   const alerts = alertsQuery.data;
+
+  useDomainHelp({
+    title: '운영 알림 가이드',
+    description:
+      '운영 알림은 월 마감, 업로드, 보안 관련 경고를 우선순위대로 모아 보는 화면입니다.',
+    primaryEntity: 'OperationsAlertItem',
+    relatedEntities: ['WorkspaceAuditEvent', 'ImportBatch', 'AccountingPeriod'],
+    truthSource:
+      '알림은 운영 이벤트와 예외 상태를 기반으로 만든 즉시 확인용 read model입니다.'
+  });
 
   return (
     <Stack spacing={appLayout.pageGap}>

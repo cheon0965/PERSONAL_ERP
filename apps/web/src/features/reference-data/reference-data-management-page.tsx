@@ -1,6 +1,7 @@
 'use client';
 
 import { Alert, Grid, Stack } from '@mui/material';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -22,6 +23,16 @@ export function ReferenceDataManagementPage() {
   const activeCategoriesCount = page.categories.filter(
     (item) => item.isActive
   ).length;
+
+  useDomainHelp({
+    title: '기준 데이터 관리 가이드',
+    description:
+      '기준 데이터 관리 화면은 자금수단과 카테고리를 직접 편집하고, 공식을 따르는 참조값은 읽는 화면입니다.',
+    primaryEntity: 'FundingAccount / Category',
+    relatedEntities: ['AccountSubject', 'LedgerTransactionType'],
+    truthSource:
+      '직접 관리하는 범위는 자금수단과 카테고리이며, 계정과목과 거래유형은 시스템 기준을 따릅니다.'
+  });
 
   return (
     <Stack spacing={appLayout.pageGap}>

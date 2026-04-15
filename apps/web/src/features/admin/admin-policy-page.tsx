@@ -9,6 +9,7 @@ import type {
 } from '@personal-erp/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthSession } from '@/shared/auth/auth-provider';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
@@ -76,6 +77,26 @@ export function AdminPolicyPage() {
     ],
     []
   );
+
+  useDomainHelp({
+    title: '권한 정책 가이드',
+    description:
+      '권한 정책 화면은 현재 메뉴 트리를 기준으로 화면별 허용 역할과 노출 상태를 읽는 확인용 표입니다.',
+    primaryEntity: 'WorkspaceNavigationMenuItem',
+    relatedEntities: ['WorkspaceNavigationMenuRole', 'TenantMembershipRole'],
+    truthSource:
+      '정책 요약은 저장된 메뉴 트리와 허용 역할을 읽어 만든 현재 상태 요약입니다.',
+    supplementarySections: [
+      {
+        title: '주로 확인하는 항목',
+        items: [
+          '화면 경로별 허용 역할',
+          '메뉴 노출 상태',
+          '현재 역할로 실제 접근 가능한 표면 수'
+        ]
+      }
+    ]
+  });
 
   return (
     <Stack spacing={appLayout.pageGap}>

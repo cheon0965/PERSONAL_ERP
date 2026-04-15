@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import type { Route } from 'next';
 import Link from 'next/link';
+import HelpOutlineRoundedIcon from '@mui/icons-material/HelpOutlineRounded';
 import { alpha } from '@mui/material/styles';
 import {
   Box,
@@ -13,6 +14,7 @@ import {
   type ButtonProps,
   type ChipProps
 } from '@mui/material';
+import { useDomainHelpStore } from '../providers/domain-help-provider';
 import { appLayout } from './layout-metrics';
 
 type PageHeaderBadge = {
@@ -63,7 +65,10 @@ export function PageHeader({
   secondaryActionDisabled,
   secondaryActionColor
 }: PageHeaderProps) {
+  const { activeContext, setDrawerOpen } = useDomainHelpStore();
+  const hasDomainGuide = Boolean(activeContext);
   const hasActions =
+    hasDomainGuide ||
     (primaryActionLabel && (primaryActionHref || primaryActionOnClick)) ||
     (secondaryActionLabel && (secondaryActionHref || secondaryActionOnClick));
 
@@ -129,9 +134,13 @@ export function PageHeader({
           </Typography>
           {description ? (
             <Typography
-              variant="body1"
+              variant="body2"
               color="text.secondary"
-              sx={{ mt: appLayout.pageHeaderDescriptionOffset }}
+              sx={{
+                mt: appLayout.pageHeaderDescriptionOffset,
+                maxWidth: 720,
+                lineHeight: 1.65
+              }}
             >
               {description}
             </Typography>
@@ -169,6 +178,17 @@ export function PageHeader({
               alignSelf: { xs: 'stretch', lg: 'flex-start' }
             }}
           >
+            {hasDomainGuide ? (
+              <Button
+                variant="text"
+                color="inherit"
+                onClick={() => setDrawerOpen(true)}
+                startIcon={<HelpOutlineRoundedIcon fontSize="small" />}
+                sx={buttonSurfaceSx}
+              >
+                도메인 가이드
+              </Button>
+            ) : null}
             {renderActionButton({
               label: secondaryActionLabel,
               href: secondaryActionHref,
