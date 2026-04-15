@@ -1,23 +1,14 @@
 'use client';
 
-import Link from 'next/link';
-import { Button, Stack } from '@mui/material';
+import { SectionTabs } from '@/shared/ui/section-tabs';
+
+const adminSectionItems = [
+  { href: '/admin', label: '관리자 개요' },
+  { href: '/admin/members', label: '회원 관리' },
+  { href: '/admin/logs', label: '로그 관리' },
+  { href: '/admin/policy', label: '권한 정책' }
+] as const;
 
 export function AdminSectionNav() {
-  return (
-    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-      <Button component={Link} href="/admin" variant="outlined">
-        관리자 개요
-      </Button>
-      <Button component={Link} href="/admin/members" variant="outlined">
-        회원관리
-      </Button>
-      <Button component={Link} href="/admin/logs" variant="outlined">
-        로그관리
-      </Button>
-      <Button component={Link} href="/admin/policy" variant="outlined">
-        권한 정책
-      </Button>
-    </Stack>
-  );
+  return <SectionTabs items={adminSectionItems} ariaLabel="관리자 하위 화면 이동" />;
 }

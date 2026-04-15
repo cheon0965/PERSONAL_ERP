@@ -1,16 +1,25 @@
 'use client';
 
 import * as React from 'react';
+import type { GridColDef } from '@mui/x-data-grid';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Box, Button, Divider, Stack, Typography } from '@mui/material';
-import type { JournalEntryItem } from '@personal-erp/contracts';
+import {
+  Alert,
+  Box,
+  Button,
+  Divider,
+  Stack,
+  Typography
+} from '@mui/material';
+import type { AccountingPeriodItem, JournalEntryItem } from '@personal-erp/contracts';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   currentAccountingPeriodQueryKey,
   getCurrentAccountingPeriod
 } from '@/features/accounting-periods/accounting-periods.api';
-import { formatWon } from '@/shared/lib/format';
+import { DataTableCard } from '@/shared/ui/data-table-card';
+import { formatDate, formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
@@ -70,6 +79,106 @@ export function JournalEntriesPage() {
   }, [highlightedEntryId, journalEntriesQuery.data]);
 
   const currentPeriod = currentPeriodQuery.data ?? null;
+  const selectedEntry = React.useMemo(() => {
+    if (entries.length === 0) {
+      return null;
+    }
+
+    if (!highlightedEntryId) {
+      return entries[0] ?? null;
+    }
+
+    return entries.find((entry) => entry.id === highlightedEntryId) ?? entries[0]!;
+  }, [entries, highlightedEntryId]);
+  const selectedEntryCanAdjust =
+    selectedEntry?.status === 'POSTED' && Boolean(currentPeriod);
+
+  const journalEntryColumns = React.useMemo<GridColDef<JournalEntryItem>[]>(
+    () => [
+      {
+        field: 'entryNumber',
+        headerName: '전표번호',
+        flex: 1,
+        minWidth: 130,
+        renderCell: (params) => (
+          <Button
+            size="small"
+            component={Link}
+            href={`/journal-entries?entryId=${params.row.id}`}
+          >
+            {params.row.entryNumber}
+          </Button>
+        )
+      },
+      {
+        field: 'entryDate',
+        headerName: '전표일',
+        flex: 0.9,
+        minWidth: 110,
+        valueFormatter: (value) => formatDate(String(value))
+      },
+      {
+        field: 'status',
+        headerName: '상태',
+        flex: 0.8,
+        minWidth: 110,
+        renderCell: (params) => <StatusChip label={String(params.value)} />
+      },
+      {
+        field: 'sourceKind',
+        headerName: '출처',
+        flex: 1,
+        minWidth: 130,
+        valueFormatter: (value) => readJournalEntrySourceKindLabel(String(value))
+      },
+      {
+        field: 'sourceCollectedTransactionTitle',
+        headerName: '원본 거래',
+        flex: 1.4,
+        minWidth: 180,
+        valueGetter: (_value, row) => row.sourceCollectedTransactionTitle ?? '-'
+      },
+      {
+        field: 'lines',
+        headerName: '라인',
+        flex: 0.7,
+        minWidth: 90,
+        sortable: false,
+        valueGetter: (_value, row) => `${row.lines.length}건`
+      },
+      {
+        field: 'totalAmount',
+        headerName: '금액',
+        flex: 0.9,
+        minWidth: 120,
+        valueGetter: (_value, row) => readJournalEntryTotalAmount(row),
+        valueFormatter: (value) => formatWon(Number(value))
+      },
+      {
+        field: 'actions',
+        headerName: '동작',
+        flex: 0.8,
+        minWidth: 110,
+        sortable: false,
+        filterable: false,
+        renderCell: (params) =>
+          params.row.id === selectedEntry?.id ? (
+            <Typography variant="caption" color="text.secondary">
+              선택됨
+            </Typography>
+          ) : (
+            <Button
+              size="small"
+              component={Link}
+              href={`/journal-entries?entryId=${params.row.id}`}
+            >
+              상세
+            </Button>
+          )
+      }
+    ],
+    [selectedEntry?.id]
+  );
 
   useDomainHelp({
     title: '전표 조회 사용 가이드',
@@ -90,7 +199,7 @@ export function JournalEntriesPage() {
         title: '바로 쓰는 순서',
         items: [
           '목록에서 전표 번호, 전표 일자, 원본 수집 거래를 확인합니다.',
-          '각 전표의 차변과 대변 라인이 의도한 계정과목과 자금수단으로 잡혔는지 확인합니다.',
+          '선택한 전표 상세에서 차변과 대변 라인이 의도한 계정과목과 자금수단으로 잡혔는지 확인합니다.',
           '거래를 취소해야 하면 반전 전표를 생성합니다.',
           '분류나 금액을 바로잡아야 하면 정정 전표를 생성합니다.',
           '조정 전표가 생기면 조정 계보에서 원본과 후속 전표 연결을 확인합니다.'
@@ -115,7 +224,58 @@ export function JournalEntriesPage() {
         <PageHeader
           eyebrow="전표"
           title="전표 조회"
-          description="확정된 전표와 전표 라인을 검토하고, 현재 열린 운영 월 안에서 반전 전표와 정정 전표를 추가로 생성하는 화면입니다."
+          description="전표 목록에서 대상을 고른 뒤 상세 라인과 조정 이력을 검토하는 공식 회계 확인 화면입니다."
+          badges={[
+            {
+              label: currentPeriod?.monthLabel ?? '열린 운영 월 없음',
+              color: currentPeriod ? 'primary' : 'warning'
+            },
+            selectedEntry
+              ? {
+                  label: selectedEntry.status,
+                  color: selectedEntry.status === 'POSTED' ? 'success' : 'default'
+                }
+              : {
+                  label: '전표 없음',
+                  color: 'default'
+                }
+          ]}
+          metadata={[
+            {
+              label: '전표 수',
+              value: `${entries.length}건`
+            },
+            {
+              label: '선택 전표',
+              value: selectedEntry?.entryNumber ?? '-'
+            },
+            {
+              label: '선택 금액',
+              value: selectedEntry
+                ? formatWon(readJournalEntryTotalAmount(selectedEntry))
+                : '-'
+            }
+          ]}
+          primaryActionLabel="정정 전표 생성"
+          primaryActionOnClick={() => {
+            if (!selectedEntry) {
+              return;
+            }
+
+            setFeedback(null);
+            setSelectedAdjustment({ mode: 'correct', entry: selectedEntry });
+          }}
+          primaryActionDisabled={!selectedEntryCanAdjust}
+          secondaryActionLabel="반전 전표 생성"
+          secondaryActionOnClick={() => {
+            if (!selectedEntry) {
+              return;
+            }
+
+            setFeedback(null);
+            setSelectedAdjustment({ mode: 'reverse', entry: selectedEntry });
+          }}
+          secondaryActionDisabled={!selectedEntryCanAdjust}
         />
 
         {feedback ? (
@@ -138,8 +298,8 @@ export function JournalEntriesPage() {
 
         {currentPeriod ? (
           <Alert severity="info" variant="outlined">
-            현재 열린 운영 기간은 {currentPeriod.monthLabel}이며, 반전/정정
-            전표는 이 기간 안의 일자로만 생성할 수 있습니다.
+            현재 열린 운영 기간은 {currentPeriod.monthLabel}이며, 반전/정정 전표는
+            이 기간 안의 일자로만 생성할 수 있습니다.
           </Alert>
         ) : (
           <Alert
@@ -162,8 +322,8 @@ export function JournalEntriesPage() {
           >
             <Stack spacing={1.5}>
               <Typography variant="body2" color="text.secondary">
-                아직 확정된 전표가 없습니다. 수집 거래 화면에서 전표 준비
-                상태의 거래를 선택해 전표 확정을 진행해 주세요.
+                아직 확정된 전표가 없습니다. 수집 거래 화면에서 전표 준비 상태의
+                거래를 선택해 전표 확정을 진행해 주세요.
               </Typography>
               <Stack
                 direction={{ xs: 'column', sm: 'row' }}
@@ -182,175 +342,28 @@ export function JournalEntriesPage() {
           </SectionCard>
         ) : (
           <Stack spacing={appLayout.sectionGap}>
-            {entries.map((entry) => {
-              const canAdjust =
-                entry.status === 'POSTED' && Boolean(currentPeriod);
+            <DataTableCard
+              title="전표 목록"
+              description="전표 번호를 선택하면 아래에서 상세 라인, 조정 계보, 후속 조정 액션을 확인할 수 있습니다."
+              rows={entries}
+              columns={journalEntryColumns}
+              height={420}
+            />
 
-              return (
-                <SectionCard
-                  key={entry.id}
-                  title={`${entry.entryNumber} 전표`}
-                  description={buildJournalEntryDescription(entry)}
-                >
-                  <Stack spacing={appLayout.cardGap}>
-                    <Stack
-                      direction={{ xs: 'column', md: 'row' }}
-                      spacing={appLayout.fieldGap}
-                      alignItems={{ xs: 'flex-start', md: 'center' }}
-                      justifyContent="space-between"
-                    >
-                      <Stack spacing={0.5}>
-                        <Typography variant="caption" color="text.secondary">
-                          전표 상태
-                        </Typography>
-                        <div>
-                          <StatusChip label={entry.status} />
-                        </div>
-                      </Stack>
-                      <Stack spacing={0.5}>
-                        <Typography variant="caption" color="text.secondary">
-                          전표 일자
-                        </Typography>
-                        <Typography variant="body2">
-                          {entry.entryDate.slice(0, 10)}
-                        </Typography>
-                      </Stack>
-                      <Stack spacing={0.5}>
-                        <Typography variant="caption" color="text.secondary">
-                          원본 수집 거래
-                        </Typography>
-                        <Typography variant="body2">
-                          {entry.sourceCollectedTransactionTitle ?? '-'}
-                        </Typography>
-                      </Stack>
-                    </Stack>
-
-                    <Stack
-                      direction={{ xs: 'column', md: 'row' }}
-                      spacing={1}
-                      alignItems={{ xs: 'flex-start', md: 'center' }}
-                      justifyContent="space-between"
-                    >
-                      <Stack direction="row" spacing={1}>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          disabled={!canAdjust}
-                          onClick={() => {
-                            setFeedback(null);
-                            setSelectedAdjustment({ mode: 'reverse', entry });
-                          }}
-                        >
-                          반전 전표
-                        </Button>
-                        <Button
-                          size="small"
-                          variant="contained"
-                          disabled={!canAdjust}
-                          onClick={() => {
-                            setFeedback(null);
-                            setSelectedAdjustment({ mode: 'correct', entry });
-                          }}
-                        >
-                          정정 전표
-                        </Button>
-                      </Stack>
-                      <Typography variant="caption" color="text.secondary">
-                        {entry.status !== 'POSTED'
-                          ? '이미 반전 또는 정정 처리된 전표는 추가 조정 버튼을 숨깁니다.'
-                          : currentPeriod
-                            ? `${currentPeriod.monthLabel} 운영 기간에 조정 전표를 생성합니다.`
-                            : '현재 열린 운영 기간이 없어 조정 전표를 시작할 수 없습니다.'}
-                      </Typography>
-                    </Stack>
-
-                    {hasAdjustmentMetadata(entry) ? (
-                      <Box
-                        sx={{
-                          px: appLayout.cardPadding,
-                          py: { xs: 1.25, md: 1.5 },
-                          borderRadius: 2,
-                          bgcolor: 'background.default',
-                          border: (theme) =>
-                            `1px solid ${theme.palette.divider}`
-                        }}
-                      >
-                        <Stack spacing={0.75}>
-                          <Typography variant="subtitle2">조정 계보</Typography>
-                          {buildAdjustmentMetadataRows(entry).map((row) => (
-                            <Typography
-                              key={`${entry.id}-${row.label}`}
-                              variant="body2"
-                              color="text.secondary"
-                            >
-                              {row.label}: {row.value}
-                            </Typography>
-                          ))}
-                        </Stack>
-                      </Box>
-                    ) : null}
-
-                    {entry.memo ? (
-                      <Box
-                        sx={{
-                          px: appLayout.cardPadding,
-                          py: { xs: 1.25, md: 1.5 },
-                          borderRadius: 2,
-                          bgcolor: 'action.hover'
-                        }}
-                      >
-                        <Typography variant="body2" color="text.secondary">
-                          {entry.memo}
-                        </Typography>
-                      </Box>
-                    ) : null}
-
-                    <Stack divider={<Divider flexItem />} spacing={0}>
-                      {entry.lines.map((line) => (
-                        <Stack
-                          key={line.id}
-                          direction={{ xs: 'column', md: 'row' }}
-                          spacing={appLayout.fieldGap}
-                          justifyContent="space-between"
-                          sx={{ py: { xs: 1.25, md: 1.5 } }}
-                        >
-                          <Stack spacing={0.5} sx={{ minWidth: 0 }}>
-                            <Typography variant="subtitle2">
-                              {line.lineNumber}. {line.accountSubjectCode}{' '}
-                              {line.accountSubjectName}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {line.fundingAccountName
-                                ? `자금수단: ${line.fundingAccountName}`
-                                : '자금수단 없음'}
-                            </Typography>
-                            {line.description ? (
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                              >
-                                {line.description}
-                              </Typography>
-                            ) : null}
-                          </Stack>
-                          <Stack
-                            spacing={0.5}
-                            alignItems={{ xs: 'flex-start', md: 'flex-end' }}
-                          >
-                            <Typography variant="body2">
-                              차변 {formatWon(line.debitAmount)}
-                            </Typography>
-                            <Typography variant="body2">
-                              대변 {formatWon(line.creditAmount)}
-                            </Typography>
-                          </Stack>
-                        </Stack>
-                      ))}
-                    </Stack>
-                  </Stack>
-                </SectionCard>
-              );
-            })}
+            {selectedEntry ? (
+              <JournalEntryDetailCard
+                entry={selectedEntry}
+                currentPeriod={currentPeriod}
+                onReverse={() => {
+                  setFeedback(null);
+                  setSelectedAdjustment({ mode: 'reverse', entry: selectedEntry });
+                }}
+                onCorrect={() => {
+                  setFeedback(null);
+                  setSelectedAdjustment({ mode: 'correct', entry: selectedEntry });
+                }}
+              />
+            ) : null}
           </Stack>
         )}
       </Stack>
@@ -377,6 +390,190 @@ export function JournalEntriesPage() {
   );
 }
 
+function JournalEntryDetailCard({
+  entry,
+  currentPeriod,
+  onReverse,
+  onCorrect
+}: {
+  entry: JournalEntryItem;
+  currentPeriod: AccountingPeriodItem | null;
+  onReverse: () => void;
+  onCorrect: () => void;
+}) {
+  const canAdjust = entry.status === 'POSTED' && Boolean(currentPeriod);
+
+  return (
+    <SectionCard
+      title={`${entry.entryNumber} 전표 상세`}
+      description={buildJournalEntryDescription(entry)}
+    >
+      <Stack spacing={appLayout.cardGap}>
+        <Stack
+          direction={{ xs: 'column', lg: 'row' }}
+          spacing={appLayout.fieldGap}
+          justifyContent="space-between"
+          alignItems={{ xs: 'flex-start', lg: 'center' }}
+        >
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={appLayout.fieldGap}
+            useFlexGap
+            flexWrap="wrap"
+          >
+            <DetailFact label="전표 상태" value={<StatusChip label={entry.status} />} />
+            <DetailFact label="전표 일자" value={formatDate(entry.entryDate)} />
+            <DetailFact
+              label="총 금액"
+              value={formatWon(readJournalEntryTotalAmount(entry))}
+            />
+            <DetailFact
+              label="원본 거래"
+              value={entry.sourceCollectedTransactionTitle ?? '-'}
+            />
+          </Stack>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+            {entry.sourceCollectedTransactionId ? (
+              <Button
+                size="small"
+                component={Link}
+                href={`/transactions?transactionId=${entry.sourceCollectedTransactionId}`}
+                variant="outlined"
+              >
+                원본 거래 보기
+              </Button>
+            ) : null}
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={!canAdjust}
+              onClick={onReverse}
+            >
+              반전 전표
+            </Button>
+            <Button
+              size="small"
+              variant="contained"
+              disabled={!canAdjust}
+              onClick={onCorrect}
+            >
+              정정 전표
+            </Button>
+          </Stack>
+        </Stack>
+
+        <Typography variant="caption" color="text.secondary">
+          {entry.status !== 'POSTED'
+            ? '이미 반전 또는 정정 처리된 전표는 추가 조정 대상이 아닙니다.'
+            : currentPeriod
+              ? `${currentPeriod.monthLabel} 운영 기간 안에서 조정 전표를 생성할 수 있습니다.`
+              : '현재 열린 운영 기간이 없어 조정 전표를 시작할 수 없습니다.'}
+        </Typography>
+
+        {hasAdjustmentMetadata(entry) ? (
+          <Box
+            sx={{
+              px: appLayout.cardPadding,
+              py: { xs: 1.25, md: 1.5 },
+              borderRadius: 2,
+              bgcolor: 'background.default',
+              border: (theme) => `1px solid ${theme.palette.divider}`
+            }}
+          >
+            <Stack spacing={0.75}>
+              <Typography variant="subtitle2">조정 계보</Typography>
+              {buildAdjustmentMetadataRows(entry).map((row) => (
+                <Typography
+                  key={`${entry.id}-${row.label}`}
+                  variant="body2"
+                  color="text.secondary"
+                >
+                  {row.label}: {row.value}
+                </Typography>
+              ))}
+            </Stack>
+          </Box>
+        ) : null}
+
+        {entry.memo ? (
+          <Box
+            sx={{
+              px: appLayout.cardPadding,
+              py: { xs: 1.25, md: 1.5 },
+              borderRadius: 2,
+              bgcolor: 'action.hover'
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              {entry.memo}
+            </Typography>
+          </Box>
+        ) : null}
+
+        <Stack divider={<Divider flexItem />} spacing={0}>
+          {entry.lines.map((line) => (
+            <Stack
+              key={line.id}
+              direction={{ xs: 'column', md: 'row' }}
+              spacing={appLayout.fieldGap}
+              justifyContent="space-between"
+              sx={{ py: { xs: 1.25, md: 1.5 } }}
+            >
+              <Stack spacing={0.5} sx={{ minWidth: 0 }}>
+                <Typography variant="subtitle2">
+                  {line.lineNumber}. {line.accountSubjectCode} {line.accountSubjectName}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {line.fundingAccountName
+                    ? `자금수단: ${line.fundingAccountName}`
+                    : '자금수단 없음'}
+                </Typography>
+                {line.description ? (
+                  <Typography variant="body2" color="text.secondary">
+                    {line.description}
+                  </Typography>
+                ) : null}
+              </Stack>
+              <Stack
+                spacing={0.5}
+                alignItems={{ xs: 'flex-start', md: 'flex-end' }}
+              >
+                <Typography variant="body2">
+                  차변 {formatWon(line.debitAmount)}
+                </Typography>
+                <Typography variant="body2">
+                  대변 {formatWon(line.creditAmount)}
+                </Typography>
+              </Stack>
+            </Stack>
+          ))}
+        </Stack>
+      </Stack>
+    </SectionCard>
+  );
+}
+
+function DetailFact({
+  label,
+  value
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <Stack spacing={0.35}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      {typeof value === 'string' ? (
+        <Typography variant="body2">{value}</Typography>
+      ) : (
+        value
+      )}
+    </Stack>
+  );
+}
+
 function buildJournalEntryDescription(entry: JournalEntryItem) {
   const sourceDescription =
     entry.sourceKind === 'COLLECTED_TRANSACTION'
@@ -393,6 +590,27 @@ function buildJournalEntryDescription(entry: JournalEntryItem) {
   ]
     .filter(Boolean)
     .join(' ');
+}
+
+function readJournalEntrySourceKindLabel(sourceKind: string) {
+  switch (sourceKind) {
+    case 'COLLECTED_TRANSACTION':
+      return '수집 거래 확정';
+    case 'PLAN_SETTLEMENT':
+      return '계획 정산';
+    case 'OPENING_BALANCE':
+      return '기초 잔액';
+    case 'CARRY_FORWARD':
+      return '차기 이월';
+    case 'MANUAL_ADJUSTMENT':
+      return '수동 조정';
+    default:
+      return sourceKind;
+  }
+}
+
+function readJournalEntryTotalAmount(entry: JournalEntryItem) {
+  return entry.lines.reduce((total, line) => total + line.debitAmount, 0);
 }
 
 function hasAdjustmentMetadata(entry: JournalEntryItem) {

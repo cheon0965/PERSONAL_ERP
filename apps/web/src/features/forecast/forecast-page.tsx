@@ -24,7 +24,6 @@ import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { SectionCard } from '@/shared/ui/section-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
-import { SummaryCard } from '@/shared/ui/summary-card';
 import {
   accountingPeriodsQueryKey,
   getAccountingPeriods
@@ -102,6 +101,42 @@ export function ForecastPage() {
         eyebrow="기간 운영"
         title="기간 운영 전망"
         description="선택한 운영 월의 확정 전표와 남은 계획을 함께 읽어 예상 월말 잔액과 안전 여력을 계산합니다."
+        badges={[
+          {
+            label: selectedPeriod
+              ? `${selectedPeriod.monthLabel} 선택`
+              : '운영 기간 선택 필요',
+            color: selectedPeriod ? 'primary' : 'warning'
+          },
+          ...(forecast
+            ? [
+                {
+                  label:
+                    forecast.basisStatus === 'OFFICIAL_LOCKED'
+                      ? '공식 잠금 기준'
+                      : '운영 전망 기준',
+                  color:
+                    forecast.basisStatus === 'OFFICIAL_LOCKED'
+                      ? ('info' as const)
+                      : ('warning' as const)
+                }
+              ]
+            : [])
+        ]}
+        metadata={[
+          {
+            label: '대상 상태',
+            value: selectedPeriod ? readPeriodStatusLabel(selectedPeriod.status) : '-'
+          },
+          {
+            label: '최근 공식 비교',
+            value: forecast?.officialComparison?.monthLabel ?? '없음'
+          }
+        ]}
+        primaryActionLabel="대시보드 보기"
+        primaryActionHref="/dashboard"
+        secondaryActionLabel="운영 월 보기"
+        secondaryActionHref="/periods"
       />
 
       {periodsQuery.error ? (
@@ -119,27 +154,54 @@ export function ForecastPage() {
       ) : null}
 
       <SectionCard
-        title="전망 대상 선택"
-        description="전망은 선택한 운영 월을 기준으로 계산됩니다."
+        title="전망 기준"
+        description="전망 대상과 현재 선택 상태를 먼저 정한 뒤, 아래 요약과 추이로 내려갑니다."
       >
-        <TextField
-          select
-          label="운영 기간"
-          value={selectedPeriodId}
-          onChange={(event) => setSelectedPeriodId(event.target.value)}
-          helperText={
-            periods.length > 0
-              ? '열린 기간을 우선 추천하지만, 잠금된 기간도 공식 결과와 비교할 용도로 다시 볼 수 있습니다.'
-              : '아직 생성된 운영 기간이 없습니다.'
-          }
-          disabled={periods.length === 0}
-        >
-          {periods.map((period) => (
-            <MenuItem key={period.id} value={period.id}>
-              {period.monthLabel} · {readPeriodStatusLabel(period.status)}
-            </MenuItem>
-          ))}
-        </TextField>
+        <Grid container spacing={appLayout.fieldGap} alignItems="flex-start">
+          <Grid size={{ xs: 12, md: 5 }}>
+            <TextField
+              select
+              fullWidth
+              label="운영 기간"
+              value={selectedPeriodId}
+              onChange={(event) => setSelectedPeriodId(event.target.value)}
+              helperText={
+                periods.length > 0
+                  ? '열린 기간을 우선 추천하지만, 잠금된 기간도 공식 결과와 비교할 용도로 다시 볼 수 있습니다.'
+                  : '아직 생성된 운영 기간이 없습니다.'
+              }
+              disabled={periods.length === 0}
+            >
+              {periods.map((period) => (
+                <MenuItem key={period.id} value={period.id}>
+                  {period.monthLabel} · {readPeriodStatusLabel(period.status)}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 12, md: 7 }}>
+            <Stack spacing={1.25}>
+              <Typography variant="body2" color="text.secondary">
+                {selectedPeriod
+                  ? `${selectedPeriod.monthLabel} 기간은 현재 ${readPeriodStatusLabel(selectedPeriod.status)} 상태입니다. 전망은 확정 전표와 남은 계획을 함께 읽는 운영 해석 계층입니다.`
+                  : '선택한 운영 기간이 없으면 전망 계산을 시작할 수 없습니다.'}
+              </Typography>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={1}
+                useFlexGap
+                flexWrap="wrap"
+              >
+                <Button component={Link} href="/dashboard" variant="outlined">
+                  대시보드 보기
+                </Button>
+                <Button component={Link} href="/periods" variant="text">
+                  운영 월 보기
+                </Button>
+              </Stack>
+            </Stack>
+          </Grid>
+        </Grid>
       </SectionCard>
 
       {!selectedPeriod ? (
@@ -189,63 +251,71 @@ export function ForecastPage() {
         </SectionCard>
       ) : (
         <Stack spacing={appLayout.sectionGap}>
-          <Stack
-            direction={{ xs: 'column', md: 'row' }}
-            spacing={1.2}
-            alignItems={{ md: 'center' }}
-          >
-            <Typography variant="h5" sx={{ fontWeight: 700 }}>
-              {forecast.period.monthLabel} 전망
-            </Typography>
-            <Chip
-              label={
-                forecast.basisStatus === 'OFFICIAL_LOCKED'
-                  ? '공식 잠금 기준'
-                  : '운영 전망 기준'
-              }
-              color={
-                forecast.basisStatus === 'OFFICIAL_LOCKED' ? 'info' : 'warning'
-              }
-              variant="outlined"
-              size="small"
-            />
-          </Stack>
-
           {forecast.warnings.map((warning) => (
             <Alert key={warning} severity="warning" variant="outlined">
               {warning}
             </Alert>
           ))}
 
-          <Grid container spacing={appLayout.sectionGap}>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <SummaryCard
-                title="현재 자금 잔액"
-                value={formatWon(forecast.actualBalanceWon)}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <SummaryCard
-                title="예상 수입"
-                value={formatWon(forecast.expectedIncomeWon)}
-                subtitle="아직 확정되지 않은 계획 항목 중 수입 방향 금액입니다."
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <SummaryCard
-                title="남은 계획 지출"
-                value={formatWon(forecast.remainingPlannedExpenseWon)}
-                subtitle="확정되지 않은 계획 항목 중 지출 방향 금액입니다."
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <SummaryCard
-                title="안전 잉여"
-                value={formatWon(forecast.safetySurplusWon)}
-                subtitle="최소 예비자금과 적립금을 반영한 뒤 남는 여력입니다."
-              />
-            </Grid>
-          </Grid>
+          <SectionCard
+            title="전망 핵심 수치"
+            description="차트로 내려가기 전에 현재 기간 전망을 해석하는 핵심 기준만 먼저 읽습니다."
+          >
+            <Stack spacing={appLayout.cardGap}>
+              <Grid container spacing={appLayout.fieldGap}>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <ForecastInfoItem
+                    label="현재 자금 잔액"
+                    value={formatWon(forecast.actualBalanceWon)}
+                    description="현재 운영 월 기준 잔액입니다."
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <ForecastInfoItem
+                    label="예상 수입"
+                    value={formatWon(forecast.expectedIncomeWon)}
+                    description="아직 확정되지 않은 수입 계획 금액입니다."
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <ForecastInfoItem
+                    label="남은 계획 지출"
+                    value={formatWon(forecast.remainingPlannedExpenseWon)}
+                    description="확정되지 않은 지출 계획 금액입니다."
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <ForecastInfoItem
+                    label="안전 잉여"
+                    value={formatWon(forecast.safetySurplusWon)}
+                    description="예비자금을 반영하고 남는 여력입니다."
+                  />
+                </Grid>
+              </Grid>
+              <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                <Chip
+                  label={`최소 예비자금 ${formatWon(forecast.minimumReserveWon)}`}
+                  size="small"
+                  variant="outlined"
+                />
+                <Chip
+                  label={`적립금 ${formatWon(forecast.sinkingFundWon)}`}
+                  size="small"
+                  variant="outlined"
+                />
+                <Chip
+                  label={
+                    forecast.officialComparison
+                      ? `공식 비교 ${forecast.officialComparison.monthLabel}`
+                      : '공식 비교 없음'
+                  }
+                  size="small"
+                  color={forecast.officialComparison ? 'info' : 'default'}
+                  variant="outlined"
+                />
+              </Stack>
+            </Stack>
+          </SectionCard>
 
           <Grid container spacing={appLayout.sectionGap}>
             <Grid size={{ xs: 12, lg: 7 }}>
@@ -386,6 +456,30 @@ export function ForecastPage() {
           </Grid>
         </Stack>
       )}
+    </Stack>
+  );
+}
+
+function ForecastInfoItem({
+  label,
+  value,
+  description
+}: {
+  label: string;
+  value: string;
+  description: string;
+}) {
+  return (
+    <Stack spacing={0.35}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body1" fontWeight={700}>
+        {value}
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        {description}
+      </Typography>
     </Stack>
   );
 }

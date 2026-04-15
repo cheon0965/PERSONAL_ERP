@@ -6,6 +6,7 @@ import Link from 'next/link';
 import {
   Alert,
   Button,
+  Grid,
   MenuItem,
   Stack,
   TextField,
@@ -151,6 +152,39 @@ export function CarryForwardsPage() {
         eyebrow="차기 이월"
         title="이월 기준 생성"
         description="잠금된 운영 기간의 마감 결과를 다음 월 시작 기준으로 연결하고, 이미 생성된 이월 결과를 함께 확인합니다."
+        badges={[
+          {
+            label: selectedPeriod
+              ? `${selectedPeriod.monthLabel} 이월 대상`
+              : '잠금 기간 선택 필요',
+            color: selectedPeriod ? 'primary' : 'warning'
+          },
+          {
+            label: canGenerate ? '생성 권한 있음' : '생성 권한 없음',
+            color: canGenerate ? 'success' : 'default'
+          }
+        ]}
+        metadata={[
+          {
+            label: '잠금 기간',
+            value: `${lockedPeriods.length}개`
+          },
+          {
+            label: '대상 월',
+            value: view?.targetPeriod.monthLabel ?? '없음'
+          },
+          {
+            label: '오프닝 라인',
+            value: `${view?.targetOpeningBalanceSnapshot.lines.length ?? 0}개`
+          }
+        ]}
+        primaryActionLabel="차기 이월 생성"
+        primaryActionOnClick={() => {
+          void handleGenerateCarryForward();
+        }}
+        primaryActionDisabled={!selectedPeriod || !canGenerate || mutation.isPending}
+        secondaryActionLabel="재무제표 보기"
+        secondaryActionHref="/financial-statements"
       />
 
       {feedback ? (
@@ -174,43 +208,61 @@ export function CarryForwardsPage() {
       ) : null}
 
       <SectionCard
-        title="이월 대상 선택"
-        description="잠금된 운영 기간을 선택하면, 다음 월 오프닝 기준을 생성하거나 이미 생성된 이월 결과를 조회할 수 있습니다."
+        title="이월 기준"
+        description="잠금된 운영 기간을 고른 뒤, 같은 흐름에서 이월 생성과 결과 확인을 이어갑니다."
       >
-        <Stack spacing={appLayout.cardGap}>
-          <TextField
-            select
-            label="잠금된 운영 기간"
-            value={selectedPeriodId}
-            onChange={(event) => {
-              setSelectedPeriodId(event.target.value);
-              setFeedback(null);
-            }}
-            helperText={
-              lockedPeriods.length > 0
-                ? '잠금된 기간만 차기 이월의 기준이 됩니다.'
-                : '아직 잠금된 운영 기간이 없습니다.'
-            }
-            disabled={lockedPeriods.length === 0}
-          >
-            {lockedPeriods.map((period) => (
-              <MenuItem key={period.id} value={period.id}>
-                {period.monthLabel}
-              </MenuItem>
-            ))}
-          </TextField>
-
-          <div>
-            <Button
-              variant="contained"
-              color="inherit"
-              disabled={!selectedPeriod || !canGenerate || mutation.isPending}
-              onClick={handleGenerateCarryForward}
+        <Grid container spacing={appLayout.fieldGap} alignItems="flex-start">
+          <Grid size={{ xs: 12, md: 5 }}>
+            <TextField
+              select
+              fullWidth
+              label="잠금된 운영 기간"
+              value={selectedPeriodId}
+              onChange={(event) => {
+                setSelectedPeriodId(event.target.value);
+                setFeedback(null);
+              }}
+              helperText={
+                lockedPeriods.length > 0
+                  ? '잠금된 기간만 차기 이월의 기준이 됩니다.'
+                  : '아직 잠금된 운영 기간이 없습니다.'
+              }
+              disabled={lockedPeriods.length === 0}
             >
-              {mutation.isPending ? '차기 이월 생성 중...' : '차기 이월 생성'}
-            </Button>
-          </div>
-        </Stack>
+              {lockedPeriods.map((period) => (
+                <MenuItem key={period.id} value={period.id}>
+                  {period.monthLabel}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 12, md: 7 }}>
+            <Stack spacing={1.25}>
+              <Typography variant="body2" color="text.secondary">
+                {selectedPeriod
+                  ? `${selectedPeriod.monthLabel} 기간은 ${readPeriodStatusLabel(selectedPeriod.status)} 상태입니다. 차기 이월은 잠금된 월의 자산·부채·자본 잔액만 다음 월 오프닝 기준으로 넘깁니다.`
+                  : '잠금된 기간이 준비되면 여기서 바로 이월 생성과 결과 조회를 진행할 수 있습니다.'}
+              </Typography>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={1}
+                useFlexGap
+                flexWrap="wrap"
+              >
+                <Button
+                  component={Link}
+                  href="/financial-statements"
+                  variant="outlined"
+                >
+                  재무제표 보기
+                </Button>
+                <Button component={Link} href="/periods" variant="text">
+                  운영 월 보기
+                </Button>
+              </Stack>
+            </Stack>
+          </Grid>
+        </Grid>
       </SectionCard>
 
       {!selectedPeriod ? (
@@ -283,41 +335,57 @@ export function CarryForwardsPage() {
       ) : (
         <Stack spacing={appLayout.sectionGap}>
           <SectionCard
-            title="이월 개요"
+            title="이월 기준 요약"
             description={`${view.sourcePeriod.monthLabel} 마감 결과가 ${view.targetPeriod.monthLabel} 기초 잔액 기준으로 연결되었습니다.`}
           >
-            <Stack spacing={appLayout.cardGap}>
-              <Typography variant="body2" color="text.secondary">
-                이월 생성 시각: {formatDate(view.carryForwardRecord.createdAt)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                대상 운영 기간 상태: {readPeriodStatusLabel(view.targetPeriod.status)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                기초 잔액 기준:{' '}
-                {readOpeningSourceLabel(view.targetOpeningBalanceSnapshot.sourceKind)}
-              </Typography>
-            </Stack>
-          </SectionCard>
-
-          <SectionCard
-            title="마감 기준"
-            description="이월은 손익 계정을 직접 넘기지 않고, 잠금 시점의 자산·부채·자본 잔액만 다음 월 기준으로 전달합니다."
-          >
-            <Stack spacing={1}>
-              <Typography variant="body2" color="text.secondary">
-                자산 합계:{' '}
-                {formatWon(view.sourceClosingSnapshot.totalAssetAmount)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                부채 합계:{' '}
-                {formatWon(view.sourceClosingSnapshot.totalLiabilityAmount)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                자본 합계:{' '}
-                {formatWon(view.sourceClosingSnapshot.totalEquityAmount)}
-              </Typography>
-            </Stack>
+            <Grid container spacing={appLayout.fieldGap}>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <CarryForwardInfoItem
+                  label="이월 생성 시각"
+                  value={formatDate(view.carryForwardRecord.createdAt)}
+                  description={`${view.sourcePeriod.monthLabel} 마감 결과를 기준으로 생성했습니다.`}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <CarryForwardInfoItem
+                  label="대상 운영 기간 상태"
+                  value={readPeriodStatusLabel(view.targetPeriod.status)}
+                  description={`${view.targetPeriod.monthLabel} 오프닝 기준에 연결됩니다.`}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <CarryForwardInfoItem
+                  label="기초 잔액 기준"
+                  value={readOpeningSourceLabel(
+                    view.targetOpeningBalanceSnapshot.sourceKind
+                  )}
+                  description="다음 월 시작 잔액의 출처를 보여줍니다."
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <CarryForwardInfoItem
+                  label="자산 합계"
+                  value={formatWon(view.sourceClosingSnapshot.totalAssetAmount)}
+                  description="잠금 시점 자산 잔액입니다."
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <CarryForwardInfoItem
+                  label="부채 합계"
+                  value={formatWon(
+                    view.sourceClosingSnapshot.totalLiabilityAmount
+                  )}
+                  description="잠금 시점 부채 잔액입니다."
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <CarryForwardInfoItem
+                  label="자본 합계"
+                  value={formatWon(view.sourceClosingSnapshot.totalEquityAmount)}
+                  description="손익 계정을 제외한 자본 잔액입니다."
+                />
+              </Grid>
+            </Grid>
           </SectionCard>
 
           <SectionCard
@@ -363,6 +431,28 @@ function readPeriodStatusLabel(status: string) {
     default:
       return status;
   }
+}
+
+function CarryForwardInfoItem({
+  label,
+  value,
+  description
+}: {
+  label: string;
+  value: string;
+  description: string;
+}) {
+  return (
+    <Stack spacing={0.5}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="subtitle1">{value}</Typography>
+      <Typography variant="body2" color="text.secondary">
+        {description}
+      </Typography>
+    </Stack>
+  );
 }
 
 function readOpeningSourceLabel(sourceKind: string) {

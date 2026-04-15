@@ -74,6 +74,10 @@ export function useReferenceDataPage() {
   const membershipRole = currentWorkspace?.membership.role ?? null;
   const canManageReferenceData =
     membershipRole === 'OWNER' || membershipRole === 'MANAGER';
+  const workspaceLabel = currentWorkspace
+    ? `${currentWorkspace.tenant.name} (${currentWorkspace.tenant.slug})`
+    : '-';
+  const ledgerLabel = currentWorkspace?.ledger?.name ?? '-';
   const managedFundingAccounts = React.useMemo(
     () => fundingAccountsManagementQuery.data ?? [],
     [fundingAccountsManagementQuery.data]
@@ -118,13 +122,11 @@ export function useReferenceDataPage() {
         facts: [
           {
             label: '사업장',
-            value: currentWorkspace
-              ? `${currentWorkspace.tenant.name} (${currentWorkspace.tenant.slug})`
-              : '-'
+            value: workspaceLabel
           },
           {
             label: '장부',
-            value: currentWorkspace?.ledger?.name ?? '-'
+            value: ledgerLabel
           },
           {
             label: '권한',
@@ -447,7 +449,10 @@ export function useReferenceDataPage() {
     saveFundingAccountPending: saveFundingAccountMutation.isPending,
     submitCategory,
     submitFundingAccount,
+    ledgerLabel,
     toggleCategoryPending: toggleCategoryMutation.isPending,
-    transitionFundingAccountPending: transitionFundingAccountMutation.isPending
+    transitionFundingAccountPending: transitionFundingAccountMutation.isPending,
+    membershipRole,
+    workspaceLabel
   };
 }

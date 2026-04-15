@@ -25,6 +25,10 @@ export function ReferenceDataPage() {
   const membershipRole = currentWorkspace?.membership.role ?? null;
   const canManageReferenceData =
     membershipRole === 'OWNER' || membershipRole === 'MANAGER';
+  const workspaceLabel = currentWorkspace
+    ? `${currentWorkspace.tenant.name} (${currentWorkspace.tenant.slug})`
+    : '-';
+  const ledgerLabel = currentWorkspace?.ledger?.name ?? '-';
 
   useDomainHelp({
     title: '기준 데이터 준비 상태 사용 가이드',
@@ -76,8 +80,21 @@ export function ReferenceDataPage() {
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
         eyebrow="기준 데이터"
-        title="기준 데이터 준비 상태와 관리 범위"
-        description="현재 사업 장부에서 기준 데이터 준비가 충분한지, 그리고 어떤 항목을 앱 안에서 직접 관리할 수 있는지 먼저 점검하는 화면입니다."
+        title="기준 데이터 준비 상태"
+        description="월 운영 전 준비 상태를 먼저 점검하고, 직접 관리가 필요한 항목만 다음 탭에서 정리합니다."
+        badges={[
+          {
+            label: canManageReferenceData ? '관리 가능' : '조회 전용',
+            color: canManageReferenceData ? 'primary' : 'default'
+          }
+        ]}
+        metadata={[
+          { label: '사업장', value: workspaceLabel },
+          { label: '장부', value: ledgerLabel },
+          { label: '권한', value: membershipRole ?? '-' }
+        ]}
+        primaryActionLabel="기준 데이터 관리"
+        primaryActionHref="/reference-data/manage"
       />
 
       <ReferenceDataSectionNav />

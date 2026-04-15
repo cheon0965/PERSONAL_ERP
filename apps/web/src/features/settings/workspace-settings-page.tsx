@@ -88,7 +88,39 @@ export function WorkspaceSettingsPage() {
       <PageHeader
         eyebrow="설정"
         title="사업장 설정"
-        description="현재 사업장의 이름, 슬러그, 상태와 기본 장부 기준값을 관리합니다."
+        description="현재 사업장의 이름, 상태와 기본 장부 기준값을 한 화면에서 관리합니다."
+        badges={[
+          {
+            label: readTenantStatusLabel(workspaceQuery.data?.tenant.status ?? null),
+            color: canManage ? 'primary' : 'default'
+          },
+          {
+            label: readLedgerStatusLabel(workspaceQuery.data?.ledger.status ?? null)
+          }
+        ]}
+        metadata={[
+          {
+            label: '열린 시작 월',
+            value: workspaceQuery.data?.ledger.openedFromYearMonth ?? '-'
+          },
+          {
+            label: '마감 완료 월',
+            value: workspaceQuery.data?.ledger.closedThroughYearMonth ?? '-'
+          },
+          {
+            label: '기준 통화 / 시간대',
+            value: `${form.baseCurrency} / ${form.timezone}`
+          },
+          {
+            label: '수정 권한',
+            value: canManage ? '있음' : '없음'
+          }
+        ]}
+        primaryActionLabel="설정 저장"
+        primaryActionOnClick={() => mutation.mutate(form)}
+        primaryActionDisabled={!canManage || mutation.isPending || !workspaceQuery.data}
+        secondaryActionLabel="운영 월 보기"
+        secondaryActionHref="/periods"
       />
 
       <SettingsSectionNav />
@@ -109,14 +141,19 @@ export function WorkspaceSettingsPage() {
         />
       ) : null}
 
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, lg: 7 }}>
-          <SectionCard
-            title="사업장과 기본 장부"
-            description="현재 기본 장부 1개 전제를 유지하면서 운영 기준값만 조정합니다."
-          >
-            <Stack spacing={appLayout.fieldGap}>
+      <SectionCard
+        title="사업장과 기본 장부"
+        description="개요 카드는 줄이고, 실제 수정이 필요한 기준값을 먼저 편집합니다."
+      >
+        <Stack spacing={appLayout.cardGap}>
+          <Typography variant="body2" color="text.secondary">
+            상태와 기준 통화, 시간대 변경은 이후 월 운영과 재무제표 기준에 직접
+            영향을 줍니다. 저장 전 현재 운영 범위를 다시 확인해 주세요.
+          </Typography>
+          <Grid container spacing={appLayout.fieldGap}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
+                fullWidth
                 label="사업장 이름"
                 value={form.tenantName}
                 disabled={!canManage}
@@ -127,7 +164,10 @@ export function WorkspaceSettingsPage() {
                   }))
                 }
               />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
+                fullWidth
                 label="사업장 슬러그"
                 value={form.tenantSlug}
                 disabled={!canManage}
@@ -139,8 +179,11 @@ export function WorkspaceSettingsPage() {
                 }
                 helperText="소문자, 숫자, 하이픈만 사용합니다."
               />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 select
+                fullWidth
                 label="사업장 상태"
                 value={form.tenantStatus}
                 disabled={!canManage}
@@ -158,7 +201,10 @@ export function WorkspaceSettingsPage() {
                   </MenuItem>
                 ))}
               </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
+                fullWidth
                 label="기본 장부 이름"
                 value={form.ledgerName}
                 disabled={!canManage}
@@ -169,7 +215,10 @@ export function WorkspaceSettingsPage() {
                   }))
                 }
               />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
+                fullWidth
                 label="기준 통화"
                 value={form.baseCurrency}
                 disabled={!canManage}
@@ -180,7 +229,10 @@ export function WorkspaceSettingsPage() {
                   }))
                 }
               />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
+                fullWidth
                 label="시간대"
                 value={form.timezone}
                 disabled={!canManage}
@@ -191,58 +243,19 @@ export function WorkspaceSettingsPage() {
                   }))
                 }
               />
-              <Button
-                variant="contained"
-                disabled={!canManage || mutation.isPending || !workspaceQuery.data}
-                onClick={() => mutation.mutate(form)}
-              >
-                {mutation.isPending ? '저장 중...' : '설정 저장'}
-              </Button>
-            </Stack>
-          </SectionCard>
-        </Grid>
-
-        <Grid size={{ xs: 12, lg: 5 }}>
-          <SectionCard
-            title="현재 운영 기준"
-            description="실제 저장 값과 마감 범위를 한 번 더 확인합니다."
-          >
-            <Stack spacing={1.5}>
-              <Detail
-                label="현재 사업장 상태"
-                value={readTenantStatusLabel(workspaceQuery.data?.tenant.status ?? null)}
-              />
-              <Detail
-                label="현재 장부 상태"
-                value={readLedgerStatusLabel(workspaceQuery.data?.ledger.status ?? null)}
-              />
-              <Detail
-                label="열린 시작 월"
-                value={workspaceQuery.data?.ledger.openedFromYearMonth ?? '-'}
-              />
-              <Detail
-                label="마감 완료 월"
-                value={workspaceQuery.data?.ledger.closedThroughYearMonth ?? '-'}
-              />
-              <Typography variant="body2" color="text.secondary">
-                상태와 기준 통화, 시간대 변경은 이후 월 운영/재무제표 기준에
-                직접 영향을 줍니다. 저장 전 현재 운영 범위를 다시 확인해 주세요.
-              </Typography>
-            </Stack>
-          </SectionCard>
-        </Grid>
-      </Grid>
-    </Stack>
-  );
-}
-
-function Detail({ label, value }: { label: string; value: string }) {
-  return (
-    <Stack spacing={0.5}>
-      <Typography variant="caption" color="text.secondary">
-        {label}
-      </Typography>
-      <Typography variant="body2">{value}</Typography>
+            </Grid>
+          </Grid>
+          <div>
+            <Button
+              variant="contained"
+              disabled={!canManage || mutation.isPending || !workspaceQuery.data}
+              onClick={() => mutation.mutate(form)}
+            >
+              {mutation.isPending ? '저장 중...' : '설정 저장'}
+            </Button>
+          </div>
+        </Stack>
+      </SectionCard>
     </Stack>
   );
 }

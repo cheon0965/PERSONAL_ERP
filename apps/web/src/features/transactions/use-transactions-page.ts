@@ -274,6 +274,13 @@ export function useTransactionsPage() {
     setDeleteTarget(null);
   }
 
+  function clearFilters() {
+    setKeyword('');
+    setFundingAccountName('');
+    setCategoryName('');
+    setPostingStatus('');
+  }
+
   function confirmTransaction(transaction: CollectedTransactionItem) {
     setFeedback(null);
     void confirmMutation.mutateAsync(transaction);
@@ -303,6 +310,7 @@ export function useTransactionsPage() {
     categoryOptions,
     closeDeleteDialog,
     closeDrawer,
+    clearFilters,
     confirmDelete,
     confirmPending: confirmMutation.isPending,
     confirmTransaction,

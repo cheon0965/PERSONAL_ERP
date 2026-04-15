@@ -1,7 +1,9 @@
 import type {
   CollectImportedRowResponse,
+  ImportBatchParseStatus,
   ImportBatchItem,
-  ImportSourceKind
+  ImportSourceKind,
+  ImportedRowParseStatus
 } from '@personal-erp/contracts';
 import { resolveStatusLabel } from '@/shared/ui/status-chip';
 
@@ -67,6 +69,40 @@ export function normalizeOptionalValue(
 ): string | undefined {
   const normalized = value?.trim();
   return normalized ? normalized : undefined;
+}
+
+export function readImportBatchParseStatusLabel(
+  status: ImportBatchParseStatus | string
+) {
+  switch (status) {
+    case 'COMPLETED':
+      return '완료';
+    case 'PARTIAL':
+      return '부분 성공';
+    case 'FAILED':
+      return '실패';
+    case 'PENDING':
+      return '대기';
+    default:
+      return status;
+  }
+}
+
+export function readImportedRowParseStatusLabel(
+  status: ImportedRowParseStatus | string
+) {
+  switch (status) {
+    case 'PARSED':
+      return '파싱 완료';
+    case 'FAILED':
+      return '실패';
+    case 'SKIPPED':
+      return '건너뜀';
+    case 'PENDING':
+      return '대기';
+    default:
+      return status;
+  }
 }
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {

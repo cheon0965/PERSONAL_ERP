@@ -1,6 +1,7 @@
 'use client';
 
-import { Grid, Stack, TextField, Typography } from '@mui/material';
+import Link from 'next/link';
+import { Button, Chip, Grid, Stack, Typography } from '@mui/material';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
@@ -83,111 +84,272 @@ export default function SettingsPage() {
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
-        eyebrow="작업 문맥"
+        eyebrow="설정"
         title="현재 작업 문맥"
-        description="현재 로그인 사용자가 어떤 사업장과 장부 문맥 안에서 작업 중인지 확인합니다."
+        description="지금 보고 있는 사업장, 권한, 장부 기준을 먼저 확인하고 다음 운영 화면으로 이동합니다."
+        badges={[
+          {
+            label: sessionStatusLabelMap[status] ?? status,
+            color: status === 'authenticated' ? 'success' : 'default'
+          },
+          {
+            label: currentWorkspace
+              ? (membershipRoleLabelMap[currentWorkspace.membership.role] ??
+                currentWorkspace.membership.role)
+              : '사업장 미연결',
+            color: currentWorkspace ? 'primary' : 'warning'
+          }
+        ]}
+        metadata={[
+          {
+            label: '사업장',
+            value: currentWorkspace?.tenant.name ?? '연결된 사업장 없음'
+          },
+          {
+            label: '장부',
+            value: currentWorkspace?.ledger?.name ?? '기본 장부 미선정'
+          },
+          {
+            label: '통화 / 시간대',
+            value: currentWorkspace?.ledger
+              ? `${currentWorkspace.ledger.baseCurrency} / ${currentWorkspace.ledger.timezone}`
+              : '-'
+          },
+          {
+            label: '사용자',
+            value: user ? `${user.name} <${user.email}>` : '활성 세션 없음'
+          }
+        ]}
+        primaryActionLabel="기준 데이터 보기"
+        primaryActionHref="/reference-data"
+        secondaryActionLabel="사업장 설정"
+        secondaryActionHref="/settings/workspace"
       />
       <SettingsSectionNav />
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, lg: 6 }}>
-          <SectionCard
-            title="현재 작업 문맥"
-            description="이 사용자가 지금 어떤 사업장과 장부를 기준으로 동작하는지 확인합니다."
-          >
-            <Stack spacing={appLayout.fieldGap}>
-              <TextField
-                label="사업장 이름"
-                value={currentWorkspace?.tenant.name ?? '연결된 사업장 없음'}
-                InputProps={{ readOnly: true }}
-              />
-              <TextField
-                label="사업장 슬러그"
-                value={currentWorkspace?.tenant.slug ?? '-'}
-                InputProps={{ readOnly: true }}
-              />
-              <TextField
-                label="사업장 상태"
-                value={
-                  currentWorkspace
+
+      <SectionCard
+        title="현재 작업 기준"
+        description="입력 화면처럼 길게 읽기보다, 지금 적용되는 사업장·권한·장부 기준을 한 번에 확인합니다."
+      >
+        <Grid container spacing={appLayout.sectionGap}>
+          <Grid size={{ xs: 12, md: 6, xl: 3 }}>
+            <ContextInfoCard
+              title="사업장"
+              items={[
+                {
+                  label: '이름',
+                  value: currentWorkspace?.tenant.name ?? '연결된 사업장 없음'
+                },
+                {
+                  label: '슬러그',
+                  value: currentWorkspace?.tenant.slug ?? '-'
+                },
+                {
+                  label: '상태',
+                  value: currentWorkspace
                     ? (tenantStatusLabelMap[currentWorkspace.tenant.status] ??
                       currentWorkspace.tenant.status)
                     : '-'
                 }
-                InputProps={{ readOnly: true }}
-              />
-              <TextField
-                label="멤버십 역할"
-                value={
-                  currentWorkspace
+              ]}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 6, xl: 3 }}>
+            <ContextInfoCard
+              title="멤버십"
+              items={[
+                {
+                  label: '역할',
+                  value: currentWorkspace
                     ? (membershipRoleLabelMap[
                         currentWorkspace.membership.role
                       ] ?? currentWorkspace.membership.role)
                     : '-'
-                }
-                helperText="현재 로그인 사용자의 권한을 공식 작업 주체 기준으로 봅니다."
-                InputProps={{ readOnly: true }}
-              />
-              <TextField
-                label="멤버십 상태"
-                value={
-                  currentWorkspace
+                },
+                {
+                  label: '상태',
+                  value: currentWorkspace
                     ? (membershipStatusLabelMap[
                         currentWorkspace.membership.status
                       ] ?? currentWorkspace.membership.status)
                     : '-'
+                },
+                {
+                  label: '해석 기준',
+                  value: '현재 로그인 사용자의 공식 작업 권한'
                 }
-                InputProps={{ readOnly: true }}
-              />
-              <TextField
-                label="현재 장부"
-                value={currentWorkspace?.ledger?.name ?? '기본 장부 미선정'}
-                helperText="이 장부 문맥 안에서 운영 기간, 수집 거래, 전표, 보고 화면이 함께 동작합니다."
-                InputProps={{ readOnly: true }}
-              />
-              <TextField
-                label="장부 통화 / 시간대"
-                value={
-                  currentWorkspace?.ledger
+              ]}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 6, xl: 3 }}>
+            <ContextInfoCard
+              title="장부"
+              items={[
+                {
+                  label: '현재 장부',
+                  value: currentWorkspace?.ledger?.name ?? '기본 장부 미선정'
+                },
+                {
+                  label: '통화 / 시간대',
+                  value: currentWorkspace?.ledger
                     ? `${currentWorkspace.ledger.baseCurrency} / ${currentWorkspace.ledger.timezone}`
                     : '-'
-                }
-                InputProps={{ readOnly: true }}
-              />
-              <TextField
-                label="장부 상태"
-                value={
-                  currentWorkspace?.ledger
+                },
+                {
+                  label: '상태',
+                  value: currentWorkspace?.ledger
                     ? (ledgerStatusLabelMap[currentWorkspace.ledger.status] ??
                       currentWorkspace.ledger.status)
                     : '-'
                 }
-                InputProps={{ readOnly: true }}
-              />
-            </Stack>
-          </SectionCard>
+              ]}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 6, xl: 3 }}>
+            <ContextInfoCard
+              title="세션"
+              items={[
+                {
+                  label: '인증 상태',
+                  value: sessionStatusLabelMap[status] ?? status
+                },
+                {
+                  label: '사용자',
+                  value: user ? `${user.name} <${user.email}>` : '활성 세션 없음'
+                },
+                {
+                  label: '확인 포인트',
+                  value: '데이터가 다르면 이 문맥과 기간 필터를 먼저 점검'
+                }
+              ]}
+            />
+          </Grid>
         </Grid>
-        <Grid size={{ xs: 12, lg: 6 }}>
-          <SectionCard
-            title="세션 정보"
-            description="현재 인증 상태와 작업 중인 사용자를 확인합니다."
-          >
-            <Stack spacing={appLayout.fieldGap}>
-              <Stack spacing={0.5}>
-                <Typography>세션 상태</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {sessionStatusLabelMap[status] ?? status}
-                </Typography>
-              </Stack>
-              <Stack spacing={0.5}>
-                <Typography>로그인 사용자</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {user ? `${user.name} <${user.email}>` : '활성 세션 없음'}
-                </Typography>
-              </Stack>
-            </Stack>
-          </SectionCard>
+      </SectionCard>
+
+      <SectionCard
+        title="다음으로 갈 화면"
+        description="문맥이 맞다면 아래 순서로 운영 준비와 설정 화면을 이어서 확인합니다."
+      >
+        <Grid container spacing={appLayout.sectionGap}>
+          <Grid size={{ xs: 12, md: 6, xl: 3 }}>
+            <SettingsActionCard
+              eyebrow="운영 준비"
+              title="기준 데이터"
+              description="자금수단, 카테고리, 공식 참조 기준이 준비됐는지 먼저 확인합니다."
+              href="/reference-data"
+              actionLabel="준비 상태 보기"
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 6, xl: 3 }}>
+            <SettingsActionCard
+              eyebrow="월 실행"
+              title="운영 월"
+              description="현재 장부 문맥에서 열린 운영 월과 마감 이력을 확인합니다."
+              href="/periods"
+              actionLabel="운영 월 보기"
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 6, xl: 3 }}>
+            <SettingsActionCard
+              eyebrow="설정"
+              title="사업장"
+              description="사업장 이름, 상태, 통화, 시간대 같은 기본 기준값을 관리합니다."
+              href="/settings/workspace"
+              actionLabel="사업장 설정"
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 6, xl: 3 }}>
+            <SettingsActionCard
+              eyebrow="보안"
+              title="내 계정"
+              description="이름, 비밀번호, 세션 종료 같은 사용자 보안 설정을 직접 관리합니다."
+              href="/settings/account"
+              actionLabel="내 계정 보기"
+            />
+          </Grid>
         </Grid>
-      </Grid>
+      </SectionCard>
+    </Stack>
+  );
+}
+
+function ContextInfoCard({
+  title,
+  items
+}: {
+  title: string;
+  items: Array<{ label: string; value: string }>;
+}) {
+  return (
+    <Stack
+      spacing={1.5}
+      sx={{
+        height: '100%',
+        p: appLayout.cardPadding,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        backgroundColor: 'background.default'
+      }}
+    >
+      <Typography variant="subtitle1">{title}</Typography>
+      <Stack spacing={1.25}>
+        {items.map((item) => (
+          <Stack key={item.label} spacing={0.25}>
+            <Typography variant="caption" color="text.secondary">
+              {item.label}
+            </Typography>
+            <Typography variant="body2" fontWeight={600}>
+              {item.value}
+            </Typography>
+          </Stack>
+        ))}
+      </Stack>
+    </Stack>
+  );
+}
+
+function SettingsActionCard({
+  eyebrow,
+  title,
+  description,
+  href,
+  actionLabel
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  href: string;
+  actionLabel: string;
+}) {
+  return (
+    <Stack
+      spacing={1.5}
+      sx={{
+        height: '100%',
+        p: appLayout.cardPadding,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        backgroundColor: 'background.default'
+      }}
+    >
+      <Stack direction="row" justifyContent="space-between" spacing={1}>
+        <Typography variant="overline" color="text.secondary">
+          {eyebrow}
+        </Typography>
+        <Chip label="바로 이동" size="small" variant="outlined" />
+      </Stack>
+      <Typography variant="subtitle1">{title}</Typography>
+      <Typography variant="body2" color="text.secondary">
+        {description}
+      </Typography>
+      <div>
+        <Button component={Link} href={href} variant="outlined">
+          {actionLabel}
+        </Button>
+      </div>
     </Stack>
   );
 }

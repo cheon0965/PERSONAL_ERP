@@ -14,7 +14,6 @@ import {
   Stack,
   Typography
 } from '@mui/material';
-import { alpha } from '@mui/material/styles';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart } from '@mui/x-charts/BarChart';
 import { formatWon } from '@/shared/lib/format';
@@ -135,86 +134,114 @@ export function DashboardPage() {
       <PageHeader
         eyebrow="장부 운영"
         title="월 운영 대시보드"
-        description="현재 운영 월의 확정 전표, 남은 계획, 최근 공식 잠금 기준을 함께 읽어 운영 판단과 공식 보고의 경계를 분명하게 보여줍니다."
+        description="현재 운영 월의 운영 숫자와 최근 공식 숫자를 구분해 보면서 월간 판단 흐름을 빠르게 점검합니다."
+        badges={[
+          {
+            label: `${summary.period.monthLabel} 운영 월`,
+            color: 'primary'
+          },
+          {
+            label: readBasisStatusLabel(summary.basisStatus),
+            color:
+              summary.basisStatus === 'OFFICIAL_LOCKED' ? 'info' : 'warning'
+          }
+        ]}
+        metadata={[
+          {
+            label: '기간 상태',
+            value: readPeriodStatusLabel(summary.period.status)
+          },
+          {
+            label: '최근 공식 비교',
+            value: summary.officialComparison?.monthLabel ?? '없음'
+          },
+          {
+            label: '주의 항목',
+            value: `${summary.warnings.length}건`
+          }
+        ]}
         primaryActionLabel="운영 전망 보기"
         primaryActionHref="/forecast"
+        secondaryActionLabel="재무제표 보기"
+        secondaryActionHref="/financial-statements"
       />
 
-      <Box
-        sx={{
-          position: 'relative',
-          overflow: 'hidden',
-          borderRadius: 6,
-          p: appLayout.dashboardHeroPadding,
-          background:
-            'linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(22, 101, 52, 0.9) 58%, rgba(74, 222, 128, 0.72))',
-          color: 'common.white',
-          boxShadow: '0 18px 40px rgba(15, 23, 42, 0.14)'
-        }}
+      <SectionCard
+        title="운영 기준선"
+        description="헤더에서 월과 기준 상태를 확인한 뒤, 아래 카드와 차트는 이 기준을 따라 읽습니다."
       >
-        <Stack
-          spacing={appLayout.dashboardHeroMetricGap}
-          sx={{ position: 'relative', zIndex: 1 }}
-        >
-          <Stack
-            direction={{ xs: 'column', md: 'row' }}
-            spacing={1.2}
-            alignItems={{ md: 'center' }}
-          >
-            <Typography
-              variant="overline"
-              sx={{ color: alpha('#ffffff', 0.72) }}
-            >
-              {summary.period.monthLabel} 운영 기간
-            </Typography>
-            <Chip
-              label={readBasisStatusLabel(summary.basisStatus)}
-              size="small"
-              sx={{
-                alignSelf: 'flex-start',
-                color: '#ecfeff',
-                backgroundColor: alpha('#ffffff', 0.14),
-                border: `1px solid ${alpha('#ffffff', 0.18)}`
-              }}
-            />
-          </Stack>
-
-          <Typography
-            variant="h4"
-            sx={{ fontWeight: 800, letterSpacing: '-0.03em' }}
-          >
-            운영 숫자와 최근 공식 숫자를 같은 화면에서 분리해 확인합니다.
-          </Typography>
-
-          <Typography sx={{ maxWidth: 700, color: alpha('#ffffff', 0.78) }}>
-            현재 기간 상태는 {readPeriodStatusLabel(summary.period.status)}이며,
-            안전 잉여와 남은 계획 지출을 운영 판단 기준으로 보여줍니다.
-          </Typography>
+        <Stack spacing={appLayout.cardGap}>
+          <Grid container spacing={appLayout.fieldGap}>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <DashboardInfoItem
+                label="현재 운영 기간"
+                value={summary.period.monthLabel}
+                description={readPeriodStatusLabel(summary.period.status)}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <DashboardInfoItem
+                label="판단 기준"
+                value={readBasisStatusLabel(summary.basisStatus)}
+                description="운영 숫자와 공식 잠금 숫자의 경계를 먼저 확인합니다."
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <DashboardInfoItem
+                label="최근 공식 잠금"
+                value={summary.officialComparison?.monthLabel ?? '없음'}
+                description={
+                  summary.officialComparison
+                    ? '공식 재무제표와 비교 가능한 최근 잠금 월입니다.'
+                    : '아직 비교 가능한 공식 잠금 기준이 없습니다.'
+                }
+              />
+            </Grid>
+          </Grid>
 
           {summary.officialComparison ? (
-            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-              <MetricBadge
-                label="최근 공식 순자산"
-                value={formatWon(
-                  summary.officialComparison.officialNetWorthWon
-                )}
-              />
-              <MetricBadge
-                label="최근 공식 손익"
-                value={formatWon(
-                  summary.officialComparison.officialPeriodPnLWon
-                )}
-              />
-            </Stack>
+            <Grid container spacing={appLayout.fieldGap}>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <DashboardInfoItem
+                  label="공식 현금"
+                  value={formatWon(summary.officialComparison.officialCashWon)}
+                  description="최근 잠금 월 기준 현금 잔액입니다."
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <DashboardInfoItem
+                  label="공식 순자산"
+                  value={formatWon(
+                    summary.officialComparison.officialNetWorthWon
+                  )}
+                  description="운영 숫자와 비교할 공식 기준선입니다."
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <DashboardInfoItem
+                  label="공식 손익"
+                  value={formatWon(
+                    summary.officialComparison.officialPeriodPnLWon
+                  )}
+                  description="공식 보고서 기준 월간 손익입니다."
+                />
+              </Grid>
+            </Grid>
           ) : null}
         </Stack>
-      </Box>
+      </SectionCard>
 
-      {summary.warnings.map((warning) => (
-        <Alert key={warning} severity="warning" variant="outlined">
-          {warning}
+      {summary.warnings.length > 0 ? (
+        <Alert severity="warning" variant="outlined">
+          <Stack spacing={0.5}>
+            {summary.warnings.map((warning) => (
+              <Typography key={warning} variant="body2">
+                {warning}
+              </Typography>
+            ))}
+          </Stack>
         </Alert>
-      ))}
+      ) : null}
 
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
@@ -358,27 +385,6 @@ export function DashboardPage() {
   );
 }
 
-function MetricBadge({ label, value }: { label: string; value: string }) {
-  return (
-    <Box
-      sx={{
-        minWidth: 180,
-        p: 1.5,
-        borderRadius: 4,
-        backgroundColor: alpha('#ffffff', 0.1),
-        border: `1px solid ${alpha('#ffffff', 0.12)}`
-      }}
-    >
-      <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.72) }}>
-        {label}
-      </Typography>
-      <Typography variant="h6" sx={{ mt: 0.5, fontWeight: 800 }}>
-        {value}
-      </Typography>
-    </Box>
-  );
-}
-
 function readBasisStatusLabel(
   basisStatus: 'LIVE_OPERATIONS' | 'OFFICIAL_LOCKED'
 ) {
@@ -400,6 +406,28 @@ function readPeriodStatusLabel(status: string) {
     default:
       return status;
   }
+}
+
+function DashboardInfoItem({
+  label,
+  value,
+  description
+}: {
+  label: string;
+  value: string;
+  description: string;
+}) {
+  return (
+    <Stack spacing={0.5}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="subtitle1">{value}</Typography>
+      <Typography variant="body2" color="text.secondary">
+        {description}
+      </Typography>
+    </Stack>
+  );
 }
 
 function readHighlightToneColor(tone: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL') {

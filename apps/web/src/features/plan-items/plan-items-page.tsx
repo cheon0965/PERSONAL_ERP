@@ -153,6 +153,7 @@ export function PlanItemsPage() {
     membershipRole === 'MANAGER' ||
     membershipRole === 'EDITOR';
   const view = planItemsQuery.data;
+  const summary = view?.summary ?? null;
   const journalEntriesById = React.useMemo(
     () =>
       new Map(
@@ -215,6 +216,8 @@ export function PlanItemsPage() {
       linkedJournalEntryIdByCollectedTransaction
     ]
   );
+  const generationDisabled =
+    !selectedPeriod || !canGenerate || mutation.isPending;
 
   useDomainHelp({
     title: '계획 항목 사용 가이드',
@@ -248,12 +251,111 @@ export function PlanItemsPage() {
       '계획 항목 자체는 아직 실제 거래나 공식 전표가 아닙니다. 전표 번호가 연결된 뒤부터 공식 회계 흐름에 반영됩니다.'
   });
 
+  const handleGeneratePlanItems = React.useCallback(async () => {
+    if (!selectedPeriod) {
+      return;
+    }
+
+    setFeedback(null);
+
+    try {
+      const result = await mutation.mutateAsync(selectedPeriod);
+      setFeedback({
+        severity: 'success',
+        message: `${result.period.monthLabel} 계획 항목을 생성했습니다. 신규 ${result.generation.createdCount}건, 기존 유지 ${result.generation.skippedExistingCount}건, 제외 규칙 ${result.generation.excludedRuleCount}건입니다.`
+      });
+    } catch (error) {
+      setFeedback({
+        severity: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : '계획 항목을 생성하지 못했습니다.'
+      });
+    }
+  }, [mutation, selectedPeriod]);
+
+  const tableActions = (
+    <Stack
+      direction={{ xs: 'column', lg: 'row' }}
+      spacing={1}
+      useFlexGap
+      flexWrap="wrap"
+      alignItems={{ xs: 'stretch', lg: 'center' }}
+      sx={{ width: { xs: '100%', lg: 'auto' } }}
+    >
+      <TextField
+        select
+        size="small"
+        label="운영 기간"
+        value={selectedPeriodId}
+        onChange={(event) => {
+          setSelectedPeriodId(event.target.value);
+          setFeedback(null);
+        }}
+        disabled={candidatePeriods.length === 0}
+        sx={{ minWidth: { xs: '100%', sm: 220 } }}
+      >
+        {candidatePeriods.map((period) => (
+          <MenuItem key={period.id} value={period.id}>
+            {period.monthLabel}
+          </MenuItem>
+        ))}
+      </TextField>
+      <Button
+        size="small"
+        variant="contained"
+        color="inherit"
+        disabled={generationDisabled}
+        onClick={() => {
+          void handleGeneratePlanItems();
+        }}
+      >
+        {mutation.isPending ? '생성 중...' : '계획 항목 생성'}
+      </Button>
+      <Button component={Link} href="/transactions" size="small" variant="outlined">
+        수집 거래 보기
+      </Button>
+    </Stack>
+  );
+
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
         eyebrow="계획 계층"
         title="계획 항목"
-        description="반복 규칙을 현재 운영 월의 계획 항목으로 생성하고, 계획이 실제 수집 거래와 전표로 어디까지 이어졌는지 함께 추적하며 전표 준비가 끝난 항목은 바로 확정합니다."
+        description="선택한 운영 월의 계획 항목을 생성하고, 실제 수집 거래와 전표까지 어디까지 이어졌는지 목록 중심으로 추적합니다."
+        badges={[
+          {
+            label: selectedPeriod?.monthLabel ?? '운영 기간 선택 필요',
+            color: selectedPeriod ? 'primary' : 'warning'
+          },
+          {
+            label: canGenerate ? '생성 가능' : '조회 전용',
+            color: canGenerate ? 'success' : 'default'
+          }
+        ]}
+        metadata={[
+          {
+            label: '총 계획 항목',
+            value: `${summary?.totalCount ?? 0}건`
+          },
+          {
+            label: '확정 완료',
+            value: `${summary?.confirmedCount ?? 0}건`
+          },
+          {
+            label: '계획 총액',
+            value: formatWon(summary?.totalPlannedAmount ?? 0)
+          }
+        ]}
+        primaryActionLabel="계획 항목 생성"
+        primaryActionOnClick={() => {
+          void handleGeneratePlanItems();
+        }}
+        primaryActionDisabled={generationDisabled}
+        secondaryActionLabel="반복 규칙 보기"
+        secondaryActionHref="/recurring"
       />
 
       {highlightedPlanItemId ? (
@@ -283,125 +385,93 @@ export function PlanItemsPage() {
         />
       ) : null}
 
-      <SectionCard
-        title="생성 대상 기간"
-        description="잠기지 않은 운영 기간에서만 계획 항목을 생성합니다. 같은 규칙과 날짜 조합은 중복 생성되지 않습니다."
-      >
-        <Stack spacing={appLayout.cardGap}>
-          <TextField
-            select
-            label="운영 기간"
-            value={selectedPeriodId}
-            onChange={(event) => {
-              setSelectedPeriodId(event.target.value);
-              setFeedback(null);
-            }}
-            disabled={candidatePeriods.length === 0}
-            helperText={
-              candidatePeriods.length > 0
-                ? '현재 계획을 생성할 운영 기간을 선택해 주세요.'
-                : '잠기지 않은 운영 기간이 없습니다.'
-            }
-          >
-            {candidatePeriods.map((period) => (
-              <MenuItem key={period.id} value={period.id}>
-                {period.monthLabel}
-              </MenuItem>
-            ))}
-          </TextField>
+      <DataTableCard
+        title="기간 계획 항목"
+        description={
+          selectedPeriod
+            ? `${selectedPeriod.monthLabel} 운영 월의 계획 항목을 먼저 보고, 연결된 수집 거래와 전표 상태를 같은 표에서 추적합니다.`
+            : '잠기지 않은 운영 기간을 선택하면 계획 항목 생성과 목록 조회를 바로 시작할 수 있습니다.'
+        }
+        actions={tableActions}
+        rows={selectedPeriod ? tableRows : []}
+        columns={columns}
+        height={selectedPeriod ? 460 : 320}
+      />
 
-          <Stack
-            direction={{ xs: 'column', md: 'row' }}
-            spacing={1}
-            alignItems={{ xs: 'stretch', md: 'center' }}
-          >
-            <Button
-              variant="contained"
-              color="inherit"
-              disabled={!selectedPeriod || !canGenerate || mutation.isPending}
-              onClick={async () => {
-                if (!selectedPeriod) {
-                  return;
-                }
-
-                setFeedback(null);
-
-                try {
-                  const result = await mutation.mutateAsync(selectedPeriod);
-                  setFeedback({
-                    severity: 'success',
-                    message: `${result.period.monthLabel} 계획 항목을 생성했습니다. 신규 ${result.generation.createdCount}건, 기존 유지 ${result.generation.skippedExistingCount}건, 제외 규칙 ${result.generation.excludedRuleCount}건입니다.`
-                  });
-                } catch (error) {
-                  setFeedback({
-                    severity: 'error',
-                    message:
-                      error instanceof Error
-                        ? error.message
-                        : '계획 항목을 생성하지 못했습니다.'
-                  });
-                }
-              }}
-            >
-              {mutation.isPending ? '생성 중...' : '계획 항목 생성'}
-            </Button>
-            <Button component={Link} href="/imports" variant="text">
-              업로드 배치로 이동
-            </Button>
-          </Stack>
-
-          {!canGenerate ? (
-            <Alert severity="info" variant="outlined">
-              계획 항목 생성은 소유자, 관리자, 편집자만 실행할 수 있습니다.
-            </Alert>
-          ) : null}
-        </Stack>
-      </SectionCard>
+      {!canGenerate ? (
+        <Alert severity="info" variant="outlined">
+          계획 항목 생성은 소유자, 관리자, 편집자만 실행할 수 있습니다.
+        </Alert>
+      ) : null}
 
       {!selectedPeriod ? (
         <SectionCard
           title="생성할 기간이 없습니다"
           description="먼저 잠기지 않은 운영 기간을 준비해 주세요."
         >
-          <Typography variant="body2" color="text.secondary">
-            운영 기간이 열려 있어야 계획 항목을 생성할 수 있습니다.
-          </Typography>
+          <Stack spacing={1.5}>
+            <Typography variant="body2" color="text.secondary">
+              운영 기간이 열려 있어야 계획 항목을 생성할 수 있습니다.
+            </Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <Button component={Link} href="/periods" variant="contained">
+                운영 월 보기
+              </Button>
+              <Button component={Link} href="/recurring" variant="outlined">
+                반복 규칙 보기
+              </Button>
+            </Stack>
+          </Stack>
         </SectionCard>
       ) : (
         <Grid container spacing={appLayout.sectionGap}>
-          <Grid size={{ xs: 12, md: 4 }}>
+          <Grid size={{ xs: 12, lg: 4 }}>
             <SectionCard
               title="계획 요약"
-              description="현재 선택한 월의 계획 항목 상태 집계입니다."
+              description="현재 선택한 운영 월에서 계획이 실제 실행으로 얼마나 이어졌는지 보여줍니다."
             >
               <Stack spacing={1.25}>
                 <SummaryRow
                   label="총 계획 항목"
-                  value={String(view?.summary.totalCount ?? 0)}
+                  value={String(summary?.totalCount ?? 0)}
                 />
                 <SummaryRow
                   label="계획 총액"
-                  value={formatWon(view?.summary.totalPlannedAmount ?? 0)}
+                  value={formatWon(summary?.totalPlannedAmount ?? 0)}
                 />
                 <SummaryRow
                   label="초안 / 연결됨 / 확정됨"
-                  value={`${view?.summary.draftCount ?? 0} / ${view?.summary.matchedCount ?? 0} / ${view?.summary.confirmedCount ?? 0}`}
+                  value={`${summary?.draftCount ?? 0} / ${summary?.matchedCount ?? 0} / ${summary?.confirmedCount ?? 0}`}
                 />
                 <SummaryRow
                   label="제외 / 만료"
-                  value={`${view?.summary.skippedCount ?? 0} / ${view?.summary.expiredCount ?? 0}`}
+                  value={`${summary?.skippedCount ?? 0} / ${summary?.expiredCount ?? 0}`}
                 />
               </Stack>
             </SectionCard>
           </Grid>
-          <Grid size={{ xs: 12, md: 8 }}>
-            <DataTableCard
-              title="기간 계획 항목"
-              description="반복 규칙에서 파생된 계획 항목 목록입니다. 이제 실제 수집 거래와 전표 연결까지 함께 확인할 수 있습니다."
-              rows={tableRows}
-              columns={columns}
-              height={420}
-            />
+          <Grid size={{ xs: 12, lg: 8 }}>
+            <SectionCard
+              title="실행 연결 안내"
+              description="표를 읽을 때는 계획 기준, 실제 거래 연결, 공식 전표 연결 순서로 확인하면 가장 빠릅니다."
+            >
+              <Stack spacing={1.25}>
+                <Typography variant="body2" color="text.secondary">
+                  `READY_TO_POST` 상태면 이 화면에서 바로 전표 확정을 실행할 수 있습니다.
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  아직 분류 보완이 필요하면 수집 거래 화면으로 이동해 카테고리와 자금수단을 먼저 정리합니다.
+                </Typography>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                  <Button component={Link} href="/transactions" variant="contained">
+                    수집 거래로 이동
+                  </Button>
+                  <Button component={Link} href="/journal-entries" variant="outlined">
+                    전표 조회 보기
+                  </Button>
+                </Stack>
+              </Stack>
+            </SectionCard>
           </Grid>
         </Grid>
       )}

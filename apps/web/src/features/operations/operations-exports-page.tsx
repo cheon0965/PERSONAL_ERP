@@ -9,7 +9,6 @@ import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { SectionCard } from '@/shared/ui/section-card';
-import { SummaryCard } from '@/shared/ui/summary-card';
 import {
   getOperationsExports,
   operationsExportsQueryKey,
@@ -46,7 +45,36 @@ export function OperationsExportsPage() {
       <PageHeader
         eyebrow="운영 지원"
         title="백업 / 내보내기"
-        description="운영자가 직접 실행하는 UTF-8 CSV 반출입니다. 기준 데이터, 수집 거래, 전표, 재무제표 스냅샷을 감사 로그와 함께 남깁니다."
+        description="운영자가 직접 실행하는 UTF-8 CSV 반출로, 기준 데이터와 운영 산출물을 안전하게 내려받습니다."
+        badges={[
+          {
+            label: `${formatNumber(exports?.items.length ?? 0, 0)}개 범위`,
+            color: (exports?.items.length ?? 0) > 0 ? 'primary' : 'default'
+          },
+          {
+            label:
+              exports?.lastExportedAt ? '최근 반출 이력 있음' : '반출 이력 없음',
+            color: exports?.lastExportedAt ? 'success' : 'default'
+          }
+        ]}
+        metadata={[
+          {
+            label: '반출 범위',
+            value: `${formatNumber(exports?.items.length ?? 0, 0)}개`
+          },
+          {
+            label: '대상 행 수',
+            value: `${formatNumber(totalRows, 0)}행`
+          },
+          {
+            label: '마지막 반출',
+            value: formatDateTime(exports?.lastExportedAt ?? null)
+          }
+        ]}
+        primaryActionLabel="반출 범위 보기"
+        primaryActionHref="#exports-workbench"
+        secondaryActionLabel="감사 로그"
+        secondaryActionHref="/admin/logs"
       />
 
       <OperationsSectionNav />
@@ -67,36 +95,61 @@ export function OperationsExportsPage() {
       ) : null}
 
       <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <SummaryCard
-            title="반출 범위"
-            value={formatNumber(exports?.items.length ?? 0, 0)}
-            subtitle="운영 1차 범위"
-            tone="primary"
-          />
+        <Grid size={{ xs: 12, lg: 7 }}>
+          <SectionCard
+            title="지금 우선 확인"
+            description="운영자가 반출 전에 확인할 범위 수, 행 수, 최근 반출 시점을 먼저 보여줍니다."
+          >
+            <Grid container spacing={appLayout.fieldGap}>
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <ExportInfoItem
+                  label="반출 범위"
+                  value={`${formatNumber(exports?.items.length ?? 0, 0)}개`}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <ExportInfoItem
+                  label="대상 행 수"
+                  value={`${formatNumber(totalRows, 0)}행`}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <ExportInfoItem
+                  label="마지막 반출"
+                  value={formatDateTime(exports?.lastExportedAt ?? null)}
+                />
+              </Grid>
+            </Grid>
+          </SectionCard>
         </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <SummaryCard
-            title="대상 행 수"
-            value={formatNumber(totalRows, 0)}
-            subtitle="현재 장부 기준"
-            tone="neutral"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <SummaryCard
-            title="마지막 반출"
-            value={formatDateTime(exports?.lastExportedAt ?? null)}
-            tone="warning"
-          />
+        <Grid size={{ xs: 12, lg: 5 }}>
+          <SectionCard
+            title="자주 여는 후속 화면"
+            description="반출 전에 근거 화면이나 감사 이력을 함께 확인할 때 사용하는 화면입니다."
+          >
+            <Stack spacing={1.25}>
+              <OperationsSupportLinkCard
+                title="감사 로그"
+                description="수동 반출 실행 전후의 운영 이벤트와 요청 흐름을 함께 확인합니다."
+                href="/admin/logs"
+                actionLabel="감사 로그 보기"
+              />
+              <OperationsSupportLinkCard
+                title="재무제표"
+                description="공식 스냅샷이 최신인지 확인한 뒤 재무제표 범위를 반출합니다."
+                href="/financial-statements"
+                actionLabel="재무제표 보기"
+              />
+            </Stack>
+          </SectionCard>
         </Grid>
       </Grid>
 
       <SectionCard
-        title="수동 CSV 반출"
-        description="스케줄 백업이나 DB 스냅샷은 아직 다루지 않고, 운영자가 필요한 시점에 내려받는 안전한 1차 흐름부터 제공합니다."
+        title="반출 작업대"
+        description="실제 CSV 생성은 여기서 범위별로 실행합니다."
       >
-        <Stack spacing={1.5}>
+        <Stack spacing={1.5} id="exports-workbench">
           {(exports?.items ?? []).map((item) => (
             <Box
               key={item.scope}
@@ -153,6 +206,15 @@ export function OperationsExportsPage() {
         </Stack>
       </SectionCard>
 
+      <SectionCard
+        title="수동 CSV 반출"
+        description="스케줄 백업이나 DB 스냅샷은 아직 다루지 않고, 운영자가 필요한 시점에 내려받는 1차 흐름만 제공합니다."
+      >
+        <Typography variant="body2" color="text.secondary">
+          생성된 파일은 브라우저에서 즉시 다운로드되며, UTF-8 CSV 형식으로 저장됩니다.
+        </Typography>
+      </SectionCard>
+
       {lastResult ? (
         <SectionCard
           title="최근 생성 결과"
@@ -174,6 +236,60 @@ export function OperationsExportsPage() {
           </Typography>
         </SectionCard>
       ) : null}
+    </Stack>
+  );
+}
+
+function ExportInfoItem({
+  label,
+  value
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <Stack spacing={0.35}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body2" fontWeight={600}>
+        {value}
+      </Typography>
+    </Stack>
+  );
+}
+
+function OperationsSupportLinkCard({
+  title,
+  description,
+  href,
+  actionLabel
+}: {
+  title: string;
+  description: string;
+  href: string;
+  actionLabel: string;
+}) {
+  return (
+    <Stack
+      spacing={1}
+      sx={{
+        p: appLayout.cardPadding,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        backgroundColor: 'background.default'
+      }}
+    >
+      <Typography variant="subtitle2">{title}</Typography>
+      <Typography variant="body2" color="text.secondary">
+        {description}
+      </Typography>
+      <div>
+        <Button href={href} variant="outlined">
+          {actionLabel}
+        </Button>
+      </div>
     </Stack>
   );
 }

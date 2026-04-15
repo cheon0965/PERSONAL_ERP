@@ -46,7 +46,17 @@ export function PeriodOperationsSection(
   }, [openPeriod, reopenPeriod]);
 
   return (
-    <Stack spacing={appLayout.cardGap} id="accounting-period-operations">
+    <Stack spacing={appLayout.cardGap} id="accounting-period-workbench">
+      <Stack spacing={0.5}>
+        <Typography variant="h6">운영 작업</Typography>
+        <Typography variant="body2" color="text.secondary">
+          {openPeriod
+            ? `${openPeriod.monthLabel} 월 기준으로 마감 준비 또는 운영 메모를 처리합니다.`
+            : reopenPeriod
+              ? `${reopenPeriod.monthLabel} 잠금 월 재오픈 여부를 검토합니다.`
+              : '새 운영 월을 열 준비를 진행합니다.'}
+        </Typography>
+      </Stack>
       <Tabs
         value={activeTab}
         onChange={(_event, nextValue: PeriodOperationTab) => {
@@ -55,9 +65,9 @@ export function PeriodOperationsSection(
         variant="scrollable"
         allowScrollButtonsMobile
       >
-        <Tab value="open" label="월 운영 시작" />
+        <Tab value="open" label="운영 시작" />
         <Tab value="close" label="월 마감" />
-        <Tab value="reopen" label="월 재오픈" />
+        <Tab value="reopen" label="재오픈" />
       </Tabs>
 
       {activeTab === 'open' ? <OpenAccountingPeriodSection {...props} /> : null}
@@ -113,7 +123,7 @@ function CloseAccountingPeriodSection({
   return (
     <SectionCard
       title="월 마감"
-      description="현재 열린 운영 기간을 잠그고 오프닝 기준과 확정 전표를 반영한 월 마감 스냅샷을 생성합니다. 미확정 수집 거래가 남아 있으면 마감할 수 없습니다."
+      description="현재 열린 운영 기간을 잠그고 월 마감 스냅샷을 생성합니다. 미확정 수집 거래가 남아 있으면 마감할 수 없습니다."
     >
       <Stack spacing={appLayout.cardGap}>
         <InfoRow
@@ -179,7 +189,7 @@ function ReopenAccountingPeriodSection({
   return (
     <SectionCard
       title="월 재오픈"
-      description="가장 최근에 잠긴 운영 기간만 재오픈할 수 있으며, 재오픈 시 해당 기간의 마감 산출물은 함께 정리됩니다."
+      description="가장 최근에 잠긴 운영 기간만 재오픈할 수 있으며, 재오픈 시 해당 기간의 마감 산출물도 함께 정리됩니다."
     >
       <Stack spacing={appLayout.cardGap}>
         <InfoRow

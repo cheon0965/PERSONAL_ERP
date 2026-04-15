@@ -13,8 +13,8 @@ export function ImportsCurrentPeriodSection({
 }) {
   return (
     <SectionCard
-      title="현재 운영 기간"
-      description="배치 생성은 언제든 가능하지만, 업로드 행 승격과 자동 준비 preview는 현재 열린 운영 월 안에서만 처리됩니다."
+      title="현재 운영 월"
+      description="행 승격과 자동 준비 preview는 현재 열린 운영 월 기준으로만 처리됩니다."
     >
       {currentPeriod ? (
         <Grid container spacing={appLayout.fieldGap}>

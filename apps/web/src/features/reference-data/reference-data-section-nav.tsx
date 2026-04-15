@@ -1,13 +1,11 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Box, Tab, Tabs } from '@mui/material';
+import { SectionTabs } from '@/shared/ui/section-tabs';
 
 const referenceDataSectionItems = [
   {
     href: '/reference-data',
-    label: '준비 상태와 관리 범위'
+    label: '준비 상태'
   },
   {
     href: '/reference-data/manage',
@@ -16,40 +14,10 @@ const referenceDataSectionItems = [
 ] as const;
 
 export function ReferenceDataSectionNav() {
-  const pathname = usePathname();
-  const value =
-    pathname === '/reference-data/manage'
-      ? '/reference-data/manage'
-      : '/reference-data';
-
   return (
-    <Box
-      sx={{
-        borderBottom: '1px solid',
-        borderColor: 'divider'
-      }}
-    >
-      <Tabs
-        value={value}
-        variant="scrollable"
-        allowScrollButtonsMobile
-        sx={{ minHeight: 44 }}
-      >
-        {referenceDataSectionItems.map((item) => (
-          <Tab
-            key={item.href}
-            component={Link}
-            href={item.href}
-            value={item.href}
-            label={item.label}
-            sx={{
-              minHeight: 44,
-              textTransform: 'none',
-              alignItems: 'flex-start'
-            }}
-          />
-        ))}
-      </Tabs>
-    </Box>
+    <SectionTabs
+      items={referenceDataSectionItems}
+      ariaLabel="기준 데이터 하위 화면 이동"
+    />
   );
 }
