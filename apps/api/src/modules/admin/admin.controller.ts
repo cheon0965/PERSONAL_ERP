@@ -29,8 +29,10 @@ import {
 import { AdminAuditEventsService } from './admin-audit-events.service';
 import { AdminMembersService } from './admin-members.service';
 import { AdminPolicyService } from './admin-policy.service';
+import { NavigationService } from '../navigation/public';
 import { AdminAuditEventsQueryDto } from './dto/admin-audit-events-query.dto';
 import { InviteTenantMemberDto } from './dto/invite-tenant-member.dto';
+import { UpdateNavigationMenuItemDto } from '../navigation/dto/update-navigation-menu-item.dto';
 import { UpdateTenantMemberRoleDto } from './dto/update-tenant-member-role.dto';
 import { UpdateTenantMemberStatusDto } from './dto/update-tenant-member-status.dto';
 
@@ -42,6 +44,7 @@ export class AdminController {
     private readonly membersService: AdminMembersService,
     private readonly auditEventsService: AdminAuditEventsService,
     private readonly policyService: AdminPolicyService,
+    private readonly navigationService: NavigationService,
     private readonly securityEvents: SecurityEventLogger
   ) {}
 
@@ -239,7 +242,7 @@ export class AdminController {
       workspace
     });
 
-    const summary = this.policyService.getSummary();
+    const summary = await this.policyService.getSummary(workspace);
     logWorkspaceActionSucceeded(this.securityEvents, {
       action: 'admin_policy.read',
       request,
@@ -250,6 +253,66 @@ export class AdminController {
     });
 
     return summary;
+  }
+
+  @Get('navigation')
+  async getNavigation(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
+    const workspace = requireCurrentWorkspace(user);
+    await this.assertAllowed({
+      action: 'admin_navigation.read',
+      request,
+      workspace
+    });
+
+    const tree = await this.navigationService.getManagementTree(workspace);
+    logWorkspaceActionSucceeded(this.securityEvents, {
+      action: 'admin_navigation.read',
+      request,
+      workspace,
+      details: {
+        itemCount: countNavigationItems(tree.items)
+      }
+    });
+
+    return tree;
+  }
+
+  @Patch('navigation/:menuItemId')
+  async updateNavigationItem(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('menuItemId') menuItemId: string,
+    @Body() dto: UpdateNavigationMenuItemDto
+  ) {
+    const workspace = requireCurrentWorkspace(user);
+    await this.assertAllowed({
+      action: 'admin_navigation.update',
+      request,
+      workspace,
+      resourceId: menuItemId
+    });
+
+    const tree = await this.navigationService.updateMenuItem(
+      workspace,
+      menuItemId,
+      dto
+    );
+    logWorkspaceActionSucceeded(this.securityEvents, {
+      action: 'admin_navigation.update',
+      request,
+      workspace,
+      persist: false,
+      details: {
+        menuItemId,
+        isVisible: dto.isVisible,
+        allowedRoles: dto.allowedRoles?.join(',')
+      }
+    });
+
+    return tree;
   }
 
   @Get('audit-events/:auditEventId')
@@ -306,4 +369,16 @@ export class AdminController {
       throw error;
     }
   }
+}
+
+function countNavigationItems(
+  items: Array<{ children: unknown[] }>
+): number {
+  return items.reduce(
+    (count, item) =>
+      count +
+      1 +
+      countNavigationItems(item.children as Array<{ children: unknown[] }>),
+    0
+  );
 }

@@ -7,7 +7,6 @@ import ReceiptLongRoundedIcon from '@mui/icons-material/ReceiptLongRounded';
 import ShieldRoundedIcon from '@mui/icons-material/ShieldRounded';
 import {
   Alert,
-  Box,
   Button,
   Chip,
   Grid,
@@ -168,67 +167,35 @@ export function DashboardPage() {
 
       <SectionCard
         title="운영 기준선"
-        description="헤더에서 월과 기준 상태를 확인한 뒤, 아래 카드와 차트는 이 기준을 따라 읽습니다."
+        description="헤더에서 월과 기준 상태를 확인한 뒤, 아래 카드와 추이는 이 기준을 따라 읽습니다."
       >
-        <Stack spacing={appLayout.cardGap}>
-          <Grid container spacing={appLayout.fieldGap}>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <DashboardInfoItem
-                label="현재 운영 기간"
-                value={summary.period.monthLabel}
-                description={readPeriodStatusLabel(summary.period.status)}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <DashboardInfoItem
-                label="판단 기준"
-                value={readBasisStatusLabel(summary.basisStatus)}
-                description="운영 숫자와 공식 잠금 숫자의 경계를 먼저 확인합니다."
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <DashboardInfoItem
-                label="최근 공식 잠금"
-                value={summary.officialComparison?.monthLabel ?? '없음'}
-                description={
-                  summary.officialComparison
-                    ? '공식 재무제표와 비교 가능한 최근 잠금 월입니다.'
-                    : '아직 비교 가능한 공식 잠금 기준이 없습니다.'
-                }
-              />
-            </Grid>
+        <Grid container spacing={appLayout.fieldGap}>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <DashboardInfoItem
+              label="현재 운영 기간"
+              value={summary.period.monthLabel}
+              description={readPeriodStatusLabel(summary.period.status)}
+            />
           </Grid>
-
-          {summary.officialComparison ? (
-            <Grid container spacing={appLayout.fieldGap}>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <DashboardInfoItem
-                  label="공식 현금"
-                  value={formatWon(summary.officialComparison.officialCashWon)}
-                  description="최근 잠금 월 기준 현금 잔액입니다."
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <DashboardInfoItem
-                  label="공식 순자산"
-                  value={formatWon(
-                    summary.officialComparison.officialNetWorthWon
-                  )}
-                  description="운영 숫자와 비교할 공식 기준선입니다."
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <DashboardInfoItem
-                  label="공식 손익"
-                  value={formatWon(
-                    summary.officialComparison.officialPeriodPnLWon
-                  )}
-                  description="공식 보고서 기준 월간 손익입니다."
-                />
-              </Grid>
-            </Grid>
-          ) : null}
-        </Stack>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <DashboardInfoItem
+              label="판단 기준"
+              value={readBasisStatusLabel(summary.basisStatus)}
+              description="운영 숫자와 공식 잠금 숫자의 경계를 먼저 확인합니다."
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <DashboardInfoItem
+              label="최근 공식 잠금"
+              value={summary.officialComparison?.monthLabel ?? '없음'}
+              description={
+                summary.officialComparison
+                  ? '공식 재무제표와 비교 가능한 최근 잠금 월입니다.'
+                  : '아직 비교 가능한 공식 잠금 기준이 없습니다.'
+              }
+            />
+          </Grid>
+        </Grid>
       </SectionCard>
 
       {summary.warnings.length > 0 ? (
@@ -286,8 +253,45 @@ export function DashboardPage() {
         </Grid>
       </Grid>
 
+      <SectionCard
+        title="빠른 체크포인트"
+        description="대시보드는 세부 해석보다 지금 바로 확인할 포인트만 짧게 보여주고, 자세한 판단은 전망과 보고 화면으로 넘깁니다."
+      >
+        <Grid container spacing={appLayout.fieldGap}>
+          {summary.highlights.map((highlight) => (
+            <Grid key={highlight.label} size={{ xs: 12, md: 4 }}>
+              <Stack
+                spacing={0.75}
+                sx={{
+                  p: appLayout.cardPadding,
+                  borderRadius: 3,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  backgroundColor: 'background.default',
+                  height: '100%'
+                }}
+              >
+                <Typography variant="caption" color="text.secondary">
+                  {highlight.label}
+                </Typography>
+                <Typography variant="h6">
+                  {formatWon(highlight.amountWon)}
+                </Typography>
+                <Chip
+                  label={readHighlightToneLabel(highlight.tone)}
+                  color={readHighlightToneColor(highlight.tone)}
+                  variant="outlined"
+                  size="small"
+                  sx={{ width: 'fit-content' }}
+                />
+              </Stack>
+            </Grid>
+          ))}
+        </Grid>
+      </SectionCard>
+
       <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, xl: 7 }}>
+        <Grid size={{ xs: 12, xl: 8 }}>
           <ChartCard
             title="최근 기간 추이"
             description="수입, 확정 지출, 남은 계획 지출을 현재 운영 월 기준으로 함께 보여줍니다."
@@ -319,64 +323,55 @@ export function DashboardPage() {
           />
         </Grid>
 
-        <Grid size={{ xs: 12, xl: 5 }}>
+        <Grid size={{ xs: 12, xl: 4 }}>
           <SectionCard
-            title="운영 해석"
-            description="현재 카드가 운영 숫자인지, 최근 공식 잠금 숫자인지 같은 문맥에서 풀어 설명합니다."
+            title="다음 판단으로 이동"
+            description="대시보드는 요약만 담당하고, 세부 해석과 공식 확인은 각 전용 화면으로 이어집니다."
           >
             <Stack spacing={1.5}>
-              {summary.highlights.map((highlight) => (
-                <Stack
-                  key={highlight.label}
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  spacing={2}
-                >
-                  <Typography variant="body2" color="text.secondary">
-                    {highlight.label}
-                  </Typography>
+              <Stack spacing={0.5}>
+                <Typography variant="subtitle2">
+                  최근 공식 기준: {summary.officialComparison?.monthLabel ?? '없음'}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  공식 비교가 필요하면 재무제표, 다음 달 준비 상태까지 보려면
+                  기간 전망으로 이동하세요.
+                </Typography>
+              </Stack>
+
+              {summary.officialComparison ? (
+                <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                   <Chip
-                    label={formatWon(highlight.amountWon)}
-                    color={readHighlightToneColor(highlight.tone)}
+                    label={`공식 현금 ${formatWon(summary.officialComparison.officialCashWon)}`}
+                    variant="outlined"
+                    size="small"
+                  />
+                  <Chip
+                    label={`공식 순자산 ${formatWon(summary.officialComparison.officialNetWorthWon)}`}
                     variant="outlined"
                     size="small"
                   />
                 </Stack>
-              ))}
-
-              {summary.officialComparison ? (
-                <Box
-                  sx={{
-                    mt: 1,
-                    p: 2,
-                    borderRadius: 3,
-                    backgroundColor: 'grey.50',
-                    border: '1px solid',
-                    borderColor: 'divider'
-                  }}
-                >
-                  <Typography variant="subtitle2">
-                    최근 공식 잠금 기준: {summary.officialComparison.monthLabel}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 0.75 }}
-                  >
-                    공식 현금{' '}
-                    {formatWon(summary.officialComparison.officialCashWon)}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    공식 순자산{' '}
-                    {formatWon(summary.officialComparison.officialNetWorthWon)}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    공식 손익{' '}
-                    {formatWon(summary.officialComparison.officialPeriodPnLWon)}
-                  </Typography>
-                </Box>
               ) : null}
+
+              <Stack spacing={1}>
+                <Button component={Link} href="/forecast" variant="contained">
+                  기간 전망 보기
+                </Button>
+                <Button
+                  component={Link}
+                  href="/financial-statements"
+                  variant="outlined"
+                >
+                  재무제표 보기
+                </Button>
+                <Button component={Link} href="/journal-entries" variant="text">
+                  전표 보기
+                </Button>
+                <Button component={Link} href="/carry-forwards" variant="text">
+                  차기 이월 보기
+                </Button>
+              </Stack>
             </Stack>
           </SectionCard>
         </Grid>
@@ -438,5 +433,16 @@ function readHighlightToneColor(tone: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL') {
       return 'warning';
     default:
       return 'default';
+  }
+}
+
+function readHighlightToneLabel(tone: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL') {
+  switch (tone) {
+    case 'POSITIVE':
+      return '긍정 신호';
+    case 'NEGATIVE':
+      return '점검 필요';
+    default:
+      return '중립';
   }
 }

@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Chip, Grid, Stack, Typography } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
@@ -328,21 +329,6 @@ export function InsurancePoliciesPage() {
         <QueryErrorAlert title="보험 정보 조회에 실패했습니다." error={error} />
       ) : null}
 
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, lg: 7 }}>
-          <InsuranceInfoCard
-            totalPremium={formatWon(totalPremium)}
-            totalCount={data.length}
-            linkedCount={linkedPolicyCount}
-            unlinkedCount={unlinkedPolicyCount}
-            inactiveCount={inactivePolicyCount}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, lg: 5 }}>
-          <InsuranceSupportCard />
-        </Grid>
-      </Grid>
-
       <DataTableCard
         title="보험 계약 목록"
         description="보험 계약 저장 시 연결된 반복 규칙도 함께 관리합니다. 표에서 바로 수정하거나 삭제해 목록 중심으로 정리할 수 있습니다."
@@ -381,6 +367,21 @@ export function InsurancePoliciesPage() {
         rows={data}
         columns={columns}
       />
+
+      <Grid container spacing={appLayout.sectionGap}>
+        <Grid size={{ xs: 12, lg: 7 }}>
+          <InsuranceInfoCard
+            totalPremium={formatWon(totalPremium)}
+            totalCount={data.length}
+            linkedCount={linkedPolicyCount}
+            unlinkedCount={unlinkedPolicyCount}
+            inactiveCount={inactivePolicyCount}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, lg: 5 }}>
+          <InsuranceSupportCard />
+        </Grid>
+      </Grid>
 
       <FormDrawer
         open={drawerState !== null}
@@ -447,7 +448,7 @@ function InsuranceInfoCard({
         backgroundColor: 'background.paper'
       }}
     >
-      <Typography variant="h6">현재 관리 기준</Typography>
+      <Typography variant="h6">목록 읽는 기준</Typography>
       <Grid container spacing={appLayout.fieldGap}>
         <Grid size={{ xs: 12, sm: 4 }}>
           <InfoItem label="활성 월 보험료" value={totalPremium} />
@@ -484,10 +485,10 @@ function InsuranceSupportCard() {
         backgroundColor: 'background.paper'
       }}
     >
-      <Typography variant="h6">자주 여는 후속 화면</Typography>
+      <Typography variant="h6">연결 규칙과 후속 화면</Typography>
       <SupportLink
         title="반복 규칙"
-        description="보험 계약과 연결된 반복 규칙 상태를 함께 확인합니다."
+        description="보험 계약 저장 시 생성되는 연결 반복 규칙 상태를 함께 확인합니다."
         href="/recurring"
         actionLabel="반복 규칙 보기"
       />
@@ -528,7 +529,7 @@ function SupportLink({
         {description}
       </Typography>
       <div>
-        <Button href={href} variant="outlined">
+        <Button component={Link} href={href} variant="outlined">
           {actionLabel}
         </Button>
       </div>

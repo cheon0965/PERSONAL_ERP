@@ -12,6 +12,8 @@ export type WorkspaceAction =
   | 'account_security.change_password'
   | 'account_security.revoke_session'
   | 'admin_policy.read'
+  | 'admin_navigation.read'
+  | 'admin_navigation.update'
   | 'operations_console.read'
   | 'operations_export.run'
   | 'operations_note.create'
@@ -62,6 +64,8 @@ const workspaceActionAllowedRoles: Record<
   'account_security.change_password': ['OWNER', 'MANAGER', 'EDITOR', 'VIEWER'],
   'account_security.revoke_session': ['OWNER', 'MANAGER', 'EDITOR', 'VIEWER'],
   'admin_policy.read': ['OWNER', 'MANAGER'],
+  'admin_navigation.read': ['OWNER', 'MANAGER'],
+  'admin_navigation.update': ['OWNER'],
   'operations_console.read': ['OWNER', 'MANAGER', 'EDITOR', 'VIEWER'],
   'operations_export.run': ['OWNER', 'MANAGER'],
   'operations_note.create': ['OWNER', 'MANAGER', 'EDITOR'],
@@ -117,6 +121,10 @@ const workspaceActionDeniedMessages: Record<WorkspaceAction, string> = {
     'All active workspace members can revoke their own other sessions.',
   'admin_policy.read':
     'Only owners and managers can read the admin policy summary.',
+  'admin_navigation.read':
+    'Only owners and managers can read workspace navigation settings.',
+  'admin_navigation.update':
+    'Only owners can update workspace navigation settings.',
   'operations_console.read':
     'All active workspace members can read the operations console.',
   'operations_export.run':

@@ -53,11 +53,11 @@ export function readAuditResultLabel(result: string | null) {
 export function readPolicyCtaLabel(policy: string | null) {
   switch (policy) {
     case 'ALLOW':
-      return '버튼 노출';
+      return '메뉴 노출';
     case 'READ_ONLY':
       return '읽기 중심';
     case 'HIDE':
-      return 'CTA 숨김';
+      return '메뉴 숨김';
     default:
       return policy ?? '-';
   }

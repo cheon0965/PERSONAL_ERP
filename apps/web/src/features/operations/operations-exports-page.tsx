@@ -5,6 +5,7 @@ import type { OperationsExportResult } from '@personal-erp/contracts';
 import { Alert, Box, Button, Chip, Grid, Stack, Typography } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDateTime, formatNumber } from '@/shared/lib/format';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -37,6 +38,15 @@ export function OperationsExportsPage() {
     }
   });
   const exports = exportsQuery.data;
+  useDomainHelp({
+    title: '백업 / 내보내기 가이드',
+    description:
+      '백업 / 내보내기 화면은 운영 데이터를 어떤 범위로 반출할지 선택하는 화면입니다.',
+    primaryEntity: 'OperationsExportResult',
+    relatedEntities: ['ImportBatch', 'CollectedTransaction', 'JournalEntry'],
+    truthSource:
+      '내보내기 가능 범위와 최근 실행 결과는 서버 export surface를 기준으로 표시됩니다.'
+  });
   const totalRows =
     exports?.items.reduce((sum, item) => sum + item.rowCount, 0) ?? 0;
 

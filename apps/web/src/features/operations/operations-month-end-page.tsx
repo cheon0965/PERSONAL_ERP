@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Alert, Button, Chip, Grid, Stack, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { formatNumber, formatWon } from '@/shared/lib/format';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -24,6 +25,31 @@ export function OperationsMonthEndPage() {
     queryFn: getOperationsMonthEnd
   });
   const monthEnd = monthEndQuery.data;
+
+  useDomainHelp({
+    title: '월 마감 가이드',
+    description:
+      '월 마감 화면은 현재 운영 월의 마감 가능 여부와 차단 사유를 점검하는 화면입니다.',
+    primaryEntity: 'AccountingPeriod',
+    relatedEntities: [
+      'CollectedTransaction',
+      'PlanItem',
+      'ImportBatch',
+      'FinancialStatementSnapshot',
+      'CarryForwardRecord'
+    ],
+    truthSource:
+      '마감 가능 여부는 현재 운영 월 기준의 미확정 거래, 실패 행, 남은 계획, 산출물 상태를 함께 읽어 판정합니다.',
+    supplementarySections: [
+      {
+        title: '읽는 순서',
+        items: [
+          '현재 운영 월과 마감 상태를 먼저 확인합니다.',
+          '차단 사유를 보고 해결 화면으로 이동합니다.'
+        ]
+      }
+    ]
+  });
 
   return (
     <Stack spacing={appLayout.pageGap}>

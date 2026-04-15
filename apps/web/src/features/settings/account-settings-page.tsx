@@ -6,6 +6,7 @@ import type { GridColDef } from '@mui/x-data-grid';
 import type { AccountSessionItem, ChangePasswordRequest } from '@personal-erp/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthSession } from '@/shared/auth/auth-provider';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
@@ -145,6 +146,27 @@ export function AccountSettingsPage() {
 
   const profile = accountQuery.data?.profile ?? null;
 
+  useDomainHelp({
+    title: '내 계정 / 보안 가이드',
+    description:
+      '내 계정 화면은 프로필, 세션, 비밀번호, 최근 보안 이벤트를 확인하는 개인 보안 화면입니다.',
+    primaryEntity: 'User / AuthSession',
+    relatedEntities: ['SecurityEvent', 'RefreshSession'],
+    truthSource:
+      '현재 로그인 상태와 세션 목록은 인증 서비스가 발급한 실제 세션 정보를 기준으로 표시됩니다.',
+    supplementarySections: [
+      {
+        title: '자주 하는 작업',
+        items: [
+          '이름 변경',
+          '비밀번호 변경',
+          '다른 세션 종료',
+          '최근 보안 이벤트 확인'
+        ]
+      }
+    ]
+  });
+
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
@@ -171,6 +193,10 @@ export function AccountSettingsPage() {
             value: profile?.preferredTimezone ?? '-'
           }
         ]}
+        primaryActionLabel="활성 세션 보기"
+        primaryActionHref="#sessions"
+        secondaryActionLabel="보안 이벤트 보기"
+        secondaryActionHref="#events"
       />
 
       <SettingsSectionNav />
@@ -184,120 +210,176 @@ export function AccountSettingsPage() {
         />
       ) : null}
 
+      <SectionCard
+        title="계정 기준"
+        description="먼저 현재 계정의 기본 상태를 짧게 확인하고, 아래에서 프로필과 보안 작업을 각각 처리합니다."
+      >
+        <Grid container spacing={appLayout.fieldGap}>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <AccountInfoItem label="이메일" value={profile?.email ?? '-'} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <AccountInfoItem
+              label="이메일 인증"
+              value={profile?.emailVerifiedAt ? '완료' : '필요'}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <AccountInfoItem
+              label="활성 / 최근 세션"
+              value={`${accountQuery.data?.sessions.length ?? 0}개`}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <AccountInfoItem
+              label="개인 시간대"
+              value={profile?.preferredTimezone ?? '-'}
+            />
+          </Grid>
+        </Grid>
+      </SectionCard>
+
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, lg: 6 }}>
-          <SectionCard
-            title="기본 정보"
-            description="이름은 운영 메모와 일부 로그 주체 표시에 함께 사용됩니다."
-          >
-            <Stack spacing={appLayout.fieldGap}>
-              <TextField
-                fullWidth
-                label="이메일"
-                value={profile?.email ?? '-'}
-                InputProps={{ readOnly: true }}
-              />
-              <TextField
-                fullWidth
-                label="이름"
-                value={nameDraft || profile?.name || ''}
-                onChange={(event) => setNameDraft(event.target.value)}
-              />
-              <TextField
-                fullWidth
-                label="이메일 인증 시각"
-                value={formatDateTime(profile?.emailVerifiedAt ?? null)}
-                InputProps={{ readOnly: true }}
-              />
-              <TextField
-                fullWidth
-                label="개인 시간대"
-                value={profile?.preferredTimezone ?? '-'}
-                InputProps={{ readOnly: true }}
-              />
-              <Button
-                variant="contained"
-                disabled={!profile || profileMutation.isPending}
-                onClick={() => profileMutation.mutate()}
-              >
-                {profileMutation.isPending ? '저장 중...' : '이름 저장'}
-              </Button>
-            </Stack>
-          </SectionCard>
+          <div id="profile">
+            <SectionCard
+              title="기본 정보"
+              description="이름은 운영 메모와 일부 로그 주체 표시에 함께 사용됩니다."
+            >
+              <Stack spacing={appLayout.fieldGap}>
+                <TextField
+                  fullWidth
+                  label="이메일"
+                  value={profile?.email ?? '-'}
+                  InputProps={{ readOnly: true }}
+                />
+                <TextField
+                  fullWidth
+                  label="이름"
+                  value={nameDraft || profile?.name || ''}
+                  onChange={(event) => setNameDraft(event.target.value)}
+                />
+                <TextField
+                  fullWidth
+                  label="이메일 인증 시각"
+                  value={formatDateTime(profile?.emailVerifiedAt ?? null)}
+                  InputProps={{ readOnly: true }}
+                />
+                <TextField
+                  fullWidth
+                  label="개인 시간대"
+                  value={profile?.preferredTimezone ?? '-'}
+                  InputProps={{ readOnly: true }}
+                />
+                <Button
+                  variant="contained"
+                  disabled={!profile || profileMutation.isPending}
+                  onClick={() => profileMutation.mutate()}
+                >
+                  {profileMutation.isPending ? '저장 중...' : '이름 저장'}
+                </Button>
+              </Stack>
+            </SectionCard>
+          </div>
         </Grid>
 
         <Grid size={{ xs: 12, lg: 6 }}>
-          <SectionCard
-            title="비밀번호 변경"
-            description="비밀번호를 변경하면 현재 세션을 제외한 다른 활성 세션을 함께 종료합니다."
-          >
-            <Stack spacing={appLayout.fieldGap}>
-              <TextField
-                fullWidth
-                label="현재 비밀번호"
-                type="password"
-                value={passwordDraft.currentPassword}
-                onChange={(event) =>
-                  setPasswordDraft((current) => ({
-                    ...current,
-                    currentPassword: event.target.value
-                  }))
-                }
-              />
-              <TextField
-                fullWidth
-                label="새 비밀번호"
-                type="password"
-                value={passwordDraft.nextPassword}
-                onChange={(event) =>
-                  setPasswordDraft((current) => ({
-                    ...current,
-                    nextPassword: event.target.value
-                  }))
-                }
-              />
-              <Button
-                variant="contained"
-                disabled={passwordMutation.isPending}
-                onClick={() => passwordMutation.mutate()}
-              >
-                {passwordMutation.isPending ? '변경 중...' : '비밀번호 변경'}
-              </Button>
-            </Stack>
-          </SectionCard>
+          <div id="password">
+            <SectionCard
+              title="비밀번호 변경"
+              description="비밀번호를 변경하면 현재 세션을 제외한 다른 활성 세션을 함께 종료합니다."
+            >
+              <Stack spacing={appLayout.fieldGap}>
+                <TextField
+                  fullWidth
+                  label="현재 비밀번호"
+                  type="password"
+                  value={passwordDraft.currentPassword}
+                  onChange={(event) =>
+                    setPasswordDraft((current) => ({
+                      ...current,
+                      currentPassword: event.target.value
+                    }))
+                  }
+                />
+                <TextField
+                  fullWidth
+                  label="새 비밀번호"
+                  type="password"
+                  value={passwordDraft.nextPassword}
+                  onChange={(event) =>
+                    setPasswordDraft((current) => ({
+                      ...current,
+                      nextPassword: event.target.value
+                    }))
+                  }
+                />
+                <Button
+                  variant="contained"
+                  disabled={passwordMutation.isPending}
+                  onClick={() => passwordMutation.mutate()}
+                >
+                  {passwordMutation.isPending ? '변경 중...' : '비밀번호 변경'}
+                </Button>
+              </Stack>
+            </SectionCard>
+          </div>
         </Grid>
       </Grid>
 
-      <DataTableCard
-        title="활성 및 최근 세션"
-        description="현재 세션은 여기서 종료하지 않고, 다른 세션만 강제 종료합니다."
-        rows={accountQuery.data?.sessions ?? []}
-        columns={sessionColumns}
-        height={420}
-      />
+      <div id="sessions">
+        <DataTableCard
+          title="활성 및 최근 세션"
+          description="현재 세션은 여기서 종료하지 않고, 다른 세션만 강제 종료합니다."
+          rows={accountQuery.data?.sessions ?? []}
+          columns={sessionColumns}
+          height={420}
+        />
+      </div>
 
-      <SectionCard
-        title="최근 보안 이벤트"
-        description="최근 로그인 세션 생성과 계정 보안 변경 이력을 함께 보여줍니다."
-      >
-        <Stack spacing={1.5}>
-          {(accountQuery.data?.recentEvents ?? []).map((event) => (
-            <Stack key={event.id} spacing={0.25}>
-              <Typography variant="body2">
-                {readAccountSecurityEventLabel(event.kind)}
+      <div id="events">
+        <SectionCard
+          title="최근 보안 이벤트"
+          description="최근 로그인 세션 생성과 계정 보안 변경 이력을 함께 보여줍니다."
+        >
+          <Stack spacing={1.5}>
+            {(accountQuery.data?.recentEvents ?? []).map((event) => (
+              <Stack key={event.id} spacing={0.25}>
+                <Typography variant="body2">
+                  {readAccountSecurityEventLabel(event.kind)}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {formatDateTime(event.occurredAt)}
+                </Typography>
+              </Stack>
+            ))}
+            {(accountQuery.data?.recentEvents ?? []).length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                아직 표시할 보안 이벤트가 없습니다.
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {formatDateTime(event.occurredAt)}
-              </Typography>
-            </Stack>
-          ))}
-          {(accountQuery.data?.recentEvents ?? []).length === 0 ? (
-            <Typography variant="body2" color="text.secondary">
-              아직 표시할 보안 이벤트가 없습니다.
-            </Typography>
-          ) : null}
-        </Stack>
-      </SectionCard>
+            ) : null}
+          </Stack>
+        </SectionCard>
+      </div>
+    </Stack>
+  );
+}
+
+function AccountInfoItem({
+  label,
+  value
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <Stack spacing={0.35}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body2" fontWeight={600}>
+        {value}
+      </Typography>
     </Stack>
   );
 }

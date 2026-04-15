@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Box, Button, Chip, Grid, Stack, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { formatDateTime, formatNumber } from '@/shared/lib/format';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -24,6 +25,16 @@ export function OperationsSystemStatusPage() {
     queryFn: getOperationsSystemStatus
   });
   const status = systemStatusQuery.data;
+
+  useDomainHelp({
+    title: '시스템 상태 가이드',
+    description:
+      '시스템 상태 화면은 API, DB, 메일, 감사 관련 상태를 운영 관점에서 확인하는 화면입니다.',
+    primaryEntity: 'SystemStatusSnapshot',
+    relatedEntities: ['WorkspaceAuditEvent', 'MailProvider'],
+    truthSource:
+      '표시되는 상태는 현재 시스템 헬스 체크와 운영 서비스 응답을 기준으로 계산됩니다.'
+  });
 
   return (
     <Stack spacing={appLayout.pageGap}>

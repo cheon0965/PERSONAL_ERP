@@ -18,9 +18,14 @@ export function ChartCard({ title, description, chart }: ChartCardProps) {
             <Typography variant="h6">{title}</Typography>
             {description ? (
               <Typography
-                variant="body2"
+                variant="caption"
                 color="text.secondary"
-                sx={{ mt: appLayout.cardDescriptionOffset }}
+                sx={{
+                  mt: appLayout.cardDescriptionOffset,
+                  display: 'block',
+                  maxWidth: 720,
+                  lineHeight: 1.7
+                }}
               >
                 {description}
               </Typography>

@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDateTime, formatNumber } from '@/shared/lib/format';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -59,6 +60,15 @@ export function OperationsNotesPage() {
         queryKey: operationsNotesQueryKey
       });
     }
+  });
+  useDomainHelp({
+    title: '운영 메모 가이드',
+    description:
+      '운영 메모는 월 마감, 예외, 후속 조치를 인수인계용으로 남기는 화면입니다.',
+    primaryEntity: 'WorkspaceOperationalNote',
+    relatedEntities: ['AccountingPeriod', 'OperationsExceptionItem'],
+    truthSource:
+      '메모는 현재 워크스페이스와 선택한 운영 월 기준으로 저장되고 조회됩니다.'
   });
   const notes = notesQuery.data;
   const monthEndNoteCount =

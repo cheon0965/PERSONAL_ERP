@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Button, Chip, Grid, Stack, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { formatNumber } from '@/shared/lib/format';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -133,6 +134,30 @@ export function OperationsHomePage() {
       ]
     }
   ] as const;
+
+  useDomainHelp({
+    title: '운영 허브 가이드',
+    description:
+      '운영 허브는 오늘 처리할 운영 항목과 월 마감 준비 상태를 빠르게 나누어 보는 화면입니다.',
+    primaryEntity: 'WorkspaceOperationalNote / AccountingPeriod',
+    relatedEntities: [
+      'CollectedTransaction',
+      'ImportBatch',
+      'FinancialStatementSnapshot',
+      'CarryForwardRecord'
+    ],
+    truthSource:
+      '운영 허브의 수치는 체크리스트, 예외, 업로드, 마감 준비 read model을 요약한 운영 판단용 값입니다.',
+    supplementarySections: [
+      {
+        title: '읽는 순서',
+        items: [
+          '오늘 우선 확인 카드로 긴급도를 먼저 봅니다.',
+          '필요한 작업군으로 바로 이동합니다.'
+        ]
+      }
+    ]
+  });
 
   return (
     <Stack spacing={appLayout.pageGap}>
@@ -265,7 +290,11 @@ function PriorityCard({
           {value}
         </Typography>
       </Stack>
-      <Typography variant="body2" color="text.secondary">
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ display: 'block', lineHeight: 1.7 }}
+      >
         {detail}
       </Typography>
       <div>
@@ -301,7 +330,17 @@ function HubLinkCard({
       }}
     >
       <Typography variant="subtitle1">{title}</Typography>
-      <Typography variant="body2" color="text.secondary">
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{
+          display: '-webkit-box',
+          overflow: 'hidden',
+          WebkitBoxOrient: 'vertical',
+          WebkitLineClamp: 2,
+          lineHeight: 1.7
+        }}
+      >
         {description}
       </Typography>
       <div>

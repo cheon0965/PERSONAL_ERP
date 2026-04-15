@@ -356,19 +356,6 @@ export function RecurringRulesPage() {
         <QueryErrorAlert title="반복 규칙 조회에 실패했습니다." error={error} />
       ) : null}
 
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, lg: 7 }}>
-          <RecurringRulesInfoCard
-            totalCount={data.length}
-            activeCount={activeRuleCount}
-            insuranceManagedCount={insuranceManagedRuleCount}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, lg: 5 }}>
-          <RecurringRulesSupportCard />
-        </Grid>
-      </Grid>
-
       <DataTableCard
         title="계획 생성 규칙"
         description="각 규칙은 앞으로 생성될 계획 항목의 기준입니다. 필요하면 드로어에서 바로 수정하거나 삭제할 수 있습니다."
@@ -406,6 +393,19 @@ export function RecurringRulesPage() {
         rows={data}
         columns={columns}
       />
+
+      <Grid container spacing={appLayout.sectionGap}>
+        <Grid size={{ xs: 12, lg: 7 }}>
+          <RecurringRulesInfoCard
+            totalCount={data.length}
+            activeCount={activeRuleCount}
+            insuranceManagedCount={insuranceManagedRuleCount}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, lg: 5 }}>
+          <RecurringRulesSupportCard />
+        </Grid>
+      </Grid>
 
       <FormDrawer
         open={drawerState !== null}
@@ -489,7 +489,7 @@ function RecurringRulesInfoCard({
         backgroundColor: 'background.paper'
       }}
     >
-      <Typography variant="h6">현재 관리 기준</Typography>
+      <Typography variant="h6">목록 읽는 기준</Typography>
       <Grid container spacing={appLayout.fieldGap}>
         <Grid size={{ xs: 12, sm: 4 }}>
           <RecurringInfoItem label="전체 규칙" value={`${totalCount}건`} />
@@ -528,18 +528,18 @@ function RecurringRulesSupportCard() {
         backgroundColor: 'background.paper'
       }}
     >
-      <Typography variant="h6">자주 여는 후속 화면</Typography>
+      <Typography variant="h6">보험 연동과 후속 화면</Typography>
+      <RecurringSupportLink
+        title="보험 계약"
+        description="보험 계약에서 생성된 규칙은 여기서 수정하지 않고 보험 계약 화면에서 함께 관리합니다."
+        href="/insurances"
+        actionLabel="보험 계약 보기"
+      />
       <RecurringSupportLink
         title="계획 항목"
         description="현재 운영 월 기준으로 반복 규칙이 실제 계획으로 생성됐는지 확인합니다."
         href="/plan-items"
         actionLabel="계획 항목 보기"
-      />
-      <RecurringSupportLink
-        title="보험 계약"
-        description="보험 연동 규칙은 보험 계약 화면에서 함께 관리합니다."
-        href="/insurances"
-        actionLabel="보험 계약 보기"
       />
     </Stack>
   );

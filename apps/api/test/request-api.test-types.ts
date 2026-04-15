@@ -11,7 +11,9 @@ import {
   OperationalNoteKind,
   RecurrenceFrequency,
   OpeningBalanceSourceKind,
-  PlanItemStatus
+  PlanItemStatus,
+  WorkspaceNavigationMenuItemType,
+  WorkspaceNavigationMenuMatchMode
 } from '@prisma/client';
 
 export type RequestTestUser = {
@@ -249,6 +251,24 @@ export type RequestTestState = {
     clientIpHash: string | null;
     metadata: Record<string, string | number | boolean | null> | null;
     occurredAt: Date;
+  }>;
+  workspaceNavigationMenuItems: Array<{
+    id: string;
+    tenantId: string;
+    parentId: string | null;
+    key: string;
+    itemType: WorkspaceNavigationMenuItemType;
+    label: string;
+    description: string | null;
+    href: string | null;
+    iconKey: string | null;
+    matchMode: WorkspaceNavigationMenuMatchMode;
+    sortOrder: number;
+    isVisible: boolean;
+  }>;
+  workspaceNavigationMenuRoles: Array<{
+    menuItemId: string;
+    role: 'OWNER' | 'MANAGER' | 'EDITOR' | 'VIEWER';
   }>;
   workspaceOperationalNotes: Array<{
     id: string;

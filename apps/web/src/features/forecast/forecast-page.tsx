@@ -78,8 +78,8 @@ export function ForecastPage() {
           '전망 대상 선택에서 열린 운영 월 또는 다시 볼 잠금 월을 고릅니다.',
           '상단 상태 칩으로 운영 전망 기준인지 공식 잠금 기준인지 먼저 구분합니다.',
           '현재 자금 잔액, 예상 수입, 남은 계획 지출, 안전 잉여를 확인합니다.',
-          '전망 계산 기준에서 어떤 확정 전표와 남은 계획이 계산에 들어갔는지 확인합니다.',
-          '비교 기준과 참고사항에서 공식 잠금 숫자와 경고를 함께 읽습니다.'
+          '전망 드라이버에서 어떤 확정 전표와 남은 계획이 계산에 들어갔는지 확인합니다.',
+          '공식 비교와 참고사항에서 잠금 기준 숫자와 경고를 함께 읽습니다.'
         ]
       },
       {
@@ -111,10 +111,7 @@ export function ForecastPage() {
           ...(forecast
             ? [
                 {
-                  label:
-                    forecast.basisStatus === 'OFFICIAL_LOCKED'
-                      ? '공식 잠금 기준'
-                      : '운영 전망 기준',
+                  label: readBasisStatusLabel(forecast.basisStatus),
                   color:
                     forecast.basisStatus === 'OFFICIAL_LOCKED'
                       ? ('info' as const)
@@ -155,7 +152,7 @@ export function ForecastPage() {
 
       <SectionCard
         title="전망 기준"
-        description="전망 대상과 현재 선택 상태를 먼저 정한 뒤, 아래 요약과 추이로 내려갑니다."
+        description="전망 대상과 현재 기준 상태를 먼저 정한 뒤, 아래 요약과 드라이버로 내려갑니다."
       >
         <Grid container spacing={appLayout.fieldGap} alignItems="flex-start">
           <Grid size={{ xs: 12, md: 5 }}>
@@ -195,8 +192,8 @@ export function ForecastPage() {
                 <Button component={Link} href="/dashboard" variant="outlined">
                   대시보드 보기
                 </Button>
-                <Button component={Link} href="/periods" variant="text">
-                  운영 월 보기
+                <Button component={Link} href="/financial-statements" variant="text">
+                  재무제표 보기
                 </Button>
               </Stack>
             </Stack>
@@ -259,33 +256,33 @@ export function ForecastPage() {
 
           <SectionCard
             title="전망 핵심 수치"
-            description="차트로 내려가기 전에 현재 기간 전망을 해석하는 핵심 기준만 먼저 읽습니다."
+            description="먼저 지금 판단에 필요한 핵심 수치만 보고, 아래에서 계산 드라이버와 공식 비교를 이어서 확인합니다."
           >
             <Stack spacing={appLayout.cardGap}>
               <Grid container spacing={appLayout.fieldGap}>
-                <Grid size={{ xs: 12, md: 3 }}>
-                  <ForecastInfoItem
+                <Grid size={{ xs: 12, md: 6, xl: 3 }}>
+                  <ForecastMetricCard
                     label="현재 자금 잔액"
                     value={formatWon(forecast.actualBalanceWon)}
                     description="현재 운영 월 기준 잔액입니다."
                   />
                 </Grid>
-                <Grid size={{ xs: 12, md: 3 }}>
-                  <ForecastInfoItem
+                <Grid size={{ xs: 12, md: 6, xl: 3 }}>
+                  <ForecastMetricCard
                     label="예상 수입"
                     value={formatWon(forecast.expectedIncomeWon)}
                     description="아직 확정되지 않은 수입 계획 금액입니다."
                   />
                 </Grid>
-                <Grid size={{ xs: 12, md: 3 }}>
-                  <ForecastInfoItem
+                <Grid size={{ xs: 12, md: 6, xl: 3 }}>
+                  <ForecastMetricCard
                     label="남은 계획 지출"
                     value={formatWon(forecast.remainingPlannedExpenseWon)}
                     description="확정되지 않은 지출 계획 금액입니다."
                   />
                 </Grid>
-                <Grid size={{ xs: 12, md: 3 }}>
-                  <ForecastInfoItem
+                <Grid size={{ xs: 12, md: 6, xl: 3 }}>
+                  <ForecastMetricCard
                     label="안전 잉여"
                     value={formatWon(forecast.safetySurplusWon)}
                     description="예비자금을 반영하고 남는 여력입니다."
@@ -293,174 +290,174 @@ export function ForecastPage() {
                 </Grid>
               </Grid>
               <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                <Chip
-                  label={`최소 예비자금 ${formatWon(forecast.minimumReserveWon)}`}
-                  size="small"
-                  variant="outlined"
-                />
-                <Chip
-                  label={`적립금 ${formatWon(forecast.sinkingFundWon)}`}
-                  size="small"
-                  variant="outlined"
-                />
-                <Chip
-                  label={
-                    forecast.officialComparison
-                      ? `공식 비교 ${forecast.officialComparison.monthLabel}`
-                      : '공식 비교 없음'
-                  }
-                  size="small"
-                  color={forecast.officialComparison ? 'info' : 'default'}
-                  variant="outlined"
-                />
+                {forecast.highlights.map((highlight) => (
+                  <Chip
+                    key={highlight.label}
+                    label={`${highlight.label} ${formatWon(highlight.amountWon)}`}
+                    color={readHighlightToneColor(highlight.tone)}
+                    variant="outlined"
+                    size="small"
+                  />
+                ))}
               </Stack>
             </Stack>
           </SectionCard>
 
           <Grid container spacing={appLayout.sectionGap}>
             <Grid size={{ xs: 12, lg: 7 }}>
-              <ChartCard
-                title="최근 기간 추이"
-                description="선택한 기간을 포함한 최근 기간의 수입, 확정 지출, 계획 지출 흐름입니다."
-                chart={
-                  <BarChart
-                    height={320}
-                    xAxis={[
-                      {
-                        scaleType: 'band',
-                        data: trend.map((item) => item.monthLabel)
-                      }
-                    ]}
-                    series={[
-                      {
-                        label: '수입',
-                        data: trend.map((item) => item.incomeWon)
-                      },
-                      {
-                        label: '확정 지출',
-                        data: trend.map((item) => item.expenseWon)
-                      },
-                      {
-                        label: '계획 지출',
-                        data: trend.map((item) => item.plannedExpenseWon)
-                      }
-                    ]}
-                  />
-                }
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, lg: 5 }}>
               <SectionCard
-                title="전망 계산 기준"
-                description="전망식과 공식 비교 기준을 분리해서 확인합니다."
+                title="전망 드라이버"
+                description="전망 계산식에 실제로 들어간 확정 값과 남은 계획 값을 먼저 확인합니다."
               >
-                <List disablePadding>
-                  <ListItem disableGutters>
-                    <ListItemText
-                      primary="확정 전표 수입"
-                      secondary={formatWon(forecast.confirmedIncomeWon)}
-                    />
-                  </ListItem>
-                  <ListItem disableGutters>
-                    <ListItemText
-                      primary="확정 전표 지출"
-                      secondary={formatWon(forecast.confirmedExpenseWon)}
-                    />
-                  </ListItem>
-                  <ListItem disableGutters>
-                    <ListItemText
-                      primary="예상 수입"
-                      secondary={formatWon(forecast.expectedIncomeWon)}
-                    />
-                  </ListItem>
-                  <ListItem disableGutters>
-                    <ListItemText
-                      primary="남은 계획 지출"
-                      secondary={formatWon(forecast.remainingPlannedExpenseWon)}
-                    />
-                  </ListItem>
-                  <ListItem disableGutters>
-                    <ListItemText
-                      primary="적립금"
-                      secondary={formatWon(forecast.sinkingFundWon)}
-                    />
-                  </ListItem>
-                  <ListItem disableGutters>
-                    <ListItemText
-                      primary="최소 예비자금"
-                      secondary={formatWon(forecast.minimumReserveWon)}
-                    />
-                  </ListItem>
-                  <ListItem disableGutters>
-                    <ListItemText
-                      primary="예상 기간말 잔액"
-                      secondary={formatWon(forecast.expectedMonthEndBalanceWon)}
-                    />
-                  </ListItem>
-                </List>
+                <Stack spacing={1.2}>
+                  <ForecastDriverRow
+                    label="확정 전표 수입"
+                    value={formatWon(forecast.confirmedIncomeWon)}
+                  />
+                  <ForecastDriverRow
+                    label="확정 전표 지출"
+                    value={formatWon(forecast.confirmedExpenseWon)}
+                  />
+                  <ForecastDriverRow
+                    label="예상 수입"
+                    value={formatWon(forecast.expectedIncomeWon)}
+                  />
+                  <ForecastDriverRow
+                    label="남은 계획 지출"
+                    value={formatWon(forecast.remainingPlannedExpenseWon)}
+                  />
+                  <ForecastDriverRow
+                    label="적립금"
+                    value={formatWon(forecast.sinkingFundWon)}
+                  />
+                  <ForecastDriverRow
+                    label="최소 예비자금"
+                    value={formatWon(forecast.minimumReserveWon)}
+                  />
+                  <ForecastDriverRow
+                    label="예상 기간말 잔액"
+                    value={formatWon(forecast.expectedMonthEndBalanceWon)}
+                    emphasize
+                  />
+                </Stack>
               </SectionCard>
             </Grid>
-          </Grid>
 
-          <Grid container spacing={appLayout.sectionGap}>
             <Grid size={{ xs: 12, lg: 5 }}>
               <SectionCard
-                title="비교 기준"
-                description="최근 공식 잠금 기간이 있으면 전망과 공식 수치를 같은 문맥에서 볼 수 있습니다."
+                title="공식 비교와 해석 경계"
+                description="운영 전망과 공식 잠금 숫자를 혼동하지 않도록 비교 기준과 다음 이동을 함께 둡니다."
               >
-                {forecast.officialComparison ? (
-                  <Stack spacing={1}>
+                <Stack spacing={1.5}>
+                  <Stack spacing={0.5}>
                     <Typography variant="subtitle2">
-                      공식 비교 대상: {forecast.officialComparison.monthLabel}
+                      현재 기준: {readBasisStatusLabel(forecast.basisStatus)}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      공식 현금{' '}
-                      {formatWon(forecast.officialComparison.officialCashWon)}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      공식 순자산{' '}
-                      {formatWon(
-                        forecast.officialComparison.officialNetWorthWon
-                      )}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      공식 손익{' '}
-                      {formatWon(
-                        forecast.officialComparison.officialPeriodPnLWon
-                      )}
+                      잠금 전 기간은 계속 움직일 수 있으므로 공식 보고와 분리해서
+                      읽어야 합니다.
                     </Typography>
                   </Stack>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    아직 비교 가능한 공식 잠금 기간이 없습니다.
-                  </Typography>
-                )}
-              </SectionCard>
-            </Grid>
 
-            <Grid size={{ xs: 12, lg: 7 }}>
-              <SectionCard
-                title="참고사항"
-                description="이 화면이 운영 판단용인지, 공식 보고용인지 혼동되지 않도록 가정과 범위를 드러냅니다."
-              >
-                <List disablePadding>
-                  {forecast.notes.map((note) => (
-                    <ListItem key={note} disableGutters>
-                      <ListItemText primary={note} />
-                    </ListItem>
-                  ))}
-                </List>
+                  {forecast.officialComparison ? (
+                    <Stack spacing={1}>
+                      <Typography variant="subtitle2">
+                        공식 비교 대상: {forecast.officialComparison.monthLabel}
+                      </Typography>
+                      <ForecastDriverRow
+                        label="공식 현금"
+                        value={formatWon(forecast.officialComparison.officialCashWon)}
+                      />
+                      <ForecastDriverRow
+                        label="공식 순자산"
+                        value={formatWon(
+                          forecast.officialComparison.officialNetWorthWon
+                        )}
+                      />
+                      <ForecastDriverRow
+                        label="공식 손익"
+                        value={formatWon(
+                          forecast.officialComparison.officialPeriodPnLWon
+                        )}
+                      />
+                    </Stack>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      아직 비교 가능한 공식 잠금 기간이 없습니다.
+                    </Typography>
+                  )}
+
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1}
+                    useFlexGap
+                    flexWrap="wrap"
+                  >
+                    <Button
+                      component={Link}
+                      href="/financial-statements"
+                      variant="outlined"
+                    >
+                      재무제표 보기
+                    </Button>
+                    <Button component={Link} href="/dashboard" variant="text">
+                      대시보드 보기
+                    </Button>
+                  </Stack>
+                </Stack>
               </SectionCard>
             </Grid>
           </Grid>
+
+          <ChartCard
+            title="최근 기간 추이"
+            description="선택한 기간을 포함한 최근 기간의 수입, 확정 지출, 계획 지출 흐름입니다."
+            chart={
+              <BarChart
+                height={320}
+                xAxis={[
+                  {
+                    scaleType: 'band',
+                    data: trend.map((item) => item.monthLabel)
+                  }
+                ]}
+                series={[
+                  {
+                    label: '수입',
+                    data: trend.map((item) => item.incomeWon)
+                  },
+                  {
+                    label: '확정 지출',
+                    data: trend.map((item) => item.expenseWon)
+                  },
+                  {
+                    label: '계획 지출',
+                    data: trend.map((item) => item.plannedExpenseWon)
+                  }
+                ]}
+              />
+            }
+          />
+
+          <SectionCard
+            title="참고사항"
+            description="세부 해석과 업무 메모는 여기서 확인하고, 실제 확정 작업은 관련 화면으로 이어집니다."
+          >
+            <List disablePadding>
+              {forecast.notes.map((note) => (
+                <ListItem key={note} disableGutters>
+                  <ListItemText primary={note} />
+                </ListItem>
+              ))}
+            </List>
+          </SectionCard>
         </Stack>
       )}
     </Stack>
   );
 }
 
-function ForecastInfoItem({
+function ForecastMetricCard({
   label,
   value,
   description
@@ -470,18 +467,75 @@ function ForecastInfoItem({
   description: string;
 }) {
   return (
-    <Stack spacing={0.35}>
+    <Stack
+      spacing={0.5}
+      sx={{
+        p: appLayout.cardPadding,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        backgroundColor: 'background.default',
+        height: '100%'
+      }}
+    >
       <Typography variant="caption" color="text.secondary">
         {label}
       </Typography>
-      <Typography variant="body1" fontWeight={700}>
-        {value}
-      </Typography>
+      <Typography variant="h6">{value}</Typography>
       <Typography variant="body2" color="text.secondary">
         {description}
       </Typography>
     </Stack>
   );
+}
+
+function ForecastDriverRow({
+  label,
+  value,
+  emphasize = false
+}: {
+  label: string;
+  value: string;
+  emphasize?: boolean;
+}) {
+  return (
+    <Stack
+      direction="row"
+      justifyContent="space-between"
+      spacing={2}
+      sx={{
+        py: 0.85,
+        borderBottom: '1px solid',
+        borderColor: 'divider'
+      }}
+    >
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        sx={{ fontWeight: emphasize ? 700 : 400 }}
+      >
+        {label}
+      </Typography>
+      <Typography variant="body2" sx={{ fontWeight: emphasize ? 700 : 600 }}>
+        {value}
+      </Typography>
+    </Stack>
+  );
+}
+
+function readBasisStatusLabel(basisStatus: 'LIVE_OPERATIONS' | 'OFFICIAL_LOCKED') {
+  return basisStatus === 'OFFICIAL_LOCKED' ? '공식 잠금 기준' : '운영 전망 기준';
+}
+
+function readHighlightToneColor(tone: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL') {
+  switch (tone) {
+    case 'POSITIVE':
+      return 'success';
+    case 'NEGATIVE':
+      return 'warning';
+    default:
+      return 'default';
+  }
 }
 
 function readPeriodStatusLabel(status: string) {

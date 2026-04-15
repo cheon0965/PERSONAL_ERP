@@ -222,6 +222,16 @@ enum OperationalNoteKind {
   FOLLOW_UP
 }
 
+enum WorkspaceNavigationMenuItemType {
+  GROUP
+  PAGE
+}
+
+enum WorkspaceNavigationMenuMatchMode {
+  EXACT
+  PREFIX
+}
+
 model User {
   id                      String                   @id @default(cuid())
   email                   String                   @unique
@@ -283,6 +293,7 @@ model Tenant {
   carryForwardRecords         CarryForwardRecord[]
   financialStatementSnapshots FinancialStatementSnapshot[]
   operationalNotes            WorkspaceOperationalNote[]
+  navigationMenuItems         WorkspaceNavigationMenuItem[]
 }
 
 model TenantMembership {
@@ -416,6 +427,41 @@ model WorkspaceOperationalNote {
   @@index([tenantId, ledgerId, createdAt])
   @@index([tenantId, periodId, createdAt])
   @@index([tenantId, kind, createdAt])
+}
+
+model WorkspaceNavigationMenuItem {
+  id          String                           @id @default(cuid())
+  tenantId    String
+  parentId    String?
+  key         String                           @db.VarChar(100)
+  itemType    WorkspaceNavigationMenuItemType  @default(PAGE)
+  label       String                           @db.VarChar(100)
+  description String?                          @db.VarChar(191)
+  href        String?                          @db.VarChar(300)
+  iconKey     String?                          @db.VarChar(50)
+  matchMode   WorkspaceNavigationMenuMatchMode @default(PREFIX)
+  sortOrder   Int                              @default(0)
+  isVisible   Boolean                          @default(true)
+  createdAt   DateTime                         @default(now())
+  updatedAt   DateTime                         @updatedAt
+  tenant      Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent      WorkspaceNavigationMenuItem?     @relation("WorkspaceNavigationTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children    WorkspaceNavigationMenuItem[]    @relation("WorkspaceNavigationTree")
+  roles       WorkspaceNavigationMenuRole[]
+
+  @@unique([tenantId, key])
+  @@index([tenantId, parentId, sortOrder])
+  @@index([tenantId, isVisible])
+}
+
+model WorkspaceNavigationMenuRole {
+  id         String                      @id @default(cuid())
+  menuItemId String
+  role       TenantMembershipRole
+  menuItem   WorkspaceNavigationMenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@unique([menuItemId, role])
+  @@index([role])
 }
 
 model UserSetting {

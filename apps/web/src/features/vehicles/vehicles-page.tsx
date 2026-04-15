@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Button, Chip, Grid, Stack, Tab, Tabs, Typography } from '@mui/material';
+import { Alert, Button, Chip, Grid, Stack, Typography } from '@mui/material';
 import { BarChart } from '@mui/x-charts/BarChart';
 import type {
   VehicleFuelLogItem,
@@ -38,6 +38,10 @@ import {
   buildMaintenanceLogColumns,
   buildVehicleColumns
 } from './vehicles-page.columns';
+import {
+  VehiclesSectionNav,
+  type VehicleWorkspaceSection
+} from './vehicles-section-nav';
 import { buildVehicleOperatingSummaryView } from './vehicles.summary';
 
 type SubmitFeedback = {
@@ -60,12 +64,12 @@ type VehicleFuelDrawerState =
   | { mode: 'edit'; fuelLog: VehicleFuelLogItem }
   | null;
 
-type VehicleWorkspaceTab = 'overview' | 'vehicles' | 'fuel' | 'maintenance';
-
-export function VehiclesPage() {
+export function VehiclesPage({
+  section = 'overview'
+}: {
+  section?: VehicleWorkspaceSection;
+}) {
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
-  const [activeTab, setActiveTab] =
-    React.useState<VehicleWorkspaceTab>('overview');
   const [drawerState, setDrawerState] =
     React.useState<VehicleDrawerState>(null);
   const [fuelDrawerState, setFuelDrawerState] =
@@ -123,30 +127,30 @@ export function VehiclesPage() {
             )
         )[0]
       : null;
-  const activeTabLabel =
-    activeTab === 'overview'
+  const activeSectionLabel =
+    section === 'overview'
       ? '개요'
-      : activeTab === 'vehicles'
-        ? '차량'
-        : activeTab === 'fuel'
-          ? '연료'
-          : '정비';
-  const contextualAction =
-    activeTab === 'maintenance'
-      ? {
-          label: '정비 기록 추가',
-          onClick: () => {
-            handleMaintenanceCreateOpen(vehicles[0]?.id ?? null);
-          }
-        }
-      : activeTab === 'vehicles'
-        ? null
-        : {
-            label: '연료 기록 추가',
-            onClick: () => {
-              handleFuelCreateOpen(vehicles[0]?.id ?? null);
-            }
-          };
+      : section === 'fleet'
+        ? '차량 목록'
+        : section === 'fuel'
+          ? '연료 기록'
+          : '정비 이력';
+  const pageTitle =
+    section === 'overview'
+      ? '차량 운영'
+      : section === 'fleet'
+        ? '차량 목록'
+        : section === 'fuel'
+          ? '연료 기록'
+          : '정비 이력';
+  const pageDescription =
+    section === 'overview'
+      ? '차량 프로필, 연료 기록, 정비 이력을 분리해 관리하고 차량별 운영비를 점검하는 화면입니다.'
+      : section === 'fleet'
+        ? '차량 프로필만 집중해서 관리하고, 연료/정비 이력은 각각의 전용 화면으로 분리해 읽기 쉽게 정리했습니다.'
+        : section === 'fuel'
+          ? '주유와 충전 이력만 모아 보고, 차량비 검토에 필요한 흐름을 표 중심으로 빠르게 확인합니다.'
+          : '정비 이력만 모아 보고, 정비 비용과 최근 작업 기록을 별도 화면에서 집중해서 관리합니다.';
 
   const handleCreateOpen = () => {
     setFeedback(null);
@@ -233,6 +237,46 @@ export function VehiclesPage() {
           : `${maintenanceLog.vehicleName} 정비 기록을 추가했습니다.`
     });
   };
+  const primaryAction =
+    section === 'fuel'
+      ? {
+          label: '연료 기록 추가',
+          onClick: () => {
+            handleFuelCreateOpen(vehicles[0]?.id ?? null);
+          },
+          disabled: vehicles.length === 0
+        }
+      : section === 'maintenance'
+        ? {
+            label: '정비 기록 추가',
+            onClick: () => {
+              handleMaintenanceCreateOpen(vehicles[0]?.id ?? null);
+            },
+            disabled: vehicles.length === 0
+          }
+        : {
+            label: '차량 등록',
+            onClick: handleCreateOpen,
+            disabled: false
+          };
+  const secondaryAction: {
+    label: string;
+    href: '/vehicles/fleet' | '/vehicles/fuel';
+  } =
+    section === 'overview'
+      ? {
+          label: '차량 목록 보기',
+          href: '/vehicles/fleet'
+        }
+      : section === 'fleet'
+        ? {
+            label: '연료 기록 보기',
+            href: '/vehicles/fuel'
+          }
+        : {
+            label: '차량 목록 보기',
+            href: '/vehicles/fleet'
+          };
 
   const vehicleColumns = buildVehicleColumns({
     operatingSummaryByVehicleId,
@@ -290,11 +334,11 @@ export function VehiclesPage() {
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
         eyebrow="보조 운영 영역"
-        title="차량 운영"
-        description="차량 프로필, 연료 기록, 정비 이력을 분리해 관리하고 차량별 운영비를 점검하는 화면입니다."
+        title={pageTitle}
+        description={pageDescription}
         badges={[
           {
-            label: `현재 보기 · ${activeTabLabel}`,
+            label: `현재 화면 · ${activeSectionLabel}`,
             color: 'primary'
           },
           {
@@ -326,14 +370,14 @@ export function VehiclesPage() {
               : '-'
           }
         ]}
-        primaryActionLabel="차량 등록"
-        primaryActionOnClick={handleCreateOpen}
-        secondaryActionLabel={contextualAction?.label}
-        secondaryActionOnClick={contextualAction?.onClick}
-        secondaryActionDisabled={
-          contextualAction ? vehicles.length === 0 : undefined
-        }
+        primaryActionLabel={primaryAction.label}
+        primaryActionOnClick={primaryAction.onClick}
+        primaryActionDisabled={primaryAction.disabled}
+        secondaryActionLabel={secondaryAction.label}
+        secondaryActionHref={secondaryAction.href}
       />
+
+      <VehiclesSectionNav />
 
       {feedback ? (
         <Alert severity={feedback.severity} variant="outlined">
@@ -358,21 +402,8 @@ export function VehiclesPage() {
           error={maintenanceLogsError}
         />
       ) : null}
-      <Tabs
-        value={activeTab}
-        onChange={(_event, nextValue: VehicleWorkspaceTab) => {
-          setActiveTab(nextValue);
-        }}
-        variant="scrollable"
-        allowScrollButtonsMobile
-      >
-        <Tab value="overview" label="개요" />
-        <Tab value="vehicles" label={`차량 ${vehicles.length}`} />
-        <Tab value="fuel" label={`연료 ${fuelLogRows.length}`} />
-        <Tab value="maintenance" label={`정비 ${maintenanceLogRows.length}`} />
-      </Tabs>
 
-      {activeTab === 'overview' ? (
+      {section === 'overview' ? (
         <Stack spacing={appLayout.sectionGap}>
           <Grid container spacing={appLayout.sectionGap}>
             <Grid size={{ xs: 12, md: 3 }}>
@@ -513,7 +544,7 @@ export function VehiclesPage() {
         </Stack>
       ) : null}
 
-      {activeTab === 'vehicles' ? (
+      {section === 'fleet' ? (
         <Stack spacing={appLayout.sectionGap}>
           <DataTableCard
             title="차량 기본 정보"
@@ -558,7 +589,7 @@ export function VehiclesPage() {
         </Stack>
       ) : null}
 
-      {activeTab === 'fuel' ? (
+      {section === 'fuel' ? (
         <Stack spacing={appLayout.sectionGap}>
           <DataTableCard
             title="주유 / 충전 기록"
@@ -615,7 +646,7 @@ export function VehiclesPage() {
         </Stack>
       ) : null}
 
-      {activeTab === 'maintenance' ? (
+      {section === 'maintenance' ? (
         <Stack spacing={appLayout.sectionGap}>
           <DataTableCard
             title="정비 이력"

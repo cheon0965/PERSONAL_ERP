@@ -11,6 +11,7 @@ import { sourceKindOptions, type ImportedRowTableItem } from './imports.shared';
 export function buildImportBatchColumns(input: {
   selectedBatchId: string | null;
   onSelectBatch: (batch: ImportBatchItem) => void;
+  actionLabel?: string;
 }): GridColDef<ImportBatchItem>[] {
   return [
     {
@@ -51,7 +52,7 @@ export function buildImportBatchColumns(input: {
           variant={input.selectedBatchId === params.row.id ? 'contained' : 'text'}
           onClick={() => input.onSelectBatch(params.row)}
         >
-          행 보기
+          {input.actionLabel ?? '행 보기'}
         </Button>
       )
     }

@@ -25,6 +25,7 @@ import { ForecastModule } from './modules/forecast/public';
 import { ReferenceDataReadinessModule } from './modules/reference-data-readiness/reference-data-readiness.module';
 import { WorkspaceSettingsModule } from './modules/workspace-settings/workspace-settings.module';
 import { OperationsConsoleModule } from './modules/operations-console/operations-console.module';
+import { NavigationModule } from './modules/navigation/public';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { OperationsConsoleModule } from './modules/operations-console/operations
     ExternalDependenciesModule,
     HealthModule,
     AuthModule,
+    NavigationModule,
     WorkspaceSettingsModule,
     AdminModule,
     ReferenceDataReadinessModule,

@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./auth": "./src/auth.ts",
+    "./navigation": "./src/navigation.ts",
     "./reference-data": "./src/reference-data.ts",
     "./accounting": "./src/accounting.ts",
     "./transactions": "./src/transactions.ts",

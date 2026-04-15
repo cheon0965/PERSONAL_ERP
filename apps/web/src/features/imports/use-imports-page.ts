@@ -52,11 +52,12 @@ const defaultCollectForm: CollectImportedRowRequest = {
   memo: ''
 };
 
-export function useImportsPage() {
+export function useImportsPage(initialSelectedBatchId: string | null = null) {
   const queryClient = useQueryClient();
+  const hasPinnedSelectedBatch = initialSelectedBatchId != null;
   const [feedback, setFeedback] = React.useState<FeedbackState>(null);
   const [selectedBatchId, setSelectedBatchId] = React.useState<string | null>(
-    null
+    initialSelectedBatchId
   );
   const [selectedRowId, setSelectedRowId] = React.useState<string | null>(null);
   const [isUploadDrawerOpen, setUploadDrawerOpen] = React.useState(false);
@@ -145,14 +146,20 @@ export function useImportsPage() {
   );
 
   React.useEffect(() => {
-    if (!selectedBatch && selectedBatchId !== null) {
+    if (initialSelectedBatchId && selectedBatchId !== initialSelectedBatchId) {
+      setSelectedBatchId(initialSelectedBatchId);
+    }
+  }, [initialSelectedBatchId, selectedBatchId]);
+
+  React.useEffect(() => {
+    if (!selectedBatch && selectedBatchId !== null && !hasPinnedSelectedBatch) {
       setSelectedBatchId(null);
     }
 
-    if (!selectedBatch && batches.length > 0) {
+    if (!selectedBatch && batches.length > 0 && !hasPinnedSelectedBatch) {
       setSelectedBatchId(batches[0]!.id);
     }
-  }, [batches, selectedBatch, selectedBatchId]);
+  }, [batches, hasPinnedSelectedBatch, selectedBatch, selectedBatchId]);
 
   React.useEffect(() => {
     if (!selectedRow && selectedRowId !== null) {

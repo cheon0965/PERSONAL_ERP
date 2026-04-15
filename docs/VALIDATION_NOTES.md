@@ -177,6 +177,7 @@
 
 ## 현재 남아 있는 공백
 
+- 간결 헤더와 `도메인 가이드` 노출, 페이지 전환 시 도움말 문맥 정리 동작은 현재 전용 자동 테스트가 없음
 - 차량 연료/정비 이력 분리, `GET /vehicles/operating-summary` projection 추가, 차량 `Vehicle` 물리 필드/응답/계약에서 `monthlyExpenseWon` 제거, 레거시 `Transaction` 물리 제거와 active reference guard, 메인 월 운영 루프의 `reference-data -> accounting-periods -> insurance/vehicles -> recurring-rules -> plan-items -> collected-transactions/imports -> journal-entries -> financial-statements -> carry-forwards -> forecast` 브라우저 시나리오, `imports -> collected-transactions -> journal-entries` cross-feature 브라우저 시나리오, Next.js ESLint plugin explicit registration까지는 반영됨
 - 저장소 안 우선순위로 선별했던 작업은 현재 문서 기준 모두 닫혔음
 - `.github/workflows/ci.yml`의 `prisma-integration` job wiring은 반영되었지만, 실제 GitHub 저장소/조직 secret `PRISMA_INTEGRATION_DATABASE_URL` 등록과 첫 통과 증적 확보는 저장소 밖 후속 작업으로 남아 있음

@@ -88,6 +88,7 @@ export type AdminPolicySurfaceSection =
   | 'MONTHLY_OPERATIONS'
   | 'IMPORTS'
   | 'TRANSACTIONS'
+  | 'OPERATING_ASSETS'
   | 'REPORTING'
   | 'DASHBOARD';
 

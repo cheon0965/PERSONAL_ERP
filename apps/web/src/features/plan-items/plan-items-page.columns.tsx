@@ -123,7 +123,7 @@ function PlanItemLinkCell({
       <Button
         size="small"
         component={Link}
-        href={`/journal-entries?entryId=${item.postedJournalEntryId}`}
+        href={`/journal-entries/${item.postedJournalEntryId}`}
       >
         {item.postedJournalEntryNumber ?? '전표 보기'}
       </Button>
@@ -146,7 +146,7 @@ function PlanItemLinkCell({
             <Button
               size="small"
               component={Link}
-              href={`/journal-entries?entryId=${linkedJournalEntry.id}`}
+              href={`/journal-entries/${linkedJournalEntry.id}`}
             >
               {linkedJournalEntry.entryNumber}
             </Button>

@@ -10,6 +10,7 @@ import {
   TenantMembershipStatus,
   TenantStatus
 } from '@prisma/client';
+import { ensureDefaultWorkspaceNavigation } from '../src/common/navigation/workspace-navigation-defaults';
 
 // This file keeps the phase-1 workspace/ledger backbone bootstrap alive
 // after the legacy Transaction table removal.
@@ -499,6 +500,7 @@ export async function ensurePhase1BackboneForUser(
   const backbone = await ensureTenantAndLedger(prisma, user, summary);
 
   await ensureBaseMasters(prisma, backbone.tenantId, backbone.ledgerId);
+  await ensureDefaultWorkspaceNavigation(prisma, backbone.tenantId);
   await backfillWorkspaceScopedData(
     prisma,
     user.id,

@@ -12,11 +12,15 @@ import { readImportBatchParseStatusLabel } from './imports.shared';
 export function ImportBatchesGrid({
   batches,
   selectedBatchId,
-  onSelectBatch
+  onSelectBatch,
+  helperText = '선택한 배치 기준으로 업로드 행 작업대로 바로 이동합니다.',
+  actionLabel = '작업대 열기'
 }: {
   batches: ImportBatchItem[];
   selectedBatchId: string | null;
   onSelectBatch: (batch: ImportBatchItem) => void;
+  helperText?: string;
+  actionLabel?: string;
 }) {
   const statusSummary = React.useMemo(() => {
     const counts: Record<ImportBatchItem['parseStatus'], number> = {
@@ -74,12 +78,16 @@ export function ImportBatchesGrid({
             ))}
           </Stack>
           <Typography variant="body2" color="text.secondary">
-            선택한 배치 기준으로 오른쪽 업로드 행 목록이 바로 갱신됩니다.
+            {helperText}
           </Typography>
         </Stack>
       }
       rows={batches}
-      columns={buildImportBatchColumns({ selectedBatchId, onSelectBatch })}
+      columns={buildImportBatchColumns({
+        selectedBatchId,
+        onSelectBatch,
+        actionLabel
+      })}
       height={360}
     />
   );

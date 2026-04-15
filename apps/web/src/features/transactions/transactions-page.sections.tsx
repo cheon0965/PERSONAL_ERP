@@ -198,7 +198,7 @@ export function TransactionsTableSection({
               <Button
                 size="small"
                 component={Link}
-                href={`/journal-entries?entryId=${linkedJournalEntry.id}`}
+                href={`/journal-entries/${linkedJournalEntry.id}`}
               >
                 {linkedJournalEntry.entryNumber}
               </Button>
@@ -210,7 +210,7 @@ export function TransactionsTableSection({
               <Button
                 size="small"
                 component={Link}
-                href={`/journal-entries?entryId=${row.postedJournalEntryId}`}
+                href={`/journal-entries/${row.postedJournalEntryId}`}
               >
                 {row.postedJournalEntryNumber ?? '전표 보기'}
               </Button>

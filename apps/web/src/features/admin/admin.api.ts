@@ -4,8 +4,10 @@ import type {
   AdminPolicySummary,
   AdminAuditEventQuery,
   AdminMemberItem,
+  NavigationMenuTreeResponse,
   InviteTenantMemberRequest,
   TenantMemberInvitationItem,
+  UpdateNavigationMenuItemRequest,
   UpdateTenantMemberRoleRequest,
   UpdateTenantMemberStatusRequest
 } from '@personal-erp/contracts';
@@ -19,6 +21,7 @@ import {
 export const adminMembersQueryKey = ['admin', 'members'] as const;
 export const adminAuditEventsQueryKey = ['admin', 'audit-events'] as const;
 export const adminPolicyQueryKey = ['admin', 'policy'] as const;
+export const adminNavigationQueryKey = ['admin', 'navigation'] as const;
 
 export function getAdminMembers() {
   return fetchJson<AdminMemberItem[]>('/admin/members', []);
@@ -122,4 +125,23 @@ export function getAdminPolicySummary() {
   return fetchJson<AdminPolicySummary>('/admin/policy', {
     items: []
   });
+}
+
+export function getAdminNavigationTree() {
+  return fetchJson<NavigationMenuTreeResponse>('/admin/navigation', {
+    items: []
+  });
+}
+
+export function updateAdminNavigationItem(
+  menuItemId: string,
+  input: UpdateNavigationMenuItemRequest
+) {
+  return patchJson<NavigationMenuTreeResponse, UpdateNavigationMenuItemRequest>(
+    `/admin/navigation/${menuItemId}`,
+    input,
+    {
+      items: []
+    }
+  );
 }
