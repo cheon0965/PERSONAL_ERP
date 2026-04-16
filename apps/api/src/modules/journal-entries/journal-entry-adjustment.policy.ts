@@ -1,8 +1,4 @@
-import {
-  addMoneyWon,
-  compareMoneyWon,
-  isMoneyWon
-} from '@personal-erp/money';
+import { addMoneyWon, compareMoneyWon, isMoneyWon } from '@personal-erp/money';
 import {
   fromPrismaMoneyWon,
   type PrismaMoneyLike

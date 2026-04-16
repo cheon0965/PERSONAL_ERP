@@ -275,6 +275,17 @@ test('@smoke protects the transactions route, restores the session, and saves a 
       return;
     }
 
+    if (path === '/api/navigation/tree' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: []
+        })
+      });
+      return;
+    }
+
     if (path === '/api/funding-accounts' && request.method() === 'GET') {
       await route.fulfill({
         status: 200,
@@ -403,7 +414,9 @@ test('@smoke protects the transactions route, restores the session, and saves a 
   await page.goto('/transactions');
 
   try {
-    await expect(page).toHaveURL(/\/login/);
+    await expect(
+      page.getByRole('heading', { name: '워크스페이스에 로그인' })
+    ).toBeVisible();
   } catch (error) {
     throw new Error(
       [`Navigation to /login failed.`, ...pageErrors, String(error)].join(
@@ -428,9 +441,8 @@ test('@smoke protects the transactions route, restores the session, and saves a 
   await expect(
     page.getByRole('heading', { name: 'Demo Workspace / 사업 장부' })
   ).toBeVisible();
-  await expect(page.getByRole('button', { name: '문맥 상세' })).toBeVisible();
-  await page.getByRole('button', { name: '문맥 상세' }).click();
-  await expect(page.getByText('현재 작업 문맥 상세')).toBeVisible();
+  await expect(page.getByRole('button', { name: '문맥' })).toBeVisible();
+  await page.getByRole('button', { name: '문맥' }).click();
   await expect(page.getByRole('link', { name: '운영 월' })).toBeVisible();
   await page.keyboard.press('Escape');
 

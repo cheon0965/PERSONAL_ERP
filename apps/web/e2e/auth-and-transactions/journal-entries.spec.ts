@@ -205,6 +205,17 @@ test('@smoke manages journal entry reversal and correction through the journal e
       return;
     }
 
+    if (path === '/api/navigation/tree' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: []
+        })
+      });
+      return;
+    }
+
     if (
       path === '/api/accounting-periods/current' &&
       request.method() === 'GET'
@@ -421,7 +432,9 @@ test('@smoke manages journal entry reversal and correction through the journal e
   });
 
   await page.goto('/journal-entries');
-  await expect(page).toHaveURL(/\/login/);
+  await expect(
+    page.getByRole('heading', { name: '워크스페이스에 로그인' })
+  ).toBeVisible();
 
   await page.getByLabel('이메일').fill('demo@example.com');
   await page.getByLabel('비밀번호').fill('Demo1234!');
@@ -435,10 +448,12 @@ test('@smoke manages journal entry reversal and correction through the journal e
     )
   ).toBeVisible();
 
-  const incomeEntryCard = page
-    .getByRole('heading', { name: '202605-0001 전표' })
-    .locator('xpath=ancestor::div[contains(@class,"MuiCard-root")][1]');
-  await incomeEntryCard.getByRole('button', { name: '반전 전표' }).click();
+  await page.goto('/journal-entries/je-income-1');
+  await expect(page).toHaveURL(/\/journal-entries\/je-income-1$/);
+  await expect(
+    page.getByRole('heading', { level: 4, name: '202605-0001 전표 상세' })
+  ).toBeVisible();
+  await page.getByRole('button', { name: '반전 전표 생성' }).click();
 
   const reverseDialog = page.getByRole('dialog');
   await expect(
@@ -451,14 +466,19 @@ test('@smoke manages journal entry reversal and correction through the journal e
   await expect(
     page.getByText('202605-0003 반전 전표를 생성했습니다.')
   ).toBeVisible();
-  await expect(page).toHaveURL(/\/journal-entries\?entryId=je-reverse-1$/);
+  await expect(page).toHaveURL(/\/journal-entries\/je-reverse-1$/);
   await expect(page.getByText(/반전 원본:\s*202605-0001/)).toBeVisible();
+
+  await page.goto('/journal-entries/je-income-1');
+  await expect(page).toHaveURL(/\/journal-entries\/je-income-1$/);
   await expect(page.getByText(/후속 반전 전표:\s*202605-0003/)).toBeVisible();
 
-  const expenseEntryCard = page
-    .getByRole('heading', { name: '202605-0002 전표' })
-    .locator('xpath=ancestor::div[contains(@class,"MuiCard-root")][1]');
-  await expenseEntryCard.getByRole('button', { name: '정정 전표' }).click();
+  await page.goto('/journal-entries/je-expense-1');
+  await expect(page).toHaveURL(/\/journal-entries\/je-expense-1$/);
+  await expect(
+    page.getByRole('heading', { level: 4, name: '202605-0002 전표 상세' })
+  ).toBeVisible();
+  await page.getByRole('button', { name: '정정 전표 생성' }).click();
 
   const correctDialog = page.getByRole('dialog');
   await expect(
@@ -473,9 +493,12 @@ test('@smoke manages journal entry reversal and correction through the journal e
   await expect(
     page.getByText('202605-0004 정정 전표를 생성했습니다.')
   ).toBeVisible();
-  await expect(page).toHaveURL(/\/journal-entries\?entryId=je-correct-1$/);
+  await expect(page).toHaveURL(/\/journal-entries\/je-correct-1$/);
   await expect(page.getByText(/정정 원본:\s*202605-0002/)).toBeVisible();
   await expect(page.getByText(/정정 사유:\s*영수증 재확인/)).toBeVisible();
+
+  await page.goto('/journal-entries/je-expense-1');
+  await expect(page).toHaveURL(/\/journal-entries\/je-expense-1$/);
   await expect(page.getByText(/후속 정정 전표:\s*202605-0004/)).toBeVisible();
 
   expectNoUnhandledApiRequests(unhandledApiRequests);

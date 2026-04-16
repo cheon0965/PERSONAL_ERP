@@ -112,7 +112,8 @@ export function AdminHomePage() {
     },
     {
       title: '감사 / 추적',
-      description: '관리 명령이 실제로 어떻게 실행됐는지 감사 흐름을 분리해 봅니다.',
+      description:
+        '관리 명령이 실제로 어떻게 실행됐는지 감사 흐름을 분리해 봅니다.',
       items: [
         {
           title: '로그 관리',
@@ -349,7 +350,12 @@ function AdminLinkCard({
         {description}
       </Typography>
       <div>
-        <Button component={Link} href={href} variant="outlined" disabled={disabled}>
+        <Button
+          component={Link}
+          href={href}
+          variant="outlined"
+          disabled={disabled}
+        >
           {actionLabel}
         </Button>
       </div>

@@ -56,9 +56,7 @@ export class ChangePasswordUseCase {
         userId: user.id,
         reason: 'invalid_current_password'
       });
-      throw new UnauthorizedException(
-        '현재 비밀번호가 올바르지 않습니다.'
-      );
+      throw new UnauthorizedException('현재 비밀번호가 올바르지 않습니다.');
     }
 
     const nextPasswordMatchesCurrent = await argon2.verify(

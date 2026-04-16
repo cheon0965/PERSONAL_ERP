@@ -30,12 +30,13 @@ export class CreateInsurancePolicyUseCase {
     const workspace = requireCurrentWorkspace(user);
     const normalizedInput = normalizeInsurancePolicyInput(input);
 
-    const duplicate = await this.insurancePoliciesRepository.findDuplicateInWorkspace(
-      workspace.tenantId,
-      workspace.ledgerId,
-      normalizedInput.provider,
-      normalizedInput.productName
-    );
+    const duplicate =
+      await this.insurancePoliciesRepository.findDuplicateInWorkspace(
+        workspace.tenantId,
+        workspace.ledgerId,
+        normalizedInput.provider,
+        normalizedInput.productName
+      );
     assertInsurancePolicyUnique(duplicate);
 
     const referenceState =

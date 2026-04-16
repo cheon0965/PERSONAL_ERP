@@ -341,7 +341,10 @@ export class AdminController {
       resourceId: auditEventId
     });
 
-    const event = await this.auditEventsService.findOne(workspace, auditEventId);
+    const event = await this.auditEventsService.findOne(
+      workspace,
+      auditEventId
+    );
     logWorkspaceActionSucceeded(this.securityEvents, {
       action: 'admin_audit_log.read',
       request,
@@ -383,9 +386,7 @@ export class AdminController {
   }
 }
 
-function countNavigationItems(
-  items: Array<{ children: unknown[] }>
-): number {
+function countNavigationItems(items: Array<{ children: unknown[] }>): number {
   return items.reduce(
     (count, item) =>
       count +

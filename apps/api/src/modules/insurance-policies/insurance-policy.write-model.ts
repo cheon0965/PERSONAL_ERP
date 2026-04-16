@@ -122,9 +122,7 @@ export function assertInsurancePolicyRecurringReferences(
   }
 
   if (state.categoryKind !== CategoryKind.EXPENSE) {
-    throw new BadRequestException(
-      '보험 계약 카테고리는 지출 분류여야 합니다.'
-    );
+    throw new BadRequestException('보험 계약 카테고리는 지출 분류여야 합니다.');
   }
 }
 

@@ -24,6 +24,7 @@
 - `ERROR_HANDLING_AND_LOGGING.md`: 예외 처리와 최소 로깅 기준
 - `VALIDATION_NOTES.md`: 실제 검증 범위와 남은 공백
 - `PROJECT_PLAN.md`: 중기 제품 로드맵
+- `FRONTEND_SCREEN_SPLIT_AND_COPY_CLEANUP_EXECUTION_PLAN.md`: 프론트 화면 분리와 설명문구 정리 실행 계획
 - `ASVS_L2_EXECUTION_PLAN.md`: 보안 기준 실행 계획
 - `ASVS_L2_BASELINE_MATRIX.md`: 보안 기준선과 근거 매트릭스
 - `FALLBACK_POLICY.md`: 데모 fallback 사용 기준

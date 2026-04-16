@@ -194,7 +194,9 @@ export class OperationsConsoleService {
       monthEnd,
       imports,
       outstandingWorkCount:
-        exceptions.totalCount + checklist.totals.actionRequired + checklist.totals.blocked
+        exceptions.totalCount +
+        checklist.totals.actionRequired +
+        checklist.totals.blocked
     };
   }
 
@@ -232,8 +234,9 @@ export class OperationsConsoleService {
     return this.buildAlerts(await this.buildSnapshot(user));
   }
 
-
-  private async buildSnapshot(user: AuthenticatedUser): Promise<OperationsSnapshot> {
+  private async buildSnapshot(
+    user: AuthenticatedUser
+  ): Promise<OperationsSnapshot> {
     const workspace = requireCurrentWorkspace(user);
     return this.operationsConsoleReadRepository.readSnapshot({
       tenantId: workspace.tenantId,
@@ -255,12 +258,14 @@ export class OperationsConsoleService {
       {
         key: 'MONTH_START',
         title: '월 시작 전',
-        description: '월 운영을 시작하기 전에 기준 데이터와 운영 기간을 확인합니다.',
+        description:
+          '월 운영을 시작하기 전에 기준 데이터와 운영 기간을 확인합니다.',
         items: [
           this.createChecklistItem({
             id: 'reference-data-ready',
             title: '기준 데이터 준비',
-            description: '자금수단, 카테고리, 계정과목, 거래유형이 준비되어야 합니다.',
+            description:
+              '자금수단, 카테고리, 계정과목, 거래유형이 준비되어야 합니다.',
             status:
               snapshot.readinessGaps.length === 0 ? 'READY' : 'ACTION_REQUIRED',
             detail:
@@ -282,15 +287,22 @@ export class OperationsConsoleService {
             detail: hasPeriod
               ? `${snapshot.currentPeriod?.monthLabel} 기간을 기준으로 운영합니다.`
               : '아직 열린 운영 기간이 없습니다.',
-            blockingReason: hasPeriod ? null : '월 운영 화면에서 운영 기간을 먼저 열어야 합니다.',
+            blockingReason: hasPeriod
+              ? null
+              : '월 운영 화면에서 운영 기간을 먼저 열어야 합니다.',
             actionLabel: '월 운영 보기',
             href: '/periods'
           }),
           this.createChecklistItem({
             id: 'opening-balance-ready',
             title: '기초 잔액 스냅샷',
-            description: '현재 기간의 장부 시작 기준이 준비되어 있는지 확인합니다.',
-            status: !hasPeriod ? 'BLOCKED' : hasOpeningSnapshot ? 'READY' : 'ACTION_REQUIRED',
+            description:
+              '현재 기간의 장부 시작 기준이 준비되어 있는지 확인합니다.',
+            status: !hasPeriod
+              ? 'BLOCKED'
+              : hasOpeningSnapshot
+                ? 'READY'
+                : 'ACTION_REQUIRED',
             detail: hasOpeningSnapshot
               ? '현재 기간에 기초 잔액 스냅샷이 연결되어 있습니다.'
               : '기초 잔액 스냅샷이 아직 없습니다.',
@@ -321,7 +333,8 @@ export class OperationsConsoleService {
           this.createChecklistItem({
             id: 'import-row-backlog',
             title: '업로드 미수집 행',
-            description: '정상 파싱됐지만 아직 수집 거래로 승격되지 않은 행을 처리합니다.',
+            description:
+              '정상 파싱됐지만 아직 수집 거래로 승격되지 않은 행을 처리합니다.',
             status:
               importStatus.uncollectedRowCount === 0
                 ? 'READY'
@@ -337,7 +350,8 @@ export class OperationsConsoleService {
           this.createChecklistItem({
             id: 'failed-audit-events',
             title: '최근 실패 이벤트',
-            description: '운영 API 실패나 보안 이벤트 실패가 반복되는지 확인합니다.',
+            description:
+              '운영 API 실패나 보안 이벤트 실패가 반복되는지 확인합니다.',
             status:
               snapshot.failedAuditEvents.length === 0
                 ? 'READY'
@@ -360,18 +374,22 @@ export class OperationsConsoleService {
           this.createChecklistItem({
             id: 'month-close-readiness',
             title: '마감 가능 상태',
-            description: '미확정 거래와 필수 기준 데이터가 남아 있는지 확인합니다.',
+            description:
+              '미확정 거래와 필수 기준 데이터가 남아 있는지 확인합니다.',
             status: monthEnd.closeReadiness,
             detail: monthEnd.closeReadinessLabel,
             blockingReason:
-              monthEnd.blockers.length > 0 ? monthEnd.blockers.join(' / ') : null,
+              monthEnd.blockers.length > 0
+                ? monthEnd.blockers.join(' / ')
+                : null,
             actionLabel: '월 마감 대시보드',
             href: '/operations/month-end'
           }),
           this.createChecklistItem({
             id: 'financial-statements-ready',
             title: '재무제표 스냅샷',
-            description: '잠금된 기간에는 공식 재무제표 스냅샷이 있어야 합니다.',
+            description:
+              '잠금된 기간에는 공식 재무제표 스냅샷이 있어야 합니다.',
             status:
               snapshot.currentPeriod?.status === 'LOCKED' &&
               snapshot.financialStatementSnapshotCount === 0
@@ -388,7 +406,8 @@ export class OperationsConsoleService {
           this.createChecklistItem({
             id: 'carry-forward-ready',
             title: '차기 이월',
-            description: '잠금된 기간의 다음 월 기초 잔액 연결 상태를 확인합니다.',
+            description:
+              '잠금된 기간의 다음 월 기초 잔액 연결 상태를 확인합니다.',
             status:
               snapshot.currentPeriod?.status === 'LOCKED' &&
               !snapshot.carryForwardCreated
@@ -434,7 +453,9 @@ export class OperationsConsoleService {
       currentPeriod: snapshot.currentPeriod,
       totals: {
         ready: items.filter((item) => item.status === 'READY').length,
-        actionRequired: items.filter((item) => item.status === 'ACTION_REQUIRED').length,
+        actionRequired: items.filter(
+          (item) => item.status === 'ACTION_REQUIRED'
+        ).length,
         blocked: items.filter((item) => item.status === 'BLOCKED').length
       },
       groups
@@ -563,19 +584,27 @@ export class OperationsConsoleService {
     }
 
     if (snapshot.readinessGaps.length > 0) {
-      blockers.push(`기준 데이터 ${snapshot.readinessGaps.length}개가 부족합니다.`);
+      blockers.push(
+        `기준 데이터 ${snapshot.readinessGaps.length}개가 부족합니다.`
+      );
     }
 
     if (snapshot.unresolvedTransactions.length > 0) {
-      blockers.push(`미확정 수집 거래 ${snapshot.unresolvedTransactions.length}건이 남아 있습니다.`);
+      blockers.push(
+        `미확정 수집 거래 ${snapshot.unresolvedTransactions.length}건이 남아 있습니다.`
+      );
     }
 
     if (importStatus.failedRowCount > 0) {
-      warnings.push(`업로드 파싱 실패 행 ${importStatus.failedRowCount}개를 확인해야 합니다.`);
+      warnings.push(
+        `업로드 파싱 실패 행 ${importStatus.failedRowCount}개를 확인해야 합니다.`
+      );
     }
 
     if (snapshot.remainingPlanItems.length > 0) {
-      warnings.push(`남은 계획 항목 ${snapshot.remainingPlanItems.length}건을 확인해야 합니다.`);
+      warnings.push(
+        `남은 계획 항목 ${snapshot.remainingPlanItems.length}건을 확인해야 합니다.`
+      );
     }
 
     if (
@@ -635,7 +664,10 @@ export class OperationsConsoleService {
       generatedAt: snapshot.generatedAt,
       totalBatchCount: batches.length,
       totalRowCount: batches.reduce((sum, batch) => sum + batch.rowCount, 0),
-      failedRowCount: batches.reduce((sum, batch) => sum + batch.failedRowCount, 0),
+      failedRowCount: batches.reduce(
+        (sum, batch) => sum + batch.failedRowCount,
+        0
+      ),
       uncollectedRowCount: batches.reduce(
         (sum, batch) => sum + batch.uncollectedRowCount,
         0
@@ -694,7 +726,9 @@ export class OperationsConsoleService {
         lastCheckedAt: generatedAt
       }
     ];
-    const overallStatus = readOverallStatus(components.map((item) => item.status));
+    const overallStatus = readOverallStatus(
+      components.map((item) => item.status)
+    );
 
     return {
       generatedAt,
@@ -937,7 +971,11 @@ type ExportSourceCollections = {
   accountSubjects: Array<{ updatedAt?: Date }>;
   ledgerTransactionTypes: Array<{ updatedAt?: Date }>;
   collectedTransactions: Array<{ occurredOn?: Date; updatedAt?: Date }>;
-  journalEntries: Array<{ entryDate?: Date; createdAt?: Date; updatedAt?: Date }>;
+  journalEntries: Array<{
+    entryDate?: Date;
+    createdAt?: Date;
+    updatedAt?: Date;
+  }>;
   financialStatementSnapshots: Array<{ createdAt?: Date; updatedAt?: Date }>;
 };
 
@@ -1062,7 +1100,9 @@ function readPeriodLabel(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, '0')}`;
 }
 
-function _normalizeOptionalText(value: string | null | undefined): string | null {
+function _normalizeOptionalText(
+  value: string | null | undefined
+): string | null {
   const normalized = value?.trim();
   return normalized ? normalized : null;
 }
@@ -1085,9 +1125,11 @@ function _mapOperationalNote(note: OperationalNoteRecord): OperationsNoteItem {
 }
 
 function _readLatestIso(values: Array<string | null>): string | null {
-  return values
-    .flatMap((value) => (value ? [value] : []))
-    .sort((left, right) => right.localeCompare(left))[0] ?? null;
+  return (
+    values
+      .flatMap((value) => (value ? [value] : []))
+      .sort((left, right) => right.localeCompare(left))[0] ?? null
+  );
 }
 
 function _readLatestDateValue(

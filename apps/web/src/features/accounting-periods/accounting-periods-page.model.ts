@@ -44,15 +44,19 @@ export function buildAccountingPeriodsPageModel({
   ledgerLabel: string;
 }) {
   const hasWorkspace = ledgerLabel !== '-';
-  const canOpenPeriod = membershipRole === 'OWNER' || membershipRole === 'MANAGER';
+  const canOpenPeriod =
+    membershipRole === 'OWNER' || membershipRole === 'MANAGER';
   const canClosePeriod = membershipRole === 'OWNER';
   const canReopenPeriod = membershipRole === 'OWNER';
   const isFirstPeriod = periods.length === 0;
-  const openPeriod = periods.find((period) => period.status !== 'LOCKED') ?? null;
+  const openPeriod =
+    periods.find((period) => period.status !== 'LOCKED') ?? null;
   const latestPeriod = periods[0] ?? null;
   const reopenPeriod = latestPeriod?.status === 'LOCKED' ? latestPeriod : null;
   const currentPeriod = openPeriod ?? latestPeriod ?? null;
-  const lockedPeriodCount = periods.filter((period) => period.status === 'LOCKED').length;
+  const lockedPeriodCount = periods.filter(
+    (period) => period.status === 'LOCKED'
+  ).length;
   const periodStatusSummary = periods.reduce(
     (counts, period) => {
       counts[period.status] += 1;
@@ -174,14 +178,14 @@ export function buildAccountingPeriodsHeaderConfig({
   ledgerLabel,
   membershipRole
 }: {
-    currentPeriod: AccountingPeriodItem | null;
-    isReadyForMonthlyOperation: boolean;
-    pageDescription: string;
-    pageTitle: string;
-    periodsLength: number;
-    primaryAction: { label: string; href: PageHeaderHref };
-    section: PeriodWorkspaceSection;
-    secondaryAction: { label: string; href: PageHeaderHref };
+  currentPeriod: AccountingPeriodItem | null;
+  isReadyForMonthlyOperation: boolean;
+  pageDescription: string;
+  pageTitle: string;
+  periodsLength: number;
+  primaryAction: { label: string; href: PageHeaderHref };
+  section: PeriodWorkspaceSection;
+  secondaryAction: { label: string; href: PageHeaderHref };
   workspaceLabel: string;
   ledgerLabel: string;
   membershipRole: string;
@@ -205,7 +209,9 @@ export function buildAccountingPeriodsHeaderConfig({
         color: currentPeriod ? ('primary' as const) : ('default' as const)
       },
       {
-        label: isReadyForMonthlyOperation ? '시작 준비됨' : '기준 데이터 점검 필요',
+        label: isReadyForMonthlyOperation
+          ? '시작 준비됨'
+          : '기준 데이터 점검 필요',
         color: isReadyForMonthlyOperation
           ? ('success' as const)
           : ('warning' as const)
@@ -223,7 +229,9 @@ export function buildAccountingPeriodsHeaderConfig({
       {
         label: section === 'history' ? '운영 기간 수' : '현재 운영 월',
         value:
-          section === 'history' ? `${periodsLength}개` : currentPeriod?.monthLabel ?? '-'
+          section === 'history'
+            ? `${periodsLength}개`
+            : (currentPeriod?.monthLabel ?? '-')
       },
       {
         label: '권한',
@@ -262,11 +270,15 @@ export function buildAccountingPeriodsDomainHelp({
         },
         {
           label: '부채 합계',
-          value: formatWon(latestClosingResult.closingSnapshot.totalLiabilityAmount)
+          value: formatWon(
+            latestClosingResult.closingSnapshot.totalLiabilityAmount
+          )
         },
         {
           label: '자본 합계',
-          value: formatWon(latestClosingResult.closingSnapshot.totalEquityAmount)
+          value: formatWon(
+            latestClosingResult.closingSnapshot.totalEquityAmount
+          )
         },
         {
           label: '당기 손익',
@@ -291,7 +303,12 @@ export function buildAccountingPeriodsDomainHelp({
     description:
       '이 화면은 한 달 운영을 열고 닫는 기준점입니다. 운영 기간을 열어야 계획 항목, 업로드 승격, 수집 거래 입력, 전표 확정이 같은 월 안에서 움직입니다.',
     primaryEntity: '운영 기간',
-    relatedEntities: ['기간 상태 이력', '기초 잔액 기준', '사업 장부', '사용자 권한'],
+    relatedEntities: [
+      '기간 상태 이력',
+      '기초 잔액 기준',
+      '사업 장부',
+      '사용자 권한'
+    ],
     truthSource:
       '운영 기간의 상태가 월별 쓰기 가능 여부를 결정하며, 첫 월 시작 시 입력한 기초 잔액이 이후 마감과 이월의 시작 기준이 됩니다.',
     supplementarySections: [
@@ -320,7 +337,8 @@ export function buildAccountingPeriodsDomainHelp({
       },
       {
         title: '바로 쓰는 순서',
-        description: '월 운영은 시작, 진행, 마감, 필요 시 재오픈 순서로 다룹니다.',
+        description:
+          '월 운영은 시작, 진행, 마감, 필요 시 재오픈 순서로 다룹니다.',
         items: [
           '열린 기간이 없으면 기준 데이터 readiness를 확인한 뒤 월 운영 시작에서 대상 월을 엽니다.',
           '첫 월이면 기초 잔액 라인을 1건 이상 입력해 시작 기준을 남깁니다.',
@@ -366,7 +384,9 @@ export function buildPeriodOperationsSectionProps(
   return input;
 }
 
-export async function invalidateAccountingPeriodQueries(queryClient: QueryClient) {
+export async function invalidateAccountingPeriodQueries(
+  queryClient: QueryClient
+) {
   await queryClient.invalidateQueries({
     queryKey: accountingPeriodsQueryKey
   });

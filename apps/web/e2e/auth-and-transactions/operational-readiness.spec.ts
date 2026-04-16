@@ -85,6 +85,17 @@ test('@smoke surfaces operational checklist guidance across empty states and rea
       return;
     }
 
+    if (path === '/api/navigation/tree' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: []
+        })
+      });
+      return;
+    }
+
     if (path === '/api/dashboard/summary' && request.method() === 'GET') {
       await route.fulfill({
         status: 200,
@@ -197,7 +208,9 @@ test('@smoke surfaces operational checklist guidance across empty states and rea
   });
 
   await page.goto('/dashboard');
-  await expect(page).toHaveURL(/\/login/);
+  await expect(
+    page.getByRole('heading', { name: '워크스페이스에 로그인' })
+  ).toBeVisible();
 
   await page.getByLabel('이메일').fill('demo@example.com');
   await page.getByLabel('비밀번호').fill('Demo1234!');
@@ -208,10 +221,14 @@ test('@smoke surfaces operational checklist guidance across empty states and rea
     page.getByRole('heading', { name: '월 운영 대시보드' })
   ).toBeVisible();
   await expect(page.getByText('운영 기간이 아직 없습니다')).toBeVisible();
-  await page.getByRole('link', { name: '운영 월 보기' }).click();
+  await page
+    .getByRole('heading', { name: '운영 기간이 아직 없습니다' })
+    .locator('xpath=ancestor::div[contains(@class,"MuiCard-root")][1]')
+    .getByRole('link', { name: '운영 월 보기' })
+    .click();
   await expect(page).toHaveURL(/\/periods$/);
   await expect(
-    page.getByRole('heading', { name: '운영 기간 관리' })
+    page.getByRole('heading', { level: 4, name: '운영 기간', exact: true })
   ).toBeVisible();
 
   await page.goto('/transactions');
@@ -226,13 +243,13 @@ test('@smoke surfaces operational checklist guidance across empty states and rea
   ).toBeVisible();
   await expect(
     page.getByText(
-      '현재 열린 운영 기간이 없습니다. 먼저 `월 운영` 화면에서 월을 시작해 주세요.'
+      '먼저 월 운영 화면에서 운영 월을 시작하면 수집 거래 입력과 전표 확정 흐름이 열립니다.'
     )
   ).toBeVisible();
   await page.getByRole('link', { name: '기준 데이터 확인' }).click();
   await expect(page).toHaveURL(/\/reference-data$/);
   await expect(
-    page.getByRole('heading', { name: '기준 데이터 준비 상태와 관리 범위' })
+    page.getByRole('heading', { name: '기준 데이터 준비 상태' })
   ).toBeVisible();
   await expect(
     page.getByText(
@@ -244,7 +261,11 @@ test('@smoke surfaces operational checklist guidance across empty states and rea
   await page.goto('/financial-statements');
   await expect(page).toHaveURL(/\/financial-statements$/);
   await expect(page.getByText('표시할 재무제표가 없습니다')).toBeVisible();
-  await page.getByRole('link', { name: '운영 월 보기' }).click();
+  await page
+    .getByRole('heading', { name: '표시할 재무제표가 없습니다' })
+    .locator('xpath=ancestor::div[contains(@class,"MuiCard-root")][1]')
+    .getByRole('link', { name: '운영 월 보기' })
+    .click();
   await expect(page).toHaveURL(/\/periods$/);
 
   await page.goto('/carry-forwards');

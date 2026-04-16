@@ -1,4 +1,10 @@
-import { ArrayMinSize, IsArray, IsBoolean, IsEnum, IsOptional } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsOptional
+} from 'class-validator';
 import { TenantMembershipRole } from '@prisma/client';
 
 export class UpdateNavigationMenuItemDto {

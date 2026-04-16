@@ -53,7 +53,9 @@ export function InsurancePoliciesPage() {
     activePolicies.map((item) => item.monthlyPremiumWon)
   );
   const inactivePolicyCount = data.filter((item) => !item.isActive).length;
-  const linkedPolicyCount = data.filter((item) => item.linkedRecurringRuleId).length;
+  const linkedPolicyCount = data.filter(
+    (item) => item.linkedRecurringRuleId
+  ).length;
   const unlinkedPolicyCount = data.length - linkedPolicyCount;
 
   const deleteMutation = useMutation({
@@ -75,7 +77,9 @@ export function InsurancePoliciesPage() {
 
       if (!webRuntime.demoFallbackEnabled) {
         await Promise.all([
-          queryClient.invalidateQueries({ queryKey: insurancePoliciesQueryKey }),
+          queryClient.invalidateQueries({
+            queryKey: insurancePoliciesQueryKey
+          }),
           queryClient.invalidateQueries({ queryKey: ['recurring-rules'] }),
           queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] })
         ]);
@@ -129,15 +133,21 @@ export function InsurancePoliciesPage() {
     setDrawerState({ mode: 'create' });
   }, []);
 
-  const handleEditOpen = React.useCallback((insurancePolicy: InsurancePolicyItem) => {
-    setFeedback(null);
-    setDrawerState({ mode: 'edit', insurancePolicy });
-  }, []);
+  const handleEditOpen = React.useCallback(
+    (insurancePolicy: InsurancePolicyItem) => {
+      setFeedback(null);
+      setDrawerState({ mode: 'edit', insurancePolicy });
+    },
+    []
+  );
 
-  const handleDeleteOpen = React.useCallback((insurancePolicy: InsurancePolicyItem) => {
-    setFeedback(null);
-    setDeleteTarget(insurancePolicy);
-  }, []);
+  const handleDeleteOpen = React.useCallback(
+    (insurancePolicy: InsurancePolicyItem) => {
+      setFeedback(null);
+      setDeleteTarget(insurancePolicy);
+    },
+    []
+  );
 
   const handleDeleteConfirm = React.useCallback(() => {
     if (!deleteTarget) {

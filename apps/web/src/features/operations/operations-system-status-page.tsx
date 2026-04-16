@@ -44,8 +44,12 @@ export function OperationsSystemStatusPage() {
         description="API, DB readiness, 감사 로그, 메일 경계와 최근 운영 활동을 운영자 관점에서 확인합니다."
         badges={[
           {
-            label: readSystemComponentStatusLabel(status?.overallStatus ?? 'UNKNOWN'),
-            color: readSystemComponentStatusColor(status?.overallStatus ?? 'UNKNOWN')
+            label: readSystemComponentStatusLabel(
+              status?.overallStatus ?? 'UNKNOWN'
+            ),
+            color: readSystemComponentStatusColor(
+              status?.overallStatus ?? 'UNKNOWN'
+            )
           },
           {
             label: status?.mail.provider ?? '메일 제공자 미확인',
@@ -59,11 +63,15 @@ export function OperationsSystemStatusPage() {
           },
           {
             label: '최근 실패 이벤트',
-            value: formatDateTime(status?.recentActivity.lastFailedAuditEventAt ?? null)
+            value: formatDateTime(
+              status?.recentActivity.lastFailedAuditEventAt ?? null
+            )
           },
           {
             label: '최근 업로드',
-            value: formatDateTime(status?.recentActivity.lastImportUploadedAt ?? null)
+            value: formatDateTime(
+              status?.recentActivity.lastImportUploadedAt ?? null
+            )
           },
           {
             label: '환경',
@@ -193,7 +201,10 @@ export function OperationsSystemStatusPage() {
         </Grid>
 
         <Grid size={{ xs: 12, lg: 5 }}>
-          <SectionCard title="빌드와 최근 활동" description="민감한 설정값은 표시하지 않습니다.">
+          <SectionCard
+            title="빌드와 최근 활동"
+            description="민감한 설정값은 표시하지 않습니다."
+          >
             <Stack spacing={1.5}>
               <Detail label="환경" value={status?.build.environment ?? '-'} />
               <Detail label="Node" value={status?.build.nodeVersion ?? '-'} />
@@ -235,19 +246,17 @@ function Detail({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SystemInfoItem({
-  label,
-  value
-}: {
-  label: string;
-  value: string;
-}) {
+function SystemInfoItem({ label, value }: { label: string; value: string }) {
   return (
     <Stack spacing={0.35}>
       <Typography variant="caption" color="text.secondary">
         {label}
       </Typography>
-      <Typography variant="body2" fontWeight={600} sx={{ overflowWrap: 'anywhere' }}>
+      <Typography
+        variant="body2"
+        fontWeight={600}
+        sx={{ overflowWrap: 'anywhere' }}
+      >
         {value}
       </Typography>
     </Stack>

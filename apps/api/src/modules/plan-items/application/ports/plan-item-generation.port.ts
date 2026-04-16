@@ -1,9 +1,6 @@
 import type { PrismaMoneyLike } from '../../../../common/money/prisma-money';
 // eslint-disable-next-line no-restricted-imports
-import type {
-  CategoryKind,
-  LedgerTransactionFlowKind
-} from '@prisma/client';
+import type { CategoryKind, LedgerTransactionFlowKind } from '@prisma/client';
 
 export type PlanItemGenerationPeriod = {
   id: string;
@@ -80,9 +77,7 @@ export abstract class PlanItemGenerationPort {
     ledgerId: string
   ): Promise<PlanItemGenerationTransactionType[]>;
 
-  abstract createGeneratedPlanItems(
-    items: GeneratedPlanItemDraft[]
-  ): Promise<{
+  abstract createGeneratedPlanItems(items: GeneratedPlanItemDraft[]): Promise<{
     createdCount: number;
     skippedExistingCount: number;
   }>;

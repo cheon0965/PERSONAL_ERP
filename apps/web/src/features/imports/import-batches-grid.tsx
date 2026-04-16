@@ -4,9 +4,7 @@ import * as React from 'react';
 import { Chip, Stack, Typography } from '@mui/material';
 import type { ImportBatchItem } from '@personal-erp/contracts';
 import { DataTableCard } from '@/shared/ui/data-table-card';
-import {
-  buildImportBatchColumns
-} from './imports.columns';
+import { buildImportBatchColumns } from './imports.columns';
 import { readImportBatchParseStatusLabel } from './imports.shared';
 
 export function ImportBatchesGrid({
@@ -58,7 +56,11 @@ export function ImportBatchesGrid({
           alignItems={{ xs: 'flex-start', md: 'center' }}
         >
           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-            <Chip label={`전체 ${batches.length}건`} size="small" variant="outlined" />
+            <Chip
+              label={`전체 ${batches.length}건`}
+              size="small"
+              variant="outlined"
+            />
             {statusSummary.map((item) => (
               <Chip
                 key={item.status}

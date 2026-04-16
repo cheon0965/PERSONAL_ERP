@@ -56,26 +56,31 @@ export class GeneratePlanItemsUseCase {
       );
     }
 
-    const [recurringRules, existingItems, transactionTypes] = await Promise.all([
-      this.planItemGenerationPort.listRecurringRulesForPeriod(
-        workspace.tenantId,
-        workspace.ledgerId,
-        period.startDate,
-        period.endDate
-      ),
-      this.planItemGenerationPort.listExistingItemsForPeriod(
-        workspace.tenantId,
-        workspace.ledgerId,
-        period.id
-      ),
-      this.planItemGenerationPort.listActiveTransactionTypes(
-        workspace.tenantId,
-        workspace.ledgerId
-      )
-    ]);
+    const [recurringRules, existingItems, transactionTypes] = await Promise.all(
+      [
+        this.planItemGenerationPort.listRecurringRulesForPeriod(
+          workspace.tenantId,
+          workspace.ledgerId,
+          period.startDate,
+          period.endDate
+        ),
+        this.planItemGenerationPort.listExistingItemsForPeriod(
+          workspace.tenantId,
+          workspace.ledgerId,
+          period.id
+        ),
+        this.planItemGenerationPort.listActiveTransactionTypes(
+          workspace.tenantId,
+          workspace.ledgerId
+        )
+      ]
+    );
 
     const defaultTypeIdByFlow = new Map<LedgerTransactionFlowKind, string>();
-    const flowKindByTransactionTypeId = new Map<string, LedgerTransactionFlowKind>();
+    const flowKindByTransactionTypeId = new Map<
+      string,
+      LedgerTransactionFlowKind
+    >();
     for (const transactionType of transactionTypes) {
       if (!defaultTypeIdByFlow.has(transactionType.flowKind)) {
         defaultTypeIdByFlow.set(transactionType.flowKind, transactionType.id);

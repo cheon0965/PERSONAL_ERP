@@ -104,7 +104,10 @@ function resolveSectionTabValue(
     }
 
     for (const candidate of item.matchPrefixes ?? []) {
-      if (!pathname.startsWith(candidate) || candidate.length <= bestMatchLength) {
+      if (
+        !pathname.startsWith(candidate) ||
+        candidate.length <= bestMatchLength
+      ) {
         continue;
       }
 

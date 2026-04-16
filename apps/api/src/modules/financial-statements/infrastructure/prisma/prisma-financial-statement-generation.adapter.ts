@@ -11,9 +11,7 @@ import type {
 } from '../../application/ports/financial-statement-generation.port';
 
 @Injectable()
-export class PrismaFinancialStatementGenerationAdapter
-  implements FinancialStatementGenerationPort
-{
+export class PrismaFinancialStatementGenerationAdapter implements FinancialStatementGenerationPort {
   constructor(private readonly prisma: PrismaService) {}
 
   async readGenerationContext(
@@ -157,7 +155,9 @@ export class PrismaFinancialStatementGenerationAdapter
   }
 
   async upsertStatementSnapshots(
-    input: Parameters<FinancialStatementGenerationPort['upsertStatementSnapshots']>[0]
+    input: Parameters<
+      FinancialStatementGenerationPort['upsertStatementSnapshots']
+    >[0]
   ): Promise<void> {
     for (const [statementKind, payload] of input.payloads) {
       await this.prisma.financialStatementSnapshot.upsert({

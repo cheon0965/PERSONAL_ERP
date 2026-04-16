@@ -97,6 +97,17 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
       return;
     }
 
+    if (path === '/api/navigation/tree' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: []
+        })
+      });
+      return;
+    }
+
     if (path === '/api/vehicles' && request.method() === 'GET') {
       await route.fulfill({
         status: 200,
@@ -319,7 +330,9 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
   });
 
   await page.goto('/vehicles');
-  await expect(page).toHaveURL(/\/login/);
+  await expect(
+    page.getByRole('heading', { name: '워크스페이스에 로그인' })
+  ).toBeVisible();
 
   await page.getByLabel('이메일').fill('demo@example.com');
   await page.getByLabel('비밀번호').fill('Demo1234!');
@@ -329,18 +342,16 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
   await expect(
     page.getByRole('heading', { name: '차량 운영', exact: true })
   ).toBeVisible();
-  await expect(page.getByRole('button', { name: '차량 등록' })).toBeVisible();
+  await page.goto('/vehicles/fleet');
+  await expect(page).toHaveURL(/\/vehicles\/fleet$/);
+  await expect(
+    page.getByRole('heading', { name: '차량 목록', exact: true })
+  ).toBeVisible();
   const vehicleTableCard = page
     .getByRole('heading', { name: '차량 기본 정보', exact: true })
     .locator('xpath=ancestor::div[contains(@class,"MuiCard-root")][1]');
-  const fuelTableCard = page
-    .getByRole('heading', { name: '주유 / 충전 기록', exact: true })
-    .locator('xpath=ancestor::div[contains(@class,"MuiCard-root")][1]');
-  const maintenanceTableCard = page
-    .getByRole('heading', { name: '정비 이력', exact: true })
-    .locator('xpath=ancestor::div[contains(@class,"MuiCard-root")][1]');
 
-  await page.getByRole('button', { name: '차량 등록' }).click();
+  await vehicleTableCard.getByRole('button', { name: '차량 등록' }).click();
   await expect(page.getByRole('heading', { name: '차량 등록' })).toBeVisible();
   const vehicleForm = page.locator('form');
   await vehicleForm
@@ -393,6 +404,14 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
   await expect(
     page.getByText(`${renamedVehicleName} 연료 기록을 추가했습니다.`)
   ).toBeVisible();
+  await page.goto('/vehicles/fuel');
+  await expect(page).toHaveURL(/\/vehicles\/fuel$/);
+  await expect(
+    page.getByRole('heading', { name: '연료 기록', exact: true })
+  ).toBeVisible();
+  const fuelTableCard = page
+    .getByRole('heading', { name: '주유 / 충전 기록', exact: true })
+    .locator('xpath=ancestor::div[contains(@class,"MuiCard-root")][1]');
   const createdFuelRow = fuelTableCard.getByRole('row', {
     name: new RegExp(`${renamedVehicleName}.*76,431`)
   });
@@ -432,7 +451,12 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
     })
   ).toBeVisible();
 
-  await renamedVehicleRow.getByRole('button', { name: '정비 기록' }).click();
+  await page.goto('/vehicles/fleet');
+  await expect(page).toHaveURL(/\/vehicles\/fleet$/);
+  const refreshedVehicleRow = vehicleTableCard.getByRole('row', {
+    name: new RegExp(renamedVehicleName)
+  });
+  await refreshedVehicleRow.getByRole('button', { name: '정비 기록' }).click();
   await expect(
     page.getByRole('heading', { name: '정비 기록 추가' })
   ).toBeVisible();
@@ -454,6 +478,14 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
   await expect(
     page.getByText(`${renamedVehicleName} 정비 기록을 추가했습니다.`)
   ).toBeVisible();
+  await page.goto('/vehicles/maintenance');
+  await expect(page).toHaveURL(/\/vehicles\/maintenance$/);
+  await expect(
+    page.getByRole('heading', { level: 4, name: '정비 이력', exact: true })
+  ).toBeVisible();
+  const maintenanceTableCard = page
+    .getByRole('heading', { name: '정비 이력', exact: true })
+    .locator('xpath=ancestor::div[contains(@class,"MuiCard-root")][1]');
   const createdMaintenanceRow = maintenanceTableCard.getByRole('row', {
     name: new RegExp(newMaintenanceDescription)
   });

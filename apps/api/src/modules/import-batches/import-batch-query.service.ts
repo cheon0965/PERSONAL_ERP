@@ -1,5 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { AuthenticatedUser, ImportBatchItem } from '@personal-erp/contracts';
+import type {
+  AuthenticatedUser,
+  ImportBatchItem
+} from '@personal-erp/contracts';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {

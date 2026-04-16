@@ -1,5 +1,5 @@
-import { ReferenceDataManagementPage } from '@/features/reference-data/reference-data-management-page';
+import { redirect } from 'next/navigation';
 
-export default function Page() {
-  return <ReferenceDataManagementPage />;
+export default function ReferenceDataManageRoutePage() {
+  redirect('/reference-data/funding-accounts');
 }

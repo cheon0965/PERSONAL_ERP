@@ -51,7 +51,9 @@ export function ImportedRowsGrid({
 
   return (
     <DataTableCard
-      title={selectedBatch ? `${selectedBatch.fileName} 업로드 행` : '업로드 행'}
+      title={
+        selectedBatch ? `${selectedBatch.fileName} 업로드 행` : '업로드 행'
+      }
       description={
         selectedBatch
           ? `${selectedBatch.fileName}의 행을 검토하고, 필요한 행만 수집 거래로 승격합니다.`
@@ -95,7 +97,8 @@ export function ImportedRowsGrid({
               />
             </Stack>
             <Typography variant="body2" color="text.secondary">
-              파싱 완료 행만 승격 준비를 열 수 있고, 이미 연결된 행은 결과 보기로 추적합니다.
+              파싱 완료 행만 승격 준비를 열 수 있고, 이미 연결된 행은 결과
+              보기로 추적합니다.
             </Typography>
           </Stack>
         ) : null

@@ -2,7 +2,15 @@
 
 import { useState } from 'react';
 import type { OperationsExportResult } from '@personal-erp/contracts';
-import { Alert, Box, Button, Chip, Grid, Stack, Typography } from '@mui/material';
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  Grid,
+  Stack,
+  Typography
+} from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDateTime, formatNumber } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
@@ -62,8 +70,9 @@ export function OperationsExportsPage() {
             color: (exports?.items.length ?? 0) > 0 ? 'primary' : 'default'
           },
           {
-            label:
-              exports?.lastExportedAt ? '최근 반출 이력 있음' : '반출 이력 없음',
+            label: exports?.lastExportedAt
+              ? '최근 반출 이력 있음'
+              : '반출 이력 없음',
             color: exports?.lastExportedAt ? 'success' : 'default'
           }
         ]}
@@ -221,7 +230,8 @@ export function OperationsExportsPage() {
         description="스케줄 백업이나 DB 스냅샷은 아직 다루지 않고, 운영자가 필요한 시점에 내려받는 1차 흐름만 제공합니다."
       >
         <Typography variant="body2" color="text.secondary">
-          생성된 파일은 브라우저에서 즉시 다운로드되며, UTF-8 CSV 형식으로 저장됩니다.
+          생성된 파일은 브라우저에서 즉시 다운로드되며, UTF-8 CSV 형식으로
+          저장됩니다.
         </Typography>
       </SectionCard>
 
@@ -250,13 +260,7 @@ export function OperationsExportsPage() {
   );
 }
 
-function ExportInfoItem({
-  label,
-  value
-}: {
-  label: string;
-  value: string;
-}) {
+function ExportInfoItem({ label, value }: { label: string; value: string }) {
   return (
     <Stack spacing={0.35}>
       <Typography variant="caption" color="text.secondary">

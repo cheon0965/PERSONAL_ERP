@@ -681,15 +681,17 @@ async function ensureDemoVehicleMaintenanceLogs(
   summary: SeedSummary
 ) {
   for (const maintenanceLog of DEMO_VEHICLE_MAINTENANCE_LOGS) {
-    const existingMaintenanceLog = await prisma.vehicleMaintenanceLog.findFirst({
-      where: {
-        vehicleId,
-        performedOn: maintenanceLog.performedOn,
-        odometerKm: maintenanceLog.odometerKm,
-        description: maintenanceLog.description
-      },
-      select: { id: true }
-    });
+    const existingMaintenanceLog = await prisma.vehicleMaintenanceLog.findFirst(
+      {
+        where: {
+          vehicleId,
+          performedOn: maintenanceLog.performedOn,
+          odometerKm: maintenanceLog.odometerKm,
+          description: maintenanceLog.description
+        },
+        select: { id: true }
+      }
+    );
 
     if (existingMaintenanceLog) {
       summary.maintenanceLogs.skipped += 1;
@@ -727,9 +729,11 @@ async function resetDemoUserIfRequested(summary: SeedSummary) {
   summary.resetDemoUser = true;
 }
 
-function readInitialAdminSeedCredentials():
-  | { email: string; name: string; password: string }
-  | null {
+function readInitialAdminSeedCredentials(): {
+  email: string;
+  name: string;
+  password: string;
+} | null {
   const email = env.INITIAL_ADMIN_EMAIL;
   const password = env.INITIAL_ADMIN_PASSWORD;
 
@@ -816,4 +820,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-

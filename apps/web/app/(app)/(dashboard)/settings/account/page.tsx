@@ -1,5 +1,5 @@
-import { AccountSettingsPage } from '@/features/settings/account-settings-page';
+import { redirect } from 'next/navigation';
 
 export default function AccountSettingsRoutePage() {
-  return <AccountSettingsPage />;
+  redirect('/settings/account/profile');
 }

@@ -46,7 +46,9 @@ export function OperationsAlertsPage() {
         badges={[
           {
             label:
-              (alerts?.criticalCount ?? 0) > 0 ? '긴급 알림 있음' : '긴급 알림 없음',
+              (alerts?.criticalCount ?? 0) > 0
+                ? '긴급 알림 있음'
+                : '긴급 알림 없음',
             color: (alerts?.criticalCount ?? 0) > 0 ? 'warning' : 'success'
           },
           {
@@ -203,13 +205,7 @@ export function OperationsAlertsPage() {
   );
 }
 
-function AlertInfoItem({
-  label,
-  value
-}: {
-  label: string;
-  value: string;
-}) {
+function AlertInfoItem({ label, value }: { label: string; value: string }) {
   return (
     <Stack spacing={0.35}>
       <Typography variant="caption" color="text.secondary">

@@ -5,14 +5,7 @@ import AccountBalanceWalletRoundedIcon from '@mui/icons-material/AccountBalanceW
 import AutoGraphRoundedIcon from '@mui/icons-material/AutoGraphRounded';
 import ReceiptLongRoundedIcon from '@mui/icons-material/ReceiptLongRounded';
 import ShieldRoundedIcon from '@mui/icons-material/ShieldRounded';
-import {
-  Alert,
-  Button,
-  Chip,
-  Grid,
-  Stack,
-  Typography
-} from '@mui/material';
+import { Alert, Button, Chip, Grid, Stack, Typography } from '@mui/material';
 import { BarChart } from '@mui/x-charts/BarChart';
 import type { DashboardSummary } from '@personal-erp/contracts';
 import { formatWon } from '@/shared/lib/format';
@@ -225,11 +218,12 @@ export function DashboardSummarySections({
             <Stack spacing={1.5}>
               <Stack spacing={0.5}>
                 <Typography variant="subtitle2">
-                  최근 공식 기준: {summary.officialComparison?.monthLabel ?? '없음'}
+                  최근 공식 기준:{' '}
+                  {summary.officialComparison?.monthLabel ?? '없음'}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  공식 비교가 필요하면 재무제표, 다음 달 준비 상태까지 보려면 기간
-                  전망으로 이동하세요.
+                  공식 비교가 필요하면 재무제표, 다음 달 준비 상태까지 보려면
+                  기간 전망으로 이동하세요.
                 </Typography>
               </Stack>
 

@@ -77,7 +77,8 @@ export class CategoriesController {
           request,
           workspace,
           details: {
-            requiredRoles: readAllowedWorkspaceRoles('category.create').join(',')
+            requiredRoles:
+              readAllowedWorkspaceRoles('category.create').join(',')
           }
         });
       }
@@ -98,7 +99,11 @@ export class CategoriesController {
     try {
       assertWorkspaceActionAllowed(workspace.membershipRole, 'category.update');
 
-      const updated = await this.categoriesService.update(user, categoryId, dto);
+      const updated = await this.categoriesService.update(
+        user,
+        categoryId,
+        dto
+      );
 
       if (!updated) {
         throw new NotFoundException('Category not found');
@@ -122,7 +127,8 @@ export class CategoriesController {
           workspace,
           details: {
             categoryId,
-            requiredRoles: readAllowedWorkspaceRoles('category.update').join(',')
+            requiredRoles:
+              readAllowedWorkspaceRoles('category.update').join(',')
           }
         });
       }

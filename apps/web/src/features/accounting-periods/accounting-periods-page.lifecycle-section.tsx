@@ -40,8 +40,9 @@ export function PeriodOperationsSection(
     headingTitle = '운영 작업',
     headingDescription
   } = props;
-  const [activeTab, setActiveTab] = React.useState<PeriodOperationTab>(() =>
-    forcedTab ?? pickDefaultPeriodOperationTab({ openPeriod, reopenPeriod })
+  const [activeTab, setActiveTab] = React.useState<PeriodOperationTab>(
+    () =>
+      forcedTab ?? pickDefaultPeriodOperationTab({ openPeriod, reopenPeriod })
   );
 
   React.useEffect(() => {

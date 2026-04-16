@@ -97,7 +97,8 @@ export function OperationsNotesPage() {
             color: (notes?.totalCount ?? 0) > 0 ? 'primary' : 'default'
           },
           {
-            label: monthEndNoteCount > 0 ? '월 마감 메모 있음' : '월 마감 메모 없음',
+            label:
+              monthEndNoteCount > 0 ? '월 마감 메모 있음' : '월 마감 메모 없음',
             color: monthEndNoteCount > 0 ? 'warning' : 'default'
           }
         ]}
@@ -290,10 +291,17 @@ export function OperationsNotesPage() {
                       justifyContent="space-between"
                       alignItems={{ md: 'center' }}
                     >
-                      <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        useFlexGap
+                        flexWrap="wrap"
+                      >
                         <Chip
                           label={readOperationsNoteKindLabel(note.kind)}
-                          color={note.kind === 'MONTH_END' ? 'warning' : 'primary'}
+                          color={
+                            note.kind === 'MONTH_END' ? 'warning' : 'primary'
+                          }
                           size="small"
                         />
                         {note.periodLabel ? (
@@ -336,13 +344,7 @@ export function OperationsNotesPage() {
   );
 }
 
-function NoteInfoItem({
-  label,
-  value
-}: {
-  label: string;
-  value: string;
-}) {
+function NoteInfoItem({ label, value }: { label: string; value: string }) {
   return (
     <Stack spacing={0.35}>
       <Typography variant="caption" color="text.secondary">

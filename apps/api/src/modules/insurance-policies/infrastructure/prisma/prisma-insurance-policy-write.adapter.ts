@@ -2,9 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
 import { normalizeCaseInsensitiveText } from '../../../../common/utils/normalize-unique-key.util';
-import {
-  prepareRecurringRuleSchedule
-} from '../../../recurring-rules/public';
+import { prepareRecurringRuleSchedule } from '../../../recurring-rules/public';
 import type { InsurancePolicyRecord } from '../../insurance-policies.mapper';
 import { insurancePolicyInclude } from '../../insurance-policies.repository';
 import {
@@ -20,14 +18,10 @@ import {
 } from '../../application/ports/insurance-policy-write.port';
 
 @Injectable()
-export class PrismaInsurancePolicyWriteAdapter
-  implements InsurancePolicyWritePort
-{
+export class PrismaInsurancePolicyWriteAdapter implements InsurancePolicyWritePort {
   constructor(private readonly prisma: PrismaService) {}
 
-  async readRecurringReferenceState(
-    input: InsurancePolicyReferenceStateInput
-  ) {
+  async readRecurringReferenceState(input: InsurancePolicyReferenceStateInput) {
     const [fundingAccount, category] = await Promise.all([
       this.prisma.account.findFirst({
         where: {

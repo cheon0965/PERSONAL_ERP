@@ -150,8 +150,20 @@ export function createNavigationPrismaMock(
           return existing;
         }
 
+        const nextId =
+          state.workspaceNavigationMenuItems.reduce((maxId, candidate) => {
+            const match = candidate.id.match(
+              /workspace-navigation-menu-item-(\d+)$/
+            );
+
+            if (!match) {
+              return maxId;
+            }
+
+            return Math.max(maxId, Number(match[1]));
+          }, 0) + 1;
         const created = {
-          id: `workspace-navigation-menu-item-${state.workspaceNavigationMenuItems.length + 1}`,
+          id: `workspace-navigation-menu-item-${nextId}`,
           ...args.create
         };
         state.workspaceNavigationMenuItems.push(created);

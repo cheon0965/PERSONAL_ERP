@@ -36,7 +36,11 @@ export class CreateOperationsNoteDto implements CreateOperationsNoteRequest {
   @MaxLength(5000)
   body!: string;
 
-  @ApiProperty({ required: false, nullable: true, example: '/operations/alerts' })
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    example: '/operations/alerts'
+  })
   @IsOptional()
   @IsString()
   @MaxLength(300)

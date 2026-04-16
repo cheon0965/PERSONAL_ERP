@@ -2,14 +2,11 @@
 
 import type { Route } from 'next';
 import Link from 'next/link';
-import {
-  Box,
-  Button,
-  Divider,
-  Stack,
-  Typography
-} from '@mui/material';
-import type { AccountingPeriodItem, JournalEntryItem } from '@personal-erp/contracts';
+import { Box, Button, Divider, Stack, Typography } from '@mui/material';
+import type {
+  AccountingPeriodItem,
+  JournalEntryItem
+} from '@personal-erp/contracts';
 import type { GridColDef } from '@mui/x-data-grid';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { formatDate, formatWon } from '@/shared/lib/format';
@@ -137,7 +134,12 @@ export function JournalEntriesWorkspace({
             아직 확정된 전표가 없습니다. 수집 거래 화면에서 전표 준비 상태의
             거래를 선택해 전표 확정을 진행해 주세요.
           </Typography>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} useFlexGap flexWrap="wrap">
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={1}
+            useFlexGap
+            flexWrap="wrap"
+          >
             <Button component={Link} href="/transactions" variant="contained">
               수집 거래 보기
             </Button>
@@ -153,14 +155,21 @@ export function JournalEntriesWorkspace({
   if (isDetailLayout) {
     return selectedEntry ? (
       <Stack spacing={appLayout.sectionGap}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} useFlexGap flexWrap="wrap">
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={1}
+          useFlexGap
+          flexWrap="wrap"
+        >
           <Button component={Link} href="/journal-entries" variant="outlined">
             전표 목록으로
           </Button>
           {selectedEntry.sourceCollectedTransactionId ? (
             <Button
               component={Link}
-              href={`/transactions?transactionId=${selectedEntry.sourceCollectedTransactionId}` as Route}
+              href={
+                `/transactions?transactionId=${selectedEntry.sourceCollectedTransactionId}` as Route
+              }
               variant="text"
             >
               원본 거래 보기
@@ -242,27 +251,53 @@ function JournalEntryDetailCard({
           justifyContent="space-between"
           alignItems={{ xs: 'flex-start', lg: 'center' }}
         >
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={appLayout.fieldGap} useFlexGap flexWrap="wrap">
-            <DetailFact label="전표 상태" value={<StatusChip label={entry.status} />} />
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={appLayout.fieldGap}
+            useFlexGap
+            flexWrap="wrap"
+          >
+            <DetailFact
+              label="전표 상태"
+              value={<StatusChip label={entry.status} />}
+            />
             <DetailFact label="전표 일자" value={formatDate(entry.entryDate)} />
-            <DetailFact label="총 금액" value={formatWon(readJournalEntryTotalAmount(entry))} />
-            <DetailFact label="원본 거래" value={entry.sourceCollectedTransactionTitle ?? '-'} />
+            <DetailFact
+              label="총 금액"
+              value={formatWon(readJournalEntryTotalAmount(entry))}
+            />
+            <DetailFact
+              label="원본 거래"
+              value={entry.sourceCollectedTransactionTitle ?? '-'}
+            />
           </Stack>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
             {entry.sourceCollectedTransactionId ? (
               <Button
                 size="small"
                 component={Link}
-                href={`/transactions?transactionId=${entry.sourceCollectedTransactionId}` as Route}
+                href={
+                  `/transactions?transactionId=${entry.sourceCollectedTransactionId}` as Route
+                }
                 variant="outlined"
               >
                 원본 거래 보기
               </Button>
             ) : null}
-            <Button size="small" variant="outlined" disabled={!canAdjust} onClick={onReverse}>
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={!canAdjust}
+              onClick={onReverse}
+            >
               반전 전표
             </Button>
-            <Button size="small" variant="contained" disabled={!canAdjust} onClick={onCorrect}>
+            <Button
+              size="small"
+              variant="contained"
+              disabled={!canAdjust}
+              onClick={onCorrect}
+            >
               정정 전표
             </Button>
           </Stack>
@@ -289,7 +324,11 @@ function JournalEntryDetailCard({
             <Stack spacing={0.75}>
               <Typography variant="subtitle2">조정 계보</Typography>
               {buildAdjustmentMetadataRows(entry).map((row) => (
-                <Typography key={`${entry.id}-${row.label}`} variant="body2" color="text.secondary">
+                <Typography
+                  key={`${entry.id}-${row.label}`}
+                  variant="body2"
+                  color="text.secondary"
+                >
                   {row.label}: {row.value}
                 </Typography>
               ))}
@@ -323,10 +362,13 @@ function JournalEntryDetailCard({
             >
               <Stack spacing={0.5} sx={{ minWidth: 0 }}>
                 <Typography variant="subtitle2">
-                  {line.lineNumber}. {line.accountSubjectCode} {line.accountSubjectName}
+                  {line.lineNumber}. {line.accountSubjectCode}{' '}
+                  {line.accountSubjectName}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {line.fundingAccountName ? `자금수단: ${line.fundingAccountName}` : '자금수단 없음'}
+                  {line.fundingAccountName
+                    ? `자금수단: ${line.fundingAccountName}`
+                    : '자금수단 없음'}
                 </Typography>
                 {line.description ? (
                   <Typography variant="body2" color="text.secondary">
@@ -334,9 +376,16 @@ function JournalEntryDetailCard({
                   </Typography>
                 ) : null}
               </Stack>
-              <Stack spacing={0.5} alignItems={{ xs: 'flex-start', md: 'flex-end' }}>
-                <Typography variant="body2">차변 {formatWon(line.debitAmount)}</Typography>
-                <Typography variant="body2">대변 {formatWon(line.creditAmount)}</Typography>
+              <Stack
+                spacing={0.5}
+                alignItems={{ xs: 'flex-start', md: 'flex-end' }}
+              >
+                <Typography variant="body2">
+                  차변 {formatWon(line.debitAmount)}
+                </Typography>
+                <Typography variant="body2">
+                  대변 {formatWon(line.creditAmount)}
+                </Typography>
               </Stack>
             </Stack>
           ))}
@@ -358,7 +407,11 @@ function DetailFact({
       <Typography variant="caption" color="text.secondary">
         {label}
       </Typography>
-      {typeof value === 'string' ? <Typography variant="body2">{value}</Typography> : value}
+      {typeof value === 'string' ? (
+        <Typography variant="body2">{value}</Typography>
+      ) : (
+        value
+      )}
     </Stack>
   );
 }

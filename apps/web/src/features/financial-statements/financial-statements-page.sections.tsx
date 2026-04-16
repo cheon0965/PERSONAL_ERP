@@ -2,16 +2,8 @@
 
 import type { Route } from 'next';
 import Link from 'next/link';
-import {
-  Alert,
-  Button,
-  Grid,
-  Stack,
-  Typography
-} from '@mui/material';
-import type {
-  AccountingPeriodItem
-} from '@personal-erp/contracts';
+import { Alert, Button, Grid, Stack, Typography } from '@mui/material';
+import type { AccountingPeriodItem } from '@personal-erp/contracts';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { SectionCard } from '@/shared/ui/section-card';
 import {
@@ -89,7 +81,11 @@ export function FinancialStatementsOverview({
                 flexWrap="wrap"
               >
                 {detailHref && hasStatements ? (
-                  <Button component={Link} href={detailHref} variant="contained">
+                  <Button
+                    component={Link}
+                    href={detailHref}
+                    variant="contained"
+                  >
                     보고서 보기
                   </Button>
                 ) : canGenerate ? (
@@ -112,7 +108,11 @@ export function FinancialStatementsOverview({
                   </Button>
                 ) : null}
                 {!hasStatements ? (
-                  <Button component={Link} href="/journal-entries" variant="outlined">
+                  <Button
+                    component={Link}
+                    href="/journal-entries"
+                    variant="outlined"
+                  >
                     전표 보기
                   </Button>
                 ) : null}
@@ -132,7 +132,9 @@ export function FinancialStatementsOverview({
             <Stack spacing={1}>
               <Typography variant="body2" color="text.secondary">
                 기초 잔액 출처:{' '}
-                {readOpeningSourceLabel(view?.basis.openingBalanceSourceKind ?? null)}
+                {readOpeningSourceLabel(
+                  view?.basis.openingBalanceSourceKind ?? null
+                )}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 기준 월: {view?.basis.sourceMonthLabel ?? '없음'}
@@ -171,9 +173,12 @@ export function FinancialStatementsOverview({
                       : 'background.paper'
                   }}
                 >
-                  <Typography variant="subtitle1">{period.monthLabel}</Typography>
+                  <Typography variant="subtitle1">
+                    {period.monthLabel}
+                  </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {readPeriodStatusLabel(period.status)} 상태의 공식 보고 대상입니다.
+                    {readPeriodStatusLabel(period.status)} 상태의 공식 보고
+                    대상입니다.
                   </Typography>
                   <Stack
                     direction={{ xs: 'column', sm: 'row' }}
@@ -224,7 +229,9 @@ export function FinancialStatementsDetail({
               key={period.id}
               component={Link}
               href={buildFinancialStatementsDetailHref(period.id)}
-              variant={period.id === selectedPeriodId ? 'contained' : 'outlined'}
+              variant={
+                period.id === selectedPeriodId ? 'contained' : 'outlined'
+              }
             >
               {period.monthLabel}
             </Button>
@@ -264,7 +271,9 @@ export function FinancialStatementsDetail({
           <Grid size={{ xs: 12, md: 4 }}>
             <ReportInfoItem
               label="기초 잔액 출처"
-              value={readOpeningSourceLabel(view.basis.openingBalanceSourceKind)}
+              value={readOpeningSourceLabel(
+                view.basis.openingBalanceSourceKind
+              )}
               description={
                 view.basis.sourceMonthLabel
                   ? `${view.basis.sourceMonthLabel} 마감/이월에서 이어졌습니다.`

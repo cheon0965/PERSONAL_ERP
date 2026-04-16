@@ -93,8 +93,8 @@ export function ReferenceDataPage() {
           { label: '장부', value: ledgerLabel },
           { label: '권한', value: membershipRole ?? '-' }
         ]}
-        primaryActionLabel="기준 데이터 관리"
-        primaryActionHref="/reference-data/manage"
+        primaryActionLabel="자금수단"
+        primaryActionHref="/reference-data/funding-accounts"
       />
 
       <ReferenceDataSectionNav />

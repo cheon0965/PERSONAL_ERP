@@ -21,7 +21,7 @@ import {
   expectNoUnhandledApiRequests
 } from '../support/auth-transactions-common';
 
-test('manages funding accounts and categories through the reference data UI', async ({
+test('manages funding accounts and categories across split reference data screens', async ({
   page
 }) => {
   const pageErrors: string[] = [];
@@ -272,6 +272,17 @@ test('manages funding accounts and categories through the reference data UI', as
       return;
     }
 
+    if (path === '/api/navigation/tree' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: []
+        })
+      });
+      return;
+    }
+
     const requestSignature = `${request.method()} ${path}`;
     unhandledApiRequests.push(requestSignature);
 
@@ -284,16 +295,16 @@ test('manages funding accounts and categories through the reference data UI', as
     });
   });
 
-  await page.goto('/reference-data/manage');
+  await page.goto('/reference-data/funding-accounts');
   await expect(page).toHaveURL(/\/login/);
 
   await page.getByLabel('이메일').fill('demo@example.com');
   await page.getByLabel('비밀번호').fill('Demo1234!');
   await page.getByRole('button', { name: '로그인' }).click();
 
-  await expect(page).toHaveURL(/\/reference-data\/manage$/);
+  await expect(page).toHaveURL(/\/reference-data\/funding-accounts$/);
   await expect(
-    page.getByRole('heading', { name: '기준 데이터 관리와 참조 입력' })
+    page.getByRole('heading', { level: 4, name: '자금수단' })
   ).toBeVisible();
   await expect(
     page.getByRole('button', { name: '자금수단 추가' })
@@ -414,6 +425,11 @@ test('manages funding accounts and categories through the reference data UI', as
     renamedFundingAccountRow.getByText('종료 계정은 읽기 전용')
   ).toBeVisible();
 
+  await page.goto('/reference-data/categories');
+  await expect(page).toHaveURL(/\/reference-data\/categories$/);
+  await expect(
+    page.getByRole('heading', { level: 4, name: '카테고리' })
+  ).toBeVisible();
   await page.getByRole('button', { name: '카테고리 추가' }).click();
   await expect(
     page.getByRole('heading', { name: '카테고리 추가' })

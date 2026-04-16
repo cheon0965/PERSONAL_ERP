@@ -33,7 +33,12 @@ export function ConfirmActionDialog({
   onConfirm
 }: ConfirmActionDialogProps) {
   return (
-    <Dialog open={open} onClose={busy ? undefined : onClose} maxWidth="xs" fullWidth>
+    <Dialog
+      open={open}
+      onClose={busy ? undefined : onClose}
+      maxWidth="xs"
+      fullWidth
+    >
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
         <DialogContentText>{description}</DialogContentText>

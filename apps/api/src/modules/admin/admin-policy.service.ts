@@ -7,9 +7,7 @@ import { NavigationService } from '../navigation/public';
 export class AdminPolicyService {
   constructor(private readonly navigationService: NavigationService) {}
 
-  getSummary(
-    workspace: RequiredWorkspaceContext
-  ): Promise<AdminPolicySummary> {
+  getSummary(workspace: RequiredWorkspaceContext): Promise<AdminPolicySummary> {
     return this.navigationService.getPolicySummary(workspace);
   }
 }

@@ -40,13 +40,14 @@ export class UpdateInsurancePolicyUseCase {
     }
 
     const normalizedInput = normalizeInsurancePolicyInput(input);
-    const duplicate = await this.insurancePoliciesRepository.findDuplicateInWorkspace(
-      workspace.tenantId,
-      workspace.ledgerId,
-      normalizedInput.provider,
-      normalizedInput.productName,
-      existing.id
-    );
+    const duplicate =
+      await this.insurancePoliciesRepository.findDuplicateInWorkspace(
+        workspace.tenantId,
+        workspace.ledgerId,
+        normalizedInput.provider,
+        normalizedInput.productName,
+        existing.id
+      );
     assertInsurancePolicyUnique(duplicate);
 
     const referenceState =

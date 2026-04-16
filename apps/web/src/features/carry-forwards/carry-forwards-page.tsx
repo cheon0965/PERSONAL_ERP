@@ -66,11 +66,7 @@ export function CarryForwardsPage({
     description:
       '이 화면은 잠금된 월의 마감 결과를 다음 월의 시작 잔액 기준으로 넘기는 곳입니다. 한 달 운영을 공식 보고에서 끝내지 않고 다음 달 운영으로 연결합니다.',
     primaryEntity: '차기 이월 기록',
-    relatedEntities: [
-      '월 마감 스냅샷',
-      '다음 월 기초 잔액',
-      '운영 기간'
-    ],
+    relatedEntities: ['월 마감 스냅샷', '다음 월 기초 잔액', '운영 기간'],
     truthSource:
       '차기 이월은 잠금된 기간의 마감 결과와 잔액 라인을 근거로 생성됩니다.',
     supplementarySections: [
@@ -114,7 +110,11 @@ export function CarryForwardsPage({
   }, [pinnedPeriodId]);
 
   React.useEffect(() => {
-    if (pinnedPeriodId == null && !selectedPeriodIdState && lockedPeriods.length > 0) {
+    if (
+      pinnedPeriodId == null &&
+      !selectedPeriodIdState &&
+      lockedPeriods.length > 0
+    ) {
       setSelectedPeriodIdState(lockedPeriods[0]!.id);
     }
   }, [lockedPeriods, pinnedPeriodId, selectedPeriodIdState]);
@@ -236,7 +236,9 @@ export function CarryForwardsPage({
         primaryActionOnClick={() => {
           void handleGenerateCarryForward();
         }}
-        primaryActionDisabled={!selectedPeriod || !canGenerate || mutation.isPending}
+        primaryActionDisabled={
+          !selectedPeriod || !canGenerate || mutation.isPending
+        }
         secondaryActionLabel={
           mode === 'detail'
             ? '생성 / 선택으로 돌아가기'
@@ -350,7 +352,11 @@ export function CarryForwardsPage({
               현재 잠금된 운영 기간 목록으로 돌아가 다시 선택해 주세요.
             </Typography>
             <div>
-              <Button component={Link} href="/carry-forwards" variant="contained">
+              <Button
+                component={Link}
+                href="/carry-forwards"
+                variant="contained"
+              >
                 생성 / 선택으로 돌아가기
               </Button>
             </div>
@@ -425,10 +431,18 @@ export function CarryForwardsPage({
                     : '이 결과 화면에서 바로 생성'}
                 </Button>
               ) : null}
-              <Button component={Link} href="/carry-forwards" variant="outlined">
+              <Button
+                component={Link}
+                href="/carry-forwards"
+                variant="outlined"
+              >
                 생성 / 선택으로 돌아가기
               </Button>
-              <Button component={Link} href="/financial-statements" variant="text">
+              <Button
+                component={Link}
+                href="/financial-statements"
+                variant="text"
+              >
                 재무제표 보기
               </Button>
             </Stack>

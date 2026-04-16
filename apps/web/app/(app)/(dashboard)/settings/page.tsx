@@ -51,12 +51,7 @@ export default function SettingsPage() {
     description:
       '이 화면은 다른 메뉴를 사용하기 전에 현재 로그인 사용자가 어느 사업장, 권한, 장부 안에서 작업하는지 확인하는 시작 화면입니다. 데이터가 예상과 다르게 보이면 먼저 이 화면의 문맥을 확인합니다.',
     primaryEntity: '사업장 / 권한 / 장부',
-    relatedEntities: [
-      '운영 기간',
-      '입출금 계정',
-      '거래 유형',
-      '수집 거래'
-    ],
+    relatedEntities: ['운영 기간', '입출금 계정', '거래 유형', '수집 거래'],
     truthSource:
       '현재 세션의 currentWorkspace가 모든 화면의 조회, 입력, 확정 권한을 해석하는 런타임 기준입니다.',
     supplementarySections: [
@@ -173,10 +168,6 @@ export default function SettingsPage() {
                         currentWorkspace.membership.status
                       ] ?? currentWorkspace.membership.status)
                     : '-'
-                },
-                {
-                  label: '해석 기준',
-                  value: '현재 로그인 사용자의 공식 작업 권한'
                 }
               ]}
             />
@@ -215,11 +206,9 @@ export default function SettingsPage() {
                 },
                 {
                   label: '사용자',
-                  value: user ? `${user.name} <${user.email}>` : '활성 세션 없음'
-                },
-                {
-                  label: '확인 포인트',
-                  value: '데이터가 다르면 이 문맥과 기간 필터를 먼저 점검'
+                  value: user
+                    ? `${user.name} <${user.email}>`
+                    : '활성 세션 없음'
                 }
               ]}
             />
@@ -236,7 +225,6 @@ export default function SettingsPage() {
             <SettingsActionCard
               eyebrow="운영 준비"
               title="기준 데이터"
-              description="자금수단, 카테고리, 공식 참조 기준이 준비됐는지 먼저 확인합니다."
               href="/reference-data"
               actionLabel="준비 상태 보기"
             />
@@ -245,7 +233,6 @@ export default function SettingsPage() {
             <SettingsActionCard
               eyebrow="월 실행"
               title="운영 월"
-              description="현재 장부 문맥에서 열린 운영 월과 마감 이력을 확인합니다."
               href="/periods"
               actionLabel="운영 월 보기"
             />
@@ -253,8 +240,7 @@ export default function SettingsPage() {
           <Grid size={{ xs: 12, md: 6, xl: 3 }}>
             <SettingsActionCard
               eyebrow="설정"
-              title="사업장"
-              description="사업장 이름, 상태, 통화, 시간대 같은 기본 기준값을 관리합니다."
+              title="사업장 설정"
               href="/settings/workspace"
               actionLabel="사업장 설정"
             />
@@ -262,10 +248,9 @@ export default function SettingsPage() {
           <Grid size={{ xs: 12, md: 6, xl: 3 }}>
             <SettingsActionCard
               eyebrow="보안"
-              title="내 계정"
-              description="이름, 비밀번호, 세션 종료 같은 사용자 보안 설정을 직접 관리합니다."
-              href="/settings/account"
-              actionLabel="내 계정 보기"
+              title="기본 정보"
+              href="/settings/account/profile"
+              actionLabel="기본 정보"
             />
           </Grid>
         </Grid>
@@ -313,13 +298,11 @@ function ContextInfoCard({
 function SettingsActionCard({
   eyebrow,
   title,
-  description,
   href,
   actionLabel
 }: {
   eyebrow: string;
   title: string;
-  description: string;
   href: string;
   actionLabel: string;
 }) {
@@ -342,9 +325,6 @@ function SettingsActionCard({
         <Chip label="바로 이동" size="small" variant="outlined" />
       </Stack>
       <Typography variant="subtitle1">{title}</Typography>
-      <Typography variant="body2" color="text.secondary">
-        {description}
-      </Typography>
       <div>
         <Button component={Link} href={href} variant="outlined">
           {actionLabel}

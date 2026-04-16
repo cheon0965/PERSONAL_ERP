@@ -70,7 +70,10 @@ export class InsurancePoliciesController {
         'insurance_policy.create'
       );
 
-      const created = await this.createInsurancePolicyUseCase.execute(user, dto);
+      const created = await this.createInsurancePolicyUseCase.execute(
+        user,
+        dto
+      );
 
       logWorkspaceActionSucceeded(this.securityEvents, {
         action: 'insurance_policy.create',

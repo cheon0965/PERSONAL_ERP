@@ -17,7 +17,6 @@ type DataTableCardProps<T extends { id: string }> = {
 
 export function DataTableCard<T extends { id: string }>({
   title,
-  description,
   actions,
   toolbar,
   rows,
@@ -36,20 +35,6 @@ export function DataTableCard<T extends { id: string }>({
           >
             <div>
               <Typography variant="h6">{title}</Typography>
-              {description ? (
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{
-                    mt: appLayout.cardDescriptionOffset,
-                    display: 'block',
-                    maxWidth: 720,
-                    lineHeight: 1.7
-                  }}
-                >
-                  {description}
-                </Typography>
-              ) : null}
             </div>
             {actions ? <div>{actions}</div> : null}
           </Stack>

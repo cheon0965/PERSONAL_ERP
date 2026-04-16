@@ -2,7 +2,10 @@
 
 import { useMemo, useState } from 'react';
 import { Alert, Stack } from '@mui/material';
-import type { AdminMemberItem, TenantMembershipRole } from '@personal-erp/contracts';
+import type {
+  AdminMemberItem,
+  TenantMembershipRole
+} from '@personal-erp/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
@@ -146,9 +149,7 @@ export function AdminMembersPage() {
         onEdit: (member) => {
           setEditingMember(member);
           setNextRole(member.role);
-          setNextStatus(
-            member.status === 'INVITED' ? 'ACTIVE' : member.status
-          );
+          setNextStatus(member.status === 'INVITED' ? 'ACTIVE' : member.status);
         },
         onRemove: setRemoveTarget
       }),
@@ -160,7 +161,11 @@ export function AdminMembersPage() {
     description:
       '회원 관리는 현재 워크스페이스 멤버를 읽고, 필요할 때만 초대·역할·상태를 조정하는 화면입니다.',
     primaryEntity: 'TenantMembership',
-    relatedEntities: ['User', 'TenantMembershipInvitation', 'WorkspaceAuditEvent'],
+    relatedEntities: [
+      'User',
+      'TenantMembershipInvitation',
+      'WorkspaceAuditEvent'
+    ],
     truthSource:
       '실제 권한은 멤버 역할과 상태로 결정되며, 변경 이력은 감사 이벤트로 함께 남습니다.',
     supplementarySections: [

@@ -13,6 +13,9 @@ const periodSectionItems = [
 
 export function PeriodsSectionNav() {
   return (
-    <SectionTabs items={periodSectionItems} ariaLabel="월 운영 하위 화면 이동" />
+    <SectionTabs
+      items={periodSectionItems}
+      ariaLabel="월 운영 하위 화면 이동"
+    />
   );
 }

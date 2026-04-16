@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import type { CreateCategoryRequest, UpdateCategoryRequest } from '@personal-erp/contracts';
+import type {
+  CreateCategoryRequest,
+  UpdateCategoryRequest
+} from '@personal-erp/contracts';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { normalizeCaseInsensitiveText } from '../../common/utils/normalize-unique-key.util';
 

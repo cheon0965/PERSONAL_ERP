@@ -68,7 +68,8 @@ export function VehiclesPage({
   section?: VehicleWorkspaceSection;
 }) {
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
-  const [drawerState, setDrawerState] = React.useState<VehicleDrawerState>(null);
+  const [drawerState, setDrawerState] =
+    React.useState<VehicleDrawerState>(null);
   const [fuelDrawerState, setFuelDrawerState] =
     React.useState<VehicleFuelDrawerState>(null);
   const [maintenanceDrawerState, setMaintenanceDrawerState] =
@@ -108,24 +109,26 @@ export function VehiclesPage({
   );
   const latestFuelLog =
     fuelLogs.length > 0
-      ? [...fuelLogs]
+      ? ([...fuelLogs]
           .sort((left, right) => left.filledOn.localeCompare(right.filledOn))
-          .at(-1) ?? null
+          .at(-1) ?? null)
       : null;
   const latestMaintenanceLog =
     maintenanceLogs.length > 0
-      ? [...maintenanceLogs]
-          .sort((left, right) => left.performedOn.localeCompare(right.performedOn))
-          .at(-1) ?? null
+      ? ([...maintenanceLogs]
+          .sort((left, right) =>
+            left.performedOn.localeCompare(right.performedOn)
+          )
+          .at(-1) ?? null)
       : null;
   const mostExpensiveVehicle =
     operatingSummary.items.length > 0
-      ? [...operatingSummary.items].sort((left, right) =>
+      ? ([...operatingSummary.items].sort((left, right) =>
           subtractMoneyWon(
             right.recordedOperatingExpenseWon,
             left.recordedOperatingExpenseWon
           )
-        )[0] ?? null
+        )[0] ?? null)
       : null;
   const activeSectionLabel =
     section === 'overview'
@@ -184,7 +187,10 @@ export function VehiclesPage({
     setMaintenanceDrawerState({ mode: 'edit', maintenanceLog });
   };
 
-  const handleFormCompleted = (vehicle: VehicleItem, mode: 'create' | 'edit') => {
+  const handleFormCompleted = (
+    vehicle: VehicleItem,
+    mode: 'create' | 'edit'
+  ) => {
     setDrawerState(null);
     setFeedback({
       severity: 'success',
@@ -341,7 +347,9 @@ export function VehiclesPage({
           },
           {
             label: '기록 운영비',
-            value: formatWon(operatingSummary.totals.recordedOperatingExpenseWon)
+            value: formatWon(
+              operatingSummary.totals.recordedOperatingExpenseWon
+            )
           },
           {
             label: '최근 연료',
@@ -371,10 +379,16 @@ export function VehiclesPage({
         </Alert>
       ) : null}
       {vehiclesError ? (
-        <QueryErrorAlert title="차량 정보 조회에 실패했습니다." error={vehiclesError} />
+        <QueryErrorAlert
+          title="차량 정보 조회에 실패했습니다."
+          error={vehiclesError}
+        />
       ) : null}
       {fuelLogsError ? (
-        <QueryErrorAlert title="차량 연료 이력 조회에 실패했습니다." error={fuelLogsError} />
+        <QueryErrorAlert
+          title="차량 연료 이력 조회에 실패했습니다."
+          error={fuelLogsError}
+        />
       ) : null}
       {maintenanceLogsError ? (
         <QueryErrorAlert

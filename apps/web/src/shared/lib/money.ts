@@ -23,10 +23,13 @@ export function createNonNegativeMoneyWonSchema(message: string) {
 }
 
 export function createPositiveMoneyWonTextSchema(message: string) {
-  return z.string().trim().refine((value) => {
-    const parsed = parseMoneyWon(value);
-    return parsed != null && parsed > 0;
-  }, message);
+  return z
+    .string()
+    .trim()
+    .refine((value) => {
+      const parsed = parseMoneyWon(value);
+      return parsed != null && parsed > 0;
+    }, message);
 }
 
 export function parseMoneyWonValue(value: unknown) {

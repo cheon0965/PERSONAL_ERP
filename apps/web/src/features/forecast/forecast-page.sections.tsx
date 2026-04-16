@@ -15,7 +15,10 @@ import {
   Typography
 } from '@mui/material';
 import { BarChart } from '@mui/x-charts/BarChart';
-import type { AccountingPeriodItem, ForecastResponse } from '@personal-erp/contracts';
+import type {
+  AccountingPeriodItem,
+  ForecastResponse
+} from '@personal-erp/contracts';
 import { formatWon } from '@/shared/lib/format';
 import { ChartCard } from '@/shared/ui/chart-card';
 import { SectionCard } from '@/shared/ui/section-card';
@@ -75,7 +78,11 @@ export function ForecastPeriodSelectionSection({
               <Button component={Link} href="/dashboard" variant="outlined">
                 대시보드 보기
               </Button>
-              <Button component={Link} href="/financial-statements" variant="text">
+              <Button
+                component={Link}
+                href="/financial-statements"
+                variant="text"
+              >
                 재무제표 보기
               </Button>
             </Stack>
@@ -262,7 +269,9 @@ export function ForecastContent({ forecast }: { forecast: ForecastResponse }) {
                   </Typography>
                   <ForecastDriverRow
                     label="공식 현금"
-                    value={formatWon(forecast.officialComparison.officialCashWon)}
+                    value={formatWon(
+                      forecast.officialComparison.officialCashWon
+                    )}
                   />
                   <ForecastDriverRow
                     label="공식 순자산"

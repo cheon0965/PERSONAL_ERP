@@ -171,7 +171,8 @@ export function JournalEntriesPage({
             selectedEntry
               ? {
                   label: selectedEntry.status,
-                  color: selectedEntry.status === 'POSTED' ? 'success' : 'default'
+                  color:
+                    selectedEntry.status === 'POSTED' ? 'success' : 'default'
                 }
               : {
                   label: '전표 없음',
@@ -236,8 +237,8 @@ export function JournalEntriesPage({
 
         {currentPeriod ? (
           <Alert severity="info" variant="outlined">
-            현재 열린 운영 기간은 {currentPeriod.monthLabel}이며, 반전/정정 전표는
-            이 기간 안의 일자로만 생성할 수 있습니다.
+            현재 열린 운영 기간은 {currentPeriod.monthLabel}이며, 반전/정정
+            전표는 이 기간 안의 일자로만 생성할 수 있습니다.
           </Alert>
         ) : (
           <Alert

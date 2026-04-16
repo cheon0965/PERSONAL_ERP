@@ -1,7 +1,10 @@
 'use client';
 
-import { Chip, Grid, Stack, Typography } from '@mui/material';
-import type { AccountSubjectItem, LedgerTransactionTypeItem } from '@personal-erp/contracts';
+import { Chip, Grid, Stack } from '@mui/material';
+import type {
+  AccountSubjectItem,
+  LedgerTransactionTypeItem
+} from '@personal-erp/contracts';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import {
@@ -34,9 +37,6 @@ export function ReferenceDataLookupsSection({
                 size="small"
                 variant="outlined"
               />
-              <Typography variant="body2" color="text.secondary">
-                직접 수정하지 않고 입력 정책 확인용으로 조회합니다.
-              </Typography>
             </Stack>
           }
           rows={accountSubjects}
@@ -60,9 +60,6 @@ export function ReferenceDataLookupsSection({
                 size="small"
                 variant="outlined"
               />
-              <Typography variant="body2" color="text.secondary">
-                전표 정책과 흐름 기준을 확인하는 읽기 전용 참조 목록입니다.
-              </Typography>
             </Stack>
           }
           rows={ledgerTransactionTypes}

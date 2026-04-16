@@ -70,6 +70,17 @@ test('@smoke shows safe context fallback when no workspace is connected', async 
       return;
     }
 
+    if (path === '/api/navigation/tree' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: []
+        })
+      });
+      return;
+    }
+
     if (path === '/api/dashboard/summary' && request.method() === 'GET') {
       await route.fulfill({
         status: 200,
@@ -92,7 +103,9 @@ test('@smoke shows safe context fallback when no workspace is connected', async 
   });
 
   await page.goto('/dashboard');
-  await expect(page).toHaveURL(/\/login/);
+  await expect(
+    page.getByRole('heading', { name: '워크스페이스에 로그인' })
+  ).toBeVisible();
 
   await page.getByLabel('이메일').fill('demo@example.com');
   await page.getByLabel('비밀번호').fill('Demo1234!');
@@ -101,11 +114,9 @@ test('@smoke shows safe context fallback when no workspace is connected', async 
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByText('연결된 사업장 없음').first()).toBeVisible();
 
-  await page.getByRole('button', { name: '문맥 상세' }).click();
+  await page.getByRole('button', { name: '문맥' }).click();
   await expect(
-    page.getByText(
-      '아직 현재 사업장/장부 문맥이 연결되지 않았습니다. 설정 화면에서 로그인 상태와 현재 워크스페이스 구성을 먼저 확인해 주세요.'
-    )
+    page.getByText('현재 워크스페이스를 먼저 확인해 주세요.')
   ).toBeVisible();
   await page.getByRole('link', { name: '설정으로 이동' }).click();
 
@@ -113,9 +124,7 @@ test('@smoke shows safe context fallback when no workspace is connected', async 
   await expect(
     page.getByRole('heading', { name: '현재 작업 문맥' }).first()
   ).toBeVisible();
-  await expect(page.getByLabel('사업장 이름')).toHaveValue(
-    '연결된 사업장 없음'
-  );
+  await expect(page.getByText('연결된 사업장 없음').first()).toBeVisible();
 
   expectNoUnhandledApiRequests(unhandledApiRequests);
   expectNoPageErrors(pageErrors);

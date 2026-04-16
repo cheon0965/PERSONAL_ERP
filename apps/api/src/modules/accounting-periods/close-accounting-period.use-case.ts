@@ -61,8 +61,8 @@ export class CloseAccountingPeriodUseCase {
     const lockedAt = new Date();
     const reason = normalizeOptionalText(input.note);
 
-    const { closingSnapshot, closingLineDrafts } = await this.prisma.$transaction(
-      async (tx) => {
+    const { closingSnapshot, closingLineDrafts } =
+      await this.prisma.$transaction(async (tx) => {
         const currentPeriod = await tx.accountingPeriod.findFirst({
           where: {
             id: period.id,
@@ -109,15 +109,14 @@ export class CloseAccountingPeriodUseCase {
           );
         }
 
-        const existingClosingSnapshot =
-          await tx.closingSnapshot.findUnique({
-            where: {
-              periodId: currentPeriod.id
-            },
-            select: {
-              id: true
-            }
-          });
+        const existingClosingSnapshot = await tx.closingSnapshot.findUnique({
+          where: {
+            periodId: currentPeriod.id
+          },
+          select: {
+            id: true
+          }
+        });
 
         if (existingClosingSnapshot) {
           throw new ConflictException(
@@ -125,69 +124,66 @@ export class CloseAccountingPeriodUseCase {
           );
         }
 
-        const [
-          openingBalanceSnapshot,
-          collectedTransactions,
-          journalLines
-        ] = await Promise.all([
-          tx.openingBalanceSnapshot.findUnique({
-            where: {
-              effectivePeriodId: currentPeriod.id
-            },
-            include: {
-              lines: {
-                include: {
-                  accountSubject: {
-                    select: {
-                      id: true,
-                      code: true,
-                      name: true,
-                      subjectKind: true
-                    }
-                  },
-                  fundingAccount: {
-                    select: {
-                      id: true,
-                      name: true
+        const [openingBalanceSnapshot, collectedTransactions, journalLines] =
+          await Promise.all([
+            tx.openingBalanceSnapshot.findUnique({
+              where: {
+                effectivePeriodId: currentPeriod.id
+              },
+              include: {
+                lines: {
+                  include: {
+                    accountSubject: {
+                      select: {
+                        id: true,
+                        code: true,
+                        name: true,
+                        subjectKind: true
+                      }
+                    },
+                    fundingAccount: {
+                      select: {
+                        id: true,
+                        name: true
+                      }
                     }
                   }
                 }
               }
-            }
-          }),
-          tx.collectedTransaction.findMany({
-            where: {
-              tenantId: workspace.tenantId,
-              ledgerId: workspace.ledgerId
-            }
-          }),
-          tx.journalLine.findMany({
-            where: {
-              journalEntry: {
+            }),
+            tx.collectedTransaction.findMany({
+              where: {
                 tenantId: workspace.tenantId,
-                ledgerId: workspace.ledgerId,
-                periodId: currentPeriod.id,
-                status: JournalEntryStatus.POSTED
+                ledgerId: workspace.ledgerId
               }
-            },
-            include: {
-              accountSubject: {
-                select: {
-                  id: true,
-                  code: true,
-                  name: true,
-                  subjectKind: true
+            }),
+            tx.journalLine.findMany({
+              where: {
+                journalEntry: {
+                  tenantId: workspace.tenantId,
+                  ledgerId: workspace.ledgerId,
+                  periodId: currentPeriod.id,
+                  status: JournalEntryStatus.POSTED
                 }
               },
-              fundingAccount: {
-                select: {
-                  id: true,
-                  name: true
+              include: {
+                accountSubject: {
+                  select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                    subjectKind: true
+                  }
+                },
+                fundingAccount: {
+                  select: {
+                    id: true,
+                    name: true
+                  }
                 }
               }
-            }
-          })
-        ]);
+            })
+          ]);
 
         const pendingCollectedTransactionCount = collectedTransactions.filter(
           (candidate) =>
@@ -259,16 +255,16 @@ export class CloseAccountingPeriodUseCase {
           closingSnapshot: createdSnapshot,
           closingLineDrafts
         };
-      }
-    );
+      });
 
-    const refreshedPeriod = await this.accountingPeriodReader.findByIdInWorkspace(
-      {
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId
-      },
-      period.id
-    );
+    const refreshedPeriod =
+      await this.accountingPeriodReader.findByIdInWorkspace(
+        {
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId
+        },
+        period.id
+      );
 
     if (!refreshedPeriod) {
       throw new NotFoundException(

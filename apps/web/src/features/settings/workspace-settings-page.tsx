@@ -1,15 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import {
-  Alert,
-  Button,
-  Grid,
-  MenuItem,
-  Stack,
-  TextField,
-  Typography
-} from '@mui/material';
+import { Alert, Button, Grid, MenuItem, Stack, TextField } from '@mui/material';
 import type { UpdateWorkspaceSettingsRequest } from '@personal-erp/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthSession } from '@/shared/auth/auth-provider';
@@ -111,11 +103,15 @@ export function WorkspaceSettingsPage() {
         description="현재 사업장의 이름, 상태와 기본 장부 기준값을 한 화면에서 관리합니다."
         badges={[
           {
-            label: readTenantStatusLabel(workspaceQuery.data?.tenant.status ?? null),
+            label: readTenantStatusLabel(
+              workspaceQuery.data?.tenant.status ?? null
+            ),
             color: canManage ? 'primary' : 'default'
           },
           {
-            label: readLedgerStatusLabel(workspaceQuery.data?.ledger.status ?? null)
+            label: readLedgerStatusLabel(
+              workspaceQuery.data?.ledger.status ?? null
+            )
           }
         ]}
         metadata={[
@@ -138,7 +134,9 @@ export function WorkspaceSettingsPage() {
         ]}
         primaryActionLabel="설정 저장"
         primaryActionOnClick={() => mutation.mutate(form)}
-        primaryActionDisabled={!canManage || mutation.isPending || !workspaceQuery.data}
+        primaryActionDisabled={
+          !canManage || mutation.isPending || !workspaceQuery.data
+        }
         secondaryActionLabel="운영 월 보기"
         secondaryActionHref="/periods"
       />
@@ -149,8 +147,8 @@ export function WorkspaceSettingsPage() {
 
       {!canManage ? (
         <Alert severity="warning" variant="outlined">
-          현재 역할은 {user?.currentWorkspace?.membership.role ?? '-'} 입니다. 사업장
-          설정 수정은 소유자 또는 관리자만 수행할 수 있습니다.
+          현재 역할은 {user?.currentWorkspace?.membership.role ?? '-'} 입니다.
+          사업장 설정 수정은 소유자 또는 관리자만 수행할 수 있습니다.
         </Alert>
       ) : null}
 
@@ -166,10 +164,6 @@ export function WorkspaceSettingsPage() {
         description="개요 카드는 줄이고, 실제 수정이 필요한 기준값을 먼저 편집합니다."
       >
         <Stack spacing={appLayout.cardGap}>
-          <Typography variant="body2" color="text.secondary">
-            상태와 기준 통화, 시간대 변경은 이후 월 운영과 재무제표 기준에 직접
-            영향을 줍니다. 저장 전 현재 운영 범위를 다시 확인해 주세요.
-          </Typography>
           <Grid container spacing={appLayout.fieldGap}>
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
@@ -210,8 +204,8 @@ export function WorkspaceSettingsPage() {
                 onChange={(event) =>
                   setForm((current) => ({
                     ...current,
-                    tenantStatus:
-                      event.target.value as UpdateWorkspaceSettingsRequest['tenantStatus']
+                    tenantStatus: event.target
+                      .value as UpdateWorkspaceSettingsRequest['tenantStatus']
                   }))
                 }
               >
@@ -268,7 +262,9 @@ export function WorkspaceSettingsPage() {
           <div>
             <Button
               variant="contained"
-              disabled={!canManage || mutation.isPending || !workspaceQuery.data}
+              disabled={
+                !canManage || mutation.isPending || !workspaceQuery.data
+              }
               onClick={() => mutation.mutate(form)}
             >
               {mutation.isPending ? '저장 중...' : '설정 저장'}

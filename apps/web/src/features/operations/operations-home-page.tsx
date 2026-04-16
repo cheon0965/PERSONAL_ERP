@@ -34,7 +34,9 @@ export function OperationsHomePage() {
       actionLabel: '체크리스트 보기',
       href: '/operations/checklist',
       tone:
-        (summary?.checklist.totals.actionRequired ?? 0) > 0 ? 'warning' : 'success'
+        (summary?.checklist.totals.actionRequired ?? 0) > 0
+          ? 'warning'
+          : 'success'
     },
     {
       eyebrow: '예외 처리',
@@ -43,8 +45,7 @@ export function OperationsHomePage() {
       detail: '미확정 거래와 마감 차단 사유를 우선 정리합니다.',
       actionLabel: '예외 처리',
       href: '/operations/exceptions',
-      tone:
-        (summary?.exceptions.totalCount ?? 0) > 0 ? 'warning' : 'success'
+      tone: (summary?.exceptions.totalCount ?? 0) > 0 ? 'warning' : 'success'
     },
     {
       eyebrow: '월 마감',
@@ -56,14 +57,14 @@ export function OperationsHomePage() {
           : `미확정 거래 ${formatNumber(summary?.monthEnd.unresolvedTransactionCount ?? 0, 0)}건, 남은 계획 ${formatNumber(summary?.monthEnd.remainingPlanItemCount ?? 0, 0)}건`,
       actionLabel: '마감 점검',
       href: '/operations/month-end',
-      tone:
-        summary?.monthEnd.closeReadiness === 'READY' ? 'success' : 'warning'
+      tone: summary?.monthEnd.closeReadiness === 'READY' ? 'success' : 'warning'
     }
   ] as const;
   const groupedLinks = [
     {
       title: '월 마감 준비',
-      description: '월 마감과 공식 산출물 생성 흐름을 같은 묶음으로 확인합니다.',
+      description:
+        '월 마감과 공식 산출물 생성 흐름을 같은 묶음으로 확인합니다.',
       items: [
         {
           title: '월 마감 대시보드',
@@ -173,7 +174,9 @@ export function OperationsHomePage() {
           {
             label: monthEndStatusLabel,
             color:
-              summary?.monthEnd.closeReadiness === 'READY' ? 'success' : 'warning'
+              summary?.monthEnd.closeReadiness === 'READY'
+                ? 'success'
+                : 'warning'
           }
         ]}
         metadata={[

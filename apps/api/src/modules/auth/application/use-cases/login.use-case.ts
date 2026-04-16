@@ -99,9 +99,7 @@ export class LoginUseCase {
       clientIp: context.clientIp,
       reason: 'email_not_verified'
     });
-    throw new UnauthorizedException(
-      '이메일 인증을 완료한 뒤 로그인해 주세요.'
-    );
+    throw new UnauthorizedException('이메일 인증을 완료한 뒤 로그인해 주세요.');
   }
 }
 

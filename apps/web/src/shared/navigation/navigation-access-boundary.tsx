@@ -31,7 +31,11 @@ export function NavigationAccessBoundary({
 
     return (
       <Stack spacing={appLayout.pageGap}>
-        <Alert severity="warning" variant="outlined" icon={<BlockRoundedIcon />}>
+        <Alert
+          severity="warning"
+          variant="outlined"
+          icon={<BlockRoundedIcon />}
+        >
           <Typography variant="subtitle1" fontWeight={700}>
             현재 역할에 허용된 메뉴가 아닙니다.
           </Typography>

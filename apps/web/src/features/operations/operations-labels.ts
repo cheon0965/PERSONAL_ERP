@@ -91,7 +91,9 @@ export function readOperationsExceptionKindLabel(
   }
 }
 
-export function readOperationsAlertKindLabel(kind: OperationsAlertKind): string {
+export function readOperationsAlertKindLabel(
+  kind: OperationsAlertKind
+): string {
   switch (kind) {
     case 'REFERENCE_DATA':
       return '기준 데이터';
@@ -175,7 +177,9 @@ export function readSystemComponentStatusColor(
   }
 }
 
-export function readImportSourceKindLabel(sourceKind: ImportSourceKind): string {
+export function readImportSourceKindLabel(
+  sourceKind: ImportSourceKind
+): string {
   switch (sourceKind) {
     case 'CARD_EXCEL':
       return '카드 엑셀';

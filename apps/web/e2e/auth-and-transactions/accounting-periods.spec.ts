@@ -93,6 +93,17 @@ test('@smoke manages the accounting period lifecycle through open, close, and re
       return;
     }
 
+    if (path === '/api/navigation/tree' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: []
+        })
+      });
+      return;
+    }
+
     if (
       path === '/api/reference-data/readiness' &&
       request.method() === 'GET'
@@ -324,7 +335,9 @@ test('@smoke manages the accounting period lifecycle through open, close, and re
   });
 
   await page.goto('/periods');
-  await expect(page).toHaveURL(/\/login/);
+  await expect(
+    page.getByRole('heading', { name: '워크스페이스에 로그인' })
+  ).toBeVisible();
 
   await page.getByLabel('이메일').fill('demo@example.com');
   await page.getByLabel('비밀번호').fill('Demo1234!');
@@ -332,7 +345,13 @@ test('@smoke manages the accounting period lifecycle through open, close, and re
 
   await expect(page).toHaveURL(/\/periods$/);
   await expect(
-    page.getByRole('heading', { name: '운영 기간 관리' })
+    page.getByRole('heading', { level: 4, name: '운영 기간', exact: true })
+  ).toBeVisible();
+
+  await page.goto('/periods/open');
+  await expect(page).toHaveURL(/\/periods\/open$/);
+  await expect(
+    page.getByRole('heading', { level: 4, name: '월 운영 시작', exact: true })
   ).toBeVisible();
 
   const openForm = page.locator('#open-accounting-period-form');
@@ -349,11 +368,21 @@ test('@smoke manages the accounting period lifecycle through open, close, and re
   await expect(
     page.getByText('2026-05 운영 기간을 시작했습니다.')
   ).toBeVisible();
+  await page.goto('/periods/history');
+  await expect(page).toHaveURL(/\/periods\/history$/);
   await expect(
     page.getByRole('gridcell', { name: '초기 설정' }).first()
   ).toBeVisible();
 
-  await page.getByRole('tab', { name: '월 마감' }).click();
+  await page.goto('/periods/close');
+  await expect(page).toHaveURL(/\/periods\/close$/);
+  await expect(
+    page.getByRole('heading', {
+      level: 4,
+      name: '월 마감 / 재오픈',
+      exact: true
+    })
+  ).toBeVisible();
   await page.getByLabel('마감 메모').fill('E2E 월 마감');
   await page.getByRole('button', { name: '월 마감', exact: true }).click();
 
@@ -363,7 +392,6 @@ test('@smoke manages the accounting period lifecycle through open, close, and re
   ).toBeVisible();
   await expect(page.getByText('LOCKED').first()).toBeVisible();
 
-  await page.getByRole('tab', { name: '월 재오픈' }).click();
   await page.getByLabel('재오픈 사유').fill('E2E 정정 준비');
   await page.getByRole('button', { name: '월 재오픈', exact: true }).click();
 

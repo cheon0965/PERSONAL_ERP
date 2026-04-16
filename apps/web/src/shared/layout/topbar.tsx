@@ -141,7 +141,9 @@ export function Topbar() {
 
             <Tooltip
               title={
-                activeContext ? '도메인 가이드 열기' : '아직 문맥 정보가 없습니다'
+                activeContext
+                  ? '도메인 가이드 열기'
+                  : '아직 문맥 정보가 없습니다'
               }
             >
               <span>
@@ -296,13 +298,7 @@ export function Topbar() {
   );
 }
 
-function ContextDetailRow({
-  label,
-  value
-}: {
-  label: string;
-  value: string;
-}) {
+function ContextDetailRow({ label, value }: { label: string; value: string }) {
   return (
     <Stack
       direction={{ xs: 'column', sm: 'row' }}

@@ -44,12 +44,14 @@ export const mockOperationsChecklist: OperationsChecklistResponse = {
     {
       key: 'MONTH_START',
       title: '월 시작 전',
-      description: '월 운영을 시작하기 전에 기준 데이터와 운영 기간을 확인합니다.',
+      description:
+        '월 운영을 시작하기 전에 기준 데이터와 운영 기간을 확인합니다.',
       items: [
         {
           id: 'reference-data-ready',
           title: '기준 데이터 준비',
-          description: '자금수단, 카테고리, 계정과목, 거래유형이 준비되어야 합니다.',
+          description:
+            '자금수단, 카테고리, 계정과목, 거래유형이 준비되어야 합니다.',
           status: 'READY',
           detail: '필수 기준 데이터가 준비되어 있습니다.',
           blockingReason: null,
@@ -86,7 +88,8 @@ export const mockOperationsChecklist: OperationsChecklistResponse = {
         {
           id: 'import-row-backlog',
           title: '업로드 미수집 행',
-          description: '정상 파싱됐지만 아직 수집 거래로 승격되지 않은 행을 처리합니다.',
+          description:
+            '정상 파싱됐지만 아직 수집 거래로 승격되지 않은 행을 처리합니다.',
           status: 'ACTION_REQUIRED',
           detail: '3개 행이 수집 대기 중입니다.',
           blockingReason: null,
@@ -302,7 +305,8 @@ export const mockOperationsExports: OperationsExportsResponse = {
     {
       scope: 'REFERENCE_DATA',
       label: '기준 데이터',
-      description: '자금수단, 카테고리, 계정과목, 거래유형을 한 번에 CSV로 반출합니다.',
+      description:
+        '자금수단, 카테고리, 계정과목, 거래유형을 한 번에 CSV로 반출합니다.',
       rowCount: 18,
       rangeLabel: '기준 데이터 전체',
       latestSourceAt: '2026-03-20T09:00:00.000Z',
@@ -313,7 +317,8 @@ export const mockOperationsExports: OperationsExportsResponse = {
     {
       scope: 'COLLECTED_TRANSACTIONS',
       label: '수집 거래',
-      description: '수집 거래의 상태, 금액, 업로드 연결 정보를 CSV로 반출합니다.',
+      description:
+        '수집 거래의 상태, 금액, 업로드 연결 정보를 CSV로 반출합니다.',
       rowCount: 24,
       rangeLabel: '전체 기간',
       latestSourceAt: '2026-03-24T09:00:00.000Z',

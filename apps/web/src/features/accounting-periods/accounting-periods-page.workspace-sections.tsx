@@ -7,9 +7,7 @@ import { DataTableCard } from '@/shared/ui/data-table-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { SectionCard } from '@/shared/ui/section-card';
 import { CurrentPeriodStatusSection } from './accounting-periods-page.status-section';
-import {
-  periodColumns
-} from './accounting-periods-page.sections';
+import { periodColumns } from './accounting-periods-page.sections';
 import { PeriodOperationsSection } from './accounting-periods-page.lifecycle-section';
 
 type CurrentPeriodStatusSectionProps = React.ComponentProps<
@@ -154,8 +152,8 @@ export function AccountingPeriodsHistoryWorkspace({
                 재오픈 검토 대상으로 삼습니다.
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                첫 월은 `초기 설정`, 이후 월은 `이월` 기초 잔액 출처가 자연스럽게
-                이어지는지 함께 확인합니다.
+                첫 월은 `초기 설정`, 이후 월은 `이월` 기초 잔액 출처가
+                자연스럽게 이어지는지 함께 확인합니다.
               </Typography>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                 <Button href="/periods/open" variant="contained">

@@ -19,7 +19,9 @@ export function CollectPreviewSummary({
       >
         <SummaryBlock
           label="예상 다음 상태"
-          content={<StatusChip label={preview.autoPreparation.nextWorkflowStatus} />}
+          content={
+            <StatusChip label={preview.autoPreparation.nextWorkflowStatus} />
+          }
         />
         <SummaryBlock
           label="매칭 계획 항목"

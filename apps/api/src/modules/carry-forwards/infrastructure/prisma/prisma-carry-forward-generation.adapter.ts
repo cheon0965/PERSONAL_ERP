@@ -13,9 +13,7 @@ import type {
 } from '../../application/ports/carry-forward-generation.port';
 
 @Injectable()
-export class PrismaCarryForwardGenerationAdapter
-  implements CarryForwardGenerationPort
-{
+export class PrismaCarryForwardGenerationAdapter implements CarryForwardGenerationPort {
   constructor(private readonly prisma: PrismaService) {}
 
   async readGenerationContext(
@@ -25,76 +23,80 @@ export class PrismaCarryForwardGenerationAdapter
     nextYear: number,
     nextMonth: number
   ): Promise<CarryForwardGenerationContext> {
-    const [sourcePeriod, sourceClosingSnapshot, existingRecord, existingTargetPeriod] =
-      await Promise.all([
-        this.prisma.accountingPeriod.findFirst({
-          where: {
-            id: fromPeriodId,
-            tenantId,
-            ledgerId
-          },
-          select: {
-            id: true,
-            tenantId: true,
-            ledgerId: true,
-            year: true,
-            month: true,
-            status: true,
-            openingBalanceSnapshot: {
-              select: {
-                id: true
-              }
+    const [
+      sourcePeriod,
+      sourceClosingSnapshot,
+      existingRecord,
+      existingTargetPeriod
+    ] = await Promise.all([
+      this.prisma.accountingPeriod.findFirst({
+        where: {
+          id: fromPeriodId,
+          tenantId,
+          ledgerId
+        },
+        select: {
+          id: true,
+          tenantId: true,
+          ledgerId: true,
+          year: true,
+          month: true,
+          status: true,
+          openingBalanceSnapshot: {
+            select: {
+              id: true
             }
           }
-        }),
-        this.prisma.closingSnapshot.findUnique({
-          where: {
-            periodId: fromPeriodId
-          },
-          include: {
-            lines: {
-              include: {
-                accountSubject: {
-                  select: {
-                    subjectKind: true
-                  }
+        }
+      }),
+      this.prisma.closingSnapshot.findUnique({
+        where: {
+          periodId: fromPeriodId
+        },
+        include: {
+          lines: {
+            include: {
+              accountSubject: {
+                select: {
+                  subjectKind: true
                 }
               }
             }
           }
-        }),
-        this.prisma.carryForwardRecord.findFirst({
-          where: {
-            tenantId,
-            ledgerId,
-            fromPeriodId
-          },
-          select: {
-            id: true
-          }
-        }),
-        this.prisma.accountingPeriod.findFirst({
-          where: {
-            tenantId,
-            ledgerId,
-            year: nextYear,
-            month: nextMonth
-          },
-          select: {
-            id: true,
-            tenantId: true,
-            ledgerId: true,
-            year: true,
-            month: true,
-            status: true,
-            openingBalanceSnapshot: {
-              select: {
-                id: true
-              }
+        }
+      }),
+      this.prisma.carryForwardRecord.findFirst({
+        where: {
+          tenantId,
+          ledgerId,
+          fromPeriodId
+        },
+        select: {
+          id: true
+        }
+      }),
+      this.prisma.accountingPeriod.findFirst({
+        where: {
+          tenantId,
+          ledgerId,
+          year: nextYear,
+          month: nextMonth
+        },
+        select: {
+          id: true,
+          tenantId: true,
+          ledgerId: true,
+          year: true,
+          month: true,
+          status: true,
+          openingBalanceSnapshot: {
+            select: {
+              id: true
             }
           }
-        })
-      ]);
+        }
+      })
+    ]);
 
     return {
       sourcePeriod,

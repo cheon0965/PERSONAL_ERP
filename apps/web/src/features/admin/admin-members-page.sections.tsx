@@ -180,13 +180,22 @@ export function AdminMembersSummarySection({
       <Stack spacing={appLayout.cardGap}>
         <Grid container spacing={appLayout.fieldGap}>
           <Grid size={{ xs: 12, md: 3 }}>
-            <MemberInfoItem label="전체 멤버" value={`${summary.totalCount}명`} />
+            <MemberInfoItem
+              label="전체 멤버"
+              value={`${summary.totalCount}명`}
+            />
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
-            <MemberInfoItem label="활성 멤버" value={`${summary.activeCount}명`} />
+            <MemberInfoItem
+              label="활성 멤버"
+              value={`${summary.activeCount}명`}
+            />
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
-            <MemberInfoItem label="초대 대기" value={`${summary.invitedCount}명`} />
+            <MemberInfoItem
+              label="초대 대기"
+              value={`${summary.invitedCount}명`}
+            />
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
             <MemberInfoItem
@@ -196,8 +205,8 @@ export function AdminMembersSummarySection({
           </Grid>
         </Grid>
         <Typography variant="body2" color="text.secondary">
-          역할 변경과 제거는 소유자만 실행할 수 있고, 관리자 권한은 조회와 일부 운영
-          판단에 집중합니다.
+          역할 변경과 제거는 소유자만 실행할 수 있고, 관리자 권한은 조회와 일부
+          운영 판단에 집중합니다.
         </Typography>
       </Stack>
     </SectionCard>
@@ -345,8 +354,8 @@ export function AdminMemberEditDrawer({
               {editingMember.email}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              현재 역할 {readMembershipRoleLabel(editingMember.role)} / 현재 상태{' '}
-              {readMembershipStatusLabel(editingMember.status)}
+              현재 역할 {readMembershipRoleLabel(editingMember.role)} / 현재
+              상태 {readMembershipStatusLabel(editingMember.status)}
             </Typography>
           </Stack>
 
@@ -459,13 +468,7 @@ function formatDate(value: string) {
   return date.toISOString().slice(0, 10);
 }
 
-function MemberInfoItem({
-  label,
-  value
-}: {
-  label: string;
-  value: string;
-}) {
+function MemberInfoItem({ label, value }: { label: string; value: string }) {
   return (
     <Stack spacing={0.35}>
       <Typography variant="caption" color="text.secondary">
