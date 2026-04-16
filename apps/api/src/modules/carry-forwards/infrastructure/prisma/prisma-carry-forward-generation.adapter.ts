@@ -3,8 +3,7 @@ import {
   AccountingPeriodEventType,
   AccountingPeriodStatus,
   BalanceSnapshotKind,
-  OpeningBalanceSourceKind,
-  type AuditActorType
+  OpeningBalanceSourceKind
 } from '@prisma/client';
 import type { PrismaMoneyLike } from '../../../../common/money/prisma-money';
 import { PrismaService } from '../../../../common/prisma/prisma.service';

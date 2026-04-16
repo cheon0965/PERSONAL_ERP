@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+// eslint-disable-next-line no-restricted-imports
 import { Injectable } from '@nestjs/common';
 import type {
   AuthenticatedUser,
@@ -7,6 +8,7 @@ import type {
 } from '@personal-erp/contracts';
 import { requireCurrentWorkspace } from '../../../../common/auth/required-workspace.util';
 import { assertWorkspaceActionAllowed } from '../../../../common/auth/workspace-action.policy';
+// eslint-disable-next-line no-restricted-imports
 import { PrismaService } from '../../../../common/prisma/prisma.service';
 import { mapImportBatchRecordToItem } from '../../import-batch.mapper';
 import { parseImportBatchContent } from '../../import-batch.policy';

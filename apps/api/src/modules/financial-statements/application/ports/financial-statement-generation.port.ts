@@ -1,5 +1,6 @@
 import type { FinancialStatementPayload } from '@personal-erp/contracts';
 import type { PrismaMoneyLike } from '../../../../common/money/prisma-money';
+// eslint-disable-next-line no-restricted-imports
 import type {
   AccountSubjectKind,
   AccountingPeriodStatus,

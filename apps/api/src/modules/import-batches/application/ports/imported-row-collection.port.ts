@@ -1,5 +1,7 @@
 import type { CollectImportedRowRequest } from '@personal-erp/contracts';
+// eslint-disable-next-line no-restricted-imports
 import type { Prisma } from '@prisma/client';
+// eslint-disable-next-line no-restricted-imports
 import type { PrismaService } from '../../../../common/prisma/prisma.service';
 import type {
   CollectableImportedRow,

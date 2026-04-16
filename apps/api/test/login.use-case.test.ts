@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as argon2 from 'argon2';
 import { UnauthorizedException } from '@nestjs/common';
-import { AuthService } from '../src/modules/auth/auth.service';
+import { LoginUseCase } from '../src/modules/auth/application/use-cases/login.use-case';
 
-test('AuthService.login returns the issued session for valid credentials', async () => {
+test('LoginUseCase.execute returns the issued session for valid credentials', async () => {
   const passwordHash = await argon2.hash('Demo1234!');
 
   const prisma = {
@@ -55,7 +55,7 @@ test('AuthService.login returns the issued session for valid credentials', async
     }
   };
 
-  const service = new AuthService(
+  const useCase = new LoginUseCase(
     prisma as never,
     {
       issueSession: async (identity: {
@@ -70,35 +70,16 @@ test('AuthService.login returns the issued session for valid credentials', async
     {
       assertLoginAttemptAllowed: () => undefined,
       recordFailedLoginAttempt: () => undefined,
-      clearLoginAttempts: () => undefined,
-      assertRefreshAttemptAllowed: () => undefined,
-      recordFailedRefreshAttempt: () => undefined,
-      clearRefreshAttempts: () => undefined
+      clearLoginAttempts: () => undefined
     } as never,
     {
       log: () => undefined,
       warn: () => undefined,
       error: () => undefined
-    } as never,
-    {
-      send: async () => undefined
-    } as never,
-    {
-      now: () => new Date('2026-04-13T00:00:00.000Z')
-    } as never,
-    {
-      ensureForUser: async () => ({
-        tenantId: 'tenant-1',
-        ledgerId: 'ledger-1',
-        membershipId: 'membership-1'
-      })
-    } as never,
-    {
-      record: async () => undefined
     } as never
   );
 
-  const result = await service.login(
+  const result = await useCase.execute(
     {
       email: 'demo@example.com',
       password: 'Demo1234!'
@@ -119,7 +100,7 @@ test('AuthService.login returns the issued session for valid credentials', async
   ]);
 });
 
-test('AuthService.login rejects invalid credentials', async () => {
+test('LoginUseCase.execute rejects invalid credentials', async () => {
   const passwordHash = await argon2.hash('Demo1234!');
 
   const prisma = {
@@ -134,7 +115,7 @@ test('AuthService.login rejects invalid credentials', async () => {
     }
   };
 
-  const service = new AuthService(
+  const useCase = new LoginUseCase(
     prisma as never,
     {
       issueSession: async () => {
@@ -144,37 +125,18 @@ test('AuthService.login rejects invalid credentials', async () => {
     {
       assertLoginAttemptAllowed: () => undefined,
       recordFailedLoginAttempt: () => undefined,
-      clearLoginAttempts: () => undefined,
-      assertRefreshAttemptAllowed: () => undefined,
-      recordFailedRefreshAttempt: () => undefined,
-      clearRefreshAttempts: () => undefined
+      clearLoginAttempts: () => undefined
     } as never,
     {
       log: () => undefined,
       warn: () => undefined,
       error: () => undefined
-    } as never,
-    {
-      send: async () => undefined
-    } as never,
-    {
-      now: () => new Date('2026-04-13T00:00:00.000Z')
-    } as never,
-    {
-      ensureForUser: async () => ({
-        tenantId: 'tenant-1',
-        ledgerId: 'ledger-1',
-        membershipId: 'membership-1'
-      })
-    } as never,
-    {
-      record: async () => undefined
     } as never
   );
 
   await assert.rejects(
     () =>
-      service.login(
+      useCase.execute(
         {
           email: 'demo@example.com',
           password: 'WrongPassword!'

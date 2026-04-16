@@ -1,25 +1,19 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type {
   AccountingPeriodItem,
   AuthenticatedUser,
-  CreateOperationsExportRequest,
-  CreateOperationsNoteRequest,
   OperationsAlertItem,
   OperationsAlertsResponse,
   OperationsChecklistGroup,
   OperationsChecklistItem,
   OperationsChecklistResponse,
   OperationsExceptionsResponse,
-  OperationsExportResult,
   OperationsExportScope,
-  OperationsExportScopeItem,
-  OperationsExportsResponse,
   OperationsHubSummary,
   OperationsImportBatchStatusItem,
   OperationsImportStatusSummary,
   OperationsMonthEndSummary,
   OperationsNoteItem,
-  OperationsNotesResponse,
   OperationsReadinessStatus,
   OperationsSystemComponentItem,
   OperationsSystemComponentStatus,
@@ -30,23 +24,21 @@ import {
   CollectedTransactionStatus,
   ImportedRowParseStatus,
   OperationalNoteKind,
-  PlanItemStatus,
   Prisma
 } from '@prisma/client';
 import { fromPrismaMoneyWon } from '../../common/money/prisma-money';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { getApiEnv } from '../../config/api-env';
-import { mapAccountingPeriodRecordToItem } from '../accounting-periods/accounting-period.mapper';
 import { OperationsConsoleReadRepository } from './operations-console-read.repository';
 
-const openPeriodStatuses: readonly AccountingPeriodStatus[] = [
+const _openPeriodStatuses: readonly AccountingPeriodStatus[] = [
   AccountingPeriodStatus.OPEN,
   AccountingPeriodStatus.IN_REVIEW,
   AccountingPeriodStatus.CLOSING
 ] as const;
 
-const unresolvedTransactionStatuses = [
+const _unresolvedTransactionStatuses = [
   CollectedTransactionStatus.COLLECTED,
   CollectedTransactionStatus.REVIEWED,
   CollectedTransactionStatus.READY_TO_POST
@@ -59,7 +51,7 @@ const exportScopes: readonly OperationsExportScope[] = [
   'FINANCIAL_STATEMENTS'
 ] as const;
 
-const operationsPeriodInclude =
+const _operationsPeriodInclude =
   Prisma.validator<Prisma.AccountingPeriodInclude>()({
     openingBalanceSnapshot: {
       select: {
@@ -148,7 +140,7 @@ type ExportPeriodRecord = {
   month: number;
 };
 
-type BuildExportPayloadInput = {
+type _BuildExportPayloadInput = {
   scope: OperationsExportScope;
   tenantId: string;
   ledgerId: string;
@@ -156,7 +148,7 @@ type BuildExportPayloadInput = {
   rangeLabel: string;
 };
 
-type BuildExportPayloadResult = {
+type _BuildExportPayloadResult = {
   rowCount: number;
   rangeLabel: string;
   payload: string;
@@ -949,7 +941,7 @@ type ExportSourceCollections = {
   financialStatementSnapshots: Array<{ createdAt?: Date; updatedAt?: Date }>;
 };
 
-function readExportRowCount(
+function _readExportRowCount(
   scope: OperationsExportScope,
   sources: ExportSourceCollections
 ): number {
@@ -972,7 +964,7 @@ function readExportRowCount(
   }
 }
 
-function readExportSourceDates(
+function _readExportSourceDates(
   scope: OperationsExportScope,
   sources: ExportSourceCollections
 ): Array<Date | undefined> {
@@ -1005,7 +997,7 @@ function readExportSourceDates(
   }
 }
 
-function readExportScopeLabel(scope: OperationsExportScope): string {
+function _readExportScopeLabel(scope: OperationsExportScope): string {
   switch (scope) {
     case 'REFERENCE_DATA':
       return '기준 데이터';
@@ -1020,7 +1012,7 @@ function readExportScopeLabel(scope: OperationsExportScope): string {
   }
 }
 
-function readExportScopeDescription(scope: OperationsExportScope): string {
+function _readExportScopeDescription(scope: OperationsExportScope): string {
   switch (scope) {
     case 'REFERENCE_DATA':
       return '자금수단, 카테고리, 계정과목, 거래유형을 한 번에 CSV로 반출합니다.';
@@ -1035,7 +1027,7 @@ function readExportScopeDescription(scope: OperationsExportScope): string {
   }
 }
 
-function readExportScopeCadence(scope: OperationsExportScope): string {
+function _readExportScopeCadence(scope: OperationsExportScope): string {
   switch (scope) {
     case 'REFERENCE_DATA':
       return '기준 데이터 변경 후';
@@ -1049,7 +1041,7 @@ function readExportScopeCadence(scope: OperationsExportScope): string {
   }
 }
 
-function readScopeRangeLabel(scope: OperationsExportScope): string {
+function _readScopeRangeLabel(scope: OperationsExportScope): string {
   switch (scope) {
     case 'REFERENCE_DATA':
       return '기준 데이터 전체';
@@ -1058,11 +1050,11 @@ function readScopeRangeLabel(scope: OperationsExportScope): string {
   }
 }
 
-function isExportScope(value: string | null): value is OperationsExportScope {
+function _isExportScope(value: string | null): value is OperationsExportScope {
   return exportScopes.includes(value as OperationsExportScope);
 }
 
-function readPeriodRecordLabel(period: ExportPeriodRecord): string {
+function _readPeriodRecordLabel(period: ExportPeriodRecord): string {
   return readPeriodLabel(period.year, period.month);
 }
 
@@ -1070,12 +1062,12 @@ function readPeriodLabel(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, '0')}`;
 }
 
-function normalizeOptionalText(value: string | null | undefined): string | null {
+function _normalizeOptionalText(value: string | null | undefined): string | null {
   const normalized = value?.trim();
   return normalized ? normalized : null;
 }
 
-function mapOperationalNote(note: OperationalNoteRecord): OperationsNoteItem {
+function _mapOperationalNote(note: OperationalNoteRecord): OperationsNoteItem {
   return {
     id: note.id,
     kind: note.kind,
@@ -1092,13 +1084,13 @@ function mapOperationalNote(note: OperationalNoteRecord): OperationsNoteItem {
   };
 }
 
-function readLatestIso(values: Array<string | null>): string | null {
+function _readLatestIso(values: Array<string | null>): string | null {
   return values
     .flatMap((value) => (value ? [value] : []))
     .sort((left, right) => right.localeCompare(left))[0] ?? null;
 }
 
-function readLatestDateValue(
+function _readLatestDateValue(
   values: Array<Date | string | null | undefined>
 ): string | null {
   const latest = values
@@ -1109,7 +1101,7 @@ function readLatestDateValue(
   return latest?.toISOString() ?? null;
 }
 
-function readDateValue(value: Date | string | null | undefined): string {
+function _readDateValue(value: Date | string | null | undefined): string {
   return readDateObject(value)?.toISOString() ?? '';
 }
 
@@ -1126,7 +1118,7 @@ function readDateObject(value: Date | string | null | undefined): Date | null {
   return null;
 }
 
-function toCsv(rows: CsvRow[]): string {
+function _toCsv(rows: CsvRow[]): string {
   return `\ufeff${rows.map((row) => row.map(escapeCsvCell).join(',')).join('\r\n')}\r\n`;
 }
 

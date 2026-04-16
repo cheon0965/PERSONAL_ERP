@@ -2,8 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   AccountingPeriodStatus,
   JournalEntryStatus,
-  Prisma,
-  type FinancialStatementKind
+  Prisma
 } from '@prisma/client';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
 import type {

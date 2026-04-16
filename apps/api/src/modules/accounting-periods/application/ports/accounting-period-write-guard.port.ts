@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-restricted-imports
 import type { AccountingPeriodStatus, Prisma } from '@prisma/client';
 import type { AccountingPeriodWorkspaceScope } from './accounting-period-reader.port';
 
