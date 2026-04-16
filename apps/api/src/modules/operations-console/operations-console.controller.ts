@@ -29,6 +29,7 @@ import {
 } from '../../common/infrastructure/operational/workspace-action.audit';
 import { CreateOperationsExportDto } from './dto/create-operations-export.dto';
 import { CreateOperationsNoteDto } from './dto/create-operations-note.dto';
+import { OperationsConsoleCommandService } from './operations-console-command.service';
 import { OperationsConsoleService } from './operations-console.service';
 
 @ApiTags('operations')
@@ -37,6 +38,7 @@ import { OperationsConsoleService } from './operations-console.service';
 export class OperationsConsoleController {
   constructor(
     private readonly operationsConsoleService: OperationsConsoleService,
+    private readonly operationsConsoleCommandService: OperationsConsoleCommandService,
     private readonly securityEvents: SecurityEventLogger
   ) {}
 
@@ -101,7 +103,7 @@ export class OperationsConsoleController {
     @CurrentUser() user: AuthenticatedUser
   ): Promise<OperationsExportsResponse> {
     this.assertReadable(user);
-    return this.operationsConsoleService.getExports(user);
+    return this.operationsConsoleCommandService.getExports(user);
   }
 
   @Post('exports')
@@ -117,7 +119,10 @@ export class OperationsConsoleController {
       workspace
     });
 
-    const response = await this.operationsConsoleService.runExport(user, dto);
+    const response = await this.operationsConsoleCommandService.runExport(
+      user,
+      dto
+    );
     logWorkspaceActionSucceeded(this.securityEvents, {
       action: 'operations_export.run',
       request,
@@ -138,7 +143,7 @@ export class OperationsConsoleController {
     @CurrentUser() user: AuthenticatedUser
   ): Promise<OperationsNotesResponse> {
     this.assertReadable(user);
-    return this.operationsConsoleService.getNotes(user);
+    return this.operationsConsoleCommandService.getNotes(user);
   }
 
   @Post('notes')
@@ -154,7 +159,10 @@ export class OperationsConsoleController {
       workspace
     });
 
-    const response = await this.operationsConsoleService.createNote(user, dto);
+    const response = await this.operationsConsoleCommandService.createNote(
+      user,
+      dto
+    );
     logWorkspaceActionSucceeded(this.securityEvents, {
       action: 'operations_note.create',
       request,

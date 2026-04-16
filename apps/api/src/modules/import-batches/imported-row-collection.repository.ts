@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   InternalServerErrorException,
+  Injectable,
   NotFoundException
 } from '@nestjs/common';
 import type { CollectImportedRowRequest } from '@personal-erp/contracts';
@@ -11,10 +12,15 @@ import {
   Prisma
 } from '@prisma/client';
 import { fromPrismaMoneyWon } from '../../common/money/prisma-money';
-import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
-import { PrismaService } from '../../common/prisma/prisma.service';
 import { readCollectingAccountingPeriodStatuses } from '../accounting-periods/accounting-period-transition.policy';
 import { mapCollectedTransactionTypeToLedgerTransactionCode } from '../collected-transactions/public';
+import {
+  type AbsorbImportedRowIntoCollectedTransactionRecordInput,
+  type CreateCollectedTransactionRecordInput,
+  ImportedRowCollectionPort,
+  type ImportedRowCollectionWorkspaceScope,
+  type PrismaClientLike
+} from './application/ports/imported-row-collection.port';
 import { assertImportedRowCanBeCollected } from './imported-row-collection.normalization.policy';
 import { resolveMatchedPlanItemCandidate } from './imported-row-collection-plan-item.policy';
 import {
@@ -27,13 +33,11 @@ import {
   type PlanItemCollectionCandidate
 } from './imported-row-collection.types';
 
-export type WorkspaceContext = ReturnType<typeof requireCurrentWorkspace>;
-export type PrismaClientLike = PrismaService | Prisma.TransactionClient;
-
-export class ImportedRowCollectionRepository {
+@Injectable()
+export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
   async readCollectableImportedRow(
     client: PrismaClientLike,
-    workspace: WorkspaceContext,
+    workspace: ImportedRowCollectionWorkspaceScope,
     importBatchId: string,
     importedRowId: string
   ): Promise<CollectableImportedRow> {
@@ -55,7 +59,7 @@ export class ImportedRowCollectionRepository {
 
   async readCurrentCollectingPeriod(
     tx: PrismaClientLike,
-    workspace: WorkspaceContext,
+    workspace: ImportedRowCollectionWorkspaceScope,
     periodId: string
   ): Promise<CollectingPeriodRecord> {
     const currentCollectingPeriod = await tx.accountingPeriod.findFirst({
@@ -81,7 +85,7 @@ export class ImportedRowCollectionRepository {
 
   async readFundingAccount(
     tx: PrismaClientLike,
-    workspace: WorkspaceContext,
+    workspace: ImportedRowCollectionWorkspaceScope,
     fundingAccountId: string
   ): Promise<{ id: string; name: string }> {
     const fundingAccount = await tx.account.findFirst({
@@ -105,7 +109,7 @@ export class ImportedRowCollectionRepository {
 
   async readLedgerTransactionTypeId(
     tx: PrismaClientLike,
-    workspace: WorkspaceContext,
+    workspace: ImportedRowCollectionWorkspaceScope,
     type: CollectImportedRowRequest['type']
   ): Promise<string> {
     const ledgerTransactionType = await tx.ledgerTransactionType.findFirst({
@@ -131,7 +135,7 @@ export class ImportedRowCollectionRepository {
 
   private async readDraftPlanItemCandidates(
     tx: PrismaClientLike,
-    workspace: WorkspaceContext,
+    workspace: ImportedRowCollectionWorkspaceScope,
     periodId: string
   ): Promise<PlanItemCollectionCandidate[]> {
     const records = await tx.planItem.findMany({
@@ -164,7 +168,7 @@ export class ImportedRowCollectionRepository {
 
   private async readRecurringCollectedTransactionCandidates(
     tx: PrismaClientLike,
-    workspace: WorkspaceContext,
+    workspace: ImportedRowCollectionWorkspaceScope,
     periodId: string
   ): Promise<PlanItemCollectionCandidate[]> {
     const records = await tx.collectedTransaction.findMany({
@@ -221,7 +225,7 @@ export class ImportedRowCollectionRepository {
 
   private async readPlanItemCollectionCandidates(
     tx: PrismaClientLike,
-    workspace: WorkspaceContext,
+    workspace: ImportedRowCollectionWorkspaceScope,
     periodId: string
   ): Promise<PlanItemCollectionCandidate[]> {
     const [draftCandidates, recurringCandidates] = await Promise.all([
@@ -234,7 +238,7 @@ export class ImportedRowCollectionRepository {
 
   async readMatchedPlanItemCandidate(
     tx: PrismaClientLike,
-    workspace: WorkspaceContext,
+    workspace: ImportedRowCollectionWorkspaceScope,
     periodId: string,
     amount: number,
     occurredOn: Date,
@@ -260,7 +264,7 @@ export class ImportedRowCollectionRepository {
 
   async hasDuplicateSourceFingerprint(
     tx: PrismaClientLike,
-    workspace: WorkspaceContext,
+    workspace: ImportedRowCollectionWorkspaceScope,
     sourceFingerprint: string
   ): Promise<boolean> {
     const duplicateSourceFingerprint = await tx.collectedTransaction.findFirst({
@@ -277,23 +281,9 @@ export class ImportedRowCollectionRepository {
     return Boolean(duplicateSourceFingerprint);
   }
 
-  async createCollectedTransactionRecord(input: {
-    tx: Prisma.TransactionClient;
-    workspace: WorkspaceContext;
-    importBatchId: string;
-    importedRowId: string;
-    periodId: string;
-    matchedPlanItemId: string | null;
-    ledgerTransactionTypeId: string;
-    fundingAccountId: string;
-    categoryId: string | null;
-    title: string;
-    occurredOn: Date;
-    amount: number;
-    status: Prisma.CollectedTransactionCreateInput['status'];
-    sourceFingerprint: string;
-    memo: string | undefined;
-  }): Promise<CreatedCollectedTransactionRecord> {
+  async createCollectedTransactionRecord(
+    input: CreateCollectedTransactionRecordInput
+  ): Promise<CreatedCollectedTransactionRecord> {
     return input.tx.collectedTransaction.create({
       data: {
         tenantId: input.workspace.tenantId,
@@ -316,23 +306,9 @@ export class ImportedRowCollectionRepository {
     });
   }
 
-  async absorbImportedRowIntoCollectedTransactionRecord(input: {
-    tx: Prisma.TransactionClient;
-    collectedTransactionId: string;
-    matchedPlanItemId: string;
-    importBatchId: string;
-    importedRowId: string;
-    periodId: string;
-    ledgerTransactionTypeId: string;
-    fundingAccountId: string;
-    categoryId: string | null;
-    title: string;
-    occurredOn: Date;
-    amount: number;
-    status: Prisma.CollectedTransactionCreateInput['status'];
-    sourceFingerprint: string;
-    memo: string | undefined;
-  }): Promise<CreatedCollectedTransactionRecord> {
+  async absorbImportedRowIntoCollectedTransactionRecord(
+    input: AbsorbImportedRowIntoCollectedTransactionRecordInput
+  ): Promise<CreatedCollectedTransactionRecord> {
     const claimed = await input.tx.collectedTransaction.updateMany({
       where: {
         id: input.collectedTransactionId,
@@ -429,7 +405,7 @@ export class ImportedRowCollectionRepository {
 
   async readEffectiveCategory(
     tx: PrismaClientLike,
-    workspace: WorkspaceContext,
+    workspace: ImportedRowCollectionWorkspaceScope,
     categoryId: string | null
   ): Promise<{ id: string; name: string } | null> {
     if (!categoryId) {

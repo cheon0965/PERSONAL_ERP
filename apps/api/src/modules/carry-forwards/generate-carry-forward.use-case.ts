@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException
 } from '@nestjs/common';
@@ -9,19 +10,14 @@ import type {
   CarryForwardView,
   GenerateCarryForwardRequest
 } from '@personal-erp/contracts';
-import {
-  AccountingPeriodEventType,
-  AccountingPeriodStatus,
-  BalanceSnapshotKind,
-  OpeningBalanceSourceKind
-} from '@prisma/client';
+import { AccountingPeriodStatus } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import {
   readWorkspaceActorRef,
   readWorkspaceCreatedByActorRef
 } from '../../common/auth/workspace-actor-ref.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
-import { PrismaService } from '../../common/prisma/prisma.service';
+import { CarryForwardGenerationPort } from './application/ports/carry-forward-generation.port';
 import {
   isCarryForwardAccount,
   readNextMonth,
@@ -32,7 +28,8 @@ import { CarryForwardsService } from './carry-forwards.service';
 @Injectable()
 export class GenerateCarryForwardUseCase {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(CarryForwardGenerationPort)
+    private readonly carryForwardGenerationPort: CarryForwardGenerationPort,
     private readonly carryForwardsService: CarryForwardsService
   ) {}
 
@@ -64,29 +61,23 @@ export class GenerateCarryForwardUseCase {
       );
     }
 
-    const sourceClosingSnapshot = await this.prisma.closingSnapshot.findUnique({
-      where: {
-        periodId: sourcePeriod.id
-      },
-      include: {
-        lines: {
-          include: {
-            accountSubject: {
-              select: {
-                code: true,
-                name: true,
-                subjectKind: true
-              }
-            },
-            fundingAccount: {
-              select: {
-                name: true
-              }
-            }
-          }
-        }
-      }
-    });
+    const {
+      year: nextYear,
+      month: nextMonth,
+      monthLabel
+    } = readNextMonth(sourcePeriod.year, sourcePeriod.month);
+
+    const generationContext =
+      await this.carryForwardGenerationPort.readGenerationContext(
+        workspace.tenantId,
+        workspace.ledgerId,
+        sourcePeriod.id,
+        nextYear,
+        nextMonth
+      );
+    const sourceClosingSnapshot = generationContext.sourceClosingSnapshot;
+    const existingRecord = generationContext.existingRecord;
+    const existingTargetPeriod = generationContext.existingTargetPeriod;
 
     if (!sourceClosingSnapshot) {
       throw new BadRequestException(
@@ -94,33 +85,11 @@ export class GenerateCarryForwardUseCase {
       );
     }
 
-    const existingRecord = await this.prisma.carryForwardRecord.findFirst({
-      where: {
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId,
-        fromPeriodId: sourcePeriod.id
-      }
-    });
-
     if (existingRecord) {
       throw new ConflictException(
         '해당 운영 기간의 차기 이월이 이미 생성되었습니다.'
       );
     }
-
-    const {
-      year: nextYear,
-      month: nextMonth,
-      monthLabel
-    } = readNextMonth(sourcePeriod.year, sourcePeriod.month);
-
-    const existingTargetPeriod =
-      await this.carryForwardsService.findPeriodByYearMonthInWorkspace(
-        workspace.tenantId,
-        workspace.ledgerId,
-        nextYear,
-        nextMonth
-      );
 
     if (existingTargetPeriod?.status === AccountingPeriodStatus.LOCKED) {
       throw new ConflictException(
@@ -144,69 +113,22 @@ export class GenerateCarryForwardUseCase {
 
     const nextPeriodBoundary = readPeriodBoundary(nextYear, nextMonth);
 
-    await this.prisma.$transaction(async (tx) => {
-      const targetPeriod =
-        existingTargetPeriod ??
-        (await tx.accountingPeriod.create({
-          data: {
-            tenantId: workspace.tenantId,
-            ledgerId: workspace.ledgerId,
-            year: nextYear,
-            month: nextMonth,
-            startDate: nextPeriodBoundary.startDate,
-            endDate: nextPeriodBoundary.endDate,
-            status: AccountingPeriodStatus.OPEN
-          }
-        }));
-
-      if (!existingTargetPeriod) {
-        await tx.periodStatusHistory.create({
-          data: {
-            tenantId: workspace.tenantId,
-            ledgerId: workspace.ledgerId,
-            periodId: targetPeriod.id,
-            fromStatus: null,
-            toStatus: AccountingPeriodStatus.OPEN,
-            eventType: AccountingPeriodEventType.OPEN,
-            reason: `${sourcePeriod.year}-${String(sourcePeriod.month).padStart(2, '0')} 이월 생성`,
-            ...actorRef
-          }
-        });
-      }
-
-      const openingBalanceSnapshot = await tx.openingBalanceSnapshot.create({
-        data: {
-          tenantId: workspace.tenantId,
-          ledgerId: workspace.ledgerId,
-          effectivePeriodId: targetPeriod.id,
-          sourceKind: OpeningBalanceSourceKind.CARRY_FORWARD,
-          ...createdByActorRef
-        }
-      });
-
-      if (carryableLines.length > 0) {
-        await tx.balanceSnapshotLine.createMany({
-          data: carryableLines.map((line) => ({
-            snapshotKind: BalanceSnapshotKind.OPENING,
-            openingSnapshotId: openingBalanceSnapshot.id,
-            accountSubjectId: line.accountSubjectId,
-            fundingAccountId: line.fundingAccountId,
-            balanceAmount: line.balanceAmount
-          }))
-        });
-      }
-
-      await tx.carryForwardRecord.create({
-        data: {
-          tenantId: workspace.tenantId,
-          ledgerId: workspace.ledgerId,
-          fromPeriodId: sourcePeriod.id,
-          toPeriodId: targetPeriod.id,
-          sourceClosingSnapshotId: sourceClosingSnapshot.id,
-          createdJournalEntryId: null,
-          ...createdByActorRef
-        }
-      });
+    await this.carryForwardGenerationPort.createCarryForward({
+      tenantId: workspace.tenantId,
+      ledgerId: workspace.ledgerId,
+      sourcePeriod: {
+        id: sourcePeriod.id,
+        year: sourcePeriod.year,
+        month: sourcePeriod.month
+      },
+      nextYear,
+      nextMonth,
+      nextPeriodBoundary,
+      existingTargetPeriod,
+      carryableLines,
+      sourceClosingSnapshotId: sourceClosingSnapshot.id,
+      actorRef,
+      createdByActorRef
     });
 
     const view = await this.carryForwardsService.findViewInWorkspace(

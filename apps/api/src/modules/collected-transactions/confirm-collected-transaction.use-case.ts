@@ -8,7 +8,7 @@ import { requireCurrentWorkspace } from '../../common/auth/required-workspace.ut
 import { readWorkspaceCreatedByActorRef } from '../../common/auth/workspace-actor-ref.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { AccountingPeriodsService } from '../accounting-periods/accounting-periods.service';
+import { AccountingPeriodWriteGuardPort } from '../accounting-periods/public';
 import { mapJournalEntryRecordToItem } from '../journal-entries/journal-entry-item.mapper';
 import { REQUIRED_CONFIRM_ACCOUNT_SUBJECT_CODES } from './confirm-collected-transaction.policy';
 import {
@@ -36,7 +36,7 @@ import {
 export class ConfirmCollectedTransactionUseCase {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly accountingPeriodsService: AccountingPeriodsService
+    private readonly accountingPeriodWriteGuard: AccountingPeriodWriteGuardPort
   ) {}
 
   async execute(
@@ -101,10 +101,12 @@ export class ConfirmCollectedTransactionUseCase {
       });
 
       const allocatedEntryNumber =
-        await this.accountingPeriodsService.allocateJournalEntryNumberInTransaction(
+        await this.accountingPeriodWriteGuard.allocateJournalEntryNumberInTransaction(
           tx,
-          workspace.tenantId,
-          workspace.ledgerId,
+          {
+            tenantId: workspace.tenantId,
+            ledgerId: workspace.ledgerId
+          },
           latestPeriod.id
         );
 

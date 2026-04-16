@@ -18,7 +18,9 @@ import { requireCurrentWorkspace } from '../../common/auth/required-workspace.ut
 import { readWorkspaceCreatedByActorRef } from '../../common/auth/workspace-actor-ref.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { AccountingPeriodsService } from '../accounting-periods/accounting-periods.service';
+import { AccountingPeriodWriteGuardPort } from '../accounting-periods/public';
+import { assertCollectedTransactionCanBeCorrected } from '../collected-transactions/public';
+import { JournalEntryAdjustmentStorePort } from './application/ports/journal-entry-adjustment-store.port';
 import { mapJournalEntryRecordToItem } from './journal-entry-item.mapper';
 import {
   assertBalancedJournalAdjustmentLines,
@@ -28,68 +30,13 @@ import {
   normalizeOptionalText
 } from './journal-entry-adjustment.policy';
 import { assertJournalEntryCanBeReversed } from './journal-entry-transition.policy';
-import { assertCollectedTransactionCanBeCorrected } from '../collected-transactions/public';
-
-const journalEntryItemInclude = {
-  sourceCollectedTransaction: {
-    select: {
-      id: true,
-      title: true,
-      status: true
-    }
-  },
-  reversesJournalEntry: {
-    select: {
-      id: true,
-      entryNumber: true
-    }
-  },
-  reversedByJournalEntry: {
-    select: {
-      id: true,
-      entryNumber: true
-    }
-  },
-  correctsJournalEntry: {
-    select: {
-      id: true,
-      entryNumber: true
-    }
-  },
-  correctionEntries: {
-    select: {
-      id: true,
-      entryNumber: true
-    },
-    orderBy: {
-      createdAt: 'asc' as const
-    }
-  },
-  lines: {
-    include: {
-      accountSubject: {
-        select: {
-          code: true,
-          name: true
-        }
-      },
-      fundingAccount: {
-        select: {
-          name: true
-        }
-      }
-    },
-    orderBy: {
-      lineNumber: 'asc' as const
-    }
-  }
-};
 
 @Injectable()
 export class ReverseJournalEntryUseCase {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly accountingPeriodsService: AccountingPeriodsService
+    private readonly accountingPeriodWriteGuard: AccountingPeriodWriteGuardPort,
+    private readonly journalEntryAdjustmentStore: JournalEntryAdjustmentStorePort
   ) {}
 
   async execute(
@@ -98,6 +45,10 @@ export class ReverseJournalEntryUseCase {
     input: ReverseJournalEntryRequest
   ): Promise<JournalEntryItem> {
     const workspace = requireCurrentWorkspace(user);
+    const workspaceScope = {
+      tenantId: workspace.tenantId,
+      ledgerId: workspace.ledgerId
+    };
     const createdByActorRef = readWorkspaceCreatedByActorRef(workspace);
     assertWorkspaceActionAllowed(
       workspace.membershipRole,
@@ -105,8 +56,8 @@ export class ReverseJournalEntryUseCase {
     );
 
     const targetPeriod =
-      await this.accountingPeriodsService.assertCollectingDateAllowed(
-        user,
+      await this.accountingPeriodWriteGuard.assertCollectingDateAllowed(
+        workspaceScope,
         input.entryDate
       );
 
@@ -114,21 +65,18 @@ export class ReverseJournalEntryUseCase {
 
     const createdJournalEntry = await this.prisma.$transaction(async (tx) => {
       const allocatedEntryNumber =
-        await this.accountingPeriodsService.allocateJournalEntryNumberInTransaction(
+        await this.accountingPeriodWriteGuard.allocateJournalEntryNumberInTransaction(
           tx,
-          workspace.tenantId,
-          workspace.ledgerId,
+          workspaceScope,
           targetPeriod.id
         );
 
-      const originalJournalEntry = await tx.journalEntry.findFirst({
-        where: {
-          id: journalEntryId,
-          tenantId: workspace.tenantId,
-          ledgerId: workspace.ledgerId
-        },
-        include: journalEntryItemInclude
-      });
+      const originalJournalEntry =
+        await this.journalEntryAdjustmentStore.findByIdInWorkspace(
+          tx,
+          workspaceScope,
+          journalEntryId
+        );
 
       if (!originalJournalEntry) {
         throw new NotFoundException('Journal entry not found.');
@@ -152,34 +100,28 @@ export class ReverseJournalEntryUseCase {
         throw new BadRequestException(readAdjustmentErrorMessage(error));
       }
 
-      const claimedOriginalJournalEntry = await tx.journalEntry.updateMany({
-        where: {
-          id: originalJournalEntry.id,
-          tenantId: workspace.tenantId,
-          ledgerId: workspace.ledgerId,
-          status: {
-            in: [originalJournalEntry.status]
-          }
-        },
-        data: {
-          status: JournalEntryStatus.REVERSED
-        }
-      });
+      const claimedOriginalJournalEntryCount =
+        await this.journalEntryAdjustmentStore.updateStatusInWorkspace(
+          tx,
+          workspaceScope,
+          originalJournalEntry.id,
+          [originalJournalEntry.status],
+          JournalEntryStatus.REVERSED
+        );
 
-      if (claimedOriginalJournalEntry.count !== 1) {
-        const currentJournalEntry = await tx.journalEntry.findFirst({
-          where: {
-            id: journalEntryId,
-            tenantId: workspace.tenantId,
-            ledgerId: workspace.ledgerId
-          }
-        });
+      if (claimedOriginalJournalEntryCount !== 1) {
+        const currentJournalEntryStatus =
+          await this.journalEntryAdjustmentStore.findCurrentStatusInWorkspace(
+            tx,
+            workspaceScope,
+            journalEntryId
+          );
 
-        if (!currentJournalEntry) {
+        if (!currentJournalEntryStatus) {
           throw new NotFoundException('Journal entry not found.');
         }
 
-        assertJournalEntryCanBeReversed(currentJournalEntry.status);
+        assertJournalEntryCanBeReversed(currentJournalEntryStatus);
 
         throw new ConflictException(
           'Journal entry changed during reversal. Please retry.'
@@ -187,40 +129,29 @@ export class ReverseJournalEntryUseCase {
       }
 
       if (originalJournalEntry.sourceCollectedTransaction) {
-        const claimedCollectedTransaction =
-          await tx.collectedTransaction.updateMany({
-            where: {
-              id: originalJournalEntry.sourceCollectedTransaction.id,
-              tenantId: workspace.tenantId,
-              ledgerId: workspace.ledgerId,
-              status: {
-                in: [originalJournalEntry.sourceCollectedTransaction.status]
-              }
-            },
-            data: {
-              status: CollectedTransactionStatus.CORRECTED
-            }
-          });
+        const claimedCollectedTransactionCount =
+          await this.journalEntryAdjustmentStore.updateCollectedTransactionStatusInWorkspace(
+            tx,
+            workspaceScope,
+            originalJournalEntry.sourceCollectedTransaction.id,
+            [originalJournalEntry.sourceCollectedTransaction.status],
+            CollectedTransactionStatus.CORRECTED
+          );
 
-        if (claimedCollectedTransaction.count !== 1) {
-          const currentCollectedTransaction =
-            await tx.collectedTransaction.findFirst({
-              where: {
-                id: originalJournalEntry.sourceCollectedTransaction.id,
-                tenantId: workspace.tenantId,
-                ledgerId: workspace.ledgerId
-              },
-              select: {
-                status: true
-              }
-            });
+        if (claimedCollectedTransactionCount !== 1) {
+          const currentCollectedTransactionStatus =
+            await this.journalEntryAdjustmentStore.findCollectedTransactionStatusInWorkspace(
+              tx,
+              workspaceScope,
+              originalJournalEntry.sourceCollectedTransaction.id
+            );
 
-          if (!currentCollectedTransaction) {
+          if (!currentCollectedTransactionStatus) {
             throw new NotFoundException('Collected transaction not found.');
           }
 
           assertCollectedTransactionCanBeCorrected(
-            currentCollectedTransaction.status
+            currentCollectedTransactionStatus
           );
 
           throw new ConflictException(
@@ -229,30 +160,22 @@ export class ReverseJournalEntryUseCase {
         }
       }
 
-      const created = await tx.journalEntry.create({
-        data: {
-          tenantId: workspace.tenantId,
-          ledgerId: workspace.ledgerId,
-          periodId: allocatedEntryNumber.period.id,
-          entryNumber: buildJournalEntryEntryNumber(
-            allocatedEntryNumber.period.year,
-            allocatedEntryNumber.period.month,
-            allocatedEntryNumber.sequence
-          ),
-          entryDate: buildJournalEntryDate(input.entryDate),
-          sourceKind: JournalEntrySourceKind.MANUAL_ADJUSTMENT,
-          status: JournalEntryStatus.POSTED,
-          memo: reason ?? `Reversal of ${originalJournalEntry.entryNumber}`,
-          reversesJournalEntryId: originalJournalEntry.id,
-          ...createdByActorRef,
-          lines: {
-            create: reversalLines
-          }
-        },
-        include: journalEntryItemInclude
+      return this.journalEntryAdjustmentStore.createAdjustmentEntry(tx, {
+        workspace: workspaceScope,
+        periodId: allocatedEntryNumber.period.id,
+        entryNumber: buildJournalEntryEntryNumber(
+          allocatedEntryNumber.period.year,
+          allocatedEntryNumber.period.month,
+          allocatedEntryNumber.sequence
+        ),
+        entryDate: buildJournalEntryDate(input.entryDate),
+        sourceKind: JournalEntrySourceKind.MANUAL_ADJUSTMENT,
+        status: JournalEntryStatus.POSTED,
+        memo: reason ?? `Reversal of ${originalJournalEntry.entryNumber}`,
+        reversesJournalEntryId: originalJournalEntry.id,
+        actorRef: createdByActorRef,
+        lines: reversalLines
       });
-
-      return created;
     });
 
     return mapJournalEntryRecordToItem(createdJournalEntry);

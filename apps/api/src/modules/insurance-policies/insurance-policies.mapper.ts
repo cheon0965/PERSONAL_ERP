@@ -4,7 +4,7 @@ import {
   type PrismaMoneyLike
 } from '../../common/money/prisma-money';
 
-type InsurancePolicyRecord = {
+export type InsurancePolicyRecord = {
   id: string;
   provider: string;
   productName: string;

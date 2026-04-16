@@ -2,12 +2,14 @@
 
 기준일: `2026-04-15`
 
-문서 상태: `current-baseline`
+문서 상태: `completed`
+
+완료일: `2026-04-16`
 
 연결 문서:
 
 - `docs/SCREEN_FLOW_GUIDE.md`
-- `docs/completed/UI_REORGANIZATION_EXECUTION_PLAN.md`
+- `docs/completed/phase-1/UI_REORGANIZATION_EXECUTION_PLAN.md` (1차 실행계획)
 
 ## 문서 목적
 

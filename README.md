@@ -26,11 +26,15 @@
 - 백엔드: NestJS + Prisma + MySQL
 - 공용 계약 계층: `packages/contracts`
 - 공용 금액 계층: `packages/money`의 `MoneyWon` parser/helper를 기준으로 원 단위 safe integer, `Decimal(19,0)` 영속 컬럼, `HALF_UP` 반올림/배분 잔차 보정을 통일
-- 인증 기본 정책: `auth/register`, `auth/verify-email`, `auth/resend-verification`, `auth/login`, `auth/refresh`, `auth/logout`, `health`, `health/ready`를 제외한 API는 기본적으로 보호
-- Web 인증 세션: `/register`, `/verify-email`, `/login`, 메모리 기반 access token 유지, `POST /auth/refresh` 기반 사용자 복원
+- 선택적 Hexagonal 승격: `collected-transactions`, `recurring-rules`를 시작으로 `accounting-periods`, `import-batches`, `journal-entries`, `auth`, `admin`, `insurance-policies`, `plan-items`, `financial-statements`, `carry-forwards`까지 핵심 모듈을 use-case/port 기반으로 승격 완료
+- 인증 기본 정책: `auth/register`, `auth/verify-email`, `auth/resend-verification`, `auth/accept-invitation`, `auth/login`, `auth/refresh`, `auth/logout`, `health`, `health/ready`를 제외한 API는 기본적으로 보호
+- 인증/계정 관리: 회원가입, 이메일 인증, 인증 메일 재발송, 사업장 초대 수락, 로그인, 세션 refresh/logout, 계정 보안 조회, 프로필 수정, 비밀번호 변경, 세션 종료까지 10개 use-case 기반으로 운영
+- 관리자 운영: workspace-scoped 멤버 초대/역할/상태 관리, DB 메뉴 트리/메뉴 권한 관리, 감사 로그 조회, 권한 정책 요약
+- Web 인증 세션: `/register`, `/verify-email`, `/accept-invitation`, `/login`, 메모리 기반 access token 유지, `POST /auth/refresh` 기반 사용자 복원
 - 핵심 운영 흐름: 기준 데이터 준비 -> 월 운영 시작 -> 보험/차량 운영 기준 정리 -> 반복규칙 -> 계획 항목 -> 수집 거래/업로드 배치 -> 전표 확정/반전/정정 -> 월 마감 -> 재무제표 -> 차기 이월 -> 기간 전망까지 한 달 사이클로 연결됨
 - 기준 데이터 운영: readiness 요약, 자금수단/카테고리 제한적 관리, 자금수단 `ACTIVE/INACTIVE/CLOSED` lifecycle 일부 지원
-- 요청 단위 검증: auth, reference-data, accounting-periods, collected-transactions/journal-entries, import-batches, financial-statements/carry-forwards, dashboard/forecast의 현재 workspace 접근 범위와 계약 검증 포함
+- 운영 지원: 체크리스트, 예외 처리함, 월 마감 대시보드, 업로드 운영 현황, 시스템 상태/헬스, 알림 센터, 수동 CSV 반출, 운영 메모/인수인계
+- 요청 단위 검증: auth, admin, reference-data, accounting-periods, collected-transactions/journal-entries, import-batches, financial-statements/carry-forwards, dashboard/forecast의 현재 workspace 접근 범위와 계약 검증 포함
 - 대표 브라우저 E2E: 보호 라우트, 로그인/세션 복원, 거래 저장, 기준 데이터 관리, 반복 규칙 관리, 운영 체크리스트 empty state와 fallback CTA까지 대표 smoke 자동 검증
 - 운영 신호: 모든 API 응답에 `x-request-id` 헤더 부여, `GET /api/health/ready` 준비 상태 확인 지원
 - CI 게이트: `validate`, `e2e-smoke`(build 결과물 기준), `security-regression`, `prisma-integration`, `audit-runtime`, `Semgrep CE`, `Gitleaks`
@@ -190,6 +194,7 @@ PERSONAL_ERP/
     web/        # Next.js Web
   packages/
     contracts/  # 공용 요청/응답 계약
+    money/      # MoneyWon 공용 금액 모듈
   docs/         # 도메인, 아키텍처, 개발, 운영 문서
 ```
 

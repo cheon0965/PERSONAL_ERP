@@ -9,7 +9,12 @@ import { Prisma } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { AccountingPeriodsService } from '../accounting-periods/accounting-periods.service';
+import { AccountingPeriodWriteGuardPort } from '../accounting-periods/public';
+import {
+  ImportedRowCollectionPort,
+  type ImportedRowCollectionWorkspaceScope,
+  type PrismaClientLike
+} from './application/ports/imported-row-collection.port';
 import { resolveImportedRowAutoPreparation } from './imported-row-auto-preparation.policy';
 import {
   buildCollectImportedRowPreview,
@@ -21,11 +26,6 @@ import {
   readNormalizedImportedRow
 } from './imported-row-collection.normalization.policy';
 import { resolveCollectedSourceFingerprint } from './imported-row-collection-source-fingerprint.policy';
-import {
-  ImportedRowCollectionRepository,
-  type PrismaClientLike,
-  type WorkspaceContext
-} from './imported-row-collection.repository';
 import type { PlanItemCollectionCandidate } from './imported-row-collection.types';
 
 type RowCollectionAssessment = {
@@ -53,8 +53,8 @@ type RowCollectionAssessment = {
 export class ImportedRowCollectionService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly accountingPeriodsService: AccountingPeriodsService,
-    private readonly collectionRepository: ImportedRowCollectionRepository
+    private readonly accountingPeriodWriteGuard: AccountingPeriodWriteGuardPort,
+    private readonly collectionRepository: ImportedRowCollectionPort
   ) {}
 
   async collectRow(
@@ -64,6 +64,10 @@ export class ImportedRowCollectionService {
     input: CollectImportedRowRequest
   ): Promise<CollectImportedRowResponse> {
     const workspace = requireCurrentWorkspace(user);
+    const workspaceScope = {
+      tenantId: workspace.tenantId,
+      ledgerId: workspace.ledgerId
+    };
     assertWorkspaceActionAllowed(
       workspace.membershipRole,
       'collected_transaction.create'
@@ -72,21 +76,21 @@ export class ImportedRowCollectionService {
     const importedRow =
       await this.collectionRepository.readCollectableImportedRow(
         this.prisma,
-        workspace,
+        workspaceScope,
         importBatchId,
         importedRowId
       );
     const parsedRow = readNormalizedImportedRow(importedRow);
     const currentPeriod =
-      await this.accountingPeriodsService.assertCollectingDateAllowed(
-        user,
+      await this.accountingPeriodWriteGuard.assertCollectingDateAllowed(
+        workspaceScope,
         parsedRow.occurredOn
       );
 
     return this.prisma.$transaction((tx) =>
       this.collectRowInTransaction({
         tx,
-        workspace,
+        workspace: workspaceScope,
         importBatchId,
         importedRowId,
         input,
@@ -102,6 +106,10 @@ export class ImportedRowCollectionService {
     input: CollectImportedRowRequest
   ): Promise<CollectImportedRowPreview> {
     const workspace = requireCurrentWorkspace(user);
+    const workspaceScope = {
+      tenantId: workspace.tenantId,
+      ledgerId: workspace.ledgerId
+    };
     assertWorkspaceActionAllowed(
       workspace.membershipRole,
       'collected_transaction.create'
@@ -110,20 +118,20 @@ export class ImportedRowCollectionService {
     const importedRow =
       await this.collectionRepository.readCollectableImportedRow(
         this.prisma,
-        workspace,
+        workspaceScope,
         importBatchId,
         importedRowId
       );
     const parsedRow = readNormalizedImportedRow(importedRow);
     const currentPeriod =
-      await this.accountingPeriodsService.assertCollectingDateAllowed(
-        user,
+      await this.accountingPeriodWriteGuard.assertCollectingDateAllowed(
+        workspaceScope,
         parsedRow.occurredOn
       );
 
     const assessment = await this.evaluateRowCollection({
       client: this.prisma,
-      workspace,
+      workspace: workspaceScope,
       importBatchId,
       importedRowId,
       input,
@@ -135,7 +143,7 @@ export class ImportedRowCollectionService {
 
   private async collectRowInTransaction(input: {
     tx: Prisma.TransactionClient;
-    workspace: WorkspaceContext;
+    workspace: ImportedRowCollectionWorkspaceScope;
     importBatchId: string;
     importedRowId: string;
     input: CollectImportedRowRequest;
@@ -212,7 +220,7 @@ export class ImportedRowCollectionService {
 
   private async evaluateRowCollection(input: {
     client: PrismaClientLike;
-    workspace: WorkspaceContext;
+    workspace: ImportedRowCollectionWorkspaceScope;
     importBatchId: string;
     importedRowId: string;
     input: CollectImportedRowRequest;

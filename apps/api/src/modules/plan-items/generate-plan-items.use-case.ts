@@ -1,48 +1,33 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException
 } from '@nestjs/common';
 import type {
-  CollectedTransactionType,
   AuthenticatedUser,
   GeneratePlanItemsRequest,
   GeneratePlanItemsResponse
 } from '@personal-erp/contracts';
 import {
   AccountingPeriodStatus,
-  LedgerTransactionFlowKind,
-  PlanItemStatus,
-  Prisma
+  LedgerTransactionFlowKind
 } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
 import { fromPrismaMoneyWon } from '../../common/money/prisma-money';
-import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   buildPlannedDates,
   resolveLedgerTransactionTypeId
 } from './plan-item-generation.policy';
+import { PlanItemGenerationPort } from './application/ports/plan-item-generation.port';
 import { PlanItemsService } from './plan-items.service';
-
-type PlanItemCreateDraft = {
-  tenantId: string;
-  ledgerId: string;
-  periodId: string;
-  recurringRuleId: string;
-  ledgerTransactionTypeId: string;
-  fundingAccountId: string;
-  categoryId?: string;
-  title: string;
-  plannedAmount: number;
-  plannedDate: Date;
-  collectedTransactionType: CollectedTransactionType;
-};
 
 @Injectable()
 export class GeneratePlanItemsUseCase {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(PlanItemGenerationPort)
+    private readonly planItemGenerationPort: PlanItemGenerationPort,
     private readonly planItemsService: PlanItemsService
   ) {}
 
@@ -53,7 +38,7 @@ export class GeneratePlanItemsUseCase {
     const workspace = requireCurrentWorkspace(user);
     assertGeneratePermission(workspace.membershipRole);
 
-    const period = await this.planItemsService.findPeriodByIdInWorkspace(
+    const period = await this.planItemGenerationPort.findPeriodByIdInWorkspace(
       workspace.tenantId,
       workspace.ledgerId,
       input.periodId
@@ -71,67 +56,23 @@ export class GeneratePlanItemsUseCase {
       );
     }
 
-    const [recurringRules, existingItems, transactionTypes] = await Promise.all(
-      [
-        this.prisma.recurringRule.findMany({
-          where: {
-            tenantId: workspace.tenantId,
-            ledgerId: workspace.ledgerId,
-            isActive: true,
-            startDate: {
-              lt: period.endDate
-            },
-            OR: [{ endDate: null }, { endDate: { gte: period.startDate } }]
-          },
-          include: {
-            account: {
-              select: {
-                id: true,
-                name: true
-              }
-            },
-            category: {
-              select: {
-                id: true,
-                name: true,
-                kind: true
-              }
-            },
-            ledgerTransactionType: {
-              select: {
-                id: true,
-                flowKind: true,
-                isActive: true
-              }
-            }
-          },
-          orderBy: [{ nextRunDate: 'asc' }, { createdAt: 'asc' }]
-        }),
-        this.prisma.planItem.findMany({
-          where: {
-            tenantId: workspace.tenantId,
-            ledgerId: workspace.ledgerId,
-            periodId: period.id
-          },
-          select: {
-            recurringRuleId: true,
-            plannedDate: true
-          }
-        }),
-        this.prisma.ledgerTransactionType.findMany({
-          where: {
-            tenantId: workspace.tenantId,
-            ledgerId: workspace.ledgerId,
-            isActive: true
-          },
-          select: {
-            id: true,
-            flowKind: true
-          },
-          orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }]
-        })
-      ]
-    );
+    const [recurringRules, existingItems, transactionTypes] = await Promise.all([
+      this.planItemGenerationPort.listRecurringRulesForPeriod(
+        workspace.tenantId,
+        workspace.ledgerId,
+        period.startDate,
+        period.endDate
+      ),
+      this.planItemGenerationPort.listExistingItemsForPeriod(
+        workspace.tenantId,
+        workspace.ledgerId,
+        period.id
+      ),
+      this.planItemGenerationPort.listActiveTransactionTypes(
+        workspace.tenantId,
+        workspace.ledgerId
+      )
+    ]);
 
     const defaultTypeIdByFlow = new Map<LedgerTransactionFlowKind, string>();
     const flowKindByTransactionTypeId = new Map<string, LedgerTransactionFlowKind>();
@@ -154,8 +95,19 @@ export class GeneratePlanItemsUseCase {
         )
     );
 
-    const createData: PlanItemCreateDraft[] = [];
-    let createdCount = 0;
+    const createData: Array<{
+      tenantId: string;
+      ledgerId: string;
+      periodId: string;
+      recurringRuleId: string;
+      ledgerTransactionTypeId: string;
+      fundingAccountId: string;
+      categoryId?: string;
+      title: string;
+      plannedAmount: number;
+      plannedDate: Date;
+      matchedCollectedTransactionStatus: 'READY_TO_POST' | 'REVIEWED';
+    }> = [];
     let skippedExistingCount = 0;
     let excludedRuleCount = 0;
 
@@ -205,60 +157,19 @@ export class GeneratePlanItemsUseCase {
           title: rule.title,
           plannedAmount: fromPrismaMoneyWon(rule.amountWon),
           plannedDate,
-          collectedTransactionType:
-            mapLedgerTransactionFlowKindToCollectedTransactionType(flowKind)
+          matchedCollectedTransactionStatus:
+            resolveAutoCollectedTransactionStatus({
+              flowKind,
+              categoryId: rule.categoryId ?? undefined
+            })
         });
       }
     }
 
-    if (createData.length > 0) {
-      await this.prisma.$transaction(async (tx) => {
-        for (const item of createData) {
-          try {
-            await tx.planItem.create({
-              data: {
-                tenantId: item.tenantId,
-                ledgerId: item.ledgerId,
-                periodId: item.periodId,
-                recurringRuleId: item.recurringRuleId,
-                ledgerTransactionTypeId: item.ledgerTransactionTypeId,
-                fundingAccountId: item.fundingAccountId,
-                categoryId: item.categoryId,
-                title: item.title,
-                plannedAmount: item.plannedAmount,
-                plannedDate: item.plannedDate,
-                status: PlanItemStatus.MATCHED,
-                matchedCollectedTransaction: {
-                  create: {
-                    tenantId: item.tenantId,
-                    ledgerId: item.ledgerId,
-                    periodId: item.periodId,
-                    ledgerTransactionTypeId: item.ledgerTransactionTypeId,
-                    fundingAccountId: item.fundingAccountId,
-                    categoryId: item.categoryId,
-                    title: item.title,
-                    occurredOn: item.plannedDate,
-                    amount: item.plannedAmount,
-                    status: resolveAutoCollectedTransactionStatus({
-                      type: item.collectedTransactionType,
-                      categoryId: item.categoryId
-                    })
-                  }
-                }
-              }
-            });
-            createdCount += 1;
-          } catch (error) {
-            if (isPlanItemDuplicateError(error)) {
-              skippedExistingCount += 1;
-              continue;
-            }
-
-            throw error;
-          }
-        }
-      });
-    }
+    const creationResult =
+      await this.planItemGenerationPort.createGeneratedPlanItems(createData);
+    const createdCount = creationResult.createdCount;
+    skippedExistingCount += creationResult.skippedExistingCount;
 
     const view = await this.planItemsService.findViewInWorkspace(
       workspace.tenantId,
@@ -289,41 +200,19 @@ function assertGeneratePermission(
   return assertWorkspaceActionAllowed(membershipRole, 'plan_item.generate');
 }
 
-function mapLedgerTransactionFlowKindToCollectedTransactionType(
-  flowKind: LedgerTransactionFlowKind
-): CollectedTransactionType {
-  switch (flowKind) {
-    case LedgerTransactionFlowKind.INCOME:
-      return 'INCOME';
-    case LedgerTransactionFlowKind.TRANSFER:
-    case LedgerTransactionFlowKind.OPENING_BALANCE:
-    case LedgerTransactionFlowKind.CARRY_FORWARD:
-      return 'TRANSFER';
-    case LedgerTransactionFlowKind.ADJUSTMENT:
-    case LedgerTransactionFlowKind.EXPENSE:
-    default:
-      return 'EXPENSE';
-  }
-}
-
-function isPlanItemDuplicateError(error: unknown) {
-  return (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    error.code === 'P2002' &&
-    Array.isArray(error.meta?.target) &&
-    error.meta.target.includes('periodId') &&
-    error.meta.target.includes('recurringRuleId') &&
-    error.meta.target.includes('plannedDate')
-  );
-}
-
 function resolveAutoCollectedTransactionStatus(input: {
-  type: CollectedTransactionType;
+  flowKind: LedgerTransactionFlowKind;
   categoryId?: string;
 }) {
-  if (input.type === 'TRANSFER') {
+  if (
+    input.flowKind === LedgerTransactionFlowKind.TRANSFER ||
+    input.flowKind === LedgerTransactionFlowKind.OPENING_BALANCE ||
+    input.flowKind === LedgerTransactionFlowKind.CARRY_FORWARD
+  ) {
     return 'READY_TO_POST' as const;
   }
 
-  return input.categoryId?.trim() ? ('READY_TO_POST' as const) : ('REVIEWED' as const);
+  return input.categoryId?.trim()
+    ? ('READY_TO_POST' as const)
+    : ('REVIEWED' as const);
 }

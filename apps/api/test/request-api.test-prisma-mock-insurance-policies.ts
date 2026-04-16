@@ -32,23 +32,42 @@ export function createInsurancePoliciesPrismaMock(
     insurancePolicy: {
       findFirst: async (args: {
         where?: {
-          id?: string;
+          id?: string | { not?: string };
+          normalizedProvider?: string;
+          normalizedProductName?: string;
           userId?: string;
           tenantId?: string;
           ledgerId?: string;
+          isActive?: boolean;
+        };
+        select?: {
+          id?: boolean;
           isActive?: boolean;
         };
         include?: { account?: boolean; category?: boolean };
       }) => {
         const candidate =
           state.insurancePolicies.find((item) => {
-            const matchesId = !args.where?.id || item.id === args.where.id;
+            const matchesId =
+              args.where?.id === undefined
+                ? true
+                : typeof args.where.id === 'string'
+                  ? item.id === args.where.id
+                  : args.where.id.not === undefined
+                    ? true
+                    : item.id !== args.where.id.not;
             const matchesUser =
               !args.where?.userId || item.userId === args.where.userId;
             const matchesTenant =
               !args.where?.tenantId || item.tenantId === args.where.tenantId;
             const matchesLedger =
               !args.where?.ledgerId || item.ledgerId === args.where.ledgerId;
+            const matchesNormalizedProvider =
+              !args.where?.normalizedProvider ||
+              item.normalizedProvider === args.where.normalizedProvider;
+            const matchesNormalizedProductName =
+              !args.where?.normalizedProductName ||
+              item.normalizedProductName === args.where.normalizedProductName;
             const matchesActive =
               args.where?.isActive === undefined ||
               item.isActive === args.where.isActive;
@@ -58,12 +77,21 @@ export function createInsurancePoliciesPrismaMock(
               matchesUser &&
               matchesTenant &&
               matchesLedger &&
+              matchesNormalizedProvider &&
+              matchesNormalizedProductName &&
               matchesActive
             );
           }) ?? null;
 
         if (!candidate) {
           return null;
+        }
+
+        if (args.select) {
+          return {
+            ...(args.select.id ? { id: candidate.id } : {}),
+            ...(args.select.isActive ? { isActive: candidate.isActive } : {})
+          };
         }
 
         return projectInsurancePolicy(candidate, args.include);

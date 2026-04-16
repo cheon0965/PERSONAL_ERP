@@ -1,0 +1,28 @@
+﻿
+D:\참고자료\프로젝트소스\PERSONAL_ERP Starter\apps\api\src\modules\carry-forwards\application\ports\carry-forward-generation.port.ts
+  2:1  error    '@prisma/client' import is restricted from being used by a pattern. application/domain layer files must stay framework-free and depend on ports or pure logic instead  no-restricted-imports
+  6:1  warning  Unused eslint-disable directive (no problems were reported from 'no-restricted-imports')
+
+D:\참고자료\프로젝트소스\PERSONAL_ERP Starter\apps\api\src\modules\financial-statements\application\ports\financial-statement-generation.port.ts
+  3:1  error    '@prisma/client' import is restricted from being used by a pattern. application/domain layer files must stay framework-free and depend on ports or pure logic instead  no-restricted-imports
+  7:1  warning  Unused eslint-disable directive (no problems were reported from 'no-restricted-imports')
+
+D:\참고자료\프로젝트소스\PERSONAL_ERP Starter\apps\api\src\modules\import-batches\application\ports\import-batch-write.port.ts
+  1:1  error    '@prisma/client' import is restricted from being used by a pattern. application/domain layer files must stay framework-free and depend on ports or pure logic instead  no-restricted-imports
+  5:1  warning  Unused eslint-disable directive (no problems were reported from 'no-restricted-imports')
+
+D:\참고자료\프로젝트소스\PERSONAL_ERP Starter\apps\api\src\modules\journal-entries\application\ports\journal-entry-adjustment-store.port.ts
+  1:1  error    '@prisma/client' import is restricted from being used by a pattern. application/domain layer files must stay framework-free and depend on ports or pure logic instead  no-restricted-imports
+  7:1  warning  Unused eslint-disable directive (no problems were reported from 'no-restricted-imports')
+
+D:\참고자료\프로젝트소스\PERSONAL_ERP Starter\apps\api\src\modules\operations-console\operations-console.service.ts
+  944:10  error  'readExportRowCount' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  967:10  error  'readExportSourceDates' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+D:\참고자료\프로젝트소스\PERSONAL_ERP Starter\apps\api\src\modules\plan-items\application\ports\plan-item-generation.port.ts
+  2:1  error    '@prisma/client' import is restricted from being used by a pattern. application/domain layer files must stay framework-free and depend on ports or pure logic instead  no-restricted-imports
+  5:1  warning  Unused eslint-disable directive (no problems were reported from 'no-restricted-imports')
+
+✖ 12 problems (7 errors, 5 warnings)
+  0 errors and 5 warnings potentially fixable with the `--fix` option.
+

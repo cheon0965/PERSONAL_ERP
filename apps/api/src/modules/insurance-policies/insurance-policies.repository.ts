@@ -1,13 +1,9 @@
-﻿import { Injectable } from '@nestjs/common';
-import type {
-  CreateInsurancePolicyRequest,
-  UpdateInsurancePolicyRequest
-} from '@personal-erp/contracts';
+import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { normalizeCaseInsensitiveText } from '../../common/utils/normalize-unique-key.util';
 
-const insurancePolicyInclude = {
+export const insurancePolicyInclude = {
   account: {
     select: {
       id: true,
@@ -66,63 +62,31 @@ export class InsurancePoliciesRepository {
     });
   }
 
-  createInWorkspace(
-    userId: string,
+  findDuplicateInWorkspace(
     tenantId: string,
     ledgerId: string,
-    input: CreateInsurancePolicyRequest,
-    linkedRecurringRuleId: string | null
+    provider: string,
+    productName: string,
+    excludeInsurancePolicyId?: string
   ) {
-    return this.prisma.insurancePolicy.create({
-      data: {
-        userId,
+    return this.prisma.insurancePolicy.findFirst({
+      where: {
         tenantId,
         ledgerId,
-        accountId: input.fundingAccountId,
-        categoryId: input.categoryId,
-        recurringStartDate: input.recurringStartDate,
-        linkedRecurringRuleId,
-        provider: input.provider,
-        normalizedProvider: normalizeCaseInsensitiveText(input.provider),
-        productName: input.productName,
-        normalizedProductName: normalizeCaseInsensitiveText(input.productName),
-        monthlyPremiumWon: input.monthlyPremiumWon,
-        paymentDay: input.paymentDay,
-        cycle: input.cycle,
-        renewalDate: input.renewalDate,
-        maturityDate: input.maturityDate,
-        isActive: input.isActive ?? true
+        normalizedProvider: normalizeCaseInsensitiveText(provider),
+        normalizedProductName: normalizeCaseInsensitiveText(productName),
+        ...(excludeInsurancePolicyId
+          ? {
+              id: {
+                not: excludeInsurancePolicyId
+              }
+            }
+          : {})
       },
-      include: insurancePolicyInclude
-    });
-  }
-
-  updateInWorkspace(
-    insurancePolicyId: string,
-    input: UpdateInsurancePolicyRequest,
-    linkedRecurringRuleId: string | null
-  ) {
-    return this.prisma.insurancePolicy.update({
-      where: {
-        id: insurancePolicyId
-      },
-      data: {
-        accountId: input.fundingAccountId,
-        categoryId: input.categoryId,
-        recurringStartDate: input.recurringStartDate,
-        linkedRecurringRuleId,
-        provider: input.provider,
-        normalizedProvider: normalizeCaseInsensitiveText(input.provider),
-        productName: input.productName,
-        normalizedProductName: normalizeCaseInsensitiveText(input.productName),
-        monthlyPremiumWon: input.monthlyPremiumWon,
-        paymentDay: input.paymentDay,
-        cycle: input.cycle,
-        renewalDate: input.renewalDate,
-        maturityDate: input.maturityDate,
-        ...(input.isActive === undefined ? {} : { isActive: input.isActive })
-      },
-      include: insurancePolicyInclude
+      select: {
+        id: true,
+        isActive: true
+      }
     });
   }
 }

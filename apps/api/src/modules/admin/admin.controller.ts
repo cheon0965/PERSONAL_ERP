@@ -27,9 +27,13 @@ import {
   logWorkspaceActionSucceeded
 } from '../../common/infrastructure/operational/workspace-action.audit';
 import { AdminAuditEventsService } from './admin-audit-events.service';
-import { AdminMembersService } from './admin-members.service';
+import { AdminMemberQueryService } from './admin-member-query.service';
 import { AdminPolicyService } from './admin-policy.service';
 import { NavigationService } from '../navigation/public';
+import { InviteTenantMemberUseCase } from './application/use-cases/invite-tenant-member.use-case';
+import { RemoveTenantMemberUseCase } from './application/use-cases/remove-tenant-member.use-case';
+import { UpdateTenantMemberRoleUseCase } from './application/use-cases/update-tenant-member-role.use-case';
+import { UpdateTenantMemberStatusUseCase } from './application/use-cases/update-tenant-member-status.use-case';
 import { AdminAuditEventsQueryDto } from './dto/admin-audit-events-query.dto';
 import { InviteTenantMemberDto } from './dto/invite-tenant-member.dto';
 import { UpdateNavigationMenuItemDto } from '../navigation/dto/update-navigation-menu-item.dto';
@@ -41,7 +45,11 @@ import { UpdateTenantMemberStatusDto } from './dto/update-tenant-member-status.d
 @Controller('admin')
 export class AdminController {
   constructor(
-    private readonly membersService: AdminMembersService,
+    private readonly memberQueryService: AdminMemberQueryService,
+    private readonly inviteTenantMemberUseCase: InviteTenantMemberUseCase,
+    private readonly updateTenantMemberRoleUseCase: UpdateTenantMemberRoleUseCase,
+    private readonly updateTenantMemberStatusUseCase: UpdateTenantMemberStatusUseCase,
+    private readonly removeTenantMemberUseCase: RemoveTenantMemberUseCase,
     private readonly auditEventsService: AdminAuditEventsService,
     private readonly policyService: AdminPolicyService,
     private readonly navigationService: NavigationService,
@@ -60,7 +68,7 @@ export class AdminController {
       workspace
     });
 
-    const members = await this.membersService.findAll(workspace);
+    const members = await this.memberQueryService.findAll(workspace);
     logWorkspaceActionSucceeded(this.securityEvents, {
       action: 'admin_member.read',
       request,
@@ -86,7 +94,7 @@ export class AdminController {
       workspace
     });
 
-    const invitation = await this.membersService.invite(
+    const invitation = await this.inviteTenantMemberUseCase.execute(
       workspace,
       request,
       dto
@@ -120,7 +128,7 @@ export class AdminController {
       resourceId: membershipId
     });
 
-    const updated = await this.membersService.updateRole(
+    const updated = await this.updateTenantMemberRoleUseCase.execute(
       workspace,
       request,
       membershipId,
@@ -155,7 +163,7 @@ export class AdminController {
       resourceId: membershipId
     });
 
-    const updated = await this.membersService.updateStatus(
+    const updated = await this.updateTenantMemberStatusUseCase.execute(
       workspace,
       request,
       membershipId,
@@ -190,7 +198,11 @@ export class AdminController {
       resourceId: membershipId
     });
 
-    await this.membersService.remove(workspace, request, membershipId);
+    await this.removeTenantMemberUseCase.execute(
+      workspace,
+      request,
+      membershipId
+    );
     logWorkspaceActionSucceeded(this.securityEvents, {
       action: 'admin_member.remove',
       request,

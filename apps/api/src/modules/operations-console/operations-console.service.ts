@@ -1,25 +1,19 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type {
   AccountingPeriodItem,
   AuthenticatedUser,
-  CreateOperationsExportRequest,
-  CreateOperationsNoteRequest,
   OperationsAlertItem,
   OperationsAlertsResponse,
   OperationsChecklistGroup,
   OperationsChecklistItem,
   OperationsChecklistResponse,
   OperationsExceptionsResponse,
-  OperationsExportResult,
   OperationsExportScope,
-  OperationsExportScopeItem,
-  OperationsExportsResponse,
   OperationsHubSummary,
   OperationsImportBatchStatusItem,
   OperationsImportStatusSummary,
   OperationsMonthEndSummary,
   OperationsNoteItem,
-  OperationsNotesResponse,
   OperationsReadinessStatus,
   OperationsSystemComponentItem,
   OperationsSystemComponentStatus,
@@ -30,22 +24,21 @@ import {
   CollectedTransactionStatus,
   ImportedRowParseStatus,
   OperationalNoteKind,
-  PlanItemStatus,
   Prisma
 } from '@prisma/client';
 import { fromPrismaMoneyWon } from '../../common/money/prisma-money';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { getApiEnv } from '../../config/api-env';
-import { mapAccountingPeriodRecordToItem } from '../accounting-periods/accounting-period.mapper';
+import { OperationsConsoleReadRepository } from './operations-console-read.repository';
 
-const openPeriodStatuses: readonly AccountingPeriodStatus[] = [
+const _openPeriodStatuses: readonly AccountingPeriodStatus[] = [
   AccountingPeriodStatus.OPEN,
   AccountingPeriodStatus.IN_REVIEW,
   AccountingPeriodStatus.CLOSING
 ] as const;
 
-const unresolvedTransactionStatuses = [
+const _unresolvedTransactionStatuses = [
   CollectedTransactionStatus.COLLECTED,
   CollectedTransactionStatus.REVIEWED,
   CollectedTransactionStatus.READY_TO_POST
@@ -58,7 +51,7 @@ const exportScopes: readonly OperationsExportScope[] = [
   'FINANCIAL_STATEMENTS'
 ] as const;
 
-const operationsPeriodInclude =
+const _operationsPeriodInclude =
   Prisma.validator<Prisma.AccountingPeriodInclude>()({
     openingBalanceSnapshot: {
       select: {
@@ -147,7 +140,7 @@ type ExportPeriodRecord = {
   month: number;
 };
 
-type BuildExportPayloadInput = {
+type _BuildExportPayloadInput = {
   scope: OperationsExportScope;
   tenantId: string;
   ledgerId: string;
@@ -155,7 +148,7 @@ type BuildExportPayloadInput = {
   rangeLabel: string;
 };
 
-type BuildExportPayloadResult = {
+type _BuildExportPayloadResult = {
   rowCount: number;
   rangeLabel: string;
   payload: string;
@@ -182,7 +175,10 @@ type OperationalNoteRecord = {
 
 @Injectable()
 export class OperationsConsoleService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly operationsConsoleReadRepository: OperationsConsoleReadRepository
+  ) {}
 
   async getHubSummary(user: AuthenticatedUser): Promise<OperationsHubSummary> {
     const snapshot = await this.buildSnapshot(user);
@@ -236,803 +232,13 @@ export class OperationsConsoleService {
     return this.buildAlerts(await this.buildSnapshot(user));
   }
 
-  async getExports(user: AuthenticatedUser): Promise<OperationsExportsResponse> {
-    const workspace = requireCurrentWorkspace(user);
-    const generatedAt = new Date().toISOString();
-    const items = await this.buildExportScopeItems(
-      workspace.tenantId,
-      workspace.ledgerId
-    );
-
-    return {
-      generatedAt,
-      lastExportedAt: readLatestIso(
-        items.map((item) => item.latestExportedAt)
-      ),
-      items
-    };
-  }
-
-  async runExport(
-    user: AuthenticatedUser,
-    input: CreateOperationsExportRequest
-  ): Promise<OperationsExportResult> {
-    const workspace = requireCurrentWorkspace(user);
-    const period = await this.findExportPeriod(
-      workspace.tenantId,
-      workspace.ledgerId,
-      input.periodId
-    );
-    const generatedAt = new Date().toISOString();
-    const exportPayload = await this.buildExportPayload({
-      scope: input.scope,
-      tenantId: workspace.tenantId,
-      ledgerId: workspace.ledgerId,
-      periodId: period?.id ?? null,
-      rangeLabel: period ? readPeriodRecordLabel(period) : readScopeRangeLabel(input.scope)
-    });
-
-    return {
-      exportId: `operations-export-${Date.now()}`,
-      scope: input.scope,
-      fileName: `personal-erp-${input.scope.toLowerCase().replaceAll('_', '-')}-${generatedAt.slice(0, 10)}.csv`,
-      contentType: 'text/csv; charset=utf-8',
-      encoding: 'utf-8',
-      rowCount: exportPayload.rowCount,
-      rangeLabel: exportPayload.rangeLabel,
-      generatedAt,
-      payload: exportPayload.payload
-    };
-  }
-
-  async getNotes(user: AuthenticatedUser): Promise<OperationsNotesResponse> {
-    const workspace = requireCurrentWorkspace(user);
-    const notes = await this.prisma.workspaceOperationalNote.findMany({
-      where: {
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId
-      },
-      include: {
-        period: {
-          select: {
-            year: true,
-            month: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: 50
-    });
-
-    return {
-      generatedAt: new Date().toISOString(),
-      totalCount: notes.length,
-      items: notes.map(mapOperationalNote)
-    };
-  }
-
-  async createNote(
-    user: AuthenticatedUser,
-    input: CreateOperationsNoteRequest
-  ): Promise<OperationsNoteItem> {
-    const workspace = requireCurrentWorkspace(user);
-    const period = await this.findExportPeriod(
-      workspace.tenantId,
-      workspace.ledgerId,
-      input.periodId
-    );
-    const note = await this.prisma.workspaceOperationalNote.create({
-      data: {
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId,
-        periodId: period?.id ?? null,
-        authorMembershipId: workspace.membershipId,
-        kind: input.kind as OperationalNoteKind,
-        title: input.title.trim(),
-        body: input.body.trim(),
-        relatedHref: normalizeOptionalText(input.relatedHref)
-      },
-      include: {
-        period: {
-          select: {
-            year: true,
-            month: true
-          }
-        }
-      }
-    });
-
-    return mapOperationalNote(note);
-  }
-
-  private async buildExportScopeItems(
-    tenantId: string,
-    ledgerId: string
-  ): Promise<OperationsExportScopeItem[]> {
-    const [
-      accounts,
-      categories,
-      accountSubjects,
-      ledgerTransactionTypes,
-      collectedTransactions,
-      journalEntries,
-      financialStatementSnapshots,
-      exportAuditEvents
-    ] = await Promise.all([
-      this.prisma.account.findMany({
-        where: { tenantId, ledgerId },
-        orderBy: [{ status: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }]
-      }),
-      this.prisma.category.findMany({
-        where: { tenantId, ledgerId },
-        orderBy: [{ kind: 'asc' }, { name: 'asc' }]
-      }),
-      this.prisma.accountSubject.findMany({
-        where: { tenantId, ledgerId },
-        orderBy: [{ statementType: 'asc' }, { sortOrder: 'asc' }]
-      }),
-      this.prisma.ledgerTransactionType.findMany({
-        where: { tenantId, ledgerId },
-        orderBy: [{ flowKind: 'asc' }, { sortOrder: 'asc' }]
-      }),
-      this.prisma.collectedTransaction.findMany({
-        where: { tenantId, ledgerId },
-        orderBy: [{ occurredOn: 'desc' }, { createdAt: 'desc' }]
-      }),
-      this.prisma.journalEntry.findMany({
-        where: { tenantId, ledgerId },
-        orderBy: [{ entryDate: 'desc' }, { createdAt: 'desc' }]
-      }),
-      this.prisma.financialStatementSnapshot.findMany({
-        where: { tenantId, ledgerId },
-        include: {
-          period: {
-            select: {
-              year: true,
-              month: true
-            }
-          }
-        }
-      }),
-      this.prisma.workspaceAuditEvent.findMany({
-        where: {
-          tenantId,
-          action: 'operations_export.run',
-          result: 'SUCCESS',
-          resourceType: 'operations_export'
-        },
-        take: 50
-      })
-    ]);
-    const latestExportedAtByScope = new Map<OperationsExportScope, string>();
-
-    for (const event of exportAuditEvents) {
-      if (!isExportScope(event.resourceId)) {
-        continue;
-      }
-
-      if (!latestExportedAtByScope.has(event.resourceId)) {
-        latestExportedAtByScope.set(
-          event.resourceId,
-          event.occurredAt.toISOString()
-        );
-      }
-    }
-
-    return exportScopes.map((scope) => {
-      const sourceDates = readExportSourceDates(scope, {
-        accounts,
-        categories,
-        accountSubjects,
-        ledgerTransactionTypes,
-        collectedTransactions,
-        journalEntries,
-        financialStatementSnapshots
-      });
-      const rowCount = readExportRowCount(scope, {
-        accounts,
-        categories,
-        accountSubjects,
-        ledgerTransactionTypes,
-        collectedTransactions,
-        journalEntries,
-        financialStatementSnapshots
-      });
-
-      return {
-        scope,
-        label: readExportScopeLabel(scope),
-        description: readExportScopeDescription(scope),
-        rowCount,
-        rangeLabel: readScopeRangeLabel(scope),
-        latestSourceAt: readLatestDateValue(sourceDates),
-        latestExportedAt: latestExportedAtByScope.get(scope) ?? null,
-        recommendedCadence: readExportScopeCadence(scope),
-        enabled: rowCount > 0
-      };
-    });
-  }
-
-  private async findExportPeriod(
-    tenantId: string,
-    ledgerId: string,
-    rawPeriodId: string | null | undefined
-  ): Promise<ExportPeriodRecord | null> {
-    const periodId = normalizeOptionalText(rawPeriodId);
-    if (!periodId) {
-      return null;
-    }
-
-    const period = await this.prisma.accountingPeriod.findFirst({
-      where: {
-        id: periodId,
-        tenantId,
-        ledgerId
-      }
-    });
-
-    if (!period) {
-      throw new NotFoundException('내보내기 대상 운영 기간을 찾을 수 없습니다.');
-    }
-
-    return {
-      id: period.id,
-      year: period.year,
-      month: period.month
-    };
-  }
-
-  private async buildExportPayload(
-    input: BuildExportPayloadInput
-  ): Promise<BuildExportPayloadResult> {
-    switch (input.scope) {
-      case 'REFERENCE_DATA':
-        return this.buildReferenceDataExport(input);
-      case 'COLLECTED_TRANSACTIONS':
-        return this.buildCollectedTransactionsExport(input);
-      case 'JOURNAL_ENTRIES':
-        return this.buildJournalEntriesExport(input);
-      case 'FINANCIAL_STATEMENTS':
-        return this.buildFinancialStatementsExport(input);
-      default:
-        return {
-          rowCount: 0,
-          rangeLabel: input.rangeLabel,
-          payload: toCsv([['message'], ['Unsupported export scope']])
-        };
-    }
-  }
-
-  private async buildReferenceDataExport(
-    input: BuildExportPayloadInput
-  ): Promise<BuildExportPayloadResult> {
-    const [accounts, categories, accountSubjects, ledgerTransactionTypes] =
-      await Promise.all([
-        this.prisma.account.findMany({
-          where: {
-            tenantId: input.tenantId,
-            ledgerId: input.ledgerId
-          },
-          orderBy: [{ status: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }]
-        }),
-        this.prisma.category.findMany({
-          where: {
-            tenantId: input.tenantId,
-            ledgerId: input.ledgerId
-          },
-          orderBy: [{ kind: 'asc' }, { name: 'asc' }]
-        }),
-        this.prisma.accountSubject.findMany({
-          where: {
-            tenantId: input.tenantId,
-            ledgerId: input.ledgerId
-          },
-          orderBy: [{ statementType: 'asc' }, { sortOrder: 'asc' }]
-        }),
-        this.prisma.ledgerTransactionType.findMany({
-          where: {
-            tenantId: input.tenantId,
-            ledgerId: input.ledgerId
-          },
-          orderBy: [{ flowKind: 'asc' }, { sortOrder: 'asc' }]
-        })
-      ]);
-    const rows: CsvRow[] = [
-      [
-        'recordType',
-        'id',
-        'code',
-        'name',
-        'kind',
-        'status',
-        'flowKind',
-        'postingPolicyKey',
-        'sortOrder',
-        'balanceWon',
-        'updatedAt'
-      ],
-      ...accounts.map((account) => [
-        'funding_account',
-        account.id,
-        '',
-        account.name,
-        account.type,
-        account.status,
-        '',
-        '',
-        account.sortOrder,
-        fromPrismaMoneyWon(account.balanceWon),
-        readDateValue(account.updatedAt)
-      ]),
-      ...categories.map((category) => [
-        'category',
-        category.id,
-        '',
-        category.name,
-        category.kind,
-        category.isActive ? 'ACTIVE' : 'INACTIVE',
-        '',
-        '',
-        category.sortOrder,
-        '',
-        readDateValue(category.updatedAt)
-      ]),
-      ...accountSubjects.map((subject) => [
-        'account_subject',
-        subject.id,
-        subject.code,
-        subject.name,
-        subject.subjectKind,
-        subject.isActive ? 'ACTIVE' : 'INACTIVE',
-        '',
-        '',
-        subject.sortOrder,
-        '',
-        readDateValue(subject.updatedAt)
-      ]),
-      ...ledgerTransactionTypes.map((transactionType) => [
-        'ledger_transaction_type',
-        transactionType.id,
-        transactionType.code,
-        transactionType.name,
-        '',
-        transactionType.isActive ? 'ACTIVE' : 'INACTIVE',
-        transactionType.flowKind,
-        transactionType.postingPolicyKey,
-        transactionType.sortOrder,
-        '',
-        readDateValue(transactionType.updatedAt)
-      ])
-    ];
-
-    return {
-      rowCount: rows.length - 1,
-      rangeLabel: input.rangeLabel,
-      payload: toCsv(rows)
-    };
-  }
-
-  private async buildCollectedTransactionsExport(
-    input: BuildExportPayloadInput
-  ): Promise<BuildExportPayloadResult> {
-    const transactions = await this.prisma.collectedTransaction.findMany({
-      where: {
-        tenantId: input.tenantId,
-        ledgerId: input.ledgerId,
-        ...(input.periodId ? { periodId: input.periodId } : {})
-      },
-      orderBy: [{ occurredOn: 'asc' }, { createdAt: 'asc' }]
-    });
-    const rows: CsvRow[] = [
-      [
-        'id',
-        'periodId',
-        'occurredOn',
-        'title',
-        'amountWon',
-        'status',
-        'ledgerTransactionTypeId',
-        'fundingAccountId',
-        'categoryId',
-        'importBatchId',
-        'importedRowId',
-        'memo',
-        'createdAt',
-        'updatedAt'
-      ],
-      ...transactions.map((transaction) => [
-        transaction.id,
-        transaction.periodId,
-        readDateValue(transaction.occurredOn),
-        transaction.title,
-        fromPrismaMoneyWon(transaction.amount),
-        transaction.status,
-        transaction.ledgerTransactionTypeId,
-        transaction.fundingAccountId,
-        transaction.categoryId,
-        transaction.importBatchId,
-        transaction.importedRowId,
-        transaction.memo,
-        readDateValue(transaction.createdAt),
-        readDateValue(transaction.updatedAt)
-      ])
-    ];
-
-    return {
-      rowCount: rows.length - 1,
-      rangeLabel: input.rangeLabel,
-      payload: toCsv(rows)
-    };
-  }
-
-  private async buildJournalEntriesExport(
-    input: BuildExportPayloadInput
-  ): Promise<BuildExportPayloadResult> {
-    const entries = await this.prisma.journalEntry.findMany({
-      where: {
-        tenantId: input.tenantId,
-        ledgerId: input.ledgerId,
-        ...(input.periodId ? { periodId: input.periodId } : {})
-      },
-      include: {
-        lines: {
-          orderBy: {
-            lineNumber: 'asc'
-          }
-        }
-      },
-      orderBy: [{ entryDate: 'asc' }, { createdAt: 'asc' }]
-    });
-    const rows: CsvRow[] = [
-      [
-        'entryId',
-        'periodId',
-        'entryNumber',
-        'entryDate',
-        'sourceKind',
-        'status',
-        'memo',
-        'lineNumber',
-        'accountSubjectId',
-        'fundingAccountId',
-        'debitAmountWon',
-        'creditAmountWon',
-        'lineDescription',
-        'createdAt'
-      ],
-      ...entries.flatMap((entry) =>
-        entry.lines.length === 0
-          ? [
-              [
-                entry.id,
-                entry.periodId,
-                entry.entryNumber,
-                readDateValue(entry.entryDate),
-                entry.sourceKind,
-                entry.status,
-                entry.memo,
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                readDateValue(entry.createdAt)
-              ] satisfies CsvRow
-            ]
-          : entry.lines.map((line) => [
-              entry.id,
-              entry.periodId,
-              entry.entryNumber,
-              readDateValue(entry.entryDate),
-              entry.sourceKind,
-              entry.status,
-              entry.memo,
-              line.lineNumber,
-              line.accountSubjectId,
-              line.fundingAccountId,
-              fromPrismaMoneyWon(line.debitAmount),
-              fromPrismaMoneyWon(line.creditAmount),
-              line.description,
-              readDateValue(entry.createdAt)
-            ])
-      )
-    ];
-
-    return {
-      rowCount: rows.length - 1,
-      rangeLabel: input.rangeLabel,
-      payload: toCsv(rows)
-    };
-  }
-
-  private async buildFinancialStatementsExport(
-    input: BuildExportPayloadInput
-  ): Promise<BuildExportPayloadResult> {
-    const snapshots = await this.prisma.financialStatementSnapshot.findMany({
-      where: {
-        tenantId: input.tenantId,
-        ledgerId: input.ledgerId,
-        ...(input.periodId ? { periodId: input.periodId } : {})
-      },
-      include: {
-        period: {
-          select: {
-            year: true,
-            month: true
-          }
-        }
-      }
-    });
-    const rows: CsvRow[] = [
-      [
-        'id',
-        'periodId',
-        'periodLabel',
-        'statementKind',
-        'currency',
-        'payloadJson',
-        'createdAt',
-        'updatedAt'
-      ],
-      ...snapshots.map((snapshot) => [
-        snapshot.id,
-        snapshot.periodId,
-        snapshot.period
-          ? readPeriodLabel(snapshot.period.year, snapshot.period.month)
-          : '',
-        snapshot.statementKind,
-        snapshot.currency,
-        JSON.stringify(snapshot.payload),
-        readDateValue(snapshot.createdAt),
-        readDateValue(snapshot.updatedAt)
-      ])
-    ];
-
-    return {
-      rowCount: rows.length - 1,
-      rangeLabel: input.rangeLabel,
-      payload: toCsv(rows)
-    };
-  }
 
   private async buildSnapshot(user: AuthenticatedUser): Promise<OperationsSnapshot> {
     const workspace = requireCurrentWorkspace(user);
-    const readinessGapsPromise = this.findReadinessGaps(
-      workspace.tenantId,
-      workspace.ledgerId
-    );
-    const periodsPromise = this.prisma.accountingPeriod.findMany({
-      where: {
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId
-      },
-      include: operationsPeriodInclude,
-      orderBy: [{ year: 'desc' }, { month: 'desc' }]
+    return this.operationsConsoleReadRepository.readSnapshot({
+      tenantId: workspace.tenantId,
+      ledgerId: workspace.ledgerId
     });
-    const unresolvedTransactionsPromise =
-      this.prisma.collectedTransaction.findMany({
-        where: {
-          tenantId: workspace.tenantId,
-          ledgerId: workspace.ledgerId,
-          status: {
-            in: [...unresolvedTransactionStatuses]
-          }
-        },
-        select: {
-          id: true,
-          title: true,
-          status: true,
-          occurredOn: true
-        },
-        orderBy: [{ occurredOn: 'desc' }, { createdAt: 'desc' }],
-        take: 50
-      });
-    const importBatchesPromise = this.prisma.importBatch.findMany({
-      where: {
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId
-      },
-      include: {
-        rows: {
-          select: {
-            parseStatus: true,
-            createdCollectedTransaction: {
-              select: {
-                id: true
-              }
-            }
-          },
-          orderBy: {
-            rowNumber: 'asc'
-          }
-        }
-      },
-      orderBy: {
-        uploadedAt: 'desc'
-      }
-    });
-    const failedAuditEventsPromise = this.prisma.workspaceAuditEvent.findMany({
-      where: {
-        tenantId: workspace.tenantId,
-        result: 'FAILED'
-      },
-      take: 5
-    });
-    const successfulAuditEventsPromise = this.prisma.workspaceAuditEvent.findMany({
-      where: {
-        tenantId: workspace.tenantId,
-        result: 'SUCCESS'
-      },
-      take: 5
-    });
-    const deniedAuditEventsPromise = this.prisma.workspaceAuditEvent.findMany({
-      where: {
-        tenantId: workspace.tenantId,
-        result: 'DENIED'
-      },
-      take: 5
-    });
-
-    const [
-      readinessGaps,
-      periods,
-      unresolvedTransactions,
-      importBatches,
-      failedAuditEvents,
-      successfulAuditEvents,
-      deniedAuditEvents
-    ] = await Promise.all([
-      readinessGapsPromise,
-      periodsPromise,
-      unresolvedTransactionsPromise,
-      importBatchesPromise,
-      failedAuditEventsPromise,
-      successfulAuditEventsPromise,
-      deniedAuditEventsPromise
-    ]);
-
-    const currentPeriodRecord =
-      periods.find((period) => openPeriodStatuses.includes(period.status)) ??
-      periods[0] ??
-      null;
-    const currentPeriod = currentPeriodRecord
-      ? mapAccountingPeriodRecordToItem(currentPeriodRecord)
-      : null;
-
-    const [remainingPlanItems, financialStatementSnapshots, carryForwardRecord] =
-      currentPeriodRecord
-        ? await Promise.all([
-            this.prisma.planItem.findMany({
-              where: {
-                tenantId: workspace.tenantId,
-                ledgerId: workspace.ledgerId,
-                periodId: currentPeriodRecord.id,
-                status: PlanItemStatus.DRAFT
-              },
-              select: {
-                id: true,
-                plannedAmount: true
-              }
-            }),
-            this.prisma.financialStatementSnapshot.findMany({
-              where: {
-                tenantId: workspace.tenantId,
-                ledgerId: workspace.ledgerId,
-                periodId: currentPeriodRecord.id
-              }
-            }),
-            this.prisma.carryForwardRecord.findFirst({
-              where: {
-                tenantId: workspace.tenantId,
-                ledgerId: workspace.ledgerId,
-                fromPeriodId: currentPeriodRecord.id
-              }
-            })
-          ])
-        : [[], [], null];
-
-    return {
-      generatedAt: new Date().toISOString(),
-      currentPeriod,
-      readinessGaps,
-      unresolvedTransactions,
-      importBatches,
-      remainingPlanItems,
-      financialStatementSnapshotCount: financialStatementSnapshots.length,
-      carryForwardCreated: Boolean(carryForwardRecord),
-      failedAuditEvents,
-      successfulAuditEvents,
-      deniedAuditEvents
-    };
-  }
-
-  private async findReadinessGaps(
-    tenantId: string,
-    ledgerId: string
-  ): Promise<ReferenceReadinessGap[]> {
-    const [
-      fundingAccounts,
-      incomeCategories,
-      expenseCategories,
-      accountSubjects,
-      ledgerTransactionTypes
-    ] = await Promise.all([
-      this.prisma.account.findMany({
-        where: {
-          tenantId,
-          ledgerId,
-          status: 'ACTIVE'
-        }
-      }),
-      this.prisma.category.findMany({
-        where: {
-          tenantId,
-          ledgerId,
-          kind: 'INCOME',
-          isActive: true
-        }
-      }),
-      this.prisma.category.findMany({
-        where: {
-          tenantId,
-          ledgerId,
-          kind: 'EXPENSE',
-          isActive: true
-        }
-      }),
-      this.prisma.accountSubject.findMany({
-        where: {
-          tenantId,
-          ledgerId,
-          isActive: true
-        }
-      }),
-      this.prisma.ledgerTransactionType.findMany({
-        where: {
-          tenantId,
-          ledgerId,
-          isActive: true
-        }
-      })
-    ]);
-
-    return [
-      {
-        key: 'funding-accounts',
-        label: '자금수단',
-        href: '/reference-data/manage',
-        ready: fundingAccounts.length > 0
-      },
-      {
-        key: 'income-categories',
-        label: '수입 카테고리',
-        href: '/reference-data/manage',
-        ready: incomeCategories.length > 0
-      },
-      {
-        key: 'expense-categories',
-        label: '지출 카테고리',
-        href: '/reference-data/manage',
-        ready: expenseCategories.length > 0
-      },
-      {
-        key: 'account-subjects',
-        label: '계정과목',
-        href: '/reference-data',
-        ready: accountSubjects.length > 0
-      },
-      {
-        key: 'ledger-transaction-types',
-        label: '거래유형',
-        href: '/reference-data',
-        ready: ledgerTransactionTypes.length > 0
-      }
-    ]
-      .filter((item) => !item.ready)
-      .map(({ key, label, href }) => ({ key, label, href }));
   }
 
   private buildChecklist(
@@ -1628,25 +834,7 @@ export class OperationsConsoleService {
   private async checkDatabaseStatus(
     checkedAt: string
   ): Promise<OperationsSystemComponentItem> {
-    try {
-      await this.prisma.$queryRaw`SELECT 1`;
-
-      return {
-        key: 'database',
-        label: 'Database readiness',
-        status: 'OPERATIONAL',
-        detail: 'DB readiness 쿼리가 성공했습니다.',
-        lastCheckedAt: checkedAt
-      };
-    } catch {
-      return {
-        key: 'database',
-        label: 'Database readiness',
-        status: 'DOWN',
-        detail: 'DB readiness 쿼리가 실패했습니다.',
-        lastCheckedAt: checkedAt
-      };
-    }
+    return this.operationsConsoleReadRepository.readDatabaseStatus(checkedAt);
   }
 }
 
@@ -1753,7 +941,7 @@ type ExportSourceCollections = {
   financialStatementSnapshots: Array<{ createdAt?: Date; updatedAt?: Date }>;
 };
 
-function readExportRowCount(
+function _readExportRowCount(
   scope: OperationsExportScope,
   sources: ExportSourceCollections
 ): number {
@@ -1776,7 +964,7 @@ function readExportRowCount(
   }
 }
 
-function readExportSourceDates(
+function _readExportSourceDates(
   scope: OperationsExportScope,
   sources: ExportSourceCollections
 ): Array<Date | undefined> {
@@ -1809,7 +997,7 @@ function readExportSourceDates(
   }
 }
 
-function readExportScopeLabel(scope: OperationsExportScope): string {
+function _readExportScopeLabel(scope: OperationsExportScope): string {
   switch (scope) {
     case 'REFERENCE_DATA':
       return '기준 데이터';
@@ -1824,7 +1012,7 @@ function readExportScopeLabel(scope: OperationsExportScope): string {
   }
 }
 
-function readExportScopeDescription(scope: OperationsExportScope): string {
+function _readExportScopeDescription(scope: OperationsExportScope): string {
   switch (scope) {
     case 'REFERENCE_DATA':
       return '자금수단, 카테고리, 계정과목, 거래유형을 한 번에 CSV로 반출합니다.';
@@ -1839,7 +1027,7 @@ function readExportScopeDescription(scope: OperationsExportScope): string {
   }
 }
 
-function readExportScopeCadence(scope: OperationsExportScope): string {
+function _readExportScopeCadence(scope: OperationsExportScope): string {
   switch (scope) {
     case 'REFERENCE_DATA':
       return '기준 데이터 변경 후';
@@ -1853,7 +1041,7 @@ function readExportScopeCadence(scope: OperationsExportScope): string {
   }
 }
 
-function readScopeRangeLabel(scope: OperationsExportScope): string {
+function _readScopeRangeLabel(scope: OperationsExportScope): string {
   switch (scope) {
     case 'REFERENCE_DATA':
       return '기준 데이터 전체';
@@ -1862,11 +1050,11 @@ function readScopeRangeLabel(scope: OperationsExportScope): string {
   }
 }
 
-function isExportScope(value: string | null): value is OperationsExportScope {
+function _isExportScope(value: string | null): value is OperationsExportScope {
   return exportScopes.includes(value as OperationsExportScope);
 }
 
-function readPeriodRecordLabel(period: ExportPeriodRecord): string {
+function _readPeriodRecordLabel(period: ExportPeriodRecord): string {
   return readPeriodLabel(period.year, period.month);
 }
 
@@ -1874,12 +1062,12 @@ function readPeriodLabel(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, '0')}`;
 }
 
-function normalizeOptionalText(value: string | null | undefined): string | null {
+function _normalizeOptionalText(value: string | null | undefined): string | null {
   const normalized = value?.trim();
   return normalized ? normalized : null;
 }
 
-function mapOperationalNote(note: OperationalNoteRecord): OperationsNoteItem {
+function _mapOperationalNote(note: OperationalNoteRecord): OperationsNoteItem {
   return {
     id: note.id,
     kind: note.kind,
@@ -1896,13 +1084,13 @@ function mapOperationalNote(note: OperationalNoteRecord): OperationsNoteItem {
   };
 }
 
-function readLatestIso(values: Array<string | null>): string | null {
+function _readLatestIso(values: Array<string | null>): string | null {
   return values
     .flatMap((value) => (value ? [value] : []))
     .sort((left, right) => right.localeCompare(left))[0] ?? null;
 }
 
-function readLatestDateValue(
+function _readLatestDateValue(
   values: Array<Date | string | null | undefined>
 ): string | null {
   const latest = values
@@ -1913,7 +1101,7 @@ function readLatestDateValue(
   return latest?.toISOString() ?? null;
 }
 
-function readDateValue(value: Date | string | null | undefined): string {
+function _readDateValue(value: Date | string | null | undefined): string {
   return readDateObject(value)?.toISOString() ?? '';
 }
 
@@ -1930,7 +1118,7 @@ function readDateObject(value: Date | string | null | undefined): Date | null {
   return null;
 }
 
-function toCsv(rows: CsvRow[]): string {
+function _toCsv(rows: CsvRow[]): string {
   return `\ufeff${rows.map((row) => row.map(escapeCsvCell).join(',')).join('\r\n')}\r\n`;
 }
 
