@@ -14,14 +14,8 @@ import { DataTableCard } from '@/shared/ui/data-table-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
-import {
-  getAdminPolicySummary,
-  adminPolicyQueryKey
-} from './admin.api';
-import {
-  readMembershipRoleLabel,
-  readPolicyCtaLabel
-} from './admin-labels';
+import { getAdminPolicySummary, adminPolicyQueryKey } from './admin.api';
+import { readMembershipRoleLabel, readPolicyCtaLabel } from './admin-labels';
 import { AdminSectionNav } from './admin-section-nav';
 
 const policyRoles: TenantMembershipRole[] = [
@@ -45,10 +39,12 @@ export function AdminPolicyPage() {
     enabled: canReadPolicy
   });
 
-  const rows: AdminPolicyRow[] = (policyQuery.data?.items ?? []).map((item) => ({
-    ...item,
-    id: item.key
-  }));
+  const rows: AdminPolicyRow[] = (policyQuery.data?.items ?? []).map(
+    (item) => ({
+      ...item,
+      id: item.key
+    })
+  );
   const currentRoleLabel = readMembershipRoleLabel(role);
   const visibleSurfaceCount =
     policyQuery.data?.items.filter((item) =>
@@ -66,7 +62,9 @@ export function AdminPolicyPage() {
         minWidth: 240,
         flex: 1.2,
         valueGetter: (_value, row) =>
-          row.allowedRoles.map((item) => readMembershipRoleLabel(item)).join(', ')
+          row.allowedRoles
+            .map((item) => readMembershipRoleLabel(item))
+            .join(', ')
       },
       {
         field: 'ctaPolicy',
@@ -137,9 +135,9 @@ export function AdminPolicyPage() {
 
       {policyQuery.error ? (
         <QueryErrorAlert
-        title="권한 정책 요약을 불러오지 못했습니다."
-        error={policyQuery.error}
-      />
+          title="권한 정책 요약을 불러오지 못했습니다."
+          error={policyQuery.error}
+        />
       ) : null}
 
       <DataTableCard
@@ -165,8 +163,9 @@ export function AdminPolicyPage() {
               })}
             </Stack>
             <Typography variant="body2" color="text.secondary">
-              표에서는 화면 경로, 허용 역할, 메뉴 노출 상태를 한 줄에서 함께 읽고,
-              현재 역할로 실제 접근 가능한 범위를 위 칩에서 먼저 확인합니다.
+              표에서는 화면 경로, 허용 역할, 메뉴 노출 상태를 한 줄에서 함께
+              읽고, 현재 역할로 실제 접근 가능한 범위를 위 칩에서 먼저
+              확인합니다.
             </Typography>
           </Stack>
         }

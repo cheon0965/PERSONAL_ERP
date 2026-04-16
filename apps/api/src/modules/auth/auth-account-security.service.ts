@@ -95,41 +95,44 @@ export class AuthAccountSecurityService {
         metadata: normalizeAccountEventMetadata(candidate.metadata)
       }));
 
-    const sessionEvents = sessions.flatMap<AccountSecurityEventItem>((session) => {
-      const createdEvent: AccountSecurityEventItem = {
-        id: `session-created:${session.id}`,
-        kind: 'SESSION_CREATED',
-        occurredAt: session.createdAt,
-        requestId: null,
-        sessionId: session.id,
-        metadata: {
-          isCurrent: session.isCurrent
-        }
-      };
-
-      if (!session.revokedAt) {
-        return [createdEvent];
-      }
-
-      return [
-        createdEvent,
-        {
-          id: `session-revoked:${session.id}`,
-          kind: 'SESSION_REVOKED',
-          occurredAt: session.revokedAt,
+    const sessionEvents = sessions.flatMap<AccountSecurityEventItem>(
+      (session) => {
+        const createdEvent: AccountSecurityEventItem = {
+          id: `session-created:${session.id}`,
+          kind: 'SESSION_CREATED',
+          occurredAt: session.createdAt,
           requestId: null,
           sessionId: session.id,
           metadata: {
             isCurrent: session.isCurrent
           }
+        };
+
+        if (!session.revokedAt) {
+          return [createdEvent];
         }
-      ];
-    });
+
+        return [
+          createdEvent,
+          {
+            id: `session-revoked:${session.id}`,
+            kind: 'SESSION_REVOKED',
+            occurredAt: session.revokedAt,
+            requestId: null,
+            sessionId: session.id,
+            metadata: {
+              isCurrent: session.isCurrent
+            }
+          }
+        ];
+      }
+    );
 
     return [...accountAuditEvents, ...sessionEvents]
       .sort(
         (left, right) =>
-          new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime()
+          new Date(right.occurredAt).getTime() -
+          new Date(left.occurredAt).getTime()
       )
       .slice(0, 10);
   }

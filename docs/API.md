@@ -203,7 +203,11 @@
 - Web `/admin/logs` -> API `GET /admin/audit-events`, `GET /admin/audit-events/:auditEventId`
 - Web `/admin/policy` -> API `GET /admin/policy`
 - Web `/settings/workspace` -> API `GET /settings/workspace`, `PATCH /settings/workspace`
-- Web `/settings/account` -> API `GET /auth/account-security`, `PATCH /auth/account-profile`, `POST /auth/change-password`, `DELETE /auth/sessions/:sessionId`
+- Web `/settings/account` -> API `GET /auth/account-security`
+- Web `/settings/account/profile` -> API `GET /auth/account-security`, `PATCH /auth/account-profile`
+- Web `/settings/account/password` -> API `GET /auth/account-security`, `POST /auth/change-password`
+- Web `/settings/account/sessions` -> API `GET /auth/account-security`, `DELETE /auth/sessions/:sessionId`
+- Web `/settings/account/events` -> API `GET /auth/account-security`
 - Web `/operations` -> API `GET /operations/summary`
 - Web `/operations/checklist` -> API `GET /operations/checklist`
 - Web `/operations/exceptions` -> API `GET /operations/exceptions`
@@ -219,9 +223,13 @@
 - Web `/periods/close` -> API `GET /accounting-periods`, `POST /accounting-periods/:id/close`, `POST /accounting-periods/:id/reopen`
 - Web `/periods/history` -> API `GET /accounting-periods`
 - Web `/reference-data` -> API `/reference-data/readiness`, `/funding-accounts`, `/categories`, `/account-subjects`, `/ledger-transaction-types`
-- Web `/reference-data/manage` -> API `/funding-accounts`, `/categories`, `/account-subjects`, `/ledger-transaction-types`
+- Web `/reference-data/manage` -> API `/reference-data/readiness`
+- Web `/reference-data/funding-accounts` -> API `/funding-accounts`
+- Web `/reference-data/categories` -> API `/categories`
+- Web `/reference-data/lookups` -> API `/account-subjects`, `/ledger-transaction-types`
 - Web `/recurring` -> API `/recurring-rules`
 - Web `/plan-items` -> API `/plan-items`
+- Web `/plan-items/generate` -> API `GET /accounting-periods`, `POST /plan-items/generate`
 - Web `/transactions` -> API `/collected-transactions`
 - Web `/imports` -> API `/import-batches`
 - Web `/imports/[batchId]` -> API `GET /import-batches/:id`, `POST /import-batches/:id/rows/:rowId/collect-preview`, `POST /import-batches/:id/rows/:rowId/collect`

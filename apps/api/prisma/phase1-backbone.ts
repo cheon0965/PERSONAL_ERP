@@ -296,27 +296,27 @@ async function backfillWorkspaceScopedData(
 ) {
   const [accounts, categories, recurringRules, insurancePolicies, vehicles] =
     await Promise.all([
-    prisma.account.updateMany({
-      where: { userId },
-      data: { tenantId, ledgerId }
-    }),
-    prisma.category.updateMany({
-      where: { userId },
-      data: { tenantId, ledgerId }
-    }),
-    prisma.recurringRule.updateMany({
-      where: { userId },
-      data: { tenantId, ledgerId }
-    }),
-    prisma.insurancePolicy.updateMany({
-      where: { userId },
-      data: { tenantId, ledgerId }
-    }),
-    prisma.vehicle.updateMany({
-      where: { userId },
-      data: { tenantId, ledgerId }
-    })
-  ]);
+      prisma.account.updateMany({
+        where: { userId },
+        data: { tenantId, ledgerId }
+      }),
+      prisma.category.updateMany({
+        where: { userId },
+        data: { tenantId, ledgerId }
+      }),
+      prisma.recurringRule.updateMany({
+        where: { userId },
+        data: { tenantId, ledgerId }
+      }),
+      prisma.insurancePolicy.updateMany({
+        where: { userId },
+        data: { tenantId, ledgerId }
+      }),
+      prisma.vehicle.updateMany({
+        where: { userId },
+        data: { tenantId, ledgerId }
+      })
+    ]);
 
   summary.rowsBackfilled.accounts += accounts.count;
   summary.rowsBackfilled.categories += categories.count;

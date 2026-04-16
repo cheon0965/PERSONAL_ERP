@@ -1,7 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { Box, Button, Chip, Grid, LinearProgress, Stack, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  Chip,
+  Grid,
+  LinearProgress,
+  Stack,
+  Typography
+} from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { formatDateTime, formatNumber } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
@@ -51,7 +59,8 @@ export function OperationsImportStatusPage() {
         badges={[
           {
             label: `${formatNumber(importStatus?.totalBatchCount ?? 0, 0)}개 배치`,
-            color: (importStatus?.totalBatchCount ?? 0) > 0 ? 'primary' : 'default'
+            color:
+              (importStatus?.totalBatchCount ?? 0) > 0 ? 'primary' : 'default'
           },
           {
             label:
@@ -59,7 +68,9 @@ export function OperationsImportStatusPage() {
                 ? '미수집 행 있음'
                 : '미수집 행 없음',
             color:
-              (importStatus?.uncollectedRowCount ?? 0) > 0 ? 'warning' : 'success'
+              (importStatus?.uncollectedRowCount ?? 0) > 0
+                ? 'warning'
+                : 'success'
           }
         ]}
         metadata={[
@@ -179,7 +190,9 @@ export function OperationsImportStatusPage() {
                   spacing={1}
                 >
                   <Stack spacing={0.5}>
-                    <Typography variant="subtitle2">{batch.fileName}</Typography>
+                    <Typography variant="subtitle2">
+                      {batch.fileName}
+                    </Typography>
                     <Typography variant="caption" color="text.secondary">
                       {formatDateTime(batch.uploadedAt)}
                     </Typography>

@@ -9,9 +9,7 @@ import {
   MinLength
 } from 'class-validator';
 
-export class UpdateWorkspaceSettingsDto
-  implements UpdateWorkspaceSettingsRequest
-{
+export class UpdateWorkspaceSettingsDto implements UpdateWorkspaceSettingsRequest {
   @ApiProperty({ example: 'PERSONAL_ERP Demo Workspace' })
   @IsString()
   @MinLength(1)

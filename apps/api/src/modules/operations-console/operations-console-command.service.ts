@@ -40,7 +40,9 @@ import {
 export class OperationsConsoleCommandService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getExports(user: AuthenticatedUser): Promise<OperationsExportsResponse> {
+  async getExports(
+    user: AuthenticatedUser
+  ): Promise<OperationsExportsResponse> {
     const workspace = requireCurrentWorkspace(user);
     const generatedAt = new Date().toISOString();
     const items = await this.buildExportScopeItems(
@@ -50,9 +52,7 @@ export class OperationsConsoleCommandService {
 
     return {
       generatedAt,
-      lastExportedAt: readLatestIso(
-        items.map((item) => item.latestExportedAt)
-      ),
+      lastExportedAt: readLatestIso(items.map((item) => item.latestExportedAt)),
       items
     };
   }
@@ -280,7 +280,9 @@ export class OperationsConsoleCommandService {
     });
 
     if (!period) {
-      throw new NotFoundException('내보내기 대상 운영 기간을 찾을 수 없습니다.');
+      throw new NotFoundException(
+        '내보내기 대상 운영 기간을 찾을 수 없습니다.'
+      );
     }
 
     return {

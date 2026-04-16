@@ -16,7 +16,10 @@ import {
 } from '../../shared/api/fetch-json';
 
 export const workspaceSettingsQueryKey = ['settings', 'workspace'] as const;
-export const accountSecurityQueryKey = ['settings', 'account-security'] as const;
+export const accountSecurityQueryKey = [
+  'settings',
+  'account-security'
+] as const;
 
 export function getWorkspaceSettings() {
   return fetchJson<WorkspaceSettingsItem>('/settings/workspace', {

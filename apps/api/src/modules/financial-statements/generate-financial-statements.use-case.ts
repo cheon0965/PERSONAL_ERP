@@ -75,8 +75,8 @@ export class GenerateFinancialStatementsUseCase {
           ? 0
           : subtractMoneyWon(
               fromPrismaMoneyWon(previousClosingSnapshot.totalAssetAmount),
-            fromPrismaMoneyWon(previousClosingSnapshot.totalLiabilityAmount)
-          )
+              fromPrismaMoneyWon(previousClosingSnapshot.totalLiabilityAmount)
+            )
     });
 
     await this.financialStatementGenerationPort.upsertStatementSnapshots({

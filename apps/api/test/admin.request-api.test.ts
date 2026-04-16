@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createRequestTestContext } from './request-api.test-support';
+import {
+  createRequestTestContext,
+  type RequestTestContext
+} from './request-api.test-support';
 
 test('GET /admin/members returns members only in the current workspace', async () => {
   const context = await createRequestTestContext();
@@ -296,7 +299,136 @@ test('GET /admin/policy returns the current policy summary for owners and manage
       ),
       true
     );
+    assert.equal(
+      body.items.some(
+        (item) =>
+          item.key === 'reference-data-lookups' &&
+          item.allowedRoles.includes('VIEWER')
+      ),
+      true
+    );
   } finally {
     await context.close();
   }
 });
+
+test('GET /admin/navigation inherits legacy policies for newly split child menus', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const seedResponse = await context.request('/admin/navigation', {
+      headers: context.authHeaders()
+    });
+    assert.equal(seedResponse.status, 200);
+
+    setMenuPolicy(context, 'settings-account', {
+      isVisible: false,
+      roles: ['OWNER']
+    });
+    setMenuPolicy(context, 'reference-data-manage', {
+      isVisible: false,
+      roles: ['OWNER']
+    });
+    setMenuPolicy(context, 'plan-items', {
+      isVisible: false,
+      roles: ['OWNER']
+    });
+
+    removeMenuItemByKey(context, 'settings-account-password');
+    removeMenuItemByKey(context, 'settings-account-sessions');
+    removeMenuItemByKey(context, 'settings-account-events');
+    removeMenuItemByKey(context, 'reference-data-categories');
+    removeMenuItemByKey(context, 'reference-data-lookups');
+    removeMenuItemByKey(context, 'plan-items-generate');
+
+    const response = await context.request('/admin/navigation', {
+      headers: context.authHeaders()
+    });
+    assert.equal(response.status, 200);
+
+    const body = response.body as { items: NavigationTreeItem[] };
+    const itemsByKey = new Map(
+      flattenNavigationItems(body.items).map((item) => [item.key, item])
+    );
+
+    assertInheritedMenu(itemsByKey, 'settings-account-password');
+    assertInheritedMenu(itemsByKey, 'settings-account-sessions');
+    assertInheritedMenu(itemsByKey, 'settings-account-events');
+    assertInheritedMenu(itemsByKey, 'reference-data-categories');
+    assertInheritedMenu(itemsByKey, 'reference-data-lookups');
+    assertInheritedMenu(itemsByKey, 'plan-items-generate');
+  } finally {
+    await context.close();
+  }
+});
+
+type NavigationTreeItem = {
+  key: string;
+  isVisible: boolean;
+  allowedRoles: string[];
+  children: NavigationTreeItem[];
+};
+
+function flattenNavigationItems(
+  items: NavigationTreeItem[]
+): NavigationTreeItem[] {
+  return items.flatMap((item) => [
+    item,
+    ...flattenNavigationItems(item.children)
+  ]);
+}
+
+function removeMenuItemByKey(context: RequestTestContext, key: string) {
+  const item = context.state.workspaceNavigationMenuItems.find(
+    (candidate) => candidate.key === key
+  );
+  assert.ok(item);
+
+  context.state.workspaceNavigationMenuItems =
+    context.state.workspaceNavigationMenuItems.filter(
+      (candidate) => candidate.id !== item.id
+    );
+  context.state.workspaceNavigationMenuRoles =
+    context.state.workspaceNavigationMenuRoles.filter(
+      (candidate) => candidate.menuItemId !== item.id
+    );
+}
+
+function setMenuPolicy(
+  context: RequestTestContext,
+  key: string,
+  input: {
+    isVisible: boolean;
+    roles: RequestTestContext['state']['workspaceNavigationMenuRoles'][number]['role'][];
+  }
+) {
+  const item = context.state.workspaceNavigationMenuItems.find(
+    (candidate) => candidate.key === key
+  );
+  assert.ok(item);
+
+  item.isVisible = input.isVisible;
+  context.state.workspaceNavigationMenuRoles =
+    context.state.workspaceNavigationMenuRoles.filter(
+      (candidate) => candidate.menuItemId !== item.id
+    );
+  context.state.workspaceNavigationMenuRoles.push(
+    ...input.roles.map((role) => ({
+      menuItemId: item.id,
+      role
+    }))
+  );
+}
+
+function assertInheritedMenu(
+  itemsByKey: Map<string, NavigationTreeItem>,
+  key: string
+) {
+  const item = itemsByKey.get(key);
+  assert.ok(
+    item,
+    `Missing menu key ${key}. Keys: ${Array.from(itemsByKey.keys()).join(', ')}`
+  );
+  assert.equal(item.isVisible, false);
+  assert.deepEqual(item.allowedRoles, ['OWNER']);
+}

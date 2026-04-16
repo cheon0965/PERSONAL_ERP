@@ -50,7 +50,10 @@ export function CurrentPeriodStatusSection({
               />
             </Grid>
             <Grid size={{ xs: 12, md: 4 }}>
-              <InfoRow label="시작일" value={formatDate(currentPeriod.openedAt)} />
+              <InfoRow
+                label="시작일"
+                value={formatDate(currentPeriod.openedAt)}
+              />
             </Grid>
             <Grid size={{ xs: 12, md: 4 }}>
               <InfoRow
@@ -71,7 +74,11 @@ export function CurrentPeriodStatusSection({
           </Grid>
           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
             <Chip
-              label={isReadyForMonthlyOperation ? '기준 데이터 준비됨' : '기준 데이터 점검 필요'}
+              label={
+                isReadyForMonthlyOperation
+                  ? '기준 데이터 준비됨'
+                  : '기준 데이터 점검 필요'
+              }
               size="small"
               color={isReadyForMonthlyOperation ? 'success' : 'warning'}
               variant={isReadyForMonthlyOperation ? 'filled' : 'outlined'}
@@ -114,8 +121,8 @@ export function CurrentPeriodStatusSection({
       ) : (
         <Stack spacing={1.5}>
           <Typography variant="body2" color="text.secondary">
-            아직 시작된 운영 기간이 없습니다. 첫 월 운영 시작에서 대상 월과
-            기초 잔액 기준을 먼저 준비해 주세요.
+            아직 시작된 운영 기간이 없습니다. 첫 월 운영 시작에서 대상 월과 기초
+            잔액 기준을 먼저 준비해 주세요.
           </Typography>
           <Chip
             label={

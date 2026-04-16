@@ -13,7 +13,10 @@ const ALL_ROLES = [
   TenantMembershipRole.VIEWER
 ] as const;
 
-const OPERATORS = [TenantMembershipRole.OWNER, TenantMembershipRole.MANAGER] as const;
+const OPERATORS = [
+  TenantMembershipRole.OWNER,
+  TenantMembershipRole.MANAGER
+] as const;
 const OPERATORS_AND_EDITORS = [
   TenantMembershipRole.OWNER,
   TenantMembershipRole.MANAGER,
@@ -42,11 +45,23 @@ type FlattenedDefaultNavigationItem = Omit<
   sortOrder: number;
 };
 
+const defaultNavigationInheritanceSources: Partial<
+  Record<string, readonly string[]>
+> = {
+  'settings-account-password': ['settings-account', 'settings-hub'],
+  'settings-account-sessions': ['settings-account', 'settings-hub'],
+  'settings-account-events': ['settings-account', 'settings-hub'],
+  'reference-data-categories': ['reference-data-manage', 'reference-data-hub'],
+  'reference-data-lookups': ['reference-data-manage', 'reference-data-hub'],
+  'plan-items-generate': ['plan-items']
+} as const;
+
 export const defaultWorkspaceNavigationTree = [
   {
     key: 'workflow-setup',
     label: '운영 준비',
-    description: '사업장 문맥, 관리자, 기준 데이터와 운영 지원을 먼저 정리합니다.',
+    description:
+      '사업장 문맥, 관리자, 기준 데이터와 운영 지원을 먼저 정리합니다.',
     iconKey: 'settings',
     itemType: WorkspaceNavigationMenuItemType.GROUP,
     allowedRoles: ALL_ROLES,
@@ -62,15 +77,37 @@ export const defaultWorkspaceNavigationTree = [
           {
             key: 'settings-workspace',
             label: '사업장 설정',
-            description: '사업장명, 슬러그, 상태와 기본 장부 정보를 관리합니다.',
+            description:
+              '사업장명, 슬러그, 상태와 기본 장부 정보를 관리합니다.',
             href: '/settings/workspace',
             allowedRoles: OPERATORS
           },
           {
             key: 'settings-account',
-            label: '내 계정 / 보안',
-            description: '본인 계정 정보, 비밀번호, 세션 보안을 관리합니다.',
-            href: '/settings/account',
+            label: '기본 정보',
+            description: '본인 계정 이름과 개인 기준값을 관리합니다.',
+            href: '/settings/account/profile',
+            allowedRoles: ALL_ROLES
+          },
+          {
+            key: 'settings-account-password',
+            label: '비밀번호',
+            description: '비밀번호를 변경합니다.',
+            href: '/settings/account/password',
+            allowedRoles: ALL_ROLES
+          },
+          {
+            key: 'settings-account-sessions',
+            label: '세션',
+            description: '활성 세션을 확인하고 종료합니다.',
+            href: '/settings/account/sessions',
+            allowedRoles: ALL_ROLES
+          },
+          {
+            key: 'settings-account-events',
+            label: '보안 이벤트',
+            description: '최근 계정 보안 이벤트를 확인합니다.',
+            href: '/settings/account/events',
             allowedRoles: ALL_ROLES
           }
         ]
@@ -93,7 +130,8 @@ export const defaultWorkspaceNavigationTree = [
           {
             key: 'admin-navigation',
             label: '메뉴 / 권한',
-            description: 'DB에 저장된 메뉴 트리와 메뉴별 허용 역할을 관리합니다.',
+            description:
+              'DB에 저장된 메뉴 트리와 메뉴별 허용 역할을 관리합니다.',
             href: '/admin/navigation',
             allowedRoles: OPERATORS
           },
@@ -116,7 +154,8 @@ export const defaultWorkspaceNavigationTree = [
       {
         key: 'operations-hub',
         label: '운영 지원',
-        description: '예외, 알림, 메모, 내보내기 등 운영 보조 흐름을 확인합니다.',
+        description:
+          '예외, 알림, 메모, 내보내기 등 운영 보조 흐름을 확인합니다.',
         href: '/operations',
         iconKey: 'operations',
         allowedRoles: ALL_ROLES,
@@ -189,10 +228,24 @@ export const defaultWorkspaceNavigationTree = [
         children: [
           {
             key: 'reference-data-manage',
-            label: '기준 데이터 관리',
-            description: '자금수단, 카테고리, 계정과목과 거래 유형을 관리합니다.',
-            href: '/reference-data/manage',
+            label: '자금수단',
+            description: '자금수단을 관리합니다.',
+            href: '/reference-data/funding-accounts',
             allowedRoles: OPERATORS
+          },
+          {
+            key: 'reference-data-categories',
+            label: '카테고리',
+            description: '카테고리를 관리합니다.',
+            href: '/reference-data/categories',
+            allowedRoles: OPERATORS
+          },
+          {
+            key: 'reference-data-lookups',
+            label: '공식 참조값',
+            description: '계정과목과 거래유형을 확인합니다.',
+            href: '/reference-data/lookups',
+            allowedRoles: ALL_ROLES
           }
         ]
       }
@@ -201,7 +254,8 @@ export const defaultWorkspaceNavigationTree = [
   {
     key: 'workflow-monthly',
     label: '월 실행',
-    description: '월 시작부터 계획, 업로드, 거래 확정, 전표 조회까지 이어집니다.',
+    description:
+      '월 시작부터 계획, 업로드, 거래 확정, 전표 조회까지 이어집니다.',
     iconKey: 'calendar',
     itemType: WorkspaceNavigationMenuItemType.GROUP,
     allowedRoles: ALL_ROLES,
@@ -251,7 +305,16 @@ export const defaultWorkspaceNavigationTree = [
         description: '월별 예정 거래를 생성하고 확정 흐름으로 넘깁니다.',
         href: '/plan-items',
         iconKey: 'planItems',
-        allowedRoles: OPERATORS
+        allowedRoles: OPERATORS,
+        children: [
+          {
+            key: 'plan-items-generate',
+            label: '계획 생성',
+            description: '선택한 운영 월의 계획 항목을 생성합니다.',
+            href: '/plan-items/generate',
+            allowedRoles: OPERATORS
+          }
+        ]
       },
       {
         key: 'imports',
@@ -395,6 +458,15 @@ export async function ensureDefaultWorkspaceNavigation(
   for (const item of defaults) {
     const parentId = item.parentKey ? itemIdByKey.get(item.parentKey) : null;
     const existing = existingByKey.get(item.key);
+    const inheritedSource = readNavigationInheritanceSource(
+      item.key,
+      existingByKey
+    );
+    const seededRoles = existing?.roles.length
+      ? null
+      : inheritedSource?.roles.length
+        ? inheritedSource.roles.map((roleRecord) => roleRecord.role)
+        : [...item.allowedRoles];
     const saved = await prisma.workspaceNavigationMenuItem.upsert({
       where: {
         tenantId_key: {
@@ -406,7 +478,7 @@ export async function ensureDefaultWorkspaceNavigation(
         parentId,
         itemType: item.itemType ?? WorkspaceNavigationMenuItemType.PAGE,
         label: item.label,
-        description: item.description ?? null,
+        description: null,
         href: item.href ?? null,
         iconKey: item.iconKey ?? null,
         matchMode: item.matchMode ?? WorkspaceNavigationMenuMatchMode.PREFIX,
@@ -418,23 +490,23 @@ export async function ensureDefaultWorkspaceNavigation(
         key: item.key,
         itemType: item.itemType ?? WorkspaceNavigationMenuItemType.PAGE,
         label: item.label,
-        description: item.description ?? null,
+        description: null,
         href: item.href ?? null,
         iconKey: item.iconKey ?? null,
         matchMode: item.matchMode ?? WorkspaceNavigationMenuMatchMode.PREFIX,
         sortOrder: item.sortOrder,
-        isVisible: true
+        isVisible: inheritedSource?.isVisible ?? true
       }
     });
 
     itemIdByKey.set(item.key, saved.id);
 
-    if (existing?.roles.length) {
+    if (!seededRoles) {
       continue;
     }
 
     await prisma.workspaceNavigationMenuRole.createMany({
-      data: item.allowedRoles.map((role) => ({
+      data: seededRoles.map((role) => ({
         menuItemId: saved.id,
         role
       })),
@@ -455,9 +527,33 @@ function flattenDefaultNavigation(
       sortOrder: (index + 1) * 10
     };
 
-    return [
-      current,
-      ...flattenDefaultNavigation(children ?? [], item.key)
-    ];
+    return [current, ...flattenDefaultNavigation(children ?? [], item.key)];
   });
+}
+
+function readNavigationInheritanceSource(
+  key: string,
+  existingByKey: Map<
+    string,
+    {
+      isVisible: boolean;
+      roles: Array<{ role: TenantMembershipRole }>;
+    }
+  >
+) {
+  const sourceKeys = defaultNavigationInheritanceSources[key];
+
+  if (!sourceKeys) {
+    return null;
+  }
+
+  for (const sourceKey of sourceKeys) {
+    const source = existingByKey.get(sourceKey);
+
+    if (source) {
+      return source;
+    }
+  }
+
+  return null;
 }

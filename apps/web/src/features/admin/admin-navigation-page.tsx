@@ -83,13 +83,17 @@ export function AdminNavigationPage() {
       });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: adminNavigationQueryKey }),
-        queryClient.invalidateQueries({ queryKey: workspaceNavigationQueryKey }),
+        queryClient.invalidateQueries({
+          queryKey: workspaceNavigationQueryKey
+        }),
         queryClient.invalidateQueries({ queryKey: adminPolicyQueryKey })
       ]);
     },
     onError: (error) => {
       setFeedback(
-        error instanceof Error ? error.message : '메뉴 권한 저장에 실패했습니다.'
+        error instanceof Error
+          ? error.message
+          : '메뉴 권한 저장에 실패했습니다.'
       );
     }
   });
@@ -188,13 +192,22 @@ export function AdminNavigationPage() {
           <MenuMetric label="트리 그룹" value={`${summary.groupCount}개`} />
         </Grid>
         <Grid size={{ xs: 12, md: 3 }}>
-          <MenuMetric label="책임 분리 메뉴" value={`${summary.restrictedCount}개`} />
+          <MenuMetric
+            label="책임 분리 메뉴"
+            value={`${summary.restrictedCount}개`}
+          />
         </Grid>
         <Grid size={{ xs: 12, md: 3 }}>
-          <MenuMetric label="모든 역할 허용" value={`${summary.allRoleCount}개`} />
+          <MenuMetric
+            label="모든 역할 허용"
+            value={`${summary.allRoleCount}개`}
+          />
         </Grid>
         <Grid size={{ xs: 12, md: 3 }}>
-          <MenuMetric label="저장 대기" value={`${Object.keys(drafts).length}개`} />
+          <MenuMetric
+            label="저장 대기"
+            value={`${Object.keys(drafts).length}개`}
+          />
         </Grid>
       </Grid>
 
@@ -225,11 +238,15 @@ export function AdminNavigationPage() {
                   updateDraft(item, (current) => {
                     const hasRole = current.allowedRoles.includes(candidate);
                     const nextRoles = hasRole
-                      ? current.allowedRoles.filter((roleItem) => roleItem !== candidate)
+                      ? current.allowedRoles.filter(
+                          (roleItem) => roleItem !== candidate
+                        )
                       : [...current.allowedRoles, candidate];
 
                     if (nextRoles.length === 0) {
-                      setFeedback('메뉴에는 최소 1개 이상의 허용 역할이 필요합니다.');
+                      setFeedback(
+                        '메뉴에는 최소 1개 이상의 허용 역할이 필요합니다.'
+                      );
                       return current;
                     }
 
@@ -305,7 +322,12 @@ function MenuPermissionRow({
         justifyContent="space-between"
         alignItems={{ xs: 'stretch', md: 'flex-start' }}
       >
-        <Stack direction="row" spacing={1.25} alignItems="flex-start" minWidth={0}>
+        <Stack
+          direction="row"
+          spacing={1.25}
+          alignItems="flex-start"
+          minWidth={0}
+        >
           <Stack
             alignItems="center"
             justifyContent="center"
@@ -318,10 +340,20 @@ function MenuPermissionRow({
               flexShrink: 0
             }}
           >
-            {Icon ? <Icon fontSize="small" /> : <Typography variant="caption">{item.depth + 1}</Typography>}
+            {Icon ? (
+              <Icon fontSize="small" />
+            ) : (
+              <Typography variant="caption">{item.depth + 1}</Typography>
+            )}
           </Stack>
           <Stack spacing={0.5} minWidth={0}>
-            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" alignItems="center">
+            <Stack
+              direction="row"
+              spacing={1}
+              useFlexGap
+              flexWrap="wrap"
+              alignItems="center"
+            >
               <Typography variant="subtitle2" fontWeight={800}>
                 {item.label}
               </Typography>
@@ -332,14 +364,14 @@ function MenuPermissionRow({
                 variant="outlined"
               />
               {!draft.isVisible ? (
-                <Chip label="숨김" size="small" color="warning" variant="outlined" />
+                <Chip
+                  label="숨김"
+                  size="small"
+                  color="warning"
+                  variant="outlined"
+                />
               ) : null}
             </Stack>
-            {item.description ? (
-              <Typography variant="body2" color="text.secondary">
-                {item.description}
-              </Typography>
-            ) : null}
             <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
               {item.href ? (
                 <Link
@@ -389,7 +421,11 @@ function MenuPermissionRow({
               );
             })}
           </Stack>
-          <Divider flexItem orientation="vertical" sx={{ display: { xs: 'none', sm: 'block' } }} />
+          <Divider
+            flexItem
+            orientation="vertical"
+            sx={{ display: { xs: 'none', sm: 'block' } }}
+          />
           <Switch
             checked={draft.isVisible}
             disabled={!canUpdate}
@@ -469,7 +505,8 @@ function summarizeNavigation(items: FlatNavigationItem[]) {
 function isDraftDirty(item: NavigationMenuItem, draft: NavigationDraft) {
   return (
     item.isVisible !== draft.isVisible ||
-    sortRoles(item.allowedRoles).join(',') !== sortRoles(draft.allowedRoles).join(',')
+    sortRoles(item.allowedRoles).join(',') !==
+      sortRoles(draft.allowedRoles).join(',')
   );
 }
 

@@ -108,7 +108,9 @@ export function ForecastPage() {
         metadata={[
           {
             label: '대상 상태',
-            value: selectedPeriod ? readPeriodStatusLabel(selectedPeriod.status) : '-'
+            value: selectedPeriod
+              ? readPeriodStatusLabel(selectedPeriod.status)
+              : '-'
           },
           {
             label: '최근 공식 비교',

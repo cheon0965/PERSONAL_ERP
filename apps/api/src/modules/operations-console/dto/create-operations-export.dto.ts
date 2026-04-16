@@ -12,9 +12,7 @@ export const operationsExportScopes: OperationsExportScope[] = [
   'FINANCIAL_STATEMENTS'
 ];
 
-export class CreateOperationsExportDto
-  implements CreateOperationsExportRequest
-{
+export class CreateOperationsExportDto implements CreateOperationsExportRequest {
   @ApiProperty({ enum: operationsExportScopes })
   @IsIn(operationsExportScopes)
   scope!: OperationsExportScope;

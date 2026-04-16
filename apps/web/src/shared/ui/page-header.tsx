@@ -51,7 +51,6 @@ type PageHeaderProps = {
 export function PageHeader({
   eyebrow,
   title,
-  description,
   badges = [],
   metadata = [],
   primaryActionLabel,
@@ -132,27 +131,13 @@ export function PageHeader({
           >
             {title}
           </Typography>
-          {description ? (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{
-                mt: appLayout.pageHeaderDescriptionOffset,
-                maxWidth: 720,
-                lineHeight: 1.65
-              }}
-            >
-              {description}
-            </Typography>
-          ) : null}
-
           {badges.length > 0 ? (
             <Stack
               direction="row"
               spacing={appLayout.pageHeaderBadgeGap}
               useFlexGap
               flexWrap="wrap"
-              sx={{ mt: description ? 2 : 1.5 }}
+              sx={{ mt: 1.5 }}
             >
               {badges.map((badge) => (
                 <Chip

@@ -49,7 +49,9 @@ export function RecurringRulesPage() {
     queryKey: recurringRulesQueryKey,
     queryFn: getRecurringRules
   });
-  const activeRuleCount = data.filter((recurringRule) => recurringRule.isActive).length;
+  const activeRuleCount = data.filter(
+    (recurringRule) => recurringRule.isActive
+  ).length;
   const insuranceManagedRuleCount = data.filter(
     (recurringRule) => recurringRule.linkedInsurancePolicyId
   ).length;

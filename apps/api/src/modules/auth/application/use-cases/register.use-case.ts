@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  ServiceUnavailableException
-} from '@nestjs/common';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { createHash, randomBytes } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import * as argon2 from 'argon2';

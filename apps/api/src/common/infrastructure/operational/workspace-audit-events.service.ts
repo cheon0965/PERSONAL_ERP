@@ -120,7 +120,9 @@ function inferResourceType(
   return category?.trim() || undefined;
 }
 
-function inferResourceId(details: AuditDetails | undefined): string | undefined {
+function inferResourceId(
+  details: AuditDetails | undefined
+): string | undefined {
   if (!details) {
     return undefined;
   }

@@ -32,7 +32,11 @@ export function OperationsExceptionsPage() {
     description:
       '예외 처리함은 미확정 거래, 업로드 문제, 마감 차단 사유를 우선순위대로 모아 보는 화면입니다.',
     primaryEntity: 'OperationsExceptionItem',
-    relatedEntities: ['CollectedTransaction', 'ImportBatch', 'AccountingPeriod'],
+    relatedEntities: [
+      'CollectedTransaction',
+      'ImportBatch',
+      'AccountingPeriod'
+    ],
     truthSource:
       '예외 항목은 현재 운영 상태에서 즉시 조치가 필요한 객체를 모은 운영 read model입니다.',
     supplementarySections: [
@@ -55,7 +59,9 @@ export function OperationsExceptionsPage() {
         badges={[
           {
             label:
-              (exceptions?.criticalCount ?? 0) > 0 ? '긴급 예외 있음' : '긴급 예외 없음',
+              (exceptions?.criticalCount ?? 0) > 0
+                ? '긴급 예외 있음'
+                : '긴급 예외 없음',
             color: (exceptions?.criticalCount ?? 0) > 0 ? 'warning' : 'success'
           },
           {
@@ -212,13 +218,7 @@ export function OperationsExceptionsPage() {
   );
 }
 
-function ExceptionInfoItem({
-  label,
-  value
-}: {
-  label: string;
-  value: string;
-}) {
+function ExceptionInfoItem({ label, value }: { label: string; value: string }) {
   return (
     <Stack spacing={0.35}>
       <Typography variant="caption" color="text.secondary">

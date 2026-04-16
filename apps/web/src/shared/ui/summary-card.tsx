@@ -65,7 +65,6 @@ const toneStyles: Record<
 export function SummaryCard({
   title,
   value,
-  subtitle,
   eyebrow,
   tone = 'neutral',
   icon: Icon = TrendingUpRoundedIcon
@@ -155,23 +154,6 @@ export function SummaryCard({
           >
             {value}
           </Typography>
-
-          {subtitle ? (
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{
-                display: '-webkit-box',
-                minHeight: 34,
-                overflow: 'hidden',
-                WebkitBoxOrient: 'vertical',
-                WebkitLineClamp: 2,
-                lineHeight: 1.7
-              }}
-            >
-              {subtitle}
-            </Typography>
-          ) : null}
         </Stack>
       </CardContent>
     </Card>

@@ -161,37 +161,40 @@ export class OperationsConsoleReadRepository {
       ? mapAccountingPeriodRecordToItem(currentPeriodRecord)
       : null;
 
-    const [remainingPlanItems, financialStatementSnapshots, carryForwardRecord] =
-      currentPeriodRecord
-        ? await Promise.all([
-            this.prisma.planItem.findMany({
-              where: {
-                tenantId: workspace.tenantId,
-                ledgerId: workspace.ledgerId,
-                periodId: currentPeriodRecord.id,
-                status: PlanItemStatus.DRAFT
-              },
-              select: {
-                id: true,
-                plannedAmount: true
-              }
-            }),
-            this.prisma.financialStatementSnapshot.findMany({
-              where: {
-                tenantId: workspace.tenantId,
-                ledgerId: workspace.ledgerId,
-                periodId: currentPeriodRecord.id
-              }
-            }),
-            this.prisma.carryForwardRecord.findFirst({
-              where: {
-                tenantId: workspace.tenantId,
-                ledgerId: workspace.ledgerId,
-                fromPeriodId: currentPeriodRecord.id
-              }
-            })
-          ])
-        : [[], [], null];
+    const [
+      remainingPlanItems,
+      financialStatementSnapshots,
+      carryForwardRecord
+    ] = currentPeriodRecord
+      ? await Promise.all([
+          this.prisma.planItem.findMany({
+            where: {
+              tenantId: workspace.tenantId,
+              ledgerId: workspace.ledgerId,
+              periodId: currentPeriodRecord.id,
+              status: PlanItemStatus.DRAFT
+            },
+            select: {
+              id: true,
+              plannedAmount: true
+            }
+          }),
+          this.prisma.financialStatementSnapshot.findMany({
+            where: {
+              tenantId: workspace.tenantId,
+              ledgerId: workspace.ledgerId,
+              periodId: currentPeriodRecord.id
+            }
+          }),
+          this.prisma.carryForwardRecord.findFirst({
+            where: {
+              tenantId: workspace.tenantId,
+              ledgerId: workspace.ledgerId,
+              fromPeriodId: currentPeriodRecord.id
+            }
+          })
+        ])
+      : [[], [], null];
 
     return {
       generatedAt: new Date().toISOString(),
@@ -285,31 +288,31 @@ export class OperationsConsoleReadRepository {
       {
         key: 'funding-accounts',
         label: '자금수단',
-        href: '/reference-data/manage',
+        href: '/reference-data/funding-accounts',
         ready: fundingAccounts.length > 0
       },
       {
         key: 'income-categories',
         label: '수입 카테고리',
-        href: '/reference-data/manage',
+        href: '/reference-data/categories',
         ready: incomeCategories.length > 0
       },
       {
         key: 'expense-categories',
         label: '지출 카테고리',
-        href: '/reference-data/manage',
+        href: '/reference-data/categories',
         ready: expenseCategories.length > 0
       },
       {
         key: 'account-subjects',
         label: '계정과목',
-        href: '/reference-data',
+        href: '/reference-data/lookups',
         ready: accountSubjects.length > 0
       },
       {
         key: 'ledger-transaction-types',
         label: '거래유형',
-        href: '/reference-data',
+        href: '/reference-data/lookups',
         ready: ledgerTransactionTypes.length > 0
       }
     ]

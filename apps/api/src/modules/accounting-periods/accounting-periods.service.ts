@@ -28,12 +28,11 @@ export class AccountingPeriodsService {
     user: AuthenticatedUser
   ): Promise<AccountingPeriodItem | null> {
     const workspace = requireCurrentWorkspace(user);
-    const currentPeriod = await this.accountingPeriodReader.findCurrentInWorkspace(
-      {
+    const currentPeriod =
+      await this.accountingPeriodReader.findCurrentInWorkspace({
         tenantId: workspace.tenantId,
         ledgerId: workspace.ledgerId
-      }
-    );
+      });
 
     return currentPeriod
       ? mapAccountingPeriodRecordToItem(currentPeriod)

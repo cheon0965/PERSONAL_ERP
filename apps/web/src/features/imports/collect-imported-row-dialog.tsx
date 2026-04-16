@@ -173,7 +173,8 @@ export function CollectImportedRowDialog({
               <Typography variant="subtitle2">자동 판정 요약</Typography>
               {!currentPeriod ? (
                 <Typography variant="body2" color="text.secondary">
-                  현재 열린 운영 기간이 없어 자동 판정 preview를 계산할 수 없습니다.
+                  현재 열린 운영 기간이 없어 자동 판정 preview를 계산할 수
+                  없습니다.
                 </Typography>
               ) : collectPreview.isLoading ? (
                 <Typography variant="body2" color="text.secondary">
@@ -189,7 +190,8 @@ export function CollectImportedRowDialog({
                 <CollectPreviewSummary preview={collectPreview.data} />
               ) : (
                 <Typography variant="body2" color="text.secondary">
-                  거래 유형과 자금수단을 선택하면 자동 판정 preview를 표시합니다.
+                  거래 유형과 자금수단을 선택하면 자동 판정 preview를
+                  표시합니다.
                 </Typography>
               )}
             </Stack>

@@ -46,7 +46,9 @@ const vehicleFuelLogFormSchema = z.object({
     .int()
     .min(0, '주유 시점 주행거리는 0 이상이어야 합니다.'),
   liters: z.coerce.number().positive('주유량은 0보다 커야 합니다.'),
-  amountWon: createNonNegativeMoneyWonSchema('주유 금액은 0 이상이어야 합니다.'),
+  amountWon: createNonNegativeMoneyWonSchema(
+    '주유 금액은 0 이상이어야 합니다.'
+  ),
   unitPriceWon: createNonNegativeMoneyWonSchema(
     '리터당 단가는 0 이상이어야 합니다.'
   ),

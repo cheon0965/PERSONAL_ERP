@@ -99,6 +99,17 @@ async function installMonthlyOperationsRoutes(page: Page) {
       return;
     }
 
+    if (path === '/api/navigation/tree' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: []
+        })
+      });
+      return;
+    }
+
     if (
       path === '/api/accounting-periods/current' &&
       request.method() === 'GET'
@@ -292,7 +303,9 @@ async function installMonthlyOperationsRoutes(page: Page) {
 
 async function loginFrom(page: Page, path: string) {
   await page.goto(path);
-  await expect(page).toHaveURL(/\/login/);
+  await expect(
+    page.getByRole('heading', { name: '워크스페이스에 로그인' })
+  ).toBeVisible();
 
   await page.getByLabel('이메일').fill('demo@example.com');
   await page.getByLabel('비밀번호').fill('Demo1234!');
@@ -311,37 +324,47 @@ test('@smoke generates plan items and reflects them in the live dashboard and fo
   await expect(
     page.getByRole('heading', { name: '월 운영 대시보드' })
   ).toBeVisible();
-  await expect(page.getByText('2026-05 운영 기간')).toBeVisible();
-  await expect(page.getByText('운영 판단 기준', { exact: true })).toBeVisible();
+  await expect(page.getByText('2026-05 운영 월')).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '운영 판단 기준' })
+  ).toBeVisible();
   await expect(
     page.getByText(
       '아직 생성된 계획 항목이 없어 남은 계획 지출이 0원 기준으로 보입니다.'
     )
   ).toBeVisible();
 
-  await page.getByRole('link', { name: '운영 전망 보기' }).click();
+  await page.goto('/forecast');
   await expect(page).toHaveURL(/\/forecast$/);
-  await expect(page.getByText('2026-05 전망')).toBeVisible();
-  await expect(page.getByText('운영 전망 기준')).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '기간 운영 전망' })
+  ).toBeVisible();
+  await expect(page.getByText('전망 기준')).toBeVisible();
   await expect(
     page.getByText(
       '아직 생성된 계획 항목이 없어 남은 계획 지출이 비어 있습니다.'
     )
   ).toBeVisible();
 
-  await page.goto('/plan-items');
-  await expect(page).toHaveURL(/\/plan-items$/);
+  await page.goto('/plan-items/generate');
+  await expect(page).toHaveURL(/\/plan-items\/generate$/);
   await expect(
-    page.getByRole('heading', { name: '계획 항목', exact: true })
+    page.getByRole('heading', { name: '계획 생성', exact: true })
   ).toBeVisible();
 
-  await page.getByRole('button', { name: '계획 항목 생성' }).click();
+  await page
+    .getByRole('heading', { name: '생성 대상' })
+    .locator('xpath=ancestor::div[contains(@class,"MuiCard-root")][1]')
+    .getByRole('button', { name: '생성 실행' })
+    .click();
 
   await expect(
     page.getByText(
       '2026-05 계획 항목을 생성했습니다. 신규 2건, 기존 유지 0건, 제외 규칙 0건입니다.'
     )
   ).toBeVisible();
+  await page.goto('/plan-items');
+  await expect(page).toHaveURL(/\/plan-items$/);
   await expect(
     page.getByRole('gridcell', { name: '5월 월세 자동 이체', exact: true })
   ).toBeVisible();
@@ -371,9 +394,9 @@ test('@smoke generates official statements and carry-forwards for the locked mon
   const { pageErrors, unhandledApiRequests } =
     await installMonthlyOperationsRoutes(page);
 
-  await loginFrom(page, '/financial-statements');
+  await loginFrom(page, '/financial-statements/period-2026-04');
 
-  await expect(page).toHaveURL(/\/financial-statements$/);
+  await expect(page).toHaveURL(/\/financial-statements\/period-2026-04$/);
   await expect(page.getByText('공식 스냅샷이 아직 없습니다')).toBeVisible();
   await page.getByRole('button', { name: '공식 재무제표 생성' }).click();
 
@@ -388,8 +411,8 @@ test('@smoke generates official statements and carry-forwards for the locked mon
   ).toBeVisible();
   await expect(page.getByText('유동자산')).toBeVisible();
 
-  await page.goto('/carry-forwards');
-  await expect(page).toHaveURL(/\/carry-forwards$/);
+  await page.goto('/carry-forwards/period-2026-04');
+  await expect(page).toHaveURL(/\/carry-forwards\/period-2026-04$/);
   await expect(page.getByText('차기 이월이 아직 없습니다')).toBeVisible();
   await page.getByRole('button', { name: '차기 이월 생성' }).click();
 
@@ -398,7 +421,8 @@ test('@smoke generates official statements and carry-forwards for the locked mon
   ).toBeVisible();
   await expect(page.getByText('현금및예금')).toBeVisible();
   await expect(page.getByText('미지급금')).toBeVisible();
-  await expect(page.getByText('대상 운영 기간 상태: 진행 중')).toBeVisible();
+  await expect(page.getByText('대상 운영 기간 상태')).toBeVisible();
+  await expect(page.getByText('진행 중').first()).toBeVisible();
 
   await page.goto('/forecast');
   await expect(

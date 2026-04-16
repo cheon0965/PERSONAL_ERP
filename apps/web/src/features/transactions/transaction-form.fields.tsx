@@ -93,7 +93,9 @@ export function TransactionFormFields({
               <TextField
                 select
                 label="자금수단"
-                disabled={!currentPeriod || availableFundingAccounts.length === 0}
+                disabled={
+                  !currentPeriod || availableFundingAccounts.length === 0
+                }
                 error={Boolean(form.formState.errors.accountId)}
                 helperText={
                   form.formState.errors.accountId?.message ??

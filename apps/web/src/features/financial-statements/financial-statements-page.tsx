@@ -115,7 +115,11 @@ export function FinancialStatementsPage({
   }, [pinnedPeriodId]);
 
   React.useEffect(() => {
-    if (pinnedPeriodId == null && !selectedPeriodIdState && lockedPeriods.length > 0) {
+    if (
+      pinnedPeriodId == null &&
+      !selectedPeriodIdState &&
+      lockedPeriods.length > 0
+    ) {
       setSelectedPeriodIdState(lockedPeriods[0]!.id);
     }
   }, [lockedPeriods, pinnedPeriodId, selectedPeriodIdState]);
@@ -236,7 +240,9 @@ export function FinancialStatementsPage({
         primaryActionOnClick={() => {
           void handleGenerateSnapshot();
         }}
-        primaryActionDisabled={!selectedPeriod || !canGenerate || mutation.isPending}
+        primaryActionDisabled={
+          !selectedPeriod || !canGenerate || mutation.isPending
+        }
         secondaryActionLabel={
           mode === 'detail'
             ? '생성 / 선택으로 돌아가기'
@@ -253,7 +259,9 @@ export function FinancialStatementsPage({
         }
       />
 
-      <FinancialStatementsSectionNav selectedPeriodId={selectedPeriodId || null} />
+      <FinancialStatementsSectionNav
+        selectedPeriodId={selectedPeriodId || null}
+      />
 
       {feedback ? (
         <Alert severity={feedback.severity} variant="outlined">
@@ -376,7 +384,11 @@ export function FinancialStatementsPage({
               <Button component={Link} href="/periods" variant="contained">
                 운영 월 보기
               </Button>
-              <Button component={Link} href="/journal-entries" variant="outlined">
+              <Button
+                component={Link}
+                href="/journal-entries"
+                variant="outlined"
+              >
                 전표 보기
               </Button>
             </Stack>

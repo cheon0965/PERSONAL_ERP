@@ -49,7 +49,9 @@ export function buildImportBatchColumns(input: {
       renderCell: (params) => (
         <Button
           size="small"
-          variant={input.selectedBatchId === params.row.id ? 'contained' : 'text'}
+          variant={
+            input.selectedBatchId === params.row.id ? 'contained' : 'text'
+          }
           onClick={() => input.onSelectBatch(params.row)}
         >
           {input.actionLabel ?? '행 보기'}
@@ -71,7 +73,8 @@ export function buildImportedRowsColumns(input: {
       field: 'amount',
       headerName: '금액',
       flex: 0.9,
-      valueFormatter: (value) => (value == null ? '-' : formatWon(Number(value)))
+      valueFormatter: (value) =>
+        value == null ? '-' : formatWon(Number(value))
     },
     {
       field: 'parseStatus',

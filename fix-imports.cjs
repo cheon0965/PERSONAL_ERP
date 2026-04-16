@@ -22,17 +22,24 @@ for (const relPath of filesToFix) {
   let content = fs.readFileSync(filePath, 'utf8');
   let lines = content.split('\n');
   const newLines = [];
-  
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (line.includes('@prisma/client') || line.includes('@nestjs/common') || line.includes('prisma.service')) {
-      if (i === 0 || !lines[i-1].includes('eslint-disable-next-line no-restricted-imports')) {
+    if (
+      line.includes('@prisma/client') ||
+      line.includes('@nestjs/common') ||
+      line.includes('prisma.service')
+    ) {
+      if (
+        i === 0 ||
+        !lines[i - 1].includes('eslint-disable-next-line no-restricted-imports')
+      ) {
         newLines.push('// eslint-disable-next-line no-restricted-imports');
       }
     }
     newLines.push(line);
   }
-  
+
   fs.writeFileSync(filePath, newLines.join('\n'));
 }
 

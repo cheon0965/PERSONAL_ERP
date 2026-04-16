@@ -24,10 +24,7 @@ type VehicleFuelLogRecord = Omit<
   };
 };
 
-type VehicleRecord = Omit<
-  VehicleItem,
-  'estimatedFuelEfficiencyKmPerLiter'
-> & {
+type VehicleRecord = Omit<VehicleItem, 'estimatedFuelEfficiencyKmPerLiter'> & {
   estimatedFuelEfficiencyKmPerLiter: DecimalLike | null;
 };
 

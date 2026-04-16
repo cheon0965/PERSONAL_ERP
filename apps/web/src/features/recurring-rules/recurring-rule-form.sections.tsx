@@ -1,10 +1,7 @@
 'use client';
 
 import { Alert, Grid, MenuItem, TextField } from '@mui/material';
-import type {
-  CategoryItem,
-  FundingAccountItem,
-} from '@personal-erp/contracts';
+import type { CategoryItem, FundingAccountItem } from '@personal-erp/contracts';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -213,7 +210,9 @@ export function RecurringRuleFieldGrid({
               onBlur={field.onBlur}
               onChange={(event) => {
                 const nextValue = event.target.value;
-                field.onChange(nextValue === '' ? undefined : Number(nextValue));
+                field.onChange(
+                  nextValue === '' ? undefined : Number(nextValue)
+                );
               }}
               inputRef={field.ref}
             />

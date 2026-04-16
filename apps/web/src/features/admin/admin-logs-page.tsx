@@ -117,7 +117,9 @@ export function AdminLogsPage() {
       resourceType: draftResourceType.trim() || undefined,
       resourceId: draftResourceId.trim() || undefined,
       requestId: draftRequestId.trim() || undefined,
-      result: draftResult ? (draftResult as AdminAuditEventQuery['result']) : undefined
+      result: draftResult
+        ? (draftResult as AdminAuditEventQuery['result'])
+        : undefined
     });
   }
 
@@ -243,8 +245,8 @@ export function AdminLogsPage() {
             }}
           >
             <Typography variant="body2" color="text.secondary">
-              분류, 액션, 리소스, Request ID 기준으로 로그를 좁혀 본 뒤 표에서 바로
-              상세를 확인합니다.
+              분류, 액션, 리소스, Request ID 기준으로 로그를 좁혀 본 뒤 표에서
+              바로 상세를 확인합니다.
             </Typography>
             <Grid container spacing={appLayout.fieldGap}>
               <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
@@ -252,7 +254,9 @@ export function AdminLogsPage() {
                   fullWidth
                   label="분류"
                   value={draftEventCategory}
-                  onChange={(event) => setDraftEventCategory(event.target.value)}
+                  onChange={(event) =>
+                    setDraftEventCategory(event.target.value)
+                  }
                   size="small"
                 />
               </Grid>

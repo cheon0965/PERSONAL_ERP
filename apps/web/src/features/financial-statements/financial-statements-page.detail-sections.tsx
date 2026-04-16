@@ -24,7 +24,8 @@ export function FinancialStatementsDetailSections({
       >
         <Stack spacing={1}>
           <Typography variant="body2" color="text.secondary">
-            기초 잔액 출처: {readOpeningSourceLabel(view.basis.openingBalanceSourceKind)}
+            기초 잔액 출처:{' '}
+            {readOpeningSourceLabel(view.basis.openingBalanceSourceKind)}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             차기 이월 기록: {view.basis.carryForwardRecordId ?? '없음'}
@@ -62,7 +63,9 @@ export function FinancialStatementsDetailSections({
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {formatWon(metric.currentAmountWon)}
-                      {metric.deltaWon === null ? '' : ` / ${formatWon(metric.deltaWon)} 변동`}
+                      {metric.deltaWon === null
+                        ? ''
+                        : ` / ${formatWon(metric.deltaWon)} 변동`}
                     </Typography>
                   </Stack>
                 ))}
@@ -83,7 +86,11 @@ export function FinancialStatementsDetailSections({
               <Stack spacing={1}>
                 <Typography variant="subtitle2">핵심 요약</Typography>
                 {snapshot.payload.summary.map((item) => (
-                  <Typography key={item.label} variant="body2" color="text.secondary">
+                  <Typography
+                    key={item.label}
+                    variant="body2"
+                    color="text.secondary"
+                  >
                     {item.label}: {formatWon(item.amountWon)}
                   </Typography>
                 ))}
@@ -116,7 +123,11 @@ export function FinancialStatementsDetailSections({
                 <Stack spacing={1}>
                   <Typography variant="subtitle2">메모</Typography>
                   {snapshot.payload.notes.map((note) => (
-                    <Typography key={note} variant="body2" color="text.secondary">
+                    <Typography
+                      key={note}
+                      variant="body2"
+                      color="text.secondary"
+                    >
                       {note}
                     </Typography>
                   ))}

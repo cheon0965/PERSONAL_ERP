@@ -104,16 +104,18 @@ export class PrismaJournalEntryAdjustmentStoreAdapter extends JournalEntryAdjust
     workspace: JournalEntryWorkspaceScope,
     collectedTransactionId: string
   ): Promise<CollectedTransactionStatus | null> {
-    const currentCollectedTransaction = await tx.collectedTransaction.findFirst({
-      where: {
-        id: collectedTransactionId,
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId
-      },
-      select: {
-        status: true
+    const currentCollectedTransaction = await tx.collectedTransaction.findFirst(
+      {
+        where: {
+          id: collectedTransactionId,
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId
+        },
+        select: {
+          status: true
+        }
       }
-    });
+    );
 
     return currentCollectedTransaction?.status ?? null;
   }

@@ -102,11 +102,7 @@ export function AcceptInvitationPage() {
   );
 }
 
-function InvitationStateMessage({
-  state
-}: {
-  state: AcceptInvitationState;
-}) {
+function InvitationStateMessage({ state }: { state: AcceptInvitationState }) {
   switch (state.status) {
     case 'loading':
       return <Alert severity="info">초대 링크를 확인하고 있습니다.</Alert>;

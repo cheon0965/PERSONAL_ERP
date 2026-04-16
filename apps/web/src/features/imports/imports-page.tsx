@@ -30,8 +30,8 @@ export function ImportsPage({
   const collectableRowCount = page.selectedBatchRows.filter(
     (row) => row.parseStatus === 'PARSED' && !row.createdCollectedTransactionId
   ).length;
-  const collectedRowCount = page.selectedBatchRows.filter(
-    (row) => Boolean(row.createdCollectedTransactionId)
+  const collectedRowCount = page.selectedBatchRows.filter((row) =>
+    Boolean(row.createdCollectedTransactionId)
   ).length;
   const selectedBatchWorkbenchHref = page.selectedBatch
     ? `/imports/${page.selectedBatch.id}`
@@ -53,14 +53,14 @@ export function ImportsPage({
             color: page.currentPeriod ? 'primary' : 'default'
           },
           {
-            label:
-              page.referenceDataReadinessQuery.data?.isReadyForImportCollection
-                ? '승격 준비됨'
-                : '기준 데이터 점검 필요',
-            color:
-              page.referenceDataReadinessQuery.data?.isReadyForImportCollection
-                ? 'success'
-                : 'warning'
+            label: page.referenceDataReadinessQuery.data
+              ?.isReadyForImportCollection
+              ? '승격 준비됨'
+              : '기준 데이터 점검 필요',
+            color: page.referenceDataReadinessQuery.data
+              ?.isReadyForImportCollection
+              ? 'success'
+              : 'warning'
           }
         ]}
         metadata={[
@@ -83,7 +83,9 @@ export function ImportsPage({
         ]}
         primaryActionLabel="업로드 배치 등록"
         primaryActionOnClick={page.openUploadDrawer}
-        secondaryActionLabel={isDetailMode ? '배치 목록 보기' : '수집 거래 보기'}
+        secondaryActionLabel={
+          isDetailMode ? '배치 목록 보기' : '수집 거래 보기'
+        }
         secondaryActionHref={isDetailMode ? '/imports' : '/transactions'}
       />
 
@@ -225,16 +227,25 @@ function ImportsSelectionSummaryCard({
         <Stack spacing={appLayout.fieldGap}>
           <Grid container spacing={appLayout.fieldGap}>
             <Grid size={{ xs: 12, md: 6 }}>
-              <SummaryInfoItem label="배치 파일" value={selectedBatchFileName} />
+              <SummaryInfoItem
+                label="배치 파일"
+                value={selectedBatchFileName}
+              />
             </Grid>
             <Grid size={{ xs: 12, md: 2 }}>
               <SummaryInfoItem label="행 수" value={`${rowCount}건`} />
             </Grid>
             <Grid size={{ xs: 12, md: 2 }}>
-              <SummaryInfoItem label="승격 가능" value={`${collectableRowCount}건`} />
+              <SummaryInfoItem
+                label="승격 가능"
+                value={`${collectableRowCount}건`}
+              />
             </Grid>
             <Grid size={{ xs: 12, md: 2 }}>
-              <SummaryInfoItem label="연결 완료" value={`${collectedRowCount}건`} />
+              <SummaryInfoItem
+                label="연결 완료"
+                value={`${collectedRowCount}건`}
+              />
             </Grid>
           </Grid>
           {!isDetailMode && selectedBatchWorkbenchHref ? (
@@ -264,13 +275,7 @@ function ImportsSelectionSummaryCard({
   );
 }
 
-function SummaryInfoItem({
-  label,
-  value
-}: {
-  label: string;
-  value: string;
-}) {
+function SummaryInfoItem({ label, value }: { label: string; value: string }) {
   return (
     <Stack spacing={0.35}>
       <Typography variant="caption" color="text.secondary">

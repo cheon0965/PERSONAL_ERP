@@ -83,8 +83,8 @@ function buildAccountingPeriodFallbackItem(
     ),
     openingBalanceSourceKind:
       input.initializeOpeningBalance || input.openingBalanceLines?.length
-      ? 'INITIAL_SETUP'
-      : null,
+        ? 'INITIAL_SETUP'
+        : null,
     statusHistory: [
       {
         id: `period-history-demo-${Date.now()}`,

@@ -153,13 +153,14 @@ export class ReopenAccountingPeriodUseCase {
       });
     });
 
-    const refreshedPeriod = await this.accountingPeriodReader.findByIdInWorkspace(
-      {
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId
-      },
-      period.id
-    );
+    const refreshedPeriod =
+      await this.accountingPeriodReader.findByIdInWorkspace(
+        {
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId
+        },
+        period.id
+      );
 
     if (!refreshedPeriod) {
       throw new NotFoundException(

@@ -1,5 +1,9 @@
 import type { FinancialStatementPayload } from '@personal-erp/contracts';
-import { addMoneyWon, subtractMoneyWon, sumMoneyWon } from '@personal-erp/money';
+import {
+  addMoneyWon,
+  subtractMoneyWon,
+  sumMoneyWon
+} from '@personal-erp/money';
 import { AccountSubjectKind, FinancialStatementKind } from '@prisma/client';
 import {
   fromPrismaMoneyWon,
@@ -57,7 +61,9 @@ export function buildStatementPayloads(input: {
   openingNetWorth: number;
 }): Map<FinancialStatementKind, FinancialStatementPayload> {
   const closingSnapshot = {
-    totalAssetAmount: fromPrismaMoneyWon(input.closingSnapshot.totalAssetAmount),
+    totalAssetAmount: fromPrismaMoneyWon(
+      input.closingSnapshot.totalAssetAmount
+    ),
     totalLiabilityAmount: fromPrismaMoneyWon(
       input.closingSnapshot.totalLiabilityAmount
     ),
@@ -100,7 +106,10 @@ export function buildStatementPayloads(input: {
     const current = cashFlowByFundingAccount.get(line.fundingAccount.name) ?? 0;
     cashFlowByFundingAccount.set(
       line.fundingAccount.name,
-      addMoneyWon(current, subtractMoneyWon(line.debitAmount, line.creditAmount))
+      addMoneyWon(
+        current,
+        subtractMoneyWon(line.debitAmount, line.creditAmount)
+      )
     );
   }
 

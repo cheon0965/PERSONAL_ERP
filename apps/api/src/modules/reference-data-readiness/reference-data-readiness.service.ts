@@ -146,8 +146,9 @@ function buildUserManagedCheck(input: {
   currentRole: TenantMembershipRole;
   inProductEditEnabled: boolean;
 }): ReferenceDataReadinessCheckItem {
-  const currentRoleOwnsPreparation =
-    USER_MANAGED_ROLES.includes(input.currentRole);
+  const currentRoleOwnsPreparation = USER_MANAGED_ROLES.includes(
+    input.currentRole
+  );
 
   return {
     key: input.key,

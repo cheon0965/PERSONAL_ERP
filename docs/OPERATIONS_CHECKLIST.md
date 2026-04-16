@@ -85,7 +85,7 @@
 - 로그인 후 대시보드로 이동하는지 확인합니다.
 - 좌측 내비게이션 트리가 현재 로그인한 멤버의 역할(OWNER, MANAGER, VIEWER)에 따라 다르게 필터링되어 렌더링되는지 확인합니다.
 - `/settings/workspace`에서 사업장/기본 장부 설정이 열리고, Owner/Manager 수정 권한 제어가 동작하는지 확인합니다.
-- `/settings/account`에서 내 계정 프로필, 활성 세션 보안, 비밀번호 변경 화면이 열리는지 확인합니다.
+- `/settings/account/profile`, `/settings/account/password`, `/settings/account/sessions`, `/settings/account/events`에서 계정 보안 하위 화면이 정상적으로 열리는지 확인합니다.
 - `/admin/members`에서 현재 멤버 목록, 역할 수정, 상태(ACTIVE/SUSPENDED) 변경 및 워크스페이스 제거 기능이 동작하는지 확인합니다.
 - `/admin/invitations`에서 새 멤버 이메일 초대 및 초대 취소 흐름이 동작하는지 확인합니다.
 - `/admin/audit-logs`에서 워크스페이스 단위 주요 권한/보안 감사 이벤트 조회가 되는지 확인합니다.
@@ -93,10 +93,10 @@
 - `/operations`, `/operations/checklist`, `/operations/exceptions`, `/operations/month-end`, `/operations/imports`에서 운영 지원 read model이 정상 표시되는지 확인합니다.
 - `/operations/status`, `/operations/alerts`에서 시스템 상태와 파생 알림이 정상 표시되는지 확인합니다.
 - `/operations/exports`에서 수동 CSV 반출 CTA가 동작하고, `/operations/notes`에서 운영 메모 저장 흐름이 동작하는지 확인합니다.
-- `/reference-data`에서 readiness 요약과 자금수단/카테고리 관리 화면이 정상적으로 열리는지 확인합니다.
+- `/reference-data`, `/reference-data/funding-accounts`, `/reference-data/categories`, `/reference-data/lookups`에서 기준 데이터 하위 화면이 정상적으로 열리는지 확인합니다.
 - `/periods`에서 현재 운영 기간을 열거나 열린 기간을 확인할 수 있는지 확인합니다.
 - `/insurances`, `/vehicles`, `/recurring`에서 보험 계약, 차량 운영, 반복 규칙 화면이 데이터를 불러오는지 확인합니다.
-- `/plan-items`에서 현재 월 계획 항목을 생성하고 연결된 수집 거래 상태를 추적할 수 있는지 확인합니다.
+- `/plan-items/generate`에서 현재 월 계획 항목을 생성하고, `/plan-items`에서 연결된 수집 거래 상태를 추적할 수 있는지 확인합니다.
 - `/imports`에서 업로드 행의 collect preview와 수집 거래 승격 흐름이 열리는지 확인합니다.
 - `/transactions`에서 거래 Quick Add 저장 후 목록이 갱신되고, 전표 준비 거래를 확정할 수 있는지 확인합니다.
 - `/journal-entries`에서 확정 전표를 조회하고 반전/정정 전표 CTA가 유지되는지 확인합니다.

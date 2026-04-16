@@ -63,7 +63,9 @@ export function OperationsMonthEndPage() {
             color: monthEnd?.period ? 'primary' : 'default'
           },
           {
-            label: readOperationsStatusLabel(monthEnd?.closeReadiness ?? 'INFO'),
+            label: readOperationsStatusLabel(
+              monthEnd?.closeReadiness ?? 'INFO'
+            ),
             color: readOperationsStatusColor(monthEnd?.closeReadiness ?? 'INFO')
           }
         ]}
@@ -122,7 +124,9 @@ export function OperationsMonthEndPage() {
             <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
               <MonthEndInfoItem
                 label="마감 상태"
-                value={readOperationsStatusLabel(monthEnd?.closeReadiness ?? 'INFO')}
+                value={readOperationsStatusLabel(
+                  monthEnd?.closeReadiness ?? 'INFO'
+                )}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
@@ -160,7 +164,11 @@ export function OperationsMonthEndPage() {
               )}
             />
             <Chip
-              label={monthEnd?.carryForwardCreated ? '차기 이월 생성됨' : '차기 이월 확인 필요'}
+              label={
+                monthEnd?.carryForwardCreated
+                  ? '차기 이월 생성됨'
+                  : '차기 이월 확인 필요'
+              }
               color={monthEnd?.carryForwardCreated ? 'success' : 'info'}
             />
           </Stack>
@@ -169,7 +177,10 @@ export function OperationsMonthEndPage() {
 
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, lg: 7 }}>
-          <SectionCard title="마감 차단 사유" description="마감 전에 반드시 처리해야 할 항목입니다.">
+          <SectionCard
+            title="마감 차단 사유"
+            description="마감 전에 반드시 처리해야 할 항목입니다."
+          >
             <Stack spacing={1.25}>
               {(monthEnd?.blockers ?? []).length === 0 ? (
                 <Alert severity="success" variant="outlined">
@@ -181,7 +192,11 @@ export function OperationsMonthEndPage() {
                   {blocker}
                 </Alert>
               ))}
-              <Button component={Link} href="/operations/exceptions" variant="outlined">
+              <Button
+                component={Link}
+                href="/operations/exceptions"
+                variant="outlined"
+              >
                 예외 처리함 보기
               </Button>
             </Stack>
@@ -226,7 +241,10 @@ export function OperationsMonthEndPage() {
         </Grid>
       </Grid>
 
-      <SectionCard title="마감 전 경고" description="차단은 아니지만 운영자가 확인해야 할 항목입니다.">
+      <SectionCard
+        title="마감 전 경고"
+        description="차단은 아니지만 운영자가 확인해야 할 항목입니다."
+      >
         <Stack spacing={1.25}>
           {(monthEnd?.warnings ?? []).length === 0 ? (
             <Typography variant="body2" color="text.secondary">
@@ -244,13 +262,7 @@ export function OperationsMonthEndPage() {
   );
 }
 
-function MonthEndInfoItem({
-  label,
-  value
-}: {
-  label: string;
-  value: string;
-}) {
+function MonthEndInfoItem({ label, value }: { label: string; value: string }) {
   return (
     <Stack spacing={0.35}>
       <Typography variant="caption" color="text.secondary">

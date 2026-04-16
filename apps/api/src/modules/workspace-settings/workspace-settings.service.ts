@@ -131,7 +131,11 @@ export class WorkspaceSettingsService {
         }
       });
 
-      return mapWorkspaceSettingsItem(workspace, updated.tenant, updated.ledger);
+      return mapWorkspaceSettingsItem(
+        workspace,
+        updated.tenant,
+        updated.ledger
+      );
     } catch (error) {
       if (isUniqueConstraintError(error)) {
         throw new ConflictException(

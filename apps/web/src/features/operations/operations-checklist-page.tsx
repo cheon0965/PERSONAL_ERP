@@ -31,7 +31,11 @@ export function OperationsChecklistPage() {
     description:
       '운영 체크리스트는 월 시작, 일일 점검, 월 마감 준비 항목을 상태별로 읽는 화면입니다.',
     primaryEntity: 'OperationsChecklistItem',
-    relatedEntities: ['AccountingPeriod', 'CollectedTransaction', 'ImportBatch'],
+    relatedEntities: [
+      'AccountingPeriod',
+      'CollectedTransaction',
+      'ImportBatch'
+    ],
     truthSource:
       '체크리스트 상태는 현재 운영 월과 관련 예외, 수집, 마감 read model을 기준으로 계산됩니다.',
     supplementarySections: [
@@ -62,7 +66,9 @@ export function OperationsChecklistPage() {
                 ? '처리 필요 항목 있음'
                 : '즉시 처리 항목 없음',
             color:
-              (checklist?.totals.actionRequired ?? 0) > 0 ? 'warning' : 'success'
+              (checklist?.totals.actionRequired ?? 0) > 0
+                ? 'warning'
+                : 'success'
           }
         ]}
         metadata={[
@@ -104,7 +110,9 @@ export function OperationsChecklistPage() {
               <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
                 <ChecklistInfoItem
                   label="운영 월"
-                  value={checklist?.currentPeriod?.monthLabel ?? '운영 기간 없음'}
+                  value={
+                    checklist?.currentPeriod?.monthLabel ?? '운영 기간 없음'
+                  }
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
@@ -174,7 +182,9 @@ export function OperationsChecklistPage() {
                         justifyContent="space-between"
                         spacing={1}
                       >
-                        <Typography variant="subtitle2">{item.title}</Typography>
+                        <Typography variant="subtitle2">
+                          {item.title}
+                        </Typography>
                         <Chip
                           label={readOperationsStatusLabel(item.status)}
                           color={readOperationsStatusColor(item.status)}
@@ -211,13 +221,7 @@ export function OperationsChecklistPage() {
   );
 }
 
-function ChecklistInfoItem({
-  label,
-  value
-}: {
-  label: string;
-  value: string;
-}) {
+function ChecklistInfoItem({ label, value }: { label: string; value: string }) {
   return (
     <Stack spacing={0.35}>
       <Typography variant="caption" color="text.secondary">

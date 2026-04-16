@@ -106,13 +106,13 @@ export function SidebarNav() {
       <Toolbar sx={{ alignItems: 'flex-start', minHeight: 96, py: 2 }}>
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="overline" color="primary.main">
-            DB 기반 메뉴
+            메뉴
           </Typography>
-          <Typography variant="h6" sx={{ fontWeight: 850, letterSpacing: '-0.03em' }}>
+          <Typography
+            variant="h6"
+            sx={{ fontWeight: 850, letterSpacing: '-0.03em' }}
+          >
             PERSONAL ERP
-          </Typography>
-          <Typography variant="body2" color="text.secondary" noWrap>
-            운영 흐름 트리 메뉴
           </Typography>
         </Box>
       </Toolbar>
@@ -320,16 +320,10 @@ function NodeButton({
       </ListItemIcon>
       <ListItemText
         primary={item.label}
-        secondary={isRoot ? item.description : undefined}
         primaryTypographyProps={{
           noWrap: true,
           variant: isRoot ? 'subtitle2' : 'body2',
           fontWeight: selected ? 800 : isRoot ? 750 : 600
-        }}
-        secondaryTypographyProps={{
-          noWrap: true,
-          variant: 'caption',
-          color: 'text.secondary'
         }}
       />
     </ListItemButton>

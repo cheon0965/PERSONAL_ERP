@@ -14,11 +14,14 @@ export class GetCollectedTransactionDetailUseCase {
     workspace: CollectedTransactionWorkspaceScope,
     collectedTransactionId: string
   ): Promise<CollectedTransactionDetailItem | null> {
-    const transaction = await this.collectedTransactionStore.findByIdInWorkspace(
-      workspace,
-      collectedTransactionId
-    );
+    const transaction =
+      await this.collectedTransactionStore.findByIdInWorkspace(
+        workspace,
+        collectedTransactionId
+      );
 
-    return transaction ? mapCollectedTransactionToDetailItem(transaction) : null;
+    return transaction
+      ? mapCollectedTransactionToDetailItem(transaction)
+      : null;
   }
 }

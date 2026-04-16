@@ -11,5 +11,7 @@ const adminSectionItems = [
 ] as const;
 
 export function AdminSectionNav() {
-  return <SectionTabs items={adminSectionItems} ariaLabel="관리자 하위 화면 이동" />;
+  return (
+    <SectionTabs items={adminSectionItems} ariaLabel="관리자 하위 화면 이동" />
+  );
 }

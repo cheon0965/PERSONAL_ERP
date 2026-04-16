@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Button, Chip, Stack, Typography } from '@mui/material';
+import { Button, Chip, Stack } from '@mui/material';
 import type { CategoryItem } from '@personal-erp/contracts';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { buildCategoryColumns } from './reference-data.columns';
@@ -89,9 +89,6 @@ export function CategoriesSection({
               />
             ))}
           </Stack>
-          <Typography variant="body2" color="text.secondary">
-            비활성 카테고리는 기존 기록은 유지하고 새 입력 선택지에서 제외될 수 있습니다.
-          </Typography>
         </Stack>
       }
       rows={rows}

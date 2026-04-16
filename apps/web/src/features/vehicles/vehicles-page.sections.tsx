@@ -20,7 +20,9 @@ import { VehicleMaintenanceForm } from './vehicle-maintenance-form';
 import { VehicleForm } from './vehicle-form';
 import { buildVehicleOperatingSummaryView } from './vehicles.summary';
 
-type VehicleOperatingSummaryView = ReturnType<typeof buildVehicleOperatingSummaryView>;
+type VehicleOperatingSummaryView = ReturnType<
+  typeof buildVehicleOperatingSummaryView
+>;
 type VehicleOperatingSummaryItem = VehicleOperatingSummaryView['items'][number];
 
 export function VehiclesOverviewSection({
@@ -42,7 +44,9 @@ export function VehiclesOverviewSection({
         <Grid size={{ xs: 12, md: 3 }}>
           <SummaryCard
             title="기록 운영비"
-            value={formatWon(operatingSummary.totals.recordedOperatingExpenseWon)}
+            value={formatWon(
+              operatingSummary.totals.recordedOperatingExpenseWon
+            )}
             subtitle={`연료 ${formatWon(operatingSummary.totals.fuelExpenseWon)} 및 정비 ${formatWon(
               operatingSummary.totals.maintenanceExpenseWon
             )} 누적 합계입니다.`}
@@ -82,7 +86,8 @@ export function VehiclesOverviewSection({
             value={
               operatingSummary.totals.averageEstimatedFuelEfficiencyKmPerLiter
                 ? `${formatNumber(
-                    operatingSummary.totals.averageEstimatedFuelEfficiencyKmPerLiter
+                    operatingSummary.totals
+                      .averageEstimatedFuelEfficiencyKmPerLiter
                   )} km/L`
                 : '-'
             }
@@ -95,7 +100,8 @@ export function VehiclesOverviewSection({
             value={
               operatingSummary.totals.averageRecordedFuelEfficiencyKmPerLiter
                 ? `${formatNumber(
-                    operatingSummary.totals.averageRecordedFuelEfficiencyKmPerLiter
+                    operatingSummary.totals
+                      .averageRecordedFuelEfficiencyKmPerLiter
                   )} km/L`
                 : '-'
             }
@@ -163,7 +169,8 @@ export function VehiclesOverviewSection({
               />
               <Typography variant="body2" color="text.secondary">
                 차량 기본 정보, 연료 이력, 정비 이력은 각각 분리해 저장하고,
-                운영비와 연비 요약은 `operating-summary` projection으로 따로 읽습니다.
+                운영비와 연비 요약은 `operating-summary` projection으로 따로
+                읽습니다.
               </Typography>
             </Stack>
           </SectionCard>
@@ -261,7 +268,11 @@ export function VehiclesFuelSection({
               color="primary"
               variant="outlined"
             />
-            <Chip label={`기록 ${fuelLogRows.length}건`} size="small" variant="outlined" />
+            <Chip
+              label={`기록 ${fuelLogRows.length}건`}
+              size="small"
+              variant="outlined"
+            />
             <Chip
               label={
                 latestFuelLog
@@ -273,7 +284,8 @@ export function VehiclesFuelSection({
             />
           </Stack>
           <Typography variant="body2" color="text.secondary">
-            연료 기록은 이 표에서 먼저 보고, 추가와 수정은 드로어에서 이어서 처리합니다.
+            연료 기록은 이 표에서 먼저 보고, 추가와 수정은 드로어에서 이어서
+            처리합니다.
           </Typography>
         </Stack>
       }
@@ -344,7 +356,8 @@ export function VehiclesMaintenanceSection({
             />
           </Stack>
           <Typography variant="body2" color="text.secondary">
-            정비 기록은 이 표를 기준으로 확인하고, 추가와 수정은 드로어에서 이어서 처리합니다.
+            정비 기록은 이 표를 기준으로 확인하고, 추가와 수정은 드로어에서
+            이어서 처리합니다.
           </Typography>
         </Stack>
       }
@@ -378,7 +391,10 @@ export function VehiclesFormDrawers({
   onFuelCompleted,
   onMaintenanceCompleted
 }: {
-  drawerState: { mode: 'create' } | { mode: 'edit'; vehicle: VehicleItem } | null;
+  drawerState:
+    | { mode: 'create' }
+    | { mode: 'edit'; vehicle: VehicleItem }
+    | null;
   fuelDrawerState:
     | { mode: 'create'; vehicleId?: string | null }
     | { mode: 'edit'; fuelLog: VehicleFuelLogItem }
@@ -427,7 +443,9 @@ export function VehiclesFormDrawers({
       <FormDrawer
         open={fuelDrawerState !== null}
         onClose={onCloseFuelDrawer}
-        title={fuelDrawerState?.mode === 'edit' ? '연료 기록 수정' : '연료 기록 추가'}
+        title={
+          fuelDrawerState?.mode === 'edit' ? '연료 기록 수정' : '연료 기록 추가'
+        }
         description={
           fuelDrawerState?.mode === 'edit'
             ? '차량 연료 이력을 조정해 운영 판단과 비용 검토 기준을 맞춥니다.'
@@ -453,7 +471,11 @@ export function VehiclesFormDrawers({
       <FormDrawer
         open={maintenanceDrawerState !== null}
         onClose={onCloseMaintenanceDrawer}
-        title={maintenanceDrawerState?.mode === 'edit' ? '정비 기록 수정' : '정비 기록 추가'}
+        title={
+          maintenanceDrawerState?.mode === 'edit'
+            ? '정비 기록 수정'
+            : '정비 기록 추가'
+        }
         description={
           maintenanceDrawerState?.mode === 'edit'
             ? '차량 정비 이력을 조정해 운영 판단과 비용 검토 기준을 맞춥니다.'
@@ -475,7 +497,6 @@ export function VehiclesFormDrawers({
           />
         )}
       </FormDrawer>
-
     </>
   );
 }

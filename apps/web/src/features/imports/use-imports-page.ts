@@ -131,16 +131,17 @@ export function useImportsPage(initialSelectedBatchId: string | null = null) {
   const selectedFundingAccount = React.useMemo(
     () =>
       (fundingAccountsQuery.data ?? []).find(
-        (candidate) => candidate.id === normalizedCollectRequest.fundingAccountId
+        (candidate) =>
+          candidate.id === normalizedCollectRequest.fundingAccountId
       ) ?? null,
     [fundingAccountsQuery.data, normalizedCollectRequest.fundingAccountId]
   );
   const selectedCategory = React.useMemo(
     () =>
       normalizedCollectRequest.categoryId
-        ? (categoriesQuery.data ?? []).find(
+        ? ((categoriesQuery.data ?? []).find(
             (candidate) => candidate.id === normalizedCollectRequest.categoryId
-          ) ?? null
+          ) ?? null)
         : null,
     [categoriesQuery.data, normalizedCollectRequest.categoryId]
   );

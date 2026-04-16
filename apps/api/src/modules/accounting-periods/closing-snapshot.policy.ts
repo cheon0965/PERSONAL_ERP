@@ -44,12 +44,10 @@ type OpeningBalanceLineForClosingSnapshot = {
   balanceAmount: PrismaMoneyLike;
 };
 
-export function aggregateClosingSnapshotLines(
-  input: {
-    openingBalanceLines?: OpeningBalanceLineForClosingSnapshot[];
-    journalLines: JournalLineForClosingSnapshot[];
-  }
-): AggregatedClosingSnapshotLine[] {
+export function aggregateClosingSnapshotLines(input: {
+  openingBalanceLines?: OpeningBalanceLineForClosingSnapshot[];
+  journalLines: JournalLineForClosingSnapshot[];
+}): AggregatedClosingSnapshotLine[] {
   const grouped = new Map<string, AggregatedClosingSnapshotLine>();
 
   for (const line of input.openingBalanceLines ?? []) {
@@ -170,10 +168,7 @@ export function summarizeClosingSnapshot(
     totalIncomeAmount,
     totalExpenseAmount
   );
-  const totalEquityAmount = addMoneyWon(
-    totalEquityBaseAmount,
-    periodPnLAmount
-  );
+  const totalEquityAmount = addMoneyWon(totalEquityBaseAmount, periodPnLAmount);
 
   return {
     totalAssetAmount,

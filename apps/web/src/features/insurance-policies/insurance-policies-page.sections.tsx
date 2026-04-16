@@ -143,7 +143,8 @@ export function InsurancePoliciesToolbar({
         />
       </Stack>
       <Typography variant="body2" color="text.secondary">
-        보험 계약은 표에서 먼저 확인하고, 생성과 수정은 드로어에서 이어서 처리합니다.
+        보험 계약은 표에서 먼저 확인하고, 생성과 수정은 드로어에서 이어서
+        처리합니다.
       </Typography>
     </Stack>
   );
@@ -188,7 +189,11 @@ export function InsuranceSummaryGrid({
             </Grid>
           </Grid>
           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-            <Chip label={`연결 완료 ${linkedCount}건`} size="small" color="success" />
+            <Chip
+              label={`연결 완료 ${linkedCount}건`}
+              size="small"
+              color="success"
+            />
             <Chip
               label={`미연결 ${unlinkedCount}건`}
               size="small"
@@ -334,13 +339,7 @@ function SupportLink({
   );
 }
 
-function InfoItem({
-  label,
-  value
-}: {
-  label: string;
-  value: string;
-}) {
+function InfoItem({ label, value }: { label: string; value: string }) {
   return (
     <Stack spacing={0.35}>
       <Typography variant="caption" color="text.secondary">

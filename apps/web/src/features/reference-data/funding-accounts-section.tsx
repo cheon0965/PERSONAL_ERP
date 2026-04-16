@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Button, Chip, Stack, Typography } from '@mui/material';
+import { Button, Chip, Stack } from '@mui/material';
 import type { FundingAccountItem } from '@personal-erp/contracts';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { buildFundingAccountColumns } from './reference-data.columns';
@@ -89,9 +89,6 @@ export function FundingAccountsSection({
               />
             ))}
           </Stack>
-          <Typography variant="body2" color="text.secondary">
-            활성 자금수단만 입력 화면의 기본 선택지로 노출됩니다.
-          </Typography>
         </Stack>
       }
       rows={rows}

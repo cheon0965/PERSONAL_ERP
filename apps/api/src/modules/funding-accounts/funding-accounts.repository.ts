@@ -71,10 +71,7 @@ export class FundingAccountsRepository {
     });
   }
 
-  updateInWorkspace(
-    accountId: string,
-    input: UpdateFundingAccountRequest
-  ) {
+  updateInWorkspace(accountId: string, input: UpdateFundingAccountRequest) {
     return this.prisma.account.update({
       where: {
         id: accountId

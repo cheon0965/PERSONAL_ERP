@@ -369,13 +369,7 @@ function RecurringSupportLink({
   );
 }
 
-function RecurringInfoItem({
-  label,
-  value
-}: {
-  label: string;
-  value: string;
-}) {
+function RecurringInfoItem({ label, value }: { label: string; value: string }) {
   return (
     <Stack spacing={0.35}>
       <Typography variant="caption" color="text.secondary">

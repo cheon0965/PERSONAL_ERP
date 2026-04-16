@@ -1,8 +1,4 @@
-import {
-  Catch,
-  ConflictException,
-  type ArgumentsHost
-} from '@nestjs/common';
+import { Catch, ConflictException, type ArgumentsHost } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { BaseExceptionFilter } from '@nestjs/core';
 
@@ -45,7 +41,11 @@ function resolveConflictMessage(target: string[]) {
 
   if (
     hasExactTarget(target, ['ledgerId', 'kind', 'normalizedName']) ||
-    hasExactTarget(target, ['ledgerId', 'normalizedProvider', 'normalizedProductName'])
+    hasExactTarget(target, [
+      'ledgerId',
+      'normalizedProvider',
+      'normalizedProductName'
+    ])
   ) {
     return '같은 기준의 데이터가 이미 있습니다.';
   }

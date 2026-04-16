@@ -316,6 +316,17 @@ test('@smoke uploads an import batch, collects it into a transaction, confirms i
       return;
     }
 
+    if (path === '/api/navigation/tree' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: []
+        })
+      });
+      return;
+    }
+
     if (
       path === '/api/accounting-periods/current' &&
       request.method() === 'GET'
@@ -662,7 +673,11 @@ test('@smoke uploads an import batch, collects it into a transaction, confirms i
   await page.getByRole('button', { name: '로그인' }).click();
 
   await expect(
-    page.getByRole('heading', { name: '업로드 배치', exact: true })
+    page.getByRole('heading', {
+      level: 4,
+      name: '업로드 배치',
+      exact: true
+    })
   ).toBeVisible();
   await expect(
     page.getByRole('gridcell', { name: 'seeded-batch.csv', exact: true })
@@ -686,6 +701,8 @@ test('@smoke uploads an import batch, collects it into a transaction, confirms i
   await expect(
     page.getByRole('gridcell', { name: 'e2e-import.csv', exact: true })
   ).toBeVisible();
+  await page.goto('/imports/import-batch-e2e-new');
+  await expect(page).toHaveURL(/\/imports\/import-batch-e2e-new$/);
   await expect(
     page.getByRole('gridcell', { name: 'Coffee beans', exact: true })
   ).toBeVisible();
@@ -736,16 +753,15 @@ test('@smoke uploads an import batch, collects it into a transaction, confirms i
   ).toBeVisible();
 
   await page.getByRole('link', { name: '202604-0007', exact: true }).click();
-  await expect(page).toHaveURL(/\/journal-entries\?entryId=je-import-e2e-1$/);
-  await expect(page.getByRole('heading', { name: '전표 조회' })).toBeVisible();
+  await expect(page).toHaveURL(/\/journal-entries\/je-import-e2e-1$/);
   await expect(
-    page.getByRole('heading', { name: '202604-0007 전표', exact: true })
+    page.getByRole('heading', {
+      level: 4,
+      name: '202604-0007 전표 상세',
+      exact: true
+    })
   ).toBeVisible();
-  await expect(
-    page.getByText(
-      '수집 거래 확정으로 생성된 전표입니다. 원본 거래: Coffee beans'
-    )
-  ).toBeVisible();
+  await expect(page.getByText('Coffee beans').first()).toBeVisible();
   await expect(page.getByText('원재료비')).toBeVisible();
   await expect(page.getByText('현금및예금')).toBeVisible();
 

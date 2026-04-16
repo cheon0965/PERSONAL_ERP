@@ -36,8 +36,8 @@ export function InsurancePolicyReferenceAlerts({
         </Alert>
       ) : null}
       <Alert severity="info" variant="outlined">
-        보험 계약을 저장하면 연결된 반복 규칙이 함께 생성되거나 갱신됩니다.
-        실제 회계 확정은 이후 수집 거래와 전표 흐름에서 이어집니다.
+        보험 계약을 저장하면 연결된 반복 규칙이 함께 생성되거나 갱신됩니다. 실제
+        회계 확정은 이후 수집 거래와 전표 흐름에서 이어집니다.
       </Alert>
     </>
   );
@@ -217,7 +217,9 @@ export function InsurancePolicyFieldGrid({
         <TextField
           label="만기일"
           type="date"
-          helperText={form.formState.errors.maturityDate?.message ?? '선택 사항'}
+          helperText={
+            form.formState.errors.maturityDate?.message ?? '선택 사항'
+          }
           error={Boolean(form.formState.errors.maturityDate)}
           {...form.register('maturityDate')}
         />

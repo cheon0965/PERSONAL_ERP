@@ -135,9 +135,7 @@ export class FundingAccountsService {
 
     switch (duplicate.status) {
       case 'ACTIVE':
-        throw new ConflictException(
-          '같은 이름의 자금수단이 이미 있습니다.'
-        );
+        throw new ConflictException('같은 이름의 자금수단이 이미 있습니다.');
       case 'INACTIVE':
         throw new ConflictException(
           '같은 이름의 비활성 자금수단이 있습니다. 기존 자금수단을 다시 활성화하거나 다른 이름을 사용해 주세요.'
@@ -147,9 +145,7 @@ export class FundingAccountsService {
           '같은 이름의 종료 자금수단이 있습니다. 다른 이름을 사용해 주세요.'
         );
       default:
-        throw new ConflictException(
-          '같은 이름의 자금수단이 이미 있습니다.'
-        );
+        throw new ConflictException('같은 이름의 자금수단이 이미 있습니다.');
     }
   }
 }

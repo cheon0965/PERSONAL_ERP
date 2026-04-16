@@ -7,9 +7,7 @@ import type {
 } from '../../application/ports/plan-item-generation.port';
 
 @Injectable()
-export class PrismaPlanItemGenerationAdapter
-  implements PlanItemGenerationPort
-{
+export class PrismaPlanItemGenerationAdapter implements PlanItemGenerationPort {
   constructor(private readonly prisma: PrismaService) {}
 
   findPeriodByIdInWorkspace(
@@ -70,7 +68,11 @@ export class PrismaPlanItemGenerationAdapter
     });
   }
 
-  listExistingItemsForPeriod(tenantId: string, ledgerId: string, periodId: string) {
+  listExistingItemsForPeriod(
+    tenantId: string,
+    ledgerId: string,
+    periodId: string
+  ) {
     return this.prisma.planItem.findMany({
       where: {
         tenantId,

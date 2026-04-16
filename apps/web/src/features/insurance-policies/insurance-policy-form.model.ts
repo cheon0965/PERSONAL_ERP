@@ -9,9 +9,8 @@ export const insurancePolicySchema = z
   .object({
     provider: z.string().trim().min(2, '보험사 이름은 2자 이상이어야 합니다.'),
     productName: z.string().trim().min(2, '상품명은 2자 이상이어야 합니다.'),
-    monthlyPremiumWon: createPositiveMoneyWonSchema(
-      '월 보험료는 0보다 커야 합니다.'
-    ),
+    monthlyPremiumWon:
+      createPositiveMoneyWonSchema('월 보험료는 0보다 커야 합니다.'),
     paymentDay: z.coerce
       .number()
       .int()

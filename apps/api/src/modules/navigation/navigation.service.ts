@@ -271,9 +271,7 @@ function flattenWithRoot(
   });
 }
 
-function mapRootKeyToPolicySection(
-  rootKey: string
-): AdminPolicySurfaceSection {
+function mapRootKeyToPolicySection(rootKey: string): AdminPolicySurfaceSection {
   switch (rootKey) {
     case 'workflow-monthly':
       return 'MONTHLY_OPERATIONS';

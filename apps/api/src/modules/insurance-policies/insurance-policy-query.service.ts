@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import type { AuthenticatedUser, InsurancePolicyItem } from '@personal-erp/contracts';
+import type {
+  AuthenticatedUser,
+  InsurancePolicyItem
+} from '@personal-erp/contracts';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { mapInsurancePolicyToItem } from './insurance-policies.mapper';
 import { InsurancePoliciesRepository } from './insurance-policies.repository';

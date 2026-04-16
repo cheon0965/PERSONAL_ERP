@@ -155,7 +155,7 @@
 - mutation 요청의 JSON body 직렬화
 - 회원가입/이메일 인증/인증 메일 재발송 auth API helper의 요청 path와 body 직렬화
 - `/accept-invitation`, `/admin`, `/admin/members`, `/admin/logs`, `/admin/policy` 관리자/초대/권한 정책 route와 admin API helper의 보호 요청 path, Bearer token, mutation body 직렬화
-- `/settings/workspace`, `/settings/account` 설정 route와 workspace/account API helper의 보호 요청 path, Bearer token, mutation body 직렬화
+- `/settings/workspace`, `/settings/account/profile`, `/settings/account/password`, `/settings/account/sessions`, `/settings/account/events` 설정 route와 workspace/account API helper의 보호 요청 path, Bearer token, mutation body 직렬화
 - `/operations`, `/operations/checklist`, `/operations/exceptions`, `/operations/month-end`, `/operations/imports`, `/operations/status`, `/operations/alerts`, `/operations/exports`, `/operations/notes` 운영 지원 route와 operations API helper의 보호 요청 path, Bearer token, mutation body 직렬화
 - 요청 실패 메시지 안내
 - 브라우저에서 `/transactions` 보호 라우트(Collected Transactions 화면) 리다이렉트
@@ -166,7 +166,7 @@
 - 실제 브라우저 상호작용으로 `/recurring`에서 반복 규칙 생성, 수정, 삭제와 목록 반영이 동작하는지 검증
 - 실제 브라우저 상호작용으로 `/insurances`에서 보험 계약 생성, 수정, 비활성화와 목록 반영이 동작하는지 검증
 - 실제 브라우저 상호작용으로 `/vehicles`에서 차량 생성, 수정, 연료 이력 생성/수정, 정비 이력 생성/수정과 목록 반영이 동작하는지 검증
-- 실제 브라우저 상호작용으로 `/plan-items`에서 현재 월 계획 항목과 연결 반복성 수집 거래를 생성하고, `dashboard`/`forecast` 반영, `/financial-statements` 생성, `/carry-forwards` 생성과 차기 이월 basis note 반영이 동작하는지 검증
+- 실제 브라우저 상호작용으로 `/plan-items/generate`에서 현재 월 계획 항목과 연결 반복성 수집 거래를 생성하고, `/plan-items`에서 상태를 확인하며 `dashboard`/`forecast` 반영, `/financial-statements` 생성, `/carry-forwards` 생성과 차기 이월 basis note 반영이 동작하는지 검증
 - 실제 브라우저 상호작용으로 `/imports` 업로드 배치에서 행을 기존 계획 기반 수집 거래에 흡수/매칭하거나 새 수집 거래로 승격한 뒤 `/transactions`에서 전표 확정을 실행하고 `/journal-entries`에서 생성 전표를 여는 월 운영 cross-feature 흐름을 검증
 - 루트 `ci:local:*` 스크립트와 `docs/DEVELOPMENT_GUIDE.md` 매핑표로 GitHub Actions 주요 job을 로컬에서 다시 따를 수 있는 진입점을 제공
 - `npm run test:e2e:smoke:build`로 in-process production build/start 경로에 결과물을 올린 뒤 health route 응답 기준 최소 HTTP smoke를 자동 검증

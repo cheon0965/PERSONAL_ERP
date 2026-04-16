@@ -135,7 +135,9 @@ export function readExportScopeLabel(scope: OperationsExportScope): string {
   }
 }
 
-export function readExportScopeDescription(scope: OperationsExportScope): string {
+export function readExportScopeDescription(
+  scope: OperationsExportScope
+): string {
   switch (scope) {
     case 'REFERENCE_DATA':
       return '자금수단, 카테고리, 계정과목, 거래유형을 한 번에 CSV로 반출합니다.';
@@ -214,9 +216,11 @@ export function mapOperationalNote(
 }
 
 export function readLatestIso(values: Array<string | null>): string | null {
-  return values
-    .flatMap((value) => (value ? [value] : []))
-    .sort((left, right) => right.localeCompare(left))[0] ?? null;
+  return (
+    values
+      .flatMap((value) => (value ? [value] : []))
+      .sort((left, right) => right.localeCompare(left))[0] ?? null
+  );
 }
 
 export function readLatestDateValue(

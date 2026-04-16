@@ -1,7 +1,4 @@
-import type {
-  CategoryItem,
-  FundingAccountItem,
-} from '@personal-erp/contracts';
+import type { CategoryItem, FundingAccountItem } from '@personal-erp/contracts';
 import { z } from 'zod';
 import { getTodayDateInputValue } from '@/shared/lib/date-input';
 import { createPositiveMoneyWonSchema } from '@/shared/lib/money';

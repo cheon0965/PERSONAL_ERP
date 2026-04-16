@@ -83,8 +83,12 @@ export function TransactionForm({
         {formState.availableFundingAccounts.length === 0 ? (
           <Alert severity="warning" variant="outlined">
             사용할 수 있는 자금수단이 아직 없습니다.{' '}
-            <Button component={Link} href="/reference-data/manage" size="small">
-              기준 데이터 관리
+            <Button
+              component={Link}
+              href="/reference-data/funding-accounts"
+              size="small"
+            >
+              자금수단
             </Button>
           </Alert>
         ) : null}
@@ -92,8 +96,12 @@ export function TransactionForm({
         formState.filteredCategories.length === 0 ? (
           <Alert severity="warning" variant="outlined">
             선택한 거래 성격에 맞는 카테고리가 아직 없습니다.{' '}
-            <Button component={Link} href="/reference-data/manage" size="small">
-              기준 데이터 관리
+            <Button
+              component={Link}
+              href="/reference-data/categories"
+              size="small"
+            >
+              카테고리
             </Button>
           </Alert>
         ) : null}

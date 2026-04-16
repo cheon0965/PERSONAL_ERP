@@ -68,9 +68,18 @@ export function CarryForwardsOverview({
                   />
                 </Grid>
               </Grid>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} useFlexGap flexWrap="wrap">
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={1}
+                useFlexGap
+                flexWrap="wrap"
+              >
                 {detailHref && hasCarryForward ? (
-                  <Button component={Link} href={detailHref} variant="contained">
+                  <Button
+                    component={Link}
+                    href={detailHref}
+                    variant="contained"
+                  >
                     결과 보기
                   </Button>
                 ) : canGenerate ? (
@@ -84,12 +93,20 @@ export function CarryForwardsOverview({
                   </Button>
                 ) : null}
                 {canGenerate && hasCarryForward ? (
-                  <Button variant="outlined" onClick={onGenerate} disabled={isGenerating}>
+                  <Button
+                    variant="outlined"
+                    onClick={onGenerate}
+                    disabled={isGenerating}
+                  >
                     현재 기준으로 다시 생성
                   </Button>
                 ) : null}
                 {!hasCarryForward ? (
-                  <Button component={Link} href="/financial-statements" variant="outlined">
+                  <Button
+                    component={Link}
+                    href="/financial-statements"
+                    variant="outlined"
+                  >
                     재무제표 보기
                   </Button>
                 ) : null}
@@ -111,13 +128,20 @@ export function CarryForwardsOverview({
                 대상 월: {view?.targetPeriod.monthLabel ?? '없음'}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                기초 잔액 출처: {readOpeningSourceLabel(view?.targetOpeningBalanceSnapshot.sourceKind)}
+                기초 잔액 출처:{' '}
+                {readOpeningSourceLabel(
+                  view?.targetOpeningBalanceSnapshot.sourceKind
+                )}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                자산 합계: {formatWon(view?.sourceClosingSnapshot.totalAssetAmount ?? 0)}
+                자산 합계:{' '}
+                {formatWon(view?.sourceClosingSnapshot.totalAssetAmount ?? 0)}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                부채 합계: {formatWon(view?.sourceClosingSnapshot.totalLiabilityAmount ?? 0)}
+                부채 합계:{' '}
+                {formatWon(
+                  view?.sourceClosingSnapshot.totalLiabilityAmount ?? 0
+                )}
               </Typography>
             </Stack>
           </SectionCard>
@@ -141,14 +165,24 @@ export function CarryForwardsOverview({
                     borderRadius: 3,
                     border: '1px solid',
                     borderColor: isSelected ? 'primary.main' : 'divider',
-                    backgroundColor: isSelected ? 'action.selected' : 'background.paper'
+                    backgroundColor: isSelected
+                      ? 'action.selected'
+                      : 'background.paper'
                   }}
                 >
-                  <Typography variant="subtitle1">{period.monthLabel}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {readPeriodStatusLabel(period.status)} 상태의 차기 이월 기준입니다.
+                  <Typography variant="subtitle1">
+                    {period.monthLabel}
                   </Typography>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} useFlexGap flexWrap="wrap">
+                  <Typography variant="body2" color="text.secondary">
+                    {readPeriodStatusLabel(period.status)} 상태의 차기 이월
+                    기준입니다.
+                  </Typography>
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1}
+                    useFlexGap
+                    flexWrap="wrap"
+                  >
                     <Button
                       variant={isSelected ? 'contained' : 'outlined'}
                       onClick={() => onSelectPeriod(period.id)}
@@ -192,7 +226,9 @@ export function CarryForwardsDetail({
               key={period.id}
               component={Link}
               href={buildCarryForwardsDetailHref(period.id)}
-              variant={period.id === selectedPeriodId ? 'contained' : 'outlined'}
+              variant={
+                period.id === selectedPeriodId ? 'contained' : 'outlined'
+              }
             >
               {period.monthLabel}
             </Button>
@@ -222,7 +258,9 @@ export function CarryForwardsDetail({
           <Grid size={{ xs: 12, md: 4 }}>
             <CarryForwardInfoItem
               label="기초 잔액 기준"
-              value={readOpeningSourceLabel(view.targetOpeningBalanceSnapshot.sourceKind)}
+              value={readOpeningSourceLabel(
+                view.targetOpeningBalanceSnapshot.sourceKind
+              )}
               description="다음 월 시작 잔액의 출처를 보여줍니다."
             />
           </Grid>
@@ -259,7 +297,10 @@ export function CarryForwardsDetail({
             view.targetOpeningBalanceSnapshot.lines.map((line) => (
               <Typography key={line.id} variant="body2" color="text.secondary">
                 {line.accountSubjectCode} {line.accountSubjectName}
-                {line.fundingAccountName ? ` / ${line.fundingAccountName}` : ''} | {formatWon(line.balanceAmount)}
+                {line.fundingAccountName
+                  ? ` / ${line.fundingAccountName}`
+                  : ''}{' '}
+                | {formatWon(line.balanceAmount)}
               </Typography>
             ))
           ) : (

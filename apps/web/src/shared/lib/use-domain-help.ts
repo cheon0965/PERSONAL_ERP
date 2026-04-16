@@ -11,7 +11,10 @@ import {
  */
 export function useDomainHelp(context: DomainHelpContextType) {
   const { setContext, clearContext } = useDomainHelpStore();
-  const serializedContext = React.useMemo(() => JSON.stringify(context), [context]);
+  const serializedContext = React.useMemo(
+    () => JSON.stringify(context),
+    [context]
+  );
   const stableContext = React.useMemo(() => context, [serializedContext]);
 
   React.useEffect(() => {

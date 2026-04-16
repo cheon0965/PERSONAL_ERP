@@ -8,7 +8,9 @@ import { mapAdminMemberToItem } from './admin.mapper';
 export class AdminMemberQueryService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(workspace: RequiredWorkspaceContext): Promise<AdminMemberItem[]> {
+  async findAll(
+    workspace: RequiredWorkspaceContext
+  ): Promise<AdminMemberItem[]> {
     const memberships = await this.prisma.tenantMembership.findMany({
       where: {
         tenantId: workspace.tenantId
