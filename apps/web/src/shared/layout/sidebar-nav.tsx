@@ -32,6 +32,7 @@ import {
 } from '@/shared/navigation/workspace-navigation.api';
 
 const drawerWidth = 304;
+const EMPTY_NAVIGATION_ITEMS: NavigationMenuItem[] = [];
 
 export function SidebarNav() {
   const pathname = usePathname() ?? '';
@@ -39,7 +40,7 @@ export function SidebarNav() {
     queryKey: workspaceNavigationQueryKey,
     queryFn: getWorkspaceNavigationTree
   });
-  const items = navigationQuery.data?.items ?? [];
+  const items = navigationQuery.data?.items ?? EMPTY_NAVIGATION_ITEMS;
   const selectedKey = resolveSelectedNavigationKey(pathname, items);
   const activeAncestorKeys = React.useMemo(
     () => collectAncestorKeys(items, selectedKey),
@@ -50,20 +51,27 @@ export function SidebarNav() {
   React.useEffect(() => {
     setOpenKeys((current) => {
       const next = new Set(current);
+      let changed = false;
 
       if (next.size === 0) {
         for (const item of items) {
           if (activeAncestorKeys.has(item.key) || item.key === selectedKey) {
-            next.add(item.key);
+            if (!next.has(item.key)) {
+              next.add(item.key);
+              changed = true;
+            }
           }
         }
       }
 
       for (const key of activeAncestorKeys) {
-        next.add(key);
+        if (!next.has(key)) {
+          next.add(key);
+          changed = true;
+        }
       }
 
-      return next;
+      return changed ? next : current;
     });
   }, [activeAncestorKeys, items, selectedKey]);
 

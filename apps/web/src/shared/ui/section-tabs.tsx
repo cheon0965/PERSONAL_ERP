@@ -51,9 +51,9 @@ export function SectionTabs({
           }
         }}
       >
-        {items.map((item) => (
+        {items.map((item, index) => (
           <Tab
-            key={item.href}
+            key={`section-tab-${index}-${item.href}-${item.label}`}
             component={Link}
             href={item.href as Route}
             value={item.href}

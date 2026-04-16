@@ -9,6 +9,8 @@
 3. `docs/API.md`
    사람이 빠르게 읽는 엔드포인트 요약, 인증 흐름, 쓰기 흐름 설명을 유지합니다.
 
+기능과 운영 범위의 상위 요약은 `docs/CURRENT_CAPABILITIES.md`를 함께 봅니다.
+
 ## 도메인 기준선
 
 - 비즈니스 로직의 시작/끝, 상태, 권한, 마감/이월 정책의 1차 기준은 `docs/domain/business-logic-draft.md`입니다.

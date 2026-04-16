@@ -77,6 +77,7 @@ API나 공유 계약이 바뀌면 아래 순서를 같은 PR 안에서 닫습니
 문서별 역할:
 
 - `README.md`: 저장소 진입 설명, 빠른 시작, 가장 큰 운영 원칙
+- `docs/CURRENT_CAPABILITIES.md`: 현재 구현된 기능, 운영 지원 범위, 검증 가드 요약
 - `docs/domain/README.md`: 도메인 기준 문서의 진입점과 읽는 순서
 - `docs/domain/business-logic-draft.md`: 운영 사이클, 권한 모델, 주요 회계 정책, 상태 정의
 - `docs/domain/core-entity-definition.md`: 핵심 엔티티, 불변조건, 관계, 구현 우선순위
@@ -116,7 +117,7 @@ API나 공유 계약이 바뀌면 아래 순서를 같은 PR 안에서 닫습니
 npm run check:quick
 ```
 
-- `npm run check:quick`에는 `npm run docs:check`도 포함되며, 문서의 `npm run` 표기와 `docs/API.md`, `docs/VALIDATION_NOTES.md`의 Web/API surface가 실제 라우트와 controller 기반 Swagger surface와 맞는지 함께 확인합니다.
+- `npm run check:quick`에는 `npm run docs:check`도 포함되며, 문서의 `npm run` 표기와 `docs/API.md`, `docs/CURRENT_CAPABILITIES.md`, `docs/OPERATIONS_CHECKLIST.md`, `docs/VALIDATION_NOTES.md`의 Web/API surface가 실제 라우트와 controller 기반 Swagger surface와 맞는지 함께 확인합니다.
 - `npm run check:quick`에는 `npm run money:check`도 포함되며, money package 밖의 금액 필드 raw `Number(...)`, `+/-`, `+=/-=` 유입을 함께 막습니다.
 - Windows에서 `core.autocrlf=true` checkout을 쓰면 Prettier EOL 차이로 `check:quick`가 CI와 다르게 보일 수 있습니다.
 - CI와 같은 LF 기준 포맷 확인이 필요하면 `npm run format:check -- --end-of-line auto`를 함께 봅니다.

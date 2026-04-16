@@ -415,6 +415,7 @@ npm run start --workspace @personal-erp/web
 ## 10. 함께 보면 좋은 문서
 
 - [README.md](./README.md)
+- [docs/CURRENT_CAPABILITIES.md](./docs/CURRENT_CAPABILITIES.md)
 - [docs/OPERATIONS_CHECKLIST.md](./docs/OPERATIONS_CHECKLIST.md)
 - [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
 - [docs/DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md)

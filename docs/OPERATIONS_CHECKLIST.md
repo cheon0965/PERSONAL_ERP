@@ -86,9 +86,8 @@
 - 좌측 내비게이션 트리가 현재 로그인한 멤버의 역할(OWNER, MANAGER, VIEWER)에 따라 다르게 필터링되어 렌더링되는지 확인합니다.
 - `/settings/workspace`에서 사업장/기본 장부 설정이 열리고, Owner/Manager 수정 권한 제어가 동작하는지 확인합니다.
 - `/settings/account/profile`, `/settings/account/password`, `/settings/account/sessions`, `/settings/account/events`에서 계정 보안 하위 화면이 정상적으로 열리는지 확인합니다.
-- `/admin/members`에서 현재 멤버 목록, 역할 수정, 상태(ACTIVE/SUSPENDED) 변경 및 워크스페이스 제거 기능이 동작하는지 확인합니다.
-- `/admin/invitations`에서 새 멤버 이메일 초대 및 초대 취소 흐름이 동작하는지 확인합니다.
-- `/admin/audit-logs`에서 워크스페이스 단위 주요 권한/보안 감사 이벤트 조회가 되는지 확인합니다.
+- `/admin/members`에서 현재 멤버 목록, 새 멤버 이메일 초대, 역할 수정, 상태(ACTIVE/SUSPENDED) 변경 및 워크스페이스 제거 기능이 동작하는지 확인합니다.
+- `/admin/logs`에서 워크스페이스 단위 주요 권한/보안 감사 이벤트 조회가 되는지 확인합니다.
 - `/admin/policy`에서 권한 정책 요약이 표시되는지 확인합니다.
 - `/operations`, `/operations/checklist`, `/operations/exceptions`, `/operations/month-end`, `/operations/imports`에서 운영 지원 read model이 정상 표시되는지 확인합니다.
 - `/operations/status`, `/operations/alerts`에서 시스템 상태와 파생 알림이 정상 표시되는지 확인합니다.

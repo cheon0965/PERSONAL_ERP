@@ -15,7 +15,7 @@
 - 현재 문서 정합성 검사는 `npm run docs:check`로도 단독 실행할 수 있습니다.
 - `npm run money:check`는 `apps/api/src`, `apps/web/src`, `packages/contracts/src`에서 money package 밖의 금액 필드 `Number(...)`, raw `+/-`, `+=/-=` 유입을 보수적으로 막습니다.
 - `npm run docs:check:npm-run`는 `README.md`, `CONTRIBUTING.md`, `ENVIRONMENT_SETUP.md`, `docs/**/*.md`의 `npm run` 표기를 루트/workspace 스크립트와 대조합니다.
-- `npm run docs:check:surface`는 `docs/API.md`, `docs/VALIDATION_NOTES.md`의 Web/API surface가 실제 `apps/web/app` 라우트와 controller 기반 Swagger surface와 맞는지 확인합니다.
+- `npm run docs:check:surface`는 `docs/API.md`, `docs/CURRENT_CAPABILITIES.md`, `docs/OPERATIONS_CHECKLIST.md`, `docs/VALIDATION_NOTES.md`의 Web/API surface가 실제 `apps/web/app` 라우트와 controller 기반 Swagger surface와 맞는지 확인합니다.
 
 ## 금액 정합성 검증 기준
 

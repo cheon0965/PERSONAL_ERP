@@ -2,7 +2,7 @@
   "name": "personal-erp-workspace",
   "private": true,
   "version": "0.1.0",
-  "description": "Buildable monthly financial operations ERP starter for owner-operators and small businesses using Next.js, NestJS, Prisma, and MySQL",
+  "description": "Buildable monthly financial operations ERP for owner-operators and small businesses using Next.js, NestJS, Prisma, and MySQL",
   "workspaces": [
     "apps/web",
     "apps/api",
