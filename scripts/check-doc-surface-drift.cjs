@@ -5,6 +5,16 @@ const path = require('node:path');
 
 const repoRoot = path.resolve(__dirname, '..');
 const apiDocPath = path.join(repoRoot, 'docs', 'API.md');
+const currentCapabilitiesPath = path.join(
+  repoRoot,
+  'docs',
+  'CURRENT_CAPABILITIES.md'
+);
+const operationsChecklistPath = path.join(
+  repoRoot,
+  'docs',
+  'OPERATIONS_CHECKLIST.md'
+);
 const validationNotesPath = path.join(repoRoot, 'docs', 'VALIDATION_NOTES.md');
 const webAppRoot = path.join(repoRoot, 'apps', 'web', 'app');
 const apiModulesRoot = path.join(repoRoot, 'apps', 'api', 'src', 'modules');
@@ -12,6 +22,8 @@ const apiModulesRoot = path.join(repoRoot, 'apps', 'api', 'src', 'modules');
 const ignoredWebRoutes = new Set(['/', '/login', '/settings']);
 
 const apiDocContent = readUtf8(apiDocPath);
+const currentCapabilitiesContent = readUtf8(currentCapabilitiesPath);
+const operationsChecklistContent = readUtf8(operationsChecklistPath);
 const validationNotesContent = readUtf8(validationNotesPath);
 
 const actualWebRoutes = collectWebRoutes(webAppRoot);
@@ -31,6 +43,16 @@ const documentedValidationOperations = extractDocumentedApiOperations(
   validationNotesContent
 );
 const documentedApiRouteMap = extractDocumentedWebToApiRouteMap(apiDocContent);
+const documentedCurrentCapabilityRoutes = extractDocumentedSectionRoutes(
+  currentCapabilitiesContent,
+  '## Web 화면 그룹'
+);
+const documentedOperationsChecklistRoutes =
+  extractDocumentedNestedSectionRoutes(
+    operationsChecklistContent,
+    '## 수동 스모크 체크',
+    '### Web'
+  );
 const documentedRouteCheckRoutes = extractValidationNotesWebRoutes(
   validationNotesContent
 );
@@ -52,6 +74,26 @@ for (const documentedRoute of documentedRouteCheckRoutes) {
   if (!actualWebRoutes.has(documentedRoute.value)) {
     findings.push({
       filePath: validationNotesPath,
+      lineNumber: documentedRoute.lineNumber,
+      message: `문서에 적힌 Web 경로 "${documentedRoute.value}"가 apps/web/app 라우트에 없습니다.`
+    });
+  }
+}
+
+for (const documentedRoute of documentedCurrentCapabilityRoutes) {
+  if (!actualWebRoutes.has(documentedRoute.value)) {
+    findings.push({
+      filePath: currentCapabilitiesPath,
+      lineNumber: documentedRoute.lineNumber,
+      message: `문서에 적힌 Web 경로 "${documentedRoute.value}"가 apps/web/app 라우트에 없습니다.`
+    });
+  }
+}
+
+for (const documentedRoute of documentedOperationsChecklistRoutes) {
+  if (!actualWebRoutes.has(documentedRoute.value)) {
+    findings.push({
+      filePath: operationsChecklistPath,
       lineNumber: documentedRoute.lineNumber,
       message: `문서에 적힌 Web 경로 "${documentedRoute.value}"가 apps/web/app 라우트에 없습니다.`
     });
@@ -122,7 +164,7 @@ if (findings.length > 0) {
 }
 
 console.log(
-  `[docs:check:surface] Web routes ${actualDocumentedWebRoutes.size}개, API operations ${actualApiOperationSet.size}개, docs/API route map ${documentedApiRouteMap.length}개, docs/API operations ${documentedApiOperations.length}개, docs/VALIDATION_NOTES web routes ${documentedRouteCheckRoutes.length}개를 확인했습니다.`
+  `[docs:check:surface] Web routes ${actualDocumentedWebRoutes.size}개, API operations ${actualApiOperationSet.size}개, docs/API route map ${documentedApiRouteMap.length}개, docs/API operations ${documentedApiOperations.length}개, docs/CURRENT_CAPABILITIES web routes ${documentedCurrentCapabilityRoutes.length}개, docs/OPERATIONS_CHECKLIST web routes ${documentedOperationsChecklistRoutes.length}개, docs/VALIDATION_NOTES web routes ${documentedRouteCheckRoutes.length}개를 확인했습니다.`
 );
 
 function collectWebRoutes(appRootDirectory) {
@@ -231,12 +273,16 @@ function extractDocumentedWebToApiRouteMap(fileContent) {
 }
 
 function extractValidationNotesWebRoutes(fileContent) {
+  return extractDocumentedSectionRoutes(fileContent, '### Web');
+}
+
+function extractDocumentedSectionRoutes(fileContent, headingText) {
   const routes = [];
   const lines = fileContent.split(/\r?\n/);
   const sectionState = createSectionState(lines);
 
   for (let index = 0; index < lines.length; index += 1) {
-    if (!sectionState.isInside(index, '### Web')) {
+    if (!sectionState.isInside(index, headingText)) {
       continue;
     }
 
@@ -251,14 +297,63 @@ function extractValidationNotesWebRoutes(fileContent) {
   return dedupeByValue(routes);
 }
 
+function extractDocumentedNestedSectionRoutes(
+  fileContent,
+  parentHeadingText,
+  childHeadingText
+) {
+  const lines = fileContent.split(/\r?\n/);
+  const headings = collectHeadings(lines);
+  const parentHeading = headings.find(
+    (heading) => heading.text === parentHeadingText
+  );
+
+  if (!parentHeading) {
+    return [];
+  }
+
+  const parentEndIndex =
+    headings.find(
+      (heading) =>
+        heading.index > parentHeading.index &&
+        heading.level <= parentHeading.level
+    )?.index ?? lines.length;
+
+  const childHeading = headings.find(
+    (heading) =>
+      heading.text === childHeadingText &&
+      heading.index > parentHeading.index &&
+      heading.index < parentEndIndex
+  );
+
+  if (!childHeading) {
+    return [];
+  }
+
+  const childEndIndex =
+    headings.find(
+      (heading) =>
+        heading.index > childHeading.index &&
+        heading.index < parentEndIndex &&
+        heading.level <= childHeading.level
+    )?.index ?? parentEndIndex;
+
+  const routes = [];
+
+  for (let index = childHeading.index + 1; index < childEndIndex; index += 1) {
+    for (const routeMatch of lines[index].matchAll(/`(\/[^`\s]+)`/g)) {
+      routes.push({
+        value: normalizeRoutePath(routeMatch[1]),
+        lineNumber: index + 1
+      });
+    }
+  }
+
+  return dedupeByValue(routes);
+}
+
 function createSectionState(lines) {
-  const headings = lines
-    .map((line, index) => ({
-      index,
-      level: countHeadingLevel(line),
-      text: line.trim()
-    }))
-    .filter((heading) => heading.level > 0);
+  const headings = collectHeadings(lines);
 
   return {
     isInside(lineIndex, headingText) {
@@ -280,6 +375,16 @@ function createSectionState(lines) {
       return lineIndex > startHeading.index && lineIndex < endIndex;
     }
   };
+}
+
+function collectHeadings(lines) {
+  return lines
+    .map((line, index) => ({
+      index,
+      level: countHeadingLevel(line),
+      text: line.trim()
+    }))
+    .filter((heading) => heading.level > 0);
 }
 
 function countHeadingLevel(line) {

@@ -93,10 +93,10 @@ if "%RUN_PHASE1_BACKFILL%"=="1" (
 )
 
 if "%RUN_DEMO_SEED%"=="1" (
-  echo [INFO] Ensuring demo account and starter data: %DEMO_SEED_SCRIPT%...
+  echo [INFO] Ensuring demo account and sample data: %DEMO_SEED_SCRIPT%...
   call npm.cmd run %DEMO_SEED_SCRIPT%
   if errorlevel 1 goto :error
-  echo [OK] Demo account and starter data are ready.
+  echo [OK] Demo account and sample data are ready.
   echo.
 ) else (
   echo [INFO] Skipping demo data seed.
@@ -151,9 +151,9 @@ echo   prod,--prod     Start in production mode (npm run start)
 echo   --build-first   Run build.bat --skip-install before starting servers
 echo   --skip-migrate  Skip database migration before startup
 echo   --skip-backfill Skip Phase 1 backbone backfill before startup
-echo   --skip-seed     Skip demo account and starter data seed before startup
-echo   --seed-demo     Ensure the demo account and starter data exist before startup
-echo   --seed-reset    Recreate only the demo account and its starter data before startup
+echo   --skip-seed     Skip demo account and sample data seed before startup
+echo   --seed-demo     Ensure the demo account and sample data exist before startup
+echo   --seed-reset    Recreate only the demo account and its sample data before startup
 echo   --migrate-dev   Use npm run db:migrate before startup
 echo   --migrate-deploy Use npm run db:deploy before startup (default)
 echo.

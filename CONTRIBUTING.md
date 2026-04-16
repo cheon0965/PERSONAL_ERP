@@ -82,7 +82,7 @@
 
 - 최소 실행 기준: `npm run check:quick`
 - PR 전 권장 기준: `npm run test`
-- `npm run check:quick`에는 `npm run docs:check`가 포함되며, 문서의 `npm run` 표기와 `docs/API.md`, `docs/VALIDATION_NOTES.md`의 Web/API surface가 실제 라우트와 controller 기반 Swagger surface와 맞는지 함께 확인합니다.
+- `npm run check:quick`에는 `npm run docs:check`가 포함되며, 문서의 `npm run` 표기와 `docs/API.md`, `docs/CURRENT_CAPABILITIES.md`, `docs/OPERATIONS_CHECKLIST.md`, `docs/VALIDATION_NOTES.md`의 Web/API surface가 실제 라우트와 controller 기반 Swagger surface와 맞는지 함께 확인합니다.
 - 인증/세션, CORS, 보안 헤더, 브라우저/API 경계 정책을 바꿨다면 `npm run test:security:api`를 같이 봅니다.
 - `package.json` 또는 lockfile을 바꿨다면 `npm run audit:runtime`와 CI `audit-runtime` 결과를 같이 확인합니다.
 - 남아 있는 runtime advisory 상세를 다시 볼 때는 `npm run audit:runtime:full`을 사용합니다.
@@ -114,6 +114,7 @@
 - 현재 구현된 엔드포인트 목록, DTO validation, 인증 노출 상태는 Swagger(`api/docs`)를 기준으로 확인합니다.
 - `docs/API.md`는 사람이 읽는 API 요약과 인증/쓰기 흐름 설명만 유지합니다.
 - `README.md`는 저장소 진입점과 빠른 시작만 담당하고, 상세 API 기준 문서 역할은 맡기지 않습니다.
+- `docs/CURRENT_CAPABILITIES.md`는 현재 구현된 기능과 운영 지원 범위의 요약 기준입니다.
 - `docs/VALIDATION_NOTES.md`는 “지금 실제로 무엇을 검증하고 있는가”와 남은 공백만 기록합니다.
 - `docs/PROJECT_PLAN.md`는 중기 로드맵, `PORTFOLIO_ARCHITECTURE_GUIDE.md`는 프로젝트 목적, 판단 원칙, 현재 아키텍처 설명을 기록합니다.
 - API, env, fallback, 테스트 범위가 바뀌면 관련 문서를 같은 PR에서 함께 갱신합니다.

@@ -139,9 +139,9 @@ export function PageHeader({
               flexWrap="wrap"
               sx={{ mt: 1.5 }}
             >
-              {badges.map((badge) => (
+              {badges.map((badge, index) => (
                 <Chip
-                  key={String(badge.label)}
+                  key={`badge-${index}-${String(badge.label)}`}
                   label={badge.label}
                   color={badge.color ?? 'default'}
                   variant={badge.variant ?? 'outlined'}
@@ -201,9 +201,9 @@ export function PageHeader({
           useFlexGap
           flexWrap="wrap"
         >
-          {metadata.map((item) => (
+          {metadata.map((item, index) => (
             <Stack
-              key={item.label}
+              key={`metadata-${index}-${item.label}`}
               spacing={0.35}
               sx={{
                 minWidth: 128,

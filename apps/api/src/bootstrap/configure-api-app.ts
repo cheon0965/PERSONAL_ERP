@@ -41,7 +41,7 @@ export function configureApiApp(
     const swaggerConfig = new DocumentBuilder()
       .setTitle('PERSONAL ERP API')
       .setDescription(
-        'Monthly operations ERP starter API for sole proprietors and small businesses'
+        'Monthly operations ERP API for sole proprietors and small businesses'
       )
       .setVersion('0.1.0')
       .addBearerAuth()
