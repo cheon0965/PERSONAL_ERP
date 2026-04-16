@@ -34,8 +34,19 @@ export function createAccountingPeriodStatePrismaMock(
         };
         select?: {
           id?: boolean;
+          tenantId?: boolean;
+          ledgerId?: boolean;
+          year?: boolean;
+          month?: boolean;
+          status?: boolean;
           startDate?: boolean;
           endDate?: boolean;
+          ledger?: {
+            select?: { baseCurrency?: boolean };
+          };
+          openingBalanceSnapshot?: {
+            select?: { id?: boolean; sourceKind?: boolean };
+          };
         };
         include?: {
           ledger?: {
@@ -121,12 +132,52 @@ export function createAccountingPeriodStatePrismaMock(
         }
 
         if (args.select) {
+          const ledger = args.select.ledger
+            ? findLedger(candidate.ledgerId)
+            : null;
+          const openingBalanceSnapshot = args.select.openingBalanceSnapshot
+            ? (state.openingBalanceSnapshots.find(
+                (snapshot) => snapshot.effectivePeriodId === candidate.id
+              ) ?? null)
+            : undefined;
+
           return {
             ...(args.select.id ? { id: candidate.id } : {}),
+            ...(args.select.tenantId ? { tenantId: candidate.tenantId } : {}),
+            ...(args.select.ledgerId ? { ledgerId: candidate.ledgerId } : {}),
+            ...(args.select.year ? { year: candidate.year } : {}),
+            ...(args.select.month ? { month: candidate.month } : {}),
+            ...(args.select.status ? { status: candidate.status } : {}),
             ...(args.select.startDate
               ? { startDate: candidate.startDate }
               : {}),
-            ...(args.select.endDate ? { endDate: candidate.endDate } : {})
+            ...(args.select.endDate ? { endDate: candidate.endDate } : {}),
+            ...(args.select.ledger
+              ? {
+                  ledger: ledger
+                    ? {
+                        ...(args.select.ledger.select?.baseCurrency
+                          ? { baseCurrency: ledger.baseCurrency }
+                          : {})
+                      }
+                    : null
+                }
+              : {}),
+            ...(args.select.openingBalanceSnapshot
+              ? {
+                  openingBalanceSnapshot: openingBalanceSnapshot
+                    ? {
+                        ...(args.select.openingBalanceSnapshot.select?.id
+                          ? { id: openingBalanceSnapshot.id }
+                          : {}),
+                        ...(args.select.openingBalanceSnapshot.select
+                          ?.sourceKind
+                          ? { sourceKind: openingBalanceSnapshot.sourceKind }
+                          : {})
+                      }
+                    : null
+                }
+              : {})
           };
         }
 
@@ -207,6 +258,9 @@ export function createAccountingPeriodStatePrismaMock(
       findMany: async (args: {
         where?: { tenantId?: string; ledgerId?: string };
         include?: {
+          ledger?: {
+            select?: { baseCurrency?: boolean };
+          };
           openingBalanceSnapshot?: {
             select?: { sourceKind?: boolean };
           };
@@ -238,6 +292,9 @@ export function createAccountingPeriodStatePrismaMock(
         items = sortAccountingPeriods(items);
 
         return items.map((candidate) => {
+          const ledger = args.include?.ledger
+            ? findLedger(candidate.ledgerId)
+            : null;
           const openingBalanceSnapshot = args.include?.openingBalanceSnapshot
             ? (state.openingBalanceSnapshots.find(
                 (snapshot) => snapshot.effectivePeriodId === candidate.id
@@ -283,6 +340,17 @@ export function createAccountingPeriodStatePrismaMock(
             nextJournalEntrySequence: resolveNextJournalEntrySequence(
               candidate.id
             ),
+            ...(args.include?.ledger
+              ? {
+                  ledger: ledger
+                    ? {
+                        ...(args.include.ledger.select?.baseCurrency
+                          ? { baseCurrency: ledger.baseCurrency }
+                          : {})
+                      }
+                    : null
+                }
+              : {}),
             ...(args.include?.openingBalanceSnapshot
               ? {
                   openingBalanceSnapshot: openingBalanceSnapshot

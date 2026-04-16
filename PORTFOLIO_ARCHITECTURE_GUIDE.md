@@ -92,14 +92,16 @@ docs/          -> 개발, 운영, ADR, 아키텍처 문서
 [ Asset & Coverage ] ----------- read ------> [ Insight & Planning ]
 ```
 
-| Context              | 현재 모듈                                                                                                                                                                                                                                   | 소유 책임                                                     | 읽기/쓰기 성격     | 나중에 분리한다면                 |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------ | --------------------------------- |
-| Identity & Access    | `auth`, `common/auth`                                                                                                                                                                                                                       | 로그인, 토큰, 요청 주체 인증 경계                             | cross-cutting      | 공통 인증 계층                    |
-| Ledger               | `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `reference-data-readiness`, `accounting-periods`, `collected-transactions`, `journal-entries`, `import-batches`, `financial-statements`, `carry-forwards` | 기준 데이터, 월 운영, 수집/전표, 업로드, 공식 보고, 차기 이월 | 핵심 쓰기          | 가장 강한 후보                    |
-| Recurring Automation | `recurring-rules`, `plan-items`                                                                                                                                                                                                             | 반복규칙 정의, 계획 항목 생성과 추적성                        | 쓰기 + Ledger 참조 | Ledger 다음 후보                  |
-| Asset & Coverage     | `vehicles`, `insurance-policies`                                                                                                                                                                                                            | 운영비 성격의 자산/보장 도메인                                | 현재는 조회 중심   | 별도 도메인 후보                  |
-| Insight & Planning   | `dashboard`, `forecast`                                                                                                                                                                                                                     | 여러 컨텍스트를 읽어 요약/예측                                | 읽기/조합 중심     | 나중에 BFF 또는 read service 후보 |
-| Platform & Contracts | `packages/contracts`, `packages/money`, env, Prisma, health, 공통 외부 의존성 조립                                                                                                                                                          | 계약 원천, 금액 값 기준, 런타임 기반선                        | 지원 계층          | 공통 플랫폼 성격                  |
+| Context                  | 현재 모듈                                                                                                                                                                                                                                   | 소유 책임                                                             | 읽기/쓰기 성격     | 나중에 분리한다면                 |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ------------------ | --------------------------------- |
+| Identity & Access        | `auth`, `common/auth`                                                                                                                                                                                                                       | 로그인, 토큰, 요청 주체 인증, 회원가입, 이메일 인증, 계정 보안 경계   | cross-cutting      | 공통 인증 계층                    |
+| Workspace Administration | `workspace-settings`, `admin`, `navigation`, `common/infrastructure/operational`                                                                                                                                                            | workspace 설정, 멤버/권한 정책, 감사 이벤트, DB 메뉴 트리             | 쓰기 + 운영 관리   | 도메인 후보                       |
+| Ledger                   | `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `reference-data-readiness`, `accounting-periods`, `collected-transactions`, `journal-entries`, `import-batches`, `financial-statements`, `carry-forwards` | 기준 데이터, 월 운영, 수집/전표, 업로드, 공식 보고, 차기 이월         | 핵심 쓰기          | 가장 강한 후보                    |
+| Recurring Automation     | `recurring-rules`, `plan-items`                                                                                                                                                                                                             | 반복규칙 정의, 계획 항목 생성과 추적성                                | 쓰기 + Ledger 참조 | Ledger 다음 후보                  |
+| Asset & Coverage         | `vehicles`, `insurance-policies`                                                                                                                                                                                                            | 운영비 성격의 자산/보장 도메인                                        | 현재는 조회 중심   | 별도 도메인 후보                  |
+| Operations Support       | `operations-console`                                                                                                                                                                                                                        | 운영 체크리스트, 예외, 마감/업로드 현황, 시스템 상태, 알림, 반출/메모 | 읽기/운영 보조     | read service 보조 후보            |
+| Insight & Planning       | `dashboard`, `forecast`                                                                                                                                                                                                                     | 여러 컨텍스트를 읽어 요약/예측                                        | 읽기/조합 중심     | 나중에 BFF 또는 read service 후보 |
+| Platform & Contracts     | `packages/contracts`, `packages/money`, env, Prisma, health, 공통 외부 의존성 조립                                                                                                                                                          | 계약 원천, 금액 값 기준, 런타임 기반선                                | 지원 계층          | 공통 플랫폼 성격                  |
 
 여기서 `Ledger`는 현재 코드베이스의 컨텍스트 이름입니다.  
 현재 API 모듈명은 `funding-accounts`, `accounting-periods`, `insurance-policies`, `vehicles`, `recurring-rules`, `plan-items`, `collected-transactions`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`, `dashboard`, `forecast` 등이 있고, Web 화면/라우트는 사용자 경험 관점의 shorthand로 `transactions`, `periods`, `imports`, `reference-data`, `insurances` 등을 함께 사용합니다.
@@ -153,12 +155,12 @@ docs/          -> 개발, 운영, ADR, 아키텍처 문서
 controller -> service -> repository -> mapper/calculator
 ```
 
-이 구조는 `funding-accounts`, `categories`, `reference-data-readiness`, `vehicles`, `insurance-policies`, `auth`, `accounting-periods`, `journal-entries`, `dashboard`, `forecast` 같은 영역에서 여전히 유효하다.
+이 구조는 `funding-accounts`, `categories`, `reference-data-readiness`, `vehicles`, `workspace-settings`, `navigation` 같은 영역에서 여전히 유효하다.
 특히 CRUD 성격이 강하거나, 계산 로직만 분리하면 충분한 영역에서는 이 방식이 더 읽기 쉽고 유지보수도 쉽다.
 
-### 3. 핵심 쓰기 모델만 선택적으로 더 엄격한 구조를 쓴다
+### 3. 핵심 쓰기 모델과 운영 영역을 선택적으로 더 엄격한 구조로 승격했다
 
-`collected-transactions`와 `recurring-rules`는 현재 아래 흐름을 사용한다.
+`collected-transactions`와 `recurring-rules`를 시작으로, `accounting-periods`, `import-batches`, `journal-entries`, `auth`, `admin`, `insurance-policies`, `plan-items`, `financial-statements`, `carry-forwards`까지 핵심 모듈을 아래 흐름으로 승격했다.
 
 ```text
 controller -> use-case -> port -> adapter
@@ -168,10 +170,13 @@ controller -> use-case -> port -> adapter
 
 이렇게 한 이유는 간단하다.
 
-- 두 모듈은 프로젝트의 핵심 쓰기 모델이다.
-- 접근 범위 검증, 입력 규칙, 생성 흐름이 중요하다.
+- 이 모듈들은 프로젝트의 핵심 쓰기 모델이거나 운영 관리의 핵심 경계다.
+- 접근 범위 검증, 입력 규칙, 생성 흐름, 상태 전이, 보호 정책이 중요하다.
 - 테스트와 설명 가치가 높다.
 - 다른 모든 모듈에 같은 복잡도를 강요할 필요는 없다.
+
+`auth`는 회원가입, 이메일 인증, 로그인, 세션, 계정 보안 등 10개 use-case로 분리했고, `admin`은 초대/역할/상태/제거 4개 use-case로 분리했다.
+`auth`와 `admin`은 완전한 포트/어댑터 분리 대신 use-case 단위로 로직을 분리하고 SupportService를 통해 공통 로직을 공유하는 "얇은 Hexagonal" 구조를 채택했다.
 
 ### 4. 대상 모듈은 `public.ts`를 공식 공개 경계로 둔다
 
@@ -186,16 +191,19 @@ controller -> use-case -> port -> adapter
 
 ## 현재 구조를 영역별로 평가하면
 
-| 영역                                                                  | 현재 구조                                                    | 왜 이렇게 두었나                                            | 목적 부합도 |
-| --------------------------------------------------------------------- | ------------------------------------------------------------ | ----------------------------------------------------------- | ----------- |
-| Web                                                                   | `app / features / shared` + Provider 패턴                    | 화면 개발과 사용자 흐름이 중심이기 때문                     | 매우 부합   |
-| Contracts                                                             | `packages/contracts` 단일 계약 원천                          | Web/API 계약 충돌을 줄이기 위해                             | 매우 부합   |
-| Funding Accounts / Categories / Reference Data / Vehicles / Insurance | controller-service-repository-mapper                         | 규칙보다 CRUD 성격이 더 강함                                | 매우 부합   |
-| Collected Transactions                                                | use-case/port/adapter + pure policy                          | 핵심 쓰기 모델, 설명 가치와 테스트 가치가 큼                | 매우 부합   |
-| Recurring Rules                                                       | use-case/port/adapter + 최소 recurrence policy               | Collected Transactions 패턴을 재사용하면서도 과설계는 피함  | 매우 부합   |
-| Dashboard / Forecast                                                  | read service + read repository + projection                  | 읽기 조합 컨텍스트라는 역할을 코드 이름에서도 드러내기 위해 | 매우 부합   |
-| Auth                                                                  | global module + guard + service, Prisma/JWT/argon2 직접 사용 | 중요하지만 cross-cutting concern이라 지금은 실용성이 우선   | 부분 부합   |
-| Common external dependencies                                          | `ClockPort`, `ExternalDependenciesModule` 도입               | 외부 의존성 추상화의 최소 예시를 먼저 고정                  | 부합        |
+| 영역                                                                    | 현재 구조                                      | 왜 이렇게 두었나                                                  | 목적 부합도 |
+| ----------------------------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------- | ----------- |
+| Web                                                                     | `app / features / shared` + Provider 패턴      | 화면 개발과 사용자 흐름이 중심이기 때문                           | 매우 부합   |
+| Contracts                                                               | `packages/contracts` 단일 계약 원천            | Web/API 계약 충돌을 줄이기 위해                                   | 매우 부합   |
+| Funding Accounts / Categories / Reference Data / Vehicles               | controller-service-repository-mapper           | 규칙보다 CRUD 성격이 더 강함                                      | 매우 부합   |
+| Collected Transactions / Recurring Rules                                | use-case/port/adapter + pure policy            | 핵심 쓰기 모델, 설명 가치와 테스트 가치가 큼                      | 매우 부합   |
+| Accounting Periods / Import Batches / Journal Entries                   | use-case/port/adapter + domain policy          | 기간 보호, 업로드 승격, 전표 정정/반전의 정합성 중요도 높음       | 매우 부합   |
+| Auth                                                                    | 10개 use-case 기반, SupportService 공유        | 회원가입/인증/로그인/세션/계정보안 등 협력자 다수, 책임 분리 완료 | 매우 부합   |
+| Admin                                                                   | 4개 use-case + query service + command support | 멤버 라이프사이클 정책 분리, Owner 보호 정책 명확화               | 매우 부합   |
+| Insurance Policies / Plan Items / Financial Statements / Carry-forwards | use-case/port + 선택적 domain policy           | P1 승격으로 구조 완결, 직접 Prisma 의존 축소                      | 부합        |
+| Operations Console                                                      | command service + read repository + support    | 읽기 운영 표면의 mega service 분해, command/read 분리             | 부합        |
+| Dashboard / Forecast                                                    | read service + read repository + projection    | 읽기 조합 컨텍스트라는 역할을 코드 이름에서도 드러내기 위해       | 매우 부합   |
+| Common external dependencies                                            | `ClockPort`, `ExternalDependenciesModule` 도입 | 외부 의존성 추상화의 최소 예시를 먼저 고정                        | 부합        |
 
 ## 의존성 주입은 어디까지 하고 어디서 멈췄는가
 
@@ -298,7 +306,6 @@ controller -> use-case -> port -> adapter
 
 ### 아직 완전히 끝나지 않은 부분
 
-- `Auth`는 아직 Prisma, JWT, argon2에 직접 결합되어 있다.
 - GitHub 저장소 보호 규칙은 문서화되어 있지만, private repository 플랜이나 실제 설정 상태에 따라 서버 강제가 바로 적용되지 않을 수 있다.
 - 운영 레벨 세부 정책은 문서화되어 있지만, 실제 배포 환경에서 끝까지 검증한 상태는 아니다.
 
@@ -324,7 +331,7 @@ controller -> use-case -> port -> adapter
 
 ## 현재 단계 결론
 
-2026-04-12 기준으로 이 프로젝트는 다음 상태로 보는 것이 가장 정확하다.
+2026-04-16 기준으로 이 프로젝트는 다음 상태로 보는 것이 가장 정확하다.
 
 - MSA-ready P0 `Context Map와 금지선`: 완료
 - MSA-ready P1 `Module Public API / Internal Implementation 경계`: 완료

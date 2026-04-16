@@ -9,7 +9,9 @@ import {
   PlanItemStatus,
   Prisma
 } from '@prisma/client';
+import { PlanItemGenerationPort } from '../src/modules/plan-items/application/ports/plan-item-generation.port';
 import { GeneratePlanItemsUseCase } from '../src/modules/plan-items/generate-plan-items.use-case';
+import { PrismaPlanItemGenerationAdapter } from '../src/modules/plan-items/infrastructure/prisma/prisma-plan-item-generation.adapter';
 import { PlanItemsService } from '../src/modules/plan-items/plan-items.service';
 
 const user: AuthenticatedUser = {
@@ -73,7 +75,7 @@ test('GeneratePlanItemsUseCase generates plan items for recurring rules inside t
 
   const prisma = createPrismaMock(period, state);
   const useCase = new GeneratePlanItemsUseCase(
-    prisma as never,
+    new PrismaPlanItemGenerationAdapter(prisma as never),
     new PlanItemsService(prisma as never)
   );
   const result = await useCase.execute(user, { periodId: period.id });
@@ -190,7 +192,7 @@ test('GeneratePlanItemsUseCase skips existing occurrences and excludes recurring
 
   const prisma = createPrismaMock(period, state);
   const useCase = new GeneratePlanItemsUseCase(
-    prisma as never,
+    new PrismaPlanItemGenerationAdapter(prisma as never),
     new PlanItemsService(prisma as never)
   );
   const result = await useCase.execute(user, { periodId: period.id });
@@ -231,7 +233,7 @@ test('GeneratePlanItemsUseCase rejects editor role because plan generation is li
     })
   );
   const useCase = new GeneratePlanItemsUseCase(
-    prisma as never,
+    new PrismaPlanItemGenerationAdapter(prisma as never),
     new PlanItemsService(prisma as never)
   );
 
@@ -315,7 +317,7 @@ test('GeneratePlanItemsUseCase treats duplicate plan item inserts as skipped and
   };
 
   const useCase = new GeneratePlanItemsUseCase(
-    prisma as never,
+    new PrismaPlanItemGenerationAdapter(prisma as never),
     new PlanItemsService(prisma as never)
   );
   const result = await useCase.execute(user, { periodId: period.id });

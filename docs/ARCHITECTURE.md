@@ -55,7 +55,7 @@ docs/
 | Context                  | 현재 모듈                                                                                                                                                                                                                                   | 역할                                                                     |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | Identity & Access        | `auth`, `common/auth`                                                                                                                                                                                                                       | 로그인, 토큰, 계정 보안, 요청 주체 인증 기준선                           |
-| Workspace Administration | `workspace-settings`, `admin`, `common/infrastructure/operational`                                                                                                                                                                          | workspace 설정, 멤버/권한 정책, 감사 이벤트 저장과 조회                  |
+| Workspace Administration | `workspace-settings`, `admin`, `navigation`, `common/infrastructure/operational`                                                                                                                                                            | workspace 설정, 멤버/권한 정책, 감사 이벤트 저장과 조회, DB 메뉴 트리    |
 | Ledger                   | `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `reference-data-readiness`, `accounting-periods`, `collected-transactions`, `journal-entries`, `import-batches`, `financial-statements`, `carry-forwards` | 기준 데이터, 월 운영, 업로드 수집/전표, 공식 보고, 차기 이월 컨텍스트    |
 | Recurring Automation     | `recurring-rules`, `plan-items`                                                                                                                                                                                                             | 반복규칙 정의와 기간별 계획 항목 생성/정합성                             |
 | Asset & Coverage         | `vehicles`, `insurance-policies`                                                                                                                                                                                                            | 운영비 성격의 자산/보장 도메인                                           |
@@ -123,9 +123,10 @@ Insight Context: controller -> read service -> read repository -> projection
 - 외부 의존성 포트는 `apps/api/src/common/application/ports`에 둡니다.
 - 공통 어댑터 조립은 `apps/api/src/common/infrastructure`에서 시작합니다.
 - `application/domain/infrastructure` 폴더는 실제 전환 대상 모듈에서만 만듭니다.
-- `collected-transactions`, `recurring-rules` 는 이미 `use-case/port/adapter` 경계로 전환되었습니다.
+- 현재 승격 완료 모듈: `collected-transactions`, `recurring-rules`, `accounting-periods`, `import-batches`, `journal-entries`, `auth`, `admin`, `insurance-policies`, `plan-items`, `financial-statements`, `carry-forwards`, `operations-console` — `docs/completed/REFACTORING_EXECUTION_PLAN.md` 참조
 - `collected-transactions`, `recurring-rules`, `dashboard`, `forecast`는 모듈 바깥에서 각 모듈의 `public.ts`만 공식 진입점으로 사용합니다.
 - `dashboard`, `forecast`는 `read service -> read repository -> projection` 네이밍으로 읽기 조합 컨텍스트임을 코드에서 드러냅니다.
+- `auth`는 10개 use-case + SupportService 기반 "얇은 Hexagonal" 구조, `admin`은 4개 use-case + CommandSupport/QueryService 기반 구조를 채택했습니다.
 - 나머지 모듈은 설명 가능한 이유가 생길 때만 같은 방향으로 옮깁니다.
 - mapper/calculator/helper는 계속 함수 또는 plain class로 두고 provider/token으로 만들지 않습니다.
 
@@ -153,7 +154,7 @@ Insight Context: controller -> read service -> read repository -> projection
 
 ## 6. 인증과 접근 경계
 
-- `health`, `health/ready`, `auth/login`, `auth/refresh`, `auth/logout`을 제외한 API는 기본적으로 보호됩니다.
+- `health`, `health/ready`, `auth/register`, `auth/verify-email`, `auth/resend-verification`, `auth/accept-invitation`, `auth/login`, `auth/refresh`, `auth/logout`을 제외한 API는 기본적으로 보호됩니다.
 - 컨트롤러와 서비스는 인증된 `user.currentWorkspace`를 받고, 도메인 write 흐름에서는 이를 `tenantId`, `ledgerId`, `TenantMembership`, `ActorRef` 기준으로 해석해야 합니다.
 - 현재 HTTP surface와 요청 단위 검증은 user-scoped 전단계가 아니라 workspace-scoped tenant/ledger 접근 판정을 기준으로 유지합니다.
 - 계좌, 카테고리, 장부, 기간, 업로드 배치, 전표 등 참조 대상은 tenant/ledger 접근 범위 안에서 검증합니다.

@@ -36,6 +36,8 @@
 22. 운영 보조 화면 1차 체계 구현
     사업장 설정, 내 계정/보안, 권한 정책 요약, 운영 체크리스트, 예외 처리함, 월 마감 대시보드, 업로드 운영 현황, 시스템 상태/헬스, 감사 로그 고도화, 알림 센터, 수동 UTF-8 CSV 반출, 운영 메모/인수인계까지 완료.
     실행 계획은 [`completed/OPERATIONS_SUPPORT_SURFACES_EXECUTION_PLAN.md`](./completed/OPERATIONS_SUPPORT_SURFACES_EXECUTION_PLAN.md)에 보관합니다.
+23. 핵심 원장 P0 리팩토링 1차 반영
+    `accounting-periods`, `import-batches`, `journal-entries`, `operations-console`의 우선 경계를 현재 리팩토링 기준선에 맞춰 분리하기 시작했고, 이후 P1 모듈(`auth`, `admin`, `insurance-policies`, `plan-items`, `financial-statements`, `carry-forwards`)과 Web 대형 파일 분해까지 완료하여 [`completed/REFACTORING_EXECUTION_PLAN.md`](./completed/REFACTORING_EXECUTION_PLAN.md)에 보관합니다.
 
 ## 현재 MVP 범위
 
@@ -50,12 +52,12 @@
 - 전표 조회/reverse/correct
 - 재무제표 조회/generate
 - 차기 이월 조회/generate
-- 보험 조회/생성/수정
-- 차량 조회/생성/수정
+- 보험 조회/생성/수정/삭제
+- 차량 조회/생성/수정과 연료/정비 이력 생성/수정
 - 대시보드 요약
 - 기간 운영 전망(현재 월/다음 달 예측)
 - 사업장 설정과 내 계정/보안
-- 관리자 권한 정책 요약과 감사 로그 고도화
+- 관리자 멤버 초대/역할·상태 관리, 메뉴/권한, 권한 정책 요약, 감사 로그
 - 운영 지원 허브, 체크리스트, 예외 처리함, 월 마감/업로드 운영 현황
 - 시스템 상태/헬스, 알림 센터, 수동 CSV 내보내기, 운영 메모/인수인계
 - 디자인 시스템 공통 컴포넌트와 대시보드형 화면 패턴

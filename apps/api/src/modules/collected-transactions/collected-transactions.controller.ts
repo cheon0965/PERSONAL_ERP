@@ -36,7 +36,7 @@ import {
   logWorkspaceActionDenied,
   logWorkspaceActionSucceeded
 } from '../../common/infrastructure/operational/workspace-action.audit';
-import { AccountingPeriodsService } from '../accounting-periods/accounting-periods.service';
+import { AccountingPeriodWriteGuardPort } from '../accounting-periods/public';
 import { DeleteCollectedTransactionUseCase } from './application/use-cases/delete-collected-transaction.use-case';
 import { GetCollectedTransactionDetailUseCase } from './application/use-cases/get-collected-transaction-detail.use-case';
 import { CreateCollectedTransactionUseCase } from './application/use-cases/create-collected-transaction.use-case';
@@ -58,7 +58,7 @@ export class CollectedTransactionsController {
     private readonly updateCollectedTransactionUseCase: UpdateCollectedTransactionUseCase,
     private readonly deleteCollectedTransactionUseCase: DeleteCollectedTransactionUseCase,
     private readonly confirmCollectedTransactionUseCase: ConfirmCollectedTransactionUseCase,
-    private readonly accountingPeriodsService: AccountingPeriodsService,
+    private readonly accountingPeriodWriteGuard: AccountingPeriodWriteGuardPort,
     private readonly securityEvents: SecurityEventLogger
   ) {}
 
@@ -110,8 +110,11 @@ export class CollectedTransactionsController {
       );
 
       const currentPeriod =
-        await this.accountingPeriodsService.assertCollectingDateAllowed(
-          user,
+        await this.accountingPeriodWriteGuard.assertCollectingDateAllowed(
+          {
+            tenantId: workspace.tenantId,
+            ledgerId: workspace.ledgerId
+          },
           dto.businessDate
         );
 
@@ -187,8 +190,11 @@ export class CollectedTransactionsController {
       );
 
       const currentPeriod =
-        await this.accountingPeriodsService.assertCollectingDateAllowed(
-          user,
+        await this.accountingPeriodWriteGuard.assertCollectingDateAllowed(
+          {
+            tenantId: workspace.tenantId,
+            ledgerId: workspace.ledgerId
+          },
           dto.businessDate
         );
 
@@ -281,8 +287,11 @@ export class CollectedTransactionsController {
       }
 
       const currentPeriod =
-        await this.accountingPeriodsService.assertCollectingDateAllowed(
-          user,
+        await this.accountingPeriodWriteGuard.assertCollectingDateAllowed(
+          {
+            tenantId: workspace.tenantId,
+            ledgerId: workspace.ledgerId
+          },
           existing.businessDate
         );
 

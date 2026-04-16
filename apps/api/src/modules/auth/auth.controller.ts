@@ -39,7 +39,17 @@ import { assertAllowedBrowserOrigin } from '../../common/infrastructure/security
 import { getApiEnv } from '../../config/api-env';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { Public } from '../../common/auth/public.decorator';
-import { AuthService } from './auth.service';
+import { AuthAccountSecurityService } from './auth-account-security.service';
+import { AcceptInvitationUseCase } from './application/use-cases/accept-invitation.use-case';
+import { ChangePasswordUseCase } from './application/use-cases/change-password.use-case';
+import { LoginUseCase } from './application/use-cases/login.use-case';
+import { LogoutUseCase } from './application/use-cases/logout.use-case';
+import { RefreshSessionUseCase } from './application/use-cases/refresh-session.use-case';
+import { RegisterUseCase } from './application/use-cases/register.use-case';
+import { ResendVerificationEmailUseCase } from './application/use-cases/resend-verification-email.use-case';
+import { RevokeOtherSessionUseCase } from './application/use-cases/revoke-other-session.use-case';
+import { UpdateAccountProfileUseCase } from './application/use-cases/update-account-profile.use-case';
+import { VerifyEmailUseCase } from './application/use-cases/verify-email.use-case';
 import { LoginDto } from './dto/login.dto';
 import { AcceptInvitationDto } from './dto/accept-invitation.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -69,7 +79,17 @@ function getRefreshCookieOptions() {
 @Controller('auth')
 export class AuthController {
   constructor(
-    private readonly authService: AuthService,
+    private readonly authAccountSecurityService: AuthAccountSecurityService,
+    private readonly registerUseCase: RegisterUseCase,
+    private readonly verifyEmailUseCase: VerifyEmailUseCase,
+    private readonly resendVerificationEmailUseCase: ResendVerificationEmailUseCase,
+    private readonly acceptInvitationUseCase: AcceptInvitationUseCase,
+    private readonly loginUseCase: LoginUseCase,
+    private readonly refreshSessionUseCase: RefreshSessionUseCase,
+    private readonly logoutUseCase: LogoutUseCase,
+    private readonly updateAccountProfileUseCase: UpdateAccountProfileUseCase,
+    private readonly changePasswordUseCase: ChangePasswordUseCase,
+    private readonly revokeOtherSessionUseCase: RevokeOtherSessionUseCase,
     private readonly securityEvents: SecurityEventLogger
   ) {}
 
@@ -82,7 +102,7 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response
   ) {
     this.ensureAllowedCookieOrigin(request);
-    const result = await this.authService.register(dto, {
+    const result = await this.registerUseCase.execute(dto, {
       clientIp: readClientIp(request),
       requestId: readRequestId(request)
     });
@@ -99,7 +119,7 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response
   ) {
     this.ensureAllowedCookieOrigin(request);
-    const result = await this.authService.verifyEmail(dto, {
+    const result = await this.verifyEmailUseCase.execute(dto, {
       clientIp: readClientIp(request),
       requestId: readRequestId(request)
     });
@@ -116,7 +136,7 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response
   ) {
     this.ensureAllowedCookieOrigin(request);
-    const result = await this.authService.resendVerificationEmail(dto, {
+    const result = await this.resendVerificationEmailUseCase.execute(dto, {
       clientIp: readClientIp(request),
       requestId: readRequestId(request)
     });
@@ -133,7 +153,7 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response
   ) {
     this.ensureAllowedCookieOrigin(request);
-    const result = await this.authService.acceptInvitation(dto, {
+    const result = await this.acceptInvitationUseCase.execute(dto, {
       clientIp: readClientIp(request),
       requestId: readRequestId(request)
     });
@@ -150,7 +170,7 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response
   ) {
     this.ensureAllowedCookieOrigin(request);
-    const result = await this.authService.login(dto, {
+    const result = await this.loginUseCase.execute(dto, {
       clientIp: readClientIp(request),
       requestId: readRequestId(request)
     });
@@ -172,7 +192,7 @@ export class AuthController {
   ) {
     this.ensureAllowedCookieOrigin(request);
     const refreshToken = this.readRequiredRefreshTokenCookie(request);
-    const result = await this.authService.refresh(refreshToken, {
+    const result = await this.refreshSessionUseCase.execute(refreshToken, {
       clientIp: readClientIp(request),
       requestId: readRequestId(request)
     });
@@ -193,7 +213,7 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response
   ) {
     this.ensureAllowedCookieOrigin(request);
-    await this.authService.logout(readOptionalRefreshTokenCookie(request), {
+    await this.logoutUseCase.execute(readOptionalRefreshTokenCookie(request), {
       clientIp: readClientIp(request),
       requestId: readRequestId(request)
     });
@@ -224,7 +244,7 @@ export class AuthController {
       workspace
     });
 
-    const response = await this.authService.getAccountSecurity(
+    const response = await this.authAccountSecurityService.getAccountSecurity(
       user,
       workspace,
       currentSessionId ?? ''
@@ -256,7 +276,7 @@ export class AuthController {
       workspace
     });
 
-    const response = await this.authService.updateAccountProfile(
+    const response = await this.updateAccountProfileUseCase.execute(
       user,
       workspace,
       request,
@@ -291,7 +311,7 @@ export class AuthController {
       workspace
     });
 
-    const response = await this.authService.changePassword(
+    const response = await this.changePasswordUseCase.execute(
       user,
       workspace,
       request,
@@ -328,7 +348,7 @@ export class AuthController {
       workspace
     });
 
-    const response = await this.authService.revokeOtherSession(
+    const response = await this.revokeOtherSessionUseCase.execute(
       user,
       workspace,
       request,

@@ -29,14 +29,20 @@ import {
 } from '../../common/infrastructure/operational/workspace-action.audit';
 import { CreateInsurancePolicyDto } from './dto/create-insurance-policy.dto';
 import { UpdateInsurancePolicyDto } from './dto/update-insurance-policy.dto';
-import { InsurancePoliciesService } from './insurance-policies.service';
+import { CreateInsurancePolicyUseCase } from './application/use-cases/create-insurance-policy.use-case';
+import { DeleteInsurancePolicyUseCase } from './application/use-cases/delete-insurance-policy.use-case';
+import { UpdateInsurancePolicyUseCase } from './application/use-cases/update-insurance-policy.use-case';
+import { InsurancePolicyQueryService } from './insurance-policy-query.service';
 
 @ApiTags('insurance-policies')
 @ApiBearerAuth()
 @Controller('insurance-policies')
 export class InsurancePoliciesController {
   constructor(
-    private readonly insurancePoliciesService: InsurancePoliciesService,
+    private readonly insurancePolicyQueryService: InsurancePolicyQueryService,
+    private readonly createInsurancePolicyUseCase: CreateInsurancePolicyUseCase,
+    private readonly updateInsurancePolicyUseCase: UpdateInsurancePolicyUseCase,
+    private readonly deleteInsurancePolicyUseCase: DeleteInsurancePolicyUseCase,
     private readonly securityEvents: SecurityEventLogger
   ) {}
 
@@ -45,7 +51,7 @@ export class InsurancePoliciesController {
     @CurrentUser() user: AuthenticatedUser,
     @Query('includeInactive') includeInactive?: string
   ) {
-    return this.insurancePoliciesService.findAll(user, {
+    return this.insurancePolicyQueryService.findAll(user, {
       includeInactive: readBooleanQueryFlag(includeInactive)
     });
   }
@@ -64,7 +70,7 @@ export class InsurancePoliciesController {
         'insurance_policy.create'
       );
 
-      const created = await this.insurancePoliciesService.create(user, dto);
+      const created = await this.createInsurancePolicyUseCase.execute(user, dto);
 
       logWorkspaceActionSucceeded(this.securityEvents, {
         action: 'insurance_policy.create',
@@ -109,7 +115,7 @@ export class InsurancePoliciesController {
         'insurance_policy.delete'
       );
 
-      const deleted = await this.insurancePoliciesService.delete(
+      const deleted = await this.deleteInsurancePolicyUseCase.execute(
         user,
         insurancePolicyId
       );
@@ -160,7 +166,7 @@ export class InsurancePoliciesController {
         'insurance_policy.update'
       );
 
-      const updated = await this.insurancePoliciesService.update(
+      const updated = await this.updateInsurancePolicyUseCase.execute(
         user,
         insurancePolicyId,
         dto

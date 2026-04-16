@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { AccountingPeriodsModule } from '../accounting-periods/accounting-periods.module';
+import { AccountingPeriodsModule } from '../accounting-periods/public';
 import { ReferenceOwnershipPort } from './application/ports/reference-ownership.port';
 import { CollectedTransactionStorePort } from './application/ports/collected-transaction-store.port';
 import { DeleteCollectedTransactionUseCase } from './application/use-cases/delete-collected-transaction.use-case';

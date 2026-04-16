@@ -17,19 +17,19 @@ import { requireCurrentWorkspace } from '../../common/auth/required-workspace.ut
 import { readWorkspaceActorRef } from '../../common/auth/workspace-actor-ref.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { AccountingPeriodReaderPort } from './application/ports/accounting-period-reader.port';
 import { mapAccountingPeriodRecordToItem } from './accounting-period.mapper';
 import { normalizeOptionalText } from './accounting-period.policy';
 import {
   assertAccountingPeriodCanBeReopened,
   assertAccountingPeriodCanBeReopenedWithoutDependents
 } from './accounting-period-transition.policy';
-import { AccountingPeriodsService } from './accounting-periods.service';
 
 @Injectable()
 export class ReopenAccountingPeriodUseCase {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly accountingPeriodsService: AccountingPeriodsService
+    private readonly accountingPeriodReader: AccountingPeriodReaderPort
   ) {}
 
   async execute(
@@ -41,12 +41,13 @@ export class ReopenAccountingPeriodUseCase {
     const actorRef = readWorkspaceActorRef(workspace);
     assertReopenPermission(workspace.membershipRole);
 
-    const period =
-      await this.accountingPeriodsService.findPeriodByIdInWorkspace(
-        workspace.tenantId,
-        workspace.ledgerId,
-        periodId
-      );
+    const period = await this.accountingPeriodReader.findByIdInWorkspace(
+      {
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId
+      },
+      periodId
+    );
 
     if (!period) {
       throw new NotFoundException('재오픈할 운영 기간을 찾을 수 없습니다.');
@@ -152,12 +153,13 @@ export class ReopenAccountingPeriodUseCase {
       });
     });
 
-    const refreshedPeriod =
-      await this.accountingPeriodsService.findPeriodByIdInWorkspace(
-        workspace.tenantId,
-        workspace.ledgerId,
-        period.id
-      );
+    const refreshedPeriod = await this.accountingPeriodReader.findByIdInWorkspace(
+      {
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId
+      },
+      period.id
+    );
 
     if (!refreshedPeriod) {
       throw new NotFoundException(

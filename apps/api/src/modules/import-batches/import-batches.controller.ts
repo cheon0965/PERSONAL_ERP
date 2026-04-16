@@ -23,18 +23,22 @@ import {
   logWorkspaceActionDenied,
   logWorkspaceActionSucceeded
 } from '../../common/infrastructure/operational/workspace-action.audit';
+import { CollectImportedRowUseCase } from './application/use-cases/collect-imported-row.use-case';
+import { CreateImportBatchUseCase } from './application/use-cases/create-import-batch.use-case';
+import { PreviewImportedRowCollectionUseCase } from './application/use-cases/preview-imported-row-collection.use-case';
 import { CollectImportedRowRequestDto } from './dto/collect-imported-row.dto';
 import { CreateImportBatchRequestDto } from './dto/create-import-batch.dto';
-import { ImportBatchesService } from './import-batches.service';
-import { ImportedRowCollectionService } from './imported-row-collection.service';
+import { ImportBatchQueryService } from './import-batch-query.service';
 
 @ApiTags('import-batches')
 @ApiBearerAuth()
 @Controller('import-batches')
 export class ImportBatchesController {
   constructor(
-    private readonly importBatchesService: ImportBatchesService,
-    private readonly importedRowCollectionService: ImportedRowCollectionService,
+    private readonly importBatchQueryService: ImportBatchQueryService,
+    private readonly createImportBatchUseCase: CreateImportBatchUseCase,
+    private readonly previewImportedRowCollectionUseCase: PreviewImportedRowCollectionUseCase,
+    private readonly collectImportedRowUseCase: CollectImportedRowUseCase,
     private readonly securityEvents: SecurityEventLogger
   ) {}
 
@@ -42,7 +46,7 @@ export class ImportBatchesController {
   async findAll(
     @CurrentUser() user: AuthenticatedUser
   ): Promise<ImportBatchItem[]> {
-    return this.importBatchesService.findAll(user);
+    return this.importBatchQueryService.findAll(user);
   }
 
   @Get(':id')
@@ -50,7 +54,7 @@ export class ImportBatchesController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') importBatchId: string
   ): Promise<ImportBatchItem> {
-    return this.importBatchesService.findOne(user, importBatchId);
+    return this.importBatchQueryService.findOne(user, importBatchId);
   }
 
   @Post()
@@ -62,7 +66,7 @@ export class ImportBatchesController {
     const workspace = requireCurrentWorkspace(user);
 
     try {
-      const created = await this.importBatchesService.create(user, dto);
+      const created = await this.createImportBatchUseCase.execute(user, dto);
 
       logWorkspaceActionSucceeded(this.securityEvents, {
         action: 'import_batch.upload',
@@ -102,7 +106,7 @@ export class ImportBatchesController {
     @Param('rowId') importedRowId: string,
     @Body() dto: CollectImportedRowRequestDto
   ): Promise<CollectImportedRowPreview> {
-    return this.importedRowCollectionService.previewRow(
+    return this.previewImportedRowCollectionUseCase.execute(
       user,
       importBatchId,
       importedRowId,
@@ -121,7 +125,7 @@ export class ImportBatchesController {
     const workspace = requireCurrentWorkspace(user);
 
     try {
-      const created = await this.importedRowCollectionService.collectRow(
+      const created = await this.collectImportedRowUseCase.execute(
         user,
         importBatchId,
         importedRowId,

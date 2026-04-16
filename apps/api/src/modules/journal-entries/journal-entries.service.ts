@@ -6,6 +6,7 @@ import type {
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { mapJournalEntryRecordToItem } from './journal-entry-item.mapper';
+import { journalEntryItemInclude } from './journal-entry.record';
 
 @Injectable()
 export class JournalEntriesService {
@@ -18,59 +19,7 @@ export class JournalEntriesService {
         tenantId: workspace.tenantId,
         ledgerId: workspace.ledgerId
       },
-      include: {
-        sourceCollectedTransaction: {
-          select: {
-            id: true,
-            title: true
-          }
-        },
-        reversesJournalEntry: {
-          select: {
-            id: true,
-            entryNumber: true
-          }
-        },
-        reversedByJournalEntry: {
-          select: {
-            id: true,
-            entryNumber: true
-          }
-        },
-        correctsJournalEntry: {
-          select: {
-            id: true,
-            entryNumber: true
-          }
-        },
-        correctionEntries: {
-          select: {
-            id: true,
-            entryNumber: true
-          },
-          orderBy: {
-            createdAt: 'asc'
-          }
-        },
-        lines: {
-          include: {
-            accountSubject: {
-              select: {
-                code: true,
-                name: true
-              }
-            },
-            fundingAccount: {
-              select: {
-                name: true
-              }
-            }
-          },
-          orderBy: {
-            lineNumber: 'asc'
-          }
-        }
-      },
+      include: journalEntryItemInclude,
       orderBy: [{ entryDate: 'desc' }, { createdAt: 'desc' }],
       take: 100
     });

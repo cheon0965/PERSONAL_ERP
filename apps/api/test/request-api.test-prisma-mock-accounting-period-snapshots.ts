@@ -150,6 +150,10 @@ export function createAccountingPeriodSnapshotsPrismaMock(
         };
         select?: {
           id?: boolean;
+          totalAssetAmount?: boolean;
+          totalLiabilityAmount?: boolean;
+          totalEquityAmount?: boolean;
+          periodPnLAmount?: boolean;
         };
         include?: {
           lines?: {
@@ -176,8 +180,22 @@ export function createAccountingPeriodSnapshotsPrismaMock(
           return null;
         }
 
-        if (args.select?.id) {
-          return { id: snapshot.id };
+        if (args.select) {
+          return {
+            ...(args.select.id ? { id: snapshot.id } : {}),
+            ...(args.select.totalAssetAmount
+              ? { totalAssetAmount: snapshot.totalAssetAmount }
+              : {}),
+            ...(args.select.totalLiabilityAmount
+              ? { totalLiabilityAmount: snapshot.totalLiabilityAmount }
+              : {}),
+            ...(args.select.totalEquityAmount
+              ? { totalEquityAmount: snapshot.totalEquityAmount }
+              : {}),
+            ...(args.select.periodPnLAmount
+              ? { periodPnLAmount: snapshot.periodPnLAmount }
+              : {})
+          };
         }
 
         const lines = args.include?.lines

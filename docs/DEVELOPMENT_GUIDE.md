@@ -41,7 +41,8 @@ npm run test
    `단순 CRUD`: `controller -> service -> repository -> mapper/calculator`
    `핵심 쓰기 흐름`: `controller -> use-case -> port -> adapter`
    `읽기/조합 흐름`: `controller -> read service -> read repository -> projection`
-6. `collected-transactions`, `recurring-rules`, `dashboard`, `forecast`처럼 모듈 바깥 참조가 있는 영역이면 `public.ts` 진입점도 같이 맞춥니다.
+   현재 승격 완료 모듈: `collected-transactions`, `recurring-rules`, `accounting-periods`, `import-batches`, `journal-entries`, `auth`, `admin`, `insurance-policies`, `plan-items`, `financial-statements`, `carry-forwards`
+6. `collected-transactions`, `recurring-rules`, `dashboard`, `forecast`, `accounting-periods`, `journal-entries`, `import-batches`처럼 모듈 바깥 참조가 있는 영역이면 `public.ts` 진입점도 같이 맞춥니다.
 7. 현재 요청이 어떤 `tenantId` / `TenantMembership` / `ActorRef` 경계에서 실행되는지 확인합니다.
    현재 HTTP surface는 `user.currentWorkspace` 기반으로 동작하더라도, 상위 도메인 기준은 Tenant/Ledger/Actor 경계라는 점을 문서와 코드에서 분리해 둡니다.
 8. 관련 테스트를 같이 추가합니다.

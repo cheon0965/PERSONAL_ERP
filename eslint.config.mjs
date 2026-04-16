@@ -194,8 +194,23 @@ export default [
       'no-restricted-imports': ['error', apiModuleBoundaryRestrictions]
     }
   },
+  // auth/admin use-cases use NestJS + Prisma directly (thin Hexagonal pattern)
+  // without full port/adapter separation — exempt from framework-free restriction.
+  {
+    files: [
+      'apps/api/src/modules/auth/application/**/*.ts',
+      'apps/api/src/modules/admin/application/**/*.ts'
+    ],
+    rules: {
+      'no-restricted-imports': ['error', modulePublicApiRestrictions]
+    }
+  },
   {
     files: ['apps/api/src/**/application/**/*.ts'],
+    ignores: [
+      'apps/api/src/modules/auth/application/**/*.ts',
+      'apps/api/src/modules/admin/application/**/*.ts'
+    ],
     rules: {
       'no-restricted-imports': [
         'error',

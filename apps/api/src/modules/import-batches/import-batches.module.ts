@@ -1,7 +1,13 @@
 import { Module } from '@nestjs/common';
-import { AccountingPeriodsModule } from '../accounting-periods/accounting-periods.module';
+import { AccountingPeriodsModule } from '../accounting-periods/public';
+import { ImportBatchWritePort } from './application/ports/import-batch-write.port';
+import { ImportedRowCollectionPort } from './application/ports/imported-row-collection.port';
+import { CollectImportedRowUseCase } from './application/use-cases/collect-imported-row.use-case';
+import { CreateImportBatchUseCase } from './application/use-cases/create-import-batch.use-case';
+import { PreviewImportedRowCollectionUseCase } from './application/use-cases/preview-imported-row-collection.use-case';
+import { ImportBatchQueryService } from './import-batch-query.service';
 import { ImportBatchesController } from './import-batches.controller';
-import { ImportBatchesService } from './import-batches.service';
+import { PrismaImportBatchWriteAdapter } from './infrastructure/prisma/prisma-import-batch-write.adapter';
 import { ImportedRowCollectionRepository } from './imported-row-collection.repository';
 import { ImportedRowCollectionService } from './imported-row-collection.service';
 
@@ -9,10 +15,22 @@ import { ImportedRowCollectionService } from './imported-row-collection.service'
   imports: [AccountingPeriodsModule],
   controllers: [ImportBatchesController],
   providers: [
-    ImportBatchesService,
+    ImportBatchQueryService,
+    PrismaImportBatchWriteAdapter,
+    {
+      provide: ImportBatchWritePort,
+      useExisting: PrismaImportBatchWriteAdapter
+    },
     ImportedRowCollectionRepository,
-    ImportedRowCollectionService
+    {
+      provide: ImportedRowCollectionPort,
+      useExisting: ImportedRowCollectionRepository
+    },
+    ImportedRowCollectionService,
+    CreateImportBatchUseCase,
+    PreviewImportedRowCollectionUseCase,
+    CollectImportedRowUseCase
   ],
-  exports: [ImportBatchesService]
+  exports: [ImportBatchQueryService]
 })
 export class ImportBatchesModule {}
