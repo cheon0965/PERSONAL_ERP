@@ -12,7 +12,7 @@ import {
   Prisma
 } from '@prisma/client';
 import { fromPrismaMoneyWon } from '../../common/money/prisma-money';
-import { readCollectingAccountingPeriodStatuses } from '../accounting-periods/accounting-period-transition.policy';
+import { readCollectingAccountingPeriodStatuses } from '../accounting-periods/public';
 import { mapCollectedTransactionTypeToLedgerTransactionCode } from '../collected-transactions/public';
 import {
   type AbsorbImportedRowIntoCollectedTransactionRecordInput,

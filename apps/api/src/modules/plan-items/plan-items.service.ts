@@ -3,7 +3,7 @@ import type { AuthenticatedUser, PlanItemsView } from '@personal-erp/contracts';
 import { AccountingPeriodStatus, Prisma } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { mapAccountingPeriodRecordToItem } from '../accounting-periods/accounting-period.mapper';
+import { mapAccountingPeriodRecordToItem } from '../accounting-periods/public';
 import {
   mapPlanItemRecordToItem,
   summarizePlanItems

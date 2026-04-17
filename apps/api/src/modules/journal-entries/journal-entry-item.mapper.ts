@@ -12,7 +12,7 @@ import {
   type PrismaMoneyLike
 } from '../../common/money/prisma-money';
 
-type JournalLineRecord = {
+export type JournalLineRecord = {
   id: string;
   lineNumber: number;
   debitAmount: PrismaMoneyLike;
@@ -27,12 +27,12 @@ type JournalLineRecord = {
   } | null;
 };
 
-type RelatedJournalEntryRecord = {
+export type RelatedJournalEntryRecord = {
   id: string;
   entryNumber: string;
 };
 
-type JournalEntryRecord = {
+export type JournalEntryRecord = {
   id: string;
   entryNumber: string;
   entryDate: Date;

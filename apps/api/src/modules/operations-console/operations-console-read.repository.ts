@@ -7,7 +7,7 @@ import {
   Prisma
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { mapAccountingPeriodRecordToItem } from '../accounting-periods/accounting-period.mapper';
+import { mapAccountingPeriodRecordToItem } from '../accounting-periods/public';
 import type {
   OperationsSnapshot,
   ReferenceReadinessGap

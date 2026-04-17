@@ -36,7 +36,7 @@ import { UpdateTenantMemberRoleUseCase } from './application/use-cases/update-te
 import { UpdateTenantMemberStatusUseCase } from './application/use-cases/update-tenant-member-status.use-case';
 import { AdminAuditEventsQueryDto } from './dto/admin-audit-events-query.dto';
 import { InviteTenantMemberDto } from './dto/invite-tenant-member.dto';
-import { UpdateNavigationMenuItemDto } from '../navigation/dto/update-navigation-menu-item.dto';
+import { UpdateNavigationMenuItemDto } from '../navigation/public';
 import { UpdateTenantMemberRoleDto } from './dto/update-tenant-member-role.dto';
 import { UpdateTenantMemberStatusDto } from './dto/update-tenant-member-status.dto';
 
