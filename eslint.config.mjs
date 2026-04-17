@@ -27,10 +27,17 @@ const nextWebConfig = {
 };
 
 const modulePublicApiNames = [
+  'accounting-periods',
+  'carry-forwards',
   'collected-transactions',
-  'recurring-rules',
   'dashboard',
-  'forecast'
+  'financial-statements',
+  'forecast',
+  'import-batches',
+  'journal-entries',
+  'navigation',
+  'plan-items',
+  'recurring-rules'
 ];
 
 const apiModuleNames = fs
@@ -81,8 +88,8 @@ const modulePublicApiRestrictions = {
   patterns: [
     {
       group: modulePublicApiNames.flatMap((moduleName) => [
-        `**/${moduleName}/**`,
-        `!**/${moduleName}/public`
+        `**/modules/${moduleName}/**`,
+        `!**/modules/${moduleName}/public`
       ]),
       message:
         'Cross-module imports for modules with a public.ts entrypoint must go through that public API.'

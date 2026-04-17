@@ -6,8 +6,8 @@ import type {
 import { Prisma } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { mapAccountingPeriodRecordToItem } from '../accounting-periods/accounting-period.mapper';
-import { mapClosingSnapshotRecordToItem } from '../accounting-periods/closing-snapshot.mapper';
+import { mapAccountingPeriodRecordToItem } from '../accounting-periods/public';
+import { mapClosingSnapshotRecordToItem } from '../accounting-periods/public';
 import { mapCarryForwardRecordToItem } from './carry-forward.mapper';
 import { mapOpeningBalanceSnapshotRecordToItem } from './opening-balance-snapshot.mapper';
 

@@ -1,6 +1,6 @@
 import type { DashboardSummary } from '@personal-erp/contracts';
 import { addMoneyWon, subtractMoneyWon } from '@personal-erp/money';
-import { mapAccountingPeriodRecordToItem } from '../accounting-periods/accounting-period.mapper';
+import { mapAccountingPeriodRecordToItem } from '../accounting-periods/public';
 import {
   buildOperationalHighlights,
   buildTrendPoint,

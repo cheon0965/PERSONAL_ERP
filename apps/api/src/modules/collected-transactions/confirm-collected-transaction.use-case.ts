@@ -7,9 +7,8 @@ import { JournalEntrySourceKind, JournalEntryStatus } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { readWorkspaceCreatedByActorRef } from '../../common/auth/workspace-actor-ref.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
-import { PrismaService } from '../../common/prisma/prisma.service';
-import { AccountingPeriodWriteGuardPort } from '../accounting-periods/public';
-import { mapJournalEntryRecordToItem } from '../journal-entries/journal-entry-item.mapper';
+import { mapJournalEntryRecordToItem } from '../journal-entries/public';
+import { ConfirmCollectedTransactionStorePort } from './application/ports/confirm-collected-transaction-store.port';
 import { REQUIRED_CONFIRM_ACCOUNT_SUBJECT_CODES } from './confirm-collected-transaction.policy';
 import {
   assertConfirmationAllowed,
@@ -21,22 +20,11 @@ import {
   buildConfirmationJournalLines,
   resolveConfirmationAccountSubjectIds
 } from './confirm-collected-transaction.factory';
-import {
-  assertConfirmationClaimSucceeded,
-  claimCollectedTransactionForConfirmation,
-  markMatchedPlanItemConfirmed
-} from './confirm-collected-transaction.effects';
-import {
-  readActiveConfirmAccountSubjects,
-  readCollectedTransactionForConfirmation,
-  readLatestCollectedTransactionForConfirmation
-} from './confirm-collected-transaction.reader';
 
 @Injectable()
 export class ConfirmCollectedTransactionUseCase {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly accountingPeriodWriteGuard: AccountingPeriodWriteGuardPort
+    private readonly confirmStore: ConfirmCollectedTransactionStorePort
   ) {}
 
   async execute(
@@ -50,14 +38,14 @@ export class ConfirmCollectedTransactionUseCase {
       'collected_transaction.confirm'
     );
 
-    const collectedTransaction = await readCollectedTransactionForConfirmation(
-      this.prisma,
-      {
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId
-      },
-      collectedTransactionId
-    );
+    const collectedTransaction =
+      await this.confirmStore.findForConfirmation(
+        {
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId
+        },
+        collectedTransactionId
+      );
     assertConfirmationTransactionFound(collectedTransaction);
     assertConfirmationTransactionHasPeriod(collectedTransaction);
 
@@ -68,76 +56,74 @@ export class ConfirmCollectedTransactionUseCase {
       postedJournalEntryId: collectedTransaction.postedJournalEntry?.id ?? null
     });
 
-    const accountSubjects = await readActiveConfirmAccountSubjects(
-      this.prisma,
-      {
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId
-      },
-      REQUIRED_CONFIRM_ACCOUNT_SUBJECT_CODES
-    );
+    const accountSubjects =
+      await this.confirmStore.findActiveAccountSubjects(
+        {
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId
+        },
+        REQUIRED_CONFIRM_ACCOUNT_SUBJECT_CODES
+      );
     const accountSubjectIds =
       resolveConfirmationAccountSubjectIds(accountSubjects);
 
-    const journalEntry = await this.prisma.$transaction(async (tx) => {
-      const latestCollectedTransaction =
-        await readLatestCollectedTransactionForConfirmation(
-          tx,
-          {
-            tenantId: workspace.tenantId,
-            ledgerId: workspace.ledgerId
-          },
-          collectedTransaction.id
-        );
-      assertConfirmationTransactionFound(latestCollectedTransaction);
-      assertConfirmationTransactionHasPeriod(latestCollectedTransaction);
+    const journalEntry = await this.confirmStore.runInTransaction(
+      async (ctx) => {
+        const latestCollectedTransaction =
+          await ctx.findLatestForConfirmation(
+            {
+              tenantId: workspace.tenantId,
+              ledgerId: workspace.ledgerId
+            },
+            collectedTransaction.id
+          );
+        assertConfirmationTransactionFound(latestCollectedTransaction);
+        assertConfirmationTransactionHasPeriod(latestCollectedTransaction);
 
-      const latestPeriod = latestCollectedTransaction.period;
-      assertConfirmationAllowed({
-        status: latestCollectedTransaction.status,
-        periodStatus: latestPeriod.status,
-        postedJournalEntryId:
-          latestCollectedTransaction.postedJournalEntry?.id ?? null
-      });
-
-      const allocatedEntryNumber =
-        await this.accountingPeriodWriteGuard.allocateJournalEntryNumberInTransaction(
-          tx,
-          {
-            tenantId: workspace.tenantId,
-            ledgerId: workspace.ledgerId
-          },
-          latestPeriod.id
-        );
-
-      const journalLines = buildConfirmationJournalLines({
-        collectedTransaction: latestCollectedTransaction,
-        accountSubjectIds
-      });
-
-      const claimedCollectedTransaction =
-        await claimCollectedTransactionForConfirmation(tx, {
-          tenantId: workspace.tenantId,
-          ledgerId: workspace.ledgerId,
-          collectedTransactionId: latestCollectedTransaction.id,
-          currentStatus: latestCollectedTransaction.status
+        const latestPeriod = latestCollectedTransaction.period;
+        assertConfirmationAllowed({
+          status: latestCollectedTransaction.status,
+          periodStatus: latestPeriod.status,
+          postedJournalEntryId:
+            latestCollectedTransaction.postedJournalEntry?.id ?? null
         });
 
-      await assertConfirmationClaimSucceeded(tx, {
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId,
-        collectedTransactionId: collectedTransaction.id,
-        updatedCount: claimedCollectedTransaction.count
-      });
+        const allocatedEntryNumber =
+          await ctx.allocateJournalEntryNumber(
+            {
+              tenantId: workspace.tenantId,
+              ledgerId: workspace.ledgerId
+            },
+            latestPeriod.id
+          );
 
-      const entryNumber = buildConfirmationEntryNumber({
-        year: allocatedEntryNumber.period.year,
-        month: allocatedEntryNumber.period.month,
-        sequence: allocatedEntryNumber.sequence
-      });
+        const journalLines = buildConfirmationJournalLines({
+          collectedTransaction: latestCollectedTransaction,
+          accountSubjectIds
+        });
 
-      const created = await tx.journalEntry.create({
-        data: {
+        const claimedCollectedTransaction =
+          await ctx.claimForConfirmation({
+            tenantId: workspace.tenantId,
+            ledgerId: workspace.ledgerId,
+            collectedTransactionId: latestCollectedTransaction.id,
+            currentStatus: latestCollectedTransaction.status
+          });
+
+        await ctx.assertClaimSucceeded({
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId,
+          collectedTransactionId: collectedTransaction.id,
+          updatedCount: claimedCollectedTransaction.count
+        });
+
+        const entryNumber = buildConfirmationEntryNumber({
+          year: allocatedEntryNumber.period.year,
+          month: allocatedEntryNumber.period.month,
+          sequence: allocatedEntryNumber.sequence
+        });
+
+        const created = await ctx.createJournalEntry({
           tenantId: workspace.tenantId,
           ledgerId: workspace.ledgerId,
           periodId: allocatedEntryNumber.period.id,
@@ -147,47 +133,19 @@ export class ConfirmCollectedTransactionUseCase {
           sourceCollectedTransactionId: latestCollectedTransaction.id,
           status: JournalEntryStatus.POSTED,
           memo:
-            latestCollectedTransaction.memo ?? latestCollectedTransaction.title,
+            latestCollectedTransaction.memo ??
+            latestCollectedTransaction.title,
           ...createdByActorRef,
-          lines: {
-            create: journalLines
-          }
-        },
-        include: {
-          sourceCollectedTransaction: {
-            select: {
-              id: true,
-              title: true
-            }
-          },
-          lines: {
-            include: {
-              accountSubject: {
-                select: {
-                  code: true,
-                  name: true
-                }
-              },
-              fundingAccount: {
-                select: {
-                  name: true
-                }
-              }
-            },
-            orderBy: {
-              lineNumber: 'asc'
-            }
-          }
-        }
-      });
+          lines: journalLines
+        });
 
-      await markMatchedPlanItemConfirmed(
-        tx,
-        latestCollectedTransaction.matchedPlanItemId
-      );
+        await ctx.markMatchedPlanItemConfirmed(
+          latestCollectedTransaction.matchedPlanItemId
+        );
 
-      return created;
-    });
+        return created;
+      }
+    );
 
     return mapJournalEntryRecordToItem(journalEntry);
   }
