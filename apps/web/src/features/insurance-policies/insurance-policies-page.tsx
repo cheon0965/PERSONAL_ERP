@@ -121,6 +121,26 @@ export function InsurancePoliciesPage() {
           '보험 계약을 정리한 뒤 반복 규칙 화면에서 보험 계약 연동 규칙이 보이는지 확인합니다.',
           '월 운영이 열려 있으면 계획 항목 화면에서 보험료 계획을 생성합니다.',
           '실제 납부 거래는 수집 거래 또는 업로드 배치에서 전표로 확정합니다.'
+        ],
+        links: [
+          {
+            title: '반복 규칙',
+            description: '보험 계약 저장 시 생성된 연결 반복 규칙 상태를 함께 확인합니다.',
+            href: '/recurring',
+            actionLabel: '반복 규칙 보기'
+          },
+          {
+            title: '계획 항목',
+            description: '현재 운영 월에서 보험료 계획이 실제로 생성됐는지 확인합니다.',
+            href: '/plan-items',
+            actionLabel: '계획 항목 보기'
+          },
+          {
+            title: '수집 거래',
+            description: '실제 납부 거래를 확인하고 전표 준비 상태로 이어서 검토합니다.',
+            href: '/transactions',
+            actionLabel: '수집 거래 보기'
+          }
         ]
       }
     ],

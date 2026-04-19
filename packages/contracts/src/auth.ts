@@ -1,5 +1,7 @@
 ﻿export type TenantStatus = 'TRIAL' | 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED';
 
+export type UserStatus = 'ACTIVE' | 'LOCKED' | 'DISABLED';
+
 export type TenantMembershipRole = 'OWNER' | 'MANAGER' | 'EDITOR' | 'VIEWER';
 
 export type TenantMembershipStatus =
@@ -29,12 +31,17 @@ export type AuthenticatedWorkspace = {
     timezone: string;
     status: LedgerStatus;
   } | null;
+  supportContext?: {
+    enabled: boolean;
+    startedAt: string | null;
+  };
 };
 
 export type AuthenticatedUser = {
   id: string;
   email: string;
   name: string;
+  isSystemAdmin?: boolean;
   currentWorkspace: AuthenticatedWorkspace | null;
 };
 
@@ -94,6 +101,7 @@ export type RegisterRequest = {
 
 export type UpdateAccountProfileRequest = {
   name: string;
+  email: string;
 };
 
 export type ChangePasswordRequest = {

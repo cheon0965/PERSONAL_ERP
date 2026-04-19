@@ -61,6 +61,12 @@ enum TenantStatus {
   ARCHIVED
 }
 
+enum UserStatus {
+  ACTIVE
+  LOCKED
+  DISABLED
+}
+
 enum TenantMembershipRole {
   OWNER
   MANAGER
@@ -237,6 +243,10 @@ model User {
   email                   String                   @unique
   passwordHash            String
   name                    String
+  status                  UserStatus               @default(ACTIVE)
+  isSystemAdmin           Boolean                  @default(false)
+  lockedReason            String?                  @db.VarChar(191)
+  lockedAt                DateTime?
   emailVerifiedAt         DateTime?
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
@@ -249,6 +259,9 @@ model User {
   vehicles                Vehicle[]
   authSessions            AuthSession[]
   memberships             TenantMembership[]
+
+  @@index([isSystemAdmin])
+  @@index([status])
 }
 
 model EmailVerificationToken {
@@ -373,12 +386,16 @@ model AuthSession {
   refreshTokenHash String    @db.Text
   expiresAt        DateTime
   revokedAt        DateTime?
+  supportTenantId  String?
+  supportLedgerId  String?
+  supportStartedAt DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
   @@index([userId, revokedAt])
+  @@index([supportTenantId, supportLedgerId])
 }
 
 model WorkspaceAuditEvent {
@@ -406,6 +423,29 @@ model WorkspaceAuditEvent {
   @@index([tenantId, action, occurredAt])
   @@index([tenantId, actorMembershipId, occurredAt])
   @@index([tenantId, requestId])
+}
+
+model SecurityThreatEvent {
+  id            String   @id @default(cuid())
+  severity      String   @db.VarChar(30)
+  eventCategory String   @db.VarChar(50)
+  eventName     String   @db.VarChar(100)
+  source        String   @default("api") @db.VarChar(50)
+  requestId     String?  @db.VarChar(191)
+  path          String?  @db.VarChar(300)
+  clientIpHash  String?  @db.VarChar(191)
+  userId        String?
+  sessionId     String?
+  reason        String?  @db.VarChar(191)
+  metadata      Json?
+  occurredAt    DateTime @default(now())
+
+  @@index([occurredAt])
+  @@index([severity, occurredAt])
+  @@index([eventCategory, occurredAt])
+  @@index([eventName, occurredAt])
+  @@index([clientIpHash, occurredAt])
+  @@index([requestId])
 }
 
 model WorkspaceOperationalNote {

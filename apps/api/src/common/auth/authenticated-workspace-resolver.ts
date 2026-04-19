@@ -11,7 +11,10 @@ import type {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
-type AuthenticatedIdentity = Pick<AuthenticatedUser, 'id' | 'email' | 'name'>;
+type AuthenticatedIdentity = Pick<
+  AuthenticatedUser,
+  'id' | 'email' | 'name' | 'isSystemAdmin'
+>;
 
 type MembershipRecord = {
   id: string;
@@ -19,6 +22,12 @@ type MembershipRecord = {
   status: TenantMembershipStatus;
   tenantId: string;
   joinedAt: Date;
+};
+
+export type AuthenticatedSupportContext = {
+  tenantId: string | null;
+  ledgerId: string | null;
+  startedAt: Date | null;
 };
 
 const membershipRoleRank: Record<TenantMembershipRole, number> = {
@@ -33,21 +42,37 @@ export class AuthenticatedWorkspaceResolver {
   constructor(private readonly prisma: PrismaService) {}
 
   async buildAuthenticatedUser(
-    identity: AuthenticatedIdentity
+    identity: AuthenticatedIdentity,
+    supportContext?: AuthenticatedSupportContext
   ): Promise<AuthenticatedUser> {
-    const currentWorkspace = await this.resolveCurrentWorkspace(identity.id);
+    const currentWorkspace = await this.resolveCurrentWorkspace(
+      identity.id,
+      identity.isSystemAdmin ? supportContext : undefined
+    );
 
     return {
       id: identity.id,
       email: identity.email,
       name: identity.name,
+      ...(identity.isSystemAdmin ? { isSystemAdmin: true } : {}),
       currentWorkspace
     };
   }
 
   async resolveCurrentWorkspace(
-    userId: string
+    userId: string,
+    supportContext?: AuthenticatedSupportContext
   ): Promise<AuthenticatedWorkspace | null> {
+    if (supportContext?.tenantId) {
+      const supportWorkspace = await this.resolveSupportWorkspace(
+        userId,
+        supportContext
+      );
+      if (supportWorkspace) {
+        return supportWorkspace;
+      }
+    }
+
     const memberships = await this.prisma.tenantMembership.findMany({
       where: {
         userId,
@@ -149,6 +174,81 @@ export class AuthenticatedWorkspaceResolver {
         status: true
       }
     });
+  }
+
+  private async resolveSupportWorkspace(
+    userId: string,
+    supportContext: AuthenticatedSupportContext
+  ): Promise<AuthenticatedWorkspace | null> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: supportContext.tenantId ?? '' },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        status: true,
+        defaultLedgerId: true
+      }
+    });
+
+    if (!tenant) {
+      return null;
+    }
+
+    const ledger = supportContext.ledgerId
+      ? await this.resolveLedgerById(tenant.id, supportContext.ledgerId)
+      : await this.resolveCurrentLedger(
+          tenant.id,
+          tenant.defaultLedgerId ?? undefined
+        );
+
+    return {
+      tenant: {
+        id: tenant.id,
+        slug: tenant.slug,
+        name: tenant.name,
+        status: tenant.status as TenantStatus
+      },
+      membership: {
+        id: `system-admin-support:${userId}`,
+        role: 'OWNER',
+        status: 'ACTIVE'
+      },
+      ledger,
+      supportContext: {
+        enabled: true,
+        startedAt: supportContext.startedAt?.toISOString() ?? null
+      }
+    };
+  }
+
+  private async resolveLedgerById(
+    tenantId: string,
+    ledgerId: string
+  ): Promise<AuthenticatedWorkspace['ledger']> {
+    const ledger = await this.prisma.ledger.findFirst({
+      where: {
+        id: ledgerId,
+        tenantId
+      },
+      select: {
+        id: true,
+        name: true,
+        baseCurrency: true,
+        timezone: true,
+        status: true
+      }
+    });
+
+    return ledger
+      ? {
+          id: ledger.id,
+          name: ledger.name,
+          baseCurrency: ledger.baseCurrency,
+          timezone: ledger.timezone,
+          status: ledger.status as LedgerStatus
+        }
+      : null;
   }
 }
 

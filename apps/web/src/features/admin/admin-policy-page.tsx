@@ -16,7 +16,6 @@ import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { getAdminPolicySummary, adminPolicyQueryKey } from './admin.api';
 import { readMembershipRoleLabel, readPolicyCtaLabel } from './admin-labels';
-import { AdminSectionNav } from './admin-section-nav';
 
 const policyRoles: TenantMembershipRole[] = [
   'OWNER',
@@ -80,8 +79,8 @@ export function AdminPolicyPage() {
     title: '권한 정책 가이드',
     description:
       '권한 정책 화면은 현재 메뉴 트리를 기준으로 화면별 허용 역할과 노출 상태를 읽는 확인용 표입니다.',
-    primaryEntity: 'WorkspaceNavigationMenuItem',
-    relatedEntities: ['WorkspaceNavigationMenuRole', 'TenantMembershipRole'],
+    primaryEntity: '메뉴 권한',
+    relatedEntities: ['메뉴별 허용 역할', '멤버 역할'],
     truthSource:
       '정책 요약은 저장된 메뉴 트리와 허용 역할을 읽어 만든 현재 상태 요약입니다.',
     supplementarySections: [
@@ -90,7 +89,7 @@ export function AdminPolicyPage() {
         items: [
           '화면 경로별 허용 역할',
           '메뉴 노출 상태',
-          '현재 역할로 실제 접근 가능한 표면 수'
+          '현재 역할로 실제 접근 가능한 화면 수'
         ]
       }
     ]
@@ -101,7 +100,7 @@ export function AdminPolicyPage() {
       <PageHeader
         eyebrow="관리자"
         title="권한 정책 요약"
-        description="DB에 저장된 메뉴 트리 기준으로 화면별 노출 상태와 역할별 접근 기준을 표 중심으로 확인합니다."
+        description="저장된 메뉴 구조를 기준으로 화면별 노출 상태와 역할별 접근 기준을 표 중심으로 확인합니다."
         badges={[
           {
             label: canReadPolicy ? '조회 가능' : '조회 권한 없음',
@@ -114,7 +113,7 @@ export function AdminPolicyPage() {
             value: currentRoleLabel
           },
           {
-            label: '정책 표면',
+            label: '정책 화면',
             value: `${rows.length}개`
           },
           {
@@ -123,9 +122,6 @@ export function AdminPolicyPage() {
           }
         ]}
       />
-
-      <AdminSectionNav />
-
       {!canReadPolicy ? (
         <Alert severity="warning" variant="outlined">
           권한 정책 요약은 소유자 또는 관리자 권한에서만 열 수 있습니다. 현재
@@ -141,7 +137,7 @@ export function AdminPolicyPage() {
       ) : null}
 
       <DataTableCard
-        title="운영 화면 권한 매트릭스"
+        title="운영 화면 권한표"
         description={`총 ${policyQuery.data?.items.length ?? 0}개 화면/영역 기준`}
         toolbar={
           <Stack spacing={1.5}>

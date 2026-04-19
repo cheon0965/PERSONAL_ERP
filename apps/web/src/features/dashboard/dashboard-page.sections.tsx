@@ -68,7 +68,7 @@ export function DashboardSummarySections({
             <DashboardInfoItem
               label="판단 기준"
               value={readBasisStatusLabel(summary.basisStatus)}
-              description="운영 숫자와 공식 잠금 숫자의 경계를 먼저 확인합니다."
+              description="운영 중인 숫자인지 마감된 공식 숫자인지 먼저 구분합니다."
             />
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
@@ -177,93 +177,35 @@ export function DashboardSummarySections({
         </Grid>
       </SectionCard>
 
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, xl: 8 }}>
-          <ChartCard
-            title="최근 기간 추이"
-            description="수입, 확정 지출, 남은 계획 지출을 현재 운영 월 기준으로 함께 보여줍니다."
-            chart={
-              <BarChart
-                height={320}
-                xAxis={[
-                  {
-                    scaleType: 'band',
-                    data: trend.map((item) => item.monthLabel)
-                  }
-                ]}
-                series={[
-                  {
-                    label: '수입',
-                    data: trend.map((item) => item.incomeWon)
-                  },
-                  {
-                    label: '확정 지출',
-                    data: trend.map((item) => item.expenseWon)
-                  },
-                  {
-                    label: '남은 계획 지출',
-                    data: trend.map((item) => item.plannedExpenseWon)
-                  }
-                ]}
-              />
-            }
+      <ChartCard
+        title="최근 기간 추이"
+        description="수입, 확정 지출, 남은 계획 지출을 현재 운영 월 기준으로 함께 보여줍니다."
+        chart={
+          <BarChart
+            height={320}
+            xAxis={[
+              {
+                scaleType: 'band',
+                data: trend.map((item) => item.monthLabel)
+              }
+            ]}
+            series={[
+              {
+                label: '수입',
+                data: trend.map((item) => item.incomeWon)
+              },
+              {
+                label: '확정 지출',
+                data: trend.map((item) => item.expenseWon)
+              },
+              {
+                label: '남은 계획 지출',
+                data: trend.map((item) => item.plannedExpenseWon)
+              }
+            ]}
           />
-        </Grid>
-
-        <Grid size={{ xs: 12, xl: 4 }}>
-          <SectionCard
-            title="다음 판단으로 이동"
-            description="대시보드는 요약만 담당하고, 세부 해석과 공식 확인은 각 전용 화면으로 이어집니다."
-          >
-            <Stack spacing={1.5}>
-              <Stack spacing={0.5}>
-                <Typography variant="subtitle2">
-                  최근 공식 기준:{' '}
-                  {summary.officialComparison?.monthLabel ?? '없음'}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  공식 비교가 필요하면 재무제표, 다음 달 준비 상태까지 보려면
-                  기간 전망으로 이동하세요.
-                </Typography>
-              </Stack>
-
-              {summary.officialComparison ? (
-                <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                  <Chip
-                    label={`공식 현금 ${formatWon(summary.officialComparison.officialCashWon)}`}
-                    variant="outlined"
-                    size="small"
-                  />
-                  <Chip
-                    label={`공식 순자산 ${formatWon(summary.officialComparison.officialNetWorthWon)}`}
-                    variant="outlined"
-                    size="small"
-                  />
-                </Stack>
-              ) : null}
-
-              <Stack spacing={1}>
-                <Button component={Link} href="/forecast" variant="contained">
-                  기간 전망 보기
-                </Button>
-                <Button
-                  component={Link}
-                  href="/financial-statements"
-                  variant="outlined"
-                >
-                  재무제표 보기
-                </Button>
-                <Button component={Link} href="/journal-entries" variant="text">
-                  전표 보기
-                </Button>
-                <Button component={Link} href="/carry-forwards" variant="text">
-                  차기 이월 보기
-                </Button>
-              </Stack>
-            </Stack>
-          </SectionCard>
-        </Grid>
-      </Grid>
+        }
+      />
     </>
   );
 }

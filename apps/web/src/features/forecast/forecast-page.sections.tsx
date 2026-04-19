@@ -6,9 +6,6 @@ import {
   Button,
   Chip,
   Grid,
-  List,
-  ListItem,
-  ListItemText,
   MenuItem,
   Stack,
   TextField,
@@ -66,7 +63,7 @@ export function ForecastPeriodSelectionSection({
           <Stack spacing={1.25}>
             <Typography variant="body2" color="text.secondary">
               {selectedPeriod
-                ? `${selectedPeriod.monthLabel} 기간은 현재 ${readPeriodStatusLabel(selectedPeriod.status)} 상태입니다. 전망은 확정 전표와 남은 계획을 함께 읽는 운영 해석 계층입니다.`
+                ? `${selectedPeriod.monthLabel} 기간은 현재 ${readPeriodStatusLabel(selectedPeriod.status)} 상태입니다. 전망은 확정 전표와 남은 계획을 함께 읽는 운영 판단용 수치입니다.`
                 : '선택한 운영 기간이 없으면 전망 계산을 시작할 수 없습니다.'}
             </Typography>
             <Stack
@@ -248,8 +245,8 @@ export function ForecastContent({ forecast }: { forecast: ForecastResponse }) {
 
         <Grid size={{ xs: 12, lg: 5 }}>
           <SectionCard
-            title="공식 비교와 해석 경계"
-            description="운영 전망과 공식 잠금 숫자를 혼동하지 않도록 비교 기준과 다음 이동을 함께 둡니다."
+            title="공식 비교와 기준 구분"
+            description="운영 전망과 마감된 공식 숫자를 혼동하지 않도록 비교 기준과 다음 이동을 함께 둡니다."
           >
             <Stack spacing={1.5}>
               <Stack spacing={0.5}>
@@ -343,19 +340,6 @@ export function ForecastContent({ forecast }: { forecast: ForecastResponse }) {
           />
         }
       />
-
-      <SectionCard
-        title="참고사항"
-        description="세부 해석과 업무 메모는 여기서 확인하고, 실제 확정 작업은 관련 화면으로 이어집니다."
-      >
-        <List disablePadding>
-          {forecast.notes.map((note) => (
-            <ListItem key={note} disableGutters>
-              <ListItemText primary={note} />
-            </ListItem>
-          ))}
-        </List>
-      </SectionCard>
     </Stack>
   );
 }

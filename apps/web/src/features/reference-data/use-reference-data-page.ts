@@ -11,6 +11,7 @@ import type {
   UpdateFundingAccountRequest
 } from '@personal-erp/contracts';
 import { useAuthSession } from '@/shared/auth/auth-provider';
+import { membershipRoleLabelMap } from '@/shared/auth/auth-labels';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import {
   accountSubjectsQueryKey,
@@ -38,7 +39,14 @@ import {
   type FundingAccountStatusActionTarget
 } from './reference-data.shared';
 
-export function useReferenceDataPage() {
+type ReferenceDataManagementSection =
+  | 'funding-accounts'
+  | 'categories'
+  | 'lookups';
+
+export function useReferenceDataPage(
+  section: ReferenceDataManagementSection = 'funding-accounts'
+) {
   const queryClient = useQueryClient();
   const { user } = useAuthSession();
   const [feedback, setFeedback] = React.useState<FeedbackState>(null);
@@ -78,6 +86,9 @@ export function useReferenceDataPage() {
     ? `${currentWorkspace.tenant.name} (${currentWorkspace.tenant.slug})`
     : '-';
   const ledgerLabel = currentWorkspace?.ledger?.name ?? '-';
+  const membershipRoleLabel = membershipRole
+    ? (membershipRoleLabelMap[membershipRole] ?? membershipRole)
+    : '-';
   const managedFundingAccounts = React.useMemo(
     () => fundingAccountsManagementQuery.data ?? [],
     [fundingAccountsManagementQuery.data]
@@ -106,59 +117,13 @@ export function useReferenceDataPage() {
     ledgerTransactionTypesQuery.error
   ].filter(Boolean);
 
-  useDomainHelp({
-    title: '기준 데이터 관리 사용 가이드',
-    description:
-      '이 화면은 입력 화면들이 공통으로 사용하는 자금수단, 카테고리, 계정과목, 거래유형을 확인하고 제한된 범위에서 관리하는 곳입니다. 거래 입력이 막히면 여기서 선택지가 준비됐는지 확인합니다.',
-    primaryEntity: '기준 데이터',
-    relatedEntities: ['입출금 계정', '거래 분류', '계정과목', '거래 유형'],
-    truthSource:
-      '현재 작업 문맥의 활성 기준 데이터만 각 입력 화면의 공식 선택지로 사용합니다.',
-    supplementarySections: [
-      {
-        title: '현재 작업 문맥',
-        description:
-          '기준 데이터는 로그인한 사용자의 현재 사업 장부 문맥 안에서만 조회됩니다.',
-        facts: [
-          {
-            label: '사업장',
-            value: workspaceLabel
-          },
-          {
-            label: '장부',
-            value: ledgerLabel
-          },
-          {
-            label: '권한',
-            value: currentWorkspace?.membership.role ?? '-'
-          }
-        ]
-      },
-      {
-        title: '바로 쓰는 순서',
-        description:
-          '월 운영을 시작하기 전에 최소한 사용할 자금수단과 수입/지출 카테고리를 준비합니다.',
-        items: [
-          '자금수단 영역에서 운영 통장, 카드 같은 실제 입출금 기준을 추가하거나 이름을 정리합니다.',
-          '카테고리 영역에서 수입/지출 분류를 추가하거나 비활성 상태를 정리합니다.',
-          '계정과목과 거래유형 영역은 직접 편집하지 않고, 전표 자동 생성에 필요한 system-managed 기준이 있는지 확인합니다.',
-          '준비가 끝나면 월 운영 화면으로 이동해 운영 기간을 엽니다.'
-        ]
-      },
-      {
-        title: '관리 원칙',
-        description:
-          '화면별 입력 폼은 여기서 조회되는 활성 기준 데이터만 선택지로 사용하며, 직접 편집 가능한 범위도 제한적으로 유지합니다.',
-        items: [
-          '수집 거래와 반복 규칙 폼은 임의 텍스트가 아니라 기준 데이터의 식별자와 정책 키를 참조합니다.',
-          '비활성 카테고리와 자금수단은 새 입력 선택지에서 빠질 수 있지만, 기존 기록 추적을 위해 목록에서는 관리합니다.',
-          '자금수단 종료는 비활성 자금수단에서만 가능하며, 종료 후에는 기존 기록 보존용 읽기 전용 기준으로 남습니다.'
-        ]
-      }
-    ],
-    readModelNote:
-      '금액 잔액을 여기서 직접 고치는 화면은 아닙니다. 잔액 변화는 수집 거래, 전표, 마감, 차기 이월 흐름에서 만들어집니다.'
-  });
+  useDomainHelp(
+    buildReferenceDataHelpContext(section, {
+      ledgerLabel,
+      membershipRoleLabel,
+      workspaceLabel
+    })
+  );
 
   const saveFundingAccountMutation = useMutation({
     mutationFn: (input: {
@@ -455,4 +420,138 @@ export function useReferenceDataPage() {
     membershipRole,
     workspaceLabel
   };
+}
+
+function buildReferenceDataHelpContext(
+  section: ReferenceDataManagementSection,
+  input: {
+    ledgerLabel: string;
+    membershipRoleLabel: string;
+    workspaceLabel: string;
+  }
+) {
+  const currentHref =
+    section === 'funding-accounts'
+      ? '/reference-data/funding-accounts'
+      : section === 'categories'
+        ? '/reference-data/categories'
+        : '/reference-data/lookups';
+  const currentContextSection = {
+    title: '현재 이용 기준',
+    description:
+      '기준 데이터는 로그인한 사용자의 현재 사업장과 장부 안에서만 조회됩니다.',
+    facts: [
+      {
+        label: '사업장',
+        value: input.workspaceLabel
+      },
+      {
+        label: '장부',
+        value: input.ledgerLabel
+      },
+      {
+        label: '권한',
+        value: input.membershipRoleLabel
+      }
+    ]
+  };
+  const navigationSection = {
+    title: '이어지는 화면',
+    links: [
+      {
+        title: '자금수단',
+        description: '실제 입출금 기준이 되는 통장, 카드, 현금 계정을 관리합니다.',
+        href: '/reference-data/funding-accounts',
+        actionLabel: '자금수단 보기'
+      },
+      {
+        title: '카테고리',
+        description: '수입·지출 분류 이름과 활성 상태를 관리합니다.',
+        href: '/reference-data/categories',
+        actionLabel: '카테고리 보기'
+      },
+      {
+        title: '공식 참조값',
+        description: '계정과목과 거래유형 같은 시스템 제공 기준값을 확인합니다.',
+        href: '/reference-data/lookups',
+        actionLabel: '공식 참조값 보기'
+      }
+    ].filter((link) => link.href !== currentHref)
+  };
+
+  switch (section) {
+    case 'categories':
+      return {
+        title: '카테고리 도움말',
+        description:
+          '이 탭은 수입·지출 분류 이름과 활성 상태를 관리하는 화면입니다. 거래 입력과 반복 규칙에서 쓰는 분류 기준을 여기서 정리합니다.',
+        primaryEntity: '카테고리',
+        relatedEntities: ['수집 거래', '반복 규칙', '계획 항목', '전표'],
+        truthSource:
+          '현재 사업장과 장부에서 활성 상태인 카테고리만 입력 화면의 선택지로 사용합니다.',
+        supplementarySections: [
+          currentContextSection,
+          {
+            title: '이 탭에서 하는 일',
+            items: [
+              '수입·지출 카테고리를 추가하거나 이름을 정리합니다.',
+              '더 이상 새 입력에 쓰지 않을 분류는 비활성 처리해 선택지에서 숨깁니다.',
+              '기존 거래 추적을 위해 비활성 카테고리도 목록에서는 계속 관리합니다.'
+            ]
+          },
+          navigationSection
+        ],
+        readModelNote:
+          '카테고리는 거래 분류 기준입니다. 금액이나 잔액을 여기서 직접 조정하지는 않습니다.'
+      };
+    case 'lookups':
+      return {
+        title: '공식 참조값 도움말',
+        description:
+          '이 탭은 계정과목과 거래유형처럼 시스템이 제공하는 공식 기준값을 확인하는 읽기 전용 화면입니다.',
+        primaryEntity: '공식 참조값',
+        relatedEntities: ['계정과목', '거래유형', '전표', '자동 분류'],
+        truthSource:
+          '계정과목과 거래유형은 시스템 기준값을 따르며, 입력 화면과 자동 생성 전표가 이 값을 참조합니다.',
+        supplementarySections: [
+          currentContextSection,
+          {
+            title: '이 탭에서 하는 일',
+            items: [
+              '전표 자동 생성이나 거래 입력에 필요한 공식 기준값이 준비되어 있는지 확인합니다.',
+              '직접 편집하지 않고, 어떤 기준이 실제 화면에서 참조되는지 읽는 용도로 사용합니다.',
+              '선택지가 부족하다면 자금수단 또는 카테고리 탭을 먼저 점검합니다.'
+            ]
+          },
+          navigationSection
+        ],
+        readModelNote:
+          '공식 참조값은 시스템 관리 영역에 가깝습니다. 이 탭은 확인용이며 직접 수정하는 화면이 아닙니다.'
+      };
+    case 'funding-accounts':
+    default:
+      return {
+        title: '자금수단 도움말',
+        description:
+          '이 탭은 실제 입출금 기준이 되는 통장, 카드, 현금 계정을 관리하는 화면입니다. 거래 입력과 업로드 등록에서 쓰는 자금수단 기준을 여기서 정리합니다.',
+        primaryEntity: '자금수단',
+        relatedEntities: ['수집 거래', '업로드 배치', '전표', '차기 이월'],
+        truthSource:
+          '현재 사업장과 장부에서 활성 상태인 자금수단만 입력 화면의 선택지로 사용합니다.',
+        supplementarySections: [
+          currentContextSection,
+          {
+            title: '이 탭에서 하는 일',
+            items: [
+              '운영 통장, 카드, 현금 같은 실제 입출금 기준을 추가하거나 이름을 정리합니다.',
+              '더 이상 쓰지 않는 자금수단은 비활성 또는 종료 상태로 바꿔 새 입력 선택지에서 분리합니다.',
+              '기존 거래와 이월 추적을 위해 종료된 자금수단도 읽기 전용 기준으로 남길 수 있습니다.'
+            ]
+          },
+          navigationSection
+        ],
+        readModelNote:
+          '자금수단은 잔액 결과를 보여줄 수 있어도, 이 화면에서 잔액 자체를 직접 수정하지는 않습니다. 잔액 변화는 거래·전표·마감 흐름에서 만들어집니다.'
+      };
+  }
 }

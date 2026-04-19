@@ -26,7 +26,7 @@ type ReferenceDataManagementPageProps = {
 export function ReferenceDataManagementPage({
   section = 'funding-accounts'
 }: ReferenceDataManagementPageProps) {
-  const page = useReferenceDataPage();
+  const page = useReferenceDataPage(section);
   const activeFundingAccountsCount = page.fundingAccounts.filter(
     (item) => item.status === 'ACTIVE'
   ).length;

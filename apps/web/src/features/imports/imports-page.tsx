@@ -25,7 +25,7 @@ export function ImportsPage({
   selectedBatchId?: string | null;
 }) {
   const router = useRouter();
-  const page = useImportsPage(selectedBatchId);
+  const page = useImportsPage(selectedBatchId, mode);
   const isDetailMode = mode === 'detail';
   const collectableRowCount = page.selectedBatchRows.filter(
     (row) => row.parseStatus === 'PARSED' && !row.createdCollectedTransactionId
@@ -38,7 +38,7 @@ export function ImportsPage({
     : null;
   const pageTitle = isDetailMode ? '업로드 배치 작업대' : '업로드 배치';
   const pageDescription = isDetailMode
-    ? '선택한 업로드 배치의 행을 검토하고, 필요한 항목만 수집 거래로 승격하는 전용 작업 화면입니다.'
+    ? '선택한 업로드 배치의 행을 검토하고, 필요한 항목만 수집 거래로 등록하는 전용 작업 화면입니다.'
     : '원본을 업로드 배치로 보관하고, 검토할 배치를 선택해 작업대로 이어집니다.';
 
   return (
@@ -55,7 +55,7 @@ export function ImportsPage({
           {
             label: page.referenceDataReadinessQuery.data
               ?.isReadyForImportCollection
-              ? '승격 준비됨'
+              ? '등록 준비됨'
               : '기준 데이터 점검 필요',
             color: page.referenceDataReadinessQuery.data
               ?.isReadyForImportCollection
@@ -73,7 +73,7 @@ export function ImportsPage({
             value: page.selectedBatch?.fileName ?? '-'
           },
           {
-            label: '승격 가능 행',
+            label: '등록 가능 행',
             value: `${collectableRowCount}건`
           },
           {
@@ -133,7 +133,7 @@ export function ImportsPage({
           batches={page.batches}
           selectedBatchId={page.selectedBatch?.id ?? null}
           onSelectBatch={page.selectBatch}
-          helperText="목록에서 배치를 선택한 뒤 선택 배치 작업대로 이동하면 업로드 행 검토와 승격을 이어서 진행할 수 있습니다."
+          helperText="목록에서 배치를 선택한 뒤 선택 배치 작업대로 이동하면 업로드 행 검토와 거래 등록을 이어서 진행할 수 있습니다."
           actionLabel="배치 선택"
         />
       ) : page.selectedBatch ? (
@@ -219,8 +219,8 @@ function ImportsSelectionSummaryCard({
       title="선택 배치 작업대"
       description={
         isDetailMode
-          ? '현재 배치 기준으로 업로드 행 검토와 승격 가능 상태를 바로 확인합니다.'
-          : '현재 선택한 배치를 기준으로 작업대 이동 전 검토 범위와 승격 가능 상태를 미리 확인합니다.'
+          ? '현재 배치 기준으로 업로드 행 검토와 등록 가능 상태를 바로 확인합니다.'
+          : '현재 선택한 배치를 기준으로 작업대 이동 전 검토 범위와 등록 가능 상태를 미리 확인합니다.'
       }
     >
       {selectedBatchFileName ? (
@@ -237,7 +237,7 @@ function ImportsSelectionSummaryCard({
             </Grid>
             <Grid size={{ xs: 12, md: 2 }}>
               <SummaryInfoItem
-                label="승격 가능"
+                label="등록 가능"
                 value={`${collectableRowCount}건`}
               />
             </Grid>
@@ -256,8 +256,8 @@ function ImportsSelectionSummaryCard({
               alignItems={{ xs: 'flex-start', sm: 'center' }}
             >
               <Typography variant="body2" color="text.secondary">
-                배치를 고른 뒤 작업대로 이동하면 업로드 행별 자동 판정 preview와
-                수집 거래 승격을 같은 흐름에서 이어서 처리할 수 있습니다.
+                배치를 고른 뒤 작업대로 이동하면 업로드 행별 자동 판정 결과와
+                수집 거래 등록을 같은 흐름에서 이어서 처리할 수 있습니다.
               </Typography>
               <Button href={selectedBatchWorkbenchHref} variant="outlined">
                 선택 배치 작업대
@@ -267,7 +267,7 @@ function ImportsSelectionSummaryCard({
         </Stack>
       ) : (
         <Typography variant="body2" color="text.secondary">
-          먼저 업로드 배치를 선택하면, 이 영역에서 현재 검토 범위와 승격 가능
+          먼저 업로드 배치를 선택하면, 이 영역에서 현재 검토 범위와 등록 가능
           상태를 함께 확인할 수 있습니다.
         </Typography>
       )}

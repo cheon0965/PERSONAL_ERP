@@ -25,6 +25,7 @@ import {
 } from '@mui/material';
 import type { NavigationMenuItem } from '@personal-erp/contracts';
 import { useQuery } from '@tanstack/react-query';
+import { useAuthSession } from '@/shared/auth/auth-provider';
 import { resolveNavigationIcon } from '@/shared/navigation/navigation-icons';
 import {
   getWorkspaceNavigationTree,
@@ -33,20 +34,53 @@ import {
 
 const drawerWidth = 304;
 const EMPTY_NAVIGATION_ITEMS: NavigationMenuItem[] = [];
+const SYSTEM_ADMIN_MENU_ROLES: NavigationMenuItem['allowedRoles'] = ['OWNER'];
 
 export function SidebarNav() {
   const pathname = usePathname() ?? '';
+  const { user } = useAuthSession();
+  const isSystemAdmin = user?.isSystemAdmin === true;
+  const hasWorkspaceContext = Boolean(user?.currentWorkspace?.ledger);
+  const workspaceRole = user?.currentWorkspace?.membership.role ?? null;
+  const canReadWorkspaceAdminMenu =
+    workspaceRole === 'OWNER' || workspaceRole === 'MANAGER';
+  const shouldLoadWorkspaceNavigation = !isSystemAdmin || hasWorkspaceContext;
   const navigationQuery = useQuery({
     queryKey: workspaceNavigationQueryKey,
-    queryFn: getWorkspaceNavigationTree
+    queryFn: getWorkspaceNavigationTree,
+    enabled: shouldLoadWorkspaceNavigation
   });
-  const items = navigationQuery.data?.items ?? EMPTY_NAVIGATION_ITEMS;
+  const platformItems = isSystemAdmin
+    ? buildSystemAdminNavigationItems({
+        canReadNavigation: canReadWorkspaceAdminMenu,
+        canReadPolicy: canReadWorkspaceAdminMenu
+      })
+    : EMPTY_NAVIGATION_ITEMS;
+  const workspaceItems = shouldLoadWorkspaceNavigation
+    ? (navigationQuery.data?.items ?? EMPTY_NAVIGATION_ITEMS)
+    : EMPTY_NAVIGATION_ITEMS;
+  const items = isSystemAdmin
+    ? [...platformItems, ...workspaceItems]
+    : workspaceItems;
   const selectedKey = resolveSelectedNavigationKey(pathname, items);
   const activeAncestorKeys = React.useMemo(
     () => collectAncestorKeys(items, selectedKey),
     [items, selectedKey]
   );
   const [openKeys, setOpenKeys] = React.useState<Set<string>>(new Set());
+  const [manuallyClosedKeys, setManuallyClosedKeys] = React.useState<
+    Set<string>
+  >(new Set());
+  const previousPathnameRef = React.useRef(pathname);
+
+  React.useEffect(() => {
+    if (previousPathnameRef.current === pathname) {
+      return;
+    }
+
+    previousPathnameRef.current = pathname;
+    setManuallyClosedKeys(new Set());
+  }, [pathname]);
 
   React.useEffect(() => {
     setOpenKeys((current) => {
@@ -55,7 +89,10 @@ export function SidebarNav() {
 
       if (next.size === 0) {
         for (const item of items) {
-          if (activeAncestorKeys.has(item.key) || item.key === selectedKey) {
+          if (
+            (activeAncestorKeys.has(item.key) || item.key === selectedKey) &&
+            !manuallyClosedKeys.has(item.key)
+          ) {
             if (!next.has(item.key)) {
               next.add(item.key);
               changed = true;
@@ -65,6 +102,10 @@ export function SidebarNav() {
       }
 
       for (const key of activeAncestorKeys) {
+        if (manuallyClosedKeys.has(key)) {
+          continue;
+        }
+
         if (!next.has(key)) {
           next.add(key);
           changed = true;
@@ -73,15 +114,25 @@ export function SidebarNav() {
 
       return changed ? next : current;
     });
-  }, [activeAncestorKeys, items, selectedKey]);
+  }, [activeAncestorKeys, items, manuallyClosedKeys, selectedKey]);
 
   const toggleOpen = (key: string) => {
     setOpenKeys((current) => {
       const next = new Set(current);
       if (next.has(key)) {
         next.delete(key);
+        setManuallyClosedKeys((closedKeys) => {
+          const nextClosedKeys = new Set(closedKeys);
+          nextClosedKeys.add(key);
+          return nextClosedKeys;
+        });
       } else {
         next.add(key);
+        setManuallyClosedKeys((closedKeys) => {
+          const nextClosedKeys = new Set(closedKeys);
+          nextClosedKeys.delete(key);
+          return nextClosedKeys;
+        });
       }
       return next;
     });
@@ -111,11 +162,20 @@ export function SidebarNav() {
       }}
       open
     >
-      <Toolbar sx={{ alignItems: 'flex-start', minHeight: 96, py: 2 }}>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="overline" color="primary.main">
-            메뉴
-          </Typography>
+      <Toolbar sx={{ minHeight: { xs: 60, md: 64 }, p: 0 }}>
+        <Box
+          component={Link}
+          href={'/dashboard' as Route}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            width: '100%',
+            minHeight: { xs: 60, md: 64 },
+            px: 3,
+            textDecoration: 'none',
+            color: 'text.primary'
+          }}
+        >
           <Typography
             variant="h6"
             sx={{ fontWeight: 850, letterSpacing: '-0.03em' }}
@@ -126,7 +186,7 @@ export function SidebarNav() {
       </Toolbar>
       <Divider />
       <Box sx={{ px: 1.5, py: 2 }}>
-        {navigationQuery.isLoading && items.length === 0 ? (
+        {navigationQuery.isLoading && workspaceItems.length === 0 && !isSystemAdmin ? (
           <Stack spacing={1.25}>
             {Array.from({ length: 7 }).map((_, index) => (
               <Skeleton key={index} variant="rounded" height={42} />
@@ -145,15 +205,21 @@ export function SidebarNav() {
             }}
           >
             <Typography variant="subtitle2" color="warning.dark">
-              메뉴를 불러오지 못했습니다.
+              {isSystemAdmin
+                ? '사업장 운영 메뉴를 불러오지 못했습니다.'
+                : '메뉴를 불러오지 못했습니다.'}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              API 연결 또는 메뉴 권한 설정을 확인해 주세요.
+              {isSystemAdmin
+                ? '플랫폼 관리 메뉴는 계속 사용할 수 있습니다. 현재 사업장 문맥과 메뉴 권한 설정을 확인해 주세요.'
+                : '서비스 연결 또는 메뉴 권한 설정을 확인해 주세요.'}
             </Typography>
           </Box>
         ) : null}
 
-        {!navigationQuery.isLoading && items.length === 0 ? (
+        {!navigationQuery.isLoading &&
+        !isSystemAdmin &&
+        items.length === 0 ? (
           <Box
             sx={{
               p: 2,
@@ -170,8 +236,99 @@ export function SidebarNav() {
           </Box>
         ) : null}
 
-        <List disablePadding sx={{ mt: items.length > 0 ? 0 : 1 }}>
-          {items.map((item) => (
+        {platformItems.length > 0 ? (
+          <SidebarSectionLabel
+            title="플랫폼 관리"
+            sx={{ mt: items.length > 0 ? 0 : 1 }}
+          />
+        ) : null}
+
+        <List disablePadding sx={{ mt: platformItems.length > 0 ? 0.75 : 0 }}>
+          {platformItems.map((item) => (
+            <NavigationNode
+              key={item.id}
+              item={item}
+              openKeys={openKeys}
+              selectedKey={selectedKey}
+              onToggle={toggleOpen}
+            />
+          ))}
+        </List>
+
+        {isSystemAdmin ? (
+          <SidebarSectionLabel
+            title="사업장 운영"
+            sx={{ mt: platformItems.length > 0 ? 2 : 0 }}
+          />
+        ) : null}
+
+        {isSystemAdmin && !hasWorkspaceContext ? (
+          <Box
+            sx={{
+              mt: 0.75,
+              p: 2,
+              borderRadius: 3,
+              border: '1px dashed',
+              borderColor: 'divider',
+              bgcolor: alpha('#ffffff', 0.72)
+            }}
+          >
+            <Typography variant="subtitle2">사업장 운영 문맥 없음</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              현재 연결된 사업장과 장부가 없어 일반 업무 메뉴를 표시하지
+              않습니다. 테스트나 운영 확인은 사업장 멤버십이 연결된 문맥에서
+              진행할 수 있습니다.
+            </Typography>
+          </Box>
+        ) : null}
+
+        {isSystemAdmin &&
+        hasWorkspaceContext &&
+        navigationQuery.isLoading ? (
+          <Stack spacing={1.25} sx={{ mt: 0.75 }}>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <Skeleton key={index} variant="rounded" height={38} />
+            ))}
+          </Stack>
+        ) : null}
+
+        {isSystemAdmin &&
+        hasWorkspaceContext &&
+        !navigationQuery.isLoading &&
+        !navigationQuery.error &&
+        workspaceItems.length === 0 ? (
+          <Box
+            sx={{
+              mt: 0.75,
+              p: 2,
+              borderRadius: 3,
+              border: '1px dashed',
+              borderColor: 'divider',
+              bgcolor: alpha('#ffffff', 0.72)
+            }}
+          >
+            <Typography variant="subtitle2">
+              표시할 사업장 운영 메뉴가 없습니다.
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              현재 문맥 역할 기준으로 노출되는 일반 업무 메뉴가 없거나 메뉴
+              권한에서 숨김 처리된 상태입니다.
+            </Typography>
+          </Box>
+        ) : null}
+
+        <List
+          disablePadding
+          sx={{
+            mt:
+              isSystemAdmin && workspaceItems.length > 0
+                ? 0.75
+                : platformItems.length === 0 && items.length > 0
+                  ? 0
+                  : 1
+          }}
+        >
+          {workspaceItems.map((item) => (
             <NavigationNode
               key={item.id}
               item={item}
@@ -187,6 +344,228 @@ export function SidebarNav() {
 }
 
 export const sidebarWidth = drawerWidth;
+
+function buildSystemAdminNavigationItems(input: {
+  canReadNavigation: boolean;
+  canReadPolicy: boolean;
+}): NavigationMenuItem[] {
+  const children: NavigationMenuItem[] = [
+    {
+      id: 'system-admin-home',
+      key: 'system-admin-home',
+      parentId: 'system-admin-root',
+      itemType: 'PAGE',
+      label: '관리자 허브',
+      description: '전체 관리 시작 화면입니다.',
+      href: '/admin',
+      iconKey: 'admin',
+      matchMode: 'EXACT',
+      sortOrder: 10,
+      depth: 1,
+      isVisible: true,
+      allowedRoles: SYSTEM_ADMIN_MENU_ROLES,
+      children: []
+    },
+    {
+      id: 'system-admin-users',
+      key: 'system-admin-users',
+      parentId: 'system-admin-root',
+      itemType: 'PAGE',
+      label: '전체 사용자 관리',
+      description: '계정 상태와 세션, 전체 관리자 권한을 관리합니다.',
+      href: '/admin/users',
+      iconKey: 'workspace',
+      matchMode: 'PREFIX',
+      sortOrder: 20,
+      depth: 1,
+      isVisible: true,
+      allowedRoles: SYSTEM_ADMIN_MENU_ROLES,
+      children: []
+    },
+    {
+      id: 'system-admin-tenants',
+      key: 'system-admin-tenants',
+      parentId: 'system-admin-root',
+      itemType: 'PAGE',
+      label: '사업장 관리',
+      description: '사업장 상태와 기본 장부 구성을 확인합니다.',
+      href: '/admin/tenants',
+      iconKey: 'settings',
+      matchMode: 'PREFIX',
+      sortOrder: 30,
+      depth: 1,
+      isVisible: true,
+      allowedRoles: SYSTEM_ADMIN_MENU_ROLES,
+      children: []
+    },
+    {
+      id: 'system-admin-support-context',
+      key: 'system-admin-support-context',
+      parentId: 'system-admin-root',
+      itemType: 'PAGE',
+      label: '사업장 전환 / 지원 모드',
+      description: '전체 관리자 세션의 사업장 운영 문맥을 선택합니다.',
+      href: '/admin/support-context',
+      iconKey: 'admin',
+      matchMode: 'PREFIX',
+      sortOrder: 40,
+      depth: 1,
+      isVisible: true,
+      allowedRoles: SYSTEM_ADMIN_MENU_ROLES,
+      children: []
+    },
+    {
+      id: 'system-admin-members',
+      key: 'system-admin-members',
+      parentId: 'system-admin-root',
+      itemType: 'PAGE',
+      label: '전체 회원 관리',
+      description: '모든 사업장의 멤버를 관리합니다.',
+      href: '/admin/members',
+      iconKey: 'workspace',
+      matchMode: 'PREFIX',
+      sortOrder: 50,
+      depth: 1,
+      isVisible: true,
+      allowedRoles: SYSTEM_ADMIN_MENU_ROLES,
+      children: []
+    },
+    {
+      id: 'system-admin-security-threats',
+      key: 'system-admin-security-threats',
+      parentId: 'system-admin-root',
+      itemType: 'PAGE',
+      label: '보안 위협 로그',
+      description: '비정상 인증과 보안 위협 이벤트를 조회합니다.',
+      href: '/admin/security-threats',
+      iconKey: 'reports',
+      matchMode: 'PREFIX',
+      sortOrder: 60,
+      depth: 1,
+      isVisible: true,
+      allowedRoles: SYSTEM_ADMIN_MENU_ROLES,
+      children: []
+    },
+    ...(input.canReadNavigation
+      ? [
+          {
+            id: 'system-admin-navigation',
+            key: 'system-admin-navigation',
+            parentId: 'system-admin-root',
+            itemType: 'PAGE' as const,
+            label: '메뉴 / 권한 관리',
+            description:
+              '현재 사업장 문맥 기준으로 메뉴 구조와 허용 역할을 관리합니다.',
+            href: '/admin/navigation',
+            iconKey: 'settings',
+            matchMode: 'PREFIX' as const,
+            sortOrder: 80,
+            depth: 1,
+            isVisible: true,
+            allowedRoles: SYSTEM_ADMIN_MENU_ROLES,
+            children: []
+          }
+        ]
+      : []),
+    ...(input.canReadPolicy
+      ? [
+          {
+            id: 'system-admin-policy',
+            key: 'system-admin-policy',
+            parentId: 'system-admin-root',
+            itemType: 'PAGE' as const,
+            label: '권한 정책 요약',
+            description:
+              '현재 사업장 문맥 기준으로 화면별 허용 역할과 노출 상태를 확인합니다.',
+            href: '/admin/policy',
+            iconKey: 'reports',
+            matchMode: 'PREFIX' as const,
+            sortOrder: 90,
+            depth: 1,
+            isVisible: true,
+            allowedRoles: SYSTEM_ADMIN_MENU_ROLES,
+            children: []
+          }
+        ]
+      : []),
+    {
+      id: 'system-admin-logs',
+      key: 'system-admin-logs',
+      parentId: 'system-admin-root',
+      itemType: 'PAGE',
+      label: '로그관리',
+      description: '모든 사업장의 감사 로그를 조회합니다.',
+      href: '/admin/logs',
+      iconKey: 'reports',
+      matchMode: 'PREFIX',
+      sortOrder: 70,
+      depth: 1,
+      isVisible: true,
+      allowedRoles: SYSTEM_ADMIN_MENU_ROLES,
+      children: []
+    },
+    {
+      id: 'system-admin-operations',
+      key: 'system-admin-operations',
+      parentId: 'system-admin-root',
+      itemType: 'PAGE',
+      label: '운영 상태',
+      description: '전체 관리자 운영 점검 지표를 확인합니다.',
+      href: '/admin/operations',
+      iconKey: 'reports',
+      matchMode: 'PREFIX',
+      sortOrder: 75,
+      depth: 1,
+      isVisible: true,
+      allowedRoles: SYSTEM_ADMIN_MENU_ROLES,
+      children: []
+    }
+  ];
+
+  return [
+    {
+      id: 'system-admin-root',
+      key: 'system-admin-root',
+      parentId: null,
+      itemType: 'GROUP',
+      label: '전체 관리자',
+      description: null,
+      href: null,
+      iconKey: 'admin',
+      matchMode: 'PREFIX',
+      sortOrder: 10,
+      depth: 0,
+      isVisible: true,
+      allowedRoles: SYSTEM_ADMIN_MENU_ROLES,
+      children: [...children].sort((left, right) => left.sortOrder - right.sortOrder)
+    }
+  ];
+}
+
+function SidebarSectionLabel({
+  title,
+  sx
+}: {
+  title: string;
+  sx?: object;
+}) {
+  return (
+    <Box sx={sx}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{
+          display: 'block',
+          fontWeight: 800,
+          letterSpacing: '0.05em',
+          textTransform: 'uppercase'
+        }}
+      >
+        {title}
+      </Typography>
+    </Box>
+  );
+}
 
 function NavigationNode({
   item,

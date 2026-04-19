@@ -41,12 +41,17 @@ export class LoginUseCase {
       this.failEmailNotVerifiedLoginAttempt(context, email);
     }
 
+    if (user.status !== 'ACTIVE') {
+      this.failInactiveUserLoginAttempt(context, email, user.status);
+    }
+
     this.rateLimit.clearLoginAttempts(context.clientIp, email);
 
     const result = await this.authSessions.issueSession({
       id: user.id,
       email: user.email,
-      name: user.name
+      name: user.name,
+      ...(user.isSystemAdmin ? { isSystemAdmin: true } : {})
     });
     this.securityEvents.log('auth.login_succeeded', {
       requestId: context.requestId,
@@ -100,6 +105,21 @@ export class LoginUseCase {
       reason: 'email_not_verified'
     });
     throw new UnauthorizedException('이메일 인증을 완료한 뒤 로그인해 주세요.');
+  }
+
+  private failInactiveUserLoginAttempt(
+    context: AuthRequestContext,
+    email: string,
+    status: string
+  ): never {
+    this.rateLimit.recordFailedLoginAttempt(context.clientIp, email);
+    this.securityEvents.warn('auth.login_failed', {
+      requestId: context.requestId,
+      clientIp: context.clientIp,
+      reason: 'user_not_active',
+      status
+    });
+    throw new UnauthorizedException('사용할 수 없는 계정입니다.');
   }
 }
 

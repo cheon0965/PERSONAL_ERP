@@ -24,7 +24,7 @@ export function CarryForwardsSectionNav({
       items={[
         {
           href: '/carry-forwards',
-          label: '생성 / 선택'
+          label: '이월 기준 생성 / 선택'
         },
         {
           href: detailHref,

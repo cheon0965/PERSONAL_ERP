@@ -6,6 +6,7 @@ export const tenantStatusLabelMap: Record<string, string> = {
 };
 
 export const membershipRoleLabelMap: Record<string, string> = {
+  SYSTEM_ADMIN: '전체 관리자',
   OWNER: '소유자',
   MANAGER: '관리자',
   EDITOR: '편집자',

@@ -4,26 +4,23 @@ import * as React from 'react';
 import type { Route } from 'next';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import MarkEmailReadRoundedIcon from '@mui/icons-material/MarkEmailReadRounded';
-import PersonAddAltRoundedIcon from '@mui/icons-material/PersonAddAltRounded';
 import {
   Alert,
   Box,
   Button,
   Card,
   CardContent,
-  Chip,
   Container,
   Stack,
-  TextField,
-  Typography
+  TextField
 } from '@mui/material';
-import { alpha } from '@mui/material/styles';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { registerWithPassword } from '@/features/auth/auth.api';
 import { appLayout } from '@/shared/ui/layout-metrics';
+import { AuthCardHeader } from './auth-card-header';
 
 const registerSchema = z
   .object({
@@ -80,27 +77,14 @@ export function RegisterPage() {
                 'linear-gradient(90deg, rgba(14,165,233,1), rgba(34,197,94,0.9))'
             }
           }}
-        >
+          >
           <CardContent sx={{ p: appLayout.authSurfacePadding }}>
             <Stack spacing={appLayout.authSurfaceGap}>
-              <Stack spacing={1.5}>
-                <Chip
-                  icon={<PersonAddAltRoundedIcon />}
-                  label="새 워크스페이스 시작"
-                  sx={{
-                    alignSelf: 'flex-start',
-                    fontWeight: 700,
-                    backgroundColor: alpha('#0ea5e9', 0.08)
-                  }}
-                />
-                <Typography variant="h4" sx={{ fontWeight: 800 }}>
-                  회원가입
-                </Typography>
-                <Typography color="text.secondary" sx={{ lineHeight: 1.75 }}>
-                  이메일 인증을 완료하면 기본 사업 장부와 OWNER 워크스페이스가
-                  준비됩니다. 인증 메일은 Gmail API 발송 경계로 연결됩니다.
-                </Typography>
-              </Stack>
+              <AuthCardHeader
+                eyebrow="새 사업장 시작"
+                title="회원가입"
+                description="이메일 인증을 완료하면 기본 사업장과 장부가 준비됩니다. 인증 메일로 본인 확인을 마치면 바로 로그인할 수 있습니다."
+              />
 
               {sentEmail ? (
                 <Alert

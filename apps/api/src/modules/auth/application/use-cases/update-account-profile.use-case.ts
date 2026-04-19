@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException
+} from '@nestjs/common';
 import type { AccountProfileItem } from '@personal-erp/contracts';
 import type { RequiredWorkspaceContext } from '../../../../common/auth/required-workspace.util';
 import {
@@ -10,7 +14,10 @@ import { SecurityEventLogger } from '../../../../common/infrastructure/operation
 import { WorkspaceAuditEventsService } from '../../../../common/infrastructure/operational/workspace-audit-events.service';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
 import { mapAccountProfileItem } from '../../auth-account-security.mapper';
-import { normalizeDisplayName } from '../../auth.normalization';
+import {
+  normalizeDisplayName,
+  normalizeEmail
+} from '../../auth.normalization';
 
 @Injectable()
 export class UpdateAccountProfileUseCase {
@@ -24,8 +31,9 @@ export class UpdateAccountProfileUseCase {
     user: { id: string },
     workspace: RequiredWorkspaceContext,
     request: RequestWithContext,
-    input: { name: string }
+    input: { email: string; name: string }
   ): Promise<AccountProfileItem> {
+    const nextEmail = normalizeEmail(input.email);
     const nextName = normalizeDisplayName(input.name);
     const currentUser = await this.prisma.user.findUnique({
       where: { id: user.id },
@@ -46,11 +54,29 @@ export class UpdateAccountProfileUseCase {
       throw new NotFoundException('사용자를 찾을 수 없습니다.');
     }
 
-    if (currentUser.name !== nextName) {
+    if (currentUser.email !== nextEmail) {
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email: nextEmail },
+        select: { id: true }
+      });
+
+      if (existingUser && existingUser.id !== user.id) {
+        throw new ConflictException('이미 사용 중인 이메일입니다.');
+      }
+    }
+
+    const nextEmailVerifiedAt =
+      currentUser.email === nextEmail ? currentUser.emailVerifiedAt : null;
+    const hasProfileChanges =
+      currentUser.name !== nextName || currentUser.email !== nextEmail;
+
+    if (hasProfileChanges) {
       await this.prisma.user.update({
         where: { id: user.id },
         data: {
-          name: nextName
+          email: nextEmail,
+          name: nextName,
+          emailVerifiedAt: nextEmailVerifiedAt
         }
       });
 
@@ -64,8 +90,12 @@ export class UpdateAccountProfileUseCase {
         resourceId: user.id,
         result: 'SUCCESS',
         metadata: {
+          previousEmail: currentUser.email,
+          nextEmail,
           previousName: currentUser.name,
-          nextName
+          nextName,
+          emailVerificationReset:
+            currentUser.email !== nextEmail ? 'true' : 'false'
         }
       });
       this.securityEvents.log('auth.account_profile_updated', {
@@ -78,6 +108,8 @@ export class UpdateAccountProfileUseCase {
     return mapAccountProfileItem(
       {
         ...currentUser,
+        email: nextEmail,
+        emailVerifiedAt: nextEmailVerifiedAt,
         name: nextName
       },
       workspace.timezone

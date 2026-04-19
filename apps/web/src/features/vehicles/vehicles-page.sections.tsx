@@ -114,7 +114,7 @@ export function VehiclesOverviewSection({
         <Grid size={{ xs: 12, xl: 7 }}>
           <ChartCard
             title="차량별 기록 운영비"
-            description="차량별 연료비와 정비비 누적 합계를 운영 요약 projection으로 비교합니다."
+            description="차량별 연료비와 정비비 누적 합계를 운영 참고 수치로 비교합니다."
             chart={
               <BarChart
                 height={320}
@@ -169,8 +169,7 @@ export function VehiclesOverviewSection({
               />
               <Typography variant="body2" color="text.secondary">
                 차량 기본 정보, 연료 이력, 정비 이력은 각각 분리해 저장하고,
-                운영비와 연비 요약은 `operating-summary` projection으로 따로
-                읽습니다.
+                운영비와 연비 요약은 별도 참고 수치로 따로 읽습니다.
               </Typography>
             </Stack>
           </SectionCard>

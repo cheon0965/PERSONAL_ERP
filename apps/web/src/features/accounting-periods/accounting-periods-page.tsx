@@ -174,6 +174,7 @@ export function AccountingPeriodsPage({
       ledgerLabel,
       ledgerMetaLabel,
       membershipRole,
+      section,
       workspaceLabel
     })
   );
@@ -418,8 +419,8 @@ export function AccountingPeriodsPage({
 
       {!hasWorkspace ? (
         <Alert severity="warning" variant="outlined">
-          현재 작업 사업장과 장부 문맥이 아직 준비되지 않았습니다. 작업 문맥
-          화면에서 연결 상태를 먼저 확인해 주세요.
+          현재 사업장과 장부 정보가 아직 준비되지 않았습니다. 설정 화면에서
+          연결 상태를 먼저 확인해 주세요.
         </Alert>
       ) : null}
 

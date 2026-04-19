@@ -8,6 +8,7 @@ export type RequiredWorkspaceContext = {
   tenantName: string;
   membershipId: string;
   membershipRole: 'OWNER' | 'MANAGER' | 'EDITOR' | 'VIEWER';
+  systemRole?: 'SYSTEM_ADMIN';
   ledgerId: string;
   ledgerName: string;
   baseCurrency: string;

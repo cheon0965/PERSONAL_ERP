@@ -3,6 +3,7 @@
 import { Stack } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthSession } from '@/shared/auth/auth-provider';
+import { membershipRoleLabelMap } from '@/shared/auth/auth-labels';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
@@ -29,20 +30,23 @@ export function ReferenceDataPage() {
     ? `${currentWorkspace.tenant.name} (${currentWorkspace.tenant.slug})`
     : '-';
   const ledgerLabel = currentWorkspace?.ledger?.name ?? '-';
+  const membershipRoleLabel = membershipRole
+    ? (membershipRoleLabelMap[membershipRole] ?? membershipRole)
+    : '-';
 
   useDomainHelp({
     title: '기준 데이터 준비 상태 사용 가이드',
     description:
-      '이 화면은 월 운영을 시작하기 전에 자금수단, 카테고리, 계정과목, 거래유형이 운영 가능한 상태인지 한 번에 점검하는 곳입니다. 막히는 화면이 있으면 먼저 readiness 부족 항목을 확인합니다.',
+      '이 화면은 월 운영을 시작하기 전에 자금수단, 카테고리, 계정과목, 거래유형이 운영 가능한 상태인지 한 번에 점검하는 곳입니다. 막히는 화면이 있으면 먼저 부족한 준비 항목을 확인합니다.',
     primaryEntity: '기준 데이터 준비 상태',
     relatedEntities: ['자금수단', '거래 분류', '계정과목', '거래 유형'],
     truthSource:
-      '준비 상태의 단일 판정 원천은 서버가 계산한 reference-data readiness 요약입니다.',
+      '준비 상태는 현재 사업장과 장부 기준으로 계산한 기준 데이터 요약을 따릅니다.',
     supplementarySections: [
       {
-        title: '현재 작업 문맥',
+        title: '현재 이용 기준',
         description:
-          '기준 데이터 readiness는 로그인한 사용자의 현재 사업 장부 문맥 안에서만 판정됩니다.',
+          '기준 데이터 준비 상태는 로그인한 사용자의 현재 사업장과 장부 안에서만 판단됩니다.',
         facts: [
           {
             label: '사업장',
@@ -56,7 +60,7 @@ export function ReferenceDataPage() {
           },
           {
             label: '권한',
-            value: currentWorkspace?.membership.role ?? '-'
+            value: membershipRoleLabel
           }
         ]
       },
@@ -65,10 +69,10 @@ export function ReferenceDataPage() {
         description:
           '준비 상태 탭에서는 부족한 기준을 먼저 찾고, 필요한 경우 관리 탭으로 넘어가 보완합니다.',
         items: [
-          '준비 상태 요약에서 월 운영, 거래 입력, 업로드 승격에 영향을 주는 부족 항목을 확인합니다.',
+          '준비 상태 요약에서 월 운영, 거래 입력, 업로드 행 등록에 영향을 주는 부족 항목을 확인합니다.',
           '자금수단이나 카테고리가 부족하면 기준 데이터 관리 탭에서 추가합니다.',
-          '계정과목과 거래유형은 system-managed 항목이므로 존재 여부와 활성 상태를 확인합니다.',
-          'readiness가 준비되면 월 운영 화면에서 운영 기간을 엽니다.'
+          '계정과목과 거래유형은 시스템 제공 항목이므로 존재 여부와 활성 상태를 확인합니다.',
+          '준비 상태가 완료되면 월 운영 화면에서 운영 기간을 엽니다.'
         ]
       }
     ],
@@ -91,7 +95,7 @@ export function ReferenceDataPage() {
         metadata={[
           { label: '사업장', value: workspaceLabel },
           { label: '장부', value: ledgerLabel },
-          { label: '권한', value: membershipRole ?? '-' }
+          { label: '권한', value: membershipRoleLabel }
         ]}
         primaryActionLabel="자금수단"
         primaryActionHref="/reference-data/funding-accounts"

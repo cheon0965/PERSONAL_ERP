@@ -9,6 +9,8 @@ import { AdminAuditEventsService } from './admin-audit-events.service';
 import { AdminController } from './admin.controller';
 import { AdminMemberQueryService } from './admin-member-query.service';
 import { AdminPolicyService } from './admin-policy.service';
+import { AdminSecurityThreatEventsService } from './admin-security-threat-events.service';
+import { AdminSystemService } from './admin-system.service';
 
 @Module({
   imports: [NavigationModule],
@@ -21,7 +23,9 @@ import { AdminPolicyService } from './admin-policy.service';
     UpdateTenantMemberStatusUseCase,
     RemoveTenantMemberUseCase,
     AdminAuditEventsService,
-    AdminPolicyService
+    AdminSecurityThreatEventsService,
+    AdminPolicyService,
+    AdminSystemService
   ],
   exports: [AdminAuditEventsService]
 })

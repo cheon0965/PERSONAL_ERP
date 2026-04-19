@@ -107,7 +107,7 @@ export function TransactionsTableSection({
       },
       {
         field: 'sourceKind',
-        headerName: '수집 원천',
+        headerName: '등록 출처',
         flex: 0.8,
         valueFormatter: (value) =>
           sourceKindLabelMap[String(value)] ?? String(value)

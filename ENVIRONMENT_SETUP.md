@@ -202,7 +202,7 @@ EMAIL_VERIFICATION_TTL=30m
 
 ### 5순위. 데모 계정과 초기 관리자 계정 설정
 
-seed는 기존 데모 계정을 계속 만들고, `INITIAL_ADMIN_*` 값이 모두 있을 때만 별도의 첫 로그인용 workspace `OWNER` 계정을 추가로 만듭니다. 현재 schema에는 별도 platform admin role이 없으므로, 초기 관리자 값은 운영 초기 소유자 계정 기준으로 봅니다.
+seed는 기존 데모 계정을 계속 만들고, `INITIAL_ADMIN_*` 값이 모두 있을 때만 별도의 첫 로그인용 `전역 관리자` 계정을 추가로 만듭니다. 이 계정은 일반 사업장 `OWNER`와 별도로 `isSystemAdmin=true`가 저장되며, 관리자 화면에서 모든 사업장과 사용자를 조회하고 멤버 역할/상태를 관리할 수 있습니다.
 
 ```env
 DEMO_EMAIL=demo@example.com
@@ -214,7 +214,7 @@ INITIAL_ADMIN_PASSWORD=replace-with-local-initial-admin-password
 주의:
 
 - 데모 계정은 `DEMO_EMAIL`과 로컬 데모 비밀번호 `Demo1234!` 기준으로 유지합니다.
-- `INITIAL_ADMIN_EMAIL`을 `DEMO_EMAIL`과 같게 두면 별도 초기 관리자 계정은 추가로 만들지 않습니다.
+- `INITIAL_ADMIN_EMAIL`을 `DEMO_EMAIL`과 같게 두면 데모 계정 자체가 전역 관리자 계정으로 승격됩니다.
 - `INITIAL_ADMIN_PASSWORD`는 저장소 안이 아니라 `C:\secrets\personal-erp\api.env` 같은 저장소 밖 SECRET 파일에 둡니다.
 - seed는 이 비밀번호를 그대로 저장하지 않고 실행 시 argon2 hash로 변환합니다.
 - 운영에서는 예시 비밀번호를 재사용하지 말고 환경별 최초 로그인 비밀번호를 별도로 발급합니다.

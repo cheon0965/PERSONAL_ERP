@@ -61,42 +61,7 @@ export function FinancialStatementsPage({
     queryFn: getAccountingPeriods
   });
 
-  useDomainHelp({
-    title: '재무제표 사용 가이드',
-    description:
-      '이 화면은 월 마감으로 잠금된 기간의 공식 보고 스냅샷을 생성하고 확인하는 곳입니다. 운영 중 임시 숫자가 아니라 마감된 전표와 스냅샷을 기준으로 봅니다.',
-    primaryEntity: '공식 재무제표',
-    relatedEntities: [
-      '운영 월',
-      '월 마감 스냅샷',
-      '차기 이월 기록',
-      '기초 잔액 기준'
-    ],
-    truthSource:
-      '공식 재무제표는 잠금된 기간의 마감 결과와 전표를 근거로 생성되며, 기초 잔액은 차기 이월 또는 초기 설정을 따릅니다.',
-    supplementarySections: [
-      {
-        title: '바로 쓰는 순서',
-        items: [
-          '생성 / 선택 화면에서 잠금된 운영 기간을 고릅니다.',
-          '공식 재무제표 생성을 눌러 해당 기간의 보고 스냅샷을 만듭니다.',
-          '보고서 보기 화면에서 보고 대상, 직전 잠금 기간, 기초 잔액 출처를 먼저 확인합니다.',
-          '이월 및 기준선에서 어떤 마감/이월 기록을 기준으로 시작했는지 확인합니다.',
-          '재무상태표, 손익보고서, 현금흐름, 순자산 변동표의 요약과 전기 대비 변동을 검토합니다.'
-        ]
-      },
-      {
-        title: '막히면 확인',
-        items: [
-          '잠금된 기간이 없으면 월 운영 화면에서 먼저 월 마감을 완료합니다.',
-          '전표가 이상하면 전표 조회 화면에서 반전/정정 필요 여부를 확인한 뒤 재생성합니다.',
-          '다음 월 시작 기준까지 이어가려면 차기 이월 화면에서 이월 기준을 생성합니다.'
-        ]
-      }
-    ],
-    readModelNote:
-      '대시보드와 전망은 운영 판단용입니다. 공식 보고 숫자는 잠금된 기간을 대상으로 이 화면에서 생성한 스냅샷을 기준으로 봅니다.'
-  });
+  useDomainHelp(buildFinancialStatementsHelpContext(mode));
 
   const lockedPeriods = React.useMemo(
     () =>
@@ -456,4 +421,95 @@ export function FinancialStatementsPage({
       )}
     </Stack>
   );
+}
+
+function buildFinancialStatementsHelpContext(
+  mode: FinancialStatementsPageMode
+) {
+  if (mode === 'detail') {
+    return {
+      title: '보고서 보기 도움말',
+      description:
+        '이 화면은 선택한 잠금 기간의 공식 재무제표 스냅샷과 전기 대비 변동, 시작 기준선을 읽는 보고서 화면입니다.',
+      primaryEntity: '공식 재무제표 보고서',
+      relatedEntities: [
+        '월 마감 스냅샷',
+        '차기 이월 기록',
+        '기초 잔액 기준',
+        '전표'
+      ],
+      truthSource:
+        '공식 재무제표는 잠금된 기간의 마감 결과와 전표를 근거로 생성되며, 기초 잔액은 차기 이월 또는 초기 설정을 따릅니다.',
+      supplementarySections: [
+        {
+          title: '이 탭에서 하는 일',
+          items: [
+            '보고 대상 기간과 직전 잠금 기간이 맞는지 먼저 확인합니다.',
+            '재무상태표, 손익보고서, 현금흐름, 순자산 변동표의 요약과 전기 대비 변동을 검토합니다.',
+            '숫자 기준선이 의심되면 이월 및 기준선 정보와 전표 흐름을 함께 확인합니다.'
+          ]
+        },
+        {
+          title: '이어지는 화면',
+          links: [
+            {
+              title: '재무제표 생성 / 선택',
+              description: '다른 잠금 기간을 고르거나 공식 스냅샷을 다시 생성합니다.',
+              href: '/financial-statements',
+              actionLabel: '생성 / 선택 보기'
+            },
+            {
+              title: '차기 이월',
+              description: '보고 숫자가 다음 월 시작 기준으로 어떻게 이어지는지 확인합니다.',
+              href: '/carry-forwards',
+              actionLabel: '차기 이월 보기'
+            },
+            {
+              title: '전표 조회',
+              description: '이상한 숫자가 보이면 전표 기준으로 원인을 추적합니다.',
+              href: '/journal-entries',
+              actionLabel: '전표 보기'
+            }
+          ]
+        }
+      ],
+      readModelNote:
+        '대시보드와 전망은 운영 판단용입니다. 공식 보고 숫자는 잠금된 기간을 대상으로 이 화면에서 생성한 스냅샷을 기준으로 봅니다.'
+    };
+  }
+
+  return {
+    title: '재무제표 생성 / 선택 도움말',
+    description:
+      '이 화면은 잠금된 운영 기간을 고르고 공식 재무제표 스냅샷 생성 여부를 확인한 뒤 보고서 화면으로 이어가는 시작 화면입니다.',
+    primaryEntity: '공식 재무제표 생성',
+    relatedEntities: [
+      '운영 월',
+      '월 마감 스냅샷',
+      '차기 이월 기록',
+      '기초 잔액 기준'
+    ],
+    truthSource:
+      '공식 재무제표는 잠금된 기간의 마감 결과와 전표를 근거로 생성되며, 기초 잔액은 차기 이월 또는 초기 설정을 따릅니다.',
+    supplementarySections: [
+      {
+        title: '이 탭에서 하는 일',
+        items: [
+          '잠금된 운영 기간을 고르고 공식 재무제표 생성 여부를 확인합니다.',
+          '필요하면 공식 재무제표 생성을 실행한 뒤 보고서 보기 화면으로 이동합니다.',
+          '다른 잠금 월과 비교할 때도 이 화면에서 대상을 다시 선택합니다.'
+        ]
+      },
+      {
+        title: '막히면 확인',
+        items: [
+          '잠금된 기간이 없으면 월 운영 화면에서 먼저 월 마감을 완료합니다.',
+          '전표가 이상하면 전표 조회 화면에서 반전/정정 필요 여부를 확인한 뒤 재생성합니다.',
+          '다음 월 시작 기준까지 이어가려면 차기 이월 화면에서 이월 기준을 생성합니다.'
+        ]
+      }
+    ],
+    readModelNote:
+      '공식 재무제표는 운영 중 임시 숫자가 아니라 잠금된 기간의 확정 기준을 보여줍니다.'
+  };
 }

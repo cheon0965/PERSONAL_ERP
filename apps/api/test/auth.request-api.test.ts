@@ -1074,6 +1074,7 @@ test('PATCH /auth/account-profile updates the current user name', async () => {
       method: 'PATCH',
       headers: context.authHeaders(),
       body: {
+        email: 'demo@example.com',
         name: 'Updated Demo User'
       }
     });

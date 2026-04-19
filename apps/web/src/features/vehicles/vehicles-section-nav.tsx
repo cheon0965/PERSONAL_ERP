@@ -9,7 +9,7 @@ export type VehicleWorkspaceSection =
   | 'maintenance';
 
 const vehicleSectionItems = [
-  { href: '/vehicles', label: '개요' },
+  { href: '/vehicles', label: '차량 운영' },
   { href: '/vehicles/fleet', label: '차량 목록' },
   { href: '/vehicles/fuel', label: '연료 기록' },
   { href: '/vehicles/maintenance', label: '정비 이력' }

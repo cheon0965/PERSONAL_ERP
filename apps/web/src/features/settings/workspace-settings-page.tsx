@@ -5,6 +5,7 @@ import { Alert, Button, Grid, MenuItem, Stack, TextField } from '@mui/material';
 import type { UpdateWorkspaceSettingsRequest } from '@personal-erp/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthSession } from '@/shared/auth/auth-provider';
+import { membershipRoleLabelMap } from '@/shared/auth/auth-labels';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
@@ -79,9 +80,9 @@ export function WorkspaceSettingsPage() {
   useDomainHelp({
     title: '사업장 설정 가이드',
     description:
-      '사업장 설정은 현재 워크스페이스 이름, 상태, 기본 장부 기준값을 관리하는 화면입니다.',
-    primaryEntity: 'Tenant / Ledger',
-    relatedEntities: ['AccountingPeriod', 'FinancialStatementSnapshot'],
+      '사업장 설정은 현재 사업장 이름, 상태, 기본 장부 기준값을 관리하는 화면입니다.',
+    primaryEntity: '사업장 / 장부',
+    relatedEntities: ['운영 기간', '재무제표 스냅샷'],
     truthSource:
       '여기서 저장한 사업장 상태, 기본 장부 이름, 통화, 시간대가 운영 월과 보고 화면의 기본 기준이 됩니다.',
     supplementarySections: [
@@ -147,7 +148,12 @@ export function WorkspaceSettingsPage() {
 
       {!canManage ? (
         <Alert severity="warning" variant="outlined">
-          현재 역할은 {user?.currentWorkspace?.membership.role ?? '-'} 입니다.
+          현재 역할은{' '}
+          {user?.currentWorkspace?.membership.role
+            ? (membershipRoleLabelMap[user.currentWorkspace.membership.role] ??
+              user.currentWorkspace.membership.role)
+            : '-'}{' '}
+          입니다.
           사업장 설정 수정은 소유자 또는 관리자만 수행할 수 있습니다.
         </Alert>
       ) : null}

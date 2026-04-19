@@ -7,7 +7,7 @@ import {
 } from '../providers/domain-help-provider';
 
 /**
- * 페이지별 도메인 지식을 전역 도메인 가이드 시스템에 등록합니다.
+ * 페이지별 도움말 내용을 전역 화면 도움말에 등록합니다.
  */
 export function useDomainHelp(context: DomainHelpContextType) {
   const { setContext, clearContext } = useDomainHelpStore();

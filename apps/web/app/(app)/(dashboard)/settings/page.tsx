@@ -1,7 +1,6 @@
 'use client';
 
-import Link from 'next/link';
-import { Button, Chip, Grid, Stack, Typography } from '@mui/material';
+import { Grid, Stack, Typography } from '@mui/material';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
@@ -47,13 +46,13 @@ export default function SettingsPage() {
   const currentWorkspace = user?.currentWorkspace ?? null;
 
   useDomainHelp({
-    title: '작업 문맥 사용 가이드',
+    title: '현재 이용 기준 안내',
     description:
-      '이 화면은 다른 메뉴를 사용하기 전에 현재 로그인 사용자가 어느 사업장, 권한, 장부 안에서 작업하는지 확인하는 시작 화면입니다. 데이터가 예상과 다르게 보이면 먼저 이 화면의 문맥을 확인합니다.',
+      '이 화면은 다른 메뉴를 사용하기 전에 현재 로그인 사용자가 어느 사업장, 권한, 장부 기준으로 보고 있는지 확인하는 시작 화면입니다. 데이터가 예상과 다르게 보이면 먼저 이 화면의 기준 정보를 확인합니다.',
     primaryEntity: '사업장 / 권한 / 장부',
     relatedEntities: ['운영 기간', '입출금 계정', '거래 유형', '수집 거래'],
     truthSource:
-      '현재 세션의 currentWorkspace가 모든 화면의 조회, 입력, 확정 권한을 해석하는 런타임 기준입니다.',
+      '현재 로그인 중인 사업장과 장부 정보가 모든 화면의 조회, 입력, 확정 권한을 판단하는 기준입니다.',
     supplementarySections: [
       {
         title: '바로 확인할 것',
@@ -64,23 +63,49 @@ export default function SettingsPage() {
         ]
       },
       {
-        title: '다음으로 갈 화면',
+        title: '이어지는 화면',
         items: [
-          '문맥이 맞으면 기준 데이터에서 readiness와 자금수단/카테고리를 확인합니다.',
-          '문맥이 비어 있거나 잘못 보이면 로그인 상태와 사업장 연결을 먼저 점검합니다.',
-          '문맥이 맞는데 특정 화면 데이터가 이상하면 해당 화면의 기간 선택과 필터를 다시 확인합니다.'
+          '사업장과 장부가 맞으면 기준 데이터에서 준비 상태와 자금수단/카테고리를 확인합니다.',
+          '사업장 정보가 비어 있거나 잘못 보이면 로그인 상태와 사업장 연결을 먼저 점검합니다.',
+          '사업장과 장부가 맞는데 특정 화면 데이터가 이상하면 해당 화면의 기간 선택과 필터를 다시 확인합니다.'
+        ],
+        links: [
+          {
+            title: '기준 데이터 준비 상태',
+            description: '운영 준비가 충분한지 먼저 점검하고 자금수단과 카테고리를 이어서 확인합니다.',
+            href: '/reference-data',
+            actionLabel: '기준 데이터 보기'
+          },
+          {
+            title: '운영 기간',
+            description: '현재 사업장과 장부 기준이 맞다면 월 운영 시작과 마감 상태를 확인합니다.',
+            href: '/periods',
+            actionLabel: '운영 기간 보기'
+          },
+          {
+            title: '사업장 설정',
+            description: '사업장 이름, 슬러그, 장부 연결 같은 기준값을 직접 수정합니다.',
+            href: '/settings/workspace',
+            actionLabel: '사업장 설정 보기'
+          },
+          {
+            title: '기본 정보',
+            description: '내 계정 이름과 개인 보안 정보를 이어서 확인합니다.',
+            href: '/settings/account/profile',
+            actionLabel: '기본 정보 보기'
+          }
         ]
       }
     ],
     readModelNote:
-      '이 화면은 값을 수정하는 곳이 아니라, 앞으로 열 모든 운영 화면의 기준 문맥을 확인하는 곳입니다.'
+      '이 화면은 값을 수정하는 곳이 아니라, 앞으로 열 모든 운영 화면의 기준 정보를 확인하는 곳입니다.'
   });
 
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
         eyebrow="설정"
-        title="현재 작업 문맥"
+        title="현재 사업장 / 장부"
         description="지금 보고 있는 사업장, 권한, 장부 기준을 먼저 확인하고 다음 운영 화면으로 이동합니다."
         badges={[
           {
@@ -215,46 +240,6 @@ export default function SettingsPage() {
           </Grid>
         </Grid>
       </SectionCard>
-
-      <SectionCard
-        title="다음으로 갈 화면"
-        description="문맥이 맞다면 아래 순서로 운영 준비와 설정 화면을 이어서 확인합니다."
-      >
-        <Grid container spacing={appLayout.sectionGap}>
-          <Grid size={{ xs: 12, md: 6, xl: 3 }}>
-            <SettingsActionCard
-              eyebrow="운영 준비"
-              title="기준 데이터"
-              href="/reference-data"
-              actionLabel="준비 상태 보기"
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 6, xl: 3 }}>
-            <SettingsActionCard
-              eyebrow="월 실행"
-              title="운영 월"
-              href="/periods"
-              actionLabel="운영 월 보기"
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 6, xl: 3 }}>
-            <SettingsActionCard
-              eyebrow="설정"
-              title="사업장 설정"
-              href="/settings/workspace"
-              actionLabel="사업장 설정"
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 6, xl: 3 }}>
-            <SettingsActionCard
-              eyebrow="보안"
-              title="기본 정보"
-              href="/settings/account/profile"
-              actionLabel="기본 정보"
-            />
-          </Grid>
-        </Grid>
-      </SectionCard>
     </Stack>
   );
 }
@@ -291,45 +276,6 @@ function ContextInfoCard({
           </Stack>
         ))}
       </Stack>
-    </Stack>
-  );
-}
-
-function SettingsActionCard({
-  eyebrow,
-  title,
-  href,
-  actionLabel
-}: {
-  eyebrow: string;
-  title: string;
-  href: string;
-  actionLabel: string;
-}) {
-  return (
-    <Stack
-      spacing={1.5}
-      sx={{
-        height: '100%',
-        p: appLayout.cardPadding,
-        borderRadius: 3,
-        border: '1px solid',
-        borderColor: 'divider',
-        backgroundColor: 'background.default'
-      }}
-    >
-      <Stack direction="row" justifyContent="space-between" spacing={1}>
-        <Typography variant="overline" color="text.secondary">
-          {eyebrow}
-        </Typography>
-        <Chip label="바로 이동" size="small" variant="outlined" />
-      </Stack>
-      <Typography variant="subtitle1">{title}</Typography>
-      <div>
-        <Button component={Link} href={href} variant="outlined">
-          {actionLabel}
-        </Button>
-      </div>
     </Stack>
   );
 }

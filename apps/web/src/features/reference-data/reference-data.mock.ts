@@ -165,9 +165,9 @@ function buildMockReferenceDataReadiness(input: {
       label: '자금수단',
       count: activeFundingAccountCount,
       description:
-        '수집 거래, 반복 규칙, 업로드 승격에서 실제 자금 흐름 계정으로 선택하는 기준 목록입니다.',
+        '수집 거래, 반복 규칙, 업로드 행 등록에서 실제 자금 흐름 계정으로 선택하는 기준 목록입니다.',
       operatingImpact:
-        '없으면 수집 거래 등록과 업로드 행 승격에서 자금수단을 고를 수 없습니다.',
+        '없으면 수집 거래 등록과 업로드 행 등록에서 자금수단을 고를 수 없습니다.',
       currentRole: input.currentRole,
       inProductEditEnabled: true
     }),

@@ -1,6 +1,7 @@
 import type {
   AdminAuditEventItem,
   AdminMemberItem,
+  AdminSecurityThreatEventItem,
   TenantMemberInvitationItem
 } from '@personal-erp/contracts';
 
@@ -18,6 +19,12 @@ type AdminMemberRecord = {
     name: string;
     emailVerifiedAt: Date | null;
   };
+  tenant?: {
+    id: string;
+    slug: string;
+    name: string;
+    status: NonNullable<AdminMemberItem['tenant']>['status'];
+  };
 };
 
 export function mapAdminMemberToItem(
@@ -28,6 +35,16 @@ export function mapAdminMemberToItem(
     userId: record.userId,
     email: record.user.email,
     name: record.user.name,
+    ...(record.tenant
+      ? {
+          tenant: {
+            id: record.tenant.id,
+            slug: record.tenant.slug,
+            name: record.tenant.name,
+            status: record.tenant.status
+          }
+        }
+      : {}),
     role: record.role,
     status: record.status,
     joinedAt: record.joinedAt.toISOString(),
@@ -107,11 +124,85 @@ export function mapAdminAuditEventToItem(
   };
 }
 
+type AdminSecurityThreatEventRecord = {
+  id: string;
+  severity: string;
+  eventCategory: string;
+  eventName: string;
+  source: string;
+  requestId: string | null;
+  path: string | null;
+  clientIpHash: string | null;
+  userId: string | null;
+  sessionId: string | null;
+  reason: string | null;
+  metadata: unknown;
+  occurredAt: Date;
+};
+
+export function mapAdminSecurityThreatEventToItem(
+  record: AdminSecurityThreatEventRecord
+): AdminSecurityThreatEventItem {
+  return {
+    id: record.id,
+    severity: readThreatSeverity(record.severity),
+    eventCategory: readThreatCategory(record.eventCategory),
+    eventName: record.eventName,
+    source: record.source,
+    requestId: record.requestId,
+    path: record.path,
+    clientIpHash: record.clientIpHash,
+    userId: record.userId,
+    sessionId: record.sessionId,
+    reason: record.reason,
+    metadata: readFlatMetadata(record.metadata),
+    occurredAt: record.occurredAt.toISOString()
+  };
+}
+
 function readAuditResult(value: string): AdminAuditEventItem['result'] {
   return value === 'DENIED' || value === 'FAILED' ? value : 'SUCCESS';
 }
 
 function readAuditMetadata(value: unknown): AdminAuditEventItem['metadata'] {
+  return readFlatMetadata(value);
+}
+
+function readThreatSeverity(
+  value: string
+): AdminSecurityThreatEventItem['severity'] {
+  switch (value) {
+    case 'CRITICAL':
+    case 'HIGH':
+    case 'MEDIUM':
+    case 'LOW':
+      return value;
+    default:
+      return 'LOW';
+  }
+}
+
+function readThreatCategory(
+  value: string
+): AdminSecurityThreatEventItem['eventCategory'] {
+  switch (value) {
+    case 'AUTHENTICATION':
+    case 'REGISTRATION':
+    case 'SESSION':
+    case 'EMAIL_VERIFICATION':
+    case 'ACCESS_CONTROL':
+    case 'BROWSER_ORIGIN':
+    case 'EMAIL_DELIVERY':
+    case 'SYSTEM':
+      return value;
+    default:
+      return 'SYSTEM';
+  }
+}
+
+function readFlatMetadata(
+  value: unknown
+): Record<string, string | number | boolean | null> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null;
   }

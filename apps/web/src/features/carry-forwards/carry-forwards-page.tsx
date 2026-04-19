@@ -61,37 +61,7 @@ export function CarryForwardsPage({
     queryFn: getAccountingPeriods
   });
 
-  useDomainHelp({
-    title: '차기 이월 사용 가이드',
-    description:
-      '이 화면은 잠금된 월의 마감 결과를 다음 월의 시작 잔액 기준으로 넘기는 곳입니다. 한 달 운영을 공식 보고에서 끝내지 않고 다음 달 운영으로 연결합니다.',
-    primaryEntity: '차기 이월 기록',
-    relatedEntities: ['월 마감 스냅샷', '다음 월 기초 잔액', '운영 기간'],
-    truthSource:
-      '차기 이월은 잠금된 기간의 마감 결과와 잔액 라인을 근거로 생성됩니다.',
-    supplementarySections: [
-      {
-        title: '바로 쓰는 순서',
-        items: [
-          '생성 / 선택 화면에서 잠금된 운영 기간을 선택합니다.',
-          '차기 이월 생성을 눌러 선택한 월의 마감 잔액을 다음 월 오프닝 기준으로 넘깁니다.',
-          '결과 보기 화면에서 원천 월과 대상 월이 맞는지 확인합니다.',
-          '마감 기준에서 자산, 부채, 자본 합계가 의도한 기준인지 확인합니다.',
-          '다음 월 오프닝 라인에서 자금수단과 계정과목별 시작 잔액을 확인합니다.'
-        ]
-      },
-      {
-        title: '다음 단계',
-        items: [
-          '이월 결과를 확인한 뒤 기간 전망에서 다음 월 준비 상태와 안전 여력을 확인합니다.',
-          '다음 운영 월을 실제로 진행하려면 월 운영 화면에서 대상 월 상태를 확인합니다.',
-          '이월 전 보고 숫자를 다시 보고 싶으면 재무제표 화면으로 돌아갑니다.'
-        ]
-      }
-    ],
-    readModelNote:
-      '차기 이월은 손익 계정을 직접 넘기지 않고, 잠금 시점의 자산·부채·자본 잔액만 다음 월 오프닝 기준으로 전달합니다.'
-  });
+  useDomainHelp(buildCarryForwardsHelpContext(mode));
 
   const lockedPeriods = React.useMemo(
     () =>
@@ -457,4 +427,83 @@ export function CarryForwardsPage({
       )}
     </Stack>
   );
+}
+
+function buildCarryForwardsHelpContext(mode: CarryForwardsPageMode) {
+  if (mode === 'detail') {
+    return {
+      title: '차기 이월 결과 도움말',
+      description:
+        '이 화면은 선택한 잠금 기간의 이월 결과와 다음 월 오프닝 기준선을 읽는 결과 화면입니다.',
+      primaryEntity: '차기 이월 결과',
+      relatedEntities: ['월 마감 스냅샷', '다음 월 기초 잔액', '운영 기간'],
+      truthSource:
+        '차기 이월은 잠금된 기간의 마감 결과와 잔액 라인을 근거로 생성됩니다.',
+      supplementarySections: [
+        {
+          title: '이 탭에서 하는 일',
+          items: [
+            '이전 월과 다음 월 연결이 맞는지 먼저 확인합니다.',
+            '마감 기준의 자산, 부채, 자본 합계가 의도한 기준인지 확인합니다.',
+            '다음 월 오프닝 라인에서 자금수단과 계정과목별 시작 잔액을 검토합니다.'
+          ]
+        },
+        {
+          title: '이어지는 화면',
+          links: [
+            {
+              title: '이월 기준 생성 / 선택',
+              description: '다른 잠금 기간을 고르거나 차기 이월을 다시 생성합니다.',
+              href: '/carry-forwards',
+              actionLabel: '생성 / 선택 보기'
+            },
+            {
+              title: '기간 운영 전망',
+              description: '다음 월 준비 상태와 운영 여력을 이어서 확인합니다.',
+              href: '/forecast',
+              actionLabel: '기간 운영 전망 보기'
+            },
+            {
+              title: '재무제표 생성 / 선택',
+              description: '이월 전 보고 숫자와 공식 기준을 다시 확인합니다.',
+              href: '/financial-statements',
+              actionLabel: '재무제표 보기'
+            }
+          ]
+        }
+      ],
+      readModelNote:
+        '차기 이월은 손익 계정을 직접 넘기지 않고, 잠금 시점의 자산·부채·자본 잔액만 다음 월 오프닝 기준으로 전달합니다.'
+    };
+  }
+
+  return {
+    title: '이월 기준 생성 / 선택 도움말',
+    description:
+      '이 화면은 잠금된 운영 기간을 고르고 차기 이월 생성 여부를 확인한 뒤 결과 화면으로 이어가는 시작 화면입니다.',
+    primaryEntity: '차기 이월 생성',
+    relatedEntities: ['월 마감 스냅샷', '다음 월 기초 잔액', '운영 기간'],
+    truthSource:
+      '차기 이월은 잠금된 기간의 마감 결과와 잔액 라인을 근거로 생성됩니다.',
+    supplementarySections: [
+      {
+        title: '이 탭에서 하는 일',
+        items: [
+          '잠금된 운영 기간을 선택해 차기 이월 생성 여부를 확인합니다.',
+          '차기 이월 생성을 눌러 선택한 월의 마감 잔액을 다음 월 오프닝 기준으로 넘깁니다.',
+          '생성이 끝나면 결과 보기 화면에서 이전 월과 다음 월 연결이 맞는지 검토합니다.'
+        ]
+      },
+      {
+        title: '다음 단계',
+        items: [
+          '이월 결과를 확인한 뒤 기간 전망에서 다음 월 준비 상태와 안전 여력을 확인합니다.',
+          '다음 운영 월을 실제로 진행하려면 월 운영 화면에서 대상 월 상태를 확인합니다.',
+          '이월 전 보고 숫자를 다시 보고 싶으면 재무제표 화면으로 돌아갑니다.'
+        ]
+      }
+    ],
+    readModelNote:
+      '차기 이월은 공식 보고를 다음 월 시작 기준으로 이어 주는 단계입니다. 잠금된 운영 기간이 없으면 이 흐름도 시작할 수 없습니다.'
+  };
 }

@@ -65,10 +65,29 @@ export function OperationsNotesPage() {
     title: '운영 메모 가이드',
     description:
       '운영 메모는 월 마감, 예외, 후속 조치를 인수인계용으로 남기는 화면입니다.',
-    primaryEntity: 'WorkspaceOperationalNote',
-    relatedEntities: ['AccountingPeriod', 'OperationsExceptionItem'],
+    primaryEntity: '운영 메모',
+    relatedEntities: ['운영 기간', '운영 예외'],
     truthSource:
-      '메모는 현재 워크스페이스와 선택한 운영 월 기준으로 저장되고 조회됩니다.'
+      '메모는 현재 사업장과 선택한 운영 월 기준으로 저장되고 조회됩니다.',
+    supplementarySections: [
+      {
+        title: '이어지는 화면',
+        links: [
+          {
+            title: '월 마감',
+            description: '월 마감 메모와 실제 마감 기준을 함께 확인합니다.',
+            href: '/operations/month-end',
+            actionLabel: '월 마감 보기'
+          },
+          {
+            title: '예외 처리함',
+            description: '예외 처리 후속 메모와 실제 처리 화면을 바로 연결합니다.',
+            href: '/operations/exceptions',
+            actionLabel: '예외 처리 보기'
+          }
+        ]
+      }
+    ]
   });
   const notes = notesQuery.data;
   const monthEndNoteCount =
@@ -139,62 +158,37 @@ export function OperationsNotesPage() {
         </Alert>
       ) : null}
 
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, lg: 7 }}>
-          <SectionCard
-            title="지금 우선 확인"
-            description="현재 메모 규모와 최근 작성 시점을 상단에서 먼저 확인합니다."
-          >
-            <Grid container spacing={appLayout.fieldGap}>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <NoteInfoItem
-                  label="최근 메모"
-                  value={`${formatNumber(notes?.totalCount ?? 0, 0)}건`}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <NoteInfoItem
-                  label="월 마감 메모"
-                  value={`${formatNumber(monthEndNoteCount, 0)}건`}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <NoteInfoItem
-                  label="최근 작성"
-                  value={formatDateTime(notes?.items[0]?.createdAt ?? null)}
-                />
-              </Grid>
-            </Grid>
-          </SectionCard>
+      <SectionCard
+        title="지금 우선 확인"
+        description="현재 메모 규모와 최근 작성 시점을 상단에서 먼저 확인합니다."
+      >
+        <Grid container spacing={appLayout.fieldGap}>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <NoteInfoItem
+              label="최근 메모"
+              value={`${formatNumber(notes?.totalCount ?? 0, 0)}건`}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <NoteInfoItem
+              label="월 마감 메모"
+              value={`${formatNumber(monthEndNoteCount, 0)}건`}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <NoteInfoItem
+              label="최근 작성"
+              value={formatDateTime(notes?.items[0]?.createdAt ?? null)}
+            />
+          </Grid>
         </Grid>
-        <Grid size={{ xs: 12, lg: 5 }}>
-          <SectionCard
-            title="자주 여는 후속 화면"
-            description="메모를 남기거나 읽은 뒤 자주 함께 확인하는 운영 화면입니다."
-          >
-            <Stack spacing={1.25}>
-              <OperationsNotesLinkCard
-                title="월 마감"
-                description="월 마감 메모와 실제 마감 기준을 함께 확인합니다."
-                href="/operations/month-end"
-                actionLabel="월 마감 보기"
-              />
-              <OperationsNotesLinkCard
-                title="예외 처리함"
-                description="예외 처리 후속 메모와 실제 처리 화면을 바로 연결합니다."
-                href="/operations/exceptions"
-                actionLabel="예외 처리 보기"
-              />
-            </Stack>
-          </SectionCard>
-        </Grid>
-      </Grid>
+      </SectionCard>
 
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, lg: 5 }}>
           <SectionCard
             title="새 인수인계 메모"
-            description="첨부, 멘션, 승인 워크플로는 다음 단계로 미루고 텍스트 기록부터 안전하게 남깁니다."
+            description="첨부, 담당자 지정, 승인 흐름은 다음 단계로 미루고 텍스트 기록부터 안전하게 남깁니다."
           >
             <Stack
               component="form"
@@ -266,7 +260,7 @@ export function OperationsNotesPage() {
         <Grid size={{ xs: 12, lg: 7 }}>
           <SectionCard
             title="최근 인수인계 기록"
-            description="작성자 멤버십 ID와 관련 링크를 함께 남겨 후속 추적이 가능하도록 합니다."
+            description="작성자 정보와 관련 링크를 함께 남겨 후속 확인이 가능하도록 합니다."
           >
             <Stack spacing={1.5}>
               {(notes?.items ?? []).length === 0 ? (
@@ -321,7 +315,7 @@ export function OperationsNotesPage() {
                       {note.body}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      작성자 멤버십: {note.authorMembershipId}
+                      작성자 ID: {note.authorMembershipId}
                     </Typography>
                     {note.relatedHref ? (
                       <Button
@@ -353,41 +347,6 @@ function NoteInfoItem({ label, value }: { label: string; value: string }) {
       <Typography variant="body2" fontWeight={600}>
         {value}
       </Typography>
-    </Stack>
-  );
-}
-
-function OperationsNotesLinkCard({
-  title,
-  description,
-  href,
-  actionLabel
-}: {
-  title: string;
-  description: string;
-  href: string;
-  actionLabel: string;
-}) {
-  return (
-    <Stack
-      spacing={1}
-      sx={{
-        p: appLayout.cardPadding,
-        borderRadius: 3,
-        border: '1px solid',
-        borderColor: 'divider',
-        backgroundColor: 'background.default'
-      }}
-    >
-      <Typography variant="subtitle2">{title}</Typography>
-      <Typography variant="body2" color="text.secondary">
-        {description}
-      </Typography>
-      <div>
-        <Button component={Link} href={href} variant="outlined">
-          {actionLabel}
-        </Button>
-      </div>
     </Stack>
   );
 }

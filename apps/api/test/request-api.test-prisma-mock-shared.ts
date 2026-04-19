@@ -148,6 +148,10 @@ export function createRequestPrismaMockContext(state: RequestTestState) {
           email?: boolean;
           name?: boolean;
           passwordHash?: boolean;
+          status?: boolean;
+          lockedReason?: boolean;
+          lockedAt?: boolean;
+          isSystemAdmin?: boolean;
           emailVerifiedAt?: boolean;
           createdAt?: boolean;
           settings?: {
@@ -180,6 +184,22 @@ export function createRequestPrismaMockContext(state: RequestTestState) {
 
     if (select.passwordHash) {
       projected.passwordHash = user.passwordHash;
+    }
+
+    if (select.status) {
+      projected.status = user.status ?? 'ACTIVE';
+    }
+
+    if (select.lockedReason) {
+      projected.lockedReason = user.lockedReason ?? null;
+    }
+
+    if (select.lockedAt) {
+      projected.lockedAt = user.lockedAt ?? null;
+    }
+
+    if (select.isSystemAdmin) {
+      projected.isSystemAdmin = Boolean(user.isSystemAdmin);
     }
 
     if (select.emailVerifiedAt) {

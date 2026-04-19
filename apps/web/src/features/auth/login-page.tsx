@@ -25,8 +25,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useAuthSession } from '@/shared/auth/auth-provider';
-import { accessTokenStoragePolicy } from '@/shared/auth/auth-session-store';
 import { appLayout } from '@/shared/ui/layout-metrics';
+import { AuthCardHeader } from './auth-card-header';
 
 const loginSchema = z.object({
   email: z.string().email('올바른 이메일 주소를 입력해 주세요.'),
@@ -43,15 +43,15 @@ const loginHighlights = [
     icon: SecurityRoundedIcon
   },
   {
-    title: '토큰 연동 API 클라이언트',
+    title: '자동 로그인 보호',
     description:
-      '보호 요청은 Bearer 토큰을 자동으로 붙이고, 만료 시 복구 흐름에 연결됩니다.',
+      '로그인 상태가 만료되면 자동으로 확인하고, 필요하면 다시 로그인 화면으로 안내합니다.',
     icon: LockOpenRoundedIcon
   },
   {
-    title: '예측 가능한 부팅 흐름',
+    title: '안전한 시작 흐름',
     description:
-      '보호 페이지가 렌더링되기 전에 /auth/refresh로 현재 세션을 먼저 복원합니다.',
+      '업무 화면을 열기 전에 현재 계정과 사업장 정보를 먼저 확인합니다.',
     icon: TaskAltRoundedIcon
   }
 ] as const;
@@ -148,7 +148,7 @@ export function LoginPage() {
                     sx={{ position: 'relative', zIndex: 1 }}
                   >
                     <Chip
-                      label="워크스페이스 로그인"
+                      label="사업장 로그인"
                       sx={{
                         alignSelf: 'flex-start',
                         color: 'common.white',
@@ -185,8 +185,8 @@ export function LoginPage() {
                           lineHeight: 1.75
                         }}
                       >
-                        로그인 이후에는 현재 사용자를 복원하고, 보호된 API
-                        호출과 대시보드 화면을 실제 워크스페이스 세션에
+                        로그인 이후에는 현재 사용자를 복원하고, 보호된 서비스
+                        호출과 대시보드 화면을 실제 사업장 이용 정보에
                         연결합니다. 장식보다는 월 운영, 거래 검토, 마감 흐름이
                         먼저 읽히는 1인 사업자·소상공인용 ERP 경험을 목표로
                         구성했습니다.
@@ -301,50 +301,27 @@ export function LoginPage() {
             >
               <CardContent sx={{ p: appLayout.authSurfacePadding }}>
                 <Stack spacing={appLayout.authSurfaceGap}>
-                  <Stack spacing={appLayout.authMetricGap}>
-                    <Stack
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
-                    >
-                      <Box>
-                        <Typography variant="overline" color="text.secondary">
-                          인증
-                        </Typography>
-                        <Typography
-                          variant="h4"
-                          sx={{ mt: 0.5, fontWeight: 800 }}
-                        >
-                          워크스페이스에 로그인
-                        </Typography>
-                      </Box>
-
+                  <AuthCardHeader
+                    eyebrow="인증"
+                    title="사업장에 로그인"
+                    description="로그인 상태는 안전하게 보관되며, 만료되면 자동으로 확인한 뒤 필요한 경우 다시 로그인하도록 안내합니다."
+                    aside={
                       <Box
                         sx={{
-                          display: { xs: 'none', sm: 'inline-flex' },
+                          display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          width: 48,
-                          height: 48,
-                          borderRadius: 4,
+                          width: 44,
+                          height: 44,
+                          borderRadius: 3.5,
                           backgroundColor: alpha('#2563eb', 0.08),
                           color: 'primary.main'
                         }}
                       >
-                        <TimelineRoundedIcon />
+                        <TimelineRoundedIcon fontSize="small" />
                       </Box>
-                    </Stack>
-
-                    <Typography
-                      variant="body1"
-                      color="text.secondary"
-                      sx={{ lineHeight: 1.8 }}
-                    >
-                      액세스 토큰은 `{accessTokenStoragePolicy}` 로 보관하고,
-                      HttpOnly 리프레시 쿠키를 통해 `POST /auth/refresh`로
-                      세션을 복원합니다.
-                    </Typography>
-                  </Stack>
+                    }
+                  />
 
                   <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                     <Chip label="데모 이메일: demo@example.com" />
@@ -432,10 +409,9 @@ export function LoginPage() {
                       color="text.secondary"
                       sx={{ mt: 1, lineHeight: 1.75 }}
                     >
-                      보호 요청은 `Authorization: Bearer &lt;token&gt;` 헤더를
-                      사용합니다. API가 `401`을 반환하면, 클라이언트는 먼저
-                      `POST /auth/refresh`를 시도한 뒤 세션을 비우고 이 화면으로
-                      돌아옵니다.
+                      로그인하면 현재 계정과 연결된 사업장을 확인한 뒤 대시보드로
+                      이동합니다. 권한이 만료되었거나 확인이 필요한 경우에는
+                      안전하게 이 화면으로 돌아옵니다.
                     </Typography>
                   </Box>
                 </Stack>

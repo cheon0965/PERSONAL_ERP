@@ -29,7 +29,7 @@ export function FundingAccountEditorDrawer({
       title={editorState?.mode === 'edit' ? '자금수단 수정' : '자금수단 추가'}
       description={
         editorState?.mode === 'edit'
-          ? '현재 범위에서는 자금수단 이름을 수정합니다. 활성/비활성/종료 전환은 목록 액션에서 처리합니다.'
+          ? '현재 범위에서는 자금수단 이름을 수정합니다. 활성/비활성/종료 전환은 목록 버튼에서 처리합니다.'
           : '현재 장부에 새 자금수단을 추가합니다. 생성 후에는 입력 화면의 활성 선택지에 반영됩니다.'
       }
     >

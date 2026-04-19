@@ -38,14 +38,31 @@ export function OperationsImportStatusPage() {
     title: '업로드 운영 현황 가이드',
     description:
       '업로드 운영 현황은 최근 배치의 실패 행과 미수집 행을 운영 관점에서 점검하는 화면입니다.',
-    primaryEntity: 'ImportBatch',
-    relatedEntities: ['ImportedRow', 'CollectedTransaction'],
+    primaryEntity: '업로드 배치',
+    relatedEntities: ['업로드 행', '수집 거래'],
     truthSource:
       '업로드 현황 수치는 배치와 행 상태를 기준으로 계산된 운영 요약입니다.',
     supplementarySections: [
       {
         title: '기본 확인 항목',
-        items: ['최근 업로드 시각', '미수집 행', '실패 행', '승격률']
+        items: ['최근 업로드 시각', '미수집 행', '실패 행', '등록률']
+      },
+      {
+        title: '이어지는 화면',
+        links: [
+          {
+            title: '업로드 배치',
+            description: '원본 업로드, 행 검토, 거래 등록을 바로 이어서 진행합니다.',
+            href: '/imports',
+            actionLabel: '업로드 배치 열기'
+          },
+          {
+            title: '예외 처리함',
+            description: '미수집 행과 업로드 관련 예외를 우선순위로 다시 확인합니다.',
+            href: '/operations/exceptions',
+            actionLabel: '예외 처리 보기'
+          }
+        ]
       }
     ]
   });
@@ -87,7 +104,7 @@ export function OperationsImportStatusPage() {
             value: `${formatNumber(importStatus?.uncollectedRowCount ?? 0, 0)}개`
           },
           {
-            label: '승격률',
+            label: '등록률',
             value: `${formatNumber((importStatus?.collectionRate ?? 0) * 100, 1)}%`
           }
         ]}
@@ -106,66 +123,41 @@ export function OperationsImportStatusPage() {
         />
       ) : null}
 
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, lg: 7 }}>
-          <SectionCard
-            title="지금 우선 확인"
-            description="운영자가 먼저 확인해야 할 업로드 상태를 짧게 압축해 보여줍니다."
-          >
-            <Grid container spacing={appLayout.fieldGap}>
-              <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-                <ImportStatusInfoItem
-                  label="최근 업로드"
-                  value={formatDateTime(importStatus?.latestUploadedAt ?? null)}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-                <ImportStatusInfoItem
-                  label="미수집 행"
-                  value={`${formatNumber(importStatus?.uncollectedRowCount ?? 0, 0)}개`}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-                <ImportStatusInfoItem
-                  label="실패 행"
-                  value={`${formatNumber(importStatus?.failedRowCount ?? 0, 0)}개`}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-                <ImportStatusInfoItem
-                  label="승격률"
-                  value={`${formatNumber((importStatus?.collectionRate ?? 0) * 100, 1)}%`}
-                />
-              </Grid>
-            </Grid>
-          </SectionCard>
+      <SectionCard
+        title="지금 우선 확인"
+        description="운영자가 먼저 확인해야 할 업로드 상태를 짧게 압축해 보여줍니다."
+      >
+        <Grid container spacing={appLayout.fieldGap}>
+          <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+            <ImportStatusInfoItem
+              label="최근 업로드"
+              value={formatDateTime(importStatus?.latestUploadedAt ?? null)}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+            <ImportStatusInfoItem
+              label="미수집 행"
+              value={`${formatNumber(importStatus?.uncollectedRowCount ?? 0, 0)}개`}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+            <ImportStatusInfoItem
+              label="실패 행"
+              value={`${formatNumber(importStatus?.failedRowCount ?? 0, 0)}개`}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+            <ImportStatusInfoItem
+              label="등록률"
+              value={`${formatNumber((importStatus?.collectionRate ?? 0) * 100, 1)}%`}
+            />
+          </Grid>
         </Grid>
-        <Grid size={{ xs: 12, lg: 5 }}>
-          <SectionCard
-            title="바로 이동"
-            description="업로드 운영 현황에서 자주 이어서 여는 처리 화면입니다."
-          >
-            <Stack spacing={1.25}>
-              <OperationsLinkCard
-                title="업로드 배치"
-                description="원본 업로드, 행 검토, 승격 처리를 바로 이어서 진행합니다."
-                href="/imports"
-                actionLabel="업로드 배치 열기"
-              />
-              <OperationsLinkCard
-                title="예외 처리함"
-                description="미수집 행과 업로드 관련 예외를 우선순위로 다시 확인합니다."
-                href="/operations/exceptions"
-                actionLabel="예외 처리 보기"
-              />
-            </Stack>
-          </SectionCard>
-        </Grid>
-      </Grid>
+      </SectionCard>
 
       <SectionCard
         title="최근 업로드 배치"
-        description="배치별 상태를 먼저 확인한 뒤, 실제 행 처리와 승격은 업로드 배치 화면으로 이어서 진행합니다."
+        description="배치별 상태를 먼저 확인한 뒤, 실제 행 처리와 거래 등록은 업로드 배치 화면으로 이어서 진행합니다."
       >
         <Stack spacing={1.5}>
           {(importStatus?.batches ?? []).length === 0 ? (
@@ -230,7 +222,7 @@ export function OperationsImportStatusPage() {
                     미수집 {formatNumber(batch.uncollectedRowCount, 0)}개
                   </Typography>
                   <Typography variant="body2">
-                    승격률 {formatNumber(batch.collectionRate * 100, 1)}%
+                    등록률 {formatNumber(batch.collectionRate * 100, 1)}%
                   </Typography>
                 </Stack>
                 <Button component={Link} href="/imports" variant="outlined">
@@ -260,41 +252,6 @@ function ImportStatusInfoItem({
       <Typography variant="body2" fontWeight={600}>
         {value}
       </Typography>
-    </Stack>
-  );
-}
-
-function OperationsLinkCard({
-  title,
-  description,
-  href,
-  actionLabel
-}: {
-  title: string;
-  description: string;
-  href: string;
-  actionLabel: string;
-}) {
-  return (
-    <Stack
-      spacing={1}
-      sx={{
-        p: appLayout.cardPadding,
-        borderRadius: 3,
-        border: '1px solid',
-        borderColor: 'divider',
-        backgroundColor: 'background.default'
-      }}
-    >
-      <Typography variant="subtitle2">{title}</Typography>
-      <Typography variant="body2" color="text.secondary">
-        {description}
-      </Typography>
-      <div>
-        <Button component={Link} href={href} variant="outlined">
-          {actionLabel}
-        </Button>
-      </div>
     </Stack>
   );
 }

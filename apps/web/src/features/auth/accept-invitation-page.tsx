@@ -9,10 +9,10 @@ import {
   Button,
   Card,
   CardContent,
-  Stack,
-  Typography
+  Stack
 } from '@mui/material';
 import { acceptInvitation } from './auth.api';
+import { AuthCardHeader } from './auth-card-header';
 
 type AcceptInvitationState =
   | { status: 'loading' }
@@ -31,7 +31,7 @@ export function AcceptInvitationPage() {
     if (!token) {
       setState({
         status: 'error',
-        message: '초대 토큰이 없습니다.'
+        message: '초대 정보를 찾지 못했습니다.'
       });
       return;
     }
@@ -74,16 +74,11 @@ export function AcceptInvitationPage() {
       <Card sx={{ width: '100%', maxWidth: 520 }}>
         <CardContent>
           <Stack spacing={3}>
-            <Stack spacing={1}>
-              <Typography variant="overline" color="text.secondary">
-                사업장 초대
-              </Typography>
-              <Typography variant="h4">초대 수락</Typography>
-              <Typography variant="body2" color="text.secondary">
-                초대 링크를 확인하고 현재 이메일 계정을 사업장 멤버로
-                연결합니다.
-              </Typography>
-            </Stack>
+            <AuthCardHeader
+              eyebrow="사업장 초대"
+              title="초대 수락"
+              description="초대 링크를 확인하고 현재 이메일 계정을 사업장 멤버로 연결합니다."
+            />
 
             <InvitationStateMessage state={state} />
 
@@ -109,7 +104,7 @@ function InvitationStateMessage({ state }: { state: AcceptInvitationState }) {
     case 'accepted':
       return (
         <Alert severity="success">
-          초대를 수락했습니다. 로그인하면 사업장 문맥을 사용할 수 있습니다.
+          초대를 수락했습니다. 로그인하면 연결된 사업장 정보를 사용할 수 있습니다.
         </Alert>
       );
     case 'registration_required':

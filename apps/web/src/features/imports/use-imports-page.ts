@@ -52,7 +52,10 @@ const defaultCollectForm: CollectImportedRowRequest = {
   memo: ''
 };
 
-export function useImportsPage(initialSelectedBatchId: string | null = null) {
+export function useImportsPage(
+  initialSelectedBatchId: string | null = null,
+  mode: 'list' | 'detail' = 'list'
+) {
   const queryClient = useQueryClient();
   const hasPinnedSelectedBatch = initialSelectedBatchId != null;
   const [feedback, setFeedback] = React.useState<FeedbackState>(null);
@@ -183,38 +186,7 @@ export function useImportsPage(initialSelectedBatchId: string | null = null) {
 
   const currentPeriod = currentPeriodQuery.data ?? null;
 
-  useDomainHelp({
-    title: '업로드 배치 사용 가이드',
-    description:
-      '이 화면은 파일이나 붙여넣기 원본을 업로드 배치로 보관하고, 필요한 행만 검토해 수집 거래로 올리는 곳입니다. 전표 확정 전에 원본과 자동 판정 근거를 먼저 확인합니다.',
-    primaryEntity: '업로드 배치',
-    relatedEntities: ['업로드 행', '수집 거래', '계획 항목', '운영 월'],
-    truthSource:
-      '업로드 배치는 파싱과 후보 수집 단계이며, 실제 회계 확정은 전표에서 이루어집니다.',
-    supplementarySections: [
-      {
-        title: '바로 쓰는 순서',
-        items: [
-          '업로드 배치 등록을 열고 원본 종류, 파일명, CSV 또는 붙여넣기 내용을 입력합니다.',
-          '업로드 배치 목록에서 검토할 배치를 선택합니다.',
-          '업로드 행 목록에서 파싱 완료된 행의 행 승격을 엽니다.',
-          '승격 드로어에서 거래 성격, 자금수단, 카테고리를 확인하고 자동 판정 preview를 읽습니다.',
-          '승격 후 수집 거래 화면으로 이동해 전표 준비 상태인지 확인하고 전표로 확정합니다.'
-        ]
-      },
-      {
-        title: '막히면 확인',
-        items: [
-          '열린 운영 월이 없으면 행 승격과 자동 판정 preview가 막힙니다.',
-          '자금수단이나 카테고리 선택지가 부족하면 기준 데이터 관리 화면에서 먼저 보완합니다.',
-          '이미 수집 거래로 올린 행은 다시 승격하지 않고 연결된 수집 거래 상태를 추적합니다.'
-        ]
-      }
-    ],
-    readModelNote: currentPeriod
-      ? `${currentPeriod.monthLabel} 운영 월이 열려 있어 승격 전에 자동 판정 근거를 확인하고 바로 수집 거래로 올릴 수 있습니다.`
-      : '현재 열린 운영 월이 없으면 업로드는 가능하지만 업로드 행 승격과 자동 판정 preview는 막힙니다.'
-  });
+  useDomainHelp(buildImportsHelpContext(mode, currentPeriod?.monthLabel ?? null));
 
   const createImportBatchMutation = useMutation({
     mutationFn: (input: CreateImportBatchRequest) =>
@@ -222,7 +194,7 @@ export function useImportsPage(initialSelectedBatchId: string | null = null) {
     onSuccess: async (created) => {
       setFeedback({
         severity: 'success',
-        message: `${created.fileName} 업로드를 등록하고 ${created.rowCount}개 행을 파싱했습니다.`
+        message: `${created.fileName} 업로드를 등록하고 ${created.rowCount}개 행을 읽었습니다.`
       });
       setUploadDrawerOpen(false);
       setSelectedBatchId(created.id);
@@ -399,5 +371,94 @@ export function useImportsPage(initialSelectedBatchId: string | null = null) {
     updateCollectForm,
     updateUploadForm,
     uploadForm
+  };
+}
+
+function buildImportsHelpContext(
+  mode: 'list' | 'detail',
+  currentPeriodLabel: string | null
+) {
+  if (mode === 'detail') {
+    return {
+      title: '업로드 배치 작업대 도움말',
+      description:
+        '이 화면은 선택한 업로드 배치의 행을 검토하고, 필요한 항목만 수집 거래로 등록하는 전용 작업대입니다.',
+      primaryEntity: '업로드 행 등록 작업대',
+      relatedEntities: ['업로드 배치', '수집 거래', '자금수단', '카테고리'],
+      truthSource:
+        '업로드 행은 거래 후보 검토 단계이며, 실제 회계 확정은 수집 거래 확정 뒤 전표에서 이루어집니다.',
+      supplementarySections: [
+        {
+          title: '이 탭에서 하는 일',
+          items: [
+            '현재 선택한 배치의 업로드 행을 훑어보며 등록 가능한 행을 찾습니다.',
+            '수집 거래 등록 화면에서 거래 성격, 자금수단, 카테고리와 자동 판정 결과를 확인합니다.',
+            '등록 후에는 수집 거래 화면으로 넘어가 전표 준비 상태와 확정 여부를 이어서 검토합니다.'
+          ]
+        },
+        {
+          title: '막히면 확인',
+          items: [
+            '열린 운영 월이 없으면 업로드 행 등록과 자동 판정 결과가 막힙니다.',
+            '자금수단이나 카테고리 선택지가 부족하면 기준 데이터 관리 화면에서 먼저 보완합니다.',
+            '이미 수집 거래로 올린 행은 다시 등록하지 않고 연결된 수집 거래 상태만 추적합니다.'
+          ]
+        },
+        {
+          title: '이어지는 화면',
+          links: [
+            {
+              title: '업로드 배치',
+              description: '다른 배치를 다시 선택하거나 새 업로드 배치를 등록합니다.',
+              href: '/imports',
+              actionLabel: '배치 목록 보기'
+            },
+            {
+              title: '수집 거래',
+              description: '등록한 거래가 전표 준비 상태인지 확인하고 전표로 확정합니다.',
+              href: '/transactions',
+              actionLabel: '수집 거래 보기'
+            }
+          ]
+        }
+      ],
+      readModelNote: currentPeriodLabel
+        ? `${currentPeriodLabel} 운영 월이 열려 있어 자동 판정 근거를 확인한 뒤 바로 수집 거래로 올릴 수 있습니다.`
+        : '현재 열린 운영 월이 없으면 업로드는 가능하지만 업로드 행 등록과 자동 판정 결과는 막힙니다.'
+    };
+  }
+
+  return {
+    title: '업로드 배치 도움말',
+    description:
+      '이 화면은 파일이나 붙여넣기 원본을 업로드 배치로 보관하고, 검토할 배치를 골라 작업대로 이어가는 시작 화면입니다.',
+    primaryEntity: '업로드 배치',
+    relatedEntities: ['업로드 행', '수집 거래', '계획 항목', '운영 월'],
+    truthSource:
+      '업로드 배치는 파일을 읽고 거래 후보를 고르는 단계이며, 실제 회계 확정은 전표에서 이루어집니다.',
+    supplementarySections: [
+      {
+        title: '이 탭에서 하는 일',
+        items: [
+          '업로드 배치 등록을 열고 원본 종류, 파일명, CSV 또는 붙여넣기 내용을 입력합니다.',
+          '업로드 배치 목록에서 검토할 배치를 선택합니다.',
+          '배치를 고른 뒤 작업대로 이동해 업로드 행 검토와 수집 거래 등록을 이어서 진행합니다.'
+        ]
+      },
+      {
+        title: '이어지는 화면',
+        links: [
+          {
+            title: '수집 거래',
+            description: '업로드에서 등록한 거래를 전표 준비 상태와 함께 최종 검토합니다.',
+            href: '/transactions',
+            actionLabel: '수집 거래 보기'
+          }
+        ]
+      }
+    ],
+    readModelNote: currentPeriodLabel
+      ? `${currentPeriodLabel} 운영 월이 열려 있어 배치를 고른 뒤 바로 업로드 행 등록 작업대로 이어갈 수 있습니다.`
+      : '현재 열린 운영 월이 없으면 업로드 자체는 가능하지만, 실제 거래 등록 단계는 제한될 수 있습니다.'
   };
 }

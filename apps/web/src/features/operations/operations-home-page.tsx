@@ -64,7 +64,7 @@ export function OperationsHomePage() {
     {
       title: '월 마감 준비',
       description:
-        '월 마감과 공식 산출물 생성 흐름을 같은 묶음으로 확인합니다.',
+        '월 마감과 공식 보고 자료 생성 흐름을 같은 묶음으로 확인합니다.',
       items: [
         {
           title: '월 마감 대시보드',
@@ -119,9 +119,9 @@ export function OperationsHomePage() {
       description: '서비스 상태와 운영 알림을 별도 묶음으로 분리해 봅니다.',
       items: [
         {
-          title: '시스템 상태 / 헬스',
+          title: '시스템 상태',
           description:
-            'API, DB readiness, 메일 발송 경계와 최근 운영 활동 상태를 확인합니다.',
+            '서비스, 데이터베이스, 메일 발송과 최근 운영 활동 상태를 확인합니다.',
           href: '/operations/status',
           actionLabel: '상태 점검'
         },
@@ -140,7 +140,7 @@ export function OperationsHomePage() {
     title: '운영 허브 가이드',
     description:
       '운영 허브는 오늘 처리할 운영 항목과 월 마감 준비 상태를 빠르게 나누어 보는 화면입니다.',
-    primaryEntity: 'WorkspaceOperationalNote / AccountingPeriod',
+    primaryEntity: '운영 메모 / 운영 기간',
     relatedEntities: [
       'CollectedTransaction',
       'ImportBatch',
@@ -148,7 +148,7 @@ export function OperationsHomePage() {
       'CarryForwardRecord'
     ],
     truthSource:
-      '운영 허브의 수치는 체크리스트, 예외, 업로드, 마감 준비 read model을 요약한 운영 판단용 값입니다.',
+      '운영 허브의 수치는 체크리스트, 예외, 업로드, 마감 준비 데이터를 요약한 운영 판단용 값입니다.',
     supplementarySections: [
       {
         title: '읽는 순서',
@@ -156,7 +156,12 @@ export function OperationsHomePage() {
           '오늘 우선 확인 카드로 긴급도를 먼저 봅니다.',
           '필요한 작업군으로 바로 이동합니다.'
         ]
-      }
+      },
+      ...groupedLinks.map((group) => ({
+        title: group.title,
+        description: group.description,
+        links: group.items
+      }))
     ]
   });
 
@@ -221,23 +226,6 @@ export function OperationsHomePage() {
         </Grid>
       </SectionCard>
 
-      <Stack spacing={appLayout.sectionGap}>
-        {groupedLinks.map((group) => (
-          <SectionCard
-            key={group.title}
-            title={group.title}
-            description={group.description}
-          >
-            <Grid container spacing={appLayout.sectionGap}>
-              {group.items.map((item) => (
-                <Grid key={item.title} size={{ xs: 12, md: 6, xl: 4 }}>
-                  <HubLinkCard {...item} />
-                </Grid>
-              ))}
-            </Grid>
-          </SectionCard>
-        ))}
-      </Stack>
     </Stack>
   );
 }
@@ -302,52 +290,6 @@ function PriorityCard({
       </Typography>
       <div>
         <Button component={Link} href={href} variant="contained" color={tone}>
-          {actionLabel}
-        </Button>
-      </div>
-    </Stack>
-  );
-}
-
-function HubLinkCard({
-  title,
-  description,
-  href,
-  actionLabel
-}: {
-  title: string;
-  description: string;
-  href: string;
-  actionLabel: string;
-}) {
-  return (
-    <Stack
-      spacing={1.5}
-      sx={{
-        height: '100%',
-        p: appLayout.cardPadding,
-        borderRadius: 3,
-        border: '1px solid',
-        borderColor: 'divider',
-        backgroundColor: 'background.default'
-      }}
-    >
-      <Typography variant="subtitle1">{title}</Typography>
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{
-          display: '-webkit-box',
-          overflow: 'hidden',
-          WebkitBoxOrient: 'vertical',
-          WebkitLineClamp: 2,
-          lineHeight: 1.7
-        }}
-      >
-        {description}
-      </Typography>
-      <div>
-        <Button component={Link} href={href} variant="outlined">
           {actionLabel}
         </Button>
       </div>

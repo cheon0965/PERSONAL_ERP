@@ -14,6 +14,7 @@ test('LoginUseCase.execute returns the issued session for valid credentials', as
         email: 'demo@example.com',
         name: 'Demo User',
         passwordHash,
+        status: 'ACTIVE',
         emailVerifiedAt: new Date('2026-03-01T00:00:00.000Z')
       })
     }
@@ -110,6 +111,7 @@ test('LoginUseCase.execute rejects invalid credentials', async () => {
         email: 'demo@example.com',
         name: 'Demo User',
         passwordHash,
+        status: 'ACTIVE',
         emailVerifiedAt: new Date('2026-03-01T00:00:00.000Z')
       })
     }

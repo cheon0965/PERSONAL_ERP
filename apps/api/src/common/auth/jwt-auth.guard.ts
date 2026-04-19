@@ -120,7 +120,13 @@ export class JwtAuthGuard implements CanActivate {
 
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, email: true, name: true }
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        status: true,
+        isSystemAdmin: true
+      }
     });
 
     if (!user) {
@@ -128,10 +134,22 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('User not found');
     }
 
+    if (user.status !== 'ACTIVE') {
+      this.logAccessDenied(request, 'user_not_active', payload.sub);
+      throw new UnauthorizedException('User not active');
+    }
+
     return {
-      user: await this.authenticatedWorkspaceResolver.buildAuthenticatedUser(
-        user
-      ),
+      user: await this.authenticatedWorkspaceResolver.buildAuthenticatedUser({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        ...(user.isSystemAdmin ? { isSystemAdmin: true } : {})
+      }, {
+        tenantId: session.supportTenantId,
+        ledgerId: session.supportLedgerId,
+        startedAt: session.supportStartedAt
+      }),
       sessionId: session.id
     };
   }

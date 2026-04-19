@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { Button, Stack, Tab, Tabs, TextField, Typography } from '@mui/material';
+import { Button, Stack, TextField, Typography } from '@mui/material';
 import type { AccountingPeriodItem } from '@personal-erp/contracts';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { SectionCard } from '@/shared/ui/section-card';
+import { SegmentedTabs } from '@/shared/ui/section-tabs';
 import { readMembershipRoleLabel } from './accounting-periods-page.helpers';
 import { OpenAccountingPeriodSection } from './accounting-periods-page.sections';
 
@@ -78,18 +79,12 @@ export function PeriodOperationsSection(
         </Typography>
       </Stack>
       {!hideTabs ? (
-        <Tabs
+        <SegmentedTabs
+          ariaLabel="월 운영 작업 선택"
+          items={periodOperationTabItems}
           value={activeTab}
-          onChange={(_event, nextValue: PeriodOperationTab) => {
-            setActiveTab(nextValue);
-          }}
-          variant="scrollable"
-          allowScrollButtonsMobile
-        >
-          <Tab value="open" label="운영 시작" />
-          <Tab value="close" label="월 마감" />
-          <Tab value="reopen" label="재오픈" />
-        </Tabs>
+          onChange={setActiveTab}
+        />
       ) : null}
 
       {activeTab === 'open' ? <OpenAccountingPeriodSection {...props} /> : null}
@@ -211,7 +206,7 @@ function ReopenAccountingPeriodSection({
   return (
     <SectionCard
       title="월 재오픈"
-      description="가장 최근에 잠긴 운영 기간만 재오픈할 수 있으며, 재오픈 시 해당 기간의 마감 산출물도 함께 정리됩니다."
+      description="가장 최근에 잠긴 운영 기간만 재오픈할 수 있으며, 재오픈 시 해당 기간의 마감 결과 자료도 함께 정리됩니다."
     >
       <Stack spacing={appLayout.cardGap}>
         <InfoRow
@@ -261,6 +256,16 @@ function ReopenAccountingPeriodSection({
 }
 
 export type PeriodOperationTab = 'open' | 'close' | 'reopen';
+
+const periodOperationTabItems = [
+  { value: 'open', label: '운영 시작', shortLabel: '시작' },
+  { value: 'close', label: '월 마감', shortLabel: '마감' },
+  { value: 'reopen', label: '재오픈' }
+] as const satisfies ReadonlyArray<{
+  value: PeriodOperationTab;
+  label: string;
+  shortLabel?: string;
+}>;
 
 function pickDefaultPeriodOperationTab(input: {
   openPeriod: AccountingPeriodItem | null;

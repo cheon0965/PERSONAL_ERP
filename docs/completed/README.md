@@ -25,6 +25,7 @@
 - [`OPERATIONS_SUPPORT_SURFACES_EXECUTION_PLAN.md`](./OPERATIONS_SUPPORT_SURFACES_EXECUTION_PLAN.md): 사업장 설정, 내 계정/보안, 권한 정책 요약, 운영 허브/체크리스트/예외/마감/업로드 현황, 시스템 상태/알림, 수동 CSV 반출, 운영 메모/인수인계까지 완료 후 보관한 실행 계획
 - [`REFACTORING_EXECUTION_PLAN.md`](./REFACTORING_EXECUTION_PLAN.md): P0/P1 모듈 Hexagonal 승격, operations-console read-model 분리, Web 대형 파일 분해, auth/admin use-case 완전 분리를 포함한 프로젝트 전반 리팩토링 실행 계획을 완료 후 보관
 - [`REFACTORING_ROADMAP.md`](./REFACTORING_ROADMAP.md): 대형 테스트, API mock/state, 서비스/UI 파일 분리 3단계 리팩토링 완료 후 보관한 실행 로드맵
+- [`SYSTEM_ADMIN_OPERATIONS_EXECUTION_PLAN.md`](./SYSTEM_ADMIN_OPERATIONS_EXECUTION_PLAN.md): 전체 사용자 관리, 사업장 관리, 지원 모드, 보안 위협 로그, 운영 상태, 문서/검증 동기화까지 완료 후 보관한 실행 계획
 - [`UI_REORGANIZATION_EXECUTION_PLAN.md`](./UI_REORGANIZATION_EXECUTION_PLAN.md): 1차 ERP 화면 가시성, 헤더 구조, 내비게이션 통일, 화면 밀도 재정리를 완료하고 보관한 실행 계획
 - [`UI_REORGANIZATION_EXECUTION_PLAN_V2.md`](./UI_REORGANIZATION_EXECUTION_PLAN_V2.md): 2차 화면 책임 분리, 라우트 재조정, DB 메뉴 트리 기반 정보구조, 간결 화면/도메인 가이드 원칙을 완료하고 보관한 실행 계획
 - [`VEHICLE_OPERATIONS_MODEL_PLAN.md`](./VEHICLE_OPERATIONS_MODEL_PLAN.md): 차량 운영 모델 분리 작업 완료 후 보관한 설계 문서

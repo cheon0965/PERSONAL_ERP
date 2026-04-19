@@ -24,7 +24,11 @@ export class RefreshSessionUseCase {
         context
       );
       await this.authSessions.revokeSession(session.id);
-      const nextSession = await this.authSessions.issueSession(user);
+      const nextSession = await this.authSessions.issueSession(user, {
+        tenantId: session.supportTenantId,
+        ledgerId: session.supportLedgerId,
+        startedAt: session.supportStartedAt
+      });
       this.rateLimit.clearRefreshAttempts(context.clientIp);
       this.securityEvents.log('auth.refresh_succeeded', {
         requestId: context.requestId,

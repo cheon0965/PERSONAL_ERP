@@ -206,7 +206,7 @@ export function JournalEntriesWorkspace({
         title="전표 목록"
         description={
           isSplitLayout
-            ? '전표 번호를 선택하면 아래에서 상세 라인, 조정 계보, 후속 조정 액션을 확인할 수 있습니다.'
+            ? '전표 번호를 선택하면 아래에서 상세 라인, 조정 흐름, 후속 조정 작업을 확인할 수 있습니다.'
             : '목록에서 전표 번호를 선택하면 전용 상세 화면으로 이동해 라인과 조정 이력을 검토합니다.'
         }
         rows={entries}
@@ -322,7 +322,7 @@ function JournalEntryDetailCard({
             }}
           >
             <Stack spacing={0.75}>
-              <Typography variant="subtitle2">조정 계보</Typography>
+              <Typography variant="subtitle2">조정 흐름</Typography>
               {buildAdjustmentMetadataRows(entry).map((row) => (
                 <Typography
                   key={`${entry.id}-${row.label}`}

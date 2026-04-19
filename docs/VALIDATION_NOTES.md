@@ -86,6 +86,14 @@
   current workspace 멤버 목록, 초대 메일 발송, 역할 변경, 마지막 활성 Owner 보호, 권한 거부 감사 이벤트, 감사 로그 조회를 검증
 - 관리자 `GET /admin/policy`
   현재 workspace의 Owner/Manager가 권한 정책 요약을 조회할 수 있는지 검증
+- 전체 관리자 `GET /admin/users`, `GET /admin/users/:userId`, `PATCH /admin/users/:userId/status`, `POST /admin/users/:userId/revoke-sessions`, `PATCH /admin/users/:userId/system-admin`, `PATCH /admin/users/:userId/email-verification`
+  사용자 상세 조회, 계정 잠금/해제, 전체 세션 만료, 마지막 전체 관리자 보호, 이메일 인증 보정, 권한 거부를 검증
+- 전체 관리자 `GET /admin/tenants`, `GET /admin/tenants/:tenantId`, `PATCH /admin/tenants/:tenantId/status`
+  사업장 상세 조회, 상태 변경, 기본 장부/멤버 요약과 권한 거부를 검증
+- 전체 관리자 `GET /admin/support-context`, `POST /admin/support-context`, `DELETE /admin/support-context`
+  지원 문맥 설정/해제, 세션 기준 current workspace 반영, 일반 사용자 접근 차단을 검증
+- 전체 관리자 `GET /admin/operations/status`, `GET /admin/security-threats`
+  운영 상태 요약, 최근 실패/거부 감사 이벤트, 최근 보안 위협 로그 조회와 권한 거부를 검증
 - `GET /funding-accounts`, `GET /categories`, `GET /account-subjects`, `GET /ledger-transaction-types`, `GET /insurance-policies`, `GET /vehicles`, `GET /vehicles/operating-summary`
   현재 workspace/ledger 기준 활성 참조 데이터와 운영 보조 자산 데이터만 반환하는지 검증
 - `GET /insurance-policies?includeInactive=true`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`
@@ -154,7 +162,7 @@
 - `401` 응답 시 세션 정리 정책
 - mutation 요청의 JSON body 직렬화
 - 회원가입/이메일 인증/인증 메일 재발송 auth API helper의 요청 path와 body 직렬화
-- `/accept-invitation`, `/admin`, `/admin/members`, `/admin/logs`, `/admin/policy` 관리자/초대/권한 정책 route와 admin API helper의 보호 요청 path, Bearer token, mutation body 직렬화
+- `/accept-invitation`, `/admin`, `/admin/users`, `/admin/tenants`, `/admin/support-context`, `/admin/security-threats`, `/admin/operations`, `/admin/members`, `/admin/logs`, `/admin/policy` 관리자/초대/권한 정책 route와 admin API helper의 보호 요청 path, Bearer token, mutation body 직렬화
 - `/settings/workspace`, `/settings/account/profile`, `/settings/account/password`, `/settings/account/sessions`, `/settings/account/events` 설정 route와 workspace/account API helper의 보호 요청 path, Bearer token, mutation body 직렬화
 - `/operations`, `/operations/checklist`, `/operations/exceptions`, `/operations/month-end`, `/operations/imports`, `/operations/status`, `/operations/alerts`, `/operations/exports`, `/operations/notes` 운영 지원 route와 operations API helper의 보호 요청 path, Bearer token, mutation body 직렬화
 - 요청 실패 메시지 안내

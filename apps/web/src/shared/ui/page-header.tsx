@@ -3,10 +3,7 @@
 import type { ReactNode } from 'react';
 import type { Route } from 'next';
 import Link from 'next/link';
-import HelpOutlineRoundedIcon from '@mui/icons-material/HelpOutlineRounded';
-import { alpha } from '@mui/material/styles';
 import {
-  Box,
   Button,
   Chip,
   Stack,
@@ -14,7 +11,7 @@ import {
   type ButtonProps,
   type ChipProps
 } from '@mui/material';
-import { useDomainHelpStore } from '../providers/domain-help-provider';
+import { brandTokens } from '../theme/tokens';
 import { appLayout } from './layout-metrics';
 
 type PageHeaderBadge = {
@@ -52,7 +49,6 @@ export function PageHeader({
   eyebrow,
   title,
   badges = [],
-  metadata = [],
   primaryActionLabel,
   primaryActionHref,
   primaryActionOnClick,
@@ -64,10 +60,7 @@ export function PageHeader({
   secondaryActionDisabled,
   secondaryActionColor
 }: PageHeaderProps) {
-  const { activeContext, setDrawerOpen } = useDomainHelpStore();
-  const hasDomainGuide = Boolean(activeContext);
   const hasActions =
-    hasDomainGuide ||
     (primaryActionLabel && (primaryActionHref || primaryActionOnClick)) ||
     (secondaryActionLabel && (secondaryActionHref || secondaryActionOnClick));
 
@@ -80,81 +73,97 @@ export function PageHeader({
         overflow: 'hidden',
         px: appLayout.pageHeaderPadding,
         py: appLayout.pageHeaderPadding,
-        borderRadius: appLayout.pageHeaderSurfaceRadius,
+        borderRadius: `${brandTokens.radius.lg}px`,
         border: '1px solid',
-        borderColor: 'divider',
-        background: `linear-gradient(160deg, ${alpha('#ffffff', 0.98)}, ${alpha('#f8fafc', 0.94)})`,
-        boxShadow: '0 22px 50px rgba(15, 23, 42, 0.08)',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          inset: '-30% auto auto 58%',
-          width: 280,
-          height: 280,
-          borderRadius: '50%',
-          background: `radial-gradient(circle, ${alpha('#60a5fa', 0.18)}, transparent 70%)`,
-          pointerEvents: 'none'
-        },
-        '&::after': {
-          content: '""',
-          position: 'absolute',
-          inset: 0,
-          borderRadius: appLayout.pageHeaderSurfaceRadius,
-          background: `linear-gradient(180deg, transparent, ${alpha('#e2e8f0', 0.12)})`,
-          pointerEvents: 'none'
+        borderColor: brandTokens.palette.border,
+        color: brandTokens.palette.text,
+        backgroundColor: brandTokens.palette.surface,
+        boxShadow: brandTokens.shadow.card,
+        isolation: 'isolate',
+        '& > *': {
+          position: 'relative',
+          zIndex: 1
         }
       }}
     >
       <Stack
         direction={{ xs: 'column', lg: 'row' }}
         justifyContent="space-between"
-        alignItems={{ xs: 'flex-start', lg: 'center' }}
+        alignItems={{ xs: 'flex-start', lg: 'flex-start' }}
         gap={appLayout.pageHeaderGap}
       >
-        <Box sx={{ maxWidth: appLayout.pageHeaderContentMaxWidth }}>
+        <Stack
+          gap={0.75}
+          sx={{
+            minWidth: 0,
+            maxWidth: appLayout.pageHeaderContentMaxWidth
+          }}
+        >
           {eyebrow ? (
             <Typography
-              variant="overline"
-              color="primary.main"
-              sx={{ fontWeight: 700, letterSpacing: '0.08em' }}
+              variant="caption"
+              sx={{
+                color: brandTokens.palette.textMuted,
+                fontWeight: 800,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase'
+              }}
             >
               {eyebrow}
             </Typography>
           ) : null}
-          <Typography
-            variant="h4"
-            sx={{
-              mt: appLayout.pageHeaderTitleOffset,
-              fontWeight: 800,
-              letterSpacing: '-0.03em'
-            }}
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            alignItems={{ xs: 'flex-start', md: 'center' }}
+            spacing={appLayout.pageHeaderBadgeGap}
+            useFlexGap
+            flexWrap="wrap"
           >
-            {title}
-          </Typography>
-          {badges.length > 0 ? (
-            <Stack
-              direction="row"
-              spacing={appLayout.pageHeaderBadgeGap}
-              useFlexGap
-              flexWrap="wrap"
-              sx={{ mt: 1.5 }}
+            <Typography
+              component="h1"
+              variant="h5"
+              sx={{
+                mt: appLayout.pageHeaderTitleOffset,
+                fontWeight: 800,
+                fontSize: { xs: '1.35rem', md: '1.55rem' },
+                lineHeight: 1.15,
+                letterSpacing: '-0.03em',
+                color: brandTokens.palette.text
+              }}
             >
-              {badges.map((badge, index) => (
-                <Chip
-                  key={`badge-${index}-${String(badge.label)}`}
-                  label={badge.label}
-                  color={badge.color ?? 'default'}
-                  variant={badge.variant ?? 'outlined'}
-                  size="small"
-                />
-              ))}
-            </Stack>
-          ) : null}
-        </Box>
+              {title}
+            </Typography>
+            {badges.length > 0 ? (
+              <Stack
+                direction="row"
+                spacing={appLayout.pageHeaderBadgeGap}
+                useFlexGap
+                flexWrap="wrap"
+              >
+                {badges.map((badge, index) => (
+                  <Chip
+                    key={`badge-${index}-${String(badge.label)}`}
+                    label={badge.label}
+                    color={badge.color ?? 'default'}
+                    variant={badge.variant ?? 'outlined'}
+                    size="small"
+                    sx={{
+                      borderRadius: 999,
+                      '& .MuiChip-label': {
+                        px: 1.1,
+                        fontWeight: 700
+                      }
+                    }}
+                  />
+                ))}
+              </Stack>
+            ) : null}
+          </Stack>
+        </Stack>
 
         {hasActions ? (
           <Stack
-            direction={{ xs: 'column', sm: 'row' }}
+            direction="row"
             spacing={appLayout.pageHeaderActionGap}
             useFlexGap
             flexWrap="wrap"
@@ -163,17 +172,6 @@ export function PageHeader({
               alignSelf: { xs: 'stretch', lg: 'flex-start' }
             }}
           >
-            {hasDomainGuide ? (
-              <Button
-                variant="text"
-                color="inherit"
-                onClick={() => setDrawerOpen(true)}
-                startIcon={<HelpOutlineRoundedIcon fontSize="small" />}
-                sx={buttonSurfaceSx}
-              >
-                도메인 가이드
-              </Button>
-            ) : null}
             {renderActionButton({
               label: secondaryActionLabel,
               href: secondaryActionHref,
@@ -194,38 +192,6 @@ export function PageHeader({
         ) : null}
       </Stack>
 
-      {metadata.length > 0 ? (
-        <Stack
-          direction={{ xs: 'column', md: 'row' }}
-          spacing={appLayout.pageHeaderMetaGap}
-          useFlexGap
-          flexWrap="wrap"
-        >
-          {metadata.map((item, index) => (
-            <Stack
-              key={`metadata-${index}-${item.label}`}
-              spacing={0.35}
-              sx={{
-                minWidth: 128,
-                px: 1.5,
-                py: 1.1,
-                borderRadius: 3,
-                border: '1px solid',
-                borderColor: alpha('#cbd5e1', 0.7),
-                bgcolor: alpha('#ffffff', 0.72),
-                backdropFilter: 'blur(10px)'
-              }}
-            >
-              <Typography variant="caption" color="text.secondary">
-                {item.label}
-              </Typography>
-              <Typography variant="body2" fontWeight={600}>
-                {item.value}
-              </Typography>
-            </Stack>
-          ))}
-        </Stack>
-      ) : null}
     </Stack>
   );
 }
@@ -255,6 +221,7 @@ function renderActionButton({
         <Button
           component="a"
           href={href}
+          size="small"
           variant={variant}
           color={color}
           disabled={disabled}
@@ -269,6 +236,7 @@ function renderActionButton({
       <Button
         component={Link}
         href={href}
+        size="small"
         variant={variant}
         color={color}
         disabled={disabled}
@@ -281,6 +249,7 @@ function renderActionButton({
 
   return (
     <Button
+      size="small"
       variant={variant}
       color={color}
       disabled={disabled}
@@ -294,9 +263,11 @@ function renderActionButton({
 
 const buttonSurfaceSx = {
   borderRadius: 999,
-  px: 2,
+  minHeight: 34,
+  px: 1.5,
   textTransform: 'none',
   fontWeight: 700,
+  fontSize: '0.875rem',
   whiteSpace: 'nowrap',
   boxShadow: 'none'
 } as const;

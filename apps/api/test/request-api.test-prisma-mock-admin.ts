@@ -182,6 +182,77 @@ export function createAdminPrismaMock(
           ) ?? null
         );
       }
+    },
+    securityThreatEvent: {
+      create: async (args: {
+        data: {
+          severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+          eventCategory:
+            | 'AUTHENTICATION'
+            | 'REGISTRATION'
+            | 'SESSION'
+            | 'EMAIL_VERIFICATION'
+            | 'ACCESS_CONTROL'
+            | 'BROWSER_ORIGIN'
+            | 'EMAIL_DELIVERY'
+            | 'SYSTEM';
+          eventName: string;
+          source?: string;
+          requestId?: string | null;
+          path?: string | null;
+          clientIpHash?: string | null;
+          userId?: string | null;
+          sessionId?: string | null;
+          reason?: string | null;
+          metadata?: Record<string, string | number | boolean | null>;
+        };
+      }) => {
+        const created = {
+          id: `security-threat-event-${state.securityThreatEvents.length + 1}`,
+          severity: args.data.severity,
+          eventCategory: args.data.eventCategory,
+          eventName: args.data.eventName,
+          source: args.data.source ?? 'api',
+          requestId: args.data.requestId ?? null,
+          path: args.data.path ?? null,
+          clientIpHash: args.data.clientIpHash ?? null,
+          userId: args.data.userId ?? null,
+          sessionId: args.data.sessionId ?? null,
+          reason: args.data.reason ?? null,
+          metadata: args.data.metadata ?? null,
+          occurredAt: new Date()
+        };
+        state.securityThreatEvents.push(created);
+        return created;
+      },
+      count: async (args: { where?: SecurityThreatEventWhere }) => {
+        return state.securityThreatEvents.filter((candidate) =>
+          matchesSecurityThreatEventWhere(candidate, args.where)
+        ).length;
+      },
+      findMany: async (args: {
+        where?: SecurityThreatEventWhere;
+        skip?: number;
+        take?: number;
+      }) => {
+        const skip = args.skip ?? 0;
+        const take = args.take ?? 50;
+
+        return state.securityThreatEvents
+          .filter((candidate) =>
+            matchesSecurityThreatEventWhere(candidate, args.where)
+          )
+          .sort((left, right) => {
+            const occurredAtDelta =
+              right.occurredAt.getTime() - left.occurredAt.getTime();
+            if (occurredAtDelta !== 0) {
+              return occurredAtDelta;
+            }
+
+            return right.id.localeCompare(left.id);
+          })
+          .slice(skip, skip + take);
+      }
     }
   };
 }
@@ -192,11 +263,41 @@ type WorkspaceAuditEventWhere = {
   eventCategory?: string;
   eventName?: string;
   action?: string;
-  result?: 'SUCCESS' | 'DENIED' | 'FAILED';
+  result?:
+    | 'SUCCESS'
+    | 'DENIED'
+    | 'FAILED'
+    | { in?: Array<'SUCCESS' | 'DENIED' | 'FAILED'> };
   actorMembershipId?: string;
   resourceType?: string;
   resourceId?: string;
   requestId?: string;
+  occurredAt?: {
+    gte?: Date;
+    lte?: Date;
+  };
+};
+
+type SecurityThreatEventWhere = {
+  severity?:
+    | 'LOW'
+    | 'MEDIUM'
+    | 'HIGH'
+    | 'CRITICAL'
+    | { in?: Array<'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'> };
+  eventCategory?:
+    | 'AUTHENTICATION'
+    | 'REGISTRATION'
+    | 'SESSION'
+    | 'EMAIL_VERIFICATION'
+    | 'ACCESS_CONTROL'
+    | 'BROWSER_ORIGIN'
+    | 'EMAIL_DELIVERY'
+    | 'SYSTEM';
+  eventName?: string;
+  requestId?: string;
+  clientIpHash?: string;
+  userId?: string;
   occurredAt?: {
     gte?: Date;
     lte?: Date;
@@ -215,7 +316,11 @@ function matchesWorkspaceAuditEventWhere(
   const matchesEventName =
     !where?.eventName || candidate.eventName === where.eventName;
   const matchesAction = !where?.action || candidate.action === where.action;
-  const matchesResult = !where?.result || candidate.result === where.result;
+  const matchesResult =
+    !where?.result ||
+    (typeof where.result === 'string'
+      ? candidate.result === where.result
+      : !where.result.in || where.result.in.includes(candidate.result));
   const matchesActor =
     !where?.actorMembershipId ||
     candidate.actorMembershipId === where.actorMembershipId;
@@ -243,6 +348,43 @@ function matchesWorkspaceAuditEventWhere(
     matchesResourceType &&
     matchesResourceId &&
     matchesRequest &&
+    matchesFrom &&
+    matchesTo
+  );
+}
+
+function matchesSecurityThreatEventWhere(
+  candidate: RequestPrismaMockContext['state']['securityThreatEvents'][number],
+  where: SecurityThreatEventWhere | undefined
+): boolean {
+  const matchesSeverity =
+    !where?.severity ||
+    (typeof where.severity === 'string'
+      ? candidate.severity === where.severity
+      : !where.severity.in || where.severity.in.includes(candidate.severity));
+  const matchesCategory =
+    !where?.eventCategory || candidate.eventCategory === where.eventCategory;
+  const matchesEventName =
+    !where?.eventName || candidate.eventName === where.eventName;
+  const matchesRequest =
+    !where?.requestId || candidate.requestId === where.requestId;
+  const matchesClientIp =
+    !where?.clientIpHash || candidate.clientIpHash === where.clientIpHash;
+  const matchesUser = !where?.userId || candidate.userId === where.userId;
+  const matchesFrom =
+    !where?.occurredAt?.gte ||
+    candidate.occurredAt.getTime() >= where.occurredAt.gte.getTime();
+  const matchesTo =
+    !where?.occurredAt?.lte ||
+    candidate.occurredAt.getTime() <= where.occurredAt.lte.getTime();
+
+  return (
+    matchesSeverity &&
+    matchesCategory &&
+    matchesEventName &&
+    matchesRequest &&
+    matchesClientIp &&
+    matchesUser &&
     matchesFrom &&
     matchesTo
   );

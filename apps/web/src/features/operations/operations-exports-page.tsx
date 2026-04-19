@@ -50,10 +50,29 @@ export function OperationsExportsPage() {
     title: '백업 / 내보내기 가이드',
     description:
       '백업 / 내보내기 화면은 운영 데이터를 어떤 범위로 반출할지 선택하는 화면입니다.',
-    primaryEntity: 'OperationsExportResult',
-    relatedEntities: ['ImportBatch', 'CollectedTransaction', 'JournalEntry'],
+    primaryEntity: '내보내기 결과',
+    relatedEntities: ['업로드 배치', '수집 거래', '전표'],
     truthSource:
-      '내보내기 가능 범위와 최근 실행 결과는 서버 export surface를 기준으로 표시됩니다.'
+      '내보내기 가능 범위와 최근 실행 결과는 서버가 제공하는 내보내기 기준을 따라 표시됩니다.',
+    supplementarySections: [
+      {
+        title: '이어지는 화면',
+        links: [
+          {
+            title: '감사 로그',
+            description: '수동 반출 실행 전후의 운영 이벤트와 요청 흐름을 함께 확인합니다.',
+            href: '/admin/logs',
+            actionLabel: '감사 로그 보기'
+          },
+          {
+            title: '재무제표 생성 / 선택',
+            description: '공식 스냅샷이 최신인지 확인한 뒤 재무제표 범위를 반출합니다.',
+            href: '/financial-statements',
+            actionLabel: '재무제표 보기'
+          }
+        ]
+      }
+    ]
   });
   const totalRows =
     exports?.items.reduce((sum, item) => sum + item.rowCount, 0) ?? 0;
@@ -63,7 +82,7 @@ export function OperationsExportsPage() {
       <PageHeader
         eyebrow="운영 지원"
         title="백업 / 내보내기"
-        description="운영자가 직접 실행하는 UTF-8 CSV 반출로, 기준 데이터와 운영 산출물을 안전하게 내려받습니다."
+        description="운영자가 직접 실행하는 UTF-8 CSV 반출로, 기준 데이터와 운영 결과를 안전하게 내려받습니다."
         badges={[
           {
             label: `${formatNumber(exports?.items.length ?? 0, 0)}개 범위`,
@@ -113,56 +132,31 @@ export function OperationsExportsPage() {
         </Alert>
       ) : null}
 
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, lg: 7 }}>
-          <SectionCard
-            title="지금 우선 확인"
-            description="운영자가 반출 전에 확인할 범위 수, 행 수, 최근 반출 시점을 먼저 보여줍니다."
-          >
-            <Grid container spacing={appLayout.fieldGap}>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <ExportInfoItem
-                  label="반출 범위"
-                  value={`${formatNumber(exports?.items.length ?? 0, 0)}개`}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <ExportInfoItem
-                  label="대상 행 수"
-                  value={`${formatNumber(totalRows, 0)}행`}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <ExportInfoItem
-                  label="마지막 반출"
-                  value={formatDateTime(exports?.lastExportedAt ?? null)}
-                />
-              </Grid>
-            </Grid>
-          </SectionCard>
+      <SectionCard
+        title="지금 우선 확인"
+        description="운영자가 반출 전에 확인할 범위 수, 행 수, 최근 반출 시점을 먼저 보여줍니다."
+      >
+        <Grid container spacing={appLayout.fieldGap}>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <ExportInfoItem
+              label="반출 범위"
+              value={`${formatNumber(exports?.items.length ?? 0, 0)}개`}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <ExportInfoItem
+              label="대상 행 수"
+              value={`${formatNumber(totalRows, 0)}행`}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <ExportInfoItem
+              label="마지막 반출"
+              value={formatDateTime(exports?.lastExportedAt ?? null)}
+            />
+          </Grid>
         </Grid>
-        <Grid size={{ xs: 12, lg: 5 }}>
-          <SectionCard
-            title="자주 여는 후속 화면"
-            description="반출 전에 근거 화면이나 감사 이력을 함께 확인할 때 사용하는 화면입니다."
-          >
-            <Stack spacing={1.25}>
-              <OperationsSupportLinkCard
-                title="감사 로그"
-                description="수동 반출 실행 전후의 운영 이벤트와 요청 흐름을 함께 확인합니다."
-                href="/admin/logs"
-                actionLabel="감사 로그 보기"
-              />
-              <OperationsSupportLinkCard
-                title="재무제표"
-                description="공식 스냅샷이 최신인지 확인한 뒤 재무제표 범위를 반출합니다."
-                href="/financial-statements"
-                actionLabel="재무제표 보기"
-              />
-            </Stack>
-          </SectionCard>
-        </Grid>
-      </Grid>
+      </SectionCard>
 
       <SectionCard
         title="반출 작업대"
@@ -227,7 +221,7 @@ export function OperationsExportsPage() {
 
       <SectionCard
         title="수동 CSV 반출"
-        description="스케줄 백업이나 DB 스냅샷은 아직 다루지 않고, 운영자가 필요한 시점에 내려받는 1차 흐름만 제공합니다."
+        description="자동 백업은 아직 다루지 않고, 운영자가 필요한 시점에 내려받는 1차 흐름만 제공합니다."
       >
         <Typography variant="body2" color="text.secondary">
           생성된 파일은 브라우저에서 즉시 다운로드되며, UTF-8 CSV 형식으로
@@ -269,41 +263,6 @@ function ExportInfoItem({ label, value }: { label: string; value: string }) {
       <Typography variant="body2" fontWeight={600}>
         {value}
       </Typography>
-    </Stack>
-  );
-}
-
-function OperationsSupportLinkCard({
-  title,
-  description,
-  href,
-  actionLabel
-}: {
-  title: string;
-  description: string;
-  href: string;
-  actionLabel: string;
-}) {
-  return (
-    <Stack
-      spacing={1}
-      sx={{
-        p: appLayout.cardPadding,
-        borderRadius: 3,
-        border: '1px solid',
-        borderColor: 'divider',
-        backgroundColor: 'background.default'
-      }}
-    >
-      <Typography variant="subtitle2">{title}</Typography>
-      <Typography variant="body2" color="text.secondary">
-        {description}
-      </Typography>
-      <div>
-        <Button href={href} variant="outlined">
-          {actionLabel}
-        </Button>
-      </div>
     </Stack>
   );
 }

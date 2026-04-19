@@ -85,7 +85,7 @@
 
 - 인증/계정 범위는 회원가입, 이메일 인증, 인증 메일 재발송, 사업장 초대 수락, 로그인, 세션 refresh/logout, `auth/me`, 계정 보안, 프로필 수정, 비밀번호 변경, 세션 종료까지 10개 독립 use-case 기반으로 운영합니다.
 - 설정 범위는 현재 workspace의 사업장/기본 장부 설정 조회와 Owner/Manager 수정까지 포함합니다.
-- 관리자 범위는 현재 workspace의 멤버 목록/초대/역할·상태 관리, DB 메뉴 트리/메뉴 권한 관리, workspace 감사 로그 조회, 권한 정책 요약까지 포함합니다.
+- 관리자 범위는 현재 workspace의 멤버 목록/초대/역할·상태 관리, DB 메뉴 트리/메뉴 권한 관리, workspace 감사 로그 조회, 권한 정책 요약까지 포함합니다. `INITIAL_ADMIN_*`로 시드된 전역 관리자는 일반 사업장 관리자와 분리되어 전체 사용자 관리, 사업장 관리, 사업장 전환/지원 문맥, 운영 상태 점검, 보안 위협 로그, 전체 멤버십 역할·상태 관리를 수행할 수 있습니다.
 - 내비게이션 범위는 현재 workspace의 DB 메뉴 트리를 현재 멤버 역할 기준으로 필터링해 반환하는 `navigation/tree`까지 포함합니다.
 - 운영 지원 범위는 체크리스트, 예외 처리함, 월 마감 대시보드, 업로드 운영 현황, 시스템 상태, 알림 센터, 수동 CSV 반출, 운영 메모까지 포함합니다.
 - 기준/참조 범위는 조회 `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`, `vehicles/operating-summary`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/차량 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `DELETE /insurance-policies/:id`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
@@ -107,6 +107,19 @@
 - `DELETE /auth/sessions/:sessionId`
 - `GET /settings/workspace`
 - `PATCH /settings/workspace`
+- `GET /admin/tenants` (전역 관리자 전용)
+- `GET /admin/tenants/:tenantId` (전역 관리자 전용)
+- `PATCH /admin/tenants/:tenantId/status` (전역 관리자 전용)
+- `GET /admin/users` (전역 관리자 전용)
+- `GET /admin/users/:userId` (전역 관리자 전용)
+- `PATCH /admin/users/:userId/status` (전역 관리자 전용)
+- `POST /admin/users/:userId/revoke-sessions` (전역 관리자 전용)
+- `PATCH /admin/users/:userId/system-admin` (전역 관리자 전용)
+- `PATCH /admin/users/:userId/email-verification` (전역 관리자 전용)
+- `GET /admin/support-context` (전역 관리자 전용)
+- `POST /admin/support-context` (전역 관리자 전용)
+- `DELETE /admin/support-context` (전역 관리자 전용)
+- `GET /admin/operations/status` (전역 관리자 전용)
 - `GET /admin/members`
 - `POST /admin/members/invitations`
 - `PATCH /admin/members/:membershipId/role`
@@ -117,6 +130,7 @@
 - `GET /admin/policy`
 - `GET /admin/audit-events`
 - `GET /admin/audit-events/:auditEventId`
+- `GET /admin/security-threats` (전역 관리자 전용)
 - `GET /navigation/tree`
 - `GET /reference-data/readiness`
 - `GET /funding-accounts`
@@ -199,10 +213,15 @@
 - Web `/register` -> API `POST /auth/register`
 - Web `/verify-email` -> API `POST /auth/verify-email`, `POST /auth/resend-verification`
 - Web `/accept-invitation` -> API `POST /auth/accept-invitation`
-- Web `/admin` -> API `/admin/members`, `/admin/audit-events`
+- Web `/admin` -> API `/admin/users`, `/admin/tenants`, `/admin/support-context`, `/admin/operations/status`, `/admin/members`, `/admin/audit-events`
+- Web `/admin/users` -> API `GET /admin/users`, `GET /admin/users/:userId`, `PATCH /admin/users/:userId/status`, `POST /admin/users/:userId/revoke-sessions`, `PATCH /admin/users/:userId/system-admin`, `PATCH /admin/users/:userId/email-verification`
+- Web `/admin/tenants` -> API `GET /admin/tenants`, `GET /admin/tenants/:tenantId`, `PATCH /admin/tenants/:tenantId/status`
+- Web `/admin/support-context` -> API `GET /admin/support-context`, `POST /admin/support-context`, `DELETE /admin/support-context`
+- Web `/admin/operations` -> API `GET /admin/operations/status`
 - Web `/admin/members` -> API `GET /admin/members`, `POST /admin/members/invitations`, `PATCH /admin/members/:membershipId/role`, `PATCH /admin/members/:membershipId/status`, `DELETE /admin/members/:membershipId`
 - Web `/admin/navigation` -> API `GET /admin/navigation`, `PATCH /admin/navigation/:menuItemId`
 - Web `/admin/logs` -> API `GET /admin/audit-events`, `GET /admin/audit-events/:auditEventId`
+- Web `/admin/security-threats` -> API `GET /admin/security-threats`
 - Web `/admin/policy` -> API `GET /admin/policy`
 - Web `/settings/workspace` -> API `GET /settings/workspace`, `PATCH /settings/workspace`
 - Web `/settings/account` -> API `GET /auth/account-security`
@@ -250,6 +269,80 @@
 - Web 라우트의 shorthand 이름과 Swagger/API module 이름이 다를 수 있으며, 계약과 백엔드 모듈명은 API 경로 기준으로 봅니다.
 
 ## 현재 쓰기/명령 엔드포인트
+
+### `GET /admin/users`
+
+- 계약: response `AdminUserItem[]`
+- 전역 관리자만 전체 사용자 목록, 계정 상태, 이메일 인증 여부, 멤버십 수, 세션 수를 조회합니다.
+- 계정 잠금/비활성, 전체 관리자 권한 조정, 세션 만료 작업의 출발점입니다.
+
+### `GET /admin/users/:userId`
+
+- 계약: response `AdminUserDetail`
+- 전역 관리자만 특정 사용자의 멤버십, 최근 세션, 최근 보안 위협 이벤트를 함께 조회합니다.
+- 비밀번호 hash, refresh token 원문, 세션 token 원문은 노출하지 않습니다.
+
+### `PATCH /admin/users/:userId/status`
+
+- 계약: `UpdateAdminUserStatusRequest -> AdminUserDetail`
+- 전역 관리자만 사용자 상태를 `ACTIVE`, `LOCKED`, `DISABLED`로 변경합니다.
+- 자기 자신의 계정 잠금과 마지막 활성 전역 관리자 잠금은 막습니다.
+
+### `POST /admin/users/:userId/revoke-sessions`
+
+- 계약: response `RevokeAdminUserSessionsResponse`
+- 전역 관리자만 대상 사용자의 활성 세션을 만료합니다.
+- 자기 자신을 대상으로 할 때는 현재 요청 세션을 제외하고 다른 세션만 만료합니다.
+
+### `PATCH /admin/users/:userId/system-admin`
+
+- 계약: `UpdateAdminUserSystemAdminRequest -> AdminUserDetail`
+- 전역 관리자만 다른 사용자에게 전역 관리자 권한을 부여하거나 회수합니다.
+- 자기 자신의 전역 관리자 권한 변경과 마지막 활성 전역 관리자 회수는 막습니다.
+
+### `PATCH /admin/users/:userId/email-verification`
+
+- 계약: `UpdateAdminUserEmailVerificationRequest -> AdminUserDetail`
+- 전역 관리자만 이메일 인증 상태를 수동 완료 처리합니다.
+- 이메일 인증 해제는 지원하지 않습니다.
+
+### `GET /admin/tenants`
+
+- 계약: response `AdminTenantItem[]`
+- 전역 관리자만 전체 사업장 목록, 기본 장부, 멤버 수, 활성 소유자 수를 조회합니다.
+
+### `GET /admin/tenants/:tenantId`
+
+- 계약: response `AdminTenantDetail`
+- 전역 관리자만 특정 사업장의 장부 목록과 최근 감사 이벤트를 함께 조회합니다.
+
+### `PATCH /admin/tenants/:tenantId/status`
+
+- 계약: `UpdateAdminTenantStatusRequest -> AdminTenantDetail`
+- 전역 관리자만 사업장 상태를 `TRIAL`, `ACTIVE`, `SUSPENDED`, `ARCHIVED`로 변경합니다.
+- 활성화 요청은 최소 1개 장부가 있어야 성공합니다.
+
+### `GET /admin/support-context`
+
+- 계약: response `AdminSupportContext`
+- 전역 관리자만 현재 로그인 세션에 연결된 지원 문맥을 조회합니다.
+
+### `POST /admin/support-context`
+
+- 계약: `UpdateAdminSupportContextRequest -> AdminSupportContext`
+- 전역 관리자 세션에 특정 사업장과 장부를 지원 문맥으로 저장합니다.
+- 다른 사용자로 가장하지 않고 실제 전역 관리자 사용자 ID로 모든 작업이 기록됩니다.
+
+### `DELETE /admin/support-context`
+
+- 계약: response `AdminSupportContext`
+- 현재 전역 관리자 세션의 지원 문맥을 해제합니다.
+
+### `GET /admin/operations/status`
+
+- 계약: response `AdminOperationsStatus`
+- 전역 관리자만 사용자/사업장 수, 잠금 계정, 최근 24시간 보안 위협, 감사 실패/거부, API/DB 점검 상태를 조회합니다.
+- Prisma migration 상세 비교는 배포 절차에서 별도 확인하며, 이 응답은 운영 점검판 역할을 합니다.
 
 ### `GET /admin/members`
 
@@ -304,6 +397,13 @@
 
 - 계약: response `AdminAuditEventItem`
 - 현재 작업 문맥의 Owner만 현재 Tenant에 속한 감사 이벤트 상세를 조회할 수 있습니다.
+
+### `GET /admin/security-threats`
+
+- 계약: response `AdminSecurityThreatEventListResponse`
+- 전역 관리자만 로그인 실패, 가입 제한, 세션 재사용 감지, 출처 차단, 권한 거부 같은 보안 위협 이벤트 목록을 조회할 수 있습니다.
+- `severity`, `eventCategory`, `eventName`, `requestId`, `clientIpHash`, `userId`, `from`, `to`, `offset`, `limit` query를 지원합니다.
+- IP는 원문이 아니라 hash 형태로 저장하며, 조회 응답의 `metadata`도 allowlist 가능한 평탄 값만 포함합니다.
 
 ### `POST /accounting-periods`
 

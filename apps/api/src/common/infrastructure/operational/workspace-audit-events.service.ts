@@ -60,7 +60,8 @@ export class WorkspaceAuditEventsService
           ledgerId: input.workspace.ledgerId,
           actorUserId: input.workspace.userId,
           actorMembershipId: input.workspace.membershipId,
-          actorRole: input.workspace.membershipRole,
+          actorRole:
+            input.workspace.systemRole ?? input.workspace.membershipRole,
           eventCategory: input.eventCategory,
           eventName: input.eventName,
           action: input.action,

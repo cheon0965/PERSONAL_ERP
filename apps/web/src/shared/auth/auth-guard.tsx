@@ -70,7 +70,7 @@ export function AuthGuard({ children }: React.PropsWithChildren) {
             <CircularProgress size={32} />
             <Typography variant="body1" color="text.secondary">
               {status === 'loading'
-                ? '워크스페이스 세션을 복원하고 있습니다...'
+                ? '로그인 상태를 확인하고 있습니다...'
                 : '로그인 화면으로 이동하고 있습니다...'}
             </Typography>
           </>
