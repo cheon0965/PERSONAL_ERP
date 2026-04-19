@@ -38,6 +38,9 @@
     실행 계획은 [`completed/OPERATIONS_SUPPORT_SURFACES_EXECUTION_PLAN.md`](./completed/OPERATIONS_SUPPORT_SURFACES_EXECUTION_PLAN.md)에 보관합니다.
 23. 핵심 원장 P0 리팩토링 1차 반영
     `accounting-periods`, `import-batches`, `journal-entries`, `operations-console`의 우선 경계를 현재 리팩토링 기준선에 맞춰 분리하기 시작했고, 이후 P1 모듈(`auth`, `admin`, `insurance-policies`, `plan-items`, `financial-statements`, `carry-forwards`)과 Web 대형 파일 분해까지 완료하여 [`completed/REFACTORING_EXECUTION_PLAN.md`](./completed/REFACTORING_EXECUTION_PLAN.md)에 보관합니다.
+24. 전체 관리자 운영 필수 기능 구현
+    전체 사용자 관리, 사업장 관리, 지원 모드, 보안 위협 로그, 운영 상태 화면과 관련 API/테스트/문서 동기화까지 완료했습니다.
+    실행 계획은 [`completed/SYSTEM_ADMIN_OPERATIONS_EXECUTION_PLAN.md`](./completed/SYSTEM_ADMIN_OPERATIONS_EXECUTION_PLAN.md)에 보관합니다.
 
 ## 현재 MVP 범위
 
@@ -82,4 +85,4 @@
 - AI 기반 재무 조언
 - OCR 영수증 처리
 - 복합 승인 체계가 있는 고급 회계 마감 프로세스
-- 운영용 멀티테넌시 관리 UI
+- 과금, 플랜, 고객지원 티켓까지 포함하는 대형 SaaS 운영용 멀티테넌시 관리 UI

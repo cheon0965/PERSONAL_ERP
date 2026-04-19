@@ -306,7 +306,7 @@ async function ensureDemoUser(summary: SeedSummary) {
 async function ensureInitialAdminUser(summary: SeedSummary) {
   const admin = readInitialAdminSeedCredentials();
 
-  if (!admin || admin.email === env.DEMO_EMAIL) {
+  if (!admin) {
     return null;
   }
 
@@ -323,6 +323,7 @@ async function ensureInitialAdminUser(summary: SeedSummary) {
       data: {
         name: admin.name,
         passwordHash,
+        isSystemAdmin: true,
         emailVerifiedAt
       }
     });
@@ -336,6 +337,7 @@ async function ensureInitialAdminUser(summary: SeedSummary) {
       email: admin.email,
       passwordHash,
       name: admin.name,
+      isSystemAdmin: true,
       emailVerifiedAt
     },
     select: { id: true }

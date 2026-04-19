@@ -33,7 +33,6 @@ import {
   updateAdminNavigationItem
 } from './admin.api';
 import { readMembershipRoleLabel } from './admin-labels';
-import { AdminSectionNav } from './admin-section-nav';
 
 const menuRoles: TenantMembershipRole[] = [
   'OWNER',
@@ -120,9 +119,9 @@ export function AdminNavigationPage() {
   useDomainHelp({
     title: '메뉴 권한 가이드',
     description:
-      '메뉴 권한 관리는 DB에 저장된 트리 메뉴와 메뉴별 허용 역할을 조정하는 화면입니다.',
-    primaryEntity: 'WorkspaceNavigationMenuItem',
-    relatedEntities: ['WorkspaceNavigationMenuRole', 'TenantMembershipRole'],
+      '메뉴 권한 관리는 저장된 메뉴 구조와 메뉴별 허용 역할을 조정하는 화면입니다.',
+    primaryEntity: '메뉴 권한',
+    relatedEntities: ['메뉴별 허용 역할', '멤버 역할'],
     truthSource:
       '사이드바 노출과 직접 URL 접근 제한은 모두 저장된 메뉴 트리와 허용 역할을 기준으로 판정합니다.',
     supplementarySections: [
@@ -148,10 +147,10 @@ export function AdminNavigationPage() {
       <PageHeader
         eyebrow="관리자"
         title="메뉴 / 권한 관리"
-        description="사이드바 트리 메뉴를 DB 기준으로 관리하고, 메뉴별 허용 역할을 조정합니다."
+        description="사이드바 메뉴 구조를 관리하고, 메뉴별 허용 역할을 조정합니다."
         badges={[
           {
-            label: canReadNavigation ? 'DB 메뉴 조회 가능' : '조회 권한 필요',
+            label: canReadNavigation ? '메뉴 조회 가능' : '조회 권한 필요',
             color: canReadNavigation ? 'success' : 'warning'
           },
           {
@@ -168,9 +167,6 @@ export function AdminNavigationPage() {
         primaryActionLabel="권한 정책 보기"
         primaryActionHref="/admin/policy"
       />
-
-      <AdminSectionNav />
-
       {feedback ? <Alert variant="outlined">{feedback}</Alert> : null}
 
       {!canReadNavigation ? (
@@ -212,7 +208,7 @@ export function AdminNavigationPage() {
       </Grid>
 
       <SectionCard
-        title="DB 메뉴 권한 트리"
+        title="메뉴 권한 구조"
         description="상위 메뉴를 숨기거나 역할을 줄이면 하위 메뉴도 함께 노출되지 않습니다. 실제 화면 접근도 이 트리 기준으로 한 번 더 막습니다."
       >
         <Stack spacing={1.25}>
@@ -270,7 +266,7 @@ export function AdminNavigationPage() {
 
           {rows.length === 0 ? (
             <Alert severity="info" variant="outlined">
-              아직 저장된 메뉴가 없습니다. API가 메뉴 기본값을 생성하면 이곳에
+              아직 저장된 메뉴가 없습니다. 기본 메뉴가 생성되면 이곳에
               트리가 표시됩니다.
             </Alert>
           ) : null}

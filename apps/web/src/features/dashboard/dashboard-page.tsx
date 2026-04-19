@@ -32,7 +32,7 @@ export function DashboardPage() {
       '공식 재무제표'
     ],
     truthSource:
-      '공식 수치의 단일 원천은 마감 완료된 월의 마감 스냅샷과 공식 재무제표입니다.',
+      '공식 수치는 마감 완료된 월의 마감 스냅샷과 공식 재무제표를 기준으로 확인합니다.',
     supplementarySections: [
       {
         title: '바로 쓰는 순서',
@@ -51,6 +51,35 @@ export function DashboardPage() {
           '계획 항목 생성 후 남은 계획 지출이 반영됐는지 봅니다.',
           '수집 거래를 전표로 확정한 뒤 확정 지출이 반영됐는지 봅니다.',
           '월 마감 직전 이상 징후가 없는지 마지막으로 확인합니다.'
+        ]
+      },
+      {
+        title: '이어지는 화면',
+        links: [
+          {
+            title: '기간 운영 전망',
+            description: '월말 예상 잔액과 안전 여력을 더 자세히 해석할 때 이어서 확인합니다.',
+            href: '/forecast',
+            actionLabel: '기간 전망 보기'
+          },
+          {
+            title: '재무제표 생성 / 선택',
+            description: '공식 잠금 기준 숫자와 전기 비교가 필요할 때 이동합니다.',
+            href: '/financial-statements',
+            actionLabel: '재무제표 보기'
+          },
+          {
+            title: '전표 조회',
+            description: '확정 지출 근거가 되는 전표 라인과 조정 흐름을 확인합니다.',
+            href: '/journal-entries',
+            actionLabel: '전표 보기'
+          },
+          {
+            title: '이월 기준 생성 / 선택',
+            description: '다음 월 시작 기준까지 이어서 확인하려면 차기 이월 화면으로 이동합니다.',
+            href: '/carry-forwards',
+            actionLabel: '차기 이월 보기'
+          }
         ]
       }
     ],

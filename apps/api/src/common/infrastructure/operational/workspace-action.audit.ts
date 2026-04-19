@@ -55,7 +55,8 @@ export function logWorkspaceActionSucceeded(
     tenantId: input.workspace.tenantId,
     ledgerId: input.workspace.ledgerId,
     membershipId: input.workspace.membershipId,
-    membershipRole: input.workspace.membershipRole,
+    membershipRole:
+      input.workspace.systemRole ?? input.workspace.membershipRole,
     ...input.details
   });
   persistWorkspaceActionAudit({
@@ -82,7 +83,8 @@ export function logWorkspaceActionDenied(
     tenantId: input.workspace.tenantId,
     ledgerId: input.workspace.ledgerId,
     membershipId: input.workspace.membershipId,
-    membershipRole: input.workspace.membershipRole,
+    membershipRole:
+      input.workspace.systemRole ?? input.workspace.membershipRole,
     ...input.details
   });
   persistWorkspaceActionAudit({

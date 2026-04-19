@@ -22,6 +22,9 @@ export function createRequestIdentityStateFixtures(input: {
         email: 'demo@example.com',
         name: 'Demo User',
         passwordHash,
+        status: 'ACTIVE',
+        lockedReason: null,
+        lockedAt: null,
         emailVerifiedAt: new Date('2026-03-01T00:00:00.000Z'),
         createdAt: new Date('2026-03-01T00:00:00.000Z'),
         settings: {
@@ -35,6 +38,9 @@ export function createRequestIdentityStateFixtures(input: {
         email: 'other@example.com',
         name: 'Other User',
         passwordHash,
+        status: 'ACTIVE',
+        lockedReason: null,
+        lockedAt: null,
         emailVerifiedAt: new Date('2026-03-01T00:00:00.000Z'),
         createdAt: new Date('2026-03-01T00:00:00.000Z'),
         settings: {
@@ -151,6 +157,9 @@ export function createRequestIdentityStateFixtures(input: {
         refreshTokenHash: 'existing-session-hash',
         expiresAt: activeSessionExpiresAt,
         revokedAt: null,
+        supportTenantId: null,
+        supportLedgerId: null,
+        supportStartedAt: null,
         createdAt: new Date('2026-03-01T00:00:00.000Z'),
         updatedAt: new Date('2026-03-01T00:00:00.000Z')
       },
@@ -160,6 +169,9 @@ export function createRequestIdentityStateFixtures(input: {
         refreshTokenHash: 'existing-session-hash',
         expiresAt: activeSessionExpiresAt,
         revokedAt: null,
+        supportTenantId: null,
+        supportLedgerId: null,
+        supportStartedAt: null,
         createdAt: new Date('2026-03-01T00:00:00.000Z'),
         updatedAt: new Date('2026-03-01T00:00:00.000Z')
       }

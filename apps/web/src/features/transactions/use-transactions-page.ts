@@ -178,7 +178,7 @@ export function useTransactionsPage() {
   useDomainHelp({
     title: '수집 거래 사용 가이드',
     description:
-      '이 화면은 현재 열린 운영 월 안의 실제 거래 후보를 검토하고 전표로 확정하는 핵심 작업 화면입니다. 수기 입력, 업로드 승격, 계획 항목에서 생성된 거래가 모두 이곳에 모입니다.',
+      '이 화면은 현재 열린 운영 월 안의 실제 거래 후보를 검토하고 전표로 확정하는 핵심 작업 화면입니다. 수기 입력, 업로드 행 등록, 계획 항목에서 생성된 거래가 모두 이곳에 모입니다.',
     primaryEntity: '수집 거래',
     relatedEntities: [
       '운영 월',

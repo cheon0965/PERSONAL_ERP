@@ -1,14 +1,18 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import type { Route } from 'next';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { alpha } from '@mui/material/styles';
-import { Box, Tab, Tabs } from '@mui/material';
+import type { Theme } from '@mui/material/styles';
+import { Box, ButtonBase, Stack, Typography } from '@mui/material';
 
 type SectionTabItem = {
   href: string;
   label: string;
+  shortLabel?: string;
+  icon?: ReactNode;
   matchHrefs?: readonly string[];
   matchPrefixes?: readonly string[];
 };
@@ -16,6 +20,21 @@ type SectionTabItem = {
 type SectionTabsProps = {
   items: readonly SectionTabItem[];
   ariaLabel?: string;
+};
+
+type SegmentedTabItem<TValue extends string> = {
+  value: TValue;
+  label: string;
+  shortLabel?: string;
+  icon?: ReactNode;
+  disabled?: boolean;
+};
+
+type SegmentedTabsProps<TValue extends string> = {
+  items: readonly SegmentedTabItem<TValue>[];
+  value: TValue;
+  ariaLabel?: string;
+  onChange: (value: TValue) => void;
 };
 
 export function SectionTabs({
@@ -27,58 +46,91 @@ export function SectionTabs({
 
   return (
     <Box
+      component="nav"
+      aria-label={ariaLabel}
       sx={{
-        p: 0.75,
-        borderRadius: 4,
+        p: 0.6,
+        borderRadius: 3.25,
         border: '1px solid',
-        borderColor: 'divider',
-        bgcolor: alpha('#f8fafc', 0.92),
-        boxShadow: '0 10px 24px rgba(15, 23, 42, 0.04)'
+        borderColor: '#d7dee8',
+        background: '#ffffff',
+        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.05)'
       }}
     >
-      <Tabs
-        value={value}
-        variant="scrollable"
-        allowScrollButtonsMobile
-        aria-label={ariaLabel}
+      <Box
         sx={{
-          minHeight: 48,
-          '& .MuiTabs-indicator': {
-            display: 'none'
-          },
-          '& .MuiTabs-flexContainer': {
-            gap: 0.75
-          }
+          display: 'grid',
+          gridTemplateColumns: resolveTabGridColumns(items.length),
+          gap: 0.65
         }}
       >
         {items.map((item, index) => (
-          <Tab
+          <ButtonBase
             key={`section-tab-${index}-${item.href}-${item.label}`}
             component={Link}
             href={item.href as Route}
-            value={item.href}
-            label={item.label}
-            sx={{
-              minHeight: 40,
-              px: 1.75,
-              borderRadius: 999,
-              textTransform: 'none',
-              whiteSpace: 'nowrap',
-              alignItems: 'flex-start',
-              transition: 'all 160ms ease',
-              color: 'text.secondary',
-              '&.Mui-selected': {
-                color: 'primary.main',
-                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-                fontWeight: 700
-              },
-              '&:hover': {
-                bgcolor: 'action.hover'
-              }
-            }}
-          />
+            aria-current={value === item.href ? 'page' : undefined}
+            aria-label={item.label}
+            title={item.label}
+            focusRipple
+            sx={createTabButtonSx(value === item.href)}
+          >
+            <TabButtonContent item={item} selected={value === item.href} />
+          </ButtonBase>
         ))}
-      </Tabs>
+      </Box>
+    </Box>
+  );
+}
+
+export function SegmentedTabs<TValue extends string>({
+  items,
+  value,
+  ariaLabel = '화면 탭 선택',
+  onChange
+}: SegmentedTabsProps<TValue>) {
+  return (
+    <Box
+      role="tablist"
+      aria-label={ariaLabel}
+      sx={{
+        p: 0.6,
+        borderRadius: 3.25,
+        border: '1px solid',
+        borderColor: '#d7dee8',
+        background: '#ffffff'
+      }}
+    >
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: resolveTabGridColumns(items.length),
+          gap: 0.65
+        }}
+      >
+        {items.map((item) => {
+          const selected = value === item.value;
+
+          return (
+            <ButtonBase
+              key={item.value}
+              role="tab"
+              type="button"
+              disabled={item.disabled}
+              aria-selected={selected}
+              aria-label={item.label}
+              title={item.label}
+              focusRipple
+              onClick={() => {
+                onChange(item.value);
+              }}
+              sx={createTabButtonSx(selected, item.disabled)}
+            >
+              <TabButtonContent item={item} selected={selected} />
+            </ButtonBase>
+          );
+        })}
+      </Box>
     </Box>
   );
 }
@@ -117,4 +169,101 @@ function resolveSectionTabValue(
   }
 
   return bestMatchHref;
+}
+
+function TabButtonContent({
+  item,
+  selected
+}: {
+  item: Pick<SectionTabItem, 'label' | 'shortLabel' | 'icon'>;
+  selected: boolean;
+}) {
+  return (
+    <Stack
+      component="span"
+      direction="row"
+      alignItems="center"
+      spacing={0.75}
+      sx={{ minWidth: 0, width: '100%' }}
+    >
+      {item.icon ? (
+        <Box
+          component="span"
+          sx={{
+            display: 'inline-flex',
+            flexShrink: 0,
+            color: selected ? 'primary.dark' : 'text.primary'
+          }}
+        >
+          {item.icon}
+        </Box>
+      ) : null}
+      <Typography
+        component="span"
+        variant="body2"
+        sx={{
+          minWidth: 0,
+          fontWeight: selected ? 800 : 700,
+          lineHeight: 1.2,
+          overflow: 'hidden',
+          display: '-webkit-box',
+          WebkitBoxOrient: 'vertical',
+          WebkitLineClamp: 2
+        }}
+      >
+        {item.shortLabel ?? item.label}
+      </Typography>
+    </Stack>
+  );
+}
+
+function resolveTabGridColumns(itemCount: number) {
+  const mobileColumns =
+    itemCount <= 1 ? '1fr' : 'repeat(2, minmax(0, 1fr))';
+  const minimumWidth = itemCount > 6 ? 112 : itemCount > 4 ? 124 : 140;
+
+  return {
+    xs: mobileColumns,
+    sm: `repeat(auto-fit, minmax(${minimumWidth}px, 1fr))`
+  } as const;
+}
+
+function createTabButtonSx(selected: boolean, disabled = false) {
+  return (theme: Theme) => ({
+    minWidth: 0,
+    width: '100%',
+    minHeight: { xs: 40, md: 42 },
+    px: { xs: 1, md: 1.25 },
+    py: 0.85,
+    borderRadius: 2.35,
+    justifyContent: 'flex-start',
+    textAlign: 'left',
+    textDecoration: 'none',
+    border: '1px solid',
+    borderColor: selected
+      ? alpha(theme.palette.primary.main, 0.36)
+      : 'transparent',
+    color: selected ? theme.palette.primary.dark : theme.palette.text.primary,
+    backgroundColor: selected
+      ? alpha(theme.palette.primary.main, 0.16)
+      : 'transparent',
+    boxShadow: selected
+      ? `inset 0 0 0 1px ${alpha(theme.palette.primary.main, 0.08)}`
+      : 'none',
+    transition:
+      'background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease',
+    opacity: disabled ? 0.48 : 1,
+    '&:hover': {
+      backgroundColor: selected
+        ? alpha(theme.palette.primary.main, 0.2)
+        : alpha(theme.palette.text.primary, 0.045),
+      borderColor: selected
+        ? alpha(theme.palette.primary.main, 0.42)
+        : '#d7dee8'
+    },
+    '&.Mui-focusVisible': {
+      outline: `2px solid ${alpha(theme.palette.primary.main, 0.58)}`,
+      outlineOffset: 2
+    }
+  });
 }

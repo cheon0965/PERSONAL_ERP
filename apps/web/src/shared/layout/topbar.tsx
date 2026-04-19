@@ -4,12 +4,18 @@ import * as React from 'react';
 import type { Route } from 'next';
 import Link from 'next/link';
 import HelpOutlineRoundedIcon from '@mui/icons-material/HelpOutlineRounded';
+import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
+import LockRoundedIcon from '@mui/icons-material/LockRounded';
+import ManageAccountsRoundedIcon from '@mui/icons-material/ManageAccountsRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
+import SecurityRoundedIcon from '@mui/icons-material/SecurityRounded';
+import VerifiedUserRoundedIcon from '@mui/icons-material/VerifiedUserRounded';
 import {
   AppBar,
   Avatar,
   Box,
   Button,
+  ButtonBase,
   Chip,
   Divider,
   IconButton,
@@ -20,6 +26,7 @@ import {
   Typography
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
+import { useAccountAvatar } from '@/shared/auth/account-avatar';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { membershipRoleLabelMap } from '@/shared/auth/auth-labels';
 import { useDomainHelpStore } from '../providers/domain-help-provider';
@@ -30,13 +37,23 @@ export function Topbar() {
   const { logout, user } = useAuthSession();
   const { activeContext, setDrawerOpen } = useDomainHelpStore();
   const currentWorkspace = user?.currentWorkspace ?? null;
+  const isSystemAdmin = user?.isSystemAdmin === true;
+  const isSupportModeEnabled =
+    currentWorkspace?.supportContext?.enabled === true;
   const ledger = currentWorkspace?.ledger ?? null;
   const membershipRole = currentWorkspace?.membership.role ?? null;
   const [contextAnchorEl, setContextAnchorEl] =
     React.useState<HTMLElement | null>(null);
+  const [accountAnchorEl, setAccountAnchorEl] =
+    React.useState<HTMLElement | null>(null);
   const contextPopoverOpen = Boolean(contextAnchorEl);
+  const accountPopoverOpen = Boolean(accountAnchorEl);
+  const { avatarContent, avatarSx } = useAccountAvatar(user?.id, user?.name);
   const handleContextClose = React.useCallback(() => {
     setContextAnchorEl(null);
+  }, []);
+  const handleAccountClose = React.useCallback(() => {
+    setAccountAnchorEl(null);
   }, []);
 
   return (
@@ -48,111 +65,113 @@ export function Topbar() {
         sx={{
           borderRadius: 0,
           borderBottom: '1px solid',
-          borderColor: 'divider',
+          borderColor: '#d7dee8',
+          backgroundColor: '#ffffff',
           ml: { lg: `${sidebarWidth}px` },
           width: { lg: `calc(100% - ${sidebarWidth}px)` }
         }}
       >
         <Toolbar
           sx={{
-            minHeight: 72,
-            gap: 2,
+            minHeight: { xs: 60, md: 64 },
+            gap: 1.5,
             justifyContent: 'space-between',
             alignItems: 'center'
           }}
         >
           <Stack
-            spacing={0.5}
+            spacing={0.25}
             sx={{
               minWidth: 0,
-              flex: 1,
-              display: { xs: 'none', md: 'flex' }
+              flex: 1
             }}
           >
-            <Typography variant="overline" color="text.secondary">
-              현재 작업 문맥
-            </Typography>
-            <Typography variant="subtitle2" noWrap>
-              {currentWorkspace
-                ? `${currentWorkspace.tenant.name} / ${ledger?.name ?? '기본 장부 미선정'}`
-                : '연결된 사업장 없음'}
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase'
+              }}
+            >
+              {isSystemAdmin ? '전체 관리자 범위' : '현재 사업장 / 장부'}
             </Typography>
             <Stack
               direction="row"
-              spacing={1}
+              spacing={0.75}
+              alignItems="center"
               useFlexGap
               flexWrap="wrap"
-              alignItems="center"
             >
-              {currentWorkspace ? (
-                <>
-                  <Chip
-                    label={
-                      membershipRole
-                        ? (membershipRoleLabelMap[membershipRole] ??
-                          membershipRole)
-                        : '권한 미확인'
+              <Typography
+                variant="body2"
+                fontWeight={700}
+                sx={{
+                  minWidth: 0,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {currentWorkspace
+                  ? `${currentWorkspace.tenant.name} / ${ledger?.name ?? '기본 장부 미선정'}`
+                  : isSystemAdmin
+                    ? '전체 사업장 / 사용자 관리'
+                    : '연결된 사업장 없음'}
+              </Typography>
+              {isSystemAdmin && isSupportModeEnabled ? (
+                <Chip
+                  label="지원 모드"
+                  color="warning"
+                  size="small"
+                  variant="outlined"
+                  sx={{
+                    height: 22,
+                    borderRadius: 999,
+                    '& .MuiChip-label': {
+                      px: 1,
+                      fontWeight: 700
                     }
-                    size="small"
-                    color="primary"
-                    variant="outlined"
-                  />
-                  <Typography variant="caption" color="text.secondary" noWrap>
-                    {currentWorkspace.tenant.slug}
-                  </Typography>
-                  {ledger ? (
-                    <Typography variant="caption" color="text.secondary" noWrap>
-                      {ledger.baseCurrency} / {ledger.timezone}
-                    </Typography>
-                  ) : null}
-                </>
-              ) : (
-                <Typography variant="caption" color="text.secondary">
-                  연결된 문맥 없음
-                </Typography>
-              )}
+                  }}
+                />
+              ) : null}
             </Stack>
           </Stack>
 
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Stack
-              spacing={0.5}
-              sx={{
-                minWidth: 0,
-                display: { xs: 'flex', md: 'none' },
-                textAlign: 'right'
-              }}
-            >
-              <Typography variant="caption" color="text.secondary" noWrap>
-                {currentWorkspace?.tenant.name ?? '연결된 사업장 없음'}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" noWrap>
-                {ledger?.name ?? '기본 장부 미선정'}
-              </Typography>
-            </Stack>
-
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={0.75}
+            useFlexGap
+            flexWrap="wrap"
+            sx={{ justifyContent: 'flex-end' }}
+          >
             <Button
               size="small"
               variant="outlined"
               onClick={(event) => setContextAnchorEl(event.currentTarget)}
+              sx={topbarButtonSx}
             >
-              문맥
+              기준
             </Button>
 
             <Tooltip
               title={
                 activeContext
-                  ? '도메인 가이드 열기'
-                  : '아직 문맥 정보가 없습니다'
+                  ? '화면 도움말 열기'
+                  : '아직 화면 도움말이 없습니다'
               }
             >
               <span>
                 <IconButton
+                  size="small"
                   disabled={!activeContext}
                   onClick={() => setDrawerOpen(true)}
                   color="primary"
+                  sx={topbarIconButtonSx}
                 >
-                  <HelpOutlineRoundedIcon />
+                  <HelpOutlineRoundedIcon fontSize="small" />
                 </IconButton>
               </span>
             </Tooltip>
@@ -160,39 +179,156 @@ export function Topbar() {
             <Stack
               direction="row"
               alignItems="center"
-              spacing={1}
-              sx={{ pl: 1, borderLeft: '1px solid', borderColor: 'divider' }}
+              spacing={0.5}
+              sx={{
+                pl: 1,
+                borderLeft: '1px solid',
+                borderColor: '#d7dee8'
+              }}
             >
-              <Stack
-                spacing={0}
-                textAlign="right"
-                sx={{ display: { xs: 'none', md: 'flex' } }}
-              >
-                <Typography variant="body2" fontWeight={700}>
-                  {user?.name ?? '워크스페이스 사용자'}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {user?.email ?? '로그인되지 않음'}
-                </Typography>
-              </Stack>
-              <Avatar sx={{ width: 36, height: 36 }}>
-                {user?.name?.slice(0, 1).toUpperCase() ?? 'U'}
-              </Avatar>
-              <Button
-                variant="text"
-                color="inherit"
-                startIcon={<LogoutRoundedIcon />}
-                onClick={() => {
-                  void logout();
-                  router.replace('/login' as Route);
+              <ButtonBase
+                onClick={(event) => setAccountAnchorEl(event.currentTarget)}
+                sx={{
+                  minWidth: 0,
+                  maxWidth: { xs: 44, sm: 260 },
+                  borderRadius: 999,
+                  px: { xs: 0.25, sm: 0.75 },
+                  py: 0.25
                 }}
               >
-                로그아웃
-              </Button>
+                <Stack direction="row" alignItems="center" spacing={0.75}>
+                  <Avatar
+                    sx={{ width: 32, height: 32, fontSize: '0.875rem', ...avatarSx }}
+                  >
+                    {avatarContent}
+                  </Avatar>
+                  <Stack
+                    spacing={0}
+                    sx={{
+                      minWidth: 0,
+                      maxWidth: 220,
+                      display: { xs: 'none', sm: 'flex' },
+                      textAlign: 'left'
+                    }}
+                  >
+                    <Typography variant="body2" fontWeight={700} noWrap>
+                      {user?.name ?? '사업장 사용자'}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      noWrap
+                      sx={{ display: { xs: 'none', md: 'block' } }}
+                    >
+                      {user?.email ?? '로그인되지 않음'}
+                    </Typography>
+                  </Stack>
+                  <KeyboardArrowDownRoundedIcon
+                    fontSize="small"
+                    sx={{
+                      color: 'text.secondary',
+                      display: { xs: 'none', sm: 'block' }
+                    }}
+                  />
+                </Stack>
+              </ButtonBase>
             </Stack>
           </Stack>
         </Toolbar>
       </AppBar>
+
+      <Popover
+        open={accountPopoverOpen}
+        anchorEl={accountAnchorEl}
+        onClose={handleAccountClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Box sx={{ width: 340, maxWidth: 'calc(100vw - 32px)', p: 2 }}>
+          <Stack spacing={1.5}>
+            <Stack direction="row" spacing={1.25} alignItems="center">
+              <Avatar sx={{ width: 48, height: 48, fontSize: '1.25rem', ...avatarSx }}>
+                {avatarContent}
+              </Avatar>
+              <Stack sx={{ minWidth: 0 }}>
+                <Typography variant="subtitle2" noWrap>
+                  {user?.name ?? '사업장 사용자'}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" noWrap>
+                  {user?.email ?? '로그인되지 않음'}
+                </Typography>
+              </Stack>
+            </Stack>
+
+            <Divider flexItem />
+
+            <Stack spacing={1}>
+              <Button
+                component={Link}
+                href="/settings/account/profile"
+                variant="contained"
+                size="small"
+                startIcon={<ManageAccountsRoundedIcon fontSize="small" />}
+                onClick={handleAccountClose}
+                sx={{ justifyContent: 'flex-start' }}
+              >
+                프로필 수정
+              </Button>
+
+              <Button
+                component={Link}
+                href="/settings/account/password"
+                variant="outlined"
+                size="small"
+                startIcon={<LockRoundedIcon fontSize="small" />}
+                onClick={handleAccountClose}
+                sx={{ justifyContent: 'flex-start' }}
+              >
+                비밀번호 변경
+              </Button>
+              <Button
+                component={Link}
+                href="/settings/account/sessions"
+                variant="outlined"
+                size="small"
+                startIcon={<VerifiedUserRoundedIcon fontSize="small" />}
+                onClick={handleAccountClose}
+                sx={{ justifyContent: 'flex-start' }}
+              >
+                세션 관리
+              </Button>
+              <Button
+                component={Link}
+                href="/settings/account/events"
+                variant="text"
+                size="small"
+                startIcon={<SecurityRoundedIcon fontSize="small" />}
+                onClick={handleAccountClose}
+                sx={{ justifyContent: 'flex-start' }}
+              >
+                보안 이벤트
+              </Button>
+            </Stack>
+
+            <Divider flexItem />
+
+            <Button
+              size="small"
+              variant="text"
+              color="inherit"
+              startIcon={<LogoutRoundedIcon fontSize="small" />}
+              onClick={() => {
+                handleAccountClose();
+                void logout();
+                router.replace('/login' as Route);
+              }}
+              sx={{ justifyContent: 'flex-start' }}
+            >
+              로그아웃
+            </Button>
+          </Stack>
+        </Box>
+      </Popover>
 
       <Popover
         open={contextPopoverOpen}
@@ -204,12 +340,48 @@ export function Topbar() {
         <Box sx={{ width: 360, maxWidth: 'calc(100vw - 32px)', p: 2 }}>
           <Stack spacing={1.5}>
             <div>
-              <Typography variant="subtitle2">현재 작업 문맥</Typography>
+              <Typography variant="subtitle2">현재 사업장 / 장부</Typography>
             </div>
 
             <Divider flexItem />
 
-            {currentWorkspace ? (
+            {isSystemAdmin ? (
+              <>
+                <Stack spacing={1}>
+                  <ContextDetailRow
+                    label="지원 모드"
+                    value={isSupportModeEnabled ? '사용 중' : '꺼짐'}
+                  />
+                  <ContextDetailRow label="관리 범위" value="전체 사업장" />
+                  <ContextDetailRow label="권한" value="전체 관리자" />
+                  <ContextDetailRow
+                    label="계정"
+                    value={user?.email ?? '로그인되지 않음'}
+                  />
+                </Stack>
+
+                <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                  <Button
+                    component={Link}
+                    href="/admin/members"
+                    variant="contained"
+                    size="small"
+                    onClick={handleContextClose}
+                  >
+                    전체 회원 관리
+                  </Button>
+                  <Button
+                    component={Link}
+                    href="/admin/logs"
+                    variant="outlined"
+                    size="small"
+                    onClick={handleContextClose}
+                  >
+                    전체 로그
+                  </Button>
+                </Stack>
+              </>
+            ) : currentWorkspace ? (
               <>
                 <Stack spacing={1}>
                   <ContextDetailRow
@@ -276,7 +448,7 @@ export function Topbar() {
             ) : (
               <Stack spacing={1.5}>
                 <Typography variant="body2" color="text.secondary">
-                  현재 워크스페이스를 먼저 확인해 주세요.
+                  현재 사업장 연결 상태를 먼저 확인해 주세요.
                 </Typography>
                 <div>
                   <Button
@@ -312,3 +484,21 @@ function ContextDetailRow({ label, value }: { label: string; value: string }) {
     </Stack>
   );
 }
+
+const topbarButtonSx = {
+  minHeight: 34,
+  px: 1.25,
+  borderRadius: 999,
+  textTransform: 'none',
+  fontWeight: 700,
+  whiteSpace: 'nowrap'
+} as const;
+
+const topbarIconButtonSx = {
+  width: 34,
+  height: 34,
+  borderRadius: 999,
+  border: '1px solid',
+  borderColor: '#d7dee8',
+  backgroundColor: '#ffffff'
+} as const;

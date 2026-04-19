@@ -11,9 +11,9 @@ type ChartCardProps = {
 
 export function ChartCard({ title, description, chart }: ChartCardProps) {
   return (
-    <Card>
-      <CardContent sx={{ p: appLayout.cardPadding }}>
-        <Stack spacing={appLayout.cardGap}>
+    <Card sx={{ height: '100%', display: 'flex' }}>
+      <CardContent sx={{ p: appLayout.cardPadding, flex: 1, width: '100%' }}>
+        <Stack spacing={appLayout.cardGap} sx={{ height: '100%' }}>
           <div>
             <Typography variant="h6">{title}</Typography>
             {description ? (
@@ -22,16 +22,19 @@ export function ChartCard({ title, description, chart }: ChartCardProps) {
                 color="text.secondary"
                 sx={{
                   mt: appLayout.cardDescriptionOffset,
-                  display: 'block',
                   maxWidth: 720,
-                  lineHeight: 1.7
+                  lineHeight: 1.7,
+                  overflow: 'hidden',
+                  WebkitBoxOrient: 'vertical',
+                  WebkitLineClamp: 2,
+                  display: '-webkit-box'
                 }}
               >
                 {description}
               </Typography>
             ) : null}
           </div>
-          {chart}
+          <div>{chart}</div>
         </Stack>
       </CardContent>
     </Card>

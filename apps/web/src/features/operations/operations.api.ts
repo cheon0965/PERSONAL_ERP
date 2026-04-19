@@ -89,7 +89,7 @@ export const mockOperationsChecklist: OperationsChecklistResponse = {
           id: 'import-row-backlog',
           title: '업로드 미수집 행',
           description:
-            '정상 파싱됐지만 아직 수집 거래로 승격되지 않은 행을 처리합니다.',
+            '정상적으로 읽었지만 아직 수집 거래로 등록되지 않은 행을 처리합니다.',
           status: 'ACTION_REQUIRED',
           detail: '3개 행이 수집 대기 중입니다.',
           blockingReason: null,
@@ -123,7 +123,7 @@ export const mockOperationsExceptions: OperationsExceptionsResponse = {
       kind: 'IMPORT_ROW',
       severity: 'WARNING',
       title: '업로드 미수집 행',
-      description: '정상 파싱됐지만 아직 수집 거래로 승격되지 않은 행입니다.',
+      description: '정상적으로 읽었지만 아직 수집 거래로 등록되지 않은 행입니다.',
       count: 3,
       primaryActionLabel: '업로드 행 수집',
       href: '/imports',
@@ -157,7 +157,7 @@ export const mockOperationsMonthEnd: OperationsMonthEndSummary = {
   carryForwardCreated: false,
   blockers: ['미확정 수집 거래 2건이 남아 있습니다.'],
   warnings: [
-    '업로드 파싱 실패 행 1개를 확인해야 합니다.',
+    '업로드 파일 읽기 실패 행 1개를 확인해야 합니다.',
     '남은 계획 항목 4건을 확인해야 합니다.'
   ]
 };
@@ -205,16 +205,16 @@ export const mockOperationsSystemStatus: OperationsSystemStatusSummary = {
   components: [
     {
       key: 'api',
-      label: 'API 프로세스',
+      label: '서비스 프로세스',
       status: 'OPERATIONAL',
-      detail: '운영 콘솔 API가 응답하고 있습니다.',
+      detail: '운영 콘솔 서비스가 응답하고 있습니다.',
       lastCheckedAt: mockOperationsChecklist.generatedAt
     },
     {
       key: 'database',
-      label: 'Database readiness',
+      label: '데이터베이스 연결',
       status: 'OPERATIONAL',
-      detail: 'DB readiness 쿼리가 성공했습니다.',
+      detail: '데이터베이스 상태 확인이 성공했습니다.',
       lastCheckedAt: mockOperationsChecklist.generatedAt
     },
     {
@@ -226,7 +226,7 @@ export const mockOperationsSystemStatus: OperationsSystemStatusSummary = {
     },
     {
       key: 'mail',
-      label: '메일 발송 경계',
+      label: '메일 발송',
       status: 'OPERATIONAL',
       detail: '콘솔 메일 어댑터를 사용합니다.',
       lastCheckedAt: mockOperationsChecklist.generatedAt
@@ -276,7 +276,7 @@ export const mockOperationsAlerts: OperationsAlertsResponse = {
       kind: 'IMPORT',
       severity: 'WARNING',
       title: '업로드 미수집 행',
-      description: '정상 파싱됐지만 아직 수집 거래로 승격되지 않은 행입니다.',
+      description: '정상적으로 읽었지만 아직 수집 거래로 등록되지 않은 행입니다.',
       actionLabel: '업로드 행 수집',
       href: '/imports',
       sourceAuditEventId: null,
@@ -288,7 +288,7 @@ export const mockOperationsAlerts: OperationsAlertsResponse = {
       kind: 'SECURITY',
       severity: 'WARNING',
       title: '권한 거부 이벤트',
-      description: 'admin_member.update_role 작업이 거부되었습니다.',
+      description: '회원 역할 변경 작업이 거부되었습니다.',
       actionLabel: '권한 로그 확인',
       href: '/admin/logs?requestId=request-demo',
       sourceAuditEventId: 'audit-demo-1',

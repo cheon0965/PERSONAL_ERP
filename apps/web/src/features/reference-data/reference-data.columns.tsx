@@ -76,7 +76,7 @@ export function buildFundingAccountColumns(input: {
         if (!input.canManageReferenceData) {
           return (
             <Typography variant="caption" color="text.secondary">
-              OWNER/MANAGER 전용
+              소유자/관리자 전용
             </Typography>
           );
         }
@@ -184,7 +184,7 @@ export function buildCategoryColumns(input: {
           </Stack>
         ) : (
           <Typography variant="caption" color="text.secondary">
-            OWNER/MANAGER 전용
+            소유자/관리자 전용
           </Typography>
         )
     }

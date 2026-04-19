@@ -34,7 +34,7 @@ export function ImportUploadDialog({
       <Stack spacing={appLayout.fieldGap}>
         <TextField
           select
-          label="원천 형식"
+          label="원본 형식"
           size="small"
           value={form.sourceKind}
           onChange={(event) => {

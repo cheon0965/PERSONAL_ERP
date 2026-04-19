@@ -251,7 +251,7 @@ export function buildRequestFailureMessage(
     `[personal-erp] ${path} 요청에 실패했습니다.`,
     detail,
     '데모 폴백이 비활성화되어 있습니다.',
-    '로컬 개발 중에는 API 서버를 실행하거나 <PERSONAL_ERP_SECRET_DIR>/web.env (또는 apps/web/.env.local)에 NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=true 를 설정해 주세요.'
+    '로컬 개발 중에는 서비스 서버를 실행하거나 <PERSONAL_ERP_SECRET_DIR>/web.env (또는 apps/web/.env.local)에 NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=true 를 설정해 주세요.'
   ].join(' ');
 }
 

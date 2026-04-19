@@ -56,4 +56,4 @@ export function handleUnauthorizedSession(
   unauthorizedSessionHandler?.(reason);
 }
 
-export const accessTokenStoragePolicy = '메모리 전용 런타임 상태';
+export const accessTokenStoragePolicy = '로그인 중에만 보관';

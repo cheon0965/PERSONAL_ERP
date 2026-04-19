@@ -91,7 +91,10 @@ export function updateAccountProfile(
     input,
     {
       ...fallback,
-      name: input.name
+      email: input.email,
+      name: input.name,
+      emailVerifiedAt:
+        input.email === fallback.email ? fallback.emailVerifiedAt : null
     }
   );
 }

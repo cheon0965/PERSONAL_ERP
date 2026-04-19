@@ -23,7 +23,7 @@ export function buildImportBatchColumns(input: {
     { field: 'fileName', headerName: '파일명', flex: 1.3 },
     {
       field: 'sourceKind',
-      headerName: '원천',
+      headerName: '원본 종류',
       flex: 0.8,
       valueFormatter: (value) =>
         sourceKindOptions.find((option) => option.value === value)?.label ??
@@ -31,7 +31,7 @@ export function buildImportBatchColumns(input: {
     },
     {
       field: 'parseStatus',
-      headerName: '파싱 상태',
+      headerName: '읽기 상태',
       flex: 0.8,
       renderCell: (params) => <StatusChip label={String(params.value)} />
     },
@@ -78,13 +78,13 @@ export function buildImportedRowsColumns(input: {
     },
     {
       field: 'parseStatus',
-      headerName: '파싱',
+      headerName: '읽기',
       flex: 0.8,
       renderCell: (params) => <StatusChip label={String(params.value)} />
     },
     {
       field: 'createdCollectedTransactionId',
-      headerName: '승격 상태',
+      headerName: '거래 등록 상태',
       flex: 1.4,
       sortable: false,
       renderCell: (params) => (

@@ -24,7 +24,7 @@ export function FinancialStatementsSectionNav({
       items={[
         {
           href: '/financial-statements',
-          label: '생성 / 선택'
+          label: '재무제표 생성 / 선택'
         },
         {
           href: detailHref,

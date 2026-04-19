@@ -19,10 +19,23 @@ export class AdminAuditEventsService {
     workspace: RequiredWorkspaceContext,
     query: AdminAuditEventQuery
   ): Promise<AdminAuditEventListResponse> {
+    return this.findByScope({ tenantId: workspace.tenantId }, query);
+  }
+
+  async findAllAcrossTenants(
+    query: AdminAuditEventQuery
+  ): Promise<AdminAuditEventListResponse> {
+    return this.findByScope({}, query);
+  }
+
+  private async findByScope(
+    scope: { tenantId?: string },
+    query: AdminAuditEventQuery
+  ): Promise<AdminAuditEventListResponse> {
     const offset = normalizeOffset(query.offset);
     const limit = normalizeLimit(query.limit);
     const where = {
-      tenantId: workspace.tenantId,
+      ...scope,
       ...(query.eventCategory ? { eventCategory: query.eventCategory } : {}),
       ...(query.eventName ? { eventName: query.eventName } : {}),
       ...(query.action ? { action: query.action } : {}),
@@ -62,6 +75,22 @@ export class AdminAuditEventsService {
       where: {
         id: auditEventId,
         tenantId: workspace.tenantId
+      }
+    });
+
+    if (!record) {
+      throw new NotFoundException('Audit event not found');
+    }
+
+    return mapAdminAuditEventToItem(record);
+  }
+
+  async findOneAcrossTenants(
+    auditEventId: string
+  ): Promise<AdminAuditEventItem> {
+    const record = await this.prisma.workspaceAuditEvent.findFirst({
+      where: {
+        id: auditEventId
       }
     });
 

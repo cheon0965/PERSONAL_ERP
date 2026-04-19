@@ -31,14 +31,14 @@ export function ReferenceDataReadinessSummarySection({
   return (
     <SectionCard
       title="준비 상태와 관리 범위"
-      description="서버가 판정한 기준 데이터 readiness와 ownership를 기준으로, 다음 운영 단계가 자연스럽게 이어질 수 있는지 확인합니다."
+      description="기준 데이터 준비 상태와 관리 범위를 기준으로, 다음 운영 단계가 자연스럽게 이어질 수 있는지 확인합니다."
     >
       <Alert
         severity={readiness.status === 'READY' ? 'success' : 'warning'}
         variant="outlined"
       >
         {readiness.status === 'READY'
-          ? '현재 작업 문맥의 기준 데이터 준비가 완료되어 월 운영, 수집 거래, 업로드 승격, 반복 규칙 흐름을 이어갈 수 있습니다.'
+          ? '현재 사업장과 장부의 기준 데이터 준비가 완료되어 월 운영, 수집 거래, 업로드 행 등록, 반복 규칙 흐름을 이어갈 수 있습니다.'
           : `기준 데이터 준비가 아직 완전하지 않습니다. 현재 부족한 항목: ${formatMissingRequirements(readiness)}.`}
       </Alert>
 
@@ -57,7 +57,7 @@ export function ReferenceDataReadinessSummarySection({
         </Grid>
         <Grid size={{ xs: 12, md: 3 }}>
           <ReadinessCapabilityBox
-            label="업로드 행 승격"
+            label="업로드 행 등록"
             ready={readiness.isReadyForImportCollection}
           />
         </Grid>
@@ -207,13 +207,13 @@ function ReferenceDataCheckCard({
             </Typography>
             <Typography variant="body2">
               {check.ownershipScope === 'USER_MANAGED'
-                ? '사용자 준비 책임'
+                ? '사용자가 관리'
                 : '시스템 관리'}
             </Typography>
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
             <Typography variant="caption" color="text.secondary">
-              책임 역할 / 앱 내 직접 수정
+              관리 가능 역할 / 화면에서 수정
             </Typography>
             <Typography variant="body2">
               {formatResponsibleRoles(check)} /{' '}
@@ -254,7 +254,7 @@ function readContextHeadline(context: ReferenceDataReadinessContext) {
     case 'transaction-entry':
       return '수집 거래 입력 전에 기준 데이터 준비를 먼저 점검해야 합니다.';
     case 'import-collection':
-      return '업로드 행 승격 전에 기준 데이터 준비를 먼저 점검해야 합니다.';
+      return '업로드 행 등록 전에 기준 데이터 준비를 먼저 점검해야 합니다.';
     default:
       return '기준 데이터 준비 상태를 확인해 주세요.';
   }
@@ -266,7 +266,7 @@ function formatMissingRequirements(readiness: ReferenceDataReadinessSummary) {
 
 function formatResponsibleRoles(check: ReferenceDataReadinessCheckItem) {
   if (check.responsibleRoles.length === 0) {
-    return '시스템/seed';
+    return '시스템 기본값';
   }
 
   return check.responsibleRoles
@@ -288,8 +288,8 @@ function readAlertGuidanceMessage(input: {
   }
 
   if (input.hasDirectEditAvailable) {
-    return '일부 부족 항목은 앱 안에서 직접 정비할 수 있지만, 계정과목/거래유형처럼 읽기 전용인 항목도 있습니다. 기준 데이터 화면에서 ownership와 운영 영향을 함께 확인해 주세요.';
+    return '일부 부족 항목은 앱 안에서 직접 정비할 수 있지만, 계정과목/거래유형처럼 읽기 전용인 항목도 있습니다. 기준 데이터 화면에서 관리 범위와 운영 영향을 함께 확인해 주세요.';
   }
 
-  return '현재 역할은 준비 상태를 점검할 책임 범위에 포함되지만, 아직 앱 안에서 직접 생성/수정 UI는 제공하지 않습니다. 기준 데이터 화면에서 ownership와 운영 영향을 먼저 확인해 주세요.';
+  return '현재 역할은 준비 상태를 점검할 책임 범위에 포함되지만, 아직 앱 안에서 직접 생성/수정 화면은 제공하지 않습니다. 기준 데이터 화면에서 관리 범위와 운영 영향을 먼저 확인해 주세요.';
 }

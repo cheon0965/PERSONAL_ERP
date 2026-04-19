@@ -32,6 +32,7 @@ export async function createRequestTestState(): Promise<RequestTestState> {
     emailVerificationTokens: [],
     tenantMembershipInvitations: [],
     workspaceAuditEvents: [],
+    securityThreatEvents: [],
     workspaceNavigationMenuItems: [],
     workspaceNavigationMenuRoles: [],
     workspaceOperationalNotes: [],

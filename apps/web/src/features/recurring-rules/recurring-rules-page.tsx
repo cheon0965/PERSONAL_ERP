@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Grid, Stack } from '@mui/material';
+import { Stack } from '@mui/material';
 import { webRuntime } from '@/shared/config/env';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { ConfirmActionDialog } from '@/shared/ui/confirm-action-dialog';
@@ -24,7 +24,6 @@ import {
   RecurringRuleDrawerContent,
   RecurringRulesFeedbackAlerts,
   RecurringRulesInfoCard,
-  RecurringRulesSupportCard,
   RecurringRulesToolbar
 } from './recurring-rules-page.sections';
 
@@ -133,6 +132,29 @@ export function RecurringRulesPage() {
           '반복 규칙을 삭제해도 이미 생성된 기존 계획 항목은 자동으로 지워지지 않습니다.',
           '규칙은 미래 계획의 기준이며, 실제 납부나 입금 여부는 수집 거래에서 확인합니다.',
           '카테고리나 자금수단 선택지가 부족하면 기준 데이터 관리 화면에서 먼저 보완합니다.'
+        ]
+      },
+      {
+        title: '이어지는 화면',
+        links: [
+          {
+            title: '보험 계약',
+            description: '보험 계약에서 생성된 연동 규칙은 보험 계약 화면에서 함께 관리합니다.',
+            href: '/insurances',
+            actionLabel: '보험 계약 보기'
+          },
+          {
+            title: '계획 항목',
+            description: '현재 운영 월 기준으로 반복 규칙이 실제 계획으로 생성됐는지 확인합니다.',
+            href: '/plan-items',
+            actionLabel: '계획 항목 보기'
+          },
+          {
+            title: '기준 데이터 준비 상태',
+            description: '자금수단이나 카테고리 선택지가 부족할 때 먼저 보완합니다.',
+            href: '/reference-data',
+            actionLabel: '기준 데이터 보기'
+          }
         ]
       }
     ],
@@ -274,18 +296,11 @@ export function RecurringRulesPage() {
         columns={columns}
       />
 
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, lg: 7 }}>
-          <RecurringRulesInfoCard
-            totalCount={data.length}
-            activeCount={activeRuleCount}
-            insuranceManagedCount={insuranceManagedRuleCount}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, lg: 5 }}>
-          <RecurringRulesSupportCard />
-        </Grid>
-      </Grid>
+      <RecurringRulesInfoCard
+        totalCount={data.length}
+        activeCount={activeRuleCount}
+        insuranceManagedCount={insuranceManagedRuleCount}
+      />
 
       <FormDrawer
         open={drawerState !== null}

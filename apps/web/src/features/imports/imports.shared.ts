@@ -93,7 +93,7 @@ export function readImportedRowParseStatusLabel(
 ) {
   switch (status) {
     case 'PARSED':
-      return '파싱 완료';
+      return '읽기 완료';
     case 'FAILED':
       return '실패';
     case 'SKIPPED':

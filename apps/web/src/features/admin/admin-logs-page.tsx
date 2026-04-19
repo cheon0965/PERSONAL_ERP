@@ -30,14 +30,17 @@ import {
   getAdminAuditEvent
 } from './admin.api';
 import { readAuditResultLabel, readMembershipRoleLabel } from './admin-labels';
-import { AdminSectionNav } from './admin-section-nav';
 
 export function AdminLogsPage() {
   const searchParams = useSearchParams();
   const initialRequestId = searchParams?.get('requestId') ?? '';
   const { user } = useAuthSession();
+  const isSystemAdmin = user?.isSystemAdmin === true;
   const role = user?.currentWorkspace?.membership.role ?? null;
-  const canReadLogs = role === 'OWNER';
+  const roleLabel = isSystemAdmin
+    ? '전체 관리자'
+    : readMembershipRoleLabel(role);
+  const canReadLogs = isSystemAdmin || role === 'OWNER';
   const [filters, setFilters] = useState<AdminAuditEventQuery>({
     limit: 50,
     offset: 0,
@@ -75,20 +78,20 @@ export function AdminLogsPage() {
   useDomainHelp({
     title: '감사 로그 가이드',
     description:
-      '감사 로그는 관리자 작업과 보안 관련 이벤트를 requestId 기준으로 추적하는 화면입니다.',
-    primaryEntity: 'WorkspaceAuditEvent',
-    relatedEntities: ['TenantMembership', 'User'],
+      '감사 로그는 관리자 작업과 보안 관련 이벤트를 요청번호 기준으로 추적하는 화면입니다.',
+    primaryEntity: '감사 로그',
+    relatedEntities: ['사업장 멤버', '사용자'],
     truthSource:
       '감사 로그는 서버에서 기록한 이벤트를 그대로 읽는 추적 기록입니다.',
     supplementarySections: [
       {
         title: '자주 확인하는 기준',
         items: [
-          'requestId',
-          'event category',
-          'action',
-          'actor membership',
-          'resource type / resource id'
+          '요청번호',
+          '이벤트 분류',
+          '작업',
+          '작업자 멤버',
+          '대상 종류 / 대상 ID'
         ]
       }
     ]
@@ -153,15 +156,15 @@ export function AdminLogsPage() {
       },
       { field: 'eventName', headerName: '이벤트', flex: 1, minWidth: 220 },
       { field: 'eventCategory', headerName: '분류', width: 130 },
-      { field: 'action', headerName: '액션', flex: 1, minWidth: 200 },
-      { field: 'resourceType', headerName: '리소스', width: 140 },
+      { field: 'action', headerName: '작업', flex: 1, minWidth: 200 },
+      { field: 'resourceType', headerName: '대상', width: 140 },
       {
         field: 'actorRole',
         headerName: '역할',
         width: 100,
         valueFormatter: (value) => readMembershipRoleLabel(String(value))
       },
-      { field: 'requestId', headerName: 'Request ID', flex: 1, minWidth: 220 },
+      { field: 'requestId', headerName: '요청번호', flex: 1, minWidth: 220 },
       {
         field: 'detail',
         headerName: '상세',
@@ -188,14 +191,22 @@ export function AdminLogsPage() {
       <PageHeader
         eyebrow="관리자"
         title="로그관리"
-        description="현재 사업장 문맥의 감사 이벤트를 조회합니다."
+        description={
+          isSystemAdmin
+            ? '모든 사업장의 감사 이벤트를 조회합니다.'
+            : '현재 사업장의 감사 이벤트를 조회합니다.'
+        }
         badges={[
           {
-            label: canReadLogs ? '소유자 전용 조회' : '조회 권한 없음',
+            label: canReadLogs
+              ? isSystemAdmin
+                ? '전체 로그 조회'
+                : '소유자 전용 조회'
+              : '조회 권한 없음',
             color: canReadLogs ? 'success' : 'warning'
           },
           ...(filters.requestId
-            ? [{ label: `Request ID ${filters.requestId}` }]
+            ? [{ label: `요청번호 ${filters.requestId}` }]
             : [])
         ]}
         metadata={[
@@ -213,13 +224,10 @@ export function AdminLogsPage() {
           }
         ]}
       />
-
-      <AdminSectionNav />
-
       {!canReadLogs ? (
         <Alert severity="warning" variant="outlined">
-          로그관리는 소유자 권한에서 사용할 수 있습니다. 현재 권한은{' '}
-          {readMembershipRoleLabel(role)} 입니다.
+          로그관리는 소유자 권한에서 사용할 수 있습니다. 현재 권한은 {roleLabel}{' '}
+          입니다.
         </Alert>
       ) : null}
 
@@ -245,8 +253,8 @@ export function AdminLogsPage() {
             }}
           >
             <Typography variant="body2" color="text.secondary">
-              분류, 액션, 리소스, Request ID 기준으로 로그를 좁혀 본 뒤 표에서
-              바로 상세를 확인합니다.
+              분류, 작업, 대상, 요청번호 기준으로 로그를 좁혀 본 뒤 표에서 바로
+              상세를 확인합니다.
             </Typography>
             <Grid container spacing={appLayout.fieldGap}>
               <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
@@ -263,7 +271,7 @@ export function AdminLogsPage() {
               <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
                 <TextField
                   fullWidth
-                  label="액션"
+                  label="작업"
                   value={draftAction}
                   onChange={(event) => setDraftAction(event.target.value)}
                   size="small"
@@ -272,7 +280,7 @@ export function AdminLogsPage() {
               <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
                 <TextField
                   fullWidth
-                  label="Actor Membership"
+                  label="작업자 멤버 ID"
                   value={draftActorMembershipId}
                   onChange={(event) =>
                     setDraftActorMembershipId(event.target.value)
@@ -283,7 +291,7 @@ export function AdminLogsPage() {
               <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
                 <TextField
                   fullWidth
-                  label="리소스 유형"
+                  label="대상 종류"
                   value={draftResourceType}
                   onChange={(event) => setDraftResourceType(event.target.value)}
                   size="small"
@@ -292,7 +300,7 @@ export function AdminLogsPage() {
               <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
                 <TextField
                   fullWidth
-                  label="리소스 ID"
+                  label="대상 ID"
                   value={draftResourceId}
                   onChange={(event) => setDraftResourceId(event.target.value)}
                   size="small"
@@ -301,7 +309,7 @@ export function AdminLogsPage() {
               <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
                 <TextField
                   fullWidth
-                  label="Request ID"
+                  label="요청번호"
                   value={draftRequestId}
                   onChange={(event) => setDraftRequestId(event.target.value)}
                   size="small"
@@ -358,18 +366,18 @@ export function AdminLogsPage() {
             />
             <Detail label="분류" value={selectedEvent.eventCategory} />
             <Detail label="이벤트" value={selectedEvent.eventName} />
-            <Detail label="액션" value={selectedEvent.action ?? '-'} />
-            <Detail label="리소스" value={selectedEvent.resourceType ?? '-'} />
-            <Detail label="리소스 ID" value={selectedEvent.resourceId ?? '-'} />
-            <Detail label="Request ID" value={selectedEvent.requestId ?? '-'} />
+            <Detail label="작업" value={selectedEvent.action ?? '-'} />
+            <Detail label="대상" value={selectedEvent.resourceType ?? '-'} />
+            <Detail label="대상 ID" value={selectedEvent.resourceId ?? '-'} />
+            <Detail label="요청번호" value={selectedEvent.requestId ?? '-'} />
             <Detail label="사유" value={selectedEvent.reason ?? '-'} />
             <Detail label="경로" value={selectedEvent.path ?? '-'} />
             <Detail
-              label="Actor"
+              label="작업자"
               value={`${selectedEvent.actorMembershipId ?? '-'} / ${readMembershipRoleLabel(selectedEvent.actorRole)}`}
             />
             <Detail
-              label="Metadata"
+              label="추가 정보"
               value={
                 selectedEvent.metadata
                   ? JSON.stringify(selectedEvent.metadata)
@@ -389,7 +397,7 @@ export function AdminLogsPage() {
                   setSelectedEventId(null);
                 }}
               >
-                같은 Request ID로 보기
+                같은 요청번호로 보기
               </Button>
             ) : null}
           </Stack>

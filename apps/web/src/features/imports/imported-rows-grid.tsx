@@ -56,7 +56,7 @@ export function ImportedRowsGrid({
       }
       description={
         selectedBatch
-          ? `${selectedBatch.fileName}의 행을 검토하고, 필요한 행만 수집 거래로 승격합니다.`
+          ? `${selectedBatch.fileName}의 행을 검토하고, 필요한 행만 수집 거래로 등록합니다.`
           : '먼저 업로드 배치를 선택해 주세요.'
       }
       toolbar={
@@ -84,7 +84,7 @@ export function ImportedRowsGrid({
                 />
               ))}
               <Chip
-                label={`승격 가능 ${collectableCount}건`}
+                label={`등록 가능 ${collectableCount}건`}
                 size="small"
                 color="primary"
                 variant="outlined"
@@ -97,7 +97,7 @@ export function ImportedRowsGrid({
               />
             </Stack>
             <Typography variant="body2" color="text.secondary">
-              파싱 완료 행만 승격 준비를 열 수 있고, 이미 연결된 행은 결과
+              읽기 완료 행만 거래 등록을 열 수 있고, 이미 연결된 행은 결과
               보기로 추적합니다.
             </Typography>
           </Stack>

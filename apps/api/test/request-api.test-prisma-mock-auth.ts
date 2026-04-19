@@ -37,6 +37,14 @@ export function createAuthPrismaMock(
         joinedAt?: boolean;
       };
       include?: {
+        tenant?: {
+          select?: {
+            id?: boolean;
+            slug?: boolean;
+            name?: boolean;
+            status?: boolean;
+          };
+        };
         user?: {
           select?: {
             id?: boolean;
@@ -60,6 +68,29 @@ export function createAuthPrismaMock(
 
     return {
       ...membership,
+      ...(args?.include?.tenant
+        ? {
+            tenant: (() => {
+              const tenant = findTenant(membership.tenantId);
+              return tenant
+                ? {
+                    ...(args.include.tenant.select?.id
+                      ? { id: tenant.id }
+                      : {}),
+                    ...(args.include.tenant.select?.slug
+                      ? { slug: tenant.slug }
+                      : {}),
+                    ...(args.include.tenant.select?.name
+                      ? { name: tenant.name }
+                      : {}),
+                    ...(args.include.tenant.select?.status
+                      ? { status: tenant.status }
+                      : {})
+                  }
+                : null;
+            })()
+          }
+        : {}),
       ...(args?.include?.user
         ? {
             user: projectUser(
@@ -69,6 +100,77 @@ export function createAuthPrismaMock(
           }
         : {})
     };
+  };
+  const projectAuthSession = (
+    session: RequestPrismaMockContext['state']['authSessions'][number],
+    select?: {
+      id?: boolean;
+      createdAt?: boolean;
+      updatedAt?: boolean;
+      expiresAt?: boolean;
+      revokedAt?: boolean;
+      supportTenantId?: boolean;
+      supportLedgerId?: boolean;
+      supportStartedAt?: boolean;
+    }
+  ) => {
+    if (!select) {
+      return {
+        ...session,
+        supportTenantId: session.supportTenantId ?? null,
+        supportLedgerId: session.supportLedgerId ?? null,
+        supportStartedAt: session.supportStartedAt ?? null
+      };
+    }
+
+    return {
+      ...(select.id ? { id: session.id } : {}),
+      ...(select.createdAt ? { createdAt: session.createdAt } : {}),
+      ...(select.updatedAt ? { updatedAt: session.updatedAt } : {}),
+      ...(select.expiresAt ? { expiresAt: session.expiresAt } : {}),
+      ...(select.revokedAt ? { revokedAt: session.revokedAt } : {}),
+      ...(select.supportTenantId
+        ? { supportTenantId: session.supportTenantId ?? null }
+        : {}),
+      ...(select.supportLedgerId
+        ? { supportLedgerId: session.supportLedgerId ?? null }
+        : {}),
+      ...(select.supportStartedAt
+        ? { supportStartedAt: session.supportStartedAt ?? null }
+        : {})
+    };
+  };
+  const matchesUserWhere = (
+    candidate: RequestPrismaMockContext['state']['users'][number],
+    where:
+      | {
+          id?: string | { not?: string };
+          email?: string;
+          isSystemAdmin?: boolean;
+          status?:
+            | 'ACTIVE'
+            | 'LOCKED'
+            | 'DISABLED'
+            | { not?: 'ACTIVE' | 'LOCKED' | 'DISABLED' };
+        }
+      | undefined
+  ) => {
+    const matchesId =
+      !where?.id ||
+      (typeof where.id === 'string'
+        ? candidate.id === where.id
+        : !where.id.not || candidate.id !== where.id.not);
+    const matchesEmail = !where?.email || candidate.email === where.email;
+    const matchesSystemAdmin =
+      where?.isSystemAdmin === undefined ||
+      Boolean(candidate.isSystemAdmin) === where.isSystemAdmin;
+    const candidateStatus = candidate.status ?? 'ACTIVE';
+    const matchesStatus =
+      !where?.status ||
+      (typeof where.status === 'string'
+        ? candidateStatus === where.status
+        : !where.status.not || candidateStatus !== where.status.not);
+    return matchesId && matchesEmail && matchesSystemAdmin && matchesStatus;
   };
 
   return {
@@ -80,8 +182,41 @@ export function createAuthPrismaMock(
           email?: boolean;
           name?: boolean;
           passwordHash?: boolean;
+          status?: boolean;
+          lockedReason?: boolean;
+          lockedAt?: boolean;
+          isSystemAdmin?: boolean;
           emailVerifiedAt?: boolean;
           createdAt?: boolean;
+          memberships?: {
+            select?: {
+              id?: boolean;
+              role?: boolean;
+              status?: boolean;
+              joinedAt?: boolean;
+              tenant?: {
+                select?: {
+                  id?: boolean;
+                  slug?: boolean;
+                  name?: boolean;
+                };
+              };
+            };
+          };
+          authSessions?: {
+            select?: {
+              id?: boolean;
+              createdAt?: boolean;
+              updatedAt?: boolean;
+              expiresAt?: boolean;
+              revokedAt?: boolean;
+              supportTenantId?: boolean;
+              supportLedgerId?: boolean;
+              supportStartedAt?: boolean;
+            };
+            orderBy?: Array<Record<string, string>>;
+            take?: number;
+          };
           settings?: {
             select?: {
               minimumReserveWon?: boolean;
@@ -97,13 +232,81 @@ export function createAuthPrismaMock(
           return null;
         }
 
-        return projectUser(user, args.select);
+        return {
+          ...projectUser(user, args.select),
+          ...(args.select?.memberships
+            ? {
+                memberships: state.memberships
+                  .filter((membership) => membership.userId === user.id)
+                  .map((membership) => ({
+                    ...(args.select?.memberships?.select?.id
+                      ? { id: membership.id }
+                      : {}),
+                    ...(args.select?.memberships?.select?.role
+                      ? { role: membership.role }
+                      : {}),
+                    ...(args.select?.memberships?.select?.status
+                      ? { status: membership.status }
+                      : {}),
+                    ...(args.select?.memberships?.select?.joinedAt
+                      ? { joinedAt: membership.joinedAt }
+                      : {}),
+                    ...(args.select?.memberships?.select?.tenant
+                      ? {
+                          tenant: (() => {
+                            const tenant = findTenant(membership.tenantId);
+                            return tenant
+                              ? {
+                                  ...(args.select?.memberships?.select?.tenant
+                                    ?.select?.id
+                                    ? { id: tenant.id }
+                                    : {}),
+                                  ...(args.select?.memberships?.select?.tenant
+                                    ?.select?.slug
+                                    ? { slug: tenant.slug }
+                                    : {}),
+                                  ...(args.select?.memberships?.select?.tenant
+                                    ?.select?.name
+                                    ? { name: tenant.name }
+                                    : {})
+                                }
+                              : null;
+                          })()
+                        }
+                      : {})
+                  }))
+              }
+            : {}),
+          ...(args.select?.authSessions
+            ? {
+                authSessions: state.authSessions
+                  .filter((session) => session.userId === user.id)
+                  .sort((left, right) => {
+                    const leftRevoked = left.revokedAt?.getTime() ?? 0;
+                    const rightRevoked = right.revokedAt?.getTime() ?? 0;
+                    if (leftRevoked !== rightRevoked) {
+                      return leftRevoked - rightRevoked;
+                    }
+
+                    return right.updatedAt.getTime() - left.updatedAt.getTime();
+                  })
+                  .slice(0, args.select.authSessions.take ?? 20)
+                  .map((session) =>
+                    projectAuthSession(
+                      session,
+                      args.select?.authSessions?.select
+                    )
+                  )
+              }
+            : {})
+        };
       },
       create: async (args: {
         data: {
           email: string;
           name: string;
           passwordHash: string;
+          isSystemAdmin?: boolean;
           settings?: { create?: Record<string, never> };
         };
       }) => {
@@ -119,6 +322,10 @@ export function createAuthPrismaMock(
           email: args.data.email,
           name: args.data.name,
           passwordHash: args.data.passwordHash,
+          status: 'ACTIVE' as const,
+          lockedReason: null,
+          lockedAt: null,
+          isSystemAdmin: Boolean(args.data.isSystemAdmin),
           emailVerifiedAt: null,
           createdAt: now,
           settings: args.data.settings
@@ -137,6 +344,10 @@ export function createAuthPrismaMock(
         data: {
           name?: string;
           passwordHash?: string;
+          status?: 'ACTIVE' | 'LOCKED' | 'DISABLED';
+          lockedReason?: string | null;
+          lockedAt?: Date | null;
+          isSystemAdmin?: boolean;
           emailVerifiedAt?: Date | null;
         };
       }) => {
@@ -170,6 +381,85 @@ export function createAuthPrismaMock(
         }
 
         return projectUser(user, args.select);
+      },
+      findMany: async (args: {
+        select?: {
+          id?: boolean;
+          email?: boolean;
+          name?: boolean;
+          status?: boolean;
+          lockedReason?: boolean;
+          lockedAt?: boolean;
+          isSystemAdmin?: boolean;
+          emailVerifiedAt?: boolean;
+          createdAt?: boolean;
+          memberships?: {
+            select?: {
+              status?: boolean;
+            };
+          };
+          authSessions?: {
+            select?: {
+              expiresAt?: boolean;
+              revokedAt?: boolean;
+            };
+          };
+        };
+      }) => {
+        return [...state.users]
+          .sort((left, right) => {
+            const systemAdminDelta =
+              Number(Boolean(right.isSystemAdmin)) -
+              Number(Boolean(left.isSystemAdmin));
+            if (systemAdminDelta !== 0) {
+              return systemAdminDelta;
+            }
+
+            return left.createdAt.getTime() - right.createdAt.getTime();
+          })
+          .map((user) => ({
+            ...projectUser(user, args.select),
+            ...(args.select?.memberships
+              ? {
+                  memberships: state.memberships
+                    .filter((membership) => membership.userId === user.id)
+                    .map((membership) => ({
+                      ...(args.select?.memberships?.select?.status
+                        ? { status: membership.status }
+                        : {})
+                    }))
+                }
+              : {}),
+            ...(args.select?.authSessions
+              ? {
+                  authSessions: state.authSessions
+                    .filter((session) => session.userId === user.id)
+                    .map((session) => ({
+                      ...(args.select?.authSessions?.select?.expiresAt
+                        ? { expiresAt: session.expiresAt }
+                        : {}),
+                      ...(args.select?.authSessions?.select?.revokedAt
+                        ? { revokedAt: session.revokedAt }
+                        : {})
+                    }))
+                }
+              : {})
+          }));
+      },
+      count: async (args?: {
+        where?: {
+          id?: { not?: string };
+          isSystemAdmin?: boolean;
+          status?:
+            | 'ACTIVE'
+            | 'LOCKED'
+            | 'DISABLED'
+            | { not?: 'ACTIVE' | 'LOCKED' | 'DISABLED' };
+        };
+      }) => {
+        return state.users.filter((candidate) =>
+          matchesUserWhere(candidate, args?.where)
+        ).length;
       }
     },
     emailVerificationToken: {
@@ -269,34 +559,71 @@ export function createAuthPrismaMock(
           userId: string;
           refreshTokenHash: string;
           expiresAt: Date;
+          supportTenantId?: string | null;
+          supportLedgerId?: string | null;
+          supportStartedAt?: Date | null;
         };
       }) => {
         const now = new Date();
         const created = {
           ...args.data,
           revokedAt: null,
+          supportTenantId: args.data.supportTenantId ?? null,
+          supportLedgerId: args.data.supportLedgerId ?? null,
+          supportStartedAt: args.data.supportStartedAt ?? null,
           createdAt: now,
           updatedAt: now
         };
         state.authSessions.push(created);
         return created;
       },
-      findUnique: async (args: { where: { id: string } }) => {
-        return (
+      findUnique: async (args: {
+        where: { id: string };
+        select?: {
+          supportTenantId?: boolean;
+          supportLedgerId?: boolean;
+          supportStartedAt?: boolean;
+        };
+      }) => {
+        const session =
           state.authSessions.find(
             (candidate) => candidate.id === args.where.id
-          ) ?? null
-        );
+          ) ?? null;
+        return session ? projectAuthSession(session, args.select) : null;
       },
       findMany: async (args: {
         where?: {
           userId?: string;
         };
       }) => {
-        return state.authSessions.filter(
-          (candidate) =>
-            !args.where?.userId || candidate.userId === args.where.userId
+        return state.authSessions
+          .filter(
+            (candidate) =>
+              !args.where?.userId || candidate.userId === args.where.userId
+          )
+          .map((session) => projectAuthSession(session));
+      },
+      update: async (args: {
+        where: { id: string };
+        data: {
+          supportTenantId?: string | null;
+          supportLedgerId?: string | null;
+          supportStartedAt?: Date | null;
+        };
+      }) => {
+        const session = state.authSessions.find(
+          (candidate) => candidate.id === args.where.id
         );
+
+        if (!session) {
+          throw new Error('Auth session not found');
+        }
+
+        Object.assign(session, {
+          ...args.data,
+          updatedAt: new Date()
+        });
+        return projectAuthSession(session);
       },
       updateMany: async (args: {
         where: {
@@ -306,6 +633,9 @@ export function createAuthPrismaMock(
         };
         data: {
           revokedAt?: Date | null;
+          supportTenantId?: string | null;
+          supportLedgerId?: string | null;
+          supportStartedAt?: Date | null;
         };
       }) => {
         let count = 0;
@@ -346,26 +676,70 @@ export function createAuthPrismaMock(
             userId: string;
           };
         };
+        select?: {
+          tenant?: {
+            select?: {
+              id?: boolean;
+              slug?: boolean;
+              name?: boolean;
+              status?: boolean;
+              defaultLedgerId?: boolean;
+            };
+          };
+        };
       }) => {
+        let membership:
+          | RequestPrismaMockContext['state']['memberships'][number]
+          | null = null;
+
         if (args.where.id) {
-          return (
+          membership =
             state.memberships.find(
               (candidate) => candidate.id === args.where.id
-            ) ?? null
-          );
+            ) ?? null;
         }
 
-        if (!args.where.tenantId_userId) {
+        if (!membership && !args.where.tenantId_userId) {
           return null;
         }
 
-        return (
-          state.memberships.find(
-            (candidate) =>
-              candidate.tenantId === args.where.tenantId_userId?.tenantId &&
-              candidate.userId === args.where.tenantId_userId?.userId
-          ) ?? null
-        );
+        if (!membership) {
+          membership =
+            state.memberships.find(
+              (candidate) =>
+                candidate.tenantId === args.where.tenantId_userId?.tenantId &&
+                candidate.userId === args.where.tenantId_userId?.userId
+            ) ?? null;
+        }
+
+        if (!membership) {
+          return null;
+        }
+
+        if (args.select?.tenant) {
+          const tenant = findTenant(membership.tenantId);
+          return {
+            tenant: tenant
+              ? {
+                  ...(args.select.tenant.select?.id ? { id: tenant.id } : {}),
+                  ...(args.select.tenant.select?.slug
+                    ? { slug: tenant.slug }
+                    : {}),
+                  ...(args.select.tenant.select?.name
+                    ? { name: tenant.name }
+                    : {}),
+                  ...(args.select.tenant.select?.status
+                    ? { status: tenant.status }
+                    : {}),
+                  ...(args.select.tenant.select?.defaultLedgerId
+                    ? { defaultLedgerId: tenant.defaultLedgerId }
+                    : {})
+                }
+              : null
+          };
+        }
+
+        return membership;
       },
       findFirst: async (args: {
         where?: {
@@ -376,6 +750,14 @@ export function createAuthPrismaMock(
           status?: 'ACTIVE' | 'INVITED' | 'SUSPENDED' | 'REMOVED';
         };
         include?: {
+          tenant?: {
+            select?: {
+              id?: boolean;
+              slug?: boolean;
+              name?: boolean;
+              status?: boolean;
+            };
+          };
           user?: {
             select?: {
               id?: boolean;
@@ -494,6 +876,95 @@ export function createAuthPrismaMock(
       }
     },
     tenant: {
+      findMany: async (args: {
+        select?: {
+          id?: boolean;
+          slug?: boolean;
+          name?: boolean;
+          status?: boolean;
+          defaultLedgerId?: boolean;
+          defaultLedger?: {
+            select?: {
+              id?: boolean;
+              name?: boolean;
+            };
+          };
+          ledgers?: {
+            select?: {
+              id?: boolean;
+            };
+          };
+          memberships?: {
+            select?: {
+              role?: boolean;
+              status?: boolean;
+            };
+          };
+        };
+      }) => {
+        return [...state.tenants]
+          .sort((left, right) => {
+            const statusDelta = left.status.localeCompare(right.status);
+            if (statusDelta !== 0) {
+              return statusDelta;
+            }
+
+            return left.name.localeCompare(right.name);
+          })
+          .map((tenant) => ({
+            ...(args.select?.id ? { id: tenant.id } : {}),
+            ...(args.select?.slug ? { slug: tenant.slug } : {}),
+            ...(args.select?.name ? { name: tenant.name } : {}),
+            ...(args.select?.status ? { status: tenant.status } : {}),
+            ...(args.select?.defaultLedgerId
+              ? { defaultLedgerId: tenant.defaultLedgerId }
+              : {}),
+            ...(args.select?.defaultLedger
+              ? {
+                  defaultLedger: tenant.defaultLedgerId
+                    ? (() => {
+                        const ledger = findLedger(tenant.defaultLedgerId);
+                        return ledger
+                          ? {
+                              ...(args.select?.defaultLedger?.select?.id
+                                ? { id: ledger.id }
+                                : {}),
+                              ...(args.select?.defaultLedger?.select?.name
+                                ? { name: ledger.name }
+                                : {})
+                            }
+                          : null;
+                      })()
+                    : null
+                }
+              : {}),
+            ...(args.select?.ledgers
+              ? {
+                  ledgers: state.ledgers
+                    .filter((ledger) => ledger.tenantId === tenant.id)
+                    .map((ledger) => ({
+                      ...(args.select?.ledgers?.select?.id
+                        ? { id: ledger.id }
+                        : {})
+                    }))
+                }
+              : {}),
+            ...(args.select?.memberships
+              ? {
+                  memberships: state.memberships
+                    .filter((membership) => membership.tenantId === tenant.id)
+                    .map((membership) => ({
+                      ...(args.select?.memberships?.select?.role
+                        ? { role: membership.role }
+                        : {}),
+                      ...(args.select?.memberships?.select?.status
+                        ? { status: membership.status }
+                        : {})
+                    }))
+                }
+              : {})
+          }));
+      },
       findFirst: async (args: {
         where?: {
           memberships?: {
@@ -536,6 +1007,27 @@ export function createAuthPrismaMock(
           name?: boolean;
           status?: boolean;
           defaultLedgerId?: boolean;
+          defaultLedger?: {
+            select?: {
+              id?: boolean;
+              name?: boolean;
+            };
+          };
+          ledgers?: {
+            select?: {
+              id?: boolean;
+              name?: boolean;
+              baseCurrency?: boolean;
+              timezone?: boolean;
+              status?: boolean;
+            };
+          };
+          memberships?: {
+            select?: {
+              role?: boolean;
+              status?: boolean;
+            };
+          };
         };
       }) => {
         const tenant = findTenant(args.where.id);
@@ -554,6 +1046,62 @@ export function createAuthPrismaMock(
           ...(args.select.status ? { status: tenant.status } : {}),
           ...(args.select.defaultLedgerId
             ? { defaultLedgerId: tenant.defaultLedgerId }
+            : {}),
+          ...(args.select.defaultLedger
+            ? {
+                defaultLedger: tenant.defaultLedgerId
+                  ? (() => {
+                      const ledger = findLedger(tenant.defaultLedgerId);
+                      return ledger
+                        ? {
+                            ...(args.select?.defaultLedger?.select?.id
+                              ? { id: ledger.id }
+                              : {}),
+                            ...(args.select?.defaultLedger?.select?.name
+                              ? { name: ledger.name }
+                              : {})
+                          }
+                        : null;
+                    })()
+                  : null
+              }
+            : {}),
+          ...(args.select.ledgers
+            ? {
+                ledgers: state.ledgers
+                  .filter((ledger) => ledger.tenantId === tenant.id)
+                  .map((ledger) => ({
+                    ...(args.select?.ledgers?.select?.id
+                      ? { id: ledger.id }
+                      : {}),
+                    ...(args.select?.ledgers?.select?.name
+                      ? { name: ledger.name }
+                      : {}),
+                    ...(args.select?.ledgers?.select?.baseCurrency
+                      ? { baseCurrency: ledger.baseCurrency }
+                      : {}),
+                    ...(args.select?.ledgers?.select?.timezone
+                      ? { timezone: ledger.timezone }
+                      : {}),
+                    ...(args.select?.ledgers?.select?.status
+                      ? { status: ledger.status }
+                      : {})
+                  }))
+              }
+            : {}),
+          ...(args.select.memberships
+            ? {
+                memberships: state.memberships
+                  .filter((membership) => membership.tenantId === tenant.id)
+                  .map((membership) => ({
+                    ...(args.select?.memberships?.select?.role
+                      ? { role: membership.role }
+                      : {}),
+                    ...(args.select?.memberships?.select?.status
+                      ? { status: membership.status }
+                      : {})
+                  }))
+              }
             : {})
         };
       },
@@ -596,6 +1144,16 @@ export function createAuthPrismaMock(
             ? { defaultLedgerId: tenant.defaultLedgerId }
             : {})
         };
+      },
+      count: async (args?: {
+        where?: {
+          status?: 'ACTIVE' | 'TRIAL' | 'SUSPENDED' | 'ARCHIVED';
+        };
+      }) => {
+        return state.tenants.filter(
+          (candidate) =>
+            !args?.where?.status || candidate.status === args.where.status
+        ).length;
       }
     },
     ledger: {
@@ -639,7 +1197,7 @@ export function createAuthPrismaMock(
         };
       },
       findFirst: async (args: {
-        where?: { tenantId?: string };
+        where?: { id?: string; tenantId?: string };
         select?: {
           id?: boolean;
           tenantId?: boolean;
@@ -654,8 +1212,9 @@ export function createAuthPrismaMock(
         const ledger =
           state.ledgers.find(
             (candidate) =>
-              !args.where?.tenantId ||
-              candidate.tenantId === args.where.tenantId
+              (!args.where?.id || candidate.id === args.where.id) &&
+              (!args.where?.tenantId ||
+                candidate.tenantId === args.where.tenantId)
           ) ?? null;
 
         if (!ledger) {
@@ -757,6 +1316,12 @@ export function createAuthPrismaMock(
         };
         state.ledgers.push(created);
         return created;
+      },
+      count: async (args?: { where?: { tenantId?: string } }) => {
+        return state.ledgers.filter(
+          (candidate) =>
+            !args?.where?.tenantId || candidate.tenantId === args.where.tenantId
+        ).length;
       }
     },
     accountSubject: {

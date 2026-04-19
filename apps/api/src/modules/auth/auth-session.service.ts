@@ -17,7 +17,8 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import type {
   AuthenticatedIdentity,
   AuthRequestContext,
-  AuthSessionResult
+  AuthSessionResult,
+  AuthSessionSupportContext
 } from './auth.types';
 
 type AccessTokenPayload = {
@@ -39,6 +40,9 @@ type AuthSessionRecord = {
   refreshTokenHash: string;
   expiresAt: Date;
   revokedAt: Date | null;
+  supportTenantId: string | null;
+  supportLedgerId: string | null;
+  supportStartedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -53,7 +57,10 @@ export class AuthSessionService {
     private readonly securityEvents: SecurityEventLogger
   ) {}
 
-  async issueSession(user: AuthenticatedIdentity): Promise<AuthSessionResult> {
+  async issueSession(
+    user: AuthenticatedIdentity,
+    supportContext?: AuthSessionSupportContext
+  ): Promise<AuthSessionResult> {
     const sessionId = randomUUID();
     const refreshExpiresAt = new Date(
       this.clock.now().getTime() + getRefreshTokenMaxAgeMs()
@@ -83,7 +90,10 @@ export class AuthSessionService {
         id: sessionId,
         userId: user.id,
         refreshTokenHash: await argon2.hash(refreshToken),
-        expiresAt: refreshExpiresAt
+        expiresAt: refreshExpiresAt,
+        supportTenantId: supportContext?.tenantId ?? null,
+        supportLedgerId: supportContext?.ledgerId ?? null,
+        supportStartedAt: supportContext?.startedAt ?? null
       }
     });
 
@@ -92,7 +102,8 @@ export class AuthSessionService {
       accessToken,
       refreshToken,
       user: await this.authenticatedWorkspaceResolver.buildAuthenticatedUser(
-        user
+        user,
+        supportContext
       )
     };
   }
@@ -151,18 +162,32 @@ export class AuthSessionService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: session.userId },
-      select: { id: true, email: true, name: true }
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        status: true,
+        isSystemAdmin: true
+      }
     });
 
-    if (!user) {
+    if (!user || user.status !== 'ACTIVE') {
       await this.revokeSession(session.id);
       throw createSecurityTaggedUnauthorizedError(
-        'refresh_user_not_found',
+        user ? 'refresh_user_not_active' : 'refresh_user_not_found',
         'Invalid refresh token'
       );
     }
 
-    return { session, user };
+    return {
+      session,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        ...(user.isSystemAdmin ? { isSystemAdmin: true } : {})
+      }
+    };
   }
 
   async revokeSession(sessionId: string): Promise<void> {

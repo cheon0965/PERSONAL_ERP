@@ -1,8 +1,11 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
+import { alpha } from '@mui/material/styles';
 import {
   Box,
+  Button,
   Chip,
   Divider,
   Drawer,
@@ -12,12 +15,34 @@ import {
 } from '@mui/material';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import HelpOutlineRoundedIcon from '@mui/icons-material/HelpOutlineRounded';
-import { useDomainHelpStore } from '../providers/domain-help-provider';
+import {
+  type DomainHelpContextType,
+  useDomainHelpStore
+} from '../providers/domain-help-provider';
+import { SegmentedTabs } from './section-tabs';
+
+type HelpTabValue = 'overview' | 'checkpoints' | 'followup';
+type HelpSection = NonNullable<DomainHelpContextType['supplementarySections']>[number];
+
+const STANDARD_HELP_TABS = [
+  { value: 'overview' as const, label: '개요' },
+  { value: 'checkpoints' as const, label: '확인 기준' },
+  { value: 'followup' as const, label: '후속 안내' }
+] as const;
 
 export function DomainHelpDrawer() {
   const { activeContext, isDrawerOpen, setDrawerOpen } = useDomainHelpStore();
 
   const handleClose = () => setDrawerOpen(false);
+  const [activeTab, setActiveTab] = React.useState<HelpTabValue>('overview');
+  const standardSections = React.useMemo(
+    () => buildStandardHelpSections(activeContext),
+    [activeContext]
+  );
+
+  React.useEffect(() => {
+    setActiveTab('overview');
+  }, [activeContext]);
 
   if (!activeContext) return null;
 
@@ -33,7 +58,7 @@ export function DomainHelpDrawer() {
       }}
       PaperProps={{
         sx: {
-          width: { xs: '100%', sm: 400 },
+          width: { xs: '100%', sm: 520, lg: 560 },
           p: 0,
           backgroundImage: 'none'
         }
@@ -50,7 +75,7 @@ export function DomainHelpDrawer() {
         <Stack direction="row" spacing={1} alignItems="center">
           <HelpOutlineRoundedIcon color="primary" />
           <Typography variant="h6" fontWeight={700}>
-            도메인 가이드
+            화면 도움말
           </Typography>
         </Stack>
         <IconButton onClick={handleClose} size="small">
@@ -61,198 +86,144 @@ export function DomainHelpDrawer() {
       <Divider />
 
       <Box sx={{ p: 3, overflowY: 'auto' }}>
-        <Stack spacing={4}>
-          <Box>
-            <Typography
-              variant="subtitle2"
-              color="primary"
-              fontWeight={700}
-              gutterBottom
-            >
-              {activeContext.title || '화면 개요'}
-            </Typography>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ whiteSpace: 'pre-wrap' }}
-            >
-              {activeContext.description}
-            </Typography>
-          </Box>
-
-          <Divider />
-
-          <Box>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              fontWeight={700}
-              sx={{
-                display: 'block',
-                mb: 1,
-                textTransform: 'uppercase',
-                letterSpacing: 1
-              }}
-            >
-              대표 엔티티
-            </Typography>
-            <Typography variant="body1" fontWeight={700}>
-              {activeContext.primaryEntity}
-            </Typography>
-          </Box>
-
-          <Box>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              fontWeight={700}
-              sx={{
-                display: 'block',
-                mb: 1,
-                textTransform: 'uppercase',
-                letterSpacing: 1
-              }}
-            >
-              함께 보는 엔티티
-            </Typography>
-            <Stack direction="row" flexWrap="wrap" gap={1}>
-              {activeContext.relatedEntities.map((entity) => (
+        <Stack spacing={2.25}>
+          <Box
+            sx={(theme) => ({
+              p: 2.5,
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: alpha(theme.palette.primary.main, 0.16),
+              background: `linear-gradient(180deg, ${alpha(theme.palette.primary.main, 0.08)} 0%, ${alpha(theme.palette.primary.main, 0.02)} 100%)`
+            })}
+          >
+            <Stack spacing={1.25}>
+              <Box>
+                <Typography
+                  variant="subtitle2"
+                  color="primary"
+                  fontWeight={700}
+                  gutterBottom
+                >
+                  {activeContext.title || '화면 개요'}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ whiteSpace: 'pre-wrap' }}
+                >
+                  {activeContext.description}
+                </Typography>
+              </Box>
+              <div>
                 <Chip
-                  key={entity}
-                  label={entity}
+                  label={`핵심 기준 · ${activeContext.primaryEntity}`}
+                  color="primary"
                   variant="outlined"
-                  size="small"
-                  sx={{ borderRadius: 1 }}
+                  sx={{ borderRadius: 1.5 }}
                 />
-              ))}
+              </div>
             </Stack>
           </Box>
 
-          <Box>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              fontWeight={700}
-              sx={{
-                display: 'block',
-                mb: 1,
-                textTransform: 'uppercase',
-                letterSpacing: 1
-              }}
-            >
-              회계 확정 기준
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{
-                p: 2,
-                bgcolor: 'action.hover',
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'divider'
-              }}
-            >
-              {activeContext.truthSource}
-            </Typography>
+          <Box
+            sx={{
+              '& > [role="tablist"]': {
+                p: 0.45,
+                borderRadius: 2
+              },
+              '& [role="tab"]': {
+                borderRadius: 1.5,
+                minHeight: 38
+              }
+            }}
+          >
+            <SegmentedTabs
+              items={STANDARD_HELP_TABS}
+              value={activeTab}
+              ariaLabel="화면 도움말 탭"
+              onChange={(value) => setActiveTab(value)}
+            />
           </Box>
 
-          {activeContext.supplementarySections?.map((section) => (
-            <Box
-              key={section.title}
-              sx={{
-                p: 2.25,
-                borderRadius: 2.5,
-                border: '1px solid',
-                borderColor: 'divider',
-                bgcolor: 'background.paper'
-              }}
-            >
-              <Stack spacing={1.5}>
-                <Box>
-                  <Typography variant="subtitle2" fontWeight={700}>
-                    {section.title}
+          {activeTab === 'overview' ? (
+            <Stack spacing={1.5}>
+              <HelpPanelCard title="핵심 기준">
+                <Typography variant="body1" fontWeight={700}>
+                  {activeContext.primaryEntity}
+                </Typography>
+              </HelpPanelCard>
+
+              <HelpPanelCard title="함께 확인할 항목">
+                <Stack direction="row" flexWrap="wrap" gap={1}>
+                  {activeContext.relatedEntities.map((entity) => (
+                    <Chip
+                      key={entity}
+                      label={entity}
+                      variant="outlined"
+                      size="small"
+                      sx={{ borderRadius: 1 }}
+                    />
+                  ))}
+                </Stack>
+              </HelpPanelCard>
+
+              <HelpPanelCard title="회계 확정 기준" tone="subtle">
+                <Typography variant="body2" color="text.secondary">
+                  {activeContext.truthSource}
+                </Typography>
+              </HelpPanelCard>
+
+              {activeContext.readModelNote ? (
+                <HelpPanelCard title="주의 사항 / 참고" tone="primary">
+                  <Typography variant="body2" color="inherit">
+                    {activeContext.readModelNote}
                   </Typography>
-                  {section.description ? (
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ mt: 0.75, whiteSpace: 'pre-wrap' }}
-                    >
-                      {section.description}
-                    </Typography>
-                  ) : null}
-                </Box>
-
-                {section.facts?.length ? (
-                  <Stack spacing={1.25}>
-                    {section.facts.map((fact) => (
-                      <Box key={`${section.title}-${fact.label}`}>
-                        <Typography variant="caption" color="text.secondary">
-                          {fact.label}
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          sx={{ mt: 0.25, fontWeight: 600 }}
-                        >
-                          {fact.value}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Stack>
-                ) : null}
-
-                {section.items?.length ? (
-                  <Stack spacing={1.1}>
-                    {section.items.map((item) => (
-                      <Stack
-                        key={`${section.title}-${item}`}
-                        direction="row"
-                        spacing={1}
-                        alignItems="flex-start"
-                      >
-                        <Typography
-                          variant="body2"
-                          color="primary"
-                          sx={{ lineHeight: 1.6, fontWeight: 700 }}
-                        >
-                          •
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {item}
-                        </Typography>
-                      </Stack>
-                    ))}
-                  </Stack>
-                ) : null}
+                </HelpPanelCard>
+              ) : null}
+            </Stack>
+          ) : activeTab === 'checkpoints' ? (
+            standardSections.checkpoints.length > 0 ? (
+              <Stack spacing={1.5}>
+                {standardSections.checkpoints.map((section) => (
+                  <HelpSupplementarySection
+                    key={`checkpoint-${section.title}`}
+                    section={section}
+                  />
+                ))}
               </Stack>
-            </Box>
-          ))}
+            ) : (
+              <HelpEmptyState
+                title="확인 기준"
+                description="이 화면에서 먼저 볼 기준과 확인 순서는 개요 탭과 본문 카드에서 함께 확인할 수 있습니다."
+              />
+            )
+          ) : null}
 
-          {activeContext.readModelNote && (
-            <Box
-              sx={{
-                p: 2,
-                bgcolor: 'primary.main',
-                color: 'primary.contrastText',
-                borderRadius: 2
-              }}
-            >
-              <Typography
-                variant="caption"
-                sx={{
-                  opacity: 0.8,
-                  display: 'block',
-                  mb: 0.5,
-                  fontWeight: 700
-                }}
-              >
-                주의 사항 / 참고
-              </Typography>
-              <Typography variant="body2">
-                {activeContext.readModelNote}
-              </Typography>
-            </Box>
-          )}
+          {activeTab === 'followup' ? (
+            <Stack spacing={1.5}>
+              {standardSections.followup.length > 0 ? (
+                standardSections.followup.map((section) => (
+                  <HelpSupplementarySection
+                    key={`followup-${section.title}`}
+                    section={section}
+                  />
+                ))
+              ) : (
+                <HelpEmptyState
+                  title="후속 안내"
+                  description="현재 화면에서 바로 이어지는 후속 작업은 별도 등록되지 않았습니다. 본문 액션 버튼이나 좌측 메뉴를 사용해 다음 화면으로 이동할 수 있습니다."
+                />
+              )}
+
+              {activeContext.readModelNote ? (
+                <HelpPanelCard title="주의 사항 / 참고" tone="primary">
+                  <Typography variant="body2" color="inherit">
+                    {activeContext.readModelNote}
+                  </Typography>
+                </HelpPanelCard>
+              ) : null}
+            </Stack>
+          ) : null}
         </Stack>
       </Box>
 
@@ -266,10 +237,222 @@ export function DomainHelpDrawer() {
         }}
       >
         <Typography variant="caption" color="text.secondary">
-          본 가이드는 PERSONAL ERP의 도메인 설계 원칙을 준수합니다. 비즈니스
-          로직과 화면의 정합성이 궁금하실 때 언제든 열어보세요.
+          현재 화면의 도움말 탭을 기준으로 읽는 순서, 확인 기준, 이어지는
+          화면을 빠르게 확인할 수 있습니다.
         </Typography>
       </Box>
     </Drawer>
   );
+}
+
+function HelpSupplementarySection({
+  section
+}: {
+  section: HelpSection;
+}) {
+  return (
+    <HelpPanelCard title={section.title}>
+      <Stack spacing={1.5}>
+        {section.description ? (
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ whiteSpace: 'pre-wrap' }}
+          >
+            {section.description}
+          </Typography>
+        ) : null}
+
+        {section.facts?.length ? (
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: 'repeat(1, minmax(0, 1fr))',
+                sm: 'repeat(2, minmax(0, 1fr))'
+              },
+              gap: 1.1
+            }}
+          >
+            {section.facts.map((fact) => (
+              <Box
+                key={`${section.title}-${fact.label}`}
+                sx={{
+                  p: 1.5,
+                  borderRadius: 1.5,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  bgcolor: 'background.default'
+                }}
+              >
+                <Typography variant="caption" color="text.secondary">
+                  {fact.label}
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 0.4, fontWeight: 700 }}>
+                  {fact.value}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        ) : null}
+
+        {section.items?.length ? (
+          <Stack spacing={1.1}>
+            {section.items.map((item) => (
+              <Stack
+                key={`${section.title}-${item}`}
+                direction="row"
+                spacing={1}
+                alignItems="flex-start"
+              >
+                <Typography
+                  variant="body2"
+                  color="primary"
+                  sx={{ lineHeight: 1.6, fontWeight: 700 }}
+                >
+                  •
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {item}
+                </Typography>
+              </Stack>
+            ))}
+          </Stack>
+        ) : null}
+
+        {section.links?.length ? (
+          <Stack spacing={1.1}>
+            {section.links.map((link) => (
+              <Box
+                key={`${section.title}-${link.href}-${link.title}`}
+                sx={{
+                  p: 1.5,
+                  borderRadius: 1.5,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  bgcolor: 'background.default'
+                }}
+              >
+                <Stack spacing={1}>
+                  <Typography variant="body2" fontWeight={700}>
+                    {link.title}
+                  </Typography>
+                  {link.description ? (
+                    <Typography variant="body2" color="text.secondary">
+                      {link.description}
+                    </Typography>
+                  ) : null}
+                  <div>
+                    <Button
+                      component={Link}
+                      href={link.href}
+                      variant="outlined"
+                      size="small"
+                    >
+                      {link.actionLabel ?? `${link.title} 열기`}
+                    </Button>
+                  </div>
+                </Stack>
+              </Box>
+            ))}
+          </Stack>
+        ) : null}
+      </Stack>
+    </HelpPanelCard>
+  );
+}
+
+function HelpPanelCard({
+  children,
+  title,
+  tone = 'default'
+}: {
+  children: React.ReactNode;
+  title: string;
+  tone?: 'default' | 'subtle' | 'primary';
+}) {
+  return (
+    <Box
+      sx={(theme) => ({
+        p: 2.25,
+        borderRadius: 1.75,
+        border: '1px solid',
+        borderColor:
+          tone === 'primary'
+            ? alpha(theme.palette.primary.main, 0.18)
+            : 'divider',
+        bgcolor:
+          tone === 'primary'
+            ? 'primary.main'
+            : tone === 'subtle'
+              ? 'action.hover'
+              : 'background.paper',
+        color: tone === 'primary' ? 'primary.contrastText' : 'text.primary'
+      })}
+    >
+      <Stack spacing={1.25}>
+        <Typography
+          variant="subtitle2"
+          fontWeight={700}
+          color={tone === 'primary' ? 'inherit' : 'text.primary'}
+        >
+          {title}
+        </Typography>
+        {children}
+      </Stack>
+    </Box>
+  );
+}
+
+function HelpEmptyState({
+  title,
+  description
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <HelpPanelCard title={title} tone="subtle">
+      <Typography variant="body2" color="text.secondary">
+        {description}
+      </Typography>
+    </HelpPanelCard>
+  );
+}
+
+function buildStandardHelpSections(context: DomainHelpContextType | null) {
+  const sections = context?.supplementarySections ?? [];
+
+  return sections.reduce(
+    (groups, section) => {
+      const bucket = readHelpSectionBucket(section);
+      groups[bucket].push(section);
+      return groups;
+    },
+    {
+      checkpoints: [] as HelpSection[],
+      followup: [] as HelpSection[]
+    }
+  );
+}
+
+function readHelpSectionBucket(section: HelpSection) {
+  if (section.links?.length) {
+    return 'followup' as const;
+  }
+
+  const normalizedTitle = section.title.replace(/\s+/g, '');
+
+  if (
+    normalizedTitle.includes('이어지는화면') ||
+    normalizedTitle.includes('다음단계') ||
+    normalizedTitle.includes('후속') ||
+    normalizedTitle.includes('참고') ||
+    normalizedTitle.includes('주의') ||
+    normalizedTitle.includes('메모')
+  ) {
+    return 'followup' as const;
+  }
+
+  return 'checkpoints' as const;
 }

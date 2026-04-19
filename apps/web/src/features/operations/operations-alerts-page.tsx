@@ -31,10 +31,29 @@ export function OperationsAlertsPage() {
     title: '운영 알림 가이드',
     description:
       '운영 알림은 월 마감, 업로드, 보안 관련 경고를 우선순위대로 모아 보는 화면입니다.',
-    primaryEntity: 'OperationsAlertItem',
-    relatedEntities: ['WorkspaceAuditEvent', 'ImportBatch', 'AccountingPeriod'],
+    primaryEntity: '운영 알림',
+    relatedEntities: ['감사 로그', '업로드 배치', '운영 기간'],
     truthSource:
-      '알림은 운영 이벤트와 예외 상태를 기반으로 만든 즉시 확인용 read model입니다.'
+      '알림은 운영 이벤트와 예외 상태를 기반으로 만든 즉시 확인용 요약입니다.',
+    supplementarySections: [
+      {
+        title: '이어지는 화면',
+        links: [
+          {
+            title: '예외 처리함',
+            description: '알림의 원인이 되는 운영 예외를 우선순위 기준으로 다시 확인합니다.',
+            href: '/operations/exceptions',
+            actionLabel: '예외 처리 보기'
+          },
+          {
+            title: '시스템 상태',
+            description: '시스템, 메일, 최근 활동 상태에서 실제 이상이 있는지 함께 점검합니다.',
+            href: '/operations/status',
+            actionLabel: '시스템 상태 보기'
+          }
+        ]
+      }
+    ]
   });
 
   return (
@@ -85,56 +104,31 @@ export function OperationsAlertsPage() {
         />
       ) : null}
 
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, lg: 7 }}>
-          <SectionCard
-            title="지금 우선 확인"
-            description="현재 알림 규모와 우선순위를 먼저 확인하고 본문 목록으로 내려갑니다."
-          >
-            <Grid container spacing={appLayout.fieldGap}>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <AlertInfoItem
-                  label="전체 알림"
-                  value={`${formatNumber(alerts?.totalCount ?? 0, 0)}건`}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <AlertInfoItem
-                  label="긴급"
-                  value={`${formatNumber(alerts?.criticalCount ?? 0, 0)}건`}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <AlertInfoItem
-                  label="경고"
-                  value={`${formatNumber(alerts?.warningCount ?? 0, 0)}건`}
-                />
-              </Grid>
-            </Grid>
-          </SectionCard>
+      <SectionCard
+        title="지금 우선 확인"
+        description="현재 알림 규모와 우선순위를 먼저 확인하고 본문 목록으로 내려갑니다."
+      >
+        <Grid container spacing={appLayout.fieldGap}>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <AlertInfoItem
+              label="전체 알림"
+              value={`${formatNumber(alerts?.totalCount ?? 0, 0)}건`}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <AlertInfoItem
+              label="긴급"
+              value={`${formatNumber(alerts?.criticalCount ?? 0, 0)}건`}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <AlertInfoItem
+              label="경고"
+              value={`${formatNumber(alerts?.warningCount ?? 0, 0)}건`}
+            />
+          </Grid>
         </Grid>
-        <Grid size={{ xs: 12, lg: 5 }}>
-          <SectionCard
-            title="자주 여는 후속 화면"
-            description="알림을 읽은 뒤 실제 원인을 확인하러 자주 이동하는 화면입니다."
-          >
-            <Stack spacing={1.25}>
-              <OperationsAlertsNavCard
-                title="예외 처리함"
-                description="알림의 원인이 되는 운영 예외를 우선순위 기준으로 다시 확인합니다."
-                href="/operations/exceptions"
-                actionLabel="예외 처리 보기"
-              />
-              <OperationsAlertsNavCard
-                title="시스템 상태"
-                description="시스템/메일/최근 활동 경계에서 실제 이상이 있는지 함께 점검합니다."
-                href="/operations/status"
-                actionLabel="시스템 상태 보기"
-              />
-            </Stack>
-          </SectionCard>
-        </Grid>
-      </Grid>
+      </SectionCard>
 
       <SectionCard
         title="파생 알림"
@@ -185,7 +179,7 @@ export function OperationsAlertsPage() {
                 </Typography>
                 {alert.requestId ? (
                   <Typography variant="caption" color="text.secondary">
-                    Request ID: {alert.requestId}
+                    요청번호: {alert.requestId}
                   </Typography>
                 ) : null}
                 <Button
@@ -214,41 +208,6 @@ function AlertInfoItem({ label, value }: { label: string; value: string }) {
       <Typography variant="body2" fontWeight={600}>
         {value}
       </Typography>
-    </Stack>
-  );
-}
-
-function OperationsAlertsNavCard({
-  title,
-  description,
-  href,
-  actionLabel
-}: {
-  title: string;
-  description: string;
-  href: string;
-  actionLabel: string;
-}) {
-  return (
-    <Stack
-      spacing={1}
-      sx={{
-        p: appLayout.cardPadding,
-        borderRadius: 3,
-        border: '1px solid',
-        borderColor: 'divider',
-        backgroundColor: 'background.default'
-      }}
-    >
-      <Typography variant="subtitle2">{title}</Typography>
-      <Typography variant="body2" color="text.secondary">
-        {description}
-      </Typography>
-      <div>
-        <Button component={Link} href={href} variant="outlined">
-          {actionLabel}
-        </Button>
-      </div>
     </Stack>
   );
 }

@@ -68,7 +68,7 @@ export const defaultWorkspaceNavigationTree = [
     children: [
       {
         key: 'settings-hub',
-        label: '작업 문맥',
+        label: '현재 사업장 / 장부',
         description: '현재 사업장과 기본 장부 문맥을 확인합니다.',
         href: '/settings',
         iconKey: 'settings',
@@ -114,7 +114,7 @@ export const defaultWorkspaceNavigationTree = [
       },
       {
         key: 'admin-hub',
-        label: '관리자',
+        label: '관리자 허브',
         description: '멤버, 메뉴 권한, 감사 로그와 정책을 운영합니다.',
         href: '/admin',
         iconKey: 'admin',
@@ -129,7 +129,7 @@ export const defaultWorkspaceNavigationTree = [
           },
           {
             key: 'admin-navigation',
-            label: '메뉴 / 권한',
+            label: '메뉴 / 권한 관리',
             description:
               'DB에 저장된 메뉴 트리와 메뉴별 허용 역할을 관리합니다.',
             href: '/admin/navigation',
@@ -137,14 +137,14 @@ export const defaultWorkspaceNavigationTree = [
           },
           {
             key: 'admin-logs',
-            label: '감사 로그',
+            label: '로그관리',
             description: '관리자 작업과 요청 추적 기록을 확인합니다.',
             href: '/admin/logs',
             allowedRoles: [TenantMembershipRole.OWNER]
           },
           {
             key: 'admin-policy',
-            label: '권한 정책',
+            label: '권한 정책 요약',
             description: '메뉴와 주요 운영 화면의 역할 기준을 검토합니다.',
             href: '/admin/policy',
             allowedRoles: OPERATORS
@@ -153,7 +153,7 @@ export const defaultWorkspaceNavigationTree = [
       },
       {
         key: 'operations-hub',
-        label: '운영 지원',
+        label: '운영 허브',
         description:
           '예외, 알림, 메모, 내보내기 등 운영 보조 흐름을 확인합니다.',
         href: '/operations',
@@ -162,7 +162,7 @@ export const defaultWorkspaceNavigationTree = [
         children: [
           {
             key: 'operations-checklist',
-            label: '체크리스트',
+            label: '운영 체크리스트',
             description: '오늘 처리할 운영 체크포인트를 확인합니다.',
             href: '/operations/checklist',
             allowedRoles: ALL_ROLES
@@ -176,14 +176,14 @@ export const defaultWorkspaceNavigationTree = [
           },
           {
             key: 'operations-month-end',
-            label: '월 마감 지원',
+            label: '월 마감',
             description: '마감 전 확인해야 할 이슈와 준비 상태를 점검합니다.',
             href: '/operations/month-end',
             allowedRoles: ALL_ROLES
           },
           {
             key: 'operations-imports',
-            label: '업로드 현황',
+            label: '업로드 운영 현황',
             description: '업로드 배치와 수집 상태를 운영 관점에서 확인합니다.',
             href: '/operations/imports',
             allowedRoles: ALL_ROLES
@@ -197,7 +197,7 @@ export const defaultWorkspaceNavigationTree = [
           },
           {
             key: 'operations-alerts',
-            label: '알림 센터',
+            label: '알림 / 이벤트 센터',
             description: '처리 지연, 예외, 마감 리스크 알림을 확인합니다.',
             href: '/operations/alerts',
             allowedRoles: ALL_ROLES
@@ -211,7 +211,7 @@ export const defaultWorkspaceNavigationTree = [
           },
           {
             key: 'operations-notes',
-            label: '운영 메모',
+            label: '운영 메모 / 인수인계',
             description: '인수인계와 월말 참고 메모를 남깁니다.',
             href: '/operations/notes',
             allowedRoles: ALL_ROLES
@@ -220,7 +220,7 @@ export const defaultWorkspaceNavigationTree = [
       },
       {
         key: 'reference-data-hub',
-        label: '기준 데이터',
+        label: '기준 데이터 준비 상태',
         description: '자금수단, 카테고리, 계정과목 준비 상태를 확인합니다.',
         href: '/reference-data',
         iconKey: 'referenceData',
@@ -262,7 +262,7 @@ export const defaultWorkspaceNavigationTree = [
     children: [
       {
         key: 'periods-hub',
-        label: '월 운영',
+        label: '운영 기간',
         description: '현재 운영 기간과 마감 상태를 확인합니다.',
         href: '/periods',
         iconKey: 'calendar',
@@ -284,7 +284,7 @@ export const defaultWorkspaceNavigationTree = [
           },
           {
             key: 'periods-history',
-            label: '기간 이력',
+            label: '운영 기간 이력',
             description: '운영 기간 상태 변화와 이력을 확인합니다.',
             href: '/periods/history',
             allowedRoles: OPERATORS
@@ -411,7 +411,7 @@ export const defaultWorkspaceNavigationTree = [
       },
       {
         key: 'carry-forwards',
-        label: '차기 이월 생성 / 선택',
+        label: '이월 기준 생성 / 선택',
         description: '마감 잔액을 다음 기간으로 이월합니다.',
         href: '/carry-forwards',
         iconKey: 'carryForward',
@@ -419,7 +419,7 @@ export const defaultWorkspaceNavigationTree = [
       },
       {
         key: 'forecast',
-        label: '기간 전망',
+        label: '기간 운영 전망',
         description: '월중 현금 흐름과 예비금 상태를 전망합니다.',
         href: '/forecast',
         iconKey: 'forecast',
@@ -427,7 +427,7 @@ export const defaultWorkspaceNavigationTree = [
       },
       {
         key: 'dashboard',
-        label: '대시보드',
+        label: '월 운영 대시보드',
         description: '현재 사업장 상태와 핵심 지표를 요약합니다.',
         href: '/dashboard',
         iconKey: 'dashboard',

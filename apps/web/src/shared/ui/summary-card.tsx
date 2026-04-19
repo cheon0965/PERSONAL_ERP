@@ -65,6 +65,7 @@ const toneStyles: Record<
 export function SummaryCard({
   title,
   value,
+  subtitle,
   eyebrow,
   tone = 'neutral',
   icon: Icon = TrendingUpRoundedIcon
@@ -75,6 +76,8 @@ export function SummaryCard({
     <Card
       sx={{
         position: 'relative',
+        height: '100%',
+        display: 'flex',
         overflow: 'hidden',
         background:
           'linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96))',
@@ -99,8 +102,11 @@ export function SummaryCard({
         }
       }}
     >
-      <CardContent sx={{ p: appLayout.cardPadding }}>
-        <Stack spacing={appLayout.cardGap}>
+      <CardContent sx={{ p: appLayout.cardPadding, flex: 1, width: '100%' }}>
+        <Stack
+          spacing={appLayout.cardGap}
+          sx={{ height: '100%', justifyContent: 'space-between' }}
+        >
           <Stack
             direction="row"
             alignItems="flex-start"
@@ -154,6 +160,22 @@ export function SummaryCard({
           >
             {value}
           </Typography>
+          {subtitle ? (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                mt: -1,
+                lineHeight: 1.6,
+                overflow: 'hidden',
+                WebkitBoxOrient: 'vertical',
+                WebkitLineClamp: 2,
+                display: '-webkit-box'
+              }}
+            >
+              {subtitle}
+            </Typography>
+          ) : null}
         </Stack>
       </CardContent>
     </Card>

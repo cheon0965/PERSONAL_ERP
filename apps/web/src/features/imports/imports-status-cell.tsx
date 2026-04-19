@@ -45,7 +45,7 @@ export function ImportedRowStatusCell({
       variant={selectedRowId === row.id ? 'contained' : 'text'}
       onClick={() => onPrepare(row)}
     >
-      승격 준비
+      거래 등록
     </Button>
   );
 }

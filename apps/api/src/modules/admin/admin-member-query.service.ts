@@ -30,4 +30,35 @@ export class AdminMemberQueryService {
 
     return memberships.map(mapAdminMemberToItem);
   }
+
+  async findAllAcrossTenants(): Promise<AdminMemberItem[]> {
+    const memberships = await this.prisma.tenantMembership.findMany({
+      include: {
+        tenant: {
+          select: {
+            id: true,
+            slug: true,
+            name: true,
+            status: true
+          }
+        },
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            emailVerifiedAt: true
+          }
+        }
+      },
+      orderBy: [
+        { tenantId: 'asc' },
+        { status: 'asc' },
+        { role: 'asc' },
+        { joinedAt: 'asc' }
+      ]
+    });
+
+    return memberships.map(mapAdminMemberToItem);
+  }
 }

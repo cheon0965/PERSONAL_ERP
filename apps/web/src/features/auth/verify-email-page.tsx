@@ -24,6 +24,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { resendVerificationEmail, verifyEmail } from '@/features/auth/auth.api';
 import { appLayout } from '@/shared/ui/layout-metrics';
+import { AuthCardHeader } from './auth-card-header';
 
 const resendSchema = z.object({
   email: z.string().email('올바른 이메일 주소를 입력해 주세요.')
@@ -56,7 +57,7 @@ export function VerifyEmailPage() {
 
     if (!token) {
       setStatus('failed');
-      setMessage('이메일 인증 토큰이 없습니다.');
+      setMessage('이메일 인증 정보를 찾지 못했습니다.');
       return;
     }
 
@@ -97,43 +98,39 @@ export function VerifyEmailPage() {
                 'linear-gradient(90deg, rgba(34,197,94,1), rgba(14,165,233,0.9))'
             }
           }}
-        >
+          >
           <CardContent sx={{ p: appLayout.authSurfacePadding }}>
             <Stack spacing={appLayout.authSurfaceGap} alignItems="stretch">
-              <Box
-                sx={{
-                  alignSelf: 'flex-start',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 56,
-                  height: 56,
-                  borderRadius: 4,
-                  backgroundColor:
-                    status === 'failed'
-                      ? alpha('#dc2626', 0.08)
-                      : alpha('#16a34a', 0.1),
-                  color: status === 'failed' ? 'error.main' : 'success.main'
-                }}
-              >
-                {status === 'loading' ? (
-                  <CircularProgress size={26} />
-                ) : status === 'verified' ? (
-                  <CheckCircleRoundedIcon />
-                ) : (
-                  <ErrorOutlineRoundedIcon />
-                )}
-              </Box>
-
-              <Stack spacing={1.25}>
-                <Typography variant="h4" sx={{ fontWeight: 800 }}>
-                  이메일 인증
-                </Typography>
-                <Typography color="text.secondary" sx={{ lineHeight: 1.75 }}>
-                  인증이 완료되면 회원가입 시 만든 계정으로 로그인할 수
-                  있습니다.
-                </Typography>
-              </Stack>
+              <AuthCardHeader
+                eyebrow="계정 확인"
+                title="이메일 인증"
+                description="인증이 완료되면 회원가입 시 만든 계정으로 바로 로그인할 수 있습니다."
+                aside={
+                  <Box
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 48,
+                      height: 48,
+                      borderRadius: 3.5,
+                      backgroundColor:
+                        status === 'failed'
+                          ? alpha('#dc2626', 0.08)
+                          : alpha('#16a34a', 0.1),
+                      color: status === 'failed' ? 'error.main' : 'success.main'
+                    }}
+                  >
+                    {status === 'loading' ? (
+                      <CircularProgress size={24} />
+                    ) : status === 'verified' ? (
+                      <CheckCircleRoundedIcon fontSize="small" />
+                    ) : (
+                      <ErrorOutlineRoundedIcon fontSize="small" />
+                    )}
+                  </Box>
+                }
+              />
 
               {message ? (
                 <Alert

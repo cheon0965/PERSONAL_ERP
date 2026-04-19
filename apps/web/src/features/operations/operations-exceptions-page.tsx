@@ -31,20 +31,33 @@ export function OperationsExceptionsPage() {
     title: '예외 처리함 가이드',
     description:
       '예외 처리함은 미확정 거래, 업로드 문제, 마감 차단 사유를 우선순위대로 모아 보는 화면입니다.',
-    primaryEntity: 'OperationsExceptionItem',
-    relatedEntities: [
-      'CollectedTransaction',
-      'ImportBatch',
-      'AccountingPeriod'
-    ],
+    primaryEntity: '운영 예외',
+    relatedEntities: ['수집 거래', '업로드 배치', '운영 기간'],
     truthSource:
-      '예외 항목은 현재 운영 상태에서 즉시 조치가 필요한 객체를 모은 운영 read model입니다.',
+      '예외 항목은 현재 운영 상태에서 즉시 조치가 필요한 항목을 모은 운영 요약입니다.',
     supplementarySections: [
       {
         title: '기본 순서',
         items: [
           '긴급/경고 수량을 먼저 확인합니다.',
           '각 예외에서 바로 해결 화면으로 이동합니다.'
+        ]
+      },
+      {
+        title: '이어지는 화면',
+        links: [
+          {
+            title: '월 마감',
+            description: '마감 차단 사유와 현재 월 준비 상태를 다시 확인합니다.',
+            href: '/operations/month-end',
+            actionLabel: '월 마감 보기'
+          },
+          {
+            title: '업로드 운영 현황',
+            description: '미수집 행과 실패 배치 기준으로 업로드 관련 예외를 점검합니다.',
+            href: '/operations/imports',
+            actionLabel: '업로드 현황 보기'
+          }
         ]
       }
     ]
@@ -98,60 +111,35 @@ export function OperationsExceptionsPage() {
         />
       ) : null}
 
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, lg: 7 }}>
-          <SectionCard
-            title="지금 우선 처리"
-            description="운영자가 먼저 확인해야 할 예외 우선순위를 상단에서 바로 읽습니다."
-          >
-            <Grid container spacing={appLayout.fieldGap}>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <ExceptionInfoItem
-                  label="전체 예외"
-                  value={`${formatNumber(exceptions?.totalCount ?? 0, 0)}건`}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <ExceptionInfoItem
-                  label="긴급"
-                  value={`${formatNumber(exceptions?.criticalCount ?? 0, 0)}건`}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <ExceptionInfoItem
-                  label="경고"
-                  value={`${formatNumber(exceptions?.warningCount ?? 0, 0)}건`}
-                />
-              </Grid>
-            </Grid>
-          </SectionCard>
+      <SectionCard
+        title="지금 우선 처리"
+        description="운영자가 먼저 확인해야 할 예외 우선순위를 상단에서 바로 읽습니다."
+      >
+        <Grid container spacing={appLayout.fieldGap}>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <ExceptionInfoItem
+              label="전체 예외"
+              value={`${formatNumber(exceptions?.totalCount ?? 0, 0)}건`}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <ExceptionInfoItem
+              label="긴급"
+              value={`${formatNumber(exceptions?.criticalCount ?? 0, 0)}건`}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <ExceptionInfoItem
+              label="경고"
+              value={`${formatNumber(exceptions?.warningCount ?? 0, 0)}건`}
+            />
+          </Grid>
         </Grid>
-        <Grid size={{ xs: 12, lg: 5 }}>
-          <SectionCard
-            title="자주 여는 후속 화면"
-            description="예외를 읽고 바로 이어서 처리하는 대표 운영 화면입니다."
-          >
-            <Stack spacing={1.25}>
-              <OperationsQuickLink
-                title="월 마감"
-                description="마감 차단 사유와 현재 월 준비 상태를 다시 확인합니다."
-                href="/operations/month-end"
-                actionLabel="월 마감 보기"
-              />
-              <OperationsQuickLink
-                title="업로드 현황"
-                description="미수집 행과 실패 배치 기준으로 업로드 관련 예외를 점검합니다."
-                href="/operations/imports"
-                actionLabel="업로드 현황 보기"
-              />
-            </Stack>
-          </SectionCard>
-        </Grid>
-      </Grid>
+      </SectionCard>
 
       <SectionCard
         title="바로 처리할 작업"
-        description="각 예외는 실제 해결 화면으로 이동하는 deep link를 제공합니다."
+        description="각 예외는 실제 해결 화면으로 이동하는 바로가기 링크를 제공합니다."
       >
         <Stack spacing={1.5}>
           {(exceptions?.items ?? []).length === 0 ? (
@@ -227,51 +215,6 @@ function ExceptionInfoItem({ label, value }: { label: string; value: string }) {
       <Typography variant="body2" fontWeight={600}>
         {value}
       </Typography>
-    </Stack>
-  );
-}
-
-function OperationsQuickLink({
-  title,
-  description,
-  href,
-  actionLabel
-}: {
-  title: string;
-  description: string;
-  href: string;
-  actionLabel: string;
-}) {
-  return (
-    <Stack
-      spacing={1}
-      sx={{
-        p: appLayout.cardPadding,
-        borderRadius: 3,
-        border: '1px solid',
-        borderColor: 'divider',
-        backgroundColor: 'background.default'
-      }}
-    >
-      <Typography variant="subtitle2">{title}</Typography>
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{
-          display: '-webkit-box',
-          overflow: 'hidden',
-          WebkitBoxOrient: 'vertical',
-          WebkitLineClamp: 2,
-          lineHeight: 1.7
-        }}
-      >
-        {description}
-      </Typography>
-      <div>
-        <Button component={Link} href={href} variant="outlined">
-          {actionLabel}
-        </Button>
-      </div>
     </Stack>
   );
 }

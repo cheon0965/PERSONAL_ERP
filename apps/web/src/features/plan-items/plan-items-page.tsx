@@ -247,15 +247,7 @@ export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
   const generationDisabled =
     !selectedPeriod || !canGenerate || mutation.isPending;
 
-  useDomainHelp({
-    title: '계획 항목 가이드',
-    description:
-      '계획 항목 영역은 생성 화면과 목록 화면을 분리해 월별 계획 생성과 실행 추적을 각각 다룹니다.',
-    primaryEntity: '계획 항목',
-    relatedEntities: ['반복 규칙', '운영 월', '수집 거래', '전표'],
-    truthSource:
-      '계획 항목은 반복 규칙에서 파생된 계획 기준이며, 회계 확정은 연결된 수집 거래와 전표에서 이뤄집니다.'
-  });
+  useDomainHelp(buildPlanItemsHelpContext(mode));
 
   const handleGeneratePlanItems = React.useCallback(async () => {
     if (!selectedPeriod) {
@@ -284,7 +276,7 @@ export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
-        eyebrow="계획 계층"
+        eyebrow="계획 기준"
         title={mode === 'generate' ? '계획 생성' : '계획 항목'}
         badges={[
           {
@@ -472,7 +464,7 @@ export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
           ) : null}
 
           <Grid container spacing={appLayout.sectionGap}>
-            <Grid size={{ xs: 12, lg: 4 }}>
+            <Grid size={{ xs: 12 }}>
               <SectionCard title="요약">
                 <Stack spacing={1.25}>
                   <SummaryRow
@@ -494,33 +486,6 @@ export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
                 </Stack>
               </SectionCard>
             </Grid>
-            <Grid size={{ xs: 12, lg: 8 }}>
-              <SectionCard title="연결 화면">
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                  <Button
-                    component={Link}
-                    href="/transactions"
-                    variant="contained"
-                  >
-                    수집 거래
-                  </Button>
-                  <Button
-                    component={Link}
-                    href="/journal-entries"
-                    variant="outlined"
-                  >
-                    전표 조회
-                  </Button>
-                  <Button
-                    component={Link}
-                    href="/plan-items/generate"
-                    variant="outlined"
-                  >
-                    계획 생성
-                  </Button>
-                </Stack>
-              </SectionCard>
-            </Grid>
           </Grid>
         </>
       ) : null}
@@ -537,4 +502,92 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
       <Typography variant="body2">{value}</Typography>
     </Stack>
   );
+}
+
+function buildPlanItemsHelpContext(mode: PlanItemsPageMode) {
+  if (mode === 'generate') {
+    return {
+      title: '계획 생성 도움말',
+      description:
+        '이 화면은 선택한 운영 월에 반복 규칙을 기준으로 계획 항목을 다시 생성하거나 보강하는 작업 화면입니다.',
+      primaryEntity: '계획 항목 생성',
+      relatedEntities: ['반복 규칙', '운영 월', '계획 항목 목록'],
+      truthSource:
+        '계획 항목은 반복 규칙에서 파생된 계획 기준이며, 실제 회계 확정은 이후 수집 거래와 전표에서 이뤄집니다.',
+      supplementarySections: [
+        {
+          title: '이 탭에서 하는 일',
+          items: [
+            '잠기지 않은 운영 월을 선택해 해당 월에 필요한 계획 항목을 생성합니다.',
+            '반복 규칙 변경 이후 누락된 계획을 다시 보강할 때도 이 화면을 사용합니다.',
+            '생성이 끝나면 계획 항목 목록으로 이동해 초안, 연결, 확정 흐름을 이어서 확인합니다.'
+          ]
+        },
+        {
+          title: '이어지는 화면',
+          links: [
+            {
+              title: '계획 항목',
+              description: '생성 결과와 확정 진행 상태를 목록에서 확인합니다.',
+              href: '/plan-items',
+              actionLabel: '계획 항목 보기'
+            },
+            {
+              title: '수집 거래',
+              description: '연결된 실제 거래를 검토하고 전표 준비 상태를 확인합니다.',
+              href: '/transactions',
+              actionLabel: '수집 거래 보기'
+            }
+          ]
+        }
+      ],
+      readModelNote:
+        '계획 생성은 계획 기준을 준비하는 단계입니다. 공식 숫자는 연결된 수집 거래와 전표 확정 뒤에만 만들어집니다.'
+    };
+  }
+
+  return {
+    title: '계획 항목 도움말',
+    description:
+      '이 화면은 운영 월별 계획 항목을 보고, 실제 거래 연결과 확정 진행 상태를 추적하는 목록 화면입니다.',
+    primaryEntity: '계획 항목',
+    relatedEntities: ['반복 규칙', '운영 월', '수집 거래', '전표'],
+    truthSource:
+      '계획 항목은 반복 규칙에서 파생된 계획 기준이며, 회계 확정은 연결된 수집 거래와 전표에서 이뤄집니다.',
+    supplementarySections: [
+      {
+        title: '이 탭에서 하는 일',
+        items: [
+          '운영 월별 계획 항목을 보며 초안, 연결, 확정 상태가 어디까지 왔는지 확인합니다.',
+          '강조된 계획 항목이 있으면 다른 화면에서 넘어온 연결 대상인지 먼저 확인합니다.',
+          '실제 거래 연결과 전표 반영 여부는 수집 거래와 전표 조회 화면으로 이어서 확인합니다.'
+        ]
+      },
+      {
+        title: '이어지는 화면',
+        links: [
+          {
+            title: '수집 거래',
+            description: '계획 항목과 연결된 실제 거래를 검토하고 전표 준비 상태까지 이어서 확인합니다.',
+            href: '/transactions',
+            actionLabel: '수집 거래 보기'
+          },
+          {
+            title: '전표 조회',
+            description: '확정된 계획이 실제 전표로 반영됐는지 공식 회계 기준으로 확인합니다.',
+            href: '/journal-entries',
+            actionLabel: '전표 보기'
+          },
+          {
+            title: '계획 생성',
+            description: '선택한 운영 월의 계획 항목을 다시 생성하거나 보강합니다.',
+            href: '/plan-items/generate',
+            actionLabel: '계획 생성 보기'
+          }
+        ]
+      }
+    ],
+    readModelNote:
+      '계획 항목은 실행 전 기준선입니다. 공식 손익과 자금 흐름은 연결된 수집 거래가 전표로 확정된 뒤에만 판단합니다.'
+  };
 }

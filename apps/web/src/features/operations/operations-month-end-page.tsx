@@ -30,22 +30,53 @@ export function OperationsMonthEndPage() {
     title: '월 마감 가이드',
     description:
       '월 마감 화면은 현재 운영 월의 마감 가능 여부와 차단 사유를 점검하는 화면입니다.',
-    primaryEntity: 'AccountingPeriod',
+    primaryEntity: '운영 기간',
     relatedEntities: [
-      'CollectedTransaction',
-      'PlanItem',
-      'ImportBatch',
-      'FinancialStatementSnapshot',
-      'CarryForwardRecord'
+      '수집 거래',
+      '계획 항목',
+      '업로드 배치',
+      '재무제표 스냅샷',
+      '차기 이월'
     ],
     truthSource:
-      '마감 가능 여부는 현재 운영 월 기준의 미확정 거래, 실패 행, 남은 계획, 산출물 상태를 함께 읽어 판정합니다.',
+      '마감 가능 여부는 현재 운영 월 기준의 미확정 거래, 실패 행, 남은 계획, 보고 자료 상태를 함께 읽어 판단합니다.',
     supplementarySections: [
       {
         title: '읽는 순서',
         items: [
           '현재 운영 월과 마감 상태를 먼저 확인합니다.',
           '차단 사유를 보고 해결 화면으로 이동합니다.'
+        ]
+      },
+      {
+        title: '이어지는 화면',
+        links: [
+          {
+            title: '예외 처리함',
+            description: `미확정 거래 ${formatNumber(monthEnd?.unresolvedTransactionCount ?? 0, 0)}건과 차단 사유를 먼저 정리합니다.`,
+            href: '/operations/exceptions',
+            actionLabel: '예외 처리함 보기'
+          },
+          {
+            title: '업로드 운영 현황',
+            description: `업로드 실패 행 ${formatNumber(monthEnd?.failedImportRowCount ?? 0, 0)}건을 다시 확인합니다.`,
+            href: '/operations/imports',
+            actionLabel: '업로드 현황 보기'
+          },
+          {
+            title: '재무제표 생성 / 선택',
+            description: `현재 생성된 스냅샷 ${formatNumber(monthEnd?.financialStatementSnapshotCount ?? 0, 0)}개를 확인합니다.`,
+            href: '/financial-statements',
+            actionLabel: '재무제표 보기'
+          },
+          {
+            title: '이월 기준 생성 / 선택',
+            description: monthEnd?.carryForwardCreated
+              ? '다음 월 연결 기준이 이미 생성되어 있습니다.'
+              : '월 마감 후 다음 월 연결 기준 생성을 확인합니다.',
+            href: '/carry-forwards',
+            actionLabel: '차기 이월 보기'
+          }
         ]
       }
     ]
@@ -175,71 +206,26 @@ export function OperationsMonthEndPage() {
         </Stack>
       </SectionCard>
 
-      <Grid container spacing={appLayout.sectionGap}>
-        <Grid size={{ xs: 12, lg: 7 }}>
-          <SectionCard
-            title="마감 차단 사유"
-            description="마감 전에 반드시 처리해야 할 항목입니다."
-          >
-            <Stack spacing={1.25}>
-              {(monthEnd?.blockers ?? []).length === 0 ? (
-                <Alert severity="success" variant="outlined">
-                  현재 마감 차단 사유가 없습니다.
-                </Alert>
-              ) : null}
-              {(monthEnd?.blockers ?? []).map((blocker) => (
-                <Alert key={blocker} severity="error" variant="outlined">
-                  {blocker}
-                </Alert>
-              ))}
-              <Button
-                component={Link}
-                href="/operations/exceptions"
-                variant="outlined"
-              >
-                예외 처리함 보기
-              </Button>
-            </Stack>
-          </SectionCard>
-        </Grid>
-        <Grid size={{ xs: 12, lg: 5 }}>
-          <SectionCard
-            title="바로 확인할 후속 작업"
-            description="월 마감 준비에서 자주 함께 열어보는 화면을 묶어 둡니다."
-          >
-            <Stack spacing={1.25}>
-              <MonthEndActionItem
-                title="예외 처리함"
-                description={`미확정 거래 ${formatNumber(monthEnd?.unresolvedTransactionCount ?? 0, 0)}건과 차단 사유를 먼저 정리합니다.`}
-                href="/operations/exceptions"
-                actionLabel="예외 처리함 보기"
-              />
-              <MonthEndActionItem
-                title="업로드 운영 현황"
-                description={`업로드 실패 행 ${formatNumber(monthEnd?.failedImportRowCount ?? 0, 0)}건을 다시 확인합니다.`}
-                href="/operations/imports"
-                actionLabel="업로드 현황 보기"
-              />
-              <MonthEndActionItem
-                title="재무제표"
-                description={`현재 생성된 스냅샷 ${formatNumber(monthEnd?.financialStatementSnapshotCount ?? 0, 0)}개를 확인합니다.`}
-                href="/financial-statements"
-                actionLabel="재무제표 보기"
-              />
-              <MonthEndActionItem
-                title="차기 이월"
-                description={
-                  monthEnd?.carryForwardCreated
-                    ? '다음 월 연결 기준이 이미 생성되어 있습니다.'
-                    : '월 마감 후 다음 월 연결 기준 생성을 확인합니다.'
-                }
-                href="/carry-forwards"
-                actionLabel="차기 이월 보기"
-              />
-            </Stack>
-          </SectionCard>
-        </Grid>
-      </Grid>
+      <SectionCard
+        title="마감 차단 사유"
+        description="마감 전에 반드시 처리해야 할 항목입니다."
+      >
+        <Stack spacing={1.25}>
+          {(monthEnd?.blockers ?? []).length === 0 ? (
+            <Alert severity="success" variant="outlined">
+              현재 마감 차단 사유가 없습니다.
+            </Alert>
+          ) : null}
+          {(monthEnd?.blockers ?? []).map((blocker) => (
+            <Alert key={blocker} severity="error" variant="outlined">
+              {blocker}
+            </Alert>
+          ))}
+          <Button component={Link} href="/operations/exceptions" variant="outlined">
+            예외 처리함 보기
+          </Button>
+        </Stack>
+      </SectionCard>
 
       <SectionCard
         title="마감 전 경고"
@@ -275,37 +261,3 @@ function MonthEndInfoItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-function MonthEndActionItem({
-  title,
-  description,
-  href,
-  actionLabel
-}: {
-  title: string;
-  description: string;
-  href: string;
-  actionLabel: string;
-}) {
-  return (
-    <Stack
-      spacing={1}
-      sx={{
-        p: appLayout.cardPadding,
-        borderRadius: 3,
-        border: '1px solid',
-        borderColor: 'divider',
-        backgroundColor: 'background.default'
-      }}
-    >
-      <Typography variant="subtitle2">{title}</Typography>
-      <Typography variant="body2" color="text.secondary">
-        {description}
-      </Typography>
-      <div>
-        <Button component={Link} href={href} variant="outlined">
-          {actionLabel}
-        </Button>
-      </div>
-    </Stack>
-  );
-}

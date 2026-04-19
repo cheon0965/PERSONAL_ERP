@@ -78,6 +78,8 @@
 - 로그인 후 `GET /api/operations/summary`, `GET /api/operations/system-status`, `GET /api/operations/alerts`가 현재 workspace 기준으로 응답하는지 확인합니다.
 - 운영 반출을 허용한 계정으로 `POST /api/operations/exports`를 실행했을 때 UTF-8 CSV payload가 내려오고 `operations_export.run` 감사 이벤트가 남는지 확인합니다.
 - 운영 메모를 허용한 계정으로 `POST /api/operations/notes`를 실행했을 때 메모가 저장되고 `operations_note.create` 감사 이벤트가 남는지 확인합니다.
+- 전체 관리자 계정으로 로그인했을 때 `GET /api/admin/users`, `GET /api/admin/tenants`, `GET /api/admin/operations/status`, `GET /api/admin/security-threats`가 응답하는지 확인합니다.
+- 전체 관리자 계정으로 `POST /api/admin/support-context` 실행 후 `GET /api/auth/me`의 `currentWorkspace`가 선택한 사업장/장부로 바뀌는지, `DELETE /api/admin/support-context` 후 해제되는지 확인합니다.
 
 ### Web
 
@@ -86,6 +88,8 @@
 - 좌측 내비게이션 트리가 현재 로그인한 멤버의 역할(OWNER, MANAGER, VIEWER)에 따라 다르게 필터링되어 렌더링되는지 확인합니다.
 - `/settings/workspace`에서 사업장/기본 장부 설정이 열리고, Owner/Manager 수정 권한 제어가 동작하는지 확인합니다.
 - `/settings/account/profile`, `/settings/account/password`, `/settings/account/sessions`, `/settings/account/events`에서 계정 보안 하위 화면이 정상적으로 열리는지 확인합니다.
+- 전체 관리자 계정이라면 `/admin`, `/admin/users`, `/admin/tenants`, `/admin/support-context`, `/admin/security-threats`, `/admin/operations`가 정상적으로 열리는지 확인합니다.
+- `/admin/support-context`에서 특정 사업장/장부를 선택했을 때 상단바에 `지원 모드` 배지가 보이고, 지원 문맥 해제 시 배지가 사라지는지 확인합니다.
 - `/admin/members`에서 현재 멤버 목록, 새 멤버 이메일 초대, 역할 수정, 상태(ACTIVE/SUSPENDED) 변경 및 워크스페이스 제거 기능이 동작하는지 확인합니다.
 - `/admin/logs`에서 워크스페이스 단위 주요 권한/보안 감사 이벤트 조회가 되는지 확인합니다.
 - `/admin/policy`에서 권한 정책 요약이 표시되는지 확인합니다.

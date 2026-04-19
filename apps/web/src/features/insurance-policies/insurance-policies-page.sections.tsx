@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { Button, Chip, Grid, Stack, Typography } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import type { InsurancePolicyItem } from '@personal-erp/contracts';
@@ -165,7 +164,7 @@ export function InsuranceSummaryGrid({
 }) {
   return (
     <Grid container spacing={appLayout.sectionGap}>
-      <Grid size={{ xs: 12, lg: 7 }}>
+      <Grid size={{ xs: 12 }}>
         <Stack
           spacing={appLayout.cardGap}
           sx={{
@@ -201,32 +200,6 @@ export function InsuranceSummaryGrid({
               variant="outlined"
             />
           </Stack>
-        </Stack>
-      </Grid>
-      <Grid size={{ xs: 12, lg: 5 }}>
-        <Stack
-          spacing={1.25}
-          sx={{
-            p: appLayout.cardPadding,
-            borderRadius: 3,
-            border: '1px solid',
-            borderColor: 'divider',
-            backgroundColor: 'background.paper'
-          }}
-        >
-          <Typography variant="h6">연결 규칙과 후속 화면</Typography>
-          <SupportLink
-            title="반복 규칙"
-            description="보험 계약 저장 시 생성되는 연결 반복 규칙 상태를 함께 확인합니다."
-            href="/recurring"
-            actionLabel="반복 규칙 보기"
-          />
-          <SupportLink
-            title="계획 항목"
-            description="현재 운영 월에서 보험료 계획이 실제 생성됐는지 확인합니다."
-            href="/plan-items"
-            actionLabel="계획 항목 보기"
-          />
         </Stack>
       </Grid>
     </Grid>
@@ -303,42 +276,6 @@ export function InsuranceDeleteDialog({
     />
   );
 }
-
-function SupportLink({
-  title,
-  description,
-  href,
-  actionLabel
-}: {
-  title: string;
-  description: string;
-  href: string;
-  actionLabel: string;
-}) {
-  return (
-    <Stack
-      spacing={1}
-      sx={{
-        p: appLayout.cardPadding,
-        borderRadius: 3,
-        border: '1px solid',
-        borderColor: 'divider',
-        backgroundColor: 'background.default'
-      }}
-    >
-      <Typography variant="subtitle2">{title}</Typography>
-      <Typography variant="body2" color="text.secondary">
-        {description}
-      </Typography>
-      <div>
-        <Button component={Link} href={href} variant="outlined">
-          {actionLabel}
-        </Button>
-      </div>
-    </Stack>
-  );
-}
-
 function InfoItem({ label, value }: { label: string; value: string }) {
   return (
     <Stack spacing={0.35}>

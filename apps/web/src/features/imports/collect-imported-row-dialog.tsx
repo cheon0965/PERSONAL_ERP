@@ -63,7 +63,7 @@ export function CollectImportedRowDialog({
     <FormDrawer
       open={open}
       onClose={onClose}
-      title="행 승격"
+      title="수집 거래 등록"
       description="선택한 업로드 행을 수집 거래로 올리기 전에, 계획 항목 매칭·카테고리 보완·다음 상태를 먼저 확인합니다."
     >
       {selectedRow ? (
@@ -82,7 +82,7 @@ export function CollectImportedRowDialog({
           </div>
           <div>
             <Typography variant="caption" color="text.secondary">
-              파싱 결과
+              읽은 거래 내용
             </Typography>
             <Typography variant="body2">
               {selectedRow.occurredOn} /{' '}
@@ -173,7 +173,7 @@ export function CollectImportedRowDialog({
               <Typography variant="subtitle2">자동 판정 요약</Typography>
               {!currentPeriod ? (
                 <Typography variant="body2" color="text.secondary">
-                  현재 열린 운영 기간이 없어 자동 판정 preview를 계산할 수
+                  현재 열린 운영 기간이 없어 자동 판정 결과를 계산할 수
                   없습니다.
                 </Typography>
               ) : collectPreview.isLoading ? (
@@ -184,13 +184,13 @@ export function CollectImportedRowDialog({
                 <Alert severity="warning" variant="outlined">
                   {collectPreview.error instanceof Error
                     ? collectPreview.error.message
-                    : '자동 판정 preview를 불러오지 못했습니다.'}
+                    : '자동 판정 결과를 불러오지 못했습니다.'}
                 </Alert>
               ) : collectPreview.data ? (
                 <CollectPreviewSummary preview={collectPreview.data} />
               ) : (
                 <Typography variant="body2" color="text.secondary">
-                  거래 유형과 자금수단을 선택하면 자동 판정 preview를
+                  거래 유형과 자금수단을 선택하면 자동 판정 결과를
                   표시합니다.
                 </Typography>
               )}
@@ -204,11 +204,11 @@ export function CollectImportedRowDialog({
               void onSubmit();
             }}
           >
-            {submitPending ? '승격 중...' : '수집 거래로 승격'}
+            {submitPending ? '등록 중...' : '수집 거래로 등록'}
           </Button>
           {!currentPeriod ? (
             <Alert severity="info" variant="outlined">
-              현재 열린 운영 기간이 없어 승격이 비활성화되어 있습니다.
+              현재 열린 운영 기간이 없어 거래 등록이 비활성화되어 있습니다.
             </Alert>
           ) : null}
         </Stack>

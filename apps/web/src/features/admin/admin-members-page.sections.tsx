@@ -13,6 +13,7 @@ import {
 import type { GridColDef } from '@mui/x-data-grid';
 import type {
   AdminMemberItem,
+  AdminTenantItem,
   TenantMembershipRole,
   TenantMembershipStatus
 } from '@personal-erp/contracts';
@@ -44,6 +45,7 @@ type AdminMembersSummary = {
   activeCount: number;
   invitedCount: number;
   privilegedCount: number;
+  tenantCount: number;
   statusItems: Array<{
     status: TenantMembershipStatus;
     count: number;
@@ -61,9 +63,13 @@ export function buildAdminMembersSummary(
     REMOVED: 0
   };
   let privilegedCount = 0;
+  const tenantIds = new Set<string>();
 
   members.forEach((member) => {
     counts[member.status] += 1;
+    if (member.tenant?.id) {
+      tenantIds.add(member.tenant.id);
+    }
 
     if (member.role === 'OWNER' || member.role === 'MANAGER') {
       privilegedCount += 1;
@@ -81,6 +87,7 @@ export function buildAdminMembersSummary(
     activeCount: counts.ACTIVE,
     invitedCount: counts.INVITED,
     privilegedCount,
+    tenantCount: tenantIds.size,
     statusItems: statusOrder
       .map((status) => ({
         status,
@@ -93,10 +100,11 @@ export function buildAdminMembersSummary(
 
 export function createAdminMembersColumns(input: {
   canManageMembers: boolean;
+  showTenant: boolean;
   onEdit: (member: AdminMemberItem) => void;
   onRemove: (member: AdminMemberItem) => void;
 }): GridColDef<AdminMemberItem>[] {
-  return [
+  const columns: GridColDef<AdminMemberItem>[] = [
     { field: 'name', headerName: '이름', flex: 1, minWidth: 140 },
     { field: 'email', headerName: '이메일', flex: 1.3, minWidth: 200 },
     {
@@ -146,6 +154,18 @@ export function createAdminMembersColumns(input: {
       )
     }
   ];
+
+  if (input.showTenant) {
+    columns.splice(2, 0, {
+      field: 'tenantName',
+      headerName: '사업장',
+      flex: 1,
+      minWidth: 180,
+      renderCell: (params) => params.row.tenant?.name ?? '-'
+    });
+  }
+
+  return columns;
 }
 
 export function AdminMembersAccessAlert({
@@ -199,14 +219,19 @@ export function AdminMembersSummarySection({
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
             <MemberInfoItem
-              label="관리 역할"
-              value={`${summary.privilegedCount}명`}
+              label={summary.tenantCount > 0 ? '사업장' : '관리 역할'}
+              value={
+                summary.tenantCount > 0
+                  ? `${summary.tenantCount}곳`
+                  : `${summary.privilegedCount}명`
+              }
             />
           </Grid>
         </Grid>
         <Typography variant="body2" color="text.secondary">
-          역할 변경과 제거는 소유자만 실행할 수 있고, 관리자 권한은 조회와 일부
-          운영 판단에 집중합니다.
+          {summary.tenantCount > 0
+            ? '전역 관리자는 모든 사업장의 멤버를 함께 보며, 필요한 멤버만 역할과 상태를 조정합니다.'
+            : '역할 변경과 제거는 소유자만 실행할 수 있고, 관리자 권한은 조회와 일부 운영 판단에 집중합니다.'}
         </Typography>
       </Stack>
     </SectionCard>
@@ -245,7 +270,9 @@ export function AdminMembersTableToolbar({
         ))}
       </Stack>
       <Typography variant="body2" color="text.secondary">
-        역할 변경과 제거는 소유자만 실행할 수 있습니다.
+        {summary.tenantCount > 0
+          ? `전체 ${summary.tenantCount}개 사업장의 멤버를 함께 보고 있습니다.`
+          : '역할 변경과 제거는 소유자만 실행할 수 있습니다.'}
       </Typography>
     </Stack>
   );
@@ -255,19 +282,27 @@ export function AdminMemberInviteDrawer({
   open,
   inviteEmail,
   inviteRole,
+  inviteTenantId,
+  isSystemAdmin,
   isPending,
+  tenants,
   onClose,
   onInviteEmailChange,
   onInviteRoleChange,
+  onInviteTenantChange,
   onSubmit
 }: {
   open: boolean;
   inviteEmail: string;
   inviteRole: TenantMembershipRole;
+  inviteTenantId: string;
+  isSystemAdmin: boolean;
   isPending: boolean;
+  tenants: AdminTenantItem[];
   onClose: () => void;
   onInviteEmailChange: (email: string) => void;
   onInviteRoleChange: (role: TenantMembershipRole) => void;
+  onInviteTenantChange: (tenantId: string) => void;
   onSubmit: () => void;
 }) {
   return (
@@ -277,6 +312,20 @@ export function AdminMemberInviteDrawer({
       title="멤버 초대"
       description="초대 링크는 이메일로 발송됩니다."
     >
+      {isSystemAdmin ? (
+        <TextField
+          select
+          label="초대할 사업장"
+          value={inviteTenantId}
+          onChange={(event) => onInviteTenantChange(event.target.value)}
+        >
+          {tenants.map((tenant) => (
+            <MenuItem key={tenant.id} value={tenant.id}>
+              {tenant.name} ({tenant.slug})
+            </MenuItem>
+          ))}
+        </TextField>
+      ) : null}
       <TextField
         label="이메일"
         value={inviteEmail}
@@ -296,7 +345,11 @@ export function AdminMemberInviteDrawer({
           </MenuItem>
         ))}
       </TextField>
-      <Button variant="contained" disabled={isPending} onClick={onSubmit}>
+      <Button
+        variant="contained"
+        disabled={isPending || (isSystemAdmin && !inviteTenantId)}
+        onClick={onSubmit}
+      >
         {isPending ? '발송 중...' : '초대 보내기'}
       </Button>
     </FormDrawer>

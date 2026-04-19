@@ -5,7 +5,7 @@ import { SectionTabs } from '@/shared/ui/section-tabs';
 const referenceDataSectionItems = [
   {
     href: '/reference-data',
-    label: '준비 상태'
+    label: '기준 데이터 준비 상태'
   },
   {
     href: '/reference-data/funding-accounts',

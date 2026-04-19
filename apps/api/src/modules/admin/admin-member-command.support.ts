@@ -128,7 +128,7 @@ export class AdminMemberCommandSupportService {
         data: {
           role,
           status: 'INVITED',
-          invitedByMembershipId: workspace.membershipId
+          invitedByMembershipId: readTenantMembershipInviterId(workspace)
         }
       });
       return;
@@ -140,10 +140,18 @@ export class AdminMemberCommandSupportService {
         userId,
         role,
         status: 'INVITED',
-        invitedByMembershipId: workspace.membershipId
+        invitedByMembershipId: readTenantMembershipInviterId(workspace)
       }
     });
   }
+}
+
+function readTenantMembershipInviterId(
+  workspace: RequiredWorkspaceContext
+): string | null {
+  return workspace.systemRole === 'SYSTEM_ADMIN'
+    ? null
+    : workspace.membershipId;
 }
 
 export function normalizeAdminInvitationEmail(email: string): string {

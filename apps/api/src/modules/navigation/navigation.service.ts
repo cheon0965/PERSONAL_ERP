@@ -36,6 +36,7 @@ const roleOrder: Record<TenantMembershipRole, number> = {
   EDITOR: 2,
   VIEWER: 3
 };
+const TOPBAR_ACCOUNT_PATH_PREFIX = '/settings/account';
 
 @Injectable()
 export class NavigationService {
@@ -46,12 +47,12 @@ export class NavigationService {
   ): Promise<NavigationMenuTreeResponse> {
     await ensureDefaultWorkspaceNavigation(this.prisma, workspace.tenantId);
     const tree = await this.readTree(workspace.tenantId);
+    const accessibleItems = this.filterTopbarAccountItems(
+      this.filterByRole(tree, workspace.membershipRole as TenantMembershipRole)
+    );
 
     return {
-      items: this.filterByRole(
-        tree,
-        workspace.membershipRole as TenantMembershipRole
-      )
+      items: accessibleItems
     };
   }
 
@@ -183,6 +184,33 @@ export class NavigationService {
       ];
     });
   }
+
+  private filterTopbarAccountItems(
+    items: NavigationMenuItem[]
+  ): NavigationMenuItem[] {
+    return items.flatMap((item) => {
+      if (isTopbarAccountItem(item)) {
+        return [];
+      }
+
+      const children = this.filterTopbarAccountItems(item.children);
+      const shouldKeep =
+        item.href ||
+        children.length > 0 ||
+        item.itemType !== WorkspaceNavigationMenuItemType.GROUP;
+
+      if (!shouldKeep) {
+        return [];
+      }
+
+      return [
+        {
+          ...item,
+          children
+        }
+      ];
+    });
+  }
 }
 
 function buildTree(records: NavigationMenuRecord[]): NavigationMenuItem[] {
@@ -289,4 +317,8 @@ function normalizeRoles(roles: TenantMembershipRole[]): TenantMembershipRole[] {
   return Array.from(new Set(roles)).sort(
     (left, right) => roleOrder[left] - roleOrder[right]
   );
+}
+
+function isTopbarAccountItem(item: NavigationMenuItem) {
+  return item.href?.startsWith(TOPBAR_ACCOUNT_PATH_PREFIX) ?? false;
 }

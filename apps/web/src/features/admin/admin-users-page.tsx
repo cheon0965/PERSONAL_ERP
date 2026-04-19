@@ -1,0 +1,344 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import {
+  Alert,
+  Button,
+  Chip,
+  Stack,
+  Typography,
+  type ChipProps
+} from '@mui/material';
+import type { GridColDef } from '@mui/x-data-grid';
+import type { AdminUserItem } from '@personal-erp/contracts';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuthSession } from '@/shared/auth/auth-provider';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import { DataTableCard } from '@/shared/ui/data-table-card';
+import { FormDrawer } from '@/shared/ui/form-drawer';
+import { appLayout } from '@/shared/ui/layout-metrics';
+import { PageHeader } from '@/shared/ui/page-header';
+import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
+import {
+  adminUsersQueryKey,
+  getAdminUser,
+  getAdminUsers,
+  revokeAdminUserSessions,
+  updateAdminUserEmailVerification,
+  updateAdminUserStatus,
+  updateAdminUserSystemAdmin
+} from './admin.api';
+import { readUserStatusLabel } from './admin-labels';
+
+export function AdminUsersPage() {
+  const queryClient = useQueryClient();
+  const { user } = useAuthSession();
+  const canRead = user?.isSystemAdmin === true;
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const usersQuery = useQuery({
+    queryKey: adminUsersQueryKey,
+    queryFn: getAdminUsers,
+    enabled: canRead
+  });
+  const detailQuery = useQuery({
+    queryKey: [...adminUsersQueryKey, selectedUserId],
+    queryFn: () => getAdminUser(String(selectedUserId)),
+    enabled: Boolean(selectedUserId)
+  });
+
+  const invalidateUsers = async () => {
+    await queryClient.invalidateQueries({ queryKey: adminUsersQueryKey });
+  };
+
+  const statusMutation = useMutation({
+    mutationFn: (input: { userId: string; status: AdminUserItem['status'] }) =>
+      updateAdminUserStatus(input.userId, {
+        status: input.status,
+        reason:
+          input.status === 'ACTIVE' ? undefined : '전체 관리자 수동 상태 변경'
+      }),
+    onSuccess: async () => {
+      setFeedback('사용자 상태를 변경했습니다.');
+      await invalidateUsers();
+    }
+  });
+  const revokeSessionsMutation = useMutation({
+    mutationFn: revokeAdminUserSessions,
+    onSuccess: async (result) => {
+      setFeedback(`세션 ${result.revokedCount}개를 만료했습니다.`);
+      await invalidateUsers();
+    }
+  });
+  const systemAdminMutation = useMutation({
+    mutationFn: (input: { userId: string; isSystemAdmin: boolean }) =>
+      updateAdminUserSystemAdmin(input.userId, {
+        isSystemAdmin: input.isSystemAdmin
+      }),
+    onSuccess: async () => {
+      setFeedback('전체 관리자 권한을 변경했습니다.');
+      await invalidateUsers();
+    }
+  });
+  const emailVerificationMutation = useMutation({
+    mutationFn: (userId: string) =>
+      updateAdminUserEmailVerification(userId, { emailVerified: true }),
+    onSuccess: async () => {
+      setFeedback('이메일 인증 상태를 확인 처리했습니다.');
+      await invalidateUsers();
+    }
+  });
+
+  useDomainHelp({
+    title: '전체 사용자 관리 가이드',
+    description:
+      '전체 사용자 관리는 계정 잠금, 세션 만료, 이메일 인증 보정, 전체 관리자 권한을 최소 범위로 조정하는 화면입니다.',
+    primaryEntity: '사용자 계정',
+    relatedEntities: ['멤버십', '세션', '보안 위협 로그'],
+    truthSource:
+      '로그인 가능 여부는 사용자 상태, 이메일 인증, 활성 세션 상태를 함께 기준으로 판단합니다.',
+    supplementarySections: [
+      {
+        title: '확인 기준',
+        items: [
+          '잠금 또는 비활성 계정은 로그인할 수 없으므로 상태 변경 전 대상 사용자를 확인합니다.',
+          '활성 세션이 많은 사용자는 세션 만료 후 재로그인을 유도합니다.',
+          '전체 관리자 권한 변경은 마지막 전체 관리자 보호 규칙을 반드시 통과해야 합니다.'
+        ]
+      },
+      {
+        title: '후속 안내',
+        links: [
+          {
+            title: '보안 위협 로그',
+            href: '/admin/security-threats',
+            description:
+              '사용자 ID 기준으로 최근 보안 위협 이벤트를 함께 확인합니다.',
+            actionLabel: '보안 위협 로그 열기'
+          }
+        ]
+      }
+    ]
+  });
+
+  const rows = usersQuery.data ?? [];
+  const summary = {
+    total: rows.length,
+    locked: rows.filter((item) => item.status !== 'ACTIVE').length,
+    admins: rows.filter((item) => item.isSystemAdmin).length,
+    activeSessions: rows.reduce(
+      (sum, item) => sum + item.activeSessionCount,
+      0
+    )
+  };
+
+  const columns = useMemo<GridColDef<AdminUserItem>[]>(
+    () => [
+      { field: 'email', headerName: '이메일', flex: 1.4, minWidth: 220 },
+      { field: 'name', headerName: '이름', flex: 1, minWidth: 140 },
+      {
+        field: 'status',
+        headerName: '상태',
+        width: 110,
+        renderCell: (params) => (
+          <Chip
+            label={readUserStatusLabel(params.row.status)}
+            color={readUserStatusColor(params.row.status)}
+            size="small"
+            variant="outlined"
+            sx={{ borderRadius: 1.5, fontWeight: 700 }}
+          />
+        )
+      },
+      {
+        field: 'isSystemAdmin',
+        headerName: '전체 관리자',
+        width: 120,
+        valueFormatter: (value) => (value ? '예' : '아니오')
+      },
+      {
+        field: 'emailVerified',
+        headerName: '이메일 인증',
+        width: 120,
+        valueFormatter: (value) => (value ? '완료' : '미완료')
+      },
+      {
+        field: 'activeSessionCount',
+        headerName: '활성 세션',
+        width: 110
+      },
+      {
+        field: 'membershipCount',
+        headerName: '멤버십',
+        width: 100
+      },
+      {
+        field: 'detail',
+        headerName: '상세',
+        width: 100,
+        sortable: false,
+        filterable: false,
+        renderCell: (params) => (
+          <Button size="small" onClick={() => setSelectedUserId(params.row.id)}>
+            보기
+          </Button>
+        )
+      }
+    ],
+    []
+  );
+
+  const selectedUser = detailQuery.data ?? null;
+
+  return (
+    <Stack spacing={appLayout.pageGap}>
+      <PageHeader
+        eyebrow="전체 관리자"
+        title="전체 사용자 관리"
+        badges={[
+          {
+            label: canRead ? '전체 관리자 전용' : '조회 권한 없음',
+            color: canRead ? 'success' : 'warning'
+          },
+          { label: `사용자 ${summary.total}명` },
+          { label: `잠금/비활성 ${summary.locked}명` },
+          { label: `활성 세션 ${summary.activeSessions}개` }
+        ]}
+      />
+      {!canRead ? (
+        <Alert severity="warning" variant="outlined">
+          전체 사용자 관리는 전체 관리자만 사용할 수 있습니다.
+        </Alert>
+      ) : null}
+      {feedback ? <Alert variant="outlined">{feedback}</Alert> : null}
+      {usersQuery.error ? (
+        <QueryErrorAlert
+          title="전체 사용자 목록을 불러오지 못했습니다."
+          error={usersQuery.error}
+        />
+      ) : null}
+      <DataTableCard
+        title="사용자 목록"
+        description={`전체 관리자 ${summary.admins}명 · 잠금/비활성 ${summary.locked}명`}
+        rows={rows}
+        columns={columns}
+        height={560}
+      />
+
+      <FormDrawer
+        open={Boolean(selectedUserId)}
+        onClose={() => setSelectedUserId(null)}
+        title="사용자 상세"
+        description={selectedUser?.email}
+      >
+        {selectedUser ? (
+          <Stack spacing={2}>
+            <Detail label="이름" value={selectedUser.name} />
+            <Detail
+              label="상태"
+              value={readUserStatusLabel(selectedUser.status)}
+            />
+            <Detail
+              label="이메일 인증"
+              value={selectedUser.emailVerified ? '완료' : '미완료'}
+            />
+            <Detail
+              label="세션"
+              value={`${selectedUser.activeSessionCount}개 활성 / 전체 ${selectedUser.sessionCount}개`}
+            />
+            <Detail
+              label="멤버십"
+              value={`${selectedUser.activeMembershipCount}개 활성 / 전체 ${selectedUser.membershipCount}개`}
+            />
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Button
+                variant="outlined"
+                color={selectedUser.status === 'ACTIVE' ? 'warning' : 'success'}
+                disabled={statusMutation.isPending}
+                onClick={() =>
+                  statusMutation.mutate({
+                    userId: selectedUser.id,
+                    status:
+                      selectedUser.status === 'ACTIVE' ? 'LOCKED' : 'ACTIVE'
+                  })
+                }
+              >
+                {selectedUser.status === 'ACTIVE' ? '계정 잠금' : '잠금 해제'}
+              </Button>
+              <Button
+                variant="outlined"
+                disabled={revokeSessionsMutation.isPending}
+                onClick={() => revokeSessionsMutation.mutate(selectedUser.id)}
+              >
+                모든 세션 만료
+              </Button>
+              {!selectedUser.emailVerified ? (
+                <Button
+                  variant="outlined"
+                  onClick={() =>
+                    emailVerificationMutation.mutate(selectedUser.id)
+                  }
+                >
+                  이메일 인증 처리
+                </Button>
+              ) : null}
+              <Button
+                variant="outlined"
+                color={selectedUser.isSystemAdmin ? 'warning' : 'primary'}
+                disabled={systemAdminMutation.isPending}
+                onClick={() =>
+                  systemAdminMutation.mutate({
+                    userId: selectedUser.id,
+                    isSystemAdmin: !selectedUser.isSystemAdmin
+                  })
+                }
+              >
+                {selectedUser.isSystemAdmin
+                  ? '전체 관리자 회수'
+                  : '전체 관리자 부여'}
+              </Button>
+            </Stack>
+            <Stack spacing={1}>
+              <Typography variant="subtitle2">멤버십</Typography>
+              {selectedUser.memberships.map((membership) => (
+                <Typography key={membership.id} variant="body2">
+                  {membership.tenantName} / {membership.role} /{' '}
+                  {membership.status}
+                </Typography>
+              ))}
+            </Stack>
+          </Stack>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            상세 정보를 불러오는 중입니다.
+          </Typography>
+        )}
+      </FormDrawer>
+    </Stack>
+  );
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <Stack spacing={0.5}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
+        {value}
+      </Typography>
+    </Stack>
+  );
+}
+
+function readUserStatusColor(status: AdminUserItem['status']): ChipProps['color'] {
+  switch (status) {
+    case 'ACTIVE':
+      return 'success';
+    case 'LOCKED':
+      return 'warning';
+    case 'DISABLED':
+      return 'default';
+  }
+}

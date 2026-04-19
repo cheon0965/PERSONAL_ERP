@@ -21,6 +21,10 @@ export type RequestTestUser = {
   email: string;
   name: string;
   passwordHash: string;
+  status?: 'ACTIVE' | 'LOCKED' | 'DISABLED';
+  lockedReason?: string | null;
+  lockedAt?: Date | null;
+  isSystemAdmin?: boolean;
   emailVerifiedAt: Date | null;
   createdAt: Date;
   settings?: {
@@ -208,6 +212,9 @@ export type RequestTestState = {
     refreshTokenHash: string;
     expiresAt: Date;
     revokedAt: Date | null;
+    supportTenantId?: string | null;
+    supportLedgerId?: string | null;
+    supportStartedAt?: Date | null;
     createdAt: Date;
     updatedAt: Date;
   }>;
@@ -249,6 +256,29 @@ export type RequestTestState = {
     requestId: string | null;
     path: string | null;
     clientIpHash: string | null;
+    metadata: Record<string, string | number | boolean | null> | null;
+    occurredAt: Date;
+  }>;
+  securityThreatEvents: Array<{
+    id: string;
+    severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    eventCategory:
+      | 'AUTHENTICATION'
+      | 'REGISTRATION'
+      | 'SESSION'
+      | 'EMAIL_VERIFICATION'
+      | 'ACCESS_CONTROL'
+      | 'BROWSER_ORIGIN'
+      | 'EMAIL_DELIVERY'
+      | 'SYSTEM';
+    eventName: string;
+    source: string;
+    requestId: string | null;
+    path: string | null;
+    clientIpHash: string | null;
+    userId: string | null;
+    sessionId: string | null;
+    reason: string | null;
     metadata: Record<string, string | number | boolean | null> | null;
     occurredAt: Date;
   }>;
