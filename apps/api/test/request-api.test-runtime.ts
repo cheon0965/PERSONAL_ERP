@@ -263,6 +263,31 @@ export async function createRequestTestContext(): Promise<RequestTestContext> {
           headers: response.headers
         };
       },
+      requestFormData: async (path, options) => {
+        const headers = new Headers(options.headers);
+        const response = await fetch(`${baseUrl}${path}`, {
+          method: options.method ?? 'POST',
+          headers,
+          body: options.body
+        });
+
+        const text = await response.text();
+        let parsedBody: unknown = null;
+
+        if (text) {
+          try {
+            parsedBody = JSON.parse(text) as unknown;
+          } catch {
+            parsedBody = text;
+          }
+        }
+
+        return {
+          status: response.status,
+          body: parsedBody,
+          headers: response.headers
+        };
+      },
       close: async () => {
         await app.close();
         restoreEnv();

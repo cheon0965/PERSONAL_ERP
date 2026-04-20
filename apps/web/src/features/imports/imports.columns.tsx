@@ -30,6 +30,12 @@ export function buildImportBatchColumns(input: {
         String(value)
     },
     {
+      field: 'fundingAccountName',
+      headerName: '연결 계좌/카드',
+      flex: 1,
+      valueFormatter: (value) => (value ? String(value) : '-')
+    },
+    {
       field: 'parseStatus',
       headerName: '읽기 상태',
       flex: 0.8,
@@ -70,8 +76,28 @@ export function buildImportedRowsColumns(input: {
     { field: 'occurredOn', headerName: '거래일', flex: 0.8 },
     { field: 'title', headerName: '설명', flex: 1.3 },
     {
+      field: 'direction',
+      headerName: '입출금',
+      flex: 0.7,
+      valueFormatter: (value) =>
+        value === 'DEPOSIT'
+          ? '입금'
+          : value === 'WITHDRAWAL'
+            ? '출금'
+            : value === 'REVERSAL'
+              ? '승인취소'
+              : '-'
+    },
+    {
       field: 'amount',
       headerName: '금액',
+      flex: 0.9,
+      valueFormatter: (value) =>
+        value == null ? '-' : formatWon(Number(value))
+    },
+    {
+      field: 'balanceAfter',
+      headerName: '거래후잔액',
       flex: 0.9,
       valueFormatter: (value) =>
         value == null ? '-' : formatWon(Number(value))

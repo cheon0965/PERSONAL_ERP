@@ -458,6 +458,7 @@ function mapLedgerTransactionFlowKindToCollectedTransactionType(
     case LedgerTransactionFlowKind.CARRY_FORWARD:
       return 'TRANSFER';
     case LedgerTransactionFlowKind.ADJUSTMENT:
+      return 'REVERSAL';
     case LedgerTransactionFlowKind.EXPENSE:
     default:
       return 'EXPENSE';

@@ -116,6 +116,10 @@ export function CollectImportedRowDialog({
             <MenuItem value="INCOME">수입</MenuItem>
             <MenuItem value="EXPENSE">지출</MenuItem>
             <MenuItem value="TRANSFER">이체</MenuItem>
+            {selectedRow.collectTypeHint === 'REVERSAL' ||
+            collectForm.type === 'REVERSAL' ? (
+              <MenuItem value="REVERSAL">승인취소</MenuItem>
+            ) : null}
           </TextField>
           <TextField
             select

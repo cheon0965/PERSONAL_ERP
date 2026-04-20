@@ -16,6 +16,7 @@ export function TransactionFormFields({
   form,
   availableFundingAccounts,
   filteredCategories,
+  includeReversalTypeOption,
   isBusy,
   submitLabel
 }: {
@@ -23,6 +24,7 @@ export function TransactionFormFields({
   form: UseFormReturn<TransactionFormInput>;
   availableFundingAccounts: FundingAccountItem[];
   filteredCategories: CategoryItem[];
+  includeReversalTypeOption: boolean;
   isBusy: boolean;
   submitLabel: string;
 }) {
@@ -81,6 +83,9 @@ export function TransactionFormFields({
                 <MenuItem value="EXPENSE">지출</MenuItem>
                 <MenuItem value="INCOME">수입</MenuItem>
                 <MenuItem value="TRANSFER">이체</MenuItem>
+                {includeReversalTypeOption ? (
+                  <MenuItem value="REVERSAL">승인취소</MenuItem>
+                ) : null}
               </TextField>
             )}
           />
@@ -130,7 +135,7 @@ export function TransactionFormFields({
                 helperText={
                   filteredCategories.length === 0
                     ? '선택한 거래 유형에 맞는 카테고리가 없으면 비워 둘 수 있습니다.'
-                    : '이체는 카테고리 없이 전표 준비 상태가 됩니다. 손익 거래는 카테고리가 비어 있으면 검토 상태로 남습니다.'
+                    : '이체와 승인취소는 카테고리 없이 전표 준비 상태가 됩니다. 손익 거래는 카테고리가 비어 있으면 검토 상태로 남습니다.'
                 }
                 name={field.name}
                 value={field.value ?? ''}

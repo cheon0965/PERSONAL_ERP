@@ -5,7 +5,8 @@ import type {
   CollectedTransactionStatus,
   JournalEntrySourceKind,
   JournalEntryStatus,
-  PostingPolicyKey
+  PostingPolicyKey,
+  Prisma
 } from '@prisma/client';
 import type { JournalEntryRecord } from '../../../journal-entries/public';
 
@@ -35,8 +36,33 @@ export type ConfirmationCollectedTransaction = {
   ledgerTransactionType: {
     postingPolicyKey: PostingPolicyKey;
   };
+  importedRow: {
+    id: string;
+    batchId: string;
+    rawPayload: Prisma.JsonValue;
+  } | null;
   postedJournalEntry: {
     id: string;
+  } | null;
+};
+
+export type ConfirmationReversalTarget = {
+  id: string;
+  createdCollectedTransaction: {
+    id: string;
+    status: CollectedTransactionStatus;
+    postedJournalEntry: {
+      id: string;
+      entryNumber: string;
+      status: JournalEntryStatus;
+      lines: Array<{
+        accountSubjectId: string;
+        fundingAccountId: string | null;
+        debitAmount: Prisma.Decimal;
+        creditAmount: Prisma.Decimal;
+        description: string | null;
+      }>;
+    } | null;
   } | null;
 };
 
@@ -55,7 +81,7 @@ export type ConfirmationJournalLine = {
   fundingAccountId?: string;
   debitAmount: number;
   creditAmount: number;
-  description: string;
+  description?: string;
 };
 
 export type CreateConfirmationJournalEntryInput = {
@@ -71,6 +97,9 @@ export type CreateConfirmationJournalEntryInput = {
   createdByActorType: AuditActorType;
   createdByMembershipId: string;
   lines: ConfirmationJournalLine[];
+  reversesJournalEntryId?: string | null;
+  correctsJournalEntryId?: string | null;
+  correctionReason?: string | null;
 };
 
 export abstract class ConfirmTransactionContext {
@@ -105,6 +134,38 @@ export abstract class ConfirmTransactionContext {
   abstract markMatchedPlanItemConfirmed(
     matchedPlanItemId: string | null | undefined
   ): Promise<void>;
+
+  abstract findReversalTarget(
+    scope: ConfirmationWorkspaceScope,
+    importBatchId: string,
+    rowNumber: number
+  ): Promise<ConfirmationReversalTarget | null>;
+
+  abstract updateJournalEntryStatusInWorkspace(input: {
+    tenantId: string;
+    ledgerId: string;
+    journalEntryId: string;
+    expectedStatuses: JournalEntryStatus[];
+    nextStatus: JournalEntryStatus;
+  }): Promise<number>;
+
+  abstract findCurrentJournalEntryStatusInWorkspace(
+    scope: ConfirmationWorkspaceScope,
+    journalEntryId: string
+  ): Promise<JournalEntryStatus | null>;
+
+  abstract updateCollectedTransactionStatusInWorkspace(input: {
+    tenantId: string;
+    ledgerId: string;
+    collectedTransactionId: string;
+    expectedStatuses: CollectedTransactionStatus[];
+    nextStatus: CollectedTransactionStatus;
+  }): Promise<number>;
+
+  abstract findCurrentCollectedTransactionStatusInWorkspace(
+    scope: ConfirmationWorkspaceScope,
+    collectedTransactionId: string
+  ): Promise<CollectedTransactionStatus | null>;
 }
 
 export abstract class ConfirmCollectedTransactionStorePort {

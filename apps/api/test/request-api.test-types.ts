@@ -180,6 +180,7 @@ export type RequestTestState = {
     sourceKind: ImportSourceKind;
     fileName: string;
     fileHash: string;
+    fundingAccountId: string | null;
     rowCount: number;
     parseStatus: ImportBatchParseStatus;
     uploadedByMembershipId: string;
@@ -497,6 +498,12 @@ export type RequestOptions = {
   body?: unknown;
 };
 
+export type RequestFormDataOptions = {
+  method?: string;
+  headers?: Record<string, string>;
+  body: FormData;
+};
+
 export type RequestResult = {
   status: number;
   body: unknown;
@@ -511,6 +518,10 @@ export type RequestTestContext = {
     details: Record<string, unknown>;
   }>;
   request: (path: string, options?: RequestOptions) => Promise<RequestResult>;
+  requestFormData: (
+    path: string,
+    options: RequestFormDataOptions
+  ) => Promise<RequestResult>;
   authHeaders: (userId?: string) => Record<string, string>;
   close: () => Promise<void>;
 };

@@ -23,22 +23,23 @@ export class PrismaImportBatchWriteAdapter extends ImportBatchWritePort {
         sourceKind: input.sourceKind,
         fileName: input.fileName,
         fileHash: input.fileHash,
+        fundingAccountId: input.fundingAccountId,
         rowCount: input.rowCount,
         parseStatus: input.parseStatus,
         uploadedByMembershipId: input.workspace.membershipId
       }
     });
 
-    for (const row of input.rows) {
-      await tx.importedRow.create({
-        data: {
+    if (input.rows.length > 0) {
+      await tx.importedRow.createMany({
+        data: input.rows.map((row) => ({
           batchId: batch.id,
           rowNumber: row.rowNumber,
           rawPayload: row.rawPayload,
           parseStatus: row.parseStatus,
           parseError: row.parseError,
           sourceFingerprint: row.sourceFingerprint
-        }
+        }))
       });
     }
 

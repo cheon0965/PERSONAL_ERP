@@ -64,6 +64,13 @@ export function createCollectedTransactionReadMethods(
             title?: boolean;
           };
         };
+        importedRow?: {
+          select?: {
+            id?: boolean;
+            batchId?: boolean;
+            rawPayload?: boolean;
+          };
+        };
         fundingAccountId?: boolean;
         categoryId?: boolean;
         memo?: boolean;
@@ -124,6 +131,13 @@ export function createCollectedTransactionReadMethods(
             postingPolicyKey?: boolean;
           };
         };
+        importedRow?: {
+          select?: {
+            id?: boolean;
+            batchId?: boolean;
+            rawPayload?: boolean;
+          };
+        };
         postedJournalEntry?: {
           select?: {
             id?: boolean;
@@ -167,6 +181,11 @@ export function createCollectedTransactionReadMethods(
       const matchedPlanItem = candidate.matchedPlanItemId
         ? findPlanItem(candidate.matchedPlanItemId)
         : null;
+      const importedRow = candidate.importedRowId
+        ? (state.importedRows.find(
+            (item) => item.id === candidate.importedRowId
+          ) ?? null)
+        : null;
       const postedJournalEntry = resolveJournalEntryByCollectedTransaction(
         candidate.id
       );
@@ -175,7 +194,9 @@ export function createCollectedTransactionReadMethods(
           ? 'INCOME_BASIC'
           : candidate.ledgerTransactionTypeId === 'ltt-1-transfer'
             ? 'TRANSFER_BASIC'
-            : 'EXPENSE_BASIC';
+            : candidate.ledgerTransactionTypeId === 'ltt-1-adjustment'
+              ? 'MANUAL_ADJUSTMENT'
+              : 'EXPENSE_BASIC';
 
       if (args.select) {
         return {
@@ -201,6 +222,23 @@ export function createCollectedTransactionReadMethods(
                         : {}),
                       ...(args.select.matchedPlanItem.select?.title
                         ? { title: matchedPlanItem.title }
+                        : {})
+                    }
+                  : null
+              }
+            : {}),
+          ...(args.select.importedRow
+            ? {
+                importedRow: importedRow
+                  ? {
+                      ...(args.select.importedRow.select?.id
+                        ? { id: importedRow.id }
+                        : {}),
+                      ...(args.select.importedRow.select?.batchId
+                        ? { batchId: importedRow.batchId }
+                        : {}),
+                      ...(args.select.importedRow.select?.rawPayload
+                        ? { rawPayload: importedRow.rawPayload }
                         : {})
                     }
                   : null
@@ -345,6 +383,23 @@ export function createCollectedTransactionReadMethods(
                   ? { postingPolicyKey }
                   : {})
               }
+            }
+          : {}),
+        ...(args.include.importedRow
+          ? {
+              importedRow: importedRow
+                ? {
+                    ...(args.include.importedRow.select?.id
+                      ? { id: importedRow.id }
+                      : {}),
+                    ...(args.include.importedRow.select?.batchId
+                      ? { batchId: importedRow.batchId }
+                      : {}),
+                    ...(args.include.importedRow.select?.rawPayload
+                      ? { rawPayload: importedRow.rawPayload }
+                      : {})
+                  }
+                : null
             }
           : {}),
         ...(args.include.postedJournalEntry

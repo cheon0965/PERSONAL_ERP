@@ -1,7 +1,12 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { DataGrid, type GridColDef } from '@mui/x-data-grid';
+import {
+  DataGrid,
+  type DataGridProps,
+  type GridColDef,
+  type GridRowSelectionModel
+} from '@mui/x-data-grid';
 import { Card, CardContent, Stack, Typography } from '@mui/material';
 import { appLayout } from './layout-metrics';
 
@@ -13,6 +18,10 @@ type DataTableCardProps<T extends { id: string }> = {
   rows: T[];
   columns: GridColDef<T>[];
   height?: number;
+  checkboxSelection?: boolean;
+  rowSelectionModel?: GridRowSelectionModel;
+  onRowSelectionModelChange?: DataGridProps<T>['onRowSelectionModelChange'];
+  isRowSelectable?: DataGridProps<T>['isRowSelectable'];
 };
 
 export function DataTableCard<T extends { id: string }>({
@@ -22,7 +31,11 @@ export function DataTableCard<T extends { id: string }>({
   toolbar,
   rows,
   columns,
-  height = 440
+  height = 440,
+  checkboxSelection = false,
+  rowSelectionModel,
+  onRowSelectionModelChange,
+  isRowSelectable
 }: DataTableCardProps<T>) {
   return (
     <Card sx={{ height: '100%', display: 'flex' }}>
@@ -71,6 +84,10 @@ export function DataTableCard<T extends { id: string }>({
                 }
               }}
               disableRowSelectionOnClick
+              checkboxSelection={checkboxSelection}
+              rowSelectionModel={rowSelectionModel}
+              onRowSelectionModelChange={onRowSelectionModelChange}
+              isRowSelectable={isRowSelectable}
             />
           </div>
         </Stack>

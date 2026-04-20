@@ -219,6 +219,7 @@ function seedOperationsConsoleState(
     sourceKind: ImportSourceKind.BANK_CSV,
     fileName: 'operations-import.csv',
     fileHash: 'hash-operations-1',
+    fundingAccountId: null,
     rowCount: 2,
     parseStatus: ImportBatchParseStatus.PARTIAL,
     uploadedByMembershipId: 'membership-1',

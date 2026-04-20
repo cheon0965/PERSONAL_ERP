@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import type { Route } from 'next';
 import { Alert, Button, Grid, Stack, Typography } from '@mui/material';
 import { useRouter } from 'next/navigation';
@@ -41,6 +42,16 @@ export function ImportsPage({
     ? '선택한 업로드 배치의 행을 검토하고, 필요한 항목만 수집 거래로 등록하는 전용 작업 화면입니다.'
     : '원본을 업로드 배치로 보관하고, 검토할 배치를 선택해 작업대로 이어집니다.';
 
+  async function handleDeleteSelectedBatch() {
+    const deleted = await page.deleteSelectedBatch();
+
+    if (deleted) {
+      React.startTransition(() => {
+        router.push('/imports' as Route);
+      });
+    }
+  }
+
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
@@ -71,6 +82,10 @@ export function ImportsPage({
           {
             label: isDetailMode ? '현재 배치' : '선택 배치',
             value: page.selectedBatch?.fileName ?? '-'
+          },
+          {
+            label: '연결 계좌/카드',
+            value: page.selectedBatch?.fundingAccountName ?? '-'
           },
           {
             label: '등록 가능 행',
@@ -115,10 +130,13 @@ export function ImportsPage({
           <ImportsSelectionSummaryCard
             isDetailMode={isDetailMode}
             selectedBatchFileName={page.selectedBatch?.fileName ?? null}
+            fundingAccountName={page.selectedBatch?.fundingAccountName ?? null}
             rowCount={page.selectedBatchRows.length}
             collectableRowCount={collectableRowCount}
             collectedRowCount={collectedRowCount}
             selectedBatchWorkbenchHref={selectedBatchWorkbenchHref}
+            deleteSelectedBatchPending={page.deleteSelectedBatchPending}
+            onDeleteSelectedBatch={handleDeleteSelectedBatch}
           />
         </Grid>
       </Grid>
@@ -137,29 +155,23 @@ export function ImportsPage({
           actionLabel="배치 선택"
         />
       ) : page.selectedBatch ? (
-        <Grid container spacing={appLayout.sectionGap}>
-          <Grid size={{ xs: 12, xl: 4.5 }}>
-            <ImportBatchesGrid
-              batches={page.batches}
-              selectedBatchId={page.selectedBatch?.id ?? null}
-              onSelectBatch={(batch) => {
-                page.selectBatch(batch);
-                router.push(`/imports/${batch.id}` as Route);
-              }}
-              helperText="다른 배치를 선택하면 동일한 작업대 레이아웃 안에서 해당 배치로 바로 전환합니다."
-              actionLabel="작업대로 전환"
-            />
-          </Grid>
-
-          <Grid size={{ xs: 12, xl: 7.5 }}>
-            <ImportedRowsGrid
-              selectedBatch={page.selectedBatch}
-              rows={page.selectedBatchRows}
-              selectedRowId={page.selectedRow?.id ?? null}
-              onPrepareCollect={page.prepareCollectRow}
-            />
-          </Grid>
-        </Grid>
+        <ImportedRowsGrid
+          selectedBatch={page.selectedBatch}
+          rows={page.selectedBatchRows}
+          selectedRowId={page.selectedRow?.id ?? null}
+          selectedRowIds={page.selectedRowIds}
+          selectedRowsCount={page.selectedRowsCount}
+          currentPeriodCollectableRowCount={
+            page.currentPeriodCollectableRowCount
+          }
+          selectedCurrentPeriodCollectableRowCount={
+            page.selectedCurrentPeriodCollectableRowCount
+          }
+          bulkCollectPending={page.isBulkCollectPending}
+          onSelectedRowIdsChange={page.selectRows}
+          onPrepareCollect={page.prepareCollectRow}
+          onBulkCollect={page.submitBulkCollect}
+        />
       ) : (
         <SectionCard
           title="선택한 배치를 찾지 못했습니다"
@@ -174,6 +186,7 @@ export function ImportsPage({
       <ImportUploadDialog
         open={page.isUploadDrawerOpen}
         form={page.uploadForm}
+        fundingAccounts={page.uploadFundingAccounts}
         submitPending={page.submitUploadPending}
         onClose={page.closeUploadDrawer}
         onChange={page.updateUploadForm}
@@ -202,17 +215,23 @@ export function ImportsPage({
 function ImportsSelectionSummaryCard({
   isDetailMode,
   selectedBatchFileName,
+  fundingAccountName,
   rowCount,
   collectableRowCount,
   collectedRowCount,
-  selectedBatchWorkbenchHref
+  selectedBatchWorkbenchHref,
+  deleteSelectedBatchPending,
+  onDeleteSelectedBatch
 }: {
   isDetailMode: boolean;
   selectedBatchFileName: string | null;
+  fundingAccountName: string | null;
   rowCount: number;
   collectableRowCount: number;
   collectedRowCount: number;
   selectedBatchWorkbenchHref: string | null;
+  deleteSelectedBatchPending: boolean;
+  onDeleteSelectedBatch: () => void;
 }) {
   return (
     <SectionCard
@@ -226,10 +245,16 @@ function ImportsSelectionSummaryCard({
       {selectedBatchFileName ? (
         <Stack spacing={appLayout.fieldGap}>
           <Grid container spacing={appLayout.fieldGap}>
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <SummaryInfoItem
                 label="배치 파일"
                 value={selectedBatchFileName}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <SummaryInfoItem
+                label="연결 계좌/카드"
+                value={fundingAccountName ?? '-'}
               />
             </Grid>
             <Grid size={{ xs: 12, md: 2 }}>
@@ -261,6 +286,26 @@ function ImportsSelectionSummaryCard({
               </Typography>
               <Button href={selectedBatchWorkbenchHref} variant="outlined">
                 선택 배치 작업대
+              </Button>
+            </Stack>
+          ) : null}
+          {isDetailMode ? (
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              justifyContent="space-between"
+              alignItems={{ xs: 'flex-start', sm: 'center' }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                배치 삭제는 연결된 수집 거래가 없는 경우에만 허용됩니다.
+              </Typography>
+              <Button
+                color="error"
+                variant="outlined"
+                onClick={onDeleteSelectedBatch}
+                disabled={deleteSelectedBatchPending}
+              >
+                배치 삭제
               </Button>
             </Stack>
           ) : null}

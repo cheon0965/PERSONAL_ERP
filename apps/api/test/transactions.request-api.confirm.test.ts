@@ -481,3 +481,252 @@ test('POST /collected-transactions/:id/confirm returns 403 when the current memb
     await context.close();
   }
 });
+
+test('POST /collected-transactions/:id/confirm posts 승인취소 imports as 취소전표 and reverses the original journal entry', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push({
+      id: 'period-open-confirm-reversal',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 4,
+      startDate: new Date('2026-04-01T00:00:00.000Z'),
+      endDate: new Date('2026-05-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.OPEN,
+      nextJournalEntrySequence: 8,
+      openedAt: new Date('2026-04-01T00:00:00.000Z'),
+      lockedAt: null,
+      createdAt: new Date('2026-04-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-04-01T00:00:00.000Z')
+    });
+
+    context.state.importBatches.push({
+      id: 'import-batch-confirm-reversal',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-open-confirm-reversal',
+      sourceKind: 'IM_BANK_PDF',
+      fileName: '거래내역조회.pdf',
+      fileHash: 'hash-confirm-reversal',
+      fundingAccountId: 'acc-1',
+      rowCount: 2,
+      parseStatus: 'COMPLETED',
+      uploadedByMembershipId: 'membership-1',
+      uploadedAt: new Date('2026-04-19T12:00:00.000Z')
+    });
+
+    context.state.importedRows.push(
+      {
+        id: 'imported-row-confirm-reversal-source',
+        batchId: 'import-batch-confirm-reversal',
+        rowNumber: 3,
+        rawPayload: {
+          parsed: {
+            occurredOn: '2026-04-18',
+            title: '기분좋은self주유',
+            amount: 140000,
+            direction: 'WITHDRAWAL',
+            directionLabel: '출금',
+            collectTypeHint: 'EXPENSE',
+            balanceAfter: 860000,
+            reversalTargetRowNumber: null
+          }
+        },
+        parseStatus: 'PARSED',
+        parseError: null,
+        sourceFingerprint: 'sf:v1:confirm-reversal-source'
+      },
+      {
+        id: 'imported-row-confirm-reversal-cancel',
+        batchId: 'import-batch-confirm-reversal',
+        rowNumber: 5,
+        rawPayload: {
+          parsed: {
+            occurredOn: '2026-04-19',
+            title: '기분좋은self주유',
+            amount: 140000,
+            direction: 'REVERSAL',
+            directionLabel: '승인취소',
+            collectTypeHint: 'REVERSAL',
+            balanceAfter: 1000000,
+            reversalTargetRowNumber: 3
+          }
+        },
+        parseStatus: 'PARSED',
+        parseError: null,
+        sourceFingerprint: 'sf:v1:confirm-reversal-cancel'
+      }
+    );
+
+    context.state.collectedTransactions.push(
+      {
+        id: 'ctx-confirm-reversal-source',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-open-confirm-reversal',
+        ledgerTransactionTypeId: 'ltt-1-expense',
+        fundingAccountId: 'acc-1',
+        categoryId: 'cat-1',
+        matchedPlanItemId: null,
+        importBatchId: 'import-batch-confirm-reversal',
+        importedRowId: 'imported-row-confirm-reversal-source',
+        sourceFingerprint: 'sf:v1:confirm-reversal-source',
+        title: '기분좋은self주유',
+        occurredOn: new Date('2026-04-18T00:00:00.000Z'),
+        amount: 140000,
+        status: CollectedTransactionStatus.POSTED,
+        memo: null,
+        createdAt: new Date('2026-04-18T09:00:00.000Z'),
+        updatedAt: new Date('2026-04-18T09:00:00.000Z')
+      },
+      {
+        id: 'ctx-confirm-reversal-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-open-confirm-reversal',
+        ledgerTransactionTypeId: 'ltt-1-adjustment',
+        fundingAccountId: 'acc-1',
+        categoryId: null,
+        matchedPlanItemId: null,
+        importBatchId: 'import-batch-confirm-reversal',
+        importedRowId: 'imported-row-confirm-reversal-cancel',
+        sourceFingerprint: 'sf:v1:confirm-reversal-cancel',
+        title: '기분좋은self주유',
+        occurredOn: new Date('2026-04-19T00:00:00.000Z'),
+        amount: 140000,
+        status: CollectedTransactionStatus.READY_TO_POST,
+        memo: null,
+        createdAt: new Date('2026-04-19T09:00:00.000Z'),
+        updatedAt: new Date('2026-04-19T09:00:00.000Z')
+      }
+    );
+
+    context.state.journalEntries.push({
+      id: 'je-confirm-reversal-source-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-open-confirm-reversal',
+      entryNumber: '202604-0007',
+      entryDate: new Date('2026-04-18T00:00:00.000Z'),
+      sourceKind: 'COLLECTED_TRANSACTION',
+      sourceCollectedTransactionId: 'ctx-confirm-reversal-source',
+      reversesJournalEntryId: null,
+      correctsJournalEntryId: null,
+      correctionReason: null,
+      status: 'POSTED',
+      memo: '기분좋은self주유',
+      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+      createdByMembershipId: 'membership-1',
+      createdAt: new Date('2026-04-18T09:05:00.000Z'),
+      updatedAt: new Date('2026-04-18T09:05:00.000Z'),
+      lines: [
+        {
+          id: 'jel-confirm-reversal-source-1',
+          lineNumber: 1,
+          accountSubjectId: 'as-1-5100',
+          fundingAccountId: null,
+          debitAmount: 140000,
+          creditAmount: 0,
+          description: '기분좋은self주유'
+        },
+        {
+          id: 'jel-confirm-reversal-source-2',
+          lineNumber: 2,
+          accountSubjectId: 'as-1-1010',
+          fundingAccountId: 'acc-1',
+          debitAmount: 0,
+          creditAmount: 140000,
+          description: '기분좋은self주유'
+        }
+      ]
+    });
+
+    const response = await context.request(
+      '/collected-transactions/ctx-confirm-reversal-1/confirm',
+      {
+        method: 'POST',
+        headers: context.authHeaders()
+      }
+    );
+
+    const body = response.body as Record<string, unknown>;
+    const createdJournalEntry = context.state.journalEntries.find(
+      (candidate) => candidate.id === 'je-2'
+    );
+
+    assert.equal(response.status, 201);
+    assert.equal(body.id, 'je-2');
+    assert.equal(body.entryNumber, '202604-0008');
+    assert.equal(body.sourceKind, 'MANUAL_ADJUSTMENT');
+    assert.equal(body.memo, '기분좋은self주유 승인취소');
+    assert.equal(body.sourceCollectedTransactionId, 'ctx-confirm-reversal-1');
+    assert.equal(body.sourceCollectedTransactionTitle, '기분좋은self주유');
+    assert.equal(body.reversesJournalEntryId, 'je-confirm-reversal-source-1');
+    assert.equal(body.reversesJournalEntryNumber, '202604-0007');
+    assert.equal(body.correctsJournalEntryId, null);
+    assert.equal(body.correctionReason, null);
+
+    assert.deepEqual(
+      createdJournalEntry?.lines.map((line) => ({
+        lineNumber: line.lineNumber,
+        accountSubjectId: line.accountSubjectId,
+        fundingAccountId: line.fundingAccountId,
+        debitAmount: line.debitAmount,
+        creditAmount: line.creditAmount
+      })),
+      [
+        {
+          lineNumber: 1,
+          accountSubjectId: 'as-1-5100',
+          fundingAccountId: null,
+          debitAmount: 0,
+          creditAmount: 140000
+        },
+        {
+          lineNumber: 2,
+          accountSubjectId: 'as-1-1010',
+          fundingAccountId: 'acc-1',
+          debitAmount: 140000,
+          creditAmount: 0
+        }
+      ]
+    );
+
+    assert.equal(
+      context.state.journalEntries.find(
+        (candidate) => candidate.id === 'je-confirm-reversal-source-1'
+      )?.status,
+      'REVERSED'
+    );
+    assert.equal(
+      context.state.collectedTransactions.find(
+        (candidate) => candidate.id === 'ctx-confirm-reversal-source'
+      )?.status,
+      CollectedTransactionStatus.CORRECTED
+    );
+    assert.equal(
+      context.state.collectedTransactions.find(
+        (candidate) => candidate.id === 'ctx-confirm-reversal-1'
+      )?.status,
+      CollectedTransactionStatus.POSTED
+    );
+
+    assert.ok(
+      context.securityEvents.some(
+        (candidate) =>
+          candidate.level === 'log' &&
+          candidate.event === 'audit.action_succeeded' &&
+          candidate.details.requestId ===
+            response.headers.get('x-request-id') &&
+          candidate.details.action === 'collected_transaction.confirm' &&
+          candidate.details.collectedTransactionId ===
+            'ctx-confirm-reversal-1' &&
+          candidate.details.journalEntryId === 'je-2'
+      )
+    );
+  } finally {
+    await context.close();
+  }
+});

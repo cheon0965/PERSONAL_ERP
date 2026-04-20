@@ -101,6 +101,7 @@ export function pushImportBatch(
     sourceKind: ImportSourceKind.MANUAL_UPLOAD,
     fileName: 'collect-me.csv',
     fileHash: 'hash-collect',
+    fundingAccountId: null,
     rowCount: 1,
     parseStatus: ImportBatchParseStatus.COMPLETED,
     uploadedByMembershipId: 'membership-1',

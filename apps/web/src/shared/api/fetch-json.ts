@@ -52,6 +52,32 @@ export async function postJson<TResponse, TRequest>(
   );
 }
 
+export async function postFormData<TResponse>(
+  path: string,
+  formData: FormData,
+  fallback: TResponse
+): Promise<TResponse> {
+  return fetchJsonWithConfig(
+    path,
+    fallback,
+    {
+      apiBaseUrl: API_BASE_URL,
+      demoFallbackEnabled: webRuntime.demoFallbackEnabled,
+      fetchImpl: browserFetch,
+      getAccessToken: getStoredAccessToken,
+      refreshAccessToken: refreshStoredAccessToken,
+      onUnauthorized: () => {
+        handleUnauthorizedSession('unauthorized_response');
+      }
+    },
+    {
+      requireAuth: true,
+      method: 'POST',
+      formData
+    }
+  );
+}
+
 export async function patchJson<TResponse, TRequest>(
   path: string,
   body: TRequest,
@@ -115,6 +141,7 @@ type FetchJsonOptions = {
   requireAuth?: boolean;
   method?: string;
   body?: unknown;
+  formData?: FormData;
   allowDemoFallback?: boolean;
 };
 
@@ -179,7 +206,7 @@ async function sendRequest<T>(
   allowRefresh: boolean
 ): Promise<T> {
   const headers = new Headers();
-  let body: string | undefined;
+  let body: BodyInit | undefined;
 
   if (options.requireAuth) {
     const token = config.getAccessToken?.();
@@ -193,9 +220,17 @@ async function sendRequest<T>(
     headers.set('Authorization', `Bearer ${token}`);
   }
 
+  if (options.body !== undefined && options.formData !== undefined) {
+    throw new Error('JSON body와 FormData는 동시에 보낼 수 없습니다.');
+  }
+
   if (options.body !== undefined) {
     headers.set('Content-Type', 'application/json');
     body = JSON.stringify(options.body);
+  }
+
+  if (options.formData !== undefined) {
+    body = options.formData;
   }
 
   const response = await config.fetchImpl(`${config.apiBaseUrl}${path}`, {

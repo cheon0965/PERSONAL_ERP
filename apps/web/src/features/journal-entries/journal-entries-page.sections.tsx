@@ -54,7 +54,7 @@ export function buildJournalEntryColumns({
       headerName: '출처',
       flex: 1,
       minWidth: 130,
-      valueFormatter: (value) => readJournalEntrySourceKindLabel(String(value))
+      valueGetter: (_value, row) => readJournalEntrySourceKindLabel(row)
     },
     {
       field: 'sourceCollectedTransactionTitle',
@@ -417,12 +417,7 @@ function DetailFact({
 }
 
 function buildJournalEntryDescription(entry: JournalEntryItem) {
-  const sourceDescription =
-    entry.sourceKind === 'COLLECTED_TRANSACTION'
-      ? '수집 거래 확정으로 생성된 전표입니다.'
-      : entry.sourceKind === 'MANUAL_ADJUSTMENT'
-        ? '운영 중 반전 또는 정정으로 생성된 조정 전표입니다.'
-        : `출처: ${entry.sourceKind}`;
+  const sourceDescription = readJournalEntrySourceDescription(entry);
 
   return [
     sourceDescription,
@@ -434,7 +429,21 @@ function buildJournalEntryDescription(entry: JournalEntryItem) {
     .join(' ');
 }
 
-function readJournalEntrySourceKindLabel(sourceKind: string) {
+function readJournalEntrySourceKindLabel(entry: JournalEntryItem | string) {
+  if (typeof entry !== 'string' && entry.sourceKind === 'MANUAL_ADJUSTMENT') {
+    if (entry.reversesJournalEntryId) {
+      return '취소전표';
+    }
+
+    if (entry.correctsJournalEntryId) {
+      return '정정전표';
+    }
+
+    return '조정전표';
+  }
+
+  const sourceKind = typeof entry === 'string' ? entry : entry.sourceKind;
+
   switch (sourceKind) {
     case 'COLLECTED_TRANSACTION':
       return '수집 거래 확정';
@@ -449,6 +458,26 @@ function readJournalEntrySourceKindLabel(sourceKind: string) {
     default:
       return sourceKind;
   }
+}
+
+function readJournalEntrySourceDescription(entry: JournalEntryItem) {
+  if (entry.sourceKind === 'COLLECTED_TRANSACTION') {
+    return '수집 거래 확정으로 생성된 전표입니다.';
+  }
+
+  if (entry.sourceKind === 'MANUAL_ADJUSTMENT') {
+    if (entry.reversesJournalEntryId) {
+      return '승인취소 또는 취소 처리로 생성된 취소전표입니다.';
+    }
+
+    if (entry.correctsJournalEntryId) {
+      return '운영 중 정정 처리로 생성된 정정전표입니다.';
+    }
+
+    return '운영 중 조정 처리로 생성된 조정전표입니다.';
+  }
+
+  return `출처: ${entry.sourceKind}`;
 }
 
 function readJournalEntryTotalAmount(entry: JournalEntryItem) {

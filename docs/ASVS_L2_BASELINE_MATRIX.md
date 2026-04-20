@@ -149,10 +149,10 @@
 
 ### 파일 업로드 보안
 
-- 현재 상태: `ImportBatch` 생성 시 UTF-8 텍스트 본문 업로드 API가 존재함. 아직 binary multipart/file storage는 없음
+- 현재 상태: `ImportBatch` 생성 시 UTF-8 텍스트 본문 업로드 API와 활성 계좌/카드 연결이 필요한 IM뱅크 PDF 전용 `multipart/form-data` 파일첨부 업로드 API가 존재함. 원본 PDF 파일 storage는 아직 없음
 - 근거 파일: `apps/api/src/modules/import-batches/*`, `apps/web/src/features/imports/*`
 - 판정: `부분 적용`
-- 다음 단계: 파일 크기 제한, 허용 포맷 검증, 감사/모니터링, binary upload 도입 시 저장/백신/콘텐츠 검증 설계 추가
+- 다음 단계: 파일 storage 도입 시 백신/콘텐츠 검증, 보존 기간, 다운로드 권한, 개인정보 마스킹 정책 추가
 
 ### 외부 결제/메일/SMS 보안
 

@@ -90,7 +90,7 @@ test('GET /reference-data/readiness returns the current workspace preparation su
           description:
             '계획 항목과 수집 거래를 내부 전표 정책에 연결하는 공식 거래유형 목록입니다.',
           ready: true,
-          count: 3,
+          count: 4,
           minimumRequiredCount: 1,
           ownershipScope: 'SYSTEM_MANAGED',
           responsibleRoles: [],
@@ -237,6 +237,14 @@ test('GET /ledger-transaction-types returns active transaction types for the cur
         name: '기본 이체',
         flowKind: 'TRANSFER',
         postingPolicyKey: 'TRANSFER_BASIC',
+        isActive: true
+      },
+      {
+        id: 'ltt-1-adjustment',
+        code: 'MANUAL_ADJUSTMENT',
+        name: '수동 조정',
+        flowKind: 'ADJUSTMENT',
+        postingPolicyKey: 'MANUAL_ADJUSTMENT',
         isActive: true
       }
     ]);

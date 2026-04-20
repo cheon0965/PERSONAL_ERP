@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { BadRequestException } from '@nestjs/common';
+import type { CollectedTransactionType } from '@personal-erp/contracts';
 import { isMoneyWon, parseMoneyWon } from '@personal-erp/money';
 import {
   ImportBatchParseStatus,
@@ -7,6 +8,11 @@ import {
   ImportSourceKind,
   Prisma
 } from '@prisma/client';
+
+type DelimitedImportSourceKind = Exclude<
+  ImportSourceKind,
+  typeof ImportSourceKind.IM_BANK_PDF
+>;
 
 export type ParsedImportedRowDraft = {
   rowNumber: number;
@@ -26,6 +32,11 @@ export type ParsedImportedRowPayload = {
   occurredOn: string;
   title: string;
   amount: number;
+  direction?: 'WITHDRAWAL' | 'DEPOSIT' | 'REVERSAL' | null;
+  directionLabel?: string | null;
+  collectTypeHint?: CollectedTransactionType | null;
+  balanceAfter?: number | null;
+  reversalTargetRowNumber?: number | null;
 };
 
 export type SourceFingerprintInput = {
@@ -37,7 +48,7 @@ export type SourceFingerprintInput = {
 };
 
 const sourceColumnCandidates: Record<
-  ImportSourceKind,
+  DelimitedImportSourceKind,
   {
     occurredOn: readonly string[];
     title: readonly string[];
@@ -85,6 +96,9 @@ export function parseImportBatchContent(input: {
   sourceKind: ImportSourceKind;
   content: string;
 }): ParsedImportBatchDraft {
+  assertDelimitedImportSourceKind(input.sourceKind);
+  const sourceKind = input.sourceKind;
+
   const normalizedContent = input.content.replace(/\r\n/g, '\n').trim();
   if (!normalizedContent) {
     throw new BadRequestException('업로드 내용이 비어 있습니다.');
@@ -115,7 +129,7 @@ export function parseImportBatchContent(input: {
     .filter((candidate) => candidate.line.trim().length > 0)
     .map((candidate) =>
       parseImportedRow({
-        sourceKind: input.sourceKind,
+        sourceKind,
         headerTokens,
         line: candidate.line,
         delimiter,
@@ -142,7 +156,7 @@ export function parseImportBatchContent(input: {
 }
 
 function parseImportedRow(input: {
-  sourceKind: ImportSourceKind;
+  sourceKind: DelimitedImportSourceKind;
   headerTokens: string[];
   line: string;
   delimiter: string;
@@ -246,13 +260,49 @@ export function readParsedImportedRowPayload(
     ? {
         occurredOn: parsed.occurredOn,
         title: parsed.title,
-        amount: parsed.amount
+        amount: parsed.amount,
+        ...(readParsedDirection(parsed.direction)
+          ? { direction: readParsedDirection(parsed.direction) }
+          : {}),
+        ...(typeof parsed.directionLabel === 'string'
+          ? { directionLabel: parsed.directionLabel }
+          : {}),
+        ...(readParsedCollectTypeHint(parsed.collectTypeHint)
+          ? { collectTypeHint: readParsedCollectTypeHint(parsed.collectTypeHint) }
+          : {}),
+        ...(typeof parsed.balanceAfter === 'number'
+          ? { balanceAfter: parsed.balanceAfter }
+          : {}),
+        ...(Number.isInteger(parsed.reversalTargetRowNumber)
+          ? {
+              reversalTargetRowNumber: parsed.reversalTargetRowNumber as number
+            }
+          : {})
       }
     : null;
 }
 
+function readParsedDirection(
+  value: Prisma.JsonValue | undefined
+): ParsedImportedRowPayload['direction'] {
+  return value === 'WITHDRAWAL' || value === 'DEPOSIT' || value === 'REVERSAL'
+    ? value
+    : undefined;
+}
+
+function readParsedCollectTypeHint(
+  value: Prisma.JsonValue | undefined
+): ParsedImportedRowPayload['collectTypeHint'] {
+  return value === 'INCOME' ||
+    value === 'EXPENSE' ||
+    value === 'TRANSFER' ||
+    value === 'REVERSAL'
+    ? value
+    : undefined;
+}
+
 function readDelimiter(
-  sourceKind: ImportSourceKind,
+  sourceKind: DelimitedImportSourceKind,
   headerLine: string
 ): string {
   if (sourceKind === ImportSourceKind.CARD_EXCEL) {
@@ -260,6 +310,16 @@ function readDelimiter(
   }
 
   return headerLine.includes(',') ? ',' : '\t';
+}
+
+function assertDelimitedImportSourceKind(
+  sourceKind: ImportSourceKind
+): asserts sourceKind is DelimitedImportSourceKind {
+  if (sourceKind === ImportSourceKind.IM_BANK_PDF) {
+    throw new BadRequestException(
+      'IM뱅크 PDF는 파일 첨부 업로드로 등록해 주세요.'
+    );
+  }
 }
 
 function splitDelimitedLine(line: string, delimiter: string): string[] {

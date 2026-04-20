@@ -1,7 +1,7 @@
 import { CollectedTransactionStatus } from '@prisma/client';
 
 export function resolveImportedRowAutoPreparation(input: {
-  type: 'INCOME' | 'EXPENSE' | 'TRANSFER';
+  type: 'INCOME' | 'EXPENSE' | 'TRANSFER' | 'REVERSAL';
   requestedCategoryId: string | null;
   matchedPlanItemCategoryId: string | null;
   hasDuplicateSourceFingerprint: boolean;
@@ -21,7 +21,11 @@ export function resolveImportedRowAutoPreparation(input: {
     };
   }
 
-  if (input.type === 'TRANSFER' || effectiveCategoryId) {
+  if (
+    input.type === 'TRANSFER' ||
+    input.type === 'REVERSAL' ||
+    effectiveCategoryId
+  ) {
     return {
       effectiveCategoryId,
       nextStatus: CollectedTransactionStatus.READY_TO_POST,

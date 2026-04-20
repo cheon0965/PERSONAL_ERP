@@ -6,6 +6,8 @@ export function mapCollectedTransactionTypeToLedgerTransactionCode(
   switch (type) {
     case 'INCOME':
       return 'INCOME_BASIC';
+    case 'REVERSAL':
+      return 'MANUAL_ADJUSTMENT';
     case 'TRANSFER':
       return 'TRANSFER_BASIC';
     case 'EXPENSE':

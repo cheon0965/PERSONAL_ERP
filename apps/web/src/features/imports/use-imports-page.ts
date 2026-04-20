@@ -3,8 +3,11 @@
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
+  AccountingPeriodItem,
+  BulkCollectImportedRowsResponse,
   CollectImportedRowRequest,
   CreateImportBatchRequest,
+  FundingAccountItem,
   ImportBatchItem
 } from '@personal-erp/contracts';
 import {
@@ -25,8 +28,11 @@ import {
   buildImportBatchFallbackItem,
   buildImportedCollectedFallbackPreview,
   buildImportedCollectedFallbackResponse,
+  bulkCollectImportedRows,
   collectImportedRow,
   createImportBatch,
+  createImportBatchFromFile,
+  deleteImportBatch,
   getImportBatches,
   importBatchesQueryKey,
   previewImportedRowCollection
@@ -39,10 +45,17 @@ import {
   type ImportedRowTableItem
 } from './imports.shared';
 
-const defaultUploadForm: CreateImportBatchRequest = {
+export type ImportUploadFormState = CreateImportBatchRequest & {
+  fundingAccountId: string;
+  file: File | null;
+};
+
+const defaultUploadForm: ImportUploadFormState = {
   sourceKind: 'MANUAL_UPLOAD',
   fileName: 'march-manual.csv',
-  content: ['date,title,amount', '2026-03-12,Coffee beans,19800'].join('\n')
+  fundingAccountId: '',
+  content: ['date,title,amount', '2026-03-12,Coffee beans,19800'].join('\n'),
+  file: null
 };
 
 const defaultCollectForm: CollectImportedRowRequest = {
@@ -63,10 +76,11 @@ export function useImportsPage(
     initialSelectedBatchId
   );
   const [selectedRowId, setSelectedRowId] = React.useState<string | null>(null);
+  const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
   const [isUploadDrawerOpen, setUploadDrawerOpen] = React.useState(false);
   const [isCollectDrawerOpen, setCollectDrawerOpen] = React.useState(false);
   const [uploadForm, setUploadForm] =
-    React.useState<CreateImportBatchRequest>(defaultUploadForm);
+    React.useState<ImportUploadFormState>(defaultUploadForm);
   const [collectForm, setCollectForm] =
     React.useState<CollectImportedRowRequest>(defaultCollectForm);
 
@@ -91,6 +105,13 @@ export function useImportsPage(
     queryFn: getReferenceDataReadiness
   });
 
+  const uploadFundingAccounts = React.useMemo(
+    () =>
+      (fundingAccountsQuery.data ?? []).filter((fundingAccount) =>
+        isImportBatchFundingAccount(fundingAccount)
+      ),
+    [fundingAccountsQuery.data]
+  );
   const batches = React.useMemo(
     () => importBatchesQuery.data ?? [],
     [importBatchesQuery.data]
@@ -111,10 +132,18 @@ export function useImportsPage(
           ...row,
           occurredOn: parsed?.occurredOn ?? '-',
           title: parsed?.title ?? '-',
-          amount: parsed?.amount ?? null
+          amount: parsed?.amount ?? null,
+          direction: parsed?.direction ?? null,
+          collectTypeHint: parsed?.collectTypeHint ?? null,
+          balanceAfter: parsed?.balanceAfter ?? null
         };
       }),
     [selectedBatch]
+  );
+  const selectedRows = React.useMemo(
+    () =>
+      selectedBatchRows.filter((row) => selectedRowIds.includes(row.id)),
+    [selectedBatchRows, selectedRowIds]
   );
   const selectedRow = React.useMemo(
     () =>
@@ -148,6 +177,29 @@ export function useImportsPage(
         : null,
     [categoriesQuery.data, normalizedCollectRequest.categoryId]
   );
+  const currentPeriod = currentPeriodQuery.data ?? null;
+  const currentPeriodCollectableRows = React.useMemo(
+    () =>
+      selectedBatchRows.filter(
+        (row) =>
+          isImportedRowCollectable(row) &&
+          isImportedRowWithinCurrentPeriod(row, currentPeriod)
+      ),
+    [currentPeriod, selectedBatchRows]
+  );
+  const selectedCurrentPeriodCollectableRows = React.useMemo(
+    () =>
+      selectedRows.filter(
+        (row) =>
+          isImportedRowCollectable(row) &&
+          isImportedRowWithinCurrentPeriod(row, currentPeriod)
+      ),
+    [currentPeriod, selectedRows]
+  );
+  const bulkFundingAccountId =
+    selectedBatch?.fundingAccountId ??
+    normalizedCollectRequest.fundingAccountId ??
+    '';
 
   React.useEffect(() => {
     if (initialSelectedBatchId && selectedBatchId !== initialSelectedBatchId) {
@@ -172,25 +224,102 @@ export function useImportsPage(
   }, [selectedRow, selectedRowId]);
 
   React.useEffect(() => {
-    if (!collectForm.fundingAccountId) {
-      const defaultFundingAccount = fundingAccountsQuery.data?.[0]?.id;
+    setSelectedRowIds((current) =>
+      current.filter((rowId) =>
+        selectedBatchRows.some(
+          (candidate) =>
+            candidate.id === rowId && !candidate.createdCollectedTransactionId
+        )
+      )
+    );
+  }, [selectedBatchRows]);
 
-      if (defaultFundingAccount) {
-        setCollectForm((current) => ({
-          ...current,
-          fundingAccountId: defaultFundingAccount
-        }));
-      }
+  React.useEffect(() => {
+    if (
+      uploadForm.sourceKind === 'IM_BANK_PDF' &&
+      !uploadForm.fundingAccountId &&
+      uploadFundingAccounts[0]
+    ) {
+      setUploadForm((current) => ({
+        ...current,
+        fundingAccountId: uploadFundingAccounts[0]!.id
+      }));
     }
-  }, [collectForm.fundingAccountId, fundingAccountsQuery.data]);
+  }, [
+    uploadForm.fundingAccountId,
+    uploadForm.sourceKind,
+    uploadFundingAccounts
+  ]);
 
-  const currentPeriod = currentPeriodQuery.data ?? null;
+  React.useEffect(() => {
+    const batchFundingAccountId = selectedBatch?.fundingAccountId ?? '';
+    const defaultFundingAccountId =
+      batchFundingAccountId || fundingAccountsQuery.data?.[0]?.id || '';
 
-  useDomainHelp(buildImportsHelpContext(mode, currentPeriod?.monthLabel ?? null));
+    if (!defaultFundingAccountId) {
+      return;
+    }
+
+    setCollectForm((current) => {
+      if (
+        batchFundingAccountId &&
+        current.fundingAccountId !== batchFundingAccountId
+      ) {
+        return {
+          ...current,
+          fundingAccountId: batchFundingAccountId
+        };
+      }
+
+      if (!current.fundingAccountId) {
+        return {
+          ...current,
+          fundingAccountId: defaultFundingAccountId
+        };
+      }
+
+      return current;
+    });
+  }, [
+    fundingAccountsQuery.data,
+    selectedBatch?.fundingAccountId,
+    selectedBatch?.id
+  ]);
+
+  useDomainHelp(
+    buildImportsHelpContext(mode, currentPeriod?.monthLabel ?? null)
+  );
 
   const createImportBatchMutation = useMutation({
-    mutationFn: (input: CreateImportBatchRequest) =>
-      createImportBatch(input, buildImportBatchFallbackItem(input)),
+    mutationFn: (input: ImportUploadFormState) => {
+      if (input.sourceKind === 'IM_BANK_PDF') {
+        if (!input.file) {
+          throw new Error('IM뱅크 PDF 파일을 선택해 주세요.');
+        }
+
+        if (!input.fundingAccountId.trim()) {
+          throw new Error(
+            'IM뱅크 PDF와 연결할 계좌/카드를 선택해 주세요.'
+          );
+        }
+
+        return createImportBatchFromFile({
+          sourceKind: input.sourceKind,
+          fileName: input.fileName,
+          fundingAccountId: input.fundingAccountId,
+          file: input.file
+        });
+      }
+
+      const request: CreateImportBatchRequest = {
+        sourceKind: input.sourceKind,
+        fileName: input.fileName,
+        fundingAccountId: null,
+        content: input.content
+      };
+
+      return createImportBatch(request, buildImportBatchFallbackItem(request));
+    },
     onSuccess: async (created) => {
       setFeedback({
         severity: 'success',
@@ -199,6 +328,7 @@ export function useImportsPage(
       setUploadDrawerOpen(false);
       setSelectedBatchId(created.id);
       setSelectedRowId(null);
+      setSelectedRowIds([]);
       await queryClient.invalidateQueries({ queryKey: importBatchesQueryKey });
     },
     onError: (error) => {
@@ -291,18 +421,83 @@ export function useImportsPage(
       });
     }
   });
+  const bulkCollectMutation = useMutation({
+    mutationFn: (input: {
+      importBatchId: string;
+      rowIds: string[];
+      skippedRowCount: number;
+    }) =>
+      bulkCollectImportedRows(input.importBatchId, {
+        rowIds: input.rowIds,
+        fundingAccountId: bulkFundingAccountId
+      }),
+    onSuccess: async (result, variables) => {
+      setFeedback({
+        severity: result.failedCount === 0 ? 'success' : 'error',
+        message: buildBulkCollectFeedbackMessage(result, {
+          skippedRowCount: variables.skippedRowCount
+        })
+      });
+      setSelectedRowId(null);
+      setSelectedRowIds([]);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: importBatchesQueryKey }),
+        queryClient.invalidateQueries({
+          queryKey: collectedTransactionsQueryKey
+        })
+      ]);
+    },
+    onError: (error) => {
+      setFeedback({
+        severity: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : '업로드 행 일괄 등록에 실패했습니다.'
+      });
+    }
+  });
+  const deleteImportBatchMutation = useMutation({
+    mutationFn: (batch: ImportBatchItem) => deleteImportBatch(batch.id),
+    onSuccess: async (_result, batch) => {
+      setFeedback({
+        severity: 'success',
+        message: `${batch.fileName} 배치를 삭제했습니다.`
+      });
+      setCollectDrawerOpen(false);
+      setSelectedBatchId(null);
+      setSelectedRowId(null);
+      setSelectedRowIds([]);
+      await queryClient.invalidateQueries({ queryKey: importBatchesQueryKey });
+    },
+    onError: (error) => {
+      setFeedback({
+        severity: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : '업로드 배치를 삭제하지 못했습니다.'
+      });
+    }
+  });
 
   function handleSelectBatch(batch: ImportBatchItem) {
     setSelectedBatchId(batch.id);
     setSelectedRowId(null);
+    setSelectedRowIds([]);
+    setCollectDrawerOpen(false);
   }
 
   function handlePrepareCollectRow(row: ImportedRowTableItem) {
     setSelectedRowId(row.id);
+    setCollectForm((current) => ({
+      ...current,
+      type: row.collectTypeHint ?? current.type
+    }));
     setCollectDrawerOpen(true);
   }
 
-  function updateUploadForm(patch: Partial<CreateImportBatchRequest>) {
+  function updateUploadForm(patch: Partial<ImportUploadFormState>) {
     setUploadForm((current) => ({
       ...current,
       ...patch
@@ -318,7 +513,12 @@ export function useImportsPage(
 
   async function submitUpload() {
     setFeedback(null);
-    await createImportBatchMutation.mutateAsync(uploadForm);
+
+    try {
+      await createImportBatchMutation.mutateAsync(uploadForm);
+    } catch {
+      // React Query onError already maps the failure into the page feedback area.
+    }
   }
 
   async function submitCollect() {
@@ -327,11 +527,92 @@ export function useImportsPage(
     }
 
     setFeedback(null);
-    await collectImportedRowMutation.mutateAsync({
-      importBatchId: selectedBatch.id,
-      importedRow: selectedRow,
-      request: normalizedCollectRequest
-    });
+
+    try {
+      await collectImportedRowMutation.mutateAsync({
+        importBatchId: selectedBatch.id,
+        importedRow: selectedRow,
+        request: normalizedCollectRequest
+      });
+    } catch {
+      // React Query onError already maps the failure into the page feedback area.
+    }
+  }
+
+  async function submitBulkCollect() {
+    if (!selectedBatch) {
+      return;
+    }
+
+    if (!currentPeriod) {
+      setFeedback({
+        severity: 'error',
+        message: '현재 열린 운영 기간이 없어 업로드 행을 일괄 등록할 수 없습니다.'
+      });
+      return;
+    }
+
+    if (!bulkFundingAccountId.trim()) {
+      setFeedback({
+        severity: 'error',
+        message:
+          '배치에 연결된 계좌/카드가 없어 일괄 등록할 수 없습니다. 먼저 배치 연결 계좌를 확인해 주세요.'
+      });
+      return;
+    }
+
+    const hasSelection = selectedRows.length > 0;
+    const targetRows = hasSelection
+      ? selectedCurrentPeriodCollectableRows
+      : currentPeriodCollectableRows;
+    const skippedRowCount = hasSelection
+      ? selectedRows.length - targetRows.length
+      : 0;
+
+    if (targetRows.length === 0) {
+      setFeedback({
+        severity: 'error',
+        message: hasSelection
+          ? '선택한 행 중 현재 기간에 바로 등록할 수 있는 행이 없습니다.'
+          : '현재 기간에 바로 등록할 수 있는 행이 없습니다.'
+      });
+      return;
+    }
+
+    setFeedback(null);
+
+    try {
+      await bulkCollectMutation.mutateAsync({
+        importBatchId: selectedBatch.id,
+        rowIds: targetRows.map((row) => row.id),
+        skippedRowCount
+      });
+    } catch {
+      // React Query onError already maps the failure into the page feedback area.
+    }
+  }
+
+  async function deleteSelectedBatch() {
+    if (!selectedBatch) {
+      return false;
+    }
+
+    const confirmed = window.confirm(
+      `${selectedBatch.fileName} 배치를 삭제할까요? 연결된 수집 거래가 있는 배치는 삭제되지 않습니다.`
+    );
+
+    if (!confirmed) {
+      return false;
+    }
+
+    setFeedback(null);
+
+    try {
+      await deleteImportBatchMutation.mutateAsync(selectedBatch);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   return {
@@ -341,37 +622,108 @@ export function useImportsPage(
       selectedRowCanCollect &&
       normalizedCollectRequest.fundingAccountId.length > 0,
     categories: categoriesQuery.data ?? [],
+    closeCollectDrawer: () => setCollectDrawerOpen(false),
+    closeUploadDrawer: () => setUploadDrawerOpen(false),
     collectForm,
     collectPreview: {
       isLoading: collectPreviewQuery.isLoading,
       error: collectPreviewQuery.error,
       data: collectPreviewQuery.data
     },
-    closeCollectDrawer: () => setCollectDrawerOpen(false),
-    closeUploadDrawer: () => setUploadDrawerOpen(false),
     currentPeriod,
+    currentPeriodCollectableRowCount: currentPeriodCollectableRows.length,
     currentPeriodQuery,
+    deleteSelectedBatch,
+    deleteSelectedBatchPending: deleteImportBatchMutation.isPending,
     feedback,
     fundingAccounts: fundingAccountsQuery.data ?? [],
     importBatchesQuery,
+    isBulkCollectPending: bulkCollectMutation.isPending,
     isCollectDrawerOpen,
     isUploadDrawerOpen,
     openUploadDrawer: () => setUploadDrawerOpen(true),
     prepareCollectRow: handlePrepareCollectRow,
     referenceDataReadinessQuery,
     selectBatch: handleSelectBatch,
+    selectRows: setSelectedRowIds,
     selectedBatch,
     selectedBatchRows,
+    selectedCurrentPeriodCollectableRowCount:
+      selectedCurrentPeriodCollectableRows.length,
     selectedRow,
     selectedRowCanCollect,
+    selectedRowId,
+    selectedRowIds,
+    selectedRowsCount: selectedRows.length,
+    submitBulkCollect,
     submitCollect,
     submitCollectPending: collectImportedRowMutation.isPending,
     submitUpload,
     submitUploadPending: createImportBatchMutation.isPending,
     updateCollectForm,
     updateUploadForm,
+    uploadFundingAccounts,
     uploadForm
   };
+}
+
+function isImportBatchFundingAccount(fundingAccount: FundingAccountItem) {
+  return (
+    fundingAccount.status === 'ACTIVE' &&
+    (fundingAccount.type === 'BANK' || fundingAccount.type === 'CARD')
+  );
+}
+
+function isImportedRowCollectable(row: ImportedRowTableItem) {
+  return row.parseStatus === 'PARSED' && !row.createdCollectedTransactionId;
+}
+
+function isImportedRowWithinCurrentPeriod(
+  row: ImportedRowTableItem,
+  currentPeriod: AccountingPeriodItem | null
+) {
+  if (!currentPeriod) {
+    return false;
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(row.occurredOn)) {
+    return false;
+  }
+
+  return (
+    row.occurredOn >= currentPeriod.startDate.slice(0, 10) &&
+    row.occurredOn < currentPeriod.endDate.slice(0, 10)
+  );
+}
+
+function buildBulkCollectFeedbackMessage(
+  result: BulkCollectImportedRowsResponse,
+  input: {
+    skippedRowCount: number;
+  }
+) {
+  const firstFailure = result.results.find(
+    (candidate) => candidate.status === 'FAILED'
+  )?.message;
+  const parts = [
+    `${result.requestedRowCount}건 중 ${result.succeededCount}건을 수집 거래로 등록했습니다.`
+  ];
+
+  if (result.failedCount > 0) {
+    parts.push(`실패 ${result.failedCount}건이 남았습니다.`);
+  }
+
+  if (input.skippedRowCount > 0) {
+    parts.push(
+      `선택했지만 현재 기간 등록 대상이 아닌 ${input.skippedRowCount}건은 제외했습니다.`
+    );
+  }
+
+  if (firstFailure) {
+    parts.push(`첫 실패 사유: ${firstFailure}`);
+  }
+
+  return parts.join(' ');
 }
 
 function buildImportsHelpContext(
@@ -409,13 +761,15 @@ function buildImportsHelpContext(
           links: [
             {
               title: '업로드 배치',
-              description: '다른 배치를 다시 선택하거나 새 업로드 배치를 등록합니다.',
+              description:
+                '다른 배치를 다시 선택하거나 새 업로드 배치를 등록합니다.',
               href: '/imports',
               actionLabel: '배치 목록 보기'
             },
             {
               title: '수집 거래',
-              description: '등록한 거래가 전표 준비 상태인지 확인하고 전표로 확정합니다.',
+              description:
+                '등록한 거래가 전표 준비 상태인지 확인하고 전표로 확정합니다.',
               href: '/transactions',
               actionLabel: '수집 거래 보기'
             }
@@ -450,7 +804,8 @@ function buildImportsHelpContext(
         links: [
           {
             title: '수집 거래',
-            description: '업로드에서 등록한 거래를 전표 준비 상태와 함께 최종 검토합니다.',
+            description:
+              '업로드에서 등록한 거래를 전표 준비 상태와 함께 최종 검토합니다.',
             href: '/transactions',
             actionLabel: '수집 거래 보기'
           }

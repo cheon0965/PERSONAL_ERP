@@ -125,6 +125,13 @@ export function createRequestPrismaMockContext(state: RequestTestState) {
   const projectImportBatch = (
     candidate: RequestTestState['importBatches'][number],
     include?: {
+      fundingAccount?: {
+        select?: {
+          id?: boolean;
+          name?: boolean;
+          type?: boolean;
+        };
+      };
       rows?: {
         orderBy?: { rowNumber?: 'asc' | 'desc' };
       };
@@ -133,9 +140,30 @@ export function createRequestPrismaMockContext(state: RequestTestState) {
     const rows = include?.rows
       ? resolveImportedRows(candidate.id).map((row) => ({ ...row }))
       : undefined;
+    const fundingAccount =
+      include?.fundingAccount && candidate.fundingAccountId
+        ? resolveAccount(candidate.fundingAccountId)
+        : null;
 
     return {
       ...candidate,
+      ...(include?.fundingAccount
+        ? {
+            fundingAccount: fundingAccount
+              ? {
+                  ...(include.fundingAccount.select?.id
+                    ? { id: fundingAccount.id }
+                    : {}),
+                  ...(include.fundingAccount.select?.name
+                    ? { name: fundingAccount.name }
+                    : {}),
+                  ...(include.fundingAccount.select?.type
+                    ? { type: fundingAccount.type }
+                    : {})
+                }
+              : null
+          }
+        : {}),
       ...(include?.rows ? { rows } : {})
     };
   };

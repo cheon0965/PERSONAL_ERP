@@ -187,6 +187,8 @@ export function readImportSourceKindLabel(
       return '은행 CSV';
     case 'MANUAL_UPLOAD':
       return '수동 업로드';
+    case 'IM_BANK_PDF':
+      return 'IM뱅크 PDF';
     default:
       return sourceKind;
   }
