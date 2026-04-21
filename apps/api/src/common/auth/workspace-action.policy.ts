@@ -51,7 +51,8 @@ export type WorkspaceAction =
   | 'carry_forward.generate'
   | 'journal_entry.reverse'
   | 'journal_entry.correct'
-  | 'import_batch.upload';
+  | 'import_batch.upload'
+  | 'import_batch.delete';
 
 const workspaceActionAllowedRoles: Record<
   WorkspaceAction,
@@ -103,7 +104,8 @@ const workspaceActionAllowedRoles: Record<
   'carry_forward.generate': ['OWNER', 'MANAGER'],
   'journal_entry.reverse': ['OWNER', 'MANAGER'],
   'journal_entry.correct': ['OWNER', 'MANAGER'],
-  'import_batch.upload': ['OWNER', 'MANAGER', 'EDITOR']
+  'import_batch.upload': ['OWNER', 'MANAGER', 'EDITOR'],
+  'import_batch.delete': ['OWNER', 'MANAGER', 'EDITOR']
 };
 
 const workspaceActionDeniedMessages: Record<WorkspaceAction, string> = {
@@ -188,7 +190,9 @@ const workspaceActionDeniedMessages: Record<WorkspaceAction, string> = {
   'journal_entry.correct':
     'Only owners and managers can create correction journal entries.',
   'import_batch.upload':
-    'Only owners, managers, and editors can upload import batches.'
+    'Only owners, managers, and editors can upload import batches.',
+  'import_batch.delete':
+    'Only owners, managers, and editors can delete import batches or uploaded rows.'
 };
 
 export function readAllowedWorkspaceRoles(

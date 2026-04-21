@@ -132,6 +132,14 @@ export const mockLedgerTransactionTypes: LedgerTransactionTypeItem[] = [
     flowKind: 'TRANSFER',
     postingPolicyKey: 'TRANSFER_BASIC',
     isActive: true
+  },
+  {
+    id: 'ltt-manual-adjustment',
+    code: 'MANUAL_ADJUSTMENT',
+    name: '수동 조정',
+    flowKind: 'ADJUSTMENT',
+    postingPolicyKey: 'MANUAL_ADJUSTMENT',
+    isActive: true
   }
 ];
 

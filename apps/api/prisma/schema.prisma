@@ -23,6 +23,7 @@ enum TransactionType {
   INCOME
   EXPENSE
   TRANSFER
+  REVERSAL
 }
 
 enum RecurrenceFrequency {
@@ -164,6 +165,7 @@ enum ImportSourceKind {
   CARD_EXCEL
   BANK_CSV
   MANUAL_UPLOAD
+  IM_BANK_PDF
 }
 
 enum ImportBatchParseStatus {
@@ -532,11 +534,12 @@ model Account {
   tenant                Tenant                 @relation("TenantAccounts", fields: [tenantId], references: [id], onDelete: Cascade)
   ledger                Ledger                 @relation("LedgerAccounts", fields: [ledgerId], references: [id], onDelete: Cascade)
   recurringRules        RecurringRule[]
-  insurancePolicies     InsurancePolicy[]
-  planItems             PlanItem[]
-  collectedTransactions CollectedTransaction[]
-  journalLines          JournalLine[]
-  balanceSnapshotLines  BalanceSnapshotLine[]
+    insurancePolicies     InsurancePolicy[]
+    planItems             PlanItem[]
+    importBatches         ImportBatch[]
+    collectedTransactions CollectedTransaction[]
+    journalLines          JournalLine[]
+    balanceSnapshotLines  BalanceSnapshotLine[]
 
   @@unique([ledgerId, normalizedName])
   @@index([userId, sortOrder])
@@ -732,22 +735,25 @@ model ImportBatch {
   tenantId               String
   ledgerId               String
   periodId               String?
-  sourceKind             ImportSourceKind
-  fileName               String
-  fileHash               String                 @db.VarChar(191)
-  rowCount               Int                    @default(0)
-  parseStatus            ImportBatchParseStatus @default(PENDING)
-  uploadedByMembershipId String
+    sourceKind             ImportSourceKind
+    fileName               String
+    fileHash               String                 @db.VarChar(191)
+    fundingAccountId       String?
+    rowCount               Int                    @default(0)
+    parseStatus            ImportBatchParseStatus @default(PENDING)
+    uploadedByMembershipId String
   uploadedAt             DateTime               @default(now())
   tenant                 Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger                 Ledger                 @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
-  period                 AccountingPeriod?      @relation(fields: [periodId], references: [id], onDelete: SetNull)
-  rows                   ImportedRow[]
-  collectedTransactions  CollectedTransaction[]
+    ledger                 Ledger                 @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+    period                 AccountingPeriod?      @relation(fields: [periodId], references: [id], onDelete: SetNull)
+    fundingAccount         Account?               @relation(fields: [fundingAccountId], references: [id], onDelete: SetNull)
+    rows                   ImportedRow[]
+    collectedTransactions  CollectedTransaction[]
 
-  @@index([ledgerId, uploadedAt])
-  @@index([fileHash])
-}
+    @@index([ledgerId, uploadedAt])
+    @@index([fileHash])
+    @@index([fundingAccountId])
+  }
 
 model ImportedRow {
   id                          String                 @id @default(cuid())

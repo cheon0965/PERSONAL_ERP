@@ -1,15 +1,24 @@
 import {
+  BadRequestException,
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
+  HttpCode,
+  HttpStatus,
+  NotFoundException,
   Param,
   Post,
-  Req
+  Req,
+  UploadedFile,
+  UseInterceptors
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import type {
   AuthenticatedUser,
+  BulkCollectImportedRowsResponse,
   CollectImportedRowPreview,
   CollectImportedRowResponse,
   ImportBatchItem
@@ -24,11 +33,24 @@ import {
   logWorkspaceActionSucceeded
 } from '../../common/infrastructure/operational/workspace-action.audit';
 import { CollectImportedRowUseCase } from './application/use-cases/collect-imported-row.use-case';
+import { BulkCollectImportedRowsUseCase } from './application/use-cases/bulk-collect-imported-rows.use-case';
+import { CreateImportBatchFromFileUseCase } from './application/use-cases/create-import-batch-from-file.use-case';
 import { CreateImportBatchUseCase } from './application/use-cases/create-import-batch.use-case';
+import { DeleteImportBatchUseCase } from './application/use-cases/delete-import-batch.use-case';
 import { PreviewImportedRowCollectionUseCase } from './application/use-cases/preview-imported-row-collection.use-case';
+import { BulkCollectImportedRowsRequestDto } from './dto/bulk-collect-imported-rows.dto';
 import { CollectImportedRowRequestDto } from './dto/collect-imported-row.dto';
+import { CreateImportBatchFileRequestDto } from './dto/create-import-batch-file.dto';
 import { CreateImportBatchRequestDto } from './dto/create-import-batch.dto';
 import { ImportBatchQueryService } from './import-batch-query.service';
+import { normalizeUploadedFileName } from './uploaded-file-name';
+
+type UploadedImportFile = {
+  originalname: string;
+  mimetype?: string;
+  size: number;
+  buffer: Buffer;
+};
 
 @ApiTags('import-batches')
 @ApiBearerAuth()
@@ -37,8 +59,11 @@ export class ImportBatchesController {
   constructor(
     private readonly importBatchQueryService: ImportBatchQueryService,
     private readonly createImportBatchUseCase: CreateImportBatchUseCase,
+    private readonly createImportBatchFromFileUseCase: CreateImportBatchFromFileUseCase,
     private readonly previewImportedRowCollectionUseCase: PreviewImportedRowCollectionUseCase,
     private readonly collectImportedRowUseCase: CollectImportedRowUseCase,
+    private readonly bulkCollectImportedRowsUseCase: BulkCollectImportedRowsUseCase,
+    private readonly deleteImportBatchUseCase: DeleteImportBatchUseCase,
     private readonly securityEvents: SecurityEventLogger
   ) {}
 
@@ -55,6 +80,73 @@ export class ImportBatchesController {
     @Param('id') importBatchId: string
   ): Promise<ImportBatchItem> {
     return this.importBatchQueryService.findOne(user, importBatchId);
+  }
+
+  @Post('files')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: 10 * 1024 * 1024
+      }
+    })
+  )
+  async createFromFile(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateImportBatchFileRequestDto,
+    @UploadedFile() file?: UploadedImportFile
+  ): Promise<ImportBatchItem> {
+    const workspace = requireCurrentWorkspace(user);
+
+    if (!file) {
+      throw new BadRequestException('업로드할 파일을 선택해 주세요.');
+    }
+
+    try {
+      const created = await this.createImportBatchFromFileUseCase.execute(
+        user,
+        {
+          sourceKind: dto.sourceKind,
+          fileName: normalizeUploadedFileName(file.originalname),
+          fundingAccountId: dto.fundingAccountId,
+          contentType: file.mimetype ?? null,
+          buffer: file.buffer
+        }
+      );
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'import_batch.upload',
+        request,
+        workspace,
+        details: {
+          importBatchId: created.id,
+          rowCount: created.rowCount,
+          parseStatus: created.parseStatus,
+          sourceKind: dto.sourceKind,
+          fundingAccountId: created.fundingAccountId
+        }
+      });
+
+      return created;
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'import_batch.upload',
+          request,
+          workspace,
+          details: {
+            requiredRoles: readAllowedWorkspaceRoles(
+              'import_batch.upload'
+            ).join(','),
+            sourceKind: dto.sourceKind,
+            fundingAccountId: dto.fundingAccountId
+          }
+        });
+      }
+
+      throw error;
+    }
   }
 
   @Post()
@@ -75,7 +167,8 @@ export class ImportBatchesController {
         details: {
           importBatchId: created.id,
           rowCount: created.rowCount,
-          parseStatus: created.parseStatus
+          parseStatus: created.parseStatus,
+          fundingAccountId: created.fundingAccountId
         }
       });
 
@@ -155,6 +248,101 @@ export class ImportBatchesController {
             importedRowId,
             requiredRoles: readAllowedWorkspaceRoles(
               'collected_transaction.create'
+            ).join(',')
+          }
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  @Post(':id/rows/collect')
+  @HttpCode(HttpStatus.OK)
+  async bulkCollectRows(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') importBatchId: string,
+    @Body() dto: BulkCollectImportedRowsRequestDto
+  ): Promise<BulkCollectImportedRowsResponse> {
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      const result = await this.bulkCollectImportedRowsUseCase.execute(
+        user,
+        importBatchId,
+        dto
+      );
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'collected_transaction.create',
+        request,
+        workspace,
+        details: {
+          importBatchId,
+          requestedRowCount: result.requestedRowCount,
+          succeededCount: result.succeededCount,
+          failedCount: result.failedCount
+        }
+      });
+
+      return result;
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'collected_transaction.create',
+          request,
+          workspace,
+          details: {
+            importBatchId,
+            requiredRoles: readAllowedWorkspaceRoles(
+              'collected_transaction.create'
+            ).join(',')
+          }
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteBatch(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') importBatchId: string
+  ): Promise<void> {
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      const deleted = await this.deleteImportBatchUseCase.execute(
+        user,
+        importBatchId
+      );
+
+      if (!deleted) {
+        throw new NotFoundException('업로드 배치를 찾을 수 없습니다.');
+      }
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'import_batch.delete',
+        request,
+        workspace,
+        details: {
+          importBatchId
+        }
+      });
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'import_batch.delete',
+          request,
+          workspace,
+          details: {
+            importBatchId,
+            requiredRoles: readAllowedWorkspaceRoles(
+              'import_batch.delete'
             ).join(',')
           }
         });

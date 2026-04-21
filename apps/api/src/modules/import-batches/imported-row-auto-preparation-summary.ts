@@ -65,8 +65,11 @@ export function buildImportedRowAutoPreparationSummary(
       break;
     case 'READY_TO_POST':
       decisionReasons.push(
-        input.type === 'TRANSFER' && !input.effectiveCategoryName
-          ? '이체 거래라 카테고리 없이도 전표 준비 상태로 올립니다.'
+        (input.type === 'TRANSFER' || input.type === 'REVERSAL') &&
+          !input.effectiveCategoryName
+          ? input.type === 'REVERSAL'
+            ? '승인취소 거래라 카테고리 없이도 전표 준비 상태로 올립니다.'
+            : '이체 거래라 카테고리 없이도 전표 준비 상태로 올립니다.'
           : '즉시 전표 준비 상태로 올립니다.'
       );
       break;
@@ -163,6 +166,7 @@ export function mapLedgerTransactionFlowKindToCollectedTransactionType(
     case LedgerTransactionFlowKind.CARRY_FORWARD:
       return 'TRANSFER';
     case LedgerTransactionFlowKind.ADJUSTMENT:
+      return 'REVERSAL';
     case LedgerTransactionFlowKind.EXPENSE:
     default:
       return 'EXPENSE';

@@ -1,6 +1,7 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import {
   CollectedTransactionStatus,
+  JournalEntryStatus,
   PlanItemStatus,
   Prisma
 } from '@prisma/client';
@@ -45,6 +46,13 @@ const confirmationCollectedTransactionInclude = {
       postingPolicyKey: true
     }
   },
+  importedRow: {
+    select: {
+      id: true,
+      batchId: true,
+      rawPayload: true
+    }
+  },
   postedJournalEntry: {
     select: {
       id: true
@@ -82,6 +90,13 @@ function mapPrismaToConfirmationCollectedTransaction(
     ledgerTransactionType: {
       postingPolicyKey: record.ledgerTransactionType.postingPolicyKey
     },
+    importedRow: record.importedRow
+      ? {
+          id: record.importedRow.id,
+          batchId: record.importedRow.batchId,
+          rawPayload: record.importedRow.rawPayload
+        }
+      : null,
     postedJournalEntry: record.postedJournalEntry
       ? { id: record.postedJournalEntry.id }
       : null
@@ -276,6 +291,9 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
         sourceCollectedTransactionId: input.sourceCollectedTransactionId,
         status: input.status,
         memo: input.memo,
+        reversesJournalEntryId: input.reversesJournalEntryId ?? null,
+        correctsJournalEntryId: input.correctsJournalEntryId ?? null,
+        correctionReason: input.correctionReason ?? null,
         createdByActorType: input.createdByActorType,
         createdByMembershipId: input.createdByMembershipId,
         lines: {
@@ -287,6 +305,33 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
           select: {
             id: true,
             title: true
+          }
+        },
+        reversesJournalEntry: {
+          select: {
+            id: true,
+            entryNumber: true
+          }
+        },
+        reversedByJournalEntry: {
+          select: {
+            id: true,
+            entryNumber: true
+          }
+        },
+        correctsJournalEntry: {
+          select: {
+            id: true,
+            entryNumber: true
+          }
+        },
+        correctionEntries: {
+          select: {
+            id: true,
+            entryNumber: true
+          },
+          orderBy: {
+            createdAt: 'asc' as const
           }
         },
         lines: {
@@ -328,5 +373,141 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
         status: PlanItemStatus.CONFIRMED
       }
     });
+  }
+
+  async findReversalTarget(
+    scope: ConfirmationWorkspaceScope,
+    importBatchId: string,
+    rowNumber: number
+  ) {
+    const target = await this.tx.importedRow.findFirst({
+      where: {
+        batchId: importBatchId,
+        rowNumber,
+        batch: {
+          tenantId: scope.tenantId,
+          ledgerId: scope.ledgerId
+        }
+      },
+      select: {
+        id: true,
+        createdCollectedTransaction: {
+          select: {
+            id: true,
+            status: true,
+            postedJournalEntry: {
+              select: {
+                id: true,
+                entryNumber: true,
+                status: true,
+                lines: {
+                  select: {
+                    accountSubjectId: true,
+                    fundingAccountId: true,
+                    debitAmount: true,
+                    creditAmount: true,
+                    description: true
+                  },
+                  orderBy: {
+                    lineNumber: 'asc'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return target
+      ? {
+          id: target.id,
+          createdCollectedTransaction: target.createdCollectedTransaction
+        }
+      : null;
+  }
+
+  async updateJournalEntryStatusInWorkspace(input: {
+    tenantId: string;
+    ledgerId: string;
+    journalEntryId: string;
+    expectedStatuses: JournalEntryStatus[];
+    nextStatus: JournalEntryStatus;
+  }): Promise<number> {
+    const result = await this.tx.journalEntry.updateMany({
+      where: {
+        id: input.journalEntryId,
+        tenantId: input.tenantId,
+        ledgerId: input.ledgerId,
+        status: {
+          in: input.expectedStatuses
+        }
+      },
+      data: {
+        status: input.nextStatus
+      }
+    });
+
+    return result.count;
+  }
+
+  async findCurrentJournalEntryStatusInWorkspace(
+    scope: ConfirmationWorkspaceScope,
+    journalEntryId: string
+  ): Promise<JournalEntryStatus | null> {
+    const current = await this.tx.journalEntry.findFirst({
+      where: {
+        id: journalEntryId,
+        tenantId: scope.tenantId,
+        ledgerId: scope.ledgerId
+      },
+      select: {
+        status: true
+      }
+    });
+
+    return current?.status ?? null;
+  }
+
+  async updateCollectedTransactionStatusInWorkspace(input: {
+    tenantId: string;
+    ledgerId: string;
+    collectedTransactionId: string;
+    expectedStatuses: CollectedTransactionStatus[];
+    nextStatus: CollectedTransactionStatus;
+  }): Promise<number> {
+    const result = await this.tx.collectedTransaction.updateMany({
+      where: {
+        id: input.collectedTransactionId,
+        tenantId: input.tenantId,
+        ledgerId: input.ledgerId,
+        status: {
+          in: input.expectedStatuses
+        }
+      },
+      data: {
+        status: input.nextStatus
+      }
+    });
+
+    return result.count;
+  }
+
+  async findCurrentCollectedTransactionStatusInWorkspace(
+    scope: ConfirmationWorkspaceScope,
+    collectedTransactionId: string
+  ): Promise<CollectedTransactionStatus | null> {
+    const current = await this.tx.collectedTransaction.findFirst({
+      where: {
+        id: collectedTransactionId,
+        tenantId: scope.tenantId,
+        ledgerId: scope.ledgerId
+      },
+      select: {
+        status: true
+      }
+    });
+
+    return current?.status ?? null;
   }
 }

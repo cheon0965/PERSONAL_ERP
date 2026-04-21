@@ -7,6 +7,13 @@ import {
 
 export const importBatchRecordInclude =
   Prisma.validator<Prisma.ImportBatchInclude>()({
+    fundingAccount: {
+      select: {
+        id: true,
+        name: true,
+        type: true
+      }
+    },
     rows: {
       include: {
         createdCollectedTransaction: {
@@ -56,6 +63,9 @@ export function mapImportBatchRecordToItem(
     sourceKind: record.sourceKind,
     fileName: record.fileName,
     fileHash: record.fileHash,
+    fundingAccountId: record.fundingAccountId,
+    fundingAccountName: record.fundingAccount?.name ?? null,
+    fundingAccountType: record.fundingAccount?.type ?? null,
     rowCount: record.rowCount,
     parseStatus: record.parseStatus,
     uploadedAt: record.uploadedAt.toISOString(),

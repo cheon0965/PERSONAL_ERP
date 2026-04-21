@@ -93,6 +93,7 @@ export function TransactionForm({
           </Alert>
         ) : null}
         {formState.selectedType !== 'TRANSFER' &&
+        formState.selectedType !== 'REVERSAL' &&
         formState.filteredCategories.length === 0 ? (
           <Alert severity="warning" variant="outlined">
             선택한 거래 성격에 맞는 카테고리가 아직 없습니다.{' '}
@@ -111,6 +112,7 @@ export function TransactionForm({
           form={formState.form}
           availableFundingAccounts={formState.availableFundingAccounts}
           filteredCategories={formState.filteredCategories}
+          includeReversalTypeOption={formState.selectedType === 'REVERSAL'}
           isBusy={formState.isBusy}
           submitLabel={
             formState.mutationPending ? '저장 중...' : formState.submitLabel

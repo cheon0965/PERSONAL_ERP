@@ -140,6 +140,16 @@ export function createRequestIdentityStateFixtures(input: {
         isActive: true
       },
       {
+        id: 'ltt-1-adjustment',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        code: 'MANUAL_ADJUSTMENT',
+        name: '수동 조정',
+        flowKind: LedgerTransactionFlowKind.ADJUSTMENT,
+        postingPolicyKey: 'MANUAL_ADJUSTMENT',
+        isActive: true
+      },
+      {
         id: 'ltt-2-expense',
         tenantId: 'tenant-2',
         ledgerId: 'ledger-2',

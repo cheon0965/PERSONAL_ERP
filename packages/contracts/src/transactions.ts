@@ -1,7 +1,11 @@
 import type { AuditActorType } from './accounting';
 import type { MoneyWon } from './money';
 
-export type CollectedTransactionType = 'INCOME' | 'EXPENSE' | 'TRANSFER';
+export type CollectedTransactionType =
+  | 'INCOME'
+  | 'EXPENSE'
+  | 'TRANSFER'
+  | 'REVERSAL';
 
 export type CollectedTransactionSourceKind = 'MANUAL' | 'RECURRING' | 'IMPORT';
 

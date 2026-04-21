@@ -16,6 +16,9 @@ export const mockImportBatches: ImportBatchItem[] = [
     sourceKind: 'MANUAL_UPLOAD',
     fileName: 'march-manual.csv',
     fileHash: 'hash-demo-1',
+    fundingAccountId: null,
+    fundingAccountName: null,
+    fundingAccountType: null,
     rowCount: 3,
     parseStatus: 'PARTIAL',
     uploadedAt: '2026-03-12T09:00:00.000Z',
@@ -105,6 +108,9 @@ export const mockImportBatches: ImportBatchItem[] = [
     sourceKind: 'BANK_CSV',
     fileName: 'bank-export.csv',
     fileHash: 'hash-demo-2',
+    fundingAccountId: 'acc-1',
+    fundingAccountName: '주거래 통장',
+    fundingAccountType: 'BANK',
     rowCount: 2,
     parseStatus: 'COMPLETED',
     uploadedAt: '2026-03-18T09:00:00.000Z',
@@ -170,6 +176,9 @@ export function buildImportBatchFallbackItem(
     sourceKind: input.sourceKind,
     fileName: input.fileName,
     fileHash: `hash-${Date.now()}`,
+    fundingAccountId: input.fundingAccountId ?? null,
+    fundingAccountName: null,
+    fundingAccountType: null,
     rowCount: rows.length,
     parseStatus:
       parsedRowCount === rows.length
@@ -181,6 +190,28 @@ export function buildImportBatchFallbackItem(
     parsedRowCount,
     failedRowCount: rows.length - parsedRowCount,
     rows
+  };
+}
+
+export function buildImportBatchFileFallbackItem(input: {
+  sourceKind: ImportSourceKind;
+  fileName: string;
+  fundingAccountId?: string | null;
+}): ImportBatchItem {
+  return {
+    id: `import-batch-demo-file-${Date.now()}`,
+    sourceKind: input.sourceKind,
+    fileName: input.fileName,
+    fileHash: `hash-file-${Date.now()}`,
+    fundingAccountId: input.fundingAccountId ?? null,
+    fundingAccountName: null,
+    fundingAccountType: null,
+    rowCount: 0,
+    parseStatus: 'PENDING',
+    uploadedAt: new Date().toISOString(),
+    parsedRowCount: 0,
+    failedRowCount: 0,
+    rows: []
   };
 }
 
@@ -293,8 +324,11 @@ function buildFallbackAutoPreparationSummary(input: {
 
   if (nextWorkflowStatus === 'READY_TO_POST') {
     decisionReasons.push(
-      input.type === 'TRANSFER' && !input.effectiveCategoryName
-        ? '이체 거래라 카테고리 없이도 전표 준비 상태로 올립니다.'
+      (input.type === 'TRANSFER' || input.type === 'REVERSAL') &&
+      !input.effectiveCategoryName
+        ? input.type === 'REVERSAL'
+          ? '승인취소 거래라 카테고리 없이도 전표 준비 상태로 올립니다.'
+          : '이체 거래라 카테고리 없이도 전표 준비 상태로 올립니다.'
         : '즉시 전표 준비 상태로 올립니다.'
     );
   } else if (nextWorkflowStatus === 'REVIEWED') {

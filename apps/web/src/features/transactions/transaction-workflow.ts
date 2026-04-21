@@ -56,7 +56,7 @@ export function resolveManualCollectedTransactionPostingStatus(input: {
   type: CollectedTransactionType;
   categoryId?: string | null;
 }): CollectedTransactionPostingStatus {
-  if (input.type === 'TRANSFER') {
+  if (input.type === 'TRANSFER' || input.type === 'REVERSAL') {
     return 'READY_TO_POST';
   }
 
@@ -69,7 +69,7 @@ export function resolveImportedCollectedTransactionPostingStatus(input: {
   type: CollectedTransactionType;
   categoryName?: string | null;
 }): CollectedTransactionPostingStatus {
-  if (input.type === 'TRANSFER') {
+  if (input.type === 'TRANSFER' || input.type === 'REVERSAL') {
     return 'READY_TO_POST';
   }
 

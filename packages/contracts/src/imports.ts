@@ -4,8 +4,13 @@ import type {
   CollectedTransactionType
 } from './transactions';
 import type { MoneyWon } from './money';
+import type { AccountType } from './reference-data';
 
-export type ImportSourceKind = 'CARD_EXCEL' | 'BANK_CSV' | 'MANUAL_UPLOAD';
+export type ImportSourceKind =
+  | 'CARD_EXCEL'
+  | 'BANK_CSV'
+  | 'MANUAL_UPLOAD'
+  | 'IM_BANK_PDF';
 
 export type ImportBatchParseStatus =
   | 'PENDING'
@@ -53,6 +58,9 @@ export type ImportBatchItem = {
   sourceKind: ImportSourceKind;
   fileName: string;
   fileHash: string;
+  fundingAccountId: string | null;
+  fundingAccountName: string | null;
+  fundingAccountType: AccountType | null;
   rowCount: number;
   parseStatus: ImportBatchParseStatus;
   uploadedAt: string;
@@ -64,11 +72,20 @@ export type ImportBatchItem = {
 export type CreateImportBatchRequest = {
   sourceKind: ImportSourceKind;
   fileName: string;
+  fundingAccountId?: string | null;
   content: string;
 };
 
 export type CollectImportedRowRequest = {
   type: CollectedTransactionType;
+  fundingAccountId: string;
+  categoryId?: string;
+  memo?: string;
+};
+
+export type BulkCollectImportedRowsRequest = {
+  rowIds?: string[];
+  type?: CollectedTransactionType;
   fundingAccountId: string;
   categoryId?: string;
   memo?: string;
@@ -90,4 +107,19 @@ export type CollectImportedRowPreview = {
 export type CollectImportedRowResponse = {
   collectedTransaction: CollectedTransactionItem;
   preview: CollectImportedRowPreview;
+};
+
+export type BulkCollectImportedRowsResultItem = {
+  importedRowId: string;
+  status: 'COLLECTED' | 'FAILED';
+  collectedTransactionId: string | null;
+  message: string | null;
+};
+
+export type BulkCollectImportedRowsResponse = {
+  importBatchId: string;
+  requestedRowCount: number;
+  succeededCount: number;
+  failedCount: number;
+  results: BulkCollectImportedRowsResultItem[];
 };

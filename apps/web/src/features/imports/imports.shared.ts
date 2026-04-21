@@ -13,7 +13,8 @@ export const sourceKindOptions: Array<{
 }> = [
   { value: 'MANUAL_UPLOAD', label: '직접 붙여넣기' },
   { value: 'BANK_CSV', label: '계좌 CSV' },
-  { value: 'CARD_EXCEL', label: '카드 엑셀' }
+  { value: 'CARD_EXCEL', label: '카드 엑셀' },
+  { value: 'IM_BANK_PDF', label: 'IM뱅크 PDF' }
 ];
 
 export type FeedbackState = {
@@ -25,6 +26,9 @@ export type ImportedRowTableItem = ImportBatchItem['rows'][number] & {
   occurredOn: string;
   title: string;
   amount: number | null;
+  direction: 'WITHDRAWAL' | 'DEPOSIT' | 'REVERSAL' | null;
+  collectTypeHint: 'INCOME' | 'EXPENSE' | 'TRANSFER' | 'REVERSAL' | null;
+  balanceAfter: number | null;
 };
 
 export function buildCollectSuccessMessage(
@@ -42,6 +46,9 @@ export function readParsedRowPreview(row: ImportBatchItem['rows'][number]): {
   occurredOn: string;
   title: string;
   amount: number;
+  direction: 'WITHDRAWAL' | 'DEPOSIT' | 'REVERSAL' | null;
+  collectTypeHint: 'INCOME' | 'EXPENSE' | 'TRANSFER' | 'REVERSAL' | null;
+  balanceAfter: number | null;
 } | null {
   const parsed =
     isObjectRecord(row.rawPayload) && isObjectRecord(row.rawPayload.parsed)
@@ -60,7 +67,11 @@ export function readParsedRowPreview(row: ImportBatchItem['rows'][number]): {
   return {
     occurredOn: parsed.occurredOn,
     title: parsed.title,
-    amount: parsed.amount
+    amount: parsed.amount,
+    direction: readParsedDirection(parsed.direction),
+    collectTypeHint: readParsedCollectTypeHint(parsed.collectTypeHint),
+    balanceAfter:
+      typeof parsed.balanceAfter === 'number' ? parsed.balanceAfter : null
   };
 }
 
@@ -107,4 +118,25 @@ export function readImportedRowParseStatusLabel(
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return value != null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function readParsedDirection(
+  value: unknown
+): 'WITHDRAWAL' | 'DEPOSIT' | 'REVERSAL' | null {
+  return value === 'WITHDRAWAL' ||
+    value === 'DEPOSIT' ||
+    value === 'REVERSAL'
+    ? value
+    : null;
+}
+
+function readParsedCollectTypeHint(
+  value: unknown
+): 'INCOME' | 'EXPENSE' | 'TRANSFER' | 'REVERSAL' | null {
+  return value === 'INCOME' ||
+    value === 'EXPENSE' ||
+    value === 'TRANSFER' ||
+    value === 'REVERSAL'
+    ? value
+    : null;
 }

@@ -1,3 +1,5 @@
+// eslint-disable-next-line no-restricted-imports
+import { BadRequestException } from '@nestjs/common';
 import type {
   CollectedTransactionItem,
   UpdateCollectedTransactionRequest
@@ -37,6 +39,12 @@ export class UpdateCollectedTransactionUseCase {
 
     if (!existing) {
       return null;
+    }
+
+    if (command.type === 'REVERSAL' && existing.origin !== 'IMPORT') {
+      throw new BadRequestException(
+        '승인취소 거래는 업로드 배치에서 생성된 거래에만 적용할 수 있습니다.'
+      );
     }
 
     assertCollectedTransactionCanBeUpdated({

@@ -1,9 +1,18 @@
-import { Catch, ConflictException, type ArgumentsHost } from '@nestjs/common';
+import {
+  Catch,
+  ConflictException,
+  type ArgumentsHost,
+  type HttpServer
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { BaseExceptionFilter } from '@nestjs/core';
 
 @Catch(Prisma.PrismaClientKnownRequestError)
 export class PrismaConflictExceptionFilter extends BaseExceptionFilter {
+  constructor(applicationRef?: HttpServer) {
+    super(applicationRef);
+  }
+
   catch(exception: Prisma.PrismaClientKnownRequestError, host: ArgumentsHost) {
     if (exception.code !== 'P2002') {
       return super.catch(exception, host);

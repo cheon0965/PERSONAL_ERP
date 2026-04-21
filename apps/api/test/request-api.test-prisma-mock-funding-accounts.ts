@@ -21,6 +21,8 @@ export function createFundingAccountsPrismaMock(
         select?: {
           id?: boolean;
           name?: boolean;
+          type?: boolean;
+          status?: boolean;
           sortOrder?: boolean;
         };
       }) => {
@@ -68,6 +70,8 @@ export function createFundingAccountsPrismaMock(
         return {
           ...(args.select.id ? { id: account.id } : {}),
           ...(args.select.name ? { name: account.name } : {}),
+          ...(args.select.type ? { type: account.type } : {}),
+          ...(args.select.status ? { status: account.status } : {}),
           ...(args.select.sortOrder
             ? { sortOrder: account.sortOrder ?? 0 }
             : {})

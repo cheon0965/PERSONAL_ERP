@@ -18,6 +18,7 @@ export type CreateImportBatchRecordInput = {
   sourceKind: ImportSourceKind;
   fileName: string;
   fileHash: string;
+  fundingAccountId: string | null;
   rowCount: number;
   parseStatus: ImportBatchParseStatus;
   rows: ParsedImportedRowDraft[];

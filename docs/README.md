@@ -48,10 +48,6 @@
 - `ASVS_L2_EXECUTION_PLAN.md`: 보안 기준 실행 계획
 - `ASVS_L2_BASELINE_MATRIX.md`: 보안 기준선과 근거 매트릭스
 
-### 보조 실행 문서
-
-- `FRONTEND_SCREEN_SPLIT_AND_COPY_CLEANUP_EXECUTION_PLAN.md`: 프론트 화면 분리와 설명 문구 정리 실행 계획
-
 ## 완료 문서
 
 - [`completed/README.md`](./completed/README.md): 완료된 실행 계획, 설계 기록, 단계별 기준선 인덱스

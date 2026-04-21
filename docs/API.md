@@ -172,8 +172,11 @@
 - `GET /import-batches`
 - `GET /import-batches/:id`
 - `POST /import-batches`
+- `POST /import-batches/files`
+- `DELETE /import-batches/:id`
 - `POST /import-batches/:id/rows/:rowId/collect-preview`
 - `POST /import-batches/:id/rows/:rowId/collect`
+- `POST /import-batches/:id/rows/collect`
 - `GET /journal-entries`
 - `POST /journal-entries/:id/reverse`
 - `POST /journal-entries/:id/correct`
@@ -252,8 +255,8 @@
 - Web `/plan-items` -> API `/plan-items`
 - Web `/plan-items/generate` -> API `GET /accounting-periods`, `POST /plan-items/generate`
 - Web `/transactions` -> API `/collected-transactions`
-- Web `/imports` -> API `/import-batches`
-- Web `/imports/[batchId]` -> API `GET /import-batches/:id`, `POST /import-batches/:id/rows/:rowId/collect-preview`, `POST /import-batches/:id/rows/:rowId/collect`
+- Web `/imports` -> API `/import-batches`, `POST /import-batches/files`
+- Web `/imports/[batchId]` -> API `GET /import-batches/:id`, `DELETE /import-batches/:id`, `POST /import-batches/:id/rows/collect`, `POST /import-batches/:id/rows/:rowId/collect-preview`, `POST /import-batches/:id/rows/:rowId/collect`
 - Web `/journal-entries` -> API `/journal-entries`
 - Web `/journal-entries/[entryId]` -> API `GET /journal-entries`, `POST /journal-entries/:id/reverse`, `POST /journal-entries/:id/correct`
 - Web `/financial-statements` -> API `/financial-statements`
@@ -633,8 +636,24 @@
 ### `POST /import-batches`
 
 - 계약: `CreateImportBatchRequest -> ImportBatchItem`
-- 업로드 내용을 파싱해 배치와 행 단위 parse 결과를 저장합니다.
+- UTF-8 CSV/TSV 또는 붙여넣기 텍스트 업로드 내용을 파싱해 배치와 행 단위 parse 결과를 저장합니다.
+- `fundingAccountId`를 함께 보내면 활성 계좌/카드 자금수단과 배치를 연결합니다. 빈 값이면 기존처럼 배치만 생성합니다.
 - 현재 row read model은 이미 승격된 행이면 수집 거래 상태, 연결된 계획 항목, 적용 카테고리 요약까지 함께 돌려줍니다.
+
+### `POST /import-batches/files`
+
+- 계약: `multipart/form-data(sourceKind, fundingAccountId, file) -> ImportBatchItem`
+- 현재 파일첨부 업로드는 `IM_BANK_PDF` 원본 형식을 지원합니다.
+- `fundingAccountId`는 필수이며, 현재 워크스페이스의 활성 계좌/카드 자금수단이어야 합니다.
+- IM뱅크 PDF 거래내역은 raw bytes SHA-256 `fileHash`를 계산하고, PDF 텍스트 레이어와 좌표를 읽어 `ImportedRow.rawPayload.original/parsed` 구조로 변환합니다.
+- 원본 PDF 파일 자체는 저장하지 않고, 파일명, 해시, 파싱된 행, 행 단위 원본/정규화 payload만 저장합니다.
+- PDF magic bytes, 확장자, content-type, 10MB 크기 제한을 검증합니다.
+
+### `DELETE /import-batches/:id`
+
+- 계약: response body 없음 (`204 No Content`)
+- 현재 작업 문맥의 Owner/Manager/Editor만 업로드 배치를 삭제할 수 있습니다.
+- 이미 수집 거래와 연결된 배치는 source trace 보존을 위해 삭제를 막고 `409 Conflict`를 반환합니다.
 
 ### `POST /import-batches/:id/rows/:rowId/collect-preview`
 
@@ -650,6 +669,13 @@
 - 현재 구현은 source fingerprint 기반 중복 감지, 미확정 계획 항목(`PlanItem`) 자동 매칭, 카테고리/상태 자동 준비를 포함합니다.
 - 같은 업로드 행 재수집은 `importedRowId` 기준으로 막고, 반복 수집 거래 흡수는 조건부 claim으로 덮어쓰기를 방지합니다.
 - 중복/경합은 `409 Conflict`로 정리합니다.
+
+### `POST /import-batches/:id/rows/collect`
+
+- 계약: `BulkCollectImportedRowsRequest -> BulkCollectImportedRowsResponse`
+- 선택 행이 없으면 현재 요청 배치의 등록 가능 행 전체를 대상으로 하고, 선택 행이 있으면 선택 목록만 처리합니다.
+- 요청에서 `type`을 비우면 현재 구현은 파싱된 입출금 방향으로 `DEPOSIT -> INCOME`, `WITHDRAWAL -> EXPENSE`를 자동 판정합니다.
+- 응답은 행별 성공/실패 결과를 함께 반환해 배치 상세 작업대에서 일괄 등록 결과를 바로 피드백할 수 있게 합니다.
 
 ### `POST /journal-entries/:id/reverse`
 
@@ -715,7 +741,7 @@
 - `OWNER`, `MANAGER`, `EDITOR`, `VIEWER`: `workspace_settings.read`, `account_security.read`, `account_profile.update`, `account_security.change_password`, `account_security.revoke_session`, `operations_console.read`
 - `OWNER`, `MANAGER`: `funding_account.create`, `funding_account.update`, `category.create`, `category.update`, `insurance_policy.create`, `insurance_policy.update`, `insurance_policy.delete`, `vehicle.create`, `vehicle.update`, `accounting_period.open`, `recurring_rule.create`, `plan_item.generate`, `financial_statement.generate`, `carry_forward.generate`, `journal_entry.reverse`, `journal_entry.correct`
 - `OWNER`: `accounting_period.close`, `accounting_period.reopen`
-- `OWNER`, `MANAGER`, `EDITOR`: `collected_transaction.create`, `collected_transaction.confirm`, `import_batch.upload`, `operations_note.create`
+- `OWNER`, `MANAGER`, `EDITOR`: `collected_transaction.create`, `collected_transaction.confirm`, `import_batch.upload`, `import_batch.delete`, `operations_note.create`
 - `CollectedTransactionItem`, `RecurringRuleItem`, `JournalEntryItem`, `PlanItemsView`, `FinancialStatementsView`, `CarryForwardView`, `DashboardSummary`, `ForecastResponse`는 raw table 전체가 아니라 API view/projection shape를 응답합니다.
 - 예외적으로 `ImportBatchItem.rows[].rawPayload`는 업로드 검수 목적상 현재 응답에 포함됩니다.
 - 접근통제 실패는 `404` 또는 `401/403`으로 처리하고, 보안 이벤트 로그와 함께 남깁니다.

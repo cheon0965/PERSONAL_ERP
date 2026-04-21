@@ -1,3 +1,5 @@
+// eslint-disable-next-line no-restricted-imports
+import { BadRequestException } from '@nestjs/common';
 import type {
   CollectedTransactionItem,
   CreateCollectedTransactionRequest
@@ -26,6 +28,12 @@ export class CreateCollectedTransactionUseCase {
   async execute(
     command: CreateCollectedTransactionCommand
   ): Promise<CollectedTransactionItem> {
+    if (command.type === 'REVERSAL') {
+      throw new BadRequestException(
+        '승인취소 거래는 업로드 배치의 승인취소 행에서만 생성할 수 있습니다.'
+      );
+    }
+
     const [fundingAccountExists, categoryExists] = await Promise.all([
       this.referenceOwnership.fundingAccountExistsInWorkspace(
         command.tenantId,

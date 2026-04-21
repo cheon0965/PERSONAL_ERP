@@ -2,9 +2,19 @@
 
 기준일: `2026-04-16`
 
-문서 상태: `current-baseline`
+문서 상태: `completed-archive`
 
 적용 범위: `apps/web`, `apps/api/src/common/navigation`, `docs`
+
+> 보관 상태: `2026-04-20` 기준 프론트 화면 분리 및 설명문구 정리 실행계획을 완료 처리한 뒤 `docs/completed/`로 이동했다. 현재 운영 기준은 `docs/SCREEN_FLOW_GUIDE.md`, `docs/DESIGN_SYSTEM.md`, `docs/ARCHITECTURE.md`, `docs/CURRENT_CAPABILITIES.md`를 우선한다.
+
+## 완료 메모
+
+2026-04-20 기준 이 실행계획은 완료된 이력 문서로 보관한다.
+
+- 기준 데이터, 내 계정/보안, 계획 항목 등 화면 책임 분리 기준을 반영 완료한 상태로 본다.
+- 공통 헤더/카드/사이드바 설명문구 정리와 메뉴 텍스트 슬림화 기준을 완료 상태로 고정한다.
+- 새 화면 구조와 현재 운영 흐름은 현재 기준 문서인 `SCREEN_FLOW_GUIDE.md`, `DESIGN_SYSTEM.md`, `ARCHITECTURE.md`, `CURRENT_CAPABILITIES.md`를 우선한다.
 
 연결 문서:
 
