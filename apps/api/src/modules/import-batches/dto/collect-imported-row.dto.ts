@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import type { CollectImportedRowRequest } from '@personal-erp/contracts';
 import { TransactionType } from '@prisma/client';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
 
 export class CollectImportedRowRequestDto implements CollectImportedRowRequest {
   @ApiProperty({ enum: TransactionType })
@@ -16,6 +16,11 @@ export class CollectImportedRowRequestDto implements CollectImportedRowRequest {
   @IsOptional()
   @IsString()
   categoryId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  confirmPotentialDuplicate?: boolean;
 
   @ApiProperty({ required: false })
   @IsOptional()

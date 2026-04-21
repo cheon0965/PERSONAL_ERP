@@ -124,6 +124,7 @@ Insight Context: controller -> read service -> read repository -> projection
 - 공통 어댑터 조립은 `apps/api/src/common/infrastructure`에서 시작합니다.
 - `application/domain/infrastructure` 폴더는 실제 전환 대상 모듈에서만 만듭니다.
 - 현재 승격 완료 모듈: `collected-transactions`, `recurring-rules`, `accounting-periods`, `import-batches`, `journal-entries`, `auth`, `admin`, `insurance-policies`, `plan-items`, `financial-statements`, `carry-forwards`, `operations-console` — `docs/completed/REFACTORING_EXECUTION_PLAN.md` 참조
+- `import-batches`는 업로드 배치/행 보존, IM뱅크 PDF 파싱, 단건 collect, 일괄 등록 Job/행별 결과/workspace 잠금을 같은 Ledger 경계 안에서 조율합니다.
 - `collected-transactions`, `recurring-rules`, `dashboard`, `forecast`는 모듈 바깥에서 각 모듈의 `public.ts`만 공식 진입점으로 사용합니다.
 - `dashboard`, `forecast`는 `read service -> read repository -> projection` 네이밍으로 읽기 조합 컨텍스트임을 코드에서 드러냅니다.
 - `auth`는 10개 use-case + SupportService 기반 "얇은 Hexagonal" 구조, `admin`은 4개 use-case + CommandSupport/QueryService 기반 구조를 채택했습니다.

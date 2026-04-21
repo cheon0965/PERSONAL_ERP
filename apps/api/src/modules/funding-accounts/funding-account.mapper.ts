@@ -8,7 +8,7 @@ type AccountRecord = {
   id: string;
   name: string;
   type: FundingAccountItem['type'];
-  balanceWon: PrismaMoneyLike;
+  balanceWon: PrismaMoneyLike | number;
   status: FundingAccountItem['status'];
 };
 
@@ -19,7 +19,10 @@ export function mapFundingAccountRecordToItem(
     id: account.id,
     name: account.name,
     type: account.type,
-    balanceWon: fromPrismaMoneyWon(account.balanceWon),
+    balanceWon:
+      typeof account.balanceWon === 'number'
+        ? account.balanceWon
+        : fromPrismaMoneyWon(account.balanceWon),
     status: account.status
   };
 }

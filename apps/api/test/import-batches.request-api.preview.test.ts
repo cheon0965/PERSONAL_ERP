@@ -1,8 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { TransactionType } from '@prisma/client';
+import { ImportSourceKind, TransactionType } from '@prisma/client';
 import { createRequestTestContext } from './request-api.test-support';
-import { seedCollectableImportScenario } from './import-batches.request-api.shared';
+import {
+  buildImportRowFingerprint,
+  pushCollectedTransaction,
+  pushImportBatch,
+  pushImportedRow,
+  seedCollectableImportScenario
+} from './import-batches.request-api.shared';
 
 test('POST /import-batches/:id/rows/:rowId/collect-preview returns the automatic preparation summary before promotion', async () => {
   const context = await createRequestTestContext();
@@ -50,6 +56,169 @@ test('POST /import-batches/:id/rows/:rowId/collect-preview returns the automatic
       }
     });
     assert.equal(context.state.collectedTransactions.length, 3);
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /import-batches/:id/rows/:rowId/collect-preview announces that a missing target month will be created during registration', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    pushImportBatch(context, {
+      id: 'import-batch-missing-period-preview',
+      fileName: 'missing-period-preview.csv',
+      fileHash: 'hash-missing-period-preview'
+    });
+    pushImportedRow(context, {
+      id: 'imported-row-missing-period-preview',
+      batchId: 'import-batch-missing-period-preview',
+      occurredOn: '2026-02-12',
+      title: 'Auto-open preview',
+      amount: 22_000
+    });
+
+    const response = await context.request(
+      '/import-batches/import-batch-missing-period-preview/rows/imported-row-missing-period-preview/collect-preview',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          type: TransactionType.EXPENSE,
+          fundingAccountId: 'acc-1',
+          categoryId: 'cat-1'
+        }
+      }
+    );
+
+    assert.equal(response.status, 201);
+    assert.equal(context.state.accountingPeriods.length, 0);
+    assert.ok(
+      (
+        response.body as {
+          autoPreparation: {
+            decisionReasons: string[];
+          };
+        }
+      ).autoPreparation.decisionReasons.includes(
+        '2026-02 운영월이 없어 등록 과정에서 자동으로 추가합니다.'
+      )
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /import-batches/:id/rows/:rowId/collect-preview reports potential duplicates that need confirmation', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    seedCollectableImportScenario(context, {
+      title: 'Fuel refill',
+      amount: 84_000
+    });
+    pushCollectedTransaction(context, {
+      id: 'ctx-potential-duplicate-preview',
+      periodId: 'period-open-import-collect',
+      title: 'Fuel refill existing',
+      occurredOn: new Date('2026-03-12T00:00:00.000Z'),
+      amount: 84_000
+    });
+
+    const response = await context.request(
+      '/import-batches/import-batch-collect/rows/imported-row-collect-1/collect-preview',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          type: TransactionType.EXPENSE,
+          fundingAccountId: 'acc-1'
+        }
+      }
+    );
+
+    assert.equal(response.status, 201);
+    assert.equal(
+      (
+        response.body as {
+          autoPreparation: {
+            potentialDuplicateTransactionCount?: number;
+          };
+        }
+      ).autoPreparation.potentialDuplicateTransactionCount,
+      1
+    );
+    assert.ok(
+      (
+        response.body as {
+          autoPreparation: {
+            decisionReasons: string[];
+          };
+        }
+      ).autoPreparation.decisionReasons.includes(
+        '같은 거래일·금액·입출금 유형의 기존 거래 1건이 있어 확인 후 등록해야 합니다.'
+      )
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /import-batches/:id/rows/:rowId/collect-preview ignores duplicate candidates from the same import batch', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const duplicateFingerprint = buildImportRowFingerprint({
+      sourceKind: ImportSourceKind.MANUAL_UPLOAD,
+      occurredOn: '2026-03-12',
+      amount: 84_000,
+      title: 'Fuel refill'
+    });
+
+    seedCollectableImportScenario(context, {
+      title: 'Fuel refill',
+      amount: 84_000,
+      sourceFingerprint: duplicateFingerprint
+    });
+    pushCollectedTransaction(context, {
+      id: 'ctx-same-batch-potential-duplicate-preview',
+      periodId: 'period-open-import-collect',
+      importBatchId: 'import-batch-collect',
+      importedRowId: 'imported-row-same-batch-preview-existing',
+      sourceFingerprint: duplicateFingerprint,
+      title: 'Fuel refill existing from same batch',
+      occurredOn: new Date('2026-03-12T00:00:00.000Z'),
+      amount: 84_000
+    });
+
+    const response = await context.request(
+      '/import-batches/import-batch-collect/rows/imported-row-collect-1/collect-preview',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          type: TransactionType.EXPENSE,
+          fundingAccountId: 'acc-1'
+        }
+      }
+    );
+
+    assert.equal(response.status, 201);
+    const autoPreparation = (
+      response.body as {
+        autoPreparation: {
+          hasDuplicateSourceFingerprint: boolean;
+          potentialDuplicateTransactionCount?: number;
+          nextWorkflowStatus: string;
+          allowPlanItemMatch: boolean;
+        };
+      }
+    ).autoPreparation;
+
+    assert.equal(autoPreparation.hasDuplicateSourceFingerprint, false);
+    assert.equal(autoPreparation.potentialDuplicateTransactionCount, undefined);
+    assert.equal(autoPreparation.nextWorkflowStatus, 'READY_TO_POST');
+    assert.equal(autoPreparation.allowPlanItemMatch, true);
   } finally {
     await context.close();
   }

@@ -30,8 +30,10 @@ export type ParsedImportBatchDraft = {
 
 export type ParsedImportedRowPayload = {
   occurredOn: string;
+  occurredAt?: string | null;
   title: string;
   amount: number;
+  signedAmount?: number | null;
   direction?: 'WITHDRAWAL' | 'DEPOSIT' | 'REVERSAL' | null;
   directionLabel?: string | null;
   collectTypeHint?: CollectedTransactionType | null;
@@ -259,8 +261,14 @@ export function readParsedImportedRowPayload(
     isMoneyWon(parsed.amount)
     ? {
         occurredOn: parsed.occurredOn,
+        ...(typeof parsed.occurredAt === 'string'
+          ? { occurredAt: parsed.occurredAt }
+          : {}),
         title: parsed.title,
         amount: parsed.amount,
+        ...(typeof parsed.signedAmount === 'number'
+          ? { signedAmount: parsed.signedAmount }
+          : {}),
         ...(readParsedDirection(parsed.direction)
           ? { direction: readParsedDirection(parsed.direction) }
           : {}),

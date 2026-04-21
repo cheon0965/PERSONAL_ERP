@@ -123,10 +123,14 @@
 - 계획 항목 생성 정책과 service/view 조합
 - 계획 항목 view에 매칭 수집 거래 제목/상태와 전표 번호가 함께 실리는지 검증
 - 거래/반복규칙 use-case 생성 로직
-- `GET /import-batches`, `GET /import-batches/:id`, `POST /import-batches`, `POST /import-batches/:id/rows/:rowId/collect-preview`, `POST /import-batches/:id/rows/:rowId/collect`
-  UTF-8 텍스트 업로드 파싱, row collect preview, duplicate fingerprint 처리, 자동 계획 매칭/카테고리 보완 설명, role 기반 접근통제를 검증
+- `GET /import-batches`, `GET /import-batches/:id`, `POST /import-batches`, `POST /import-batches/files`, `POST /import-batches/:id/rows/:rowId/collect-preview`, `POST /import-batches/:id/rows/:rowId/collect`
+  UTF-8 텍스트 업로드 파싱, IM뱅크 PDF multipart 업로드, row collect preview, duplicate fingerprint 처리, 자동 계획 매칭/카테고리 보완 설명, role 기반 접근통제를 검증
+- `POST /import-batches/files`
+  IM뱅크 PDF 업로드의 활성 계좌/카드 연결 필수 조건, PDF magic bytes/확장자/content-type/10MB 제한, 원본 PDF 미저장과 행 단위 payload 저장을 검증
 - `POST /import-batches/:id/rows/:rowId/collect`
   반복 수집 거래 흡수 claim, 이미 다른 업로드 행과 연결된 대상의 `409 Conflict`, 같은 업로드 행 재수집 방지를 검증
+- `POST /import-batches/:id/rows/collect`, `GET /import-batches/:id/collection-jobs/active`, `GET /import-batches/:id/collection-jobs/:jobId`
+  선택 행 또는 등록 가능 행 전체의 일괄 등록 Job 생성, 입출금 방향 기반 수입/지출/취소 유형 추론, 진행률/행별 결과 조회, 같은 workspace 내 동시 일괄 등록 잠금과 단건 등록 충돌 보호를 검증
 - 계획 항목 generate use case
   `periodId + recurringRuleId + plannedDate` DB unique 경합을 `skip`으로 해석하고 `createdCount/skippedExistingCount`가 실제 commit 결과와 맞는지 검증
 - `POST /financial-statements/generate`, `GET /financial-statements`
@@ -176,6 +180,7 @@
 - 실제 브라우저 상호작용으로 `/vehicles`에서 차량 생성, 수정, 연료 이력 생성/수정, 정비 이력 생성/수정과 목록 반영이 동작하는지 검증
 - 실제 브라우저 상호작용으로 `/plan-items/generate`에서 현재 월 계획 항목과 연결 반복성 수집 거래를 생성하고, `/plan-items`에서 상태를 확인하며 `dashboard`/`forecast` 반영, `/financial-statements` 생성, `/carry-forwards` 생성과 차기 이월 basis note 반영이 동작하는지 검증
 - 실제 브라우저 상호작용으로 `/imports` 업로드 배치에서 행을 기존 계획 기반 수집 거래에 흡수/매칭하거나 새 수집 거래로 승격한 뒤 `/transactions`에서 전표 확정을 실행하고 `/journal-entries`에서 생성 전표를 여는 월 운영 cross-feature 흐름을 검증
+- API 요청 테스트로 IM뱅크 PDF 업로드와 업로드 배치 일괄 등록 Job/진행률/동시 작업 잠금 경계를 검증하고, Web 단위에서는 일괄 등록 버튼/진행률 표시와 API helper path를 함께 확인
 - 루트 `ci:local:*` 스크립트와 `docs/DEVELOPMENT_GUIDE.md` 매핑표로 GitHub Actions 주요 job을 로컬에서 다시 따를 수 있는 진입점을 제공
 - `npm run test:e2e:smoke:build`로 in-process production build/start 경로에 결과물을 올린 뒤 health route 응답 기준 최소 HTTP smoke를 자동 검증
 - `npm run test:e2e:smoke:build:browser`로는 로그인/세션 복원, 운영 체크리스트 핵심 CTA, 작업 문맥 fallback 같은 브라우저 build smoke를 루트 래퍼 경로로 필요 시 별도로 검증

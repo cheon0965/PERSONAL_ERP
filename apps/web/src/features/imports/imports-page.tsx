@@ -161,12 +161,9 @@ export function ImportsPage({
           selectedRowId={page.selectedRow?.id ?? null}
           selectedRowIds={page.selectedRowIds}
           selectedRowsCount={page.selectedRowsCount}
-          currentPeriodCollectableRowCount={
-            page.currentPeriodCollectableRowCount
-          }
-          selectedCurrentPeriodCollectableRowCount={
-            page.selectedCurrentPeriodCollectableRowCount
-          }
+          collectableRowCount={page.collectableRowCount}
+          selectedCollectableRowCount={page.selectedCollectableRowCount}
+          bulkCollectJob={page.bulkCollectJob}
           bulkCollectPending={page.isBulkCollectPending}
           onSelectedRowIdsChange={page.selectRows}
           onPrepareCollect={page.prepareCollectRow}
@@ -196,7 +193,6 @@ export function ImportsPage({
       <CollectImportedRowDialog
         open={page.isCollectDrawerOpen}
         selectedRow={page.selectedRow}
-        currentPeriod={page.currentPeriod}
         readiness={page.referenceDataReadinessQuery.data ?? null}
         fundingAccounts={page.fundingAccounts}
         categories={page.categories}

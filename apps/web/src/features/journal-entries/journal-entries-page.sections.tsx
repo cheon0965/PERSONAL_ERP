@@ -105,7 +105,7 @@ export function buildJournalEntryColumns({
 }
 
 export function JournalEntriesWorkspace({
-  currentPeriod,
+  adjustmentPeriod,
   entries,
   isDetailLayout,
   isSplitLayout,
@@ -114,7 +114,7 @@ export function JournalEntriesWorkspace({
   onSelectReverse,
   onSelectCorrect
 }: {
-  currentPeriod: AccountingPeriodItem | null;
+  adjustmentPeriod: AccountingPeriodItem | null;
   entries: JournalEntryItem[];
   isDetailLayout: boolean;
   isSplitLayout: boolean;
@@ -178,7 +178,7 @@ export function JournalEntriesWorkspace({
         </Stack>
         <JournalEntryDetailCard
           entry={selectedEntry}
-          currentPeriod={currentPeriod}
+          adjustmentPeriod={adjustmentPeriod}
           onReverse={() => onSelectReverse(selectedEntry)}
           onCorrect={() => onSelectCorrect(selectedEntry)}
         />
@@ -217,7 +217,7 @@ export function JournalEntriesWorkspace({
       {isSplitLayout && selectedEntry ? (
         <JournalEntryDetailCard
           entry={selectedEntry}
-          currentPeriod={currentPeriod}
+          adjustmentPeriod={adjustmentPeriod}
           onReverse={() => onSelectReverse(selectedEntry)}
           onCorrect={() => onSelectCorrect(selectedEntry)}
         />
@@ -228,16 +228,16 @@ export function JournalEntriesWorkspace({
 
 function JournalEntryDetailCard({
   entry,
-  currentPeriod,
+  adjustmentPeriod,
   onReverse,
   onCorrect
 }: {
   entry: JournalEntryItem;
-  currentPeriod: AccountingPeriodItem | null;
+  adjustmentPeriod: AccountingPeriodItem | null;
   onReverse: () => void;
   onCorrect: () => void;
 }) {
-  const canAdjust = entry.status === 'POSTED' && Boolean(currentPeriod);
+  const canAdjust = entry.status === 'POSTED' && Boolean(adjustmentPeriod);
 
   return (
     <SectionCard
@@ -306,9 +306,9 @@ function JournalEntryDetailCard({
         <Typography variant="caption" color="text.secondary">
           {entry.status !== 'POSTED'
             ? '이미 반전 또는 정정 처리된 전표는 추가 조정 대상이 아닙니다.'
-            : currentPeriod
-              ? `${currentPeriod.monthLabel} 운영 기간 안에서 조정 전표를 생성할 수 있습니다.`
-              : '현재 열린 운영 기간이 없어 조정 전표를 시작할 수 없습니다.'}
+            : adjustmentPeriod
+              ? `${adjustmentPeriod.monthLabel} 운영 기간을 기본 기준으로 조정 전표를 생성할 수 있습니다.`
+              : '전표 입력 가능한 운영 기간이 없어 조정 전표를 시작할 수 없습니다.'}
         </Typography>
 
         {hasAdjustmentMetadata(entry) ? (

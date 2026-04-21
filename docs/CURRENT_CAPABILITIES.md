@@ -17,7 +17,7 @@
 | 관리자/권한    | 사업장 설정, 멤버 초대/역할/상태 관리, 전체 사용자/사업장 관리, 지원 모드, 보안 위협 로그, 감사 로그 조회, 권한 정책 요약 | `workspace-settings`, `admin`, `navigation`                                                                  |
 | 운영 지원      | 체크리스트, 예외 처리함, 월 마감 지원, 업로드 현황, 시스템 상태, 알림 센터, UTF-8 CSV 반출, 운영 메모                     | `operations-console`                                                                                         |
 | 기준 데이터    | readiness 요약, 자금수단 관리, 카테고리 관리, 계정과목/거래유형 조회                                                      | `reference-data-readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types` |
-| 월 실행        | 운영 기간 open/close/reopen, 수집 거래, 업로드 배치, 전표 조회/조정                                                       | `accounting-periods`, `collected-transactions`, `import-batches`, `journal-entries`                          |
+| 월 실행        | 운영 기간 open/close/reopen, 수집 거래, 업로드 배치와 일괄 등록 진행률, 전표 조회/조정                                    | `accounting-periods`, `collected-transactions`, `import-batches`, `journal-entries`                          |
 | 계획 자동화    | 반복 규칙, 계획 항목 생성과 추적                                                                                          | `recurring-rules`, `plan-items`                                                                              |
 | 운영 자산      | 보험 계약, 차량 기본 정보, 연료 이력, 정비 이력, 차량 운영 요약                                                           | `insurance-policies`, `vehicles`                                                                             |
 | 보고/판단      | 대시보드, 재무제표 스냅샷, 차기 이월, 기간 전망                                                                           | `dashboard`, `financial-statements`, `carry-forwards`, `forecast`                                            |
@@ -123,7 +123,7 @@
 - `recurring-rules`: 반복 규칙 CRUD
 - `plan-items`: 계획 항목 생성과 기간별 추적
 - `collected-transactions`: 생성, 상세 조회, 수정, 삭제, 전표 확정
-- `import-batches`: UTF-8 텍스트 업로드 파싱, 활성 계좌/카드 연결형 IM뱅크 PDF 파일첨부 파싱, collect preview, 단건 collect, 배치 삭제, 배치 상세 일괄 collect
+- `import-batches`: UTF-8 텍스트 업로드 파싱, 활성 계좌/카드 연결형 IM뱅크 PDF 파일첨부 파싱, collect preview, 단건 collect, 배치 삭제, 배치 상세 일괄 등록 Job/진행률/행별 결과 조회
 - `journal-entries`: 전표 조회, 반전 전표, 정정 전표
 - `financial-statements`: 잠금 기간 재무제표 스냅샷 생성/조회
 - `carry-forwards`: closing snapshot 기반 차기 이월 생성/조회

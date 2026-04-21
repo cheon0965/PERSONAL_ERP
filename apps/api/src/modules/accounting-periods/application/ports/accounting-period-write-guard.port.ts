@@ -24,6 +24,11 @@ export abstract class AccountingPeriodWriteGuardPort {
     businessDate: string
   ): Promise<WritableAccountingPeriod>;
 
+  abstract assertJournalEntryDateAllowed(
+    workspace: AccountingPeriodWorkspaceScope,
+    businessDate: string
+  ): Promise<WritableAccountingPeriod>;
+
   abstract claimJournalWritePeriodInTransaction(
     tx: Prisma.TransactionClient,
     workspace: AccountingPeriodWorkspaceScope,

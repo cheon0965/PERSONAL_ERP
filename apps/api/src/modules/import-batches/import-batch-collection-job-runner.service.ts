@@ -1,0 +1,376 @@
+import { Injectable, Logger } from '@nestjs/common';
+import type {
+  AuthenticatedUser,
+  BulkCollectImportedRowsRequest,
+  CollectedTransactionType
+} from '@personal-erp/contracts';
+import {
+  ImportBatchCollectionJobRowStatus,
+  ImportBatchCollectionJobStatus,
+  Prisma
+} from '@prisma/client';
+import { PrismaService } from '../../common/prisma/prisma.service';
+import { buildCollectRequestForBulkRow } from './bulk-collect-imported-rows.policy';
+import { ImportedRowCollectionService } from './imported-row-collection.service';
+
+const IMPORT_COLLECTION_LOCK_TTL_MS = 15 * 60 * 1000;
+
+@Injectable()
+export class ImportBatchCollectionJobRunner {
+  private readonly logger = new Logger(ImportBatchCollectionJobRunner.name);
+  private readonly runningJobIds = new Set<string>();
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly importedRowCollectionService: ImportedRowCollectionService
+  ) {}
+
+  start(jobId: string, user: AuthenticatedUser): void {
+    if (this.runningJobIds.has(jobId)) {
+      return;
+    }
+
+    this.runningJobIds.add(jobId);
+    setTimeout(() => {
+      void this.run(jobId, user).finally(() => {
+        this.runningJobIds.delete(jobId);
+      });
+    }, 0);
+  }
+
+  private async run(jobId: string, user: AuthenticatedUser): Promise<void> {
+    const job = await this.prisma.importBatchCollectionJob.findFirst({
+      where: {
+        id: jobId
+      },
+      include: {
+        rows: {
+          orderBy: {
+            rowNumber: 'asc'
+          }
+        }
+      }
+    });
+
+    if (!job || job.status !== ImportBatchCollectionJobStatus.PENDING) {
+      return;
+    }
+
+    const request = readBulkCollectRequest(job.requestPayload);
+    const startedAt = new Date();
+    await this.prisma.importBatchCollectionJob.update({
+      where: {
+        id: job.id
+      },
+      data: {
+        status: ImportBatchCollectionJobStatus.RUNNING,
+        startedAt,
+        heartbeatAt: startedAt,
+        processedRowCount: 0,
+        succeededCount: 0,
+        failedCount: 0,
+        errorMessage: null
+      }
+    });
+
+    let processedRowCount = 0;
+    let succeededCount = 0;
+    let failedCount = 0;
+
+    try {
+      for (const row of job.rows) {
+        const result = await this.processRow({
+          jobId: job.id,
+          importBatchId: job.importBatchId,
+          rowId: row.id,
+          importedRowId: row.importedRowId,
+          user,
+          request
+        });
+
+        processedRowCount += 1;
+        if (result === ImportBatchCollectionJobRowStatus.COLLECTED) {
+          succeededCount += 1;
+        } else if (result === ImportBatchCollectionJobRowStatus.FAILED) {
+          failedCount += 1;
+        }
+
+        await this.updateJobProgress({
+          jobId: job.id,
+          processedRowCount,
+          succeededCount,
+          failedCount
+        });
+      }
+
+      await this.finishJob({
+        jobId: job.id,
+        status: resolveFinalJobStatus({
+          succeededCount,
+          failedCount
+        }),
+        processedRowCount,
+        succeededCount,
+        failedCount,
+        errorMessage: null
+      });
+    } catch (error) {
+      this.logger.error(
+        `Import batch collection job failed: ${job.id}`,
+        error instanceof Error ? error.stack : undefined
+      );
+      await this.finishJob({
+        jobId: job.id,
+        status: ImportBatchCollectionJobStatus.FAILED,
+        processedRowCount,
+        succeededCount,
+        failedCount: Math.max(
+          failedCount,
+          job.requestedRowCount - succeededCount
+        ),
+        errorMessage:
+          error instanceof Error
+            ? error.message
+            : '업로드 배치 일괄 등록 작업이 중단되었습니다.'
+      });
+    }
+  }
+
+  private async processRow(input: {
+    jobId: string;
+    importBatchId: string;
+    rowId: string;
+    importedRowId: string;
+    user: AuthenticatedUser;
+    request: BulkCollectImportedRowsRequest;
+  }): Promise<ImportBatchCollectionJobRowStatus> {
+    const startedAt = new Date();
+    await this.prisma.importBatchCollectionJobRow.update({
+      where: {
+        id: input.rowId
+      },
+      data: {
+        status: ImportBatchCollectionJobRowStatus.RUNNING,
+        startedAt,
+        message: null
+      }
+    });
+
+    const importedRow = await this.prisma.importedRow.findFirst({
+      where: {
+        id: input.importedRowId,
+        batchId: input.importBatchId
+      },
+      select: {
+        id: true,
+        parseStatus: true,
+        rawPayload: true,
+        createdCollectedTransaction: {
+          select: {
+            id: true
+          }
+        }
+      }
+    });
+
+    if (!importedRow) {
+      await this.markRowFinished({
+        rowId: input.rowId,
+        status: ImportBatchCollectionJobRowStatus.FAILED,
+        collectedTransactionId: null,
+        message: '업로드 행을 찾을 수 없습니다.'
+      });
+      return ImportBatchCollectionJobRowStatus.FAILED;
+    }
+
+    if (importedRow.parseStatus !== 'PARSED') {
+      await this.markRowFinished({
+        rowId: input.rowId,
+        status: ImportBatchCollectionJobRowStatus.FAILED,
+        collectedTransactionId: null,
+        message: '파싱 완료 행만 수집 거래로 승격할 수 있습니다.'
+      });
+      return ImportBatchCollectionJobRowStatus.FAILED;
+    }
+
+    if (importedRow.createdCollectedTransaction) {
+      await this.markRowFinished({
+        rowId: input.rowId,
+        status: ImportBatchCollectionJobRowStatus.SKIPPED,
+        collectedTransactionId: importedRow.createdCollectedTransaction.id,
+        message: '이미 수집 거래로 승격된 업로드 행입니다.'
+      });
+      return ImportBatchCollectionJobRowStatus.SKIPPED;
+    }
+
+    try {
+      const collected = await this.importedRowCollectionService.collectRow(
+        input.user,
+        input.importBatchId,
+        importedRow.id,
+        buildCollectRequestForBulkRow({
+          request: input.request,
+          rawPayload: importedRow.rawPayload
+        })
+      );
+
+      await this.markRowFinished({
+        rowId: input.rowId,
+        status: ImportBatchCollectionJobRowStatus.COLLECTED,
+        collectedTransactionId: collected.collectedTransaction.id,
+        message:
+          collected.preview.autoPreparation.decisionReasons.at(-1) ?? null
+      });
+      return ImportBatchCollectionJobRowStatus.COLLECTED;
+    } catch (error) {
+      await this.markRowFinished({
+        rowId: input.rowId,
+        status: ImportBatchCollectionJobRowStatus.FAILED,
+        collectedTransactionId: null,
+        message:
+          error instanceof Error
+            ? error.message
+            : '업로드 행을 일괄 등록하지 못했습니다.'
+      });
+      return ImportBatchCollectionJobRowStatus.FAILED;
+    }
+  }
+
+  private async markRowFinished(input: {
+    rowId: string;
+    status: ImportBatchCollectionJobRowStatus;
+    collectedTransactionId: string | null;
+    message: string | null;
+  }) {
+    await this.prisma.importBatchCollectionJobRow.update({
+      where: {
+        id: input.rowId
+      },
+      data: {
+        status: input.status,
+        collectedTransactionId: input.collectedTransactionId,
+        message: input.message,
+        finishedAt: new Date()
+      }
+    });
+  }
+
+  private async updateJobProgress(input: {
+    jobId: string;
+    processedRowCount: number;
+    succeededCount: number;
+    failedCount: number;
+  }) {
+    const heartbeatAt = new Date();
+    await this.prisma.importBatchCollectionJob.update({
+      where: {
+        id: input.jobId
+      },
+      data: {
+        processedRowCount: input.processedRowCount,
+        succeededCount: input.succeededCount,
+        failedCount: input.failedCount,
+        heartbeatAt
+      }
+    });
+    await this.prisma.importBatchCollectionLock.updateMany({
+      where: {
+        jobId: input.jobId
+      },
+      data: {
+        expiresAt: new Date(
+          heartbeatAt.getTime() + IMPORT_COLLECTION_LOCK_TTL_MS
+        )
+      }
+    });
+  }
+
+  private async finishJob(input: {
+    jobId: string;
+    status: ImportBatchCollectionJobStatus;
+    processedRowCount: number;
+    succeededCount: number;
+    failedCount: number;
+    errorMessage: string | null;
+  }) {
+    const finishedAt = new Date();
+    await this.prisma.importBatchCollectionJob.update({
+      where: {
+        id: input.jobId
+      },
+      data: {
+        status: input.status,
+        processedRowCount: input.processedRowCount,
+        succeededCount: input.succeededCount,
+        failedCount: input.failedCount,
+        errorMessage: input.errorMessage,
+        finishedAt,
+        heartbeatAt: finishedAt
+      }
+    });
+    await this.prisma.importBatchCollectionLock.deleteMany({
+      where: {
+        jobId: input.jobId
+      }
+    });
+  }
+}
+
+function readBulkCollectRequest(
+  value: Prisma.JsonValue
+): BulkCollectImportedRowsRequest {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('일괄 등록 요청 정보를 읽을 수 없습니다.');
+  }
+
+  const record = value as Record<string, unknown>;
+  if (typeof record.fundingAccountId !== 'string') {
+    throw new Error('일괄 등록 요청 계좌/카드 정보를 읽을 수 없습니다.');
+  }
+  const type =
+    typeof record.type === 'string' && isCollectedTransactionType(record.type)
+      ? record.type
+      : undefined;
+
+  return {
+    ...(Array.isArray(record.rowIds)
+      ? {
+          rowIds: record.rowIds.filter(
+            (rowId): rowId is string => typeof rowId === 'string'
+          )
+        }
+      : {}),
+    ...(type ? { type } : {}),
+    fundingAccountId: record.fundingAccountId,
+    ...(typeof record.categoryId === 'string'
+      ? { categoryId: record.categoryId }
+      : {}),
+    ...(typeof record.memo === 'string' ? { memo: record.memo } : {})
+  };
+}
+
+function resolveFinalJobStatus(input: {
+  succeededCount: number;
+  failedCount: number;
+}): ImportBatchCollectionJobStatus {
+  if (input.failedCount > 0 && input.succeededCount > 0) {
+    return ImportBatchCollectionJobStatus.PARTIAL;
+  }
+
+  if (input.failedCount > 0) {
+    return ImportBatchCollectionJobStatus.FAILED;
+  }
+
+  return ImportBatchCollectionJobStatus.SUCCEEDED;
+}
+
+function isCollectedTransactionType(
+  value: string
+): value is CollectedTransactionType {
+  return (
+    value === 'INCOME' ||
+    value === 'EXPENSE' ||
+    value === 'TRANSFER' ||
+    value === 'REVERSAL'
+  );
+}

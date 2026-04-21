@@ -62,6 +62,32 @@ test('POST /journal-entries/:id/reverse creates a reversal journal entry and mar
         createdAt: new Date('2026-04-01T00:00:00.000Z'),
 
         updatedAt: new Date('2026-04-01T00:00:00.000Z')
+      },
+
+      {
+        id: 'period-journal-open-latest-1',
+
+        tenantId: 'tenant-1',
+
+        ledgerId: 'ledger-1',
+
+        year: 2026,
+
+        month: 5,
+
+        startDate: new Date('2026-05-01T00:00:00.000Z'),
+
+        endDate: new Date('2026-06-01T00:00:00.000Z'),
+
+        status: AccountingPeriodStatus.OPEN,
+
+        openedAt: new Date('2026-05-01T00:00:00.000Z'),
+
+        lockedAt: null,
+
+        createdAt: new Date('2026-05-01T00:00:00.000Z'),
+
+        updatedAt: new Date('2026-05-01T00:00:00.000Z')
       }
     );
 
@@ -194,6 +220,8 @@ test('POST /journal-entries/:id/reverse creates a reversal journal entry and mar
     assert.equal(body.id, 'je-2');
 
     assert.equal(body.entryNumber, '202604-0001');
+
+    assert.equal(createdJournalEntry?.periodId, 'period-journal-open-1');
 
     assert.equal(body.sourceKind, 'MANUAL_ADJUSTMENT');
 
@@ -392,6 +420,32 @@ test('POST /journal-entries/:id/correct creates a correction journal entry and m
         createdAt: new Date('2026-04-01T00:00:00.000Z'),
 
         updatedAt: new Date('2026-04-01T00:00:00.000Z')
+      },
+
+      {
+        id: 'period-journal-correct-open-latest',
+
+        tenantId: 'tenant-1',
+
+        ledgerId: 'ledger-1',
+
+        year: 2026,
+
+        month: 5,
+
+        startDate: new Date('2026-05-01T00:00:00.000Z'),
+
+        endDate: new Date('2026-06-01T00:00:00.000Z'),
+
+        status: AccountingPeriodStatus.OPEN,
+
+        openedAt: new Date('2026-05-01T00:00:00.000Z'),
+
+        lockedAt: null,
+
+        createdAt: new Date('2026-05-01T00:00:00.000Z'),
+
+        updatedAt: new Date('2026-05-01T00:00:00.000Z')
       }
     );
 
@@ -548,6 +602,8 @@ test('POST /journal-entries/:id/correct creates a correction journal entry and m
     assert.equal(body.id, 'je-2');
 
     assert.equal(body.entryNumber, '202604-0001');
+
+    assert.equal(createdJournalEntry?.periodId, 'period-journal-correct-open');
 
     assert.equal(body.sourceKind, 'MANUAL_ADJUSTMENT');
 

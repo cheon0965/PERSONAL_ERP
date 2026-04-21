@@ -21,6 +21,7 @@ import type {
   BulkCollectImportedRowsResponse,
   CollectImportedRowPreview,
   CollectImportedRowResponse,
+  ImportBatchCollectionJobItem,
   ImportBatchItem
 } from '@personal-erp/contracts';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
@@ -37,6 +38,8 @@ import { BulkCollectImportedRowsUseCase } from './application/use-cases/bulk-col
 import { CreateImportBatchFromFileUseCase } from './application/use-cases/create-import-batch-from-file.use-case';
 import { CreateImportBatchUseCase } from './application/use-cases/create-import-batch.use-case';
 import { DeleteImportBatchUseCase } from './application/use-cases/delete-import-batch.use-case';
+import { GetActiveImportBatchCollectionJobUseCase } from './application/use-cases/get-active-import-batch-collection-job.use-case';
+import { GetImportBatchCollectionJobUseCase } from './application/use-cases/get-import-batch-collection-job.use-case';
 import { PreviewImportedRowCollectionUseCase } from './application/use-cases/preview-imported-row-collection.use-case';
 import { BulkCollectImportedRowsRequestDto } from './dto/bulk-collect-imported-rows.dto';
 import { CollectImportedRowRequestDto } from './dto/collect-imported-row.dto';
@@ -63,6 +66,8 @@ export class ImportBatchesController {
     private readonly previewImportedRowCollectionUseCase: PreviewImportedRowCollectionUseCase,
     private readonly collectImportedRowUseCase: CollectImportedRowUseCase,
     private readonly bulkCollectImportedRowsUseCase: BulkCollectImportedRowsUseCase,
+    private readonly getImportBatchCollectionJobUseCase: GetImportBatchCollectionJobUseCase,
+    private readonly getActiveImportBatchCollectionJobUseCase: GetActiveImportBatchCollectionJobUseCase,
     private readonly deleteImportBatchUseCase: DeleteImportBatchUseCase,
     private readonly securityEvents: SecurityEventLogger
   ) {}
@@ -258,7 +263,7 @@ export class ImportBatchesController {
   }
 
   @Post(':id/rows/collect')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.ACCEPTED)
   async bulkCollectRows(
     @Req() request: RequestWithContext,
     @CurrentUser() user: AuthenticatedUser,
@@ -281,8 +286,7 @@ export class ImportBatchesController {
         details: {
           importBatchId,
           requestedRowCount: result.requestedRowCount,
-          succeededCount: result.succeededCount,
-          failedCount: result.failedCount
+          jobId: result.id
         }
       });
 
@@ -304,6 +308,30 @@ export class ImportBatchesController {
 
       throw error;
     }
+  }
+
+  @Get(':id/collection-jobs/active')
+  async findActiveCollectionJob(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') importBatchId: string
+  ): Promise<ImportBatchCollectionJobItem | null> {
+    return this.getActiveImportBatchCollectionJobUseCase.execute(
+      user,
+      importBatchId
+    );
+  }
+
+  @Get(':id/collection-jobs/:jobId')
+  async findCollectionJob(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') importBatchId: string,
+    @Param('jobId') jobId: string
+  ): Promise<ImportBatchCollectionJobItem> {
+    return this.getImportBatchCollectionJobUseCase.execute(
+      user,
+      importBatchId,
+      jobId
+    );
   }
 
   @Delete(':id')

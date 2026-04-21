@@ -129,6 +129,83 @@ test('POST /import-batches/:id/rows/:rowId/collect creates a collected transacti
   }
 });
 
+test('POST /import-batches/:id/rows/:rowId/collect auto-creates the target operating month before saving', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    pushImportBatch(context, {
+      id: 'import-batch-auto-period-collect',
+      fileName: 'auto-period-collect.csv',
+      fileHash: 'hash-auto-period-collect'
+    });
+    pushImportedRow(context, {
+      id: 'imported-row-auto-period-collect',
+      batchId: 'import-batch-auto-period-collect',
+      occurredOn: '2026-02-12',
+      title: 'Auto-open collect',
+      amount: 22_000
+    });
+
+    const response = await context.request(
+      '/import-batches/import-batch-auto-period-collect/rows/imported-row-auto-period-collect/collect',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          type: TransactionType.EXPENSE,
+          fundingAccountId: 'acc-1',
+          categoryId: 'cat-1'
+        }
+      }
+    );
+
+    assert.equal(response.status, 201);
+    assert.equal(context.state.accountingPeriods.length, 1);
+    assert.deepEqual(context.state.accountingPeriods[0], {
+      id: 'period-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 2,
+      startDate: new Date('2026-02-01T00:00:00.000Z'),
+      endDate: new Date('2026-03-01T00:00:00.000Z'),
+      status: 'OPEN',
+      nextJournalEntrySequence: 1,
+      openedAt: context.state.accountingPeriods[0]?.openedAt,
+      lockedAt: null,
+      createdAt: context.state.accountingPeriods[0]?.createdAt,
+      updatedAt: context.state.accountingPeriods[0]?.updatedAt
+    });
+    assert.equal(
+      context.state.collectedTransactions.at(-1)?.periodId,
+      'period-1'
+    );
+    assert.ok(
+      context.state.periodStatusHistory.some(
+        (candidate) =>
+          candidate.periodId === 'period-1' &&
+          candidate.eventType === 'OPEN' &&
+          candidate.reason === '업로드 배치 거래 등록 자동 생성 (2026-02)'
+      )
+    );
+    assert.ok(
+      (
+        response.body as {
+          preview: {
+            autoPreparation: {
+              decisionReasons: string[];
+            };
+          };
+        }
+      ).preview.autoPreparation.decisionReasons.includes(
+        '2026-02 운영월이 없어 등록 과정에서 자동으로 추가합니다.'
+      )
+    );
+  } finally {
+    await context.close();
+  }
+});
+
 test('POST /import-batches/:id/rows/:rowId/collect absorbs a recurring collected transaction that was already created from a matched plan item', async () => {
   const context = await createRequestTestContext();
 
@@ -333,6 +410,241 @@ test('POST /import-batches/:id/rows/:rowId/collect returns 400 for a failed impo
   }
 });
 
+test('POST /import-batches/:id/rows/:rowId/collect returns 400 for a locked target month', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    pushImportBatch(context, {
+      id: 'import-batch-locked-period',
+      fileName: 'locked-period.csv',
+      fileHash: 'hash-locked-period'
+    });
+    pushImportedRow(context, {
+      id: 'imported-row-locked-period',
+      batchId: 'import-batch-locked-period',
+      occurredOn: '2026-02-12',
+      title: 'Locked month row',
+      amount: 14_000
+    });
+    context.state.accountingPeriods.push({
+      id: 'period-locked-2026-02',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 2,
+      startDate: new Date('2026-02-01T00:00:00.000Z'),
+      endDate: new Date('2026-03-01T00:00:00.000Z'),
+      status: 'LOCKED',
+      nextJournalEntrySequence: 1,
+      openedAt: new Date('2026-02-01T00:00:00.000Z'),
+      lockedAt: new Date('2026-02-28T23:59:59.000Z'),
+      createdAt: new Date('2026-02-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-02-28T23:59:59.000Z')
+    });
+
+    const response = await context.request(
+      '/import-batches/import-batch-locked-period/rows/imported-row-locked-period/collect',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          type: TransactionType.EXPENSE,
+          fundingAccountId: 'acc-1',
+          categoryId: 'cat-1'
+        }
+      }
+    );
+
+    assert.equal(response.status, 400);
+    assert.deepEqual(response.body, {
+      statusCode: 400,
+      message: '2026-02 마감월 데이터이기 때문에 저장할 수 없습니다.',
+      error: 'Bad Request'
+    });
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /import-batches/:id/rows/:rowId/collect requires confirmation when a potential duplicate transaction exists', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    seedCollectableImportScenario(context, {
+      title: 'Fuel refill',
+      amount: 84_000
+    });
+    pushCollectedTransaction(context, {
+      id: 'ctx-potential-duplicate-collect',
+      periodId: 'period-open-import-collect',
+      title: 'Fuel refill existing',
+      occurredOn: new Date('2026-03-12T00:00:00.000Z'),
+      amount: 84_000
+    });
+
+    const blockedResponse = await context.request(
+      '/import-batches/import-batch-collect/rows/imported-row-collect-1/collect',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          type: TransactionType.EXPENSE,
+          fundingAccountId: 'acc-1',
+          categoryId: 'cat-1'
+        }
+      }
+    );
+
+    assert.equal(blockedResponse.status, 409);
+    assert.deepEqual(blockedResponse.body, {
+      statusCode: 409,
+      message:
+        '같은 거래일·금액·입출금 유형의 기존 거래 1건이 있어 확인 없이 저장할 수 없습니다. 자동 판정 요약을 확인한 뒤 다시 등록해 주세요.',
+      error: 'Conflict'
+    });
+    assert.equal(context.state.collectedTransactions.length, 4);
+
+    const confirmedResponse = await context.request(
+      '/import-batches/import-batch-collect/rows/imported-row-collect-1/collect',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          type: TransactionType.EXPENSE,
+          fundingAccountId: 'acc-1',
+          categoryId: 'cat-1',
+          confirmPotentialDuplicate: true
+        }
+      }
+    );
+
+    assert.equal(confirmedResponse.status, 201);
+    assert.equal(context.state.collectedTransactions.length, 5);
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /import-batches/:id/rows/:rowId/collect ignores duplicate candidates from the same import batch', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const duplicateFingerprint = buildImportRowFingerprint({
+      sourceKind: ImportSourceKind.MANUAL_UPLOAD,
+      occurredOn: '2026-03-12',
+      amount: 84_000,
+      title: 'Fuel refill'
+    });
+
+    seedCollectableImportScenario(context, {
+      title: 'Fuel refill',
+      amount: 84_000,
+      sourceFingerprint: duplicateFingerprint
+    });
+    pushCollectedTransaction(context, {
+      id: 'ctx-same-batch-potential-duplicate-collect',
+      periodId: 'period-open-import-collect',
+      importBatchId: 'import-batch-collect',
+      importedRowId: 'imported-row-same-batch-existing',
+      sourceFingerprint: duplicateFingerprint,
+      title: 'Fuel refill existing from same batch',
+      occurredOn: new Date('2026-03-12T00:00:00.000Z'),
+      amount: 84_000
+    });
+
+    const response = await context.request(
+      '/import-batches/import-batch-collect/rows/imported-row-collect-1/collect',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          type: TransactionType.EXPENSE,
+          fundingAccountId: 'acc-1',
+          categoryId: 'cat-1'
+        }
+      }
+    );
+
+    assert.equal(response.status, 201);
+    assert.equal(
+      (
+        response.body as {
+          preview: {
+            autoPreparation: {
+              hasDuplicateSourceFingerprint: boolean;
+              potentialDuplicateTransactionCount?: number;
+            };
+          };
+        }
+      ).preview.autoPreparation.hasDuplicateSourceFingerprint,
+      false
+    );
+    assert.equal(
+      (
+        response.body as {
+          preview: {
+            autoPreparation: {
+              potentialDuplicateTransactionCount?: number;
+            };
+          };
+        }
+      ).preview.autoPreparation.potentialDuplicateTransactionCount,
+      undefined
+    );
+    assert.equal(
+      context.state.collectedTransactions.at(-1)?.status,
+      CollectedTransactionStatus.READY_TO_POST
+    );
+    assert.equal(
+      context.state.collectedTransactions.at(-1)?.matchedPlanItemId,
+      'plan-item-collect-1'
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /import-batches/:id/rows/:rowId/collect still requires confirmation for duplicate candidates from another import batch', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    seedCollectableImportScenario(context, {
+      title: 'Fuel refill',
+      amount: 84_000
+    });
+    pushCollectedTransaction(context, {
+      id: 'ctx-other-batch-potential-duplicate-collect',
+      periodId: 'period-open-import-collect',
+      importBatchId: 'import-batch-earlier-upload',
+      importedRowId: 'imported-row-earlier-upload',
+      title: 'Fuel refill from earlier upload',
+      occurredOn: new Date('2026-03-12T00:00:00.000Z'),
+      amount: 84_000
+    });
+
+    const response = await context.request(
+      '/import-batches/import-batch-collect/rows/imported-row-collect-1/collect',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          type: TransactionType.EXPENSE,
+          fundingAccountId: 'acc-1',
+          categoryId: 'cat-1'
+        }
+      }
+    );
+
+    assert.equal(response.status, 409);
+    assert.equal(
+      (response.body as { message: string }).message,
+      '같은 거래일·금액·입출금 유형의 기존 거래 1건이 있어 확인 없이 저장할 수 없습니다. 자동 판정 요약을 확인한 뒤 다시 등록해 주세요.'
+    );
+  } finally {
+    await context.close();
+  }
+});
+
 test('POST /import-batches/:id/rows/:rowId/collect keeps the transaction in collected status when a duplicate fingerprint already exists', async () => {
   const context = await createRequestTestContext();
 
@@ -370,7 +682,8 @@ test('POST /import-batches/:id/rows/:rowId/collect keeps the transaction in coll
         headers: context.authHeaders(),
         body: {
           type: TransactionType.EXPENSE,
-          fundingAccountId: 'acc-1'
+          fundingAccountId: 'acc-1',
+          confirmPotentialDuplicate: true
         }
       }
     );

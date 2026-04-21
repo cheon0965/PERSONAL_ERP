@@ -46,7 +46,7 @@ export function readNormalizedImportedRow(
 
 export function assertOccurredOnWithinPeriod(
   occurredOnIso: string,
-  currentCollectingPeriod: CollectingPeriodRecord
+  currentCollectingPeriod: Pick<CollectingPeriodRecord, 'startDate' | 'endDate'>
 ): Date {
   const occurredOn = new Date(`${occurredOnIso}T00:00:00.000Z`);
 
@@ -55,7 +55,7 @@ export function assertOccurredOnWithinPeriod(
     occurredOn.getTime() >= currentCollectingPeriod.endDate.getTime()
   ) {
     throw new BadRequestException(
-      '수집 거래 일자는 현재 열린 운영 기간 안에 있어야 합니다.'
+      '수집 거래 일자는 대상 운영 기간 안에 있어야 합니다.'
     );
   }
 

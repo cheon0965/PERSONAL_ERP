@@ -49,6 +49,7 @@ export type WorkspaceAction =
   | 'collected_transaction.confirm'
   | 'financial_statement.generate'
   | 'carry_forward.generate'
+  | 'carry_forward.cancel'
   | 'journal_entry.reverse'
   | 'journal_entry.correct'
   | 'import_batch.upload'
@@ -102,6 +103,7 @@ const workspaceActionAllowedRoles: Record<
   'collected_transaction.confirm': ['OWNER', 'MANAGER', 'EDITOR'],
   'financial_statement.generate': ['OWNER', 'MANAGER'],
   'carry_forward.generate': ['OWNER', 'MANAGER'],
+  'carry_forward.cancel': ['OWNER'],
   'journal_entry.reverse': ['OWNER', 'MANAGER'],
   'journal_entry.correct': ['OWNER', 'MANAGER'],
   'import_batch.upload': ['OWNER', 'MANAGER', 'EDITOR'],
@@ -185,6 +187,7 @@ const workspaceActionDeniedMessages: Record<WorkspaceAction, string> = {
     'Only owners and managers can generate financial statements.',
   'carry_forward.generate':
     'Only owners and managers can generate carry-forward records.',
+  'carry_forward.cancel': 'Only owners can cancel carry-forward records.',
   'journal_entry.reverse':
     'Only owners and managers can create reversal journal entries.',
   'journal_entry.correct':

@@ -4,7 +4,7 @@ import type {
   AccountingPeriodItem,
   CollectedTransactionItem
 } from '@personal-erp/contracts';
-import { isBusinessDateWithinPeriod } from './transactions-page.shared';
+import { findAccountingPeriodForDate } from '@/features/accounting-periods/accounting-period-selection';
 
 export function buildFundingAccountOptions(data: CollectedTransactionItem[]) {
   return Array.from(new Set(data.map((item) => item.fundingAccountName)))
@@ -20,7 +20,7 @@ export function buildCategoryOptions(data: CollectedTransactionItem[]) {
 
 export function filterTransactions(input: {
   data: CollectedTransactionItem[];
-  currentPeriod: AccountingPeriodItem | null;
+  collectingPeriods: AccountingPeriodItem[];
   keyword: string;
   fundingAccountName: string;
   categoryName: string;
@@ -29,9 +29,9 @@ export function filterTransactions(input: {
   const normalizedKeyword = input.keyword.trim().toLowerCase();
 
   return input.data.filter((item) => {
-    const matchesCurrentPeriod =
-      !input.currentPeriod ||
-      isBusinessDateWithinPeriod(item.businessDate, input.currentPeriod);
+    const matchesCollectingPeriod = Boolean(
+      findAccountingPeriodForDate(input.collectingPeriods, item.businessDate)
+    );
     const matchesKeyword =
       normalizedKeyword.length === 0 ||
       [item.title, item.categoryName, item.fundingAccountName]
@@ -49,7 +49,7 @@ export function filterTransactions(input: {
       item.postingStatus === input.postingStatus;
 
     return (
-      matchesCurrentPeriod &&
+      matchesCollectingPeriod &&
       matchesKeyword &&
       matchesFundingAccount &&
       matchesCategory &&

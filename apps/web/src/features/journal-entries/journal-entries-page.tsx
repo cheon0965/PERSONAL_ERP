@@ -8,9 +8,15 @@ import { Alert, Button, Stack } from '@mui/material';
 import type { JournalEntryItem } from '@personal-erp/contracts';
 import { useRouter } from 'next/navigation';
 import {
+  accountingPeriodsQueryKey,
   currentAccountingPeriodQueryKey,
+  getAccountingPeriods,
   getCurrentAccountingPeriod
 } from '@/features/accounting-periods/accounting-periods.api';
+import {
+  readJournalWritableAccountingPeriods,
+  resolvePreferredAccountingPeriod
+} from '@/features/accounting-periods/accounting-period-selection';
 import { formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
@@ -60,6 +66,10 @@ export function JournalEntriesPage({
     queryKey: currentAccountingPeriodQueryKey,
     queryFn: getCurrentAccountingPeriod
   });
+  const accountingPeriodsQuery = useQuery({
+    queryKey: accountingPeriodsQueryKey,
+    queryFn: getAccountingPeriods
+  });
 
   const entries = React.useMemo(() => {
     const data = journalEntriesQuery.data ?? [];
@@ -79,6 +89,16 @@ export function JournalEntriesPage({
   }, [highlightedEntryId, journalEntriesQuery.data]);
 
   const currentPeriod = currentPeriodQuery.data ?? null;
+  const accountingPeriods = accountingPeriodsQuery.data ?? [];
+  const journalWritablePeriods = React.useMemo(
+    () => readJournalWritableAccountingPeriods(accountingPeriods),
+    [accountingPeriods]
+  );
+  const adjustmentPeriod = React.useMemo(
+    () =>
+      resolvePreferredAccountingPeriod(currentPeriod, journalWritablePeriods),
+    [currentPeriod, journalWritablePeriods]
+  );
   const selectedEntry = React.useMemo(() => {
     if (entries.length === 0) {
       return null;
@@ -98,7 +118,7 @@ export function JournalEntriesPage({
     return layout === 'detail' ? null : (entries[0] ?? null);
   }, [entries, highlightedEntryId, layout]);
   const selectedEntryCanAdjust =
-    selectedEntry?.status === 'POSTED' && Boolean(currentPeriod);
+    selectedEntry?.status === 'POSTED' && Boolean(adjustmentPeriod);
   const isDetailLayout = layout === 'detail';
   const isSplitLayout = layout === 'split';
   const pageTitle = isDetailLayout
@@ -198,11 +218,20 @@ export function JournalEntriesPage({
             error={journalEntriesQuery.error}
           />
         ) : null}
+        {accountingPeriodsQuery.error ? (
+          <QueryErrorAlert
+            title="운영 기간 목록을 불러오지 못했습니다."
+            error={accountingPeriodsQuery.error}
+          />
+        ) : null}
 
-        {currentPeriod ? (
+        {adjustmentPeriod ? (
           <Alert severity="info" variant="outlined">
-            현재 열린 운영 기간은 {currentPeriod.monthLabel}이며, 반전/정정
-            전표는 이 기간 안의 일자로만 생성할 수 있습니다.
+            {currentPeriod && currentPeriod.id !== adjustmentPeriod.id
+              ? `현재 운영 기준 월은 ${currentPeriod.monthLabel}이고, 조정 전표 기본 입력 월은 ${adjustmentPeriod.monthLabel}입니다.`
+              : `조정 전표 기본 입력 월은 ${adjustmentPeriod.monthLabel}입니다.`}{' '}
+            반전/정정 전표는 전표 입력 가능한 열린 운영 기간의 일자로 생성할 수
+            있습니다.
           </Alert>
         ) : (
           <Alert
@@ -214,12 +243,13 @@ export function JournalEntriesPage({
               </Button>
             }
           >
-            현재 열린 운영 기간이 없어 반전/정정 전표 버튼이 잠겨 있습니다.
+            전표 입력 가능한 운영 기간이 없어 반전/정정 전표 버튼이 잠겨
+            있습니다.
           </Alert>
         )}
 
         <JournalEntriesWorkspace
-          currentPeriod={currentPeriod}
+          adjustmentPeriod={adjustmentPeriod}
           entries={entries}
           isDetailLayout={isDetailLayout}
           isSplitLayout={isSplitLayout}
@@ -240,7 +270,8 @@ export function JournalEntriesPage({
         open={selectedAdjustment != null}
         mode={selectedAdjustment?.mode ?? null}
         entry={selectedAdjustment?.entry ?? null}
-        currentPeriod={currentPeriod}
+        adjustmentPeriod={adjustmentPeriod}
+        journalWritablePeriods={journalWritablePeriods}
         onClose={() => setSelectedAdjustment(null)}
         onCompleted={(createdEntry, mode) => {
           setFeedback({

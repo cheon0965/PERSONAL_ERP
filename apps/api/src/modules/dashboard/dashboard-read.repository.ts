@@ -7,6 +7,7 @@ import {
   type PrismaMoneyLike
 } from '../../common/money/prisma-money';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { readWorkspaceCurrentFundingBalanceWon } from '../funding-accounts/funding-account-live-balance.reader';
 import {
   findLatestLockedPeriod,
   findPreviousLockedPeriod,
@@ -99,7 +100,8 @@ export class DashboardReadRepository {
     ledgerId: string;
     periodId?: string;
   }): Promise<DashboardSummaryReadModel | null> {
-    const [user, periods, accounts, ledgerTransactionTypes] = await Promise.all(
+    const [user, periods, currentFundingBalanceWon, ledgerTransactionTypes] =
+      await Promise.all(
       [
         this.prisma.user.findUniqueOrThrow({
           where: { id: input.userId },
@@ -119,14 +121,9 @@ export class DashboardReadRepository {
           include: dashboardPeriodInclude,
           orderBy: [{ year: 'desc' }, { month: 'desc' }]
         }),
-        this.prisma.account.findMany({
-          where: {
-            tenantId: input.tenantId,
-            ledgerId: input.ledgerId
-          },
-          select: {
-            balanceWon: true
-          }
+        readWorkspaceCurrentFundingBalanceWon(this.prisma, {
+          tenantId: input.tenantId,
+          ledgerId: input.ledgerId
         }),
         this.prisma.ledgerTransactionType.findMany({
           where: {
@@ -135,8 +132,7 @@ export class DashboardReadRepository {
             isActive: true
           }
         })
-      ]
-    );
+      ]);
 
     const targetPeriod = selectOperationalPeriod(periods, input.periodId);
     if (!targetPeriod) {
@@ -204,10 +200,6 @@ export class DashboardReadRepository {
     );
 
     const metricsByPeriodId = new Map(periodMetrics);
-    const currentFundingBalanceWon = sumMoneyWon(
-      accounts.map((account) => fromPrismaMoneyWon(account.balanceWon))
-    );
-
     return {
       targetPeriod,
       basisStatus:

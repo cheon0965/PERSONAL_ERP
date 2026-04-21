@@ -1,15 +1,23 @@
 import * as React from 'react';
-import { Button, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Button, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import type { AccountingPeriodItem } from '@personal-erp/contracts';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { SectionCard } from '@/shared/ui/section-card';
 import { SegmentedTabs } from '@/shared/ui/section-tabs';
+import type { AccountingPeriodReopenEligibility } from './accounting-period-reopen-eligibility';
 import { readMembershipRoleLabel } from './accounting-periods-page.helpers';
 import { OpenAccountingPeriodSection } from './accounting-periods-page.sections';
 
 type PeriodLifecycleActionProps = {
   openPeriod: AccountingPeriodItem | null;
   reopenPeriod: AccountingPeriodItem | null;
+  lockedPeriods: AccountingPeriodItem[];
+  reopenEligibilityByPeriodId: Record<
+    string,
+    AccountingPeriodReopenEligibility
+  >;
+  selectedReopenEligibility: AccountingPeriodReopenEligibility | null;
+  selectedReopenPeriodId: string | null;
   membershipRole: string | null;
   canClosePeriod: boolean;
   canReopenPeriod: boolean;
@@ -20,6 +28,7 @@ type PeriodLifecycleActionProps = {
   reopenPending: boolean;
   onCloseNoteChange: (value: string) => void;
   onReopenReasonChange: (value: string) => void;
+  onSelectReopenPeriod: (periodId: string | null) => void;
   onClosePeriod: () => Promise<void> | void;
   onReopenPeriod: () => Promise<void> | void;
 };
@@ -27,6 +36,8 @@ type PeriodLifecycleActionProps = {
 export function PeriodOperationsSection(
   props: Parameters<typeof OpenAccountingPeriodSection>[0] &
     PeriodLifecycleActionProps & {
+      availableTabs?: readonly PeriodOperationTab[];
+      defaultTab?: PeriodOperationTab;
       forcedTab?: PeriodOperationTab;
       hideTabs?: boolean;
       headingTitle?: string;
@@ -36,14 +47,29 @@ export function PeriodOperationsSection(
   const {
     openPeriod,
     reopenPeriod,
+    availableTabs,
+    defaultTab,
     forcedTab,
     hideTabs = false,
     headingTitle = '운영 작업',
     headingDescription
   } = props;
+  const tabItems = React.useMemo(
+    () =>
+      periodOperationTabItems.filter(
+        (item) => availableTabs?.includes(item.value) ?? true
+      ),
+    [availableTabs]
+  );
   const [activeTab, setActiveTab] = React.useState<PeriodOperationTab>(
     () =>
-      forcedTab ?? pickDefaultPeriodOperationTab({ openPeriod, reopenPeriod })
+      forcedTab ??
+      pickDefaultPeriodOperationTab({
+        openPeriod,
+        reopenPeriod,
+        availableTabs,
+        defaultTab
+      })
   );
 
   React.useEffect(() => {
@@ -53,17 +79,36 @@ export function PeriodOperationsSection(
     }
 
     setActiveTab((currentTab) => {
+      if (availableTabs && !availableTabs.includes(currentTab)) {
+        return pickDefaultPeriodOperationTab({
+          openPeriod,
+          reopenPeriod,
+          availableTabs,
+          defaultTab
+        });
+      }
+
       if (currentTab === 'close' && !openPeriod) {
-        return pickDefaultPeriodOperationTab({ openPeriod, reopenPeriod });
+        return pickDefaultPeriodOperationTab({
+          openPeriod,
+          reopenPeriod,
+          availableTabs,
+          defaultTab
+        });
       }
 
       if (currentTab === 'reopen' && !reopenPeriod) {
-        return pickDefaultPeriodOperationTab({ openPeriod, reopenPeriod });
+        return pickDefaultPeriodOperationTab({
+          openPeriod,
+          reopenPeriod,
+          availableTabs,
+          defaultTab
+        });
       }
 
       return currentTab;
     });
-  }, [forcedTab, openPeriod, reopenPeriod]);
+  }, [availableTabs, defaultTab, forcedTab, openPeriod, reopenPeriod]);
 
   return (
     <Stack spacing={appLayout.cardGap} id="accounting-period-workbench">
@@ -81,7 +126,7 @@ export function PeriodOperationsSection(
       {!hideTabs ? (
         <SegmentedTabs
           ariaLabel="월 운영 작업 선택"
-          items={periodOperationTabItems}
+          items={tabItems}
           value={activeTab}
           onChange={setActiveTab}
         />
@@ -104,12 +149,17 @@ export function PeriodOperationsSection(
 
       {activeTab === 'reopen' ? (
         <ReopenAccountingPeriodSection
+          lockedPeriods={props.lockedPeriods}
+          reopenEligibilityByPeriodId={props.reopenEligibilityByPeriodId}
           reopenPeriod={props.reopenPeriod}
+          selectedReopenEligibility={props.selectedReopenEligibility}
+          selectedReopenPeriodId={props.selectedReopenPeriodId}
           membershipRole={props.membershipRole}
           canReopenPeriod={props.canReopenPeriod}
           hasWorkspace={props.hasWorkspace}
           reopenReason={props.reopenReason}
           reopenPending={props.reopenPending}
+          onSelectReopenPeriod={props.onSelectReopenPeriod}
           onReopenReasonChange={props.onReopenReasonChange}
           onReopenPeriod={props.onReopenPeriod}
         />
@@ -185,44 +235,101 @@ function CloseAccountingPeriodSection({
 }
 
 function ReopenAccountingPeriodSection({
+  lockedPeriods,
+  reopenEligibilityByPeriodId,
   reopenPeriod,
+  selectedReopenEligibility,
+  selectedReopenPeriodId,
   membershipRole,
   canReopenPeriod,
   hasWorkspace,
   reopenReason,
   reopenPending,
+  onSelectReopenPeriod,
   onReopenReasonChange,
   onReopenPeriod
 }: {
+  lockedPeriods: AccountingPeriodItem[];
+  reopenEligibilityByPeriodId: Record<
+    string,
+    AccountingPeriodReopenEligibility
+  >;
   reopenPeriod: AccountingPeriodItem | null;
+  selectedReopenEligibility: AccountingPeriodReopenEligibility | null;
+  selectedReopenPeriodId: string | null;
   membershipRole: string | null;
   canReopenPeriod: boolean;
   hasWorkspace: boolean;
   reopenReason: string;
   reopenPending: boolean;
+  onSelectReopenPeriod: (periodId: string | null) => void;
   onReopenReasonChange: (value: string) => void;
   onReopenPeriod: () => Promise<void> | void;
 }) {
   return (
     <SectionCard
       title="월 재오픈"
-      description="가장 최근에 잠긴 운영 기간만 재오픈할 수 있으며, 재오픈 시 해당 기간의 마감 결과 자료도 함께 정리됩니다."
+      description="차기 이월이나 다음 월 오프닝 스냅샷 같은 종속 결과가 아직 없다면 선택한 잠금 운영 기간을 다시 열 수 있으며, 재오픈 시 해당 기간의 마감 결과 자료도 함께 정리됩니다."
     >
       <Stack spacing={appLayout.cardGap}>
-        <InfoRow
-          label="재오픈 대상"
-          value={
-            reopenPeriod
-              ? reopenPeriod.monthLabel
-              : '가장 최근 잠금 운영 기간 없음'
-          }
-        />
         <InfoRow
           label="권한"
           value={
             canReopenPeriod ? '소유자' : readMembershipRoleLabel(membershipRole)
           }
         />
+        <TextField
+          select
+          label="재오픈 대상 월"
+          value={selectedReopenPeriodId ?? reopenPeriod?.id ?? ''}
+          onChange={(event) => {
+            onSelectReopenPeriod(event.target.value || null);
+          }}
+          helperText={
+            lockedPeriods.length > 0
+              ? '잠금 월별 재오픈 가능 여부는 저장 시 차기 이월과 다음 월 오프닝 스냅샷 존재 여부로 다시 검증됩니다.'
+              : '현재 선택 가능한 잠금 월이 없습니다.'
+          }
+          disabled={!hasWorkspace || lockedPeriods.length === 0 || reopenPending}
+        >
+          {lockedPeriods.length === 0 ? (
+            <MenuItem value="" disabled>
+              재오픈 가능한 잠금 월 없음
+            </MenuItem>
+          ) : null}
+          {lockedPeriods.map((period) => {
+            const periodEligibility = reopenEligibilityByPeriodId[period.id];
+
+            return (
+              <MenuItem key={period.id} value={period.id}>
+                {period.monthLabel}
+                {periodEligibility ? ` · ${periodEligibility.statusLabel}` : ''}
+              </MenuItem>
+            );
+          })}
+        </TextField>
+        <InfoRow
+          label="선택 상태"
+          value={
+            selectedReopenEligibility
+              ? `${reopenPeriod?.monthLabel ?? '-'} · ${selectedReopenEligibility.statusLabel}`
+              : '재오픈 대상으로 선택된 잠금 월 없음'
+          }
+        />
+        {selectedReopenEligibility ? (
+          <Alert
+            severity={selectedReopenEligibility.statusSeverity}
+            variant="outlined"
+          >
+            <Stack spacing={0.5}>
+              {selectedReopenEligibility.detailLines.map((line, index) => (
+                <Typography key={`${selectedReopenEligibility.periodId}-${index}`} variant="body2">
+                  {line}
+                </Typography>
+              ))}
+            </Stack>
+          </Alert>
+        ) : null}
         <TextField
           label="재오픈 사유"
           multiline
@@ -238,6 +345,8 @@ function ReopenAccountingPeriodSection({
           variant="outlined"
           disabled={
             !reopenPeriod ||
+            !selectedReopenEligibility?.isReady ||
+            !selectedReopenEligibility.canReopen ||
             !canReopenPeriod ||
             !hasWorkspace ||
             reopenPending ||
@@ -270,16 +379,34 @@ const periodOperationTabItems = [
 function pickDefaultPeriodOperationTab(input: {
   openPeriod: AccountingPeriodItem | null;
   reopenPeriod: AccountingPeriodItem | null;
+  availableTabs?: readonly PeriodOperationTab[];
+  defaultTab?: PeriodOperationTab;
 }): PeriodOperationTab {
-  if (input.openPeriod) {
+  const availableTabs = input.availableTabs ?? [
+    'open',
+    'close',
+    'reopen'
+  ];
+  const canUseDefaultTab =
+    input.defaultTab &&
+    availableTabs.includes(input.defaultTab) &&
+    (input.defaultTab === 'open' ||
+      (input.defaultTab === 'close' && input.openPeriod) ||
+      (input.defaultTab === 'reopen' && input.reopenPeriod));
+
+  if (canUseDefaultTab) {
+    return input.defaultTab!;
+  }
+
+  if (input.openPeriod && availableTabs.includes('close')) {
     return 'close';
   }
 
-  if (input.reopenPeriod) {
+  if (input.reopenPeriod && availableTabs.includes('reopen')) {
     return 'reopen';
   }
 
-  return 'open';
+  return availableTabs[0] ?? 'open';
 }
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {

@@ -19,6 +19,25 @@ export function createCollectedTransactionReadMethods(
   } = context;
 
   return {
+    count: async (args: {
+      where?: {
+        tenantId?: string;
+        ledgerId?: string;
+        periodId?: string | null;
+      };
+    }) => {
+      return state.collectedTransactions.filter((candidate) => {
+        const matchesTenant =
+          !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+        const matchesLedger =
+          !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+        const matchesPeriod =
+          args.where?.periodId === undefined ||
+          candidate.periodId === args.where.periodId;
+
+        return matchesTenant && matchesLedger && matchesPeriod;
+      }).length;
+    },
     findUnique: async (args: {
       where: { id: string };
       select?: {
@@ -48,6 +67,7 @@ export function createCollectedTransactionReadMethods(
         id?: string;
         tenantId?: string;
         ledgerId?: string;
+        periodId?: string | null;
         sourceFingerprint?: string | null;
       };
       select?: {
@@ -152,6 +172,9 @@ export function createCollectedTransactionReadMethods(
             !args.where?.tenantId || item.tenantId === args.where.tenantId;
           const matchesLedger =
             !args.where?.ledgerId || item.ledgerId === args.where.ledgerId;
+          const matchesPeriod =
+            args.where?.periodId === undefined ||
+            item.periodId === args.where.periodId;
           const matchesSourceFingerprint =
             args.where?.sourceFingerprint === undefined ||
             item.sourceFingerprint === args.where.sourceFingerprint;
@@ -160,6 +183,7 @@ export function createCollectedTransactionReadMethods(
             matchesId &&
             matchesTenant &&
             matchesLedger &&
+            matchesPeriod &&
             matchesSourceFingerprint
           );
         }) ?? null;
@@ -417,11 +441,16 @@ export function createCollectedTransactionReadMethods(
     },
     findMany: async (args: {
       where?: {
+        id?: { notIn?: string[] };
         tenantId?: string;
         ledgerId?: string;
         periodId?: string | null;
         importBatchId?: string | null;
         importedRowId?: string | null;
+        sourceFingerprint?: string | null;
+        occurredOn?: Date;
+        amount?: number;
+        ledgerTransactionTypeId?: string;
         matchedPlanItemId?: {
           not?: null;
         };
@@ -471,6 +500,8 @@ export function createCollectedTransactionReadMethods(
       take?: number;
     }) => {
       let items = state.collectedTransactions.filter((candidate) => {
+        const matchesId =
+          !args.where?.id?.notIn || !args.where.id.notIn.includes(candidate.id);
         const matchesTenant =
           !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
         const matchesLedger =
@@ -484,6 +515,19 @@ export function createCollectedTransactionReadMethods(
         const matchesImportedRow =
           args.where?.importedRowId === undefined ||
           candidate.importedRowId === args.where.importedRowId;
+        const matchesSourceFingerprint =
+          args.where?.sourceFingerprint === undefined ||
+          candidate.sourceFingerprint === args.where.sourceFingerprint;
+        const matchesOccurredOn =
+          args.where?.occurredOn === undefined ||
+          candidate.occurredOn.getTime() === args.where.occurredOn.getTime();
+        const matchesAmount =
+          args.where?.amount === undefined ||
+          candidate.amount === args.where.amount;
+        const matchesLedgerTransactionType =
+          args.where?.ledgerTransactionTypeId === undefined ||
+          candidate.ledgerTransactionTypeId ===
+            args.where.ledgerTransactionTypeId;
         const matchesMatchedPlanItem =
           args.where?.matchedPlanItemId?.not !== null ||
           candidate.matchedPlanItemId !== null;
@@ -492,11 +536,16 @@ export function createCollectedTransactionReadMethods(
           args.where.status.in.includes(candidate.status);
 
         return (
+          matchesId &&
           matchesTenant &&
           matchesLedger &&
           matchesPeriod &&
           matchesImportBatch &&
           matchesImportedRow &&
+          matchesSourceFingerprint &&
+          matchesOccurredOn &&
+          matchesAmount &&
+          matchesLedgerTransactionType &&
           matchesMatchedPlanItem &&
           matchesStatus
         );

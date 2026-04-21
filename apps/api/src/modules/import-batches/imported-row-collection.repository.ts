@@ -265,20 +265,59 @@ export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
   async hasDuplicateSourceFingerprint(
     tx: PrismaClientLike,
     workspace: ImportedRowCollectionWorkspaceScope,
-    sourceFingerprint: string
+    sourceFingerprint: string,
+    currentImportBatchId: string
   ): Promise<boolean> {
-    const duplicateSourceFingerprint = await tx.collectedTransaction.findFirst({
+    const duplicateSourceFingerprints = await tx.collectedTransaction.findMany({
       where: {
         tenantId: workspace.tenantId,
         ledgerId: workspace.ledgerId,
         sourceFingerprint
       },
       select: {
-        id: true
+        id: true,
+        importBatchId: true
       }
     });
 
-    return Boolean(duplicateSourceFingerprint);
+    return duplicateSourceFingerprints.some(
+      (candidate) => candidate.importBatchId !== currentImportBatchId
+    );
+  }
+
+  async countPotentialDuplicateTransactions(
+    tx: PrismaClientLike,
+    workspace: ImportedRowCollectionWorkspaceScope,
+    occurredOn: Date,
+    amount: number,
+    ledgerTransactionTypeId: string,
+    currentImportBatchId: string,
+    excludedCollectedTransactionIds: string[] = []
+  ): Promise<number> {
+    const duplicates = await tx.collectedTransaction.findMany({
+      where: {
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId,
+        occurredOn,
+        amount,
+        ledgerTransactionTypeId,
+        ...(excludedCollectedTransactionIds.length > 0
+          ? {
+              id: {
+                notIn: excludedCollectedTransactionIds
+              }
+            }
+          : {})
+      },
+      select: {
+        id: true,
+        importBatchId: true
+      }
+    });
+
+    return duplicates.filter(
+      (candidate) => candidate.importBatchId !== currentImportBatchId
+    ).length;
   }
 
   async createCollectedTransactionRecord(

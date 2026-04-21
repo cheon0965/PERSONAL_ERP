@@ -7,10 +7,13 @@ import { BulkCollectImportedRowsUseCase } from './application/use-cases/bulk-col
 import { CreateImportBatchFromFileUseCase } from './application/use-cases/create-import-batch-from-file.use-case';
 import { CreateImportBatchUseCase } from './application/use-cases/create-import-batch.use-case';
 import { DeleteImportBatchUseCase } from './application/use-cases/delete-import-batch.use-case';
+import { GetActiveImportBatchCollectionJobUseCase } from './application/use-cases/get-active-import-batch-collection-job.use-case';
+import { GetImportBatchCollectionJobUseCase } from './application/use-cases/get-import-batch-collection-job.use-case';
 import { PreviewImportedRowCollectionUseCase } from './application/use-cases/preview-imported-row-collection.use-case';
 import { ImportBatchQueryService } from './import-batch-query.service';
 import { ImportBatchesController } from './import-batches.controller';
 import { PrismaImportBatchWriteAdapter } from './infrastructure/prisma/prisma-import-batch-write.adapter';
+import { ImportBatchCollectionJobRunner } from './import-batch-collection-job-runner.service';
 import { ImportedRowCollectionRepository } from './imported-row-collection.repository';
 import { ImportedRowCollectionService } from './imported-row-collection.service';
 
@@ -35,6 +38,9 @@ import { ImportedRowCollectionService } from './imported-row-collection.service'
     PreviewImportedRowCollectionUseCase,
     CollectImportedRowUseCase,
     BulkCollectImportedRowsUseCase,
+    GetImportBatchCollectionJobUseCase,
+    GetActiveImportBatchCollectionJobUseCase,
+    ImportBatchCollectionJobRunner,
     DeleteImportBatchUseCase
   ],
   exports: [ImportBatchQueryService]

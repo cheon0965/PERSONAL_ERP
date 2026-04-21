@@ -10,7 +10,6 @@ import {
   Typography
 } from '@mui/material';
 import type {
-  AccountingPeriodItem,
   CategoryItem,
   CollectImportedRowPreview,
   CollectImportedRowRequest,
@@ -33,7 +32,6 @@ type CollectPreviewState = {
 export function CollectImportedRowDialog({
   open,
   selectedRow,
-  currentPeriod,
   readiness,
   fundingAccounts,
   categories,
@@ -47,7 +45,6 @@ export function CollectImportedRowDialog({
 }: {
   open: boolean;
   selectedRow: ImportedRowTableItem | null;
-  currentPeriod: AccountingPeriodItem | null;
   readiness: ReferenceDataReadinessSummary | null;
   fundingAccounts: FundingAccountItem[];
   categories: CategoryItem[];
@@ -64,7 +61,7 @@ export function CollectImportedRowDialog({
       open={open}
       onClose={onClose}
       title="수집 거래 등록"
-      description="선택한 업로드 행을 수집 거래로 올리기 전에, 계획 항목 매칭·카테고리 보완·다음 상태를 먼저 확인합니다."
+      description="선택한 업로드 행을 수집 거래로 올리기 전에, 대상 운영월 준비·계획 항목 매칭·카테고리 보완·중복 확인 결과를 먼저 점검합니다."
     >
       {selectedRow ? (
         <Stack spacing={appLayout.fieldGap}>
@@ -175,12 +172,7 @@ export function CollectImportedRowDialog({
           >
             <Stack spacing={1.25}>
               <Typography variant="subtitle2">자동 판정 요약</Typography>
-              {!currentPeriod ? (
-                <Typography variant="body2" color="text.secondary">
-                  현재 열린 운영 기간이 없어 자동 판정 결과를 계산할 수
-                  없습니다.
-                </Typography>
-              ) : collectPreview.isLoading ? (
+              {collectPreview.isLoading ? (
                 <Typography variant="body2" color="text.secondary">
                   현재 입력값 기준으로 자동 판정 결과를 계산하고 있습니다.
                 </Typography>
@@ -210,11 +202,6 @@ export function CollectImportedRowDialog({
           >
             {submitPending ? '등록 중...' : '수집 거래로 등록'}
           </Button>
-          {!currentPeriod ? (
-            <Alert severity="info" variant="outlined">
-              현재 열린 운영 기간이 없어 거래 등록이 비활성화되어 있습니다.
-            </Alert>
-          ) : null}
         </Stack>
       ) : (
         <Typography variant="body2" color="text.secondary">

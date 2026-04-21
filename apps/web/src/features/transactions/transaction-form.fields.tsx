@@ -13,6 +13,8 @@ import { readFundingAccountOptionLabel } from './transaction-form.mapper';
 
 export function TransactionFormFields({
   currentPeriod,
+  hasCollectingPeriod,
+  hasMultipleCollectingPeriods,
   form,
   availableFundingAccounts,
   filteredCategories,
@@ -21,6 +23,8 @@ export function TransactionFormFields({
   submitLabel
 }: {
   currentPeriod: AccountingPeriodItem | null;
+  hasCollectingPeriod: boolean;
+  hasMultipleCollectingPeriods: boolean;
   form: UseFormReturn<TransactionFormInput>;
   availableFundingAccounts: FundingAccountItem[];
   filteredCategories: CategoryItem[];
@@ -52,11 +56,13 @@ export function TransactionFormFields({
           <TextField
             label="거래일"
             type="date"
-            disabled={!currentPeriod}
+            disabled={!hasCollectingPeriod}
             error={Boolean(form.formState.errors.businessDate)}
             helperText={
               form.formState.errors.businessDate?.message ??
-              (currentPeriod
+              (hasMultipleCollectingPeriods
+                ? '열린 운영 기간 범위 안에서만 선택할 수 있습니다.'
+                : currentPeriod
                 ? `${currentPeriod.monthLabel} 운영 기간 범위 안에서만 선택할 수 있습니다.`
                 : '현재 열린 운영 기간이 없습니다.')
             }
@@ -71,7 +77,7 @@ export function TransactionFormFields({
               <TextField
                 select
                 label="거래 성격"
-                disabled={!currentPeriod}
+                disabled={!hasCollectingPeriod}
                 error={Boolean(form.formState.errors.type)}
                 helperText={form.formState.errors.type?.message}
                 name={field.name}
@@ -99,7 +105,7 @@ export function TransactionFormFields({
                 select
                 label="자금수단"
                 disabled={
-                  !currentPeriod || availableFundingAccounts.length === 0
+                  !hasCollectingPeriod || availableFundingAccounts.length === 0
                 }
                 error={Boolean(form.formState.errors.accountId)}
                 helperText={
@@ -131,7 +137,9 @@ export function TransactionFormFields({
               <TextField
                 select
                 label="카테고리"
-                disabled={!currentPeriod || filteredCategories.length === 0}
+                disabled={
+                  !hasCollectingPeriod || filteredCategories.length === 0
+                }
                 helperText={
                   filteredCategories.length === 0
                     ? '선택한 거래 유형에 맞는 카테고리가 없으면 비워 둘 수 있습니다.'

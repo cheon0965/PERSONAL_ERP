@@ -11,7 +11,8 @@ export function JournalEntryAdjustmentDialog({
   open,
   mode,
   entry,
-  currentPeriod,
+  adjustmentPeriod,
+  journalWritablePeriods,
   onClose,
   onCompleted
 }: JournalEntryAdjustmentDialogProps) {
@@ -35,14 +36,16 @@ export function JournalEntryAdjustmentDialog({
         {mode === 'reverse' ? (
           <ReverseJournalEntryDialogContent
             entry={entry}
-            currentPeriod={currentPeriod}
+            adjustmentPeriod={adjustmentPeriod}
+            journalWritablePeriods={journalWritablePeriods}
             onClose={onClose}
             onCompleted={onCompleted}
           />
         ) : (
           <CorrectJournalEntryDialogContent
             entry={entry}
-            currentPeriod={currentPeriod}
+            adjustmentPeriod={adjustmentPeriod}
+            journalWritablePeriods={journalWritablePeriods}
             onClose={onClose}
             onCompleted={onCompleted}
           />

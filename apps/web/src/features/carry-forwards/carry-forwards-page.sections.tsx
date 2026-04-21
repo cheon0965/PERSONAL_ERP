@@ -12,22 +12,32 @@ import { getCarryForwardView } from './carry-forwards.api';
 type CarryForwardView = Awaited<ReturnType<typeof getCarryForwardView>>;
 
 export function CarryForwardsOverview({
+  canCancel,
   canGenerate,
+  canRegenerate,
   detailHref,
   hasCarryForward,
+  isCanceling,
   isGenerating,
   lockedPeriods,
+  onCancel,
   onGenerate,
+  onRegenerate,
   onSelectPeriod,
   selectedPeriod,
   view
 }: {
+  canCancel: boolean;
   canGenerate: boolean;
+  canRegenerate: boolean;
   detailHref: Route | null;
   hasCarryForward: boolean;
+  isCanceling: boolean;
   isGenerating: boolean;
   lockedPeriods: AccountingPeriodItem[];
   onGenerate: () => void;
+  onCancel: () => void;
+  onRegenerate: () => void;
   onSelectPeriod: (periodId: string) => void;
   selectedPeriod: AccountingPeriodItem;
   view: CarryForwardView | undefined;
@@ -92,13 +102,25 @@ export function CarryForwardsOverview({
                     {isGenerating ? '차기 이월 생성 중...' : '차기 이월 생성'}
                   </Button>
                 ) : null}
-                {canGenerate && hasCarryForward ? (
+                {canRegenerate && hasCarryForward ? (
                   <Button
                     variant="outlined"
-                    onClick={onGenerate}
-                    disabled={isGenerating}
+                    onClick={onRegenerate}
+                    disabled={isGenerating || isCanceling}
                   >
-                    현재 기준으로 다시 생성
+                    {isGenerating
+                      ? '다시 생성 중...'
+                      : '현재 기준으로 다시 생성'}
+                  </Button>
+                ) : null}
+                {canCancel && hasCarryForward ? (
+                  <Button
+                    variant="outlined"
+                    color="warning"
+                    onClick={onCancel}
+                    disabled={isGenerating || isCanceling}
+                  >
+                    {isCanceling ? '취소 중...' : '차기 이월 취소'}
                   </Button>
                 ) : null}
                 {!hasCarryForward ? (
@@ -206,11 +228,23 @@ export function CarryForwardsOverview({
 }
 
 export function CarryForwardsDetail({
+  canCancel,
+  canRegenerate,
+  isCanceling,
+  isRegenerating,
   lockedPeriods,
+  onCancel,
+  onRegenerate,
   selectedPeriodId,
   view
 }: {
+  canCancel: boolean;
+  canRegenerate: boolean;
+  isCanceling: boolean;
+  isRegenerating: boolean;
   lockedPeriods: AccountingPeriodItem[];
+  onCancel: () => void;
+  onRegenerate: () => void;
   selectedPeriodId: string;
   view: NonNullable<CarryForwardView>;
 }) {
@@ -240,52 +274,77 @@ export function CarryForwardsDetail({
         title="이월 기준 요약"
         description={`${view.sourcePeriod.monthLabel} 마감 결과가 ${view.targetPeriod.monthLabel} 기초 잔액 기준으로 연결되었습니다.`}
       >
-        <Grid container spacing={appLayout.fieldGap}>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <CarryForwardInfoItem
-              label="이월 생성 시각"
-              value={formatDate(view.carryForwardRecord.createdAt)}
-              description={`${view.sourcePeriod.monthLabel} 마감 결과를 기준으로 생성했습니다.`}
-            />
+        <Stack spacing={appLayout.cardGap}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+            {canRegenerate ? (
+              <Button
+                variant="outlined"
+                onClick={onRegenerate}
+                disabled={isRegenerating || isCanceling}
+              >
+                {isRegenerating ? '다시 생성 중...' : '현재 기준으로 다시 생성'}
+              </Button>
+            ) : null}
+            {canCancel ? (
+              <Button
+                variant="outlined"
+                color="warning"
+                onClick={onCancel}
+                disabled={isRegenerating || isCanceling}
+              >
+                {isCanceling ? '취소 중...' : '차기 이월 취소'}
+              </Button>
+            ) : null}
+          </Stack>
+          <Grid container spacing={appLayout.fieldGap}>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <CarryForwardInfoItem
+                label="이월 생성 시각"
+                value={formatDate(view.carryForwardRecord.createdAt)}
+                description={`${view.sourcePeriod.monthLabel} 마감 결과를 기준으로 생성했습니다.`}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <CarryForwardInfoItem
+                label="대상 운영 기간 상태"
+                value={readPeriodStatusLabel(view.targetPeriod.status)}
+                description={`${view.targetPeriod.monthLabel} 오프닝 기준에 연결됩니다.`}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <CarryForwardInfoItem
+                label="기초 잔액 기준"
+                value={readOpeningSourceLabel(
+                  view.targetOpeningBalanceSnapshot.sourceKind
+                )}
+                description="다음 월 시작 잔액의 출처를 보여줍니다."
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <CarryForwardInfoItem
+                label="자산 합계"
+                value={formatWon(view.sourceClosingSnapshot.totalAssetAmount)}
+                description="잠금 시점 자산 잔액입니다."
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <CarryForwardInfoItem
+                label="부채 합계"
+                value={formatWon(
+                  view.sourceClosingSnapshot.totalLiabilityAmount
+                )}
+                description="잠금 시점 부채 잔액입니다."
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <CarryForwardInfoItem
+                label="자본 합계"
+                value={formatWon(view.sourceClosingSnapshot.totalEquityAmount)}
+                description="손익 계정을 제외한 자본 잔액입니다."
+              />
+            </Grid>
           </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <CarryForwardInfoItem
-              label="대상 운영 기간 상태"
-              value={readPeriodStatusLabel(view.targetPeriod.status)}
-              description={`${view.targetPeriod.monthLabel} 오프닝 기준에 연결됩니다.`}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <CarryForwardInfoItem
-              label="기초 잔액 기준"
-              value={readOpeningSourceLabel(
-                view.targetOpeningBalanceSnapshot.sourceKind
-              )}
-              description="다음 월 시작 잔액의 출처를 보여줍니다."
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <CarryForwardInfoItem
-              label="자산 합계"
-              value={formatWon(view.sourceClosingSnapshot.totalAssetAmount)}
-              description="잠금 시점 자산 잔액입니다."
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <CarryForwardInfoItem
-              label="부채 합계"
-              value={formatWon(view.sourceClosingSnapshot.totalLiabilityAmount)}
-              description="잠금 시점 부채 잔액입니다."
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <CarryForwardInfoItem
-              label="자본 합계"
-              value={formatWon(view.sourceClosingSnapshot.totalEquityAmount)}
-              description="손익 계정을 제외한 자본 잔액입니다."
-            />
-          </Grid>
-        </Grid>
+        </Stack>
       </SectionCard>
 
       <SectionCard

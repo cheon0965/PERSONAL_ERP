@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { ConflictException } from '@nestjs/common';
 import {
   AccountingPeriodStatus,
   OpeningBalanceSourceKind
@@ -44,18 +44,6 @@ const allowedAccountingPeriodTransitions = new Map<
 
 export function readCollectingAccountingPeriodStatuses() {
   return collectingAccountingPeriodStatuses;
-}
-
-export function assertAccountingPeriodCanOpenAfterPrevious(
-  previousStatus: AccountingPeriodStatus
-): void {
-  if (previousStatus === AccountingPeriodStatus.LOCKED) {
-    return;
-  }
-
-  throw new BadRequestException(
-    '새 운영 기간을 열기 전에 이전 기간을 먼저 잠가야 합니다.'
-  );
 }
 
 export function assertAccountingPeriodCanRecordInitialOpen(): void {

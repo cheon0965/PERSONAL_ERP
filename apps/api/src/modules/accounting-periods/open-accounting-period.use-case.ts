@@ -30,7 +30,6 @@ import {
   readYearMonth
 } from './accounting-period.policy';
 import {
-  assertAccountingPeriodCanOpenAfterPrevious,
   assertAccountingPeriodCanRecordInitialOpen
 } from './accounting-period-transition.policy';
 
@@ -102,8 +101,6 @@ export class OpenAccountingPeriodUseCase {
     }
 
     if (latestPeriod) {
-      assertAccountingPeriodCanOpenAfterPrevious(latestPeriod.status);
-
       if (
         compareYearMonth(year, month, latestPeriod.year, latestPeriod.month) <=
         0

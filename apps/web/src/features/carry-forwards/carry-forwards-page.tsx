@@ -13,13 +13,17 @@ import {
   TextField,
   Typography
 } from '@mui/material';
-import type { AccountingPeriodItem } from '@personal-erp/contracts';
+import type {
+  AccountingPeriodItem,
+  CarryForwardView
+} from '@personal-erp/contracts';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { SectionCard } from '@/shared/ui/section-card';
+import { ConfirmActionDialog } from '@/shared/ui/confirm-action-dialog';
 import {
   accountingPeriodsQueryKey,
   getAccountingPeriods
@@ -32,7 +36,9 @@ import {
   readPeriodStatusLabel
 } from './carry-forwards-page.sections';
 import {
+  buildCancelCarryForwardFallback,
   buildCarryForwardFallback,
+  cancelCarryForward,
   carryForwardQueryKey,
   generateCarryForward,
   getCarryForwardView
@@ -56,6 +62,9 @@ export function CarryForwardsPage({
     severity: 'success' | 'error';
     message: string;
   } | null>(null);
+  const [confirmation, setConfirmation] = React.useState<
+    'cancel' | 'regenerate' | null
+  >(null);
   const periodsQuery = useQuery({
     queryKey: accountingPeriodsQueryKey,
     queryFn: getAccountingPeriods
@@ -103,11 +112,37 @@ export function CarryForwardsPage({
     enabled: Boolean(selectedPeriodId) && !selectedPeriodMissing
   });
 
-  const mutation = useMutation({
-    mutationFn: (period: AccountingPeriodItem) =>
+  const generationMutation = useMutation({
+    mutationFn: (input: {
+      period: AccountingPeriodItem;
+      replaceExisting?: boolean;
+    }) =>
       generateCarryForward(
-        { fromPeriodId: period.id },
-        buildCarryForwardFallback(period)
+        {
+          fromPeriodId: input.period.id,
+          replaceExisting: input.replaceExisting,
+          replaceReason: input.replaceExisting
+            ? '현재 마감 기준으로 차기 이월 재생성'
+            : undefined
+        },
+        buildCarryForwardFallback(input.period)
+      ),
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({
+        queryKey: carryForwardQueryKey(result.sourcePeriod.id)
+      });
+      await queryClient.invalidateQueries({
+        queryKey: accountingPeriodsQueryKey
+      });
+    }
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (viewToCancel: CarryForwardView) =>
+      cancelCarryForward(
+        viewToCancel.carryForwardRecord.id,
+        { reason: '사용자 요청으로 차기 이월 취소' },
+        buildCancelCarryForwardFallback(viewToCancel)
       ),
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({
@@ -122,30 +157,64 @@ export function CarryForwardsPage({
   const membershipRole = user?.currentWorkspace?.membership.role ?? null;
   const canGenerate =
     membershipRole === 'OWNER' || membershipRole === 'MANAGER';
+  const canCancel = membershipRole === 'OWNER';
+  const canRegenerate = canCancel;
   const view = carryForwardQuery.data;
   const hasCarryForward = view != null;
   const detailHref = selectedPeriod
     ? buildCarryForwardsDetailHref(selectedPeriod.id)
     : null;
 
-  const handleGenerateCarryForward = React.useCallback(async () => {
-    if (!selectedPeriod) {
+  const handleGenerateCarryForward = React.useCallback(
+    async (options?: { replaceExisting?: boolean }) => {
+      if (!selectedPeriod) {
+        return;
+      }
+
+      setFeedback(null);
+
+      try {
+        const result = await generationMutation.mutateAsync({
+          period: selectedPeriod,
+          replaceExisting: options?.replaceExisting
+        });
+
+        if (mode === 'overview' && !options?.replaceExisting) {
+          router.push(buildCarryForwardsDetailHref(result.sourcePeriod.id));
+          return;
+        }
+
+        setFeedback({
+          severity: 'success',
+          message: options?.replaceExisting
+            ? `${result.sourcePeriod.monthLabel} 차기 이월을 현재 마감 기준으로 다시 생성했습니다.`
+            : `${result.sourcePeriod.monthLabel} 마감 결과를 ${result.targetPeriod.monthLabel} 오프닝 기준으로 이월했습니다.`
+        });
+      } catch (error) {
+        setFeedback({
+          severity: 'error',
+          message:
+            error instanceof Error
+              ? error.message
+              : '차기 이월을 생성하지 못했습니다.'
+        });
+      }
+    },
+    [generationMutation, mode, router, selectedPeriod]
+  );
+
+  const handleCancelCarryForward = React.useCallback(async () => {
+    if (!view) {
       return;
     }
 
     setFeedback(null);
 
     try {
-      const result = await mutation.mutateAsync(selectedPeriod);
-
-      if (mode === 'overview') {
-        router.push(buildCarryForwardsDetailHref(result.sourcePeriod.id));
-        return;
-      }
-
+      const result = await cancelMutation.mutateAsync(view);
       setFeedback({
         severity: 'success',
-        message: `${result.sourcePeriod.monthLabel} 마감 결과를 ${result.targetPeriod.monthLabel} 오프닝 기준으로 이월했습니다.`
+        message: `${result.sourcePeriod.monthLabel} 차기 이월을 취소했습니다.`
       });
     } catch (error) {
       setFeedback({
@@ -153,10 +222,28 @@ export function CarryForwardsPage({
         message:
           error instanceof Error
             ? error.message
-            : '차기 이월을 생성하지 못했습니다.'
+            : '차기 이월을 취소하지 못했습니다.'
       });
     }
-  }, [mode, mutation, router, selectedPeriod]);
+  }, [cancelMutation, view]);
+
+  const handleConfirmAction = React.useCallback(async () => {
+    const currentConfirmation = confirmation;
+    if (!currentConfirmation) {
+      return;
+    }
+
+    if (currentConfirmation === 'cancel') {
+      await handleCancelCarryForward();
+    } else {
+      await handleGenerateCarryForward({ replaceExisting: true });
+    }
+
+    setConfirmation(null);
+  }, [confirmation, handleCancelCarryForward, handleGenerateCarryForward]);
+
+  const mutationPending =
+    generationMutation.isPending || cancelMutation.isPending;
 
   return (
     <Stack spacing={appLayout.pageGap}>
@@ -204,10 +291,17 @@ export function CarryForwardsPage({
             : '차기 이월 생성'
         }
         primaryActionOnClick={() => {
+          if (mode === 'detail' && hasCarryForward) {
+            setConfirmation('regenerate');
+            return;
+          }
+
           void handleGenerateCarryForward();
         }}
         primaryActionDisabled={
-          !selectedPeriod || !canGenerate || mutation.isPending
+          !selectedPeriod ||
+          mutationPending ||
+          (mode === 'detail' && hasCarryForward ? !canRegenerate : !canGenerate)
         }
         secondaryActionLabel={
           mode === 'detail'
@@ -363,12 +457,17 @@ export function CarryForwardsPage({
         </SectionCard>
       ) : mode === 'overview' ? (
         <CarryForwardsOverview
+          canCancel={canCancel}
           canGenerate={canGenerate}
+          canRegenerate={canRegenerate}
           detailHref={detailHref}
           hasCarryForward={hasCarryForward}
-          isGenerating={mutation.isPending}
+          isCanceling={cancelMutation.isPending}
+          isGenerating={generationMutation.isPending}
           lockedPeriods={lockedPeriods}
-          onGenerate={handleGenerateCarryForward}
+          onCancel={() => setConfirmation('cancel')}
+          onGenerate={() => void handleGenerateCarryForward()}
+          onRegenerate={() => setConfirmation('regenerate')}
           onSelectPeriod={setSelectedPeriodIdState}
           selectedPeriod={selectedPeriod}
           view={view}
@@ -393,10 +492,12 @@ export function CarryForwardsPage({
                 <Button
                   variant="contained"
                   color="inherit"
-                  onClick={handleGenerateCarryForward}
-                  disabled={mutation.isPending}
+                  onClick={() => {
+                    void handleGenerateCarryForward();
+                  }}
+                  disabled={generationMutation.isPending}
                 >
-                  {mutation.isPending
+                  {generationMutation.isPending
                     ? '차기 이월 생성 중...'
                     : '이 결과 화면에서 바로 생성'}
                 </Button>
@@ -420,11 +521,37 @@ export function CarryForwardsPage({
         </SectionCard>
       ) : (
         <CarryForwardsDetail
+          canCancel={canCancel}
+          canRegenerate={canRegenerate}
+          isCanceling={cancelMutation.isPending}
+          isRegenerating={generationMutation.isPending}
           lockedPeriods={lockedPeriods}
+          onCancel={() => setConfirmation('cancel')}
+          onRegenerate={() => setConfirmation('regenerate')}
           selectedPeriodId={selectedPeriod.id}
           view={view}
         />
       )}
+
+      <ConfirmActionDialog
+        open={confirmation != null}
+        title={
+          confirmation === 'cancel' ? '차기 이월 취소' : '차기 이월 다시 생성'
+        }
+        description={
+          confirmation === 'cancel'
+            ? `${view?.sourcePeriod.monthLabel ?? '선택 기간'} 차기 이월을 취소할까요? 다음 운영 기간에 거래, 업로드, 전표, 마감 산출물이 있으면 서버에서 차단됩니다.`
+            : `${view?.sourcePeriod.monthLabel ?? '선택 기간'} 차기 이월을 현재 마감 기준으로 다시 생성할까요? 먼저 기존 오프닝 기준을 안전하게 제거한 뒤 새 기준을 만듭니다.`
+        }
+        confirmLabel={confirmation === 'cancel' ? '이월 취소' : '다시 생성'}
+        pendingLabel={confirmation === 'cancel' ? '취소 중...' : '생성 중...'}
+        confirmColor={confirmation === 'cancel' ? 'warning' : 'primary'}
+        busy={mutationPending}
+        onClose={() => setConfirmation(null)}
+        onConfirm={() => {
+          void handleConfirmAction();
+        }}
+      />
     </Stack>
   );
 }
@@ -453,7 +580,8 @@ function buildCarryForwardsHelpContext(mode: CarryForwardsPageMode) {
           links: [
             {
               title: '이월 기준 생성 / 선택',
-              description: '다른 잠금 기간을 고르거나 차기 이월을 다시 생성합니다.',
+              description:
+                '다른 잠금 기간을 고르거나 차기 이월을 다시 생성합니다.',
               href: '/carry-forwards',
               actionLabel: '생성 / 선택 보기'
             },

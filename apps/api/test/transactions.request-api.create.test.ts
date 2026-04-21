@@ -285,3 +285,108 @@ test('POST /collected-transactions returns the created collected transaction ite
     await context.close();
   }
 });
+
+test('POST /collected-transactions stores the transaction in the open period that contains the business date', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push(
+      {
+        id: 'period-open-created-march',
+
+        tenantId: 'tenant-1',
+
+        ledgerId: 'ledger-1',
+
+        year: 2026,
+
+        month: 3,
+
+        startDate: new Date('2026-03-01T00:00:00.000Z'),
+
+        endDate: new Date('2026-04-01T00:00:00.000Z'),
+
+        status: AccountingPeriodStatus.OPEN,
+
+        openedAt: new Date('2026-03-01T00:00:00.000Z'),
+
+        lockedAt: null,
+
+        createdAt: new Date('2026-03-01T00:00:00.000Z'),
+
+        updatedAt: new Date('2026-03-01T00:00:00.000Z')
+      },
+
+      {
+        id: 'period-open-created-april',
+
+        tenantId: 'tenant-1',
+
+        ledgerId: 'ledger-1',
+
+        year: 2026,
+
+        month: 4,
+
+        startDate: new Date('2026-04-01T00:00:00.000Z'),
+
+        endDate: new Date('2026-05-01T00:00:00.000Z'),
+
+        status: AccountingPeriodStatus.OPEN,
+
+        openedAt: new Date('2026-04-01T00:00:00.000Z'),
+
+        lockedAt: null,
+
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+
+        updatedAt: new Date('2026-04-01T00:00:00.000Z')
+      }
+    );
+
+    const response = await context.request('/collected-transactions', {
+      method: 'POST',
+
+      headers: context.authHeaders(),
+
+      body: {
+        title: 'Late March upload follow-up',
+
+        type: TransactionType.EXPENSE,
+
+        amountWon: 54000,
+
+        businessDate: '2026-03-28',
+
+        fundingAccountId: 'acc-1',
+
+        categoryId: 'cat-1'
+      }
+    });
+
+    assert.equal(response.status, 201);
+
+    assert.equal(
+      context.state.collectedTransactions.find(
+        (candidate) => candidate.id === 'ctx-4'
+      )?.periodId,
+
+      'period-open-created-march'
+    );
+
+    assert.ok(
+      context.securityEvents.some(
+        (candidate) =>
+          candidate.level === 'log' &&
+          candidate.event === 'audit.action_succeeded' &&
+          candidate.details.requestId ===
+            response.headers.get('x-request-id') &&
+          candidate.details.action === 'collected_transaction.create' &&
+          candidate.details.collectedTransactionId === 'ctx-4' &&
+          candidate.details.periodId === 'period-open-created-march'
+      )
+    );
+  } finally {
+    await context.close();
+  }
+});

@@ -21,6 +21,7 @@
 12. 거래/반복규칙 실제 mutation 연결
 13. 월 운영, 전표, 공식 보고 backbone 구현
 14. 업로드 배치와 수집 승격 흐름 구현
+    UTF-8 텍스트 업로드, IM뱅크 PDF 파일첨부 업로드, 단건 collect preview/collect, 배치 상세 일괄 등록 Job/진행률/동시 작업 잠금까지 현재 범위에 포함합니다.
 15. 배포/운영 체크리스트 문서화
 16. 메인 비즈니스 흐름 가시성, 준비 경로, 추적성 보강
 17. 기준 데이터 readiness와 자금수단/카테고리 제한적 관리 구현
@@ -49,7 +50,7 @@
 - 기준 데이터 readiness 조회와 자금수단/카테고리 제한적 관리
 - 운영 기간 조회/open/close/reopen
 - 수집 거래 조회/생성/수정/삭제/확정
-- 업로드 배치 조회/생성/행 collect preview/행 collect
+- 업로드 배치 조회/생성/IM뱅크 PDF 파일첨부/행 collect preview/행 collect/일괄 등록 Job 조회
 - 반복규칙 조회/생성/수정/삭제
 - 계획 항목 조회/생성(generate)과 수집 거래/전표 추적
 - 전표 조회/reverse/correct

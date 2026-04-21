@@ -1,5 +1,7 @@
 import type {
   AccountingPeriodItem,
+  CancelCarryForwardRequest,
+  CancelCarryForwardResponse,
   CarryForwardView,
   GenerateCarryForwardRequest
 } from '@personal-erp/contracts';
@@ -25,6 +27,33 @@ export function generateCarryForward(
     payload,
     fallback
   );
+}
+
+export function cancelCarryForward(
+  carryForwardRecordId: string,
+  payload: CancelCarryForwardRequest,
+  fallback: CancelCarryForwardResponse
+) {
+  return postJson<CancelCarryForwardResponse, CancelCarryForwardRequest>(
+    `/carry-forwards/${encodeURIComponent(carryForwardRecordId)}/cancel`,
+    payload,
+    fallback
+  );
+}
+
+export function buildCancelCarryForwardFallback(
+  view: CarryForwardView
+): CancelCarryForwardResponse {
+  return {
+    carryForwardRecord: view.carryForwardRecord,
+    sourcePeriod: view.sourcePeriod,
+    targetPeriod: {
+      ...view.targetPeriod,
+      hasOpeningBalanceSnapshot: false,
+      openingBalanceSourceKind: null
+    },
+    canceledOpeningBalanceSnapshotId: view.targetOpeningBalanceSnapshot.id
+  };
 }
 
 export function buildCarryForwardFallback(

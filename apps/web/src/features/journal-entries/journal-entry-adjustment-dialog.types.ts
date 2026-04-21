@@ -12,7 +12,8 @@ export type JournalEntryAdjustmentDialogProps = {
   open: boolean;
   mode: JournalEntryAdjustmentMode | null;
   entry: JournalEntryItem | null;
-  currentPeriod: AccountingPeriodItem | null;
+  adjustmentPeriod: AccountingPeriodItem | null;
+  journalWritablePeriods: AccountingPeriodItem[];
   onClose: () => void;
   onCompleted: (
     createdEntry: JournalEntryItem,
@@ -22,7 +23,7 @@ export type JournalEntryAdjustmentDialogProps = {
 
 export type JournalEntryAdjustmentContentProps = Pick<
   JournalEntryAdjustmentDialogProps,
-  'currentPeriod' | 'onClose' | 'onCompleted'
+  'adjustmentPeriod' | 'journalWritablePeriods' | 'onClose' | 'onCompleted'
 > & {
   entry: JournalEntryItem;
 };

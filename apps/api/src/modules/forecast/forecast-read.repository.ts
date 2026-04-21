@@ -7,6 +7,7 @@ import {
   type PrismaMoneyLike
 } from '../../common/money/prisma-money';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { readWorkspaceCurrentFundingBalanceWon } from '../funding-accounts/funding-account-live-balance.reader';
 import {
   findLatestLockedPeriod,
   selectOperationalPeriod
@@ -100,7 +101,8 @@ export class ForecastReadRepository {
     periodId?: string;
     monthLabel?: string;
   }): Promise<MonthlyForecastReadModel | null> {
-    const [user, periods, accounts, ledgerTransactionTypes] = await Promise.all(
+    const [user, periods, currentFundingBalanceWon, ledgerTransactionTypes] =
+      await Promise.all(
       [
         this.prisma.user.findUniqueOrThrow({
           where: { id: input.userId },
@@ -121,14 +123,9 @@ export class ForecastReadRepository {
           include: forecastPeriodInclude,
           orderBy: [{ year: 'desc' }, { month: 'desc' }]
         }),
-        this.prisma.account.findMany({
-          where: {
-            tenantId: input.tenantId,
-            ledgerId: input.ledgerId
-          },
-          select: {
-            balanceWon: true
-          }
+        readWorkspaceCurrentFundingBalanceWon(this.prisma, {
+          tenantId: input.tenantId,
+          ledgerId: input.ledgerId
         }),
         this.prisma.ledgerTransactionType.findMany({
           where: {
@@ -137,8 +134,7 @@ export class ForecastReadRepository {
             isActive: true
           }
         })
-      ]
-    );
+      ]);
 
     const targetPeriod = selectOperationalPeriod(
       periods,
@@ -209,10 +205,6 @@ export class ForecastReadRepository {
     );
 
     const metricsByPeriodId = new Map(periodMetrics);
-    const currentFundingBalanceWon = sumMoneyWon(
-      accounts.map((account) => fromPrismaMoneyWon(account.balanceWon))
-    );
-
     return {
       targetPeriod,
       basisStatus:

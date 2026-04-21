@@ -1,4 +1,5 @@
 import * as React from 'react';
+import Link from 'next/link';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import {
@@ -25,35 +26,111 @@ import { appLayout } from '@/shared/ui/layout-metrics';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { SectionCard } from '@/shared/ui/section-card';
 import { StatusChip } from '@/shared/ui/status-chip';
+import type { AccountingPeriodReopenEligibility } from './accounting-period-reopen-eligibility';
 import type { PeriodFormInput } from './accounting-periods-page.types';
 
-export const periodColumns: GridColDef<AccountingPeriodItem>[] = [
-  { field: 'monthLabel', headerName: '운영 월', flex: 0.8 },
-  {
-    field: 'status',
-    headerName: '상태',
-    flex: 0.7,
-    renderCell: (params) => <StatusChip label={String(params.value)} />
-  },
-  {
-    field: 'hasOpeningBalanceSnapshot',
-    headerName: '기초 잔액',
-    flex: 0.9,
-    valueGetter: (_value, row) => readOpeningBalanceSource(row)
-  },
-  {
-    field: 'openedAt',
-    headerName: '시작일',
-    flex: 1,
-    valueFormatter: (value) => formatDate(String(value))
-  },
-  {
-    field: 'lockedAt',
-    headerName: '잠금일',
-    flex: 1,
-    valueFormatter: (value) => (value ? formatDate(String(value)) : '-')
+export function buildPeriodColumns({
+  includeReopenAction = false,
+  reopenEligibilityByPeriodId = {}
+}: {
+  includeReopenAction?: boolean;
+  reopenEligibilityByPeriodId?: Record<
+    string,
+    AccountingPeriodReopenEligibility
+  >;
+} = {}): GridColDef<AccountingPeriodItem>[] {
+  const columns: GridColDef<AccountingPeriodItem>[] = [
+    { field: 'monthLabel', headerName: '운영 월', flex: 0.8 },
+    {
+      field: 'status',
+      headerName: '상태',
+      flex: 0.7,
+      renderCell: (params) => <StatusChip label={String(params.value)} />
+    },
+    {
+      field: 'hasOpeningBalanceSnapshot',
+      headerName: '기초 잔액',
+      flex: 0.9,
+      valueGetter: (_value, row) => readOpeningBalanceSource(row)
+    },
+    {
+      field: 'openedAt',
+      headerName: '시작일',
+      flex: 1,
+      valueFormatter: (value) => formatDate(String(value))
+    },
+    {
+      field: 'lockedAt',
+      headerName: '잠금일',
+      flex: 1,
+      valueFormatter: (value) => (value ? formatDate(String(value)) : '-')
+    }
+  ];
+
+  if (!includeReopenAction) {
+    return columns;
   }
-];
+
+  return [
+    ...columns,
+    {
+      field: 'reopenEligibility',
+      headerName: '재오픈 판단',
+      minWidth: 160,
+      flex: 1,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => {
+        if (params.row.status !== 'LOCKED') {
+          return '-';
+        }
+
+        const eligibility = reopenEligibilityByPeriodId[params.row.id];
+        return eligibility ? (
+          <Typography
+            variant="body2"
+            color={
+              eligibility.statusSeverity === 'success'
+                ? 'success.main'
+                : eligibility.statusSeverity === 'error'
+                  ? 'error.main'
+                  : eligibility.statusSeverity === 'warning'
+                    ? 'warning.main'
+                    : 'text.secondary'
+            }
+          >
+            {eligibility.statusLabel}
+          </Typography>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            조건 확인 중
+          </Typography>
+        );
+      }
+    },
+    {
+      field: 'operations',
+      headerName: '작업',
+      minWidth: 146,
+      flex: 0.85,
+      sortable: false,
+      filterable: false,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) =>
+        params.row.status === 'LOCKED' ? (
+          <Button
+            component={Link}
+            href={buildReopenWorkbenchHref(params.row.id)}
+            size="small"
+            variant="outlined"
+          >
+            재오픈 검토
+          </Button>
+        ) : null
+    }
+  ];
+}
 
 export function OpenAccountingPeriodSection({
   form,
@@ -104,7 +181,7 @@ export function OpenAccountingPeriodSection({
         description={
           isFirstPeriod
             ? '첫 월은 기초 잔액 라인을 함께 저장해 시작 기준을 만듭니다.'
-            : '이전 기간이 잠긴 뒤 다음 운영 월을 엽니다.'
+            : '월 오픈과 월 마감은 별도 작업입니다. 다음 운영 월을 미리 열어 둘 수 있습니다.'
         }
       >
         <form onSubmit={onSubmit}>
@@ -388,4 +465,8 @@ function readOpeningBalanceSource(period: AccountingPeriodItem) {
   return period.openingBalanceSourceKind === 'INITIAL_SETUP'
     ? '초기 설정'
     : '이월';
+}
+
+function buildReopenWorkbenchHref(periodId: string) {
+  return `/periods/close?reopenPeriodId=${encodeURIComponent(periodId)}#accounting-period-workbench`;
 }

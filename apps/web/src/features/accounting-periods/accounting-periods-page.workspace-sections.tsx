@@ -6,8 +6,9 @@ import type { AccountingPeriodItem } from '@personal-erp/contracts';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { SectionCard } from '@/shared/ui/section-card';
+import type { AccountingPeriodReopenEligibility } from './accounting-period-reopen-eligibility';
 import { CurrentPeriodStatusSection } from './accounting-periods-page.status-section';
-import { periodColumns } from './accounting-periods-page.sections';
+import { buildPeriodColumns } from './accounting-periods-page.sections';
 import { PeriodOperationsSection } from './accounting-periods-page.lifecycle-section';
 
 type CurrentPeriodStatusSectionProps = React.ComponentProps<
@@ -35,6 +36,8 @@ export function AccountingPeriodsOverviewWorkspace({
   lockedPeriodCount: number;
   periods: AccountingPeriodItem[];
 }) {
+  const periodColumns = React.useMemo(() => buildPeriodColumns(), []);
+
   return (
     <Stack spacing={appLayout.sectionGap}>
       <CurrentPeriodStatusSection {...statusSectionProps} />
@@ -83,13 +86,24 @@ export function AccountingPeriodsHistoryWorkspace({
   statusSectionProps,
   periodStatusSummary,
   lockedPeriodCount,
-  periods
+  periods,
+  reopenEligibilityByPeriodId
 }: {
   statusSectionProps: CurrentPeriodStatusSectionProps;
   periodStatusSummary: PeriodStatusSummary;
   lockedPeriodCount: number;
   periods: AccountingPeriodItem[];
+  reopenEligibilityByPeriodId: Record<string, AccountingPeriodReopenEligibility>;
 }) {
+  const periodColumns = React.useMemo(
+    () =>
+      buildPeriodColumns({
+        includeReopenAction: true,
+        reopenEligibilityByPeriodId
+      }),
+    [reopenEligibilityByPeriodId]
+  );
+
   return (
     <Stack spacing={appLayout.sectionGap}>
       <Grid container spacing={appLayout.sectionGap}>
@@ -104,12 +118,13 @@ export function AccountingPeriodsHistoryWorkspace({
           >
             <Stack spacing={1.25}>
               <Typography variant="body2" color="text.secondary">
-                최신 월부터 상태와 잠금 여부를 보고, 필요한 경우 최근 잠금 월만
-                재오픈 검토 대상으로 삼습니다.
+                최신 월부터 상태와 잠금 여부를 보고, 필요한 경우 잠금 월별로
+                재오픈 가능/차단 사유를 먼저 확인한 뒤 검토 대상을 고릅니다.
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 첫 월은 `초기 설정`, 이후 월은 `이월` 기초 잔액 출처가
-                자연스럽게 이어지는지 함께 확인합니다.
+                자연스럽게 이어지는지 함께 확인합니다. 실제 재오픈은 각 행의
+                `재오픈 검토` 버튼으로 이어서 처리할 수 있습니다.
               </Typography>
             </Stack>
           </SectionCard>

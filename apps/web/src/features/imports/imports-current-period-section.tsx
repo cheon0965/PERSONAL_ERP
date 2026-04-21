@@ -14,7 +14,7 @@ export function ImportsCurrentPeriodSection({
   return (
     <SectionCard
       title="현재 운영 월"
-      description="업로드 행 등록과 자동 준비 결과는 현재 열린 운영 월 기준으로만 처리됩니다."
+      description="현재 열린 운영 월은 참고 정보입니다. 업로드 행은 다른 월도 등록할 수 있고, 없는 운영 월은 등록 시 자동으로 준비됩니다."
     >
       {currentPeriod ? (
         <Grid container spacing={appLayout.fieldGap}>
@@ -44,8 +44,8 @@ export function ImportsCurrentPeriodSection({
         </Grid>
       ) : (
         <Typography variant="body2" color="text.secondary">
-          현재 열린 운영 기간이 없습니다. 배치는 미리 올릴 수 있지만 행 등록은
-          `월 운영` 화면에서 기간을 연 뒤 진행해야 합니다.
+          현재 열린 운영 기간이 없어도 업로드 행 등록은 가능합니다. 다만
+          잠금된 마감월 데이터는 저장되지 않습니다.
         </Typography>
       )}
     </SectionCard>
