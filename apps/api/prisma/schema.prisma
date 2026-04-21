@@ -807,8 +807,8 @@ model ImportBatchCollectionJob {
   updatedAt               DateTime                       @updatedAt
   rows                    ImportBatchCollectionJobRow[]
 
-  @@index([tenantId, ledgerId, importBatchId, createdAt])
-  @@index([tenantId, ledgerId, status])
+  @@index([tenantId, ledgerId, importBatchId, createdAt], map: "ibcj_tenant_ledger_batch_created_idx")
+  @@index([tenantId, ledgerId, status], map: "ibcj_tenant_ledger_status_idx")
 }
 
 model ImportBatchCollectionJobRow {
@@ -825,8 +825,8 @@ model ImportBatchCollectionJobRow {
   updatedAt              DateTime                          @updatedAt
   job                    ImportBatchCollectionJob          @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
-  @@unique([jobId, importedRowId])
-  @@index([importedRowId])
+  @@unique([jobId, importedRowId], map: "ibcjr_job_row_key")
+  @@index([importedRowId], map: "ibcjr_imported_row_idx")
 }
 
 model ImportBatchCollectionLock {
@@ -834,14 +834,15 @@ model ImportBatchCollectionLock {
   tenantId             String
   ledgerId             String
   importBatchId        String
-  jobId                String   @unique
+  jobId                String
   lockedByMembershipId String
   expiresAt            DateTime
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
-  @@unique([tenantId, ledgerId])
-  @@index([expiresAt])
+  @@unique([tenantId, ledgerId], map: "ibcl_tenant_ledger_key")
+  @@unique([jobId], map: "ibcl_job_key")
+  @@index([expiresAt], map: "ibcl_expires_at_idx")
 }
 
 model CollectedTransaction {
