@@ -17,8 +17,8 @@ CREATE TABLE `ImportBatchCollectionJob` (
   `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updatedAt` DATETIME(3) NOT NULL,
 
-  INDEX `ImportBatchCollectionJob_tenantId_ledgerId_importBatchId_createdAt_idx`(`tenantId`, `ledgerId`, `importBatchId`, `createdAt`),
-  INDEX `ImportBatchCollectionJob_tenantId_ledgerId_status_idx`(`tenantId`, `ledgerId`, `status`),
+  INDEX `ibcj_tenant_ledger_batch_created_idx`(`tenantId`, `ledgerId`, `importBatchId`, `createdAt`),
+  INDEX `ibcj_tenant_ledger_status_idx`(`tenantId`, `ledgerId`, `status`),
   PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -35,8 +35,8 @@ CREATE TABLE `ImportBatchCollectionJobRow` (
   `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updatedAt` DATETIME(3) NOT NULL,
 
-  UNIQUE INDEX `ImportBatchCollectionJobRow_jobId_importedRowId_key`(`jobId`, `importedRowId`),
-  INDEX `ImportBatchCollectionJobRow_importedRowId_idx`(`importedRowId`),
+  UNIQUE INDEX `ibcjr_job_row_key`(`jobId`, `importedRowId`),
+  INDEX `ibcjr_imported_row_idx`(`importedRowId`),
   PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -51,9 +51,9 @@ CREATE TABLE `ImportBatchCollectionLock` (
   `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updatedAt` DATETIME(3) NOT NULL,
 
-  UNIQUE INDEX `ImportBatchCollectionLock_tenantId_ledgerId_key`(`tenantId`, `ledgerId`),
-  UNIQUE INDEX `ImportBatchCollectionLock_jobId_key`(`jobId`),
-  INDEX `ImportBatchCollectionLock_expiresAt_idx`(`expiresAt`),
+  UNIQUE INDEX `ibcl_tenant_ledger_key`(`tenantId`, `ledgerId`),
+  UNIQUE INDEX `ibcl_job_key`(`jobId`),
+  INDEX `ibcl_expires_at_idx`(`expiresAt`),
   PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
