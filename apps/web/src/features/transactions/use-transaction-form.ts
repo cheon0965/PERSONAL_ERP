@@ -11,6 +11,11 @@ import type {
 } from '@personal-erp/contracts';
 import { useForm } from 'react-hook-form';
 import {
+  findAccountingPeriodForDate,
+  readCollectingAccountingPeriods,
+  resolvePreferredAccountingPeriod
+} from '@/features/accounting-periods/accounting-period-selection';
+import {
   categoriesManagementQueryKey,
   categoriesQueryKey,
   fundingAccountsManagementQueryKey,
@@ -33,7 +38,6 @@ import {
 import { resolveManualCollectedTransactionPostingStatus } from './transaction-workflow';
 import { mapDetailToFormInput } from './transaction-form.mapper';
 import {
-  isWithinPeriod,
   resolveInitialBusinessDate,
   transactionSchema,
   type TransactionFormInput
@@ -55,6 +59,7 @@ type SaveTransactionMutationInput = {
 
 export function useTransactionForm(input: {
   currentPeriod: AccountingPeriodItem | null;
+  accountingPeriods: AccountingPeriodItem[];
   mode: TransactionFormMode;
   initialTransaction: CollectedTransactionDetailItem | null;
   onCompleted?: (
@@ -64,6 +69,15 @@ export function useTransactionForm(input: {
 }) {
   const queryClient = useQueryClient();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
+  const collectingPeriods = React.useMemo(
+    () => readCollectingAccountingPeriods(input.accountingPeriods),
+    [input.accountingPeriods]
+  );
+  const preferredPeriod = React.useMemo(
+    () =>
+      resolvePreferredAccountingPeriod(input.currentPeriod, collectingPeriods),
+    [collectingPeriods, input.currentPeriod]
+  );
   const includeInactiveCategories =
     input.mode === 'edit' && Boolean(input.initialTransaction?.categoryId);
   const includeInactiveFundingAccounts =
@@ -91,7 +105,7 @@ export function useTransactionForm(input: {
     defaultValues: {
       title: '',
       amountWon: 0,
-      businessDate: resolveInitialBusinessDate(input.currentPeriod),
+      businessDate: resolveInitialBusinessDate(preferredPeriod),
       type: 'EXPENSE',
       accountId: '',
       categoryId: '',
@@ -204,25 +218,28 @@ export function useTransactionForm(input: {
     form.reset({
       title: '',
       amountWon: 0,
-      businessDate: resolveInitialBusinessDate(input.currentPeriod),
+      businessDate: resolveInitialBusinessDate(preferredPeriod),
       type: 'EXPENSE',
       accountId: '',
       categoryId: '',
       memo: ''
     });
-  }, [form, input.currentPeriod, input.initialTransaction, input.mode]);
+  }, [form, input.initialTransaction, input.mode, preferredPeriod]);
 
   React.useEffect(() => {
-    const nextValue = resolveInitialBusinessDate(input.currentPeriod);
+    const nextValue = resolveInitialBusinessDate(preferredPeriod);
     const currentValue = form.getValues('businessDate');
+    const matchedPeriod = currentValue
+      ? findAccountingPeriodForDate(collectingPeriods, currentValue)
+      : null;
 
-    if (!currentValue || !isWithinPeriod(currentValue, input.currentPeriod)) {
+    if (!currentValue || !matchedPeriod) {
       form.setValue('businessDate', nextValue, { shouldValidate: true });
     }
-  }, [form, input.currentPeriod]);
+  }, [collectingPeriods, form, preferredPeriod]);
 
   const referenceError = fundingAccountsError ?? categoriesError;
-  const canSaveInPeriod = Boolean(input.currentPeriod);
+  const canSaveInPeriod = collectingPeriods.length > 0;
   const isBusy =
     mutation.isPending ||
     form.formState.isSubmitting ||
@@ -234,7 +251,7 @@ export function useTransactionForm(input: {
   async function submit(values: TransactionFormInput) {
     setFeedback(null);
 
-    if (!input.currentPeriod) {
+    if (collectingPeriods.length === 0) {
       setFeedback({
         severity: 'error',
         message:
@@ -251,10 +268,11 @@ export function useTransactionForm(input: {
       return;
     }
 
-    if (!isWithinPeriod(values.businessDate, input.currentPeriod)) {
+    if (!findAccountingPeriodForDate(collectingPeriods, values.businessDate)) {
       setFeedback({
         severity: 'error',
-        message: '거래 일자는 현재 열린 운영 기간 안에 있어야 합니다.'
+        message:
+          '거래 일자는 해당 일자를 포함하는 열린 운영 기간 안에 있어야 합니다.'
       });
       return;
     }
@@ -309,7 +327,7 @@ export function useTransactionForm(input: {
         form.reset({
           title: '',
           amountWon: 0,
-          businessDate: resolveInitialBusinessDate(input.currentPeriod),
+          businessDate: resolveInitialBusinessDate(preferredPeriod),
           type: values.type,
           accountId: values.accountId,
           categoryId: '',
@@ -339,6 +357,7 @@ export function useTransactionForm(input: {
 
   return {
     availableFundingAccounts,
+    collectingPeriods,
     currentPeriod: input.currentPeriod,
     feedback,
     filteredCategories,
@@ -347,6 +366,7 @@ export function useTransactionForm(input: {
     mode: input.mode,
     mutationPending: mutation.isPending,
     predictedStatus,
+    preferredPeriod,
     referenceDataReadinessQuery,
     referenceError,
     selectedType,

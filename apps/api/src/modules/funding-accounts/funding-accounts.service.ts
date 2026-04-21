@@ -10,13 +10,16 @@ import type {
   UpdateFundingAccountRequest
 } from '@personal-erp/contracts';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
+import { PrismaService } from '../../common/prisma/prisma.service';
 import { normalizeCaseInsensitiveText } from '../../common/utils/normalize-unique-key.util';
 import { mapFundingAccountRecordToItem } from './funding-account.mapper';
+import { readWorkspaceFundingAccountLiveBalances } from './funding-account-live-balance.reader';
 import { FundingAccountsRepository } from './funding-accounts.repository';
 
 @Injectable()
 export class FundingAccountsService {
   constructor(
+    private readonly prisma: PrismaService,
     private readonly fundingAccountsRepository: FundingAccountsRepository
   ) {}
 
@@ -31,11 +34,16 @@ export class FundingAccountsService {
     }
   ): Promise<FundingAccountItem[]> {
     const workspace = requireCurrentWorkspace(user);
-    const accounts = await this.fundingAccountsRepository.findAllInWorkspace(
-      workspace.tenantId,
-      workspace.ledgerId,
+
+    const accounts = await readWorkspaceFundingAccountLiveBalances(
+      this.prisma,
+      {
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId
+      },
       input
     );
+
     return accounts.map(mapFundingAccountRecordToItem);
   }
 

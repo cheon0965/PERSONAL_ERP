@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type {
+  CancelCarryForwardResponse,
   CarryForwardView,
   FinancialStatementsView
 } from '@personal-erp/contracts';
@@ -11,6 +12,168 @@ import {
   OpeningBalanceSourceKind
 } from '@prisma/client';
 import { createRequestTestContext } from './request-api.test-support';
+
+type RequestContext = Awaited<ReturnType<typeof createRequestTestContext>>;
+
+function seedCancelableCarryForwardFixture(
+  context: RequestContext,
+  input: {
+    prefix: string;
+    sourceYear?: number;
+    sourceMonth?: number;
+    closingAmount?: number;
+    openingAmount?: number;
+  }
+) {
+  const sourceYear = input.sourceYear ?? 2026;
+  const sourceMonth = input.sourceMonth ?? 7;
+  const targetYear = sourceMonth === 12 ? sourceYear + 1 : sourceYear;
+  const targetMonth = sourceMonth === 12 ? 1 : sourceMonth + 1;
+  const closingAmount = input.closingAmount ?? 1_250_000;
+  const openingAmount = input.openingAmount ?? 900_000;
+  const sourcePeriodId = `${input.prefix}-source`;
+  const targetPeriodId = `${input.prefix}-target`;
+  const closingSnapshotId = `${input.prefix}-closing`;
+  const openingSnapshotId = `${input.prefix}-opening`;
+  const carryForwardRecordId = `${input.prefix}-record`;
+
+  context.state.accountingPeriods.push(
+    {
+      id: sourcePeriodId,
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: sourceYear,
+      month: sourceMonth,
+      startDate: new Date(
+        `${sourceYear}-${String(sourceMonth).padStart(2, '0')}-01T00:00:00.000Z`
+      ),
+      endDate: new Date(
+        `${targetYear}-${String(targetMonth).padStart(2, '0')}-01T00:00:00.000Z`
+      ),
+      status: AccountingPeriodStatus.LOCKED,
+      openedAt: new Date(
+        `${sourceYear}-${String(sourceMonth).padStart(2, '0')}-01T00:00:00.000Z`
+      ),
+      lockedAt: new Date(
+        `${targetYear}-${String(targetMonth).padStart(2, '0')}-01T00:00:00.000Z`
+      ),
+      createdAt: new Date(
+        `${sourceYear}-${String(sourceMonth).padStart(2, '0')}-01T00:00:00.000Z`
+      ),
+      updatedAt: new Date(
+        `${targetYear}-${String(targetMonth).padStart(2, '0')}-01T00:00:00.000Z`
+      )
+    },
+    {
+      id: targetPeriodId,
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: targetYear,
+      month: targetMonth,
+      startDate: new Date(
+        `${targetYear}-${String(targetMonth).padStart(2, '0')}-01T00:00:00.000Z`
+      ),
+      endDate: new Date(
+        targetMonth === 12
+          ? `${targetYear + 1}-01-01T00:00:00.000Z`
+          : `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-01T00:00:00.000Z`
+      ),
+      status: AccountingPeriodStatus.OPEN,
+      openedAt: new Date(
+        `${targetYear}-${String(targetMonth).padStart(2, '0')}-01T00:00:00.000Z`
+      ),
+      lockedAt: null,
+      createdAt: new Date(
+        `${targetYear}-${String(targetMonth).padStart(2, '0')}-01T00:00:00.000Z`
+      ),
+      updatedAt: new Date(
+        `${targetYear}-${String(targetMonth).padStart(2, '0')}-01T00:00:00.000Z`
+      )
+    }
+  );
+
+  context.state.closingSnapshots.push({
+    id: closingSnapshotId,
+    tenantId: 'tenant-1',
+    ledgerId: 'ledger-1',
+    periodId: sourcePeriodId,
+    lockedAt: new Date(),
+    totalAssetAmount: closingAmount,
+    totalLiabilityAmount: 0,
+    totalEquityAmount: closingAmount,
+    periodPnLAmount: 0,
+    createdAt: new Date()
+  });
+  context.state.openingBalanceSnapshots.push({
+    id: openingSnapshotId,
+    tenantId: 'tenant-1',
+    ledgerId: 'ledger-1',
+    effectivePeriodId: targetPeriodId,
+    sourceKind: OpeningBalanceSourceKind.CARRY_FORWARD,
+    createdAt: new Date(),
+    createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+    createdByMembershipId: 'membership-1'
+  });
+  context.state.balanceSnapshotLines.push(
+    {
+      id: `${input.prefix}-closing-asset`,
+      snapshotKind: 'CLOSING',
+      openingSnapshotId: null,
+      closingSnapshotId,
+      accountSubjectId: 'as-1-1010',
+      fundingAccountId: 'acc-1',
+      balanceAmount: closingAmount
+    },
+    {
+      id: `${input.prefix}-closing-equity`,
+      snapshotKind: 'CLOSING',
+      openingSnapshotId: null,
+      closingSnapshotId,
+      accountSubjectId: 'as-1-3100',
+      fundingAccountId: null,
+      balanceAmount: closingAmount
+    },
+    {
+      id: `${input.prefix}-opening-asset`,
+      snapshotKind: 'OPENING',
+      openingSnapshotId,
+      closingSnapshotId: null,
+      accountSubjectId: 'as-1-1010',
+      fundingAccountId: 'acc-1',
+      balanceAmount: openingAmount
+    },
+    {
+      id: `${input.prefix}-opening-equity`,
+      snapshotKind: 'OPENING',
+      openingSnapshotId,
+      closingSnapshotId: null,
+      accountSubjectId: 'as-1-3100',
+      fundingAccountId: null,
+      balanceAmount: openingAmount
+    }
+  );
+  context.state.carryForwardRecords.push({
+    id: carryForwardRecordId,
+    tenantId: 'tenant-1',
+    ledgerId: 'ledger-1',
+    fromPeriodId: sourcePeriodId,
+    toPeriodId: targetPeriodId,
+    sourceClosingSnapshotId: closingSnapshotId,
+    createdJournalEntryId: null,
+    createdAt: new Date(),
+    createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+    createdByMembershipId: 'membership-1'
+  });
+
+  return {
+    sourcePeriodId,
+    targetPeriodId,
+    closingSnapshotId,
+    openingSnapshotId,
+    carryForwardRecordId
+  };
+}
+
 test('POST /financial-statements/generate creates official statement snapshots for a locked period', async () => {
   const context = await createRequestTestContext();
 
@@ -606,6 +769,193 @@ test('POST /carry-forwards/generate creates a carry forward record and the next 
           candidate.details.fromPeriodId === 'period-carry-1' &&
           candidate.details.toPeriodId === body.targetPeriod.id &&
           candidate.details.carryForwardRecordId === body.carryForwardRecord.id
+      )
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /carry-forwards/:id/cancel removes an unused carry forward opening snapshot', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const fixture = seedCancelableCarryForwardFixture(context, {
+      prefix: 'carry-cancel'
+    });
+
+    const response = await context.request(
+      `/carry-forwards/${fixture.carryForwardRecordId}/cancel`,
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          reason: '마감 정정 준비'
+        }
+      }
+    );
+
+    const body = response.body as CancelCarryForwardResponse;
+
+    assert.equal(response.status, 201);
+    assert.equal(body.carryForwardRecord.id, fixture.carryForwardRecordId);
+    assert.equal(body.sourcePeriod.id, fixture.sourcePeriodId);
+    assert.equal(body.targetPeriod.id, fixture.targetPeriodId);
+    assert.equal(body.targetPeriod.hasOpeningBalanceSnapshot, false);
+    assert.equal(
+      body.canceledOpeningBalanceSnapshotId,
+      fixture.openingSnapshotId
+    );
+    assert.equal(
+      context.state.carryForwardRecords.some(
+        (candidate) => candidate.id === fixture.carryForwardRecordId
+      ),
+      false
+    );
+    assert.equal(
+      context.state.openingBalanceSnapshots.some(
+        (candidate) => candidate.id === fixture.openingSnapshotId
+      ),
+      false
+    );
+    assert.equal(
+      context.state.balanceSnapshotLines.some(
+        (candidate) => candidate.openingSnapshotId === fixture.openingSnapshotId
+      ),
+      false
+    );
+    assert.ok(
+      context.securityEvents.some(
+        (candidate) =>
+          candidate.level === 'log' &&
+          candidate.event === 'audit.action_succeeded' &&
+          candidate.details.action === 'carry_forward.cancel' &&
+          candidate.details.carryForwardRecordId ===
+            fixture.carryForwardRecordId
+      )
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /carry-forwards/:id/cancel blocks cancellation after target period outputs exist', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const fixture = seedCancelableCarryForwardFixture(context, {
+      prefix: 'carry-cancel-blocked'
+    });
+    context.state.closingSnapshots.push({
+      id: 'carry-cancel-blocked-target-closing',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: fixture.targetPeriodId,
+      lockedAt: new Date(),
+      totalAssetAmount: 1_000,
+      totalLiabilityAmount: 0,
+      totalEquityAmount: 1_000,
+      periodPnLAmount: 0,
+      createdAt: new Date()
+    });
+
+    const response = await context.request(
+      `/carry-forwards/${fixture.carryForwardRecordId}/cancel`,
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          reason: '이미 다음 월 산출물 존재'
+        }
+      }
+    );
+
+    assert.equal(response.status, 409);
+    assert.deepEqual(response.body, {
+      statusCode: 409,
+      message:
+        '다음 운영 기간에 거래, 업로드, 전표, 마감 산출물이 있어 차기 이월을 취소할 수 없습니다.',
+      error: 'Conflict'
+    });
+    assert.equal(
+      context.state.carryForwardRecords.some(
+        (candidate) => candidate.id === fixture.carryForwardRecordId
+      ),
+      true
+    );
+    assert.equal(
+      context.state.openingBalanceSnapshots.some(
+        (candidate) => candidate.id === fixture.openingSnapshotId
+      ),
+      true
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /carry-forwards/generate can safely replace an existing carry forward', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const fixture = seedCancelableCarryForwardFixture(context, {
+      prefix: 'carry-regenerate',
+      sourceMonth: 9,
+      closingAmount: 2_500_000,
+      openingAmount: 900_000
+    });
+
+    const response = await context.request('/carry-forwards/generate', {
+      method: 'POST',
+      headers: context.authHeaders(),
+      body: {
+        fromPeriodId: fixture.sourcePeriodId,
+        replaceExisting: true,
+        replaceReason: '테스트 재생성'
+      }
+    });
+
+    const body = response.body as CarryForwardView;
+
+    assert.equal(response.status, 201);
+    assert.equal(body.sourcePeriod.id, fixture.sourcePeriodId);
+    assert.equal(body.targetPeriod.id, fixture.targetPeriodId);
+    assert.notEqual(body.carryForwardRecord.id, fixture.carryForwardRecordId);
+    assert.equal(
+      context.state.carryForwardRecords.filter(
+        (candidate) => candidate.fromPeriodId === fixture.sourcePeriodId
+      ).length,
+      1
+    );
+    assert.equal(
+      context.state.openingBalanceSnapshots.filter(
+        (candidate) => candidate.effectivePeriodId === fixture.targetPeriodId
+      ).length,
+      1
+    );
+    assert.deepEqual(
+      body.targetOpeningBalanceSnapshot.lines.map((line) => ({
+        accountSubjectCode: line.accountSubjectCode,
+        balanceAmount: line.balanceAmount
+      })),
+      [
+        {
+          accountSubjectCode: '1010',
+          balanceAmount: 2_500_000
+        },
+        {
+          accountSubjectCode: '3100',
+          balanceAmount: 2_500_000
+        }
+      ]
+    );
+    assert.ok(
+      context.securityEvents.some(
+        (candidate) =>
+          candidate.level === 'log' &&
+          candidate.event === 'audit.action_succeeded' &&
+          candidate.details.action === 'carry_forward.generate' &&
+          candidate.details.replaceExisting === true
       )
     );
   } finally {

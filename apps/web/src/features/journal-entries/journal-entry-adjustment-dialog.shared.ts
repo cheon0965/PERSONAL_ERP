@@ -7,6 +7,7 @@ import type {
 } from '@personal-erp/contracts';
 import type { FieldErrors } from 'react-hook-form';
 import { currentAccountingPeriodQueryKey } from '@/features/accounting-periods/accounting-periods.api';
+import { isDateWithinAccountingPeriod } from '@/features/accounting-periods/accounting-period-selection';
 import { collectedTransactionsQueryKey } from '@/features/transactions/transactions.api';
 import { getTodayDateInputValue } from '@/shared/lib/date-input';
 import { journalEntriesQueryKey } from './journal-entries.api';
@@ -92,15 +93,7 @@ export function isWithinPeriod(
   entryDate: string,
   currentPeriod: AccountingPeriodItem | null
 ): boolean {
-  if (!currentPeriod) {
-    return false;
-  }
-
-  const targetTime = Date.parse(`${entryDate}T00:00:00.000Z`);
-  const startTime = Date.parse(currentPeriod.startDate);
-  const endTime = Date.parse(currentPeriod.endDate);
-
-  return targetTime >= startTime && targetTime < endTime;
+  return isDateWithinAccountingPeriod(entryDate, currentPeriod);
 }
 
 export function createEmptyCorrectionLine(): CorrectionLineInput {

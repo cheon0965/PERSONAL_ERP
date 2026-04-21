@@ -2,6 +2,7 @@
 
 import type { AccountingPeriodItem } from '@personal-erp/contracts';
 import { z } from 'zod';
+import { isDateWithinAccountingPeriod } from '@/features/accounting-periods/accounting-period-selection';
 import { getTodayDateInputValue } from '@/shared/lib/date-input';
 import { createPositiveMoneyWonSchema } from '@/shared/lib/money';
 
@@ -36,13 +37,5 @@ export function isWithinPeriod(
   businessDate: string,
   currentPeriod: AccountingPeriodItem | null
 ): boolean {
-  if (!currentPeriod) {
-    return false;
-  }
-
-  const businessTime = Date.parse(`${businessDate}T00:00:00.000Z`);
-  const startTime = Date.parse(currentPeriod.startDate);
-  const endTime = Date.parse(currentPeriod.endDate);
-
-  return businessTime >= startTime && businessTime < endTime;
+  return isDateWithinAccountingPeriod(businessDate, currentPeriod);
 }

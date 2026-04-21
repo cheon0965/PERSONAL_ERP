@@ -88,7 +88,7 @@ export function CurrentPeriodStatusSection({
                 openPeriod
                   ? '현재 열린 운영 월 있음'
                   : reopenPeriod
-                    ? '최근 잠금 월 검토 가능'
+                    ? '잠금 월 재오픈 검토'
                     : '첫 월 시작 필요'
               }
               size="small"
@@ -196,7 +196,7 @@ function readNextPeriodAction(input: {
   }
 
   if (input.reopenPeriod) {
-    return input.canReopenPeriod ? '재오픈 검토' : '잠금 상태 확인';
+    return input.canReopenPeriod ? '잠금 월 재오픈 검토' : '잠금 상태 확인';
   }
 
   return '첫 월 시작';

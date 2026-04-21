@@ -118,6 +118,12 @@ export type CarryForwardRecordItem = {
 
 export type GenerateCarryForwardRequest = {
   fromPeriodId: string;
+  replaceExisting?: boolean;
+  replaceReason?: string;
+};
+
+export type CancelCarryForwardRequest = {
+  reason?: string;
 };
 
 export type CarryForwardView = {
@@ -126,6 +132,13 @@ export type CarryForwardView = {
   sourceClosingSnapshot: ClosingSnapshotItem;
   targetPeriod: AccountingPeriodItem;
   targetOpeningBalanceSnapshot: OpeningBalanceSnapshotItem;
+};
+
+export type CancelCarryForwardResponse = {
+  carryForwardRecord: CarryForwardRecordItem;
+  sourcePeriod: AccountingPeriodItem;
+  targetPeriod: AccountingPeriodItem;
+  canceledOpeningBalanceSnapshotId: string;
 };
 
 export type FinancialStatementKind =

@@ -19,6 +19,7 @@ import {
 import type { CorrectJournalEntryRequest } from '@personal-erp/contracts';
 import { sumMoneyWon, parseMoneyWon } from '@personal-erp/money';
 import { useFieldArray, useForm } from 'react-hook-form';
+import { findAccountingPeriodForDate } from '@/features/accounting-periods/accounting-period-selection';
 import {
   accountSubjectsQueryKey,
   fundingAccountsManagementQueryKey,
@@ -37,7 +38,6 @@ import {
   buildCorrectionDefaultValues,
   createEmptyCorrectionLine,
   invalidateAdjustmentQueries,
-  isWithinPeriod,
   readLinesErrorMessage,
   trimOptionalText
 } from './journal-entry-adjustment-dialog.shared';
@@ -50,7 +50,8 @@ import {
 
 export function CorrectJournalEntryDialogContent({
   entry,
-  currentPeriod,
+  adjustmentPeriod,
+  journalWritablePeriods,
   onClose,
   onCompleted
 }: JournalEntryAdjustmentContentProps) {
@@ -94,11 +95,11 @@ export function CorrectJournalEntryDialogContent({
     () =>
       buildCorrectionDefaultValues(
         entry,
-        currentPeriod,
+        adjustmentPeriod,
         accountSubjects,
         fundingAccounts
       ),
-    [accountSubjects, currentPeriod, entry, fundingAccounts]
+    [accountSubjects, adjustmentPeriod, entry, fundingAccounts]
   );
   const form = useForm<CorrectJournalEntryFormInput>({
     resolver: zodResolver(correctJournalEntrySchema),
@@ -159,7 +160,7 @@ export function CorrectJournalEntryDialogContent({
     accountSubjectsQuery.error ?? fundingAccountsQuery.error ?? null;
   const linesMessage = readLinesErrorMessage(form.formState.errors.lines);
   const canSubmit =
-    Boolean(currentPeriod) &&
+    journalWritablePeriods.length > 0 &&
     !referenceError &&
     accountSubjects.length > 0 &&
     fundingAccounts.length > 0;
@@ -169,19 +170,22 @@ export function CorrectJournalEntryDialogContent({
       onSubmit={form.handleSubmit(async (values) => {
         setFeedback(null);
 
-        if (!currentPeriod) {
+        if (journalWritablePeriods.length === 0) {
           setFeedback({
             severity: 'error',
             message:
-              '현재 열린 운영 기간이 없어 정정 전표를 생성할 수 없습니다.'
+              '전표 입력 가능한 운영 기간이 없어 정정 전표를 생성할 수 없습니다.'
           });
           return;
         }
 
-        if (!isWithinPeriod(values.entryDate, currentPeriod)) {
+        if (
+          !findAccountingPeriodForDate(journalWritablePeriods, values.entryDate)
+        ) {
           setFeedback({
             severity: 'error',
-            message: '정정 전표 일자는 현재 열린 운영 기간 안에 있어야 합니다.'
+            message:
+              '정정 전표 일자는 전표 입력 가능한 열린 운영 기간 안에 있어야 합니다.'
           });
           return;
         }
@@ -200,14 +204,14 @@ export function CorrectJournalEntryDialogContent({
       })}
     >
       <Stack spacing={appLayout.cardGap}>
-        {!currentPeriod ? (
+        {!journalWritablePeriods.length ? (
           <Alert severity="warning" variant="outlined">
-            현재 열린 운영 기간이 없어 정정 전표를 시작할 수 없습니다.
+            전표 입력 가능한 운영 기간이 없어 정정 전표를 시작할 수 없습니다.
           </Alert>
         ) : (
           <Alert severity="info" variant="outlined">
-            {entry.entryNumber} 전표를 기준으로 {currentPeriod.monthLabel} 운영
-            기간에 정정 전표를 만듭니다.
+            {entry.entryNumber} 전표를 기준으로 {adjustmentPeriod?.monthLabel}{' '}
+            운영 기간을 기본 기준으로 정정 전표를 만듭니다.
           </Alert>
         )}
         {referenceError ? (
@@ -236,9 +240,11 @@ export function CorrectJournalEntryDialogContent({
               error={Boolean(form.formState.errors.entryDate)}
               helperText={
                 form.formState.errors.entryDate?.message ??
-                (currentPeriod
-                  ? `${currentPeriod.monthLabel} 운영 기간 안에서만 정정할 수 있습니다.`
-                  : '현재 열린 운영 기간이 필요합니다.')
+                (journalWritablePeriods.length > 1
+                  ? '전표 입력 가능한 열린 운영 기간 안에서만 정정할 수 있습니다.'
+                  : adjustmentPeriod
+                    ? `${adjustmentPeriod.monthLabel} 운영 기간 안에서만 정정할 수 있습니다.`
+                    : '전표 입력 가능한 운영 기간이 필요합니다.')
               }
               {...form.register('entryDate')}
             />

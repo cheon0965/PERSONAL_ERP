@@ -2,7 +2,13 @@
 
 import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient
+} from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 import { Alert, Stack } from '@mui/material';
 import type {
   AccountingPeriodItem,
@@ -11,6 +17,10 @@ import type {
 } from '@personal-erp/contracts';
 import { parseMoneyWon } from '@personal-erp/money';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
+import {
+  carryForwardQueryKey,
+  getCarryForwardView
+} from '@/features/carry-forwards/carry-forwards.api';
 import {
   accountSubjectsQueryKey,
   fundingAccountsManagementQueryKey,
@@ -26,6 +36,7 @@ import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
+import { buildAccountingPeriodReopenEligibility } from './accounting-period-reopen-eligibility';
 import {
   accountingPeriodsQueryKey,
   buildCloseAccountingPeriodFallback,
@@ -72,9 +83,13 @@ export function AccountingPeriodsPage({
 }) {
   const queryClient = useQueryClient();
   const { user } = useAuthSession();
+  const searchParams = useSearchParams();
+  const requestedReopenPeriodId = searchParams?.get('reopenPeriodId') ?? null;
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const [closeNote, setCloseNote] = React.useState('');
   const [reopenReason, setReopenReason] = React.useState('');
+  const [selectedReopenPeriodId, setSelectedReopenPeriodId] =
+    React.useState<string | null>(null);
   const [latestClosingResult, setLatestClosingResult] =
     React.useState<CloseAccountingPeriodResponse | null>(null);
   const { data: periods = [], error } = useQuery({
@@ -152,10 +167,10 @@ export function AccountingPeriodsPage({
     canOpenPeriod,
     canReopenPeriod,
     currentPeriod,
-    focusedOperationTab,
     hasWorkspace,
     isFirstPeriod,
     isReadyForMonthlyOperation,
+    lockedPeriods,
     lockedPeriodCount,
     membershipRole: membershipRoleLabel,
     openingBalanceFundingAccounts,
@@ -167,6 +182,69 @@ export function AccountingPeriodsPage({
     reopenPeriod,
     secondaryAction
   } = pageModel;
+  const shouldLoadReopenEligibility =
+    section === 'close' || section === 'history';
+  const reopenCarryForwardQueries = useQueries({
+    queries: shouldLoadReopenEligibility
+      ? lockedPeriods.map((period) => ({
+          queryKey: carryForwardQueryKey(period.id),
+          queryFn: () => getCarryForwardView(period.id),
+          staleTime: 60_000
+        }))
+      : []
+  });
+
+  React.useEffect(() => {
+    setSelectedReopenPeriodId((currentSelectedPeriodId) => {
+      if (
+        currentSelectedPeriodId &&
+        lockedPeriods.some((period) => period.id === currentSelectedPeriodId)
+      ) {
+        return currentSelectedPeriodId;
+      }
+
+      if (
+        requestedReopenPeriodId &&
+        lockedPeriods.some((period) => period.id === requestedReopenPeriodId)
+      ) {
+        return requestedReopenPeriodId;
+      }
+
+      return reopenPeriod?.id ?? null;
+    });
+  }, [lockedPeriods, reopenPeriod, requestedReopenPeriodId]);
+
+  const selectedReopenPeriod = React.useMemo(
+    () =>
+      lockedPeriods.find((period) => period.id === selectedReopenPeriodId) ??
+      reopenPeriod,
+    [lockedPeriods, reopenPeriod, selectedReopenPeriodId]
+  );
+  const reopenEligibilityByPeriodId = React.useMemo(
+    () =>
+      Object.fromEntries(
+        lockedPeriods.map((period, index) => {
+          const carryForwardQuery = reopenCarryForwardQueries[index];
+
+          return [
+            period.id,
+            buildAccountingPeriodReopenEligibility({
+              period,
+              periods,
+              carryForwardView: carryForwardQuery?.data ?? null,
+              carryForwardError: carryForwardQuery?.error ?? null,
+              carryForwardPending:
+                shouldLoadReopenEligibility &&
+                Boolean(carryForwardQuery?.isPending)
+            })
+          ];
+        })
+      ),
+    [lockedPeriods, periods, reopenCarryForwardQueries, shouldLoadReopenEligibility]
+  );
+  const selectedReopenEligibility = selectedReopenPeriod
+    ? reopenEligibilityByPeriodId[selectedReopenPeriod.id] ?? null
+    : null;
 
   useDomainHelp(
     buildAccountingPeriodsDomainHelp({
@@ -319,7 +397,7 @@ export function AccountingPeriodsPage({
   }, [closeMutation, openPeriod]);
 
   const handleReopenPeriod = React.useCallback(async () => {
-    if (!reopenPeriod) {
+    if (!selectedReopenPeriod) {
       return;
     }
 
@@ -327,7 +405,7 @@ export function AccountingPeriodsPage({
 
     try {
       const result = await reopenMutation.mutateAsync({
-        period: reopenPeriod,
+        period: selectedReopenPeriod,
         input: {
           reason: reopenReason.trim()
         }
@@ -346,7 +424,7 @@ export function AccountingPeriodsPage({
             : '월 재오픈을 완료하지 못했습니다.'
       });
     }
-  }, [reopenMutation, reopenPeriod, reopenReason]);
+  }, [reopenMutation, reopenReason, selectedReopenPeriod]);
 
   const pageHeaderConfig = buildAccountingPeriodsHeaderConfig({
     currentPeriod,
@@ -364,7 +442,7 @@ export function AccountingPeriodsPage({
   const statusSectionProps = buildStatusSectionProps({
     currentPeriod,
     openPeriod,
-    reopenPeriod,
+    reopenPeriod: selectedReopenPeriod,
     canClosePeriod,
     canReopenPeriod,
     isReadyForMonthlyOperation
@@ -391,7 +469,11 @@ export function AccountingPeriodsPage({
     onRemoveOpeningBalanceLine: removeOpeningBalanceLine,
     onSubmit: handleOpenPeriodSubmit,
     openPeriod,
-    reopenPeriod,
+    reopenPeriod: selectedReopenPeriod,
+    lockedPeriods,
+    reopenEligibilityByPeriodId,
+    selectedReopenEligibility,
+    selectedReopenPeriodId,
     membershipRole,
     canClosePeriod,
     canReopenPeriod,
@@ -402,6 +484,7 @@ export function AccountingPeriodsPage({
     reopenPending: reopenMutation.isPending,
     onCloseNoteChange: setCloseNote,
     onReopenReasonChange: setReopenReason,
+    onSelectReopenPeriod: setSelectedReopenPeriodId,
     onClosePeriod: handleClosePeriod,
     onReopenPeriod: handleReopenPeriod
   });
@@ -475,14 +558,11 @@ export function AccountingPeriodsPage({
           statusSectionProps={statusSectionProps}
           operationsSectionProps={{
             ...periodOperationsBaseProps,
-            forcedTab: focusedOperationTab,
-            hideTabs: true,
+            availableTabs: ['close', 'reopen'],
+            defaultTab: requestedReopenPeriodId ? 'reopen' : undefined,
             headingTitle: '월 마감 / 재오픈 작업대',
-            headingDescription: openPeriod
-              ? `${openPeriod.monthLabel} 운영 월 마감 준비를 이 화면에서만 집중해서 처리합니다.`
-              : reopenPeriod
-                ? `${reopenPeriod.monthLabel} 최근 잠금 월 재오픈 여부를 이 화면에서 검토합니다.`
-                : '현재 열린 운영 월이 없어 최근 잠금 월 재오픈 가능 여부만 확인합니다.'
+            headingDescription:
+              '열린 운영 월 마감과 잠금 월 재오픈을 같은 작업대에서 분리해 처리합니다.'
           }}
         />
       ) : null}
@@ -493,6 +573,7 @@ export function AccountingPeriodsPage({
           periodStatusSummary={periodStatusSummary}
           lockedPeriodCount={lockedPeriodCount}
           periods={periods}
+          reopenEligibilityByPeriodId={reopenEligibilityByPeriodId}
         />
       ) : null}
     </Stack>

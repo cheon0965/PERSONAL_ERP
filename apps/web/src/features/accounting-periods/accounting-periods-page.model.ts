@@ -51,12 +51,11 @@ export function buildAccountingPeriodsPageModel({
   const isFirstPeriod = periods.length === 0;
   const openPeriod =
     periods.find((period) => period.status !== 'LOCKED') ?? null;
+  const lockedPeriods = periods.filter((period) => period.status === 'LOCKED');
   const latestPeriod = periods[0] ?? null;
-  const reopenPeriod = latestPeriod?.status === 'LOCKED' ? latestPeriod : null;
+  const reopenPeriod = lockedPeriods[0] ?? null;
   const currentPeriod = openPeriod ?? latestPeriod ?? null;
-  const lockedPeriodCount = periods.filter(
-    (period) => period.status === 'LOCKED'
-  ).length;
+  const lockedPeriodCount = lockedPeriods.length;
   const periodStatusSummary = periods.reduce(
     (counts, period) => {
       counts[period.status] += 1;
@@ -97,7 +96,7 @@ export function buildAccountingPeriodsPageModel({
       : section === 'open'
         ? '새 운영 월과 기초 잔액 기준을 집중해서 준비하는 화면입니다.'
         : section === 'close'
-          ? '열린 운영 월의 마감과 최근 잠금 월 재오픈 여부를 별도 작업 화면에서 관리합니다.'
+          ? '열린 운영 월의 마감과 잠금 월 재오픈 여부를 별도 작업 화면에서 관리합니다.'
           : '운영 기간 상태 이력과 기초 잔액 출처를 이력 중심으로 검토하는 화면입니다.';
   const primaryAction =
     section === 'overview'
@@ -151,6 +150,7 @@ export function buildAccountingPeriodsPageModel({
     isFirstPeriod,
     isReadyForMonthlyOperation: readiness,
     ledgerLabel,
+    lockedPeriods,
     lockedPeriodCount,
     openingBalanceFundingAccounts,
     openPeriod,
@@ -383,7 +383,7 @@ function readAccountingPeriodsHelpCopy(section: PeriodWorkspaceSection) {
       return {
         title: '월 마감 / 재오픈 도움말',
         description:
-          '이 화면은 열린 운영 월을 잠그거나, 최근 잠금 월을 재오픈해야 하는 상황만 집중해서 다루는 작업 화면입니다.',
+          '이 화면은 열린 운영 월을 잠그거나, 필요한 잠금 월을 재오픈해야 하는 상황만 집중해서 다루는 작업 화면입니다.',
         primaryEntity: '운영 월 마감 / 재오픈',
         relatedEntities: [
           '전표 준비 거래',
@@ -397,7 +397,7 @@ function readAccountingPeriodsHelpCopy(section: PeriodWorkspaceSection) {
         sectionItems: [
           '현재 열린 월이 있으면 먼저 미확정 거래와 예외 항목이 남아 있는지 확인합니다.',
           '마감 실행 전 메모를 남겨 두면 이후 운영 메모와 감사 흐름에서 근거를 추적하기 쉽습니다.',
-          '마감 후 정정이 꼭 필요할 때만 재오픈 사유를 남기고 다시 엽니다.'
+          '마감 후 정정이 꼭 필요할 때만 재오픈 대상 잠금 월과 사유를 남기고 다시 엽니다.'
         ],
         readModelNote:
           '마감은 미확정 수집 거래가 남아 있으면 실패할 수 있습니다. 막히면 수집 거래와 예외 처리함을 먼저 정리합니다.'
@@ -418,7 +418,7 @@ function readAccountingPeriodsHelpCopy(section: PeriodWorkspaceSection) {
         sectionDescription:
           '운영 중 문제가 생겼을 때 현재 월보다 먼저 이력과 시작 기준선이 맞는지 확인합니다.',
         sectionItems: [
-          '가장 최근 잠금 월과 현재 열린 월이 어떤 순서로 이어지는지 먼저 봅니다.',
+          '잠금 월과 현재 열린 월이 어떤 순서로 이어지는지 먼저 봅니다.',
           '기초 잔액 출처와 잠금 이력을 확인해 숫자 기준선이 어디서 시작됐는지 추적합니다.',
           '공식 보고 검토가 필요하면 재무제표나 차기 이월 결과 화면으로 이어서 확인합니다.'
         ],
@@ -477,7 +477,7 @@ function buildAccountingPeriodsHelpLinks(section: PeriodWorkspaceSection) {
     },
     {
       title: '월 마감 / 재오픈',
-      description: '열린 월 마감 또는 최근 잠금 월 재오픈만 집중해서 처리합니다.',
+      description: '열린 월 마감 또는 필요한 잠금 월 재오픈을 집중해서 처리합니다.',
       href: '/periods/close',
       actionLabel: '월 마감 / 재오픈 보기'
     },

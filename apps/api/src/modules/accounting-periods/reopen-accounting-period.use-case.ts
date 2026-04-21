@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
   NotFoundException
 } from '@nestjs/common';
@@ -89,23 +88,6 @@ export class ReopenAccountingPeriodUseCase {
       nextOpeningBalanceSourceKind:
         nextPeriod?.openingBalanceSnapshot?.sourceKind ?? null
     });
-
-    const latestPeriod = await this.prisma.accountingPeriod.findFirst({
-      where: {
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId
-      },
-      orderBy: [{ year: 'desc' }, { month: 'desc' }],
-      select: {
-        id: true
-      }
-    });
-
-    if (!latestPeriod || latestPeriod.id !== period.id) {
-      throw new ConflictException(
-        '가장 최근 운영 기간만 재오픈할 수 있습니다.'
-      );
-    }
 
     const reason = normalizeOptionalText(input.reason);
     if (!reason) {

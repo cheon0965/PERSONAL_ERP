@@ -182,6 +182,23 @@ enum ImportedRowParseStatus {
   SKIPPED
 }
 
+enum ImportBatchCollectionJobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  PARTIAL
+  FAILED
+  CANCELLED
+}
+
+enum ImportBatchCollectionJobRowStatus {
+  PENDING
+  RUNNING
+  COLLECTED
+  FAILED
+  SKIPPED
+}
+
 enum CollectedTransactionStatus {
   COLLECTED
   REVIEWED
@@ -280,19 +297,19 @@ model EmailVerificationToken {
 }
 
 model Tenant {
-  id                          String                       @id @default(cuid())
-  slug                        String                       @unique
+  id                          String                        @id @default(cuid())
+  slug                        String                        @unique
   name                        String
-  status                      TenantStatus                 @default(ACTIVE)
-  defaultLedgerId             String?                      @unique
-  createdAt                   DateTime                     @default(now())
-  updatedAt                   DateTime                     @updatedAt
-  defaultLedger               Ledger?                      @relation("TenantDefaultLedger", fields: [defaultLedgerId], references: [id], onDelete: SetNull)
+  status                      TenantStatus                  @default(ACTIVE)
+  defaultLedgerId             String?                       @unique
+  createdAt                   DateTime                      @default(now())
+  updatedAt                   DateTime                      @updatedAt
+  defaultLedger               Ledger?                       @relation("TenantDefaultLedger", fields: [defaultLedgerId], references: [id], onDelete: SetNull)
   memberships                 TenantMembership[]
-  ledgers                     Ledger[]                     @relation("TenantLedgers")
-  accounts                    Account[]                    @relation("TenantAccounts")
-  categories                  Category[]                   @relation("TenantCategories")
-  recurringRules              RecurringRule[]              @relation("TenantRecurringRules")
+  ledgers                     Ledger[]                      @relation("TenantLedgers")
+  accounts                    Account[]                     @relation("TenantAccounts")
+  categories                  Category[]                    @relation("TenantCategories")
+  recurringRules              RecurringRule[]               @relation("TenantRecurringRules")
   insurancePolicies           InsurancePolicy[]
   vehicles                    Vehicle[]
   periods                     AccountingPeriod[]
@@ -534,12 +551,12 @@ model Account {
   tenant                Tenant                 @relation("TenantAccounts", fields: [tenantId], references: [id], onDelete: Cascade)
   ledger                Ledger                 @relation("LedgerAccounts", fields: [ledgerId], references: [id], onDelete: Cascade)
   recurringRules        RecurringRule[]
-    insurancePolicies     InsurancePolicy[]
-    planItems             PlanItem[]
-    importBatches         ImportBatch[]
-    collectedTransactions CollectedTransaction[]
-    journalLines          JournalLine[]
-    balanceSnapshotLines  BalanceSnapshotLine[]
+  insurancePolicies     InsurancePolicy[]
+  planItems             PlanItem[]
+  importBatches         ImportBatch[]
+  collectedTransactions CollectedTransaction[]
+  journalLines          JournalLine[]
+  balanceSnapshotLines  BalanceSnapshotLine[]
 
   @@unique([ledgerId, normalizedName])
   @@index([userId, sortOrder])
@@ -735,25 +752,25 @@ model ImportBatch {
   tenantId               String
   ledgerId               String
   periodId               String?
-    sourceKind             ImportSourceKind
-    fileName               String
-    fileHash               String                 @db.VarChar(191)
-    fundingAccountId       String?
-    rowCount               Int                    @default(0)
-    parseStatus            ImportBatchParseStatus @default(PENDING)
-    uploadedByMembershipId String
+  sourceKind             ImportSourceKind
+  fileName               String
+  fileHash               String                 @db.VarChar(191)
+  fundingAccountId       String?
+  rowCount               Int                    @default(0)
+  parseStatus            ImportBatchParseStatus @default(PENDING)
+  uploadedByMembershipId String
   uploadedAt             DateTime               @default(now())
   tenant                 Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-    ledger                 Ledger                 @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
-    period                 AccountingPeriod?      @relation(fields: [periodId], references: [id], onDelete: SetNull)
-    fundingAccount         Account?               @relation(fields: [fundingAccountId], references: [id], onDelete: SetNull)
-    rows                   ImportedRow[]
-    collectedTransactions  CollectedTransaction[]
+  ledger                 Ledger                 @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  period                 AccountingPeriod?      @relation(fields: [periodId], references: [id], onDelete: SetNull)
+  fundingAccount         Account?               @relation(fields: [fundingAccountId], references: [id], onDelete: SetNull)
+  rows                   ImportedRow[]
+  collectedTransactions  CollectedTransaction[]
 
-    @@index([ledgerId, uploadedAt])
-    @@index([fileHash])
-    @@index([fundingAccountId])
-  }
+  @@index([ledgerId, uploadedAt])
+  @@index([fileHash])
+  @@index([fundingAccountId])
+}
 
 model ImportedRow {
   id                          String                 @id @default(cuid())
@@ -768,6 +785,63 @@ model ImportedRow {
 
   @@unique([batchId, rowNumber])
   @@index([sourceFingerprint])
+}
+
+model ImportBatchCollectionJob {
+  id                      String                         @id @default(cuid())
+  tenantId                String
+  ledgerId                String
+  importBatchId           String
+  requestedByMembershipId String
+  status                  ImportBatchCollectionJobStatus @default(PENDING)
+  requestedRowCount       Int                            @default(0)
+  processedRowCount       Int                            @default(0)
+  succeededCount          Int                            @default(0)
+  failedCount             Int                            @default(0)
+  requestPayload          Json
+  errorMessage            String?                        @db.Text
+  startedAt               DateTime?
+  finishedAt              DateTime?
+  heartbeatAt             DateTime?
+  createdAt               DateTime                       @default(now())
+  updatedAt               DateTime                       @updatedAt
+  rows                    ImportBatchCollectionJobRow[]
+
+  @@index([tenantId, ledgerId, importBatchId, createdAt])
+  @@index([tenantId, ledgerId, status])
+}
+
+model ImportBatchCollectionJobRow {
+  id                     String                            @id @default(cuid())
+  jobId                  String
+  importedRowId          String
+  rowNumber              Int
+  status                 ImportBatchCollectionJobRowStatus @default(PENDING)
+  collectedTransactionId String?
+  message                String?                           @db.Text
+  startedAt              DateTime?
+  finishedAt             DateTime?
+  createdAt              DateTime                          @default(now())
+  updatedAt              DateTime                          @updatedAt
+  job                    ImportBatchCollectionJob          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, importedRowId])
+  @@index([importedRowId])
+}
+
+model ImportBatchCollectionLock {
+  id                   String   @id @default(cuid())
+  tenantId             String
+  ledgerId             String
+  importBatchId        String
+  jobId                String   @unique
+  lockedByMembershipId String
+  expiresAt            DateTime
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([tenantId, ledgerId])
+  @@index([expiresAt])
 }
 
 model CollectedTransaction {

@@ -1,9 +1,8 @@
 // eslint-disable-next-line no-restricted-imports
-import {
-  ConflictException,
-  Injectable
-} from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import type { AuthenticatedUser } from '@personal-erp/contracts';
+// eslint-disable-next-line no-restricted-imports
+import { ImportBatchCollectionJobStatus } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../../../common/auth/required-workspace.util';
 import { assertWorkspaceActionAllowed } from '../../../../common/auth/workspace-action.policy';
 // eslint-disable-next-line no-restricted-imports
@@ -53,12 +52,53 @@ export class DeleteImportBatchUseCase {
       );
     }
 
-    const deleted = await this.prisma.importBatch.deleteMany({
-      where: {
-        id: importBatchId,
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId
-      }
+    const activeCollectionJob =
+      await this.prisma.importBatchCollectionJob.findFirst({
+        where: {
+          importBatchId,
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId,
+          status: {
+            in: [
+              ImportBatchCollectionJobStatus.PENDING,
+              ImportBatchCollectionJobStatus.RUNNING
+            ]
+          }
+        },
+        select: {
+          id: true
+        }
+      });
+
+    if (activeCollectionJob) {
+      throw new ConflictException(
+        '일괄 등록 작업이 진행 중인 업로드 배치는 삭제할 수 없습니다.'
+      );
+    }
+
+    const deleted = await this.prisma.$transaction(async (tx) => {
+      await tx.importBatchCollectionLock.deleteMany({
+        where: {
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId,
+          importBatchId
+        }
+      });
+      await tx.importBatchCollectionJob.deleteMany({
+        where: {
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId,
+          importBatchId
+        }
+      });
+
+      return tx.importBatch.deleteMany({
+        where: {
+          id: importBatchId,
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId
+        }
+      });
     });
 
     return deleted.count === 1;

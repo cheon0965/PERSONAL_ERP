@@ -2,8 +2,11 @@
 
 import * as React from 'react';
 import type { GridRowSelectionModel } from '@mui/x-data-grid';
-import { Button, Chip, Stack, Typography } from '@mui/material';
-import type { ImportBatchItem } from '@personal-erp/contracts';
+import { Button, Chip, LinearProgress, Stack, Typography } from '@mui/material';
+import type {
+  ImportBatchCollectionJobItem,
+  ImportBatchItem
+} from '@personal-erp/contracts';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { buildImportedRowsColumns } from './imports.columns';
 import {
@@ -17,8 +20,9 @@ export function ImportedRowsGrid({
   selectedRowId,
   selectedRowIds,
   selectedRowsCount,
-  currentPeriodCollectableRowCount,
-  selectedCurrentPeriodCollectableRowCount,
+  collectableRowCount,
+  selectedCollectableRowCount,
+  bulkCollectJob,
   bulkCollectPending,
   onSelectedRowIdsChange,
   onPrepareCollect,
@@ -29,8 +33,9 @@ export function ImportedRowsGrid({
   selectedRowId: string | null;
   selectedRowIds: string[];
   selectedRowsCount: number;
-  currentPeriodCollectableRowCount: number;
-  selectedCurrentPeriodCollectableRowCount: number;
+  collectableRowCount: number;
+  selectedCollectableRowCount: number;
+  bulkCollectJob: ImportBatchCollectionJobItem | null;
   bulkCollectPending: boolean;
   onSelectedRowIdsChange: (rowIds: string[]) => void;
   onPrepareCollect: (row: ImportedRowTableItem) => void;
@@ -72,13 +77,21 @@ export function ImportedRowsGrid({
   );
   const bulkCollectLabel =
     selectedRowsCount > 0
-      ? `선택 행 일괄 등록 (${selectedCurrentPeriodCollectableRowCount}건)`
-      : `현재 기간 등록 가능 행 일괄 등록 (${currentPeriodCollectableRowCount}건)`;
+      ? `선택 행 일괄 등록 (${selectedCollectableRowCount}건)`
+      : `등록 가능 행 일괄 등록 (${collectableRowCount}건)`;
   const bulkCollectDisabled =
     bulkCollectPending ||
     (selectedRowsCount > 0
-      ? selectedCurrentPeriodCollectableRowCount === 0
-      : currentPeriodCollectableRowCount === 0);
+      ? selectedCollectableRowCount === 0
+      : collectableRowCount === 0);
+  const bulkCollectProgress =
+    bulkCollectJob && bulkCollectJob.requestedRowCount > 0
+      ? Math.round(
+          (bulkCollectJob.processedRowCount /
+            bulkCollectJob.requestedRowCount) *
+            100
+        )
+      : 0;
 
   function handleRowSelectionModelChange(model: GridRowSelectionModel) {
     if (model.type === 'exclude') {
@@ -155,10 +168,35 @@ export function ImportedRowsGrid({
                   {bulkCollectLabel}
                 </Button>
               </Stack>
+              {bulkCollectJob ? (
+                <Stack spacing={0.75}>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    alignItems="center"
+                    justifyContent="space-between"
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      일괄 등록 {bulkCollectJob.status} ·{' '}
+                      {bulkCollectJob.processedRowCount}/
+                      {bulkCollectJob.requestedRowCount}건 처리 · 성공{' '}
+                      {bulkCollectJob.succeededCount}건 · 실패{' '}
+                      {bulkCollectJob.failedCount}건
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {bulkCollectProgress}%
+                    </Typography>
+                  </Stack>
+                  <LinearProgress
+                    variant="determinate"
+                    value={bulkCollectProgress}
+                  />
+                </Stack>
+              ) : null}
             </Stack>
             <Typography variant="body2" color="text.secondary">
-              연결되지 않은 행만 선택할 수 있습니다. 선택 체크는 배치 상세
-              일괄 등록 범위를 고르는 용도로만 사용합니다.
+              읽기 완료이면서 아직 연결되지 않은 행만 선택할 수 있습니다. 선택
+              체크는 배치 상세 일괄 등록 범위를 고르는 용도로만 사용합니다.
             </Typography>
           </Stack>
         ) : null
@@ -172,7 +210,10 @@ export function ImportedRowsGrid({
       checkboxSelection
       rowSelectionModel={rowSelectionModel}
       onRowSelectionModelChange={handleRowSelectionModelChange}
-      isRowSelectable={(params) => !params.row.createdCollectedTransactionId}
+      isRowSelectable={(params) =>
+        params.row.parseStatus === 'PARSED' &&
+        !params.row.createdCollectedTransactionId
+      }
     />
   );
 }

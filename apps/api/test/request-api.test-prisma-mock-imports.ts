@@ -1,4 +1,6 @@
 import {
+  ImportBatchCollectionJobRowStatus,
+  ImportBatchCollectionJobStatus,
   ImportBatchParseStatus,
   ImportedRowParseStatus,
   ImportSourceKind
@@ -17,6 +19,105 @@ export function createImportsPrismaMock(
 
   const matchesImportBatchId = (candidateId: string, whereId?: string) =>
     !whereId || candidateId === whereId;
+  const sortCollectionJobRows = (
+    items: typeof state.importBatchCollectionJobRows
+  ) => [...items].sort((left, right) => left.rowNumber - right.rowNumber);
+  const projectCollectionJobRow = (
+    candidate: (typeof state.importBatchCollectionJobRows)[number],
+    select?: Record<string, unknown>
+  ) => {
+    if (!select) {
+      return candidate;
+    }
+
+    return {
+      ...(select.id ? { id: candidate.id } : {}),
+      ...(select.jobId ? { jobId: candidate.jobId } : {}),
+      ...(select.importedRowId
+        ? { importedRowId: candidate.importedRowId }
+        : {}),
+      ...(select.rowNumber ? { rowNumber: candidate.rowNumber } : {}),
+      ...(select.status ? { status: candidate.status } : {}),
+      ...(select.collectedTransactionId
+        ? { collectedTransactionId: candidate.collectedTransactionId }
+        : {}),
+      ...(select.message ? { message: candidate.message } : {}),
+      ...(select.startedAt ? { startedAt: candidate.startedAt } : {}),
+      ...(select.finishedAt ? { finishedAt: candidate.finishedAt } : {}),
+      ...(select.createdAt ? { createdAt: candidate.createdAt } : {}),
+      ...(select.updatedAt ? { updatedAt: candidate.updatedAt } : {})
+    };
+  };
+  const projectCollectionJob = (
+    candidate: (typeof state.importBatchCollectionJobs)[number],
+    args?: {
+      select?: Record<string, unknown>;
+      include?: {
+        rows?: {
+          orderBy?: { rowNumber?: 'asc' | 'desc' };
+        };
+      };
+    }
+  ) => {
+    const rows = sortCollectionJobRows(
+      state.importBatchCollectionJobRows.filter(
+        (row) => row.jobId === candidate.id
+      )
+    );
+
+    if (args?.include?.rows) {
+      return {
+        ...candidate,
+        rows
+      };
+    }
+
+    if (!args?.select) {
+      return candidate;
+    }
+
+    const rowsSelect = args.select.rows as
+      | {
+          select?: Record<string, unknown>;
+        }
+      | undefined;
+
+    return {
+      ...(args.select.id ? { id: candidate.id } : {}),
+      ...(args.select.importBatchId
+        ? { importBatchId: candidate.importBatchId }
+        : {}),
+      ...(args.select.status ? { status: candidate.status } : {}),
+      ...(args.select.requestedRowCount
+        ? { requestedRowCount: candidate.requestedRowCount }
+        : {}),
+      ...(args.select.processedRowCount
+        ? { processedRowCount: candidate.processedRowCount }
+        : {}),
+      ...(args.select.succeededCount
+        ? { succeededCount: candidate.succeededCount }
+        : {}),
+      ...(args.select.failedCount
+        ? { failedCount: candidate.failedCount }
+        : {}),
+      ...(args.select.errorMessage
+        ? { errorMessage: candidate.errorMessage }
+        : {}),
+      ...(args.select.createdAt ? { createdAt: candidate.createdAt } : {}),
+      ...(args.select.startedAt ? { startedAt: candidate.startedAt } : {}),
+      ...(args.select.finishedAt ? { finishedAt: candidate.finishedAt } : {}),
+      ...(args.select.heartbeatAt
+        ? { heartbeatAt: candidate.heartbeatAt }
+        : {}),
+      ...(rowsSelect
+        ? {
+            rows: rows.map((row) =>
+              projectCollectionJobRow(row, rowsSelect.select)
+            )
+          }
+        : {})
+    };
+  };
 
   const matchesImportedRowId = (
     candidateId: string,
@@ -35,11 +136,31 @@ export function createImportsPrismaMock(
 
   return {
     importBatch: {
+      count: async (args: {
+        where?: {
+          tenantId?: string;
+          ledgerId?: string;
+          periodId?: string | null;
+        };
+      }) => {
+        return state.importBatches.filter((candidate) => {
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesPeriod =
+            args.where?.periodId === undefined ||
+            candidate.periodId === args.where.periodId;
+
+          return matchesTenant && matchesLedger && matchesPeriod;
+        }).length;
+      },
       findFirst: async (args: {
         where?: {
           id?: string;
           tenantId?: string;
           ledgerId?: string;
+          periodId?: string | null;
         };
         include?: {
           fundingAccount?: {
@@ -63,8 +184,11 @@ export function createImportsPrismaMock(
             const matchesLedger =
               !args.where?.ledgerId ||
               candidate.ledgerId === args.where.ledgerId;
+            const matchesPeriod =
+              args.where?.periodId === undefined ||
+              candidate.periodId === args.where.periodId;
 
-            return matchesId && matchesTenant && matchesLedger;
+            return matchesId && matchesTenant && matchesLedger && matchesPeriod;
           })
           .sort(
             (left, right) =>
@@ -78,6 +202,7 @@ export function createImportsPrismaMock(
         where?: {
           tenantId?: string;
           ledgerId?: string;
+          periodId?: string | null;
         };
         include?: {
           fundingAccount?: {
@@ -103,8 +228,11 @@ export function createImportsPrismaMock(
             const matchesLedger =
               !args.where?.ledgerId ||
               candidate.ledgerId === args.where.ledgerId;
+            const matchesPeriod =
+              args.where?.periodId === undefined ||
+              candidate.periodId === args.where.periodId;
 
-            return matchesTenant && matchesLedger;
+            return matchesTenant && matchesLedger && matchesPeriod;
           })
           .sort(
             (left, right) =>
@@ -203,6 +331,331 @@ export function createImportsPrismaMock(
 
         return {
           count: beforeCount - state.importBatches.length
+        };
+      }
+    },
+    importBatchCollectionJob: {
+      create: async (args: {
+        data: {
+          tenantId: string;
+          ledgerId: string;
+          importBatchId: string;
+          requestedByMembershipId: string;
+          requestedRowCount: number;
+          requestPayload: Record<string, unknown>;
+          rows?: {
+            create?: Array<{
+              importedRowId: string;
+              rowNumber: number;
+            }>;
+          };
+        };
+        select?: Record<string, unknown>;
+      }) => {
+        const now = new Date();
+        const created = {
+          id: `import-batch-collection-job-${state.importBatchCollectionJobs.length + 1}`,
+          tenantId: args.data.tenantId,
+          ledgerId: args.data.ledgerId,
+          importBatchId: args.data.importBatchId,
+          requestedByMembershipId: args.data.requestedByMembershipId,
+          status: ImportBatchCollectionJobStatus.PENDING,
+          requestedRowCount: args.data.requestedRowCount,
+          processedRowCount: 0,
+          succeededCount: 0,
+          failedCount: 0,
+          requestPayload: args.data.requestPayload,
+          errorMessage: null,
+          startedAt: null,
+          finishedAt: null,
+          heartbeatAt: null,
+          createdAt: now,
+          updatedAt: now
+        };
+        state.importBatchCollectionJobs.push(created);
+
+        for (const row of args.data.rows?.create ?? []) {
+          state.importBatchCollectionJobRows.push({
+            id: `import-batch-collection-job-row-${state.importBatchCollectionJobRows.length + 1}`,
+            jobId: created.id,
+            importedRowId: row.importedRowId,
+            rowNumber: row.rowNumber,
+            status: ImportBatchCollectionJobRowStatus.PENDING,
+            collectedTransactionId: null,
+            message: null,
+            startedAt: null,
+            finishedAt: null,
+            createdAt: now,
+            updatedAt: now
+          });
+        }
+
+        return projectCollectionJob(created, { select: args.select });
+      },
+      findFirst: async (args: {
+        where?: {
+          id?: string;
+          tenantId?: string;
+          ledgerId?: string;
+          importBatchId?: string;
+          status?: {
+            in?: ImportBatchCollectionJobStatus[];
+          };
+        };
+        orderBy?: {
+          createdAt?: 'asc' | 'desc';
+        };
+        select?: Record<string, unknown>;
+        include?: {
+          rows?: {
+            orderBy?: { rowNumber?: 'asc' | 'desc' };
+          };
+        };
+      }) => {
+        const items = state.importBatchCollectionJobs
+          .filter((candidate) => {
+            const matchesId = !args.where?.id || candidate.id === args.where.id;
+            const matchesTenant =
+              !args.where?.tenantId ||
+              candidate.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId;
+            const matchesBatch =
+              !args.where?.importBatchId ||
+              candidate.importBatchId === args.where.importBatchId;
+            const matchesStatus =
+              !args.where?.status?.in ||
+              args.where.status.in.includes(candidate.status);
+
+            return (
+              matchesId &&
+              matchesTenant &&
+              matchesLedger &&
+              matchesBatch &&
+              matchesStatus
+            );
+          })
+          .sort((left, right) => {
+            if (args.orderBy?.createdAt === 'asc') {
+              return left.createdAt.getTime() - right.createdAt.getTime();
+            }
+
+            return right.createdAt.getTime() - left.createdAt.getTime();
+          });
+
+        const candidate = items[0];
+        return candidate ? projectCollectionJob(candidate, args) : null;
+      },
+      update: async (args: {
+        where: { id: string };
+        data: Partial<{
+          status: ImportBatchCollectionJobStatus;
+          processedRowCount: number;
+          succeededCount: number;
+          failedCount: number;
+          errorMessage: string | null;
+          startedAt: Date;
+          finishedAt: Date;
+          heartbeatAt: Date;
+        }>;
+      }) => {
+        const candidate = state.importBatchCollectionJobs.find(
+          (item) => item.id === args.where.id
+        );
+        if (!candidate) {
+          throw new Error('Import batch collection job not found');
+        }
+
+        Object.assign(candidate, args.data, { updatedAt: new Date() });
+        return candidate;
+      },
+      deleteMany: async (args: {
+        where?: {
+          tenantId?: string;
+          ledgerId?: string;
+          importBatchId?: string;
+        };
+      }) => {
+        const beforeCount = state.importBatchCollectionJobs.length;
+        const deletedJobIds = state.importBatchCollectionJobs
+          .filter((candidate) => {
+            const matchesTenant =
+              !args.where?.tenantId ||
+              candidate.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId;
+            const matchesBatch =
+              !args.where?.importBatchId ||
+              candidate.importBatchId === args.where.importBatchId;
+
+            return matchesTenant && matchesLedger && matchesBatch;
+          })
+          .map((candidate) => candidate.id);
+
+        state.importBatchCollectionJobs =
+          state.importBatchCollectionJobs.filter(
+            (candidate) => !deletedJobIds.includes(candidate.id)
+          );
+        state.importBatchCollectionJobRows =
+          state.importBatchCollectionJobRows.filter(
+            (candidate) => !deletedJobIds.includes(candidate.jobId)
+          );
+
+        return {
+          count: beforeCount - state.importBatchCollectionJobs.length
+        };
+      }
+    },
+    importBatchCollectionJobRow: {
+      update: async (args: {
+        where: { id: string };
+        data: Partial<{
+          status: ImportBatchCollectionJobRowStatus;
+          collectedTransactionId: string | null;
+          message: string | null;
+          startedAt: Date;
+          finishedAt: Date;
+        }>;
+      }) => {
+        const candidate = state.importBatchCollectionJobRows.find(
+          (item) => item.id === args.where.id
+        );
+        if (!candidate) {
+          throw new Error('Import batch collection job row not found');
+        }
+
+        Object.assign(candidate, args.data, { updatedAt: new Date() });
+        return candidate;
+      }
+    },
+    importBatchCollectionLock: {
+      findFirst: async (args: {
+        where?: {
+          tenantId?: string;
+          ledgerId?: string;
+          importBatchId?: string;
+        };
+        select?: {
+          jobId?: boolean;
+          importBatchId?: boolean;
+        };
+      }) => {
+        const candidate =
+          state.importBatchCollectionLocks.find((item) => {
+            const matchesTenant =
+              !args.where?.tenantId || item.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId || item.ledgerId === args.where.ledgerId;
+            const matchesBatch =
+              !args.where?.importBatchId ||
+              item.importBatchId === args.where.importBatchId;
+
+            return matchesTenant && matchesLedger && matchesBatch;
+          }) ?? null;
+
+        if (!candidate || !args.select) {
+          return candidate;
+        }
+
+        return {
+          ...(args.select.jobId ? { jobId: candidate.jobId } : {}),
+          ...(args.select.importBatchId
+            ? { importBatchId: candidate.importBatchId }
+            : {})
+        };
+      },
+      create: async (args: {
+        data: {
+          tenantId: string;
+          ledgerId: string;
+          importBatchId: string;
+          jobId: string;
+          lockedByMembershipId: string;
+          expiresAt: Date;
+        };
+      }) => {
+        const now = new Date();
+        const created = {
+          id: `import-batch-collection-lock-${state.importBatchCollectionLocks.length + 1}`,
+          tenantId: args.data.tenantId,
+          ledgerId: args.data.ledgerId,
+          importBatchId: args.data.importBatchId,
+          jobId: args.data.jobId,
+          lockedByMembershipId: args.data.lockedByMembershipId,
+          expiresAt: args.data.expiresAt,
+          createdAt: now,
+          updatedAt: now
+        };
+        state.importBatchCollectionLocks.push(created);
+        return created;
+      },
+      updateMany: async (args: {
+        where?: {
+          jobId?: string;
+        };
+        data: {
+          expiresAt?: Date;
+        };
+      }) => {
+        let count = 0;
+        state.importBatchCollectionLocks.forEach((candidate) => {
+          const matchesJob =
+            !args.where?.jobId || candidate.jobId === args.where.jobId;
+          if (!matchesJob) {
+            return;
+          }
+
+          if (args.data.expiresAt) {
+            candidate.expiresAt = args.data.expiresAt;
+          }
+          candidate.updatedAt = new Date();
+          count += 1;
+        });
+
+        return { count };
+      },
+      deleteMany: async (args: {
+        where?: {
+          tenantId?: string;
+          ledgerId?: string;
+          importBatchId?: string;
+          jobId?: string;
+          expiresAt?: {
+            lt?: Date;
+          };
+        };
+      }) => {
+        const beforeCount = state.importBatchCollectionLocks.length;
+        state.importBatchCollectionLocks =
+          state.importBatchCollectionLocks.filter((candidate) => {
+            const matchesTenant =
+              !args.where?.tenantId ||
+              candidate.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId;
+            const matchesJob =
+              !args.where?.jobId || candidate.jobId === args.where.jobId;
+            const matchesBatch =
+              !args.where?.importBatchId ||
+              candidate.importBatchId === args.where.importBatchId;
+            const matchesExpires =
+              !args.where?.expiresAt?.lt ||
+              candidate.expiresAt.getTime() < args.where.expiresAt.lt.getTime();
+
+            return !(
+              matchesTenant &&
+              matchesLedger &&
+              matchesBatch &&
+              matchesJob &&
+              matchesExpires
+            );
+          });
+
+        return {
+          count: beforeCount - state.importBatchCollectionLocks.length
         };
       }
     },

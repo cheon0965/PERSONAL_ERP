@@ -141,6 +141,43 @@ export function createAccountingPeriodSnapshotsPrismaMock(
         }
 
         return created;
+      },
+      deleteMany: async (args: {
+        where?: {
+          id?: string;
+          tenantId?: string;
+          ledgerId?: string;
+          effectivePeriodId?: string;
+        };
+      }) => {
+        const deletedSnapshotIds = state.openingBalanceSnapshots
+          .filter((candidate) => {
+            const matchesId = !args.where?.id || candidate.id === args.where.id;
+            const matchesTenant =
+              !args.where?.tenantId ||
+              candidate.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId;
+            const matchesPeriod =
+              !args.where?.effectivePeriodId ||
+              candidate.effectivePeriodId === args.where.effectivePeriodId;
+
+            return matchesId && matchesTenant && matchesLedger && matchesPeriod;
+          })
+          .map((candidate) => candidate.id);
+
+        state.openingBalanceSnapshots = state.openingBalanceSnapshots.filter(
+          (candidate) => !deletedSnapshotIds.includes(candidate.id)
+        );
+        state.balanceSnapshotLines = state.balanceSnapshotLines.filter(
+          (candidate) =>
+            !deletedSnapshotIds.includes(candidate.openingSnapshotId ?? '')
+        );
+
+        return {
+          count: deletedSnapshotIds.length
+        };
       }
     },
     closingSnapshot: {
@@ -403,6 +440,30 @@ export function createAccountingPeriodSnapshotsPrismaMock(
 
         return {
           count: args.data.length
+        };
+      },
+      deleteMany: async (args: {
+        where?: {
+          openingSnapshotId?: string;
+          closingSnapshotId?: string;
+        };
+      }) => {
+        const beforeCount = state.balanceSnapshotLines.length;
+        state.balanceSnapshotLines = state.balanceSnapshotLines.filter(
+          (candidate) => {
+            const matchesOpeningSnapshot =
+              !args.where?.openingSnapshotId ||
+              candidate.openingSnapshotId === args.where.openingSnapshotId;
+            const matchesClosingSnapshot =
+              !args.where?.closingSnapshotId ||
+              candidate.closingSnapshotId === args.where.closingSnapshotId;
+
+            return !(matchesOpeningSnapshot && matchesClosingSnapshot);
+          }
+        );
+
+        return {
+          count: beforeCount - state.balanceSnapshotLines.length
         };
       }
     }

@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import type { ReverseJournalEntryRequest } from '@personal-erp/contracts';
 import { useForm } from 'react-hook-form';
+import { findAccountingPeriodForDate } from '@/features/accounting-periods/accounting-period-selection';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import {
   buildReverseJournalEntryFallbackItem,
@@ -19,7 +20,6 @@ import {
 import {
   buildReverseDefaultValues,
   invalidateAdjustmentQueries,
-  isWithinPeriod,
   trimOptionalText
 } from './journal-entry-adjustment-dialog.shared';
 import type {
@@ -31,7 +31,8 @@ import { reverseJournalEntrySchema } from './journal-entry-adjustment-dialog.typ
 
 export function ReverseJournalEntryDialogContent({
   entry,
-  currentPeriod,
+  adjustmentPeriod,
+  journalWritablePeriods,
   onClose,
   onCompleted
 }: JournalEntryAdjustmentContentProps) {
@@ -39,13 +40,13 @@ export function ReverseJournalEntryDialogContent({
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const form = useForm<ReverseJournalEntryFormInput>({
     resolver: zodResolver(reverseJournalEntrySchema),
-    defaultValues: buildReverseDefaultValues(currentPeriod)
+    defaultValues: buildReverseDefaultValues(adjustmentPeriod)
   });
 
   React.useEffect(() => {
-    form.reset(buildReverseDefaultValues(currentPeriod));
+    form.reset(buildReverseDefaultValues(adjustmentPeriod));
     setFeedback(null);
-  }, [currentPeriod, entry.id, form]);
+  }, [adjustmentPeriod, entry.id, form]);
 
   const mutation = useMutation({
     mutationFn: (payload: ReverseJournalEntryRequest) =>
@@ -70,26 +71,29 @@ export function ReverseJournalEntryDialogContent({
     }
   });
 
-  const canSubmit = Boolean(currentPeriod);
+  const canSubmit = journalWritablePeriods.length > 0;
 
   return (
     <form
       onSubmit={form.handleSubmit(async (values) => {
         setFeedback(null);
 
-        if (!currentPeriod) {
+        if (journalWritablePeriods.length === 0) {
           setFeedback({
             severity: 'error',
             message:
-              '현재 열린 운영 기간이 없어 반전 전표를 생성할 수 없습니다.'
+              '전표 입력 가능한 운영 기간이 없어 반전 전표를 생성할 수 없습니다.'
           });
           return;
         }
 
-        if (!isWithinPeriod(values.entryDate, currentPeriod)) {
+        if (
+          !findAccountingPeriodForDate(journalWritablePeriods, values.entryDate)
+        ) {
           setFeedback({
             severity: 'error',
-            message: '반전 전표 일자는 현재 열린 운영 기간 안에 있어야 합니다.'
+            message:
+              '반전 전표 일자는 전표 입력 가능한 열린 운영 기간 안에 있어야 합니다.'
           });
           return;
         }
@@ -101,14 +105,14 @@ export function ReverseJournalEntryDialogContent({
       })}
     >
       <Stack spacing={appLayout.cardGap}>
-        {!currentPeriod ? (
+        {!canSubmit ? (
           <Alert severity="warning" variant="outlined">
-            현재 열린 운영 기간이 없어 반전 전표를 시작할 수 없습니다.
+            전표 입력 가능한 운영 기간이 없어 반전 전표를 시작할 수 없습니다.
           </Alert>
         ) : (
           <Alert severity="info" variant="outlined">
-            {entry.entryNumber} 전표를 {currentPeriod.monthLabel} 운영 기간의
-            조정 전표로 반전합니다.
+            {entry.entryNumber} 전표를 {adjustmentPeriod?.monthLabel} 운영
+            기간을 기본 기준으로 반전합니다.
           </Alert>
         )}
         {feedback ? (
@@ -134,9 +138,11 @@ export function ReverseJournalEntryDialogContent({
           error={Boolean(form.formState.errors.entryDate)}
           helperText={
             form.formState.errors.entryDate?.message ??
-            (currentPeriod
-              ? `${currentPeriod.monthLabel} 운영 기간 안에서만 반전할 수 있습니다.`
-              : '현재 열린 운영 기간이 필요합니다.')
+            (journalWritablePeriods.length > 1
+              ? '전표 입력 가능한 열린 운영 기간 안에서만 반전할 수 있습니다.'
+              : adjustmentPeriod
+                ? `${adjustmentPeriod.monthLabel} 운영 기간 안에서만 반전할 수 있습니다.`
+                : '전표 입력 가능한 운영 기간이 필요합니다.')
           }
           {...form.register('entryDate')}
         />

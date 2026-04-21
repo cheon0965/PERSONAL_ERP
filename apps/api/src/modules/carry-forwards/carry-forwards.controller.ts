@@ -3,6 +3,7 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  Param,
   Post,
   Query,
   Req
@@ -10,6 +11,7 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type {
   AuthenticatedUser,
+  CancelCarryForwardResponse,
   CarryForwardView
 } from '@personal-erp/contracts';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
@@ -21,7 +23,9 @@ import {
   logWorkspaceActionDenied,
   logWorkspaceActionSucceeded
 } from '../../common/infrastructure/operational/workspace-action.audit';
+import { CancelCarryForwardUseCase } from './cancel-carry-forward.use-case';
 import { CarryForwardsService } from './carry-forwards.service';
+import { CancelCarryForwardRequestDto } from './dto/cancel-carry-forward.dto';
 import { GenerateCarryForwardRequestDto } from './dto/generate-carry-forward.dto';
 import { GenerateCarryForwardUseCase } from './generate-carry-forward.use-case';
 
@@ -32,6 +36,7 @@ export class CarryForwardsController {
   constructor(
     private readonly carryForwardsService: CarryForwardsService,
     private readonly generateCarryForwardUseCase: GenerateCarryForwardUseCase,
+    private readonly cancelCarryForwardUseCase: CancelCarryForwardUseCase,
     private readonly securityEvents: SecurityEventLogger
   ) {}
 
@@ -64,7 +69,8 @@ export class CarryForwardsController {
         details: {
           fromPeriodId: response.sourcePeriod.id,
           toPeriodId: response.targetPeriod.id,
-          carryForwardRecordId: response.carryForwardRecord.id
+          carryForwardRecordId: response.carryForwardRecord.id,
+          replaceExisting: Boolean(body.replaceExisting)
         }
       });
 
@@ -79,6 +85,56 @@ export class CarryForwardsController {
             fromPeriodId: body.fromPeriodId,
             requiredRoles: readAllowedWorkspaceRoles(
               'carry_forward.generate'
+            ).join(',')
+          }
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  @Post(':id/cancel')
+  async cancel(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') carryForwardRecordId: string,
+    @Body() body: CancelCarryForwardRequestDto
+  ): Promise<CancelCarryForwardResponse> {
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      const response = await this.cancelCarryForwardUseCase.execute(
+        user,
+        carryForwardRecordId,
+        body
+      );
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'carry_forward.cancel',
+        request,
+        workspace,
+        details: {
+          carryForwardRecordId: response.carryForwardRecord.id,
+          fromPeriodId: response.sourcePeriod.id,
+          toPeriodId: response.targetPeriod.id,
+          canceledOpeningBalanceSnapshotId:
+            response.canceledOpeningBalanceSnapshotId,
+          reason: body.reason ?? null
+        }
+      });
+
+      return response;
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'carry_forward.cancel',
+          request,
+          workspace,
+          details: {
+            carryForwardRecordId,
+            requiredRoles: readAllowedWorkspaceRoles(
+              'carry_forward.cancel'
             ).join(',')
           }
         });

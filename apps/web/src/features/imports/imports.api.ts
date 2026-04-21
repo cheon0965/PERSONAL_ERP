@@ -5,6 +5,7 @@ import type {
   CollectImportedRowRequest,
   CollectImportedRowResponse,
   CreateImportBatchRequest,
+  ImportBatchCollectionJobItem,
   ImportBatchItem,
   ImportSourceKind
 } from '@personal-erp/contracts';
@@ -40,10 +41,18 @@ export type CreateImportBatchFromFileRequest = {
 };
 
 const bulkCollectFallback: BulkCollectImportedRowsResponse = {
+  id: '',
   importBatchId: '',
+  status: 'PENDING',
   requestedRowCount: 0,
+  processedRowCount: 0,
   succeededCount: 0,
   failedCount: 0,
+  errorMessage: null,
+  createdAt: new Date(0).toISOString(),
+  startedAt: null,
+  finishedAt: null,
+  heartbeatAt: null,
   results: []
 };
 
@@ -108,9 +117,29 @@ export function bulkCollectImportedRows(
   importBatchId: string,
   input: BulkCollectImportedRowsRequest
 ) {
-  return postJson<BulkCollectImportedRowsResponse, BulkCollectImportedRowsRequest>(
+  return postJson<
+    BulkCollectImportedRowsResponse,
+    BulkCollectImportedRowsRequest
+  >(
     `/import-batches/${importBatchId}/rows/collect`,
     input,
+    bulkCollectFallback
+  );
+}
+
+export function getActiveImportBatchCollectionJob(importBatchId: string) {
+  return fetchJson<ImportBatchCollectionJobItem | null>(
+    `/import-batches/${importBatchId}/collection-jobs/active`,
+    null
+  );
+}
+
+export function getImportBatchCollectionJob(
+  importBatchId: string,
+  jobId: string
+) {
+  return fetchJson<ImportBatchCollectionJobItem>(
+    `/import-batches/${importBatchId}/collection-jobs/${jobId}`,
     bulkCollectFallback
   );
 }

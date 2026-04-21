@@ -5,9 +5,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import type { CollectedTransactionItem } from '@personal-erp/contracts';
 import {
+  accountingPeriodsQueryKey,
   currentAccountingPeriodQueryKey,
+  getAccountingPeriods,
   getCurrentAccountingPeriod
 } from '@/features/accounting-periods/accounting-periods.api';
+import {
+  readCollectingAccountingPeriods,
+  resolvePreferredAccountingPeriod
+} from '@/features/accounting-periods/accounting-period-selection';
 import {
   getJournalEntries,
   journalEntriesQueryKey
@@ -68,6 +74,10 @@ export function useTransactionsPage() {
   const currentPeriodQuery = useQuery({
     queryKey: currentAccountingPeriodQueryKey,
     queryFn: getCurrentAccountingPeriod
+  });
+  const accountingPeriodsQuery = useQuery({
+    queryKey: accountingPeriodsQueryKey,
+    queryFn: getAccountingPeriods
   });
   const transactionsQuery = useQuery({
     queryKey: collectedTransactionsQueryKey,
@@ -174,11 +184,20 @@ export function useTransactionsPage() {
     [journalEntriesQuery.data]
   );
   const currentPeriod = currentPeriodQuery.data ?? null;
+  const accountingPeriods = accountingPeriodsQuery.data ?? [];
+  const collectingPeriods = React.useMemo(
+    () => readCollectingAccountingPeriods(accountingPeriods),
+    [accountingPeriods]
+  );
+  const preferredCollectingPeriod = React.useMemo(
+    () => resolvePreferredAccountingPeriod(currentPeriod, collectingPeriods),
+    [collectingPeriods, currentPeriod]
+  );
 
   useDomainHelp({
     title: '수집 거래 사용 가이드',
     description:
-      '이 화면은 현재 열린 운영 월 안의 실제 거래 후보를 검토하고 전표로 확정하는 핵심 작업 화면입니다. 수기 입력, 업로드 행 등록, 계획 항목에서 생성된 거래가 모두 이곳에 모입니다.',
+      '이 화면은 현재 운영 월을 기본 기준으로 실제 거래 후보를 검토하고 전표로 확정하는 핵심 작업 화면입니다. 수기 입력, 업로드 행 등록, 계획 항목에서 생성된 거래가 모두 이곳에 모입니다.',
     primaryEntity: '수집 거래',
     relatedEntities: [
       '운영 월',
@@ -193,7 +212,7 @@ export function useTransactionsPage() {
       {
         title: '바로 쓰는 순서',
         items: [
-          '현재 운영 월 카드에서 거래일 허용 범위를 먼저 확인합니다.',
+          '운영 월 카드에서 거래일 허용 범위를 먼저 확인합니다.',
           '필터로 자금수단, 카테고리, 전표 반영 상태를 좁혀 처리할 거래를 찾습니다.',
           '수기 거래는 수집 거래 등록으로 입력하고, 업로드나 계획에서 넘어온 거래는 목록에서 수정으로 보완합니다.',
           '손익 거래는 카테고리가 채워져야 전표 준비 상태가 됩니다. 이체 거래는 카테고리 없이도 전표 준비 상태가 될 수 있습니다.',
@@ -209,8 +228,8 @@ export function useTransactionsPage() {
         ]
       }
     ],
-    readModelNote: currentPeriod
-      ? `${currentPeriod.monthLabel} 운영 기간 안의 거래를 검토하고, 아직 전표가 없는 수집·검토·전표 준비 상태 거래만 수정하거나 삭제할 수 있습니다. 전표 확정은 전표 준비 상태에서만 가능합니다.`
+    readModelNote: preferredCollectingPeriod
+      ? `${preferredCollectingPeriod.monthLabel} 운영 기간을 기본 기준으로 열린 운영 기간의 거래를 검토하고, 아직 전표가 없는 수집·검토·전표 준비 상태 거래만 수정하거나 삭제할 수 있습니다. 전표 확정은 전표 준비 상태에서만 가능합니다.`
       : '아직 열린 운영 기간이 없어 수집 거래 등록과 전표 확정이 잠겨 있습니다.'
   });
 
@@ -226,7 +245,7 @@ export function useTransactionsPage() {
     () =>
       filterTransactions({
         data,
-        currentPeriod,
+        collectingPeriods,
         keyword,
         fundingAccountName,
         categoryName,
@@ -234,7 +253,7 @@ export function useTransactionsPage() {
       }),
     [
       categoryName,
-      currentPeriod,
+      collectingPeriods,
       data,
       fundingAccountName,
       keyword,
@@ -308,6 +327,9 @@ export function useTransactionsPage() {
   return {
     categoryName,
     categoryOptions,
+    accountingPeriods,
+    accountingPeriodsQuery,
+    collectingPeriods,
     closeDeleteDialog,
     closeDrawer,
     clearFilters,
@@ -321,7 +343,8 @@ export function useTransactionsPage() {
     deleteTarget,
     drawerDescription: readTransactionDrawerDescription({
       drawerMode: drawerState?.mode ?? null,
-      currentPeriod
+      currentPeriod: preferredCollectingPeriod,
+      hasMultipleCollectingPeriods: collectingPeriods.length > 1
     }),
     drawerOpen: drawerState !== null,
     drawerState,

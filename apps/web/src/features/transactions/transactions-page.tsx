@@ -29,7 +29,7 @@ export function TransactionsPage() {
       <PageHeader
         eyebrow="수집/확정"
         title="수집 거래"
-        description="현재 열린 운영 월의 거래를 입력하고 보완한 뒤, 전표 준비 상태까지 정리하는 핵심 작업 화면입니다."
+        description="현재 운영 월을 기본 기준으로 거래를 입력하고 보완한 뒤, 전표 준비 상태까지 정리하는 핵심 작업 화면입니다."
         badges={[
           {
             label: page.currentPeriod
@@ -81,6 +81,12 @@ export function TransactionsPage() {
           error={page.transactionsQuery.error}
         />
       ) : null}
+      {page.accountingPeriodsQuery.error ? (
+        <QueryErrorAlert
+          title="운영 기간 목록을 확인하지 못했습니다."
+          error={page.accountingPeriodsQuery.error}
+        />
+      ) : null}
       {page.journalEntriesQuery.error ? (
         <QueryErrorAlert
           title="전표 연결 정보를 불러오지 못했습니다."
@@ -103,6 +109,7 @@ export function TransactionsPage() {
       ) : null}
       <TransactionsTableSection
         currentPeriod={page.currentPeriod}
+        collectingPeriods={page.collectingPeriods}
         rows={page.visibleTransactions}
         journalEntriesById={page.journalEntriesById}
         keyword={page.keyword}
@@ -145,6 +152,7 @@ export function TransactionsPage() {
           ) : page.editingTransactionQuery.data ? (
             <TransactionForm
               currentPeriod={page.currentPeriod}
+              accountingPeriods={page.accountingPeriods}
               mode="edit"
               initialTransaction={page.editingTransactionQuery.data}
               onCompleted={page.handleFormCompleted}
@@ -157,6 +165,7 @@ export function TransactionsPage() {
         ) : (
           <TransactionForm
             currentPeriod={page.currentPeriod}
+            accountingPeriods={page.accountingPeriods}
             mode="create"
             onCompleted={page.handleFormCompleted}
           />

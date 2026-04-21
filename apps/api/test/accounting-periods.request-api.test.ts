@@ -241,6 +241,69 @@ test('POST /accounting-periods opens the first period and records status history
   }
 });
 
+test('POST /accounting-periods opens a later period even when the previous period is still open', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push({
+      id: 'period-open-existing-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 3,
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.OPEN,
+      openedAt: new Date('2026-03-01T00:00:00.000Z'),
+      lockedAt: null,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
+    context.state.periodStatusHistory.push({
+      id: 'period-history-open-existing-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-open-existing-1',
+      fromStatus: null,
+      toStatus: AccountingPeriodStatus.OPEN,
+      eventType: 'OPEN',
+      reason: '3월 운영 시작',
+      actorType: AuditActorType.TENANT_MEMBERSHIP,
+      actorMembershipId: 'membership-1',
+      changedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
+
+    const response = await context.request('/accounting-periods', {
+      method: 'POST',
+      headers: context.authHeaders(),
+      body: {
+        month: '2026-04',
+        note: '이전 월 마감 전 선오픈'
+      }
+    });
+
+    const createdPeriod = response.body as Record<string, unknown>;
+
+    assert.equal(response.status, 201);
+    assert.equal(createdPeriod.monthLabel, '2026-04');
+    assert.equal(createdPeriod.status, AccountingPeriodStatus.OPEN);
+    assert.equal(createdPeriod.hasOpeningBalanceSnapshot, false);
+    assert.equal(context.state.accountingPeriods.length, 2);
+    assert.equal(context.state.accountingPeriods.at(-1)?.year, 2026);
+    assert.equal(context.state.accountingPeriods.at(-1)?.month, 4);
+    assert.equal(
+      context.state.periodStatusHistory.at(-1)?.periodId,
+      createdPeriod.id
+    );
+    assert.equal(
+      context.state.periodStatusHistory.at(-1)?.toStatus,
+      AccountingPeriodStatus.OPEN
+    );
+  } finally {
+    await context.close();
+  }
+});
+
 test('POST /accounting-periods allows the first period to open with asset-only opening balance lines', async () => {
   const context = await createRequestTestContext();
 
@@ -383,6 +446,55 @@ test('GET /accounting-periods/current returns the currently open period for the 
         }
       ]
     });
+  } finally {
+    await context.close();
+  }
+});
+
+test('GET /accounting-periods/current returns the latest collecting period when multiple periods are open', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push(
+      {
+        id: 'period-current-multi-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        year: 2026,
+        month: 3,
+        startDate: new Date('2026-03-01T00:00:00.000Z'),
+        endDate: new Date('2026-04-01T00:00:00.000Z'),
+        status: AccountingPeriodStatus.OPEN,
+        openedAt: new Date('2026-03-01T00:00:00.000Z'),
+        lockedAt: null,
+        createdAt: new Date('2026-03-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-03-01T00:00:00.000Z')
+      },
+      {
+        id: 'period-current-multi-2',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        year: 2026,
+        month: 4,
+        startDate: new Date('2026-04-01T00:00:00.000Z'),
+        endDate: new Date('2026-05-01T00:00:00.000Z'),
+        status: AccountingPeriodStatus.IN_REVIEW,
+        openedAt: new Date('2026-04-01T00:00:00.000Z'),
+        lockedAt: null,
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-15T00:00:00.000Z')
+      }
+    );
+
+    const response = await context.request('/accounting-periods/current', {
+      headers: context.authHeaders()
+    });
+    const body = response.body as Record<string, unknown>;
+
+    assert.equal(response.status, 200);
+    assert.equal(body.id, 'period-current-multi-2');
+    assert.equal(body.monthLabel, '2026-04');
+    assert.equal(body.status, AccountingPeriodStatus.IN_REVIEW);
   } finally {
     await context.close();
   }
@@ -624,24 +736,40 @@ test('POST /accounting-periods/:id/close blocks locking when unresolved collecte
   }
 });
 
-test('POST /accounting-periods/:id/reopen reopens the latest locked period and clears closing outputs', async () => {
+test('POST /accounting-periods/:id/reopen reopens a locked period when the next period exists without dependent carry-forward outputs', async () => {
   const context = await createRequestTestContext();
 
   try {
-    context.state.accountingPeriods.push({
-      id: 'period-reopen-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      year: 2026,
-      month: 3,
-      startDate: new Date('2026-03-01T00:00:00.000Z'),
-      endDate: new Date('2026-04-01T00:00:00.000Z'),
-      status: AccountingPeriodStatus.LOCKED,
-      openedAt: new Date('2026-03-01T00:00:00.000Z'),
-      lockedAt: new Date('2026-03-31T15:00:00.000Z'),
-      createdAt: new Date('2026-03-01T00:00:00.000Z'),
-      updatedAt: new Date('2026-03-31T15:00:00.000Z')
-    });
+    context.state.accountingPeriods.push(
+      {
+        id: 'period-reopen-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        year: 2026,
+        month: 3,
+        startDate: new Date('2026-03-01T00:00:00.000Z'),
+        endDate: new Date('2026-04-01T00:00:00.000Z'),
+        status: AccountingPeriodStatus.LOCKED,
+        openedAt: new Date('2026-03-01T00:00:00.000Z'),
+        lockedAt: new Date('2026-03-31T15:00:00.000Z'),
+        createdAt: new Date('2026-03-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-03-31T15:00:00.000Z')
+      },
+      {
+        id: 'period-reopen-next-open-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        year: 2026,
+        month: 4,
+        startDate: new Date('2026-04-01T00:00:00.000Z'),
+        endDate: new Date('2026-05-01T00:00:00.000Z'),
+        status: AccountingPeriodStatus.OPEN,
+        openedAt: new Date('2026-04-01T00:00:00.000Z'),
+        lockedAt: null,
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-01T00:00:00.000Z')
+      }
+    );
     context.state.periodStatusHistory.push(
       {
         id: 'period-history-reopen-open-1',

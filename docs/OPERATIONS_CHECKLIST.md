@@ -78,6 +78,8 @@
 - 로그인 후 `GET /api/operations/summary`, `GET /api/operations/system-status`, `GET /api/operations/alerts`가 현재 workspace 기준으로 응답하는지 확인합니다.
 - 운영 반출을 허용한 계정으로 `POST /api/operations/exports`를 실행했을 때 UTF-8 CSV payload가 내려오고 `operations_export.run` 감사 이벤트가 남는지 확인합니다.
 - 운영 메모를 허용한 계정으로 `POST /api/operations/notes`를 실행했을 때 메모가 저장되고 `operations_note.create` 감사 이벤트가 남는지 확인합니다.
+- 업로드 배치 API를 확인할 때는 `POST /api/import-batches`의 UTF-8 텍스트 배치와 `POST /api/import-batches/files`의 IM뱅크 PDF multipart 배치가 모두 현재 workspace 기준으로 생성되는지 확인합니다.
+- 배치 상세에서 `POST /api/import-batches/:id/rows/collect`를 실행하면 `202 Accepted` 성격의 일괄 등록 Job이 반환되고, `GET /api/import-batches/:id/collection-jobs/:jobId`로 처리 건수/성공/실패/행별 결과가 갱신되는지 확인합니다.
 - 전체 관리자 계정으로 로그인했을 때 `GET /api/admin/users`, `GET /api/admin/tenants`, `GET /api/admin/operations/status`, `GET /api/admin/security-threats`가 응답하는지 확인합니다.
 - 전체 관리자 계정으로 `POST /api/admin/support-context` 실행 후 `GET /api/auth/me`의 `currentWorkspace`가 선택한 사업장/장부로 바뀌는지, `DELETE /api/admin/support-context` 후 해제되는지 확인합니다.
 
@@ -100,7 +102,7 @@
 - `/periods`에서 현재 운영 기간을 열거나 열린 기간을 확인할 수 있는지 확인합니다.
 - `/insurances`, `/vehicles`, `/recurring`에서 보험 계약, 차량 운영, 반복 규칙 화면이 데이터를 불러오는지 확인합니다.
 - `/plan-items/generate`에서 현재 월 계획 항목을 생성하고, `/plan-items`에서 연결된 수집 거래 상태를 추적할 수 있는지 확인합니다.
-- `/imports`에서 업로드 행의 collect preview와 수집 거래 승격 흐름이 열리는지 확인합니다.
+- `/imports`에서 UTF-8 텍스트 업로드와 IM뱅크 PDF 파일첨부 업로드가 열리고, `/imports/[batchId]` 작업대에서 collect preview, 단건 승격, 일괄 등록 진행률이 표시되는지 확인합니다.
 - `/transactions`에서 거래 Quick Add 저장 후 목록이 갱신되고, 전표 준비 거래를 확정할 수 있는지 확인합니다.
 - `/journal-entries`에서 확정 전표를 조회하고 반전/정정 전표 CTA가 유지되는지 확인합니다.
 - `/financial-statements`, `/carry-forwards`, `/forecast`에서 재무제표 생성, 차기 이월 생성, 현재 월/다음 달 전망 확인 흐름이 깨지지 않았는지 확인합니다.
@@ -145,6 +147,7 @@
 - 현재 refresh token 쿠키는 `APP_ORIGIN`이 HTTPS일 때만 `secure: true`가 되므로, 운영 환경에서는 반드시 HTTPS origin과 함께 점검해야 합니다.
 - 운영 환경에서는 `CORS_ALLOWED_ORIGINS`를 필요한 origin만 포함하도록 최소화하고, `SWAGGER_ENABLED=false` 여부를 같이 결정합니다.
 - 현재 보안 이벤트는 애플리케이션 로그에 남기며, 외부 감사 저장소나 중앙 로그 수집기는 아직 연결하지 않았습니다.
+- 업로드 배치 일괄 등록은 Job/행별 결과와 workspace 잠금을 DB에 남기지만, 현재 실행 루프는 API 프로세스 안에서 동작합니다. 운영 재시작 직후에는 진행 중 Job/잠금 상태를 `/operations/imports`와 배치 작업대에서 확인하고, 장기적으로는 외부 worker/outbox 도입 여부를 별도 결정해야 합니다.
 
 ## 함께 보면 좋은 문서
 

@@ -93,8 +93,19 @@ export abstract class ImportedRowCollectionPort {
   abstract hasDuplicateSourceFingerprint(
     tx: PrismaClientLike,
     workspace: ImportedRowCollectionWorkspaceScope,
-    sourceFingerprint: string
+    sourceFingerprint: string,
+    currentImportBatchId: string
   ): Promise<boolean>;
+
+  abstract countPotentialDuplicateTransactions(
+    tx: PrismaClientLike,
+    workspace: ImportedRowCollectionWorkspaceScope,
+    occurredOn: Date,
+    amount: number,
+    ledgerTransactionTypeId: string,
+    currentImportBatchId: string,
+    excludedCollectedTransactionIds?: string[]
+  ): Promise<number>;
 
   abstract createCollectedTransactionRecord(
     input: CreateCollectedTransactionRecordInput

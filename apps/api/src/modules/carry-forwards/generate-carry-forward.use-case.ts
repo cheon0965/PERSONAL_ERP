@@ -24,13 +24,18 @@ import {
   readPeriodBoundary
 } from './carry-forward.policy';
 import { CarryForwardsService } from './carry-forwards.service';
+import {
+  buildCarryForwardReplaceReason,
+  CancelCarryForwardUseCase
+} from './cancel-carry-forward.use-case';
 
 @Injectable()
 export class GenerateCarryForwardUseCase {
   constructor(
     @Inject(CarryForwardGenerationPort)
     private readonly carryForwardGenerationPort: CarryForwardGenerationPort,
-    private readonly carryForwardsService: CarryForwardsService
+    private readonly carryForwardsService: CarryForwardsService,
+    private readonly cancelCarryForwardUseCase: CancelCarryForwardUseCase
   ) {}
 
   async execute(
@@ -67,7 +72,7 @@ export class GenerateCarryForwardUseCase {
       monthLabel
     } = readNextMonth(sourcePeriod.year, sourcePeriod.month);
 
-    const generationContext =
+    let generationContext =
       await this.carryForwardGenerationPort.readGenerationContext(
         workspace.tenantId,
         workspace.ledgerId,
@@ -75,9 +80,9 @@ export class GenerateCarryForwardUseCase {
         nextYear,
         nextMonth
       );
-    const sourceClosingSnapshot = generationContext.sourceClosingSnapshot;
-    const existingRecord = generationContext.existingRecord;
-    const existingTargetPeriod = generationContext.existingTargetPeriod;
+    let sourceClosingSnapshot = generationContext.sourceClosingSnapshot;
+    let existingRecord = generationContext.existingRecord;
+    let existingTargetPeriod = generationContext.existingTargetPeriod;
 
     if (!sourceClosingSnapshot) {
       throw new BadRequestException(
@@ -85,10 +90,43 @@ export class GenerateCarryForwardUseCase {
       );
     }
 
-    if (existingRecord) {
+    if (existingRecord && !input.replaceExisting) {
       throw new ConflictException(
         '해당 운영 기간의 차기 이월이 이미 생성되었습니다.'
       );
+    }
+
+    if (existingRecord && input.replaceExisting) {
+      await this.cancelCarryForwardUseCase.cancelExistingByFromPeriod(
+        user,
+        sourcePeriod.id,
+        input.replaceReason ??
+          buildCarryForwardReplaceReason(sourcePeriod.year, sourcePeriod.month)
+      );
+
+      generationContext =
+        await this.carryForwardGenerationPort.readGenerationContext(
+          workspace.tenantId,
+          workspace.ledgerId,
+          sourcePeriod.id,
+          nextYear,
+          nextMonth
+        );
+      sourceClosingSnapshot = generationContext.sourceClosingSnapshot;
+      existingRecord = generationContext.existingRecord;
+      existingTargetPeriod = generationContext.existingTargetPeriod;
+
+      if (!sourceClosingSnapshot) {
+        throw new BadRequestException(
+          '마감 스냅샷이 없는 기간에는 차기 이월을 생성할 수 없습니다.'
+        );
+      }
+
+      if (existingRecord) {
+        throw new ConflictException(
+          '기존 차기 이월 취소 이후에도 차기 이월 기록이 남아 있습니다.'
+        );
+      }
     }
 
     if (existingTargetPeriod?.status === AccountingPeriodStatus.LOCKED) {

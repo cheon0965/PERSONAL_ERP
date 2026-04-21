@@ -33,6 +33,7 @@ import {
 
 export function TransactionsTableSection({
   currentPeriod,
+  collectingPeriods,
   rows,
   journalEntriesById,
   keyword,
@@ -53,6 +54,7 @@ export function TransactionsTableSection({
   onDelete
 }: {
   currentPeriod: AccountingPeriodItem | null;
+  collectingPeriods: AccountingPeriodItem[];
   rows: CollectedTransactionItem[];
   journalEntriesById: Map<string, JournalEntryItem>;
   keyword: string;
@@ -78,6 +80,17 @@ export function TransactionsTableSection({
     categoryName,
     postingStatus
   ].filter((value) => value.trim().length > 0).length;
+  const hasCollectingPeriod = collectingPeriods.length > 0;
+  const periodScopeLabel =
+    collectingPeriods.length > 1
+      ? '열린 운영 월'
+      : (currentPeriod?.monthLabel ?? collectingPeriods[0]?.monthLabel);
+  const periodRangeDescription =
+    collectingPeriods.length > 1
+      ? '열린 운영 기간'
+      : collectingPeriods[0]
+        ? `${collectingPeriods[0].startDate.slice(0, 10)} ~ ${collectingPeriods[0].endDate.slice(0, 10)}`
+        : null;
   const columns = React.useMemo<GridColDef<CollectedTransactionItem>[]>(
     () => [
       { field: 'businessDate', headerName: '거래일', flex: 0.8 },
@@ -239,8 +252,8 @@ export function TransactionsTableSection({
     <DataTableCard
       title="수집 거래 목록"
       description={
-        currentPeriod
-          ? `${currentPeriod.monthLabel} 운영 월의 수집 거래를 한 곳에서 검토하고 전표 준비 흐름으로 넘깁니다.`
+        hasCollectingPeriod
+          ? `${periodScopeLabel}의 수집 거래를 한 곳에서 검토하고 전표 준비 흐름으로 넘깁니다.`
           : '현재 열린 운영 월이 없으므로 목록이 비어 있습니다.'
       }
       toolbar={
@@ -279,8 +292,8 @@ export function TransactionsTableSection({
                   />
                 )}
                 <Typography variant="body2" fontWeight={600}>
-                  {currentPeriod
-                    ? `${currentPeriod.monthLabel} 운영 월`
+                  {hasCollectingPeriod
+                    ? `${periodScopeLabel} 기준`
                     : '입력 가능한 운영 월이 아직 열리지 않았습니다.'}
                 </Typography>
                 {activeFilterCount > 0 ? (
@@ -292,8 +305,8 @@ export function TransactionsTableSection({
                 ) : null}
               </Stack>
               <Typography variant="body2" color="text.secondary">
-                {currentPeriod
-                  ? `${currentPeriod.startDate.slice(0, 10)} ~ ${currentPeriod.endDate.slice(0, 10)} 범위의 거래를 확인합니다. 이 표에서 수정, 삭제, 전표 확정을 바로 처리할 수 있습니다.`
+                {hasCollectingPeriod
+                  ? `${periodRangeDescription} 범위의 거래를 확인합니다. 이 표에서 수정, 삭제, 전표 확정을 바로 처리할 수 있습니다.`
                   : '먼저 월 운영 화면에서 운영 월을 시작하면 수집 거래 입력과 전표 확정 흐름이 열립니다.'}
               </Typography>
             </Stack>
@@ -386,7 +399,7 @@ export function TransactionsTableSection({
           </Grid>
         </Stack>
       }
-      rows={currentPeriod ? rows : []}
+      rows={hasCollectingPeriod ? rows : []}
       columns={columns}
     />
   );

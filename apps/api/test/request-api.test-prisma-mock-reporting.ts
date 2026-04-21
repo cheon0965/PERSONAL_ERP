@@ -9,6 +9,24 @@ export function createReportingPrismaMock(
 
   return {
     financialStatementSnapshot: {
+      count: async (args: {
+        where?: {
+          tenantId?: string;
+          ledgerId?: string;
+          periodId?: string;
+        };
+      }) => {
+        return state.financialStatementSnapshots.filter((candidate) => {
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesPeriod =
+            !args.where?.periodId || candidate.periodId === args.where.periodId;
+
+          return matchesTenant && matchesLedger && matchesPeriod;
+        }).length;
+      },
       findMany: async (args: {
         where?: {
           tenantId?: string;
@@ -137,6 +155,7 @@ export function createReportingPrismaMock(
     carryForwardRecord: {
       findFirst: async (args: {
         where?: {
+          id?: string;
           tenantId?: string;
           ledgerId?: string;
           fromPeriodId?: string;
@@ -162,6 +181,7 @@ export function createReportingPrismaMock(
             const matchesTenant =
               !args.where?.tenantId ||
               candidate.tenantId === args.where.tenantId;
+            const matchesId = !args.where?.id || candidate.id === args.where.id;
             const matchesLedger =
               !args.where?.ledgerId ||
               candidate.ledgerId === args.where.ledgerId;
@@ -174,6 +194,7 @@ export function createReportingPrismaMock(
 
             return (
               matchesTenant &&
+              matchesId &&
               matchesLedger &&
               matchesFromPeriod &&
               matchesToPeriod
@@ -208,6 +229,46 @@ export function createReportingPrismaMock(
 
         state.carryForwardRecords.push(created);
         return created;
+      },
+      deleteMany: async (args: {
+        where?: {
+          id?: string;
+          tenantId?: string;
+          ledgerId?: string;
+          fromPeriodId?: string;
+          toPeriodId?: string;
+        };
+      }) => {
+        const beforeCount = state.carryForwardRecords.length;
+        state.carryForwardRecords = state.carryForwardRecords.filter(
+          (candidate) => {
+            const matchesId = !args.where?.id || candidate.id === args.where.id;
+            const matchesTenant =
+              !args.where?.tenantId ||
+              candidate.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId;
+            const matchesFromPeriod =
+              !args.where?.fromPeriodId ||
+              candidate.fromPeriodId === args.where.fromPeriodId;
+            const matchesToPeriod =
+              !args.where?.toPeriodId ||
+              candidate.toPeriodId === args.where.toPeriodId;
+
+            return !(
+              matchesId &&
+              matchesTenant &&
+              matchesLedger &&
+              matchesFromPeriod &&
+              matchesToPeriod
+            );
+          }
+        );
+
+        return {
+          count: beforeCount - state.carryForwardRecords.length
+        };
       }
     }
   };

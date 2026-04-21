@@ -177,6 +177,8 @@
 - `POST /import-batches/:id/rows/:rowId/collect-preview`
 - `POST /import-batches/:id/rows/:rowId/collect`
 - `POST /import-batches/:id/rows/collect`
+- `GET /import-batches/:id/collection-jobs/active`
+- `GET /import-batches/:id/collection-jobs/:jobId`
 - `GET /journal-entries`
 - `POST /journal-entries/:id/reverse`
 - `POST /journal-entries/:id/correct`
@@ -208,6 +210,7 @@
 - `POST /financial-statements/generate`
 - `GET /carry-forwards?fromPeriodId=<id>`
 - `POST /carry-forwards/generate`
+- `POST /carry-forwards/:id/cancel`
 - `GET /dashboard/summary?periodId=<id>`
 - `GET /forecast/monthly?periodId=<id>&month=YYYY-MM`
 
@@ -256,7 +259,7 @@
 - Web `/plan-items/generate` -> API `GET /accounting-periods`, `POST /plan-items/generate`
 - Web `/transactions` -> API `/collected-transactions`
 - Web `/imports` -> API `/import-batches`, `POST /import-batches/files`
-- Web `/imports/[batchId]` -> API `GET /import-batches/:id`, `DELETE /import-batches/:id`, `POST /import-batches/:id/rows/collect`, `POST /import-batches/:id/rows/:rowId/collect-preview`, `POST /import-batches/:id/rows/:rowId/collect`
+- Web `/imports/[batchId]` -> API `GET /import-batches/:id`, `DELETE /import-batches/:id`, `POST /import-batches/:id/rows/collect`, `GET /import-batches/:id/collection-jobs/active`, `GET /import-batches/:id/collection-jobs/:jobId`, `POST /import-batches/:id/rows/:rowId/collect-preview`, `POST /import-batches/:id/rows/:rowId/collect`
 - Web `/journal-entries` -> API `/journal-entries`
 - Web `/journal-entries/[entryId]` -> API `GET /journal-entries`, `POST /journal-entries/:id/reverse`, `POST /journal-entries/:id/correct`
 - Web `/financial-statements` -> API `/financial-statements`
@@ -412,6 +415,7 @@
 
 - 계약: `OpenAccountingPeriodRequest -> AccountingPeriodItem`
 - 선택한 `month`의 운영 기간을 열고, 필요하면 opening balance 초기화를 시작합니다.
+- 월 오픈은 이전 월 마감과 별도 작업이며, 이미 존재하는 가장 최근 운영 기간보다 이후 월이면 선오픈할 수 있습니다.
 
 ### `POST /accounting-periods/:id/close`
 
@@ -571,7 +575,7 @@
 ### `POST /collected-transactions`
 
 - 계약: `CreateCollectedTransactionRequest -> CollectedTransactionItem`
-- 현재 수집 가능한 운영 기간 안에서 수집 거래를 생성합니다.
+- 거래일을 포함하는 열린 운영 기간에 수집 거래를 생성합니다.
 - 현재 API 구현 이름은 `collected-transactions`이고, Web 화면 경로는 shorthand로 `/transactions`를 사용합니다.
 - 현재 응답은 `GET /collected-transactions` 목록 아이템 shape와 동일하게 매핑됩니다.
 - 기준 데이터 readiness가 부족한 경우에도 현재 구현은 저장 요청 자체를 일괄 차단하지는 않지만, Web은 `reference-data/readiness`를 기준으로 준비 부족 안내와 이동 링크를 함께 노출합니다.
@@ -586,7 +590,7 @@
 
 - 계약: `UpdateCollectedTransactionRequest -> CollectedTransactionItem`
 - 미확정 상태(`COLLECTED`, `REVIEWED`, `READY_TO_POST`)의 수집 거래를 수정합니다.
-- 현재 운영 기간 안의 거래일만 허용하며, 이미 전표로 확정된 거래는 수정할 수 없습니다.
+- 거래일을 포함하는 열린 운영 기간이 있어야 하며, 이미 전표로 확정된 거래는 수정할 수 없습니다.
 
 ### `DELETE /collected-transactions/:id`
 
@@ -660,6 +664,7 @@
 - 계약: `CollectImportedRowRequest -> CollectImportedRowPreview`
 - 파싱 완료된 업로드 행을 실제 승격 전에 평가합니다.
 - 현재 구현은 계획 항목 자동 매칭 후보, 적용 카테고리, 예상 다음 상태, duplicate fingerprint 보류 여부, 설명용 decision reason 목록을 함께 반환합니다.
+- 중복 후보는 같은 현재 배치 안의 미승격 행끼리만으로 막지 않고, 이미 수기 입력됐거나 다른 배치에서 반영된 기존 수집 거래와 겹칠 때 확인 대상으로 봅니다.
 
 ### `POST /import-batches/:id/rows/:rowId/collect`
 
@@ -668,6 +673,7 @@
 - 현재 응답은 생성된 `CollectedTransactionItem`뿐 아니라, 같은 요청 기준의 자동 판정 preview도 함께 돌려줍니다.
 - 현재 구현은 source fingerprint 기반 중복 감지, 미확정 계획 항목(`PlanItem`) 자동 매칭, 카테고리/상태 자동 준비를 포함합니다.
 - 같은 업로드 행 재수집은 `importedRowId` 기준으로 막고, 반복 수집 거래 흡수는 조건부 claim으로 덮어쓰기를 방지합니다.
+- 일괄 등록 Job이 같은 workspace에서 실행 중이면 단건 collect도 같은 배치/다른 배치 여부에 따라 `409 Conflict`로 막습니다.
 - 중복/경합은 `409 Conflict`로 정리합니다.
 
 ### `POST /import-batches/:id/rows/collect`
@@ -675,7 +681,20 @@
 - 계약: `BulkCollectImportedRowsRequest -> BulkCollectImportedRowsResponse`
 - 선택 행이 없으면 현재 요청 배치의 등록 가능 행 전체를 대상으로 하고, 선택 행이 있으면 선택 목록만 처리합니다.
 - 요청에서 `type`을 비우면 현재 구현은 파싱된 입출금 방향으로 `DEPOSIT -> INCOME`, `WITHDRAWAL -> EXPENSE`를 자동 판정합니다.
-- 응답은 행별 성공/실패 결과를 함께 반환해 배치 상세 작업대에서 일괄 등록 결과를 바로 피드백할 수 있게 합니다.
+- 응답은 `202 Accepted`와 함께 일괄 등록 Job 상태를 반환합니다. 서버는 Job/행별 결과를 저장하며, 같은 워크스페이스에서는 동시에 하나의 일괄 등록 Job만 실행됩니다.
+- Job 실행 루프는 현재 API 프로세스 안에서 시작되고, 진행률과 결과는 DB에 남긴 뒤 배치 작업대에서 폴링합니다.
+
+### `GET /import-batches/:id/collection-jobs/active`
+
+- 계약: `void -> ImportBatchCollectionJobItem | null`
+- 선택한 업로드 배치에서 아직 `PENDING` 또는 `RUNNING` 상태인 일괄 등록 Job을 조회합니다.
+- 배치 상세 작업대는 이 응답을 폴링해 새로고침 이후에도 진행 중 작업을 다시 표시합니다.
+
+### `GET /import-batches/:id/collection-jobs/:jobId`
+
+- 계약: `void -> ImportBatchCollectionJobItem`
+- 특정 일괄 등록 Job의 전체 진행률(`requestedRowCount`, `processedRowCount`, `succeededCount`, `failedCount`)과 행별 결과를 조회합니다.
+- Job 상태는 `PENDING`, `RUNNING`, `SUCCEEDED`, `PARTIAL`, `FAILED`, `CANCELLED` 중 하나입니다.
 
 ### `POST /journal-entries/:id/reverse`
 
@@ -699,16 +718,24 @@
 - 계약: `GenerateCarryForwardRequest -> CarryForwardView`
 - 잠금된 운영 기간의 closing snapshot을 다음 기간 opening balance snapshot으로 이월합니다.
 - 현재 구현은 `carryForwardRecord`와 opening balance snapshot 생성까지 포함하며, `createdJournalEntryId`는 아직 `null`일 수 있습니다.
+- `replaceExisting=true`를 보내면 기존 차기 이월을 안전 취소한 뒤 현재 closing snapshot 기준으로 다시 생성합니다. 이 경우 취소 권한까지 필요합니다.
+
+### `POST /carry-forwards/:id/cancel`
+
+- 계약: `CancelCarryForwardRequest -> CancelCarryForwardResponse`
+- 생성된 차기 이월 record와 다음 기간 opening balance snapshot 및 opening balance line을 취소합니다.
+- 안전 조건: 다음 운영 기간이 `OPEN`이고, opening balance 출처가 `CARRY_FORWARD`이며, 다음 기간에 수집 거래, 업로드 배치, 전표, 재무제표 snapshot, closing snapshot이 없어야 합니다.
+- 취소 후에는 원 기간의 `POST /accounting-periods/:id/reopen` 차단 조건도 해소됩니다.
 
 ## 현재 구현 흐름
 
 ### `reference-data -> accounting-periods -> insurance/vehicles -> recurring-rules -> plan-items -> collected-transactions/imports -> journal-entries -> financial-statements -> carry-forwards -> forecast`
 
 1. `GET /reference-data/readiness`, `POST /funding-accounts`, `POST /categories`로 기준 데이터 준비 상태를 확인하고 필요한 자금수단/카테고리를 정리합니다.
-2. `POST /accounting-periods`로 운영 기간을 엽니다.
+2. `POST /accounting-periods`로 운영 기간을 엽니다. 다음 월 선오픈은 가능하지만, 월 마감은 별도 실행입니다.
 3. `POST /insurance-policies`, `POST /vehicles`, `POST /vehicles/:id/fuel-logs`, `POST /vehicles/:id/maintenance-logs`로 보험 계약과 차량 운영 기준을 정리합니다.
 4. `POST /recurring-rules`와 `POST /plan-items/generate`로 반복 규칙을 현재 월 계획 항목으로 펼치고, 계획 기반 수집 거래까지 생성합니다.
-5. `POST /collected-transactions` 또는 `POST /import-batches/:id/rows/:rowId/collect`로 현재 기간의 수집 거래를 만들거나 업로드 행을 계획 기반 수집 거래에 흡수/매칭합니다.
+5. `POST /collected-transactions` 또는 `POST /import-batches/:id/rows/:rowId/collect`로 거래일 기준 열린 운영 기간의 수집 거래를 만들거나 업로드 행을 계획 기반 수집 거래에 흡수/매칭합니다.
 6. 필요하면 `GET/PATCH/DELETE /collected-transactions/:id`로 미확정(`COLLECTED`, `REVIEWED`, `READY_TO_POST`) 수집 거래를 상세 조회, 수정, 삭제합니다.
 7. `POST /collected-transactions/:id/confirm`로 수집 거래를 `JournalEntry`로 확정합니다. 계획 항목 화면의 바로 확정도 내부적으로 이 경로를 사용합니다.
 8. 필요하면 `POST /journal-entries/:id/reverse` 또는 `POST /journal-entries/:id/correct`로 전표 조정을 수행합니다.
@@ -716,7 +743,8 @@
 10. `POST /financial-statements/generate`로 잠금 기간의 공식 재무제표 snapshot을 생성합니다.
 11. 차기 이월 전 수정이 필요하면 `POST /accounting-periods/:id/reopen`로 잠금 기간을 다시 열고 재무제표/마감 snapshot을 정리합니다.
 12. `POST /carry-forwards/generate`로 다음 기간 opening balance snapshot과 carry-forward record를 생성합니다.
-13. `GET /forecast/monthly`로 현재 월과 다음 달 전망을 확인합니다.
+13. 차기 이월 후 정정이 필요하고 다음 기간 사용 이력이 없다면 `POST /carry-forwards/:id/cancel` 또는 `POST /carry-forwards/generate`의 `replaceExisting=true`로 안전 취소/재생성을 수행합니다.
+14. `GET /forecast/monthly`로 현재 월과 다음 달 전망을 확인합니다.
 
 ### `recurring-rules -> plan-items -> collected-transactions`
 
@@ -740,7 +768,7 @@
 - `OWNER`, `MANAGER`: `workspace_settings.update`, `admin_policy.read`, `operations_export.run`
 - `OWNER`, `MANAGER`, `EDITOR`, `VIEWER`: `workspace_settings.read`, `account_security.read`, `account_profile.update`, `account_security.change_password`, `account_security.revoke_session`, `operations_console.read`
 - `OWNER`, `MANAGER`: `funding_account.create`, `funding_account.update`, `category.create`, `category.update`, `insurance_policy.create`, `insurance_policy.update`, `insurance_policy.delete`, `vehicle.create`, `vehicle.update`, `accounting_period.open`, `recurring_rule.create`, `plan_item.generate`, `financial_statement.generate`, `carry_forward.generate`, `journal_entry.reverse`, `journal_entry.correct`
-- `OWNER`: `accounting_period.close`, `accounting_period.reopen`
+- `OWNER`: `accounting_period.close`, `accounting_period.reopen`, `carry_forward.cancel`
 - `OWNER`, `MANAGER`, `EDITOR`: `collected_transaction.create`, `collected_transaction.confirm`, `import_batch.upload`, `import_batch.delete`, `operations_note.create`
 - `CollectedTransactionItem`, `RecurringRuleItem`, `JournalEntryItem`, `PlanItemsView`, `FinancialStatementsView`, `CarryForwardView`, `DashboardSummary`, `ForecastResponse`는 raw table 전체가 아니라 API view/projection shape를 응답합니다.
 - 예외적으로 `ImportBatchItem.rows[].rawPayload`는 업로드 검수 목적상 현재 응답에 포함됩니다.

@@ -56,7 +56,7 @@ export class ReverseJournalEntryUseCase {
     );
 
     const targetPeriod =
-      await this.accountingPeriodWriteGuard.assertCollectingDateAllowed(
+      await this.accountingPeriodWriteGuard.assertJournalEntryDateAllowed(
         workspaceScope,
         input.entryDate
       );

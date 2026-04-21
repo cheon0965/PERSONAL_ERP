@@ -17,6 +17,9 @@ type ImportedRowAutoPreparationSummaryInput = {
   nextWorkflowStatus: CollectedTransactionPostingStatus;
   hasDuplicateSourceFingerprint: boolean;
   allowPlanItemMatch: boolean;
+  targetPeriodMonthLabel?: string;
+  willCreateTargetPeriod?: boolean;
+  potentialDuplicateTransactionCount?: number;
 };
 
 export function buildImportedRowAutoPreparationSummary(
@@ -24,9 +27,21 @@ export function buildImportedRowAutoPreparationSummary(
 ): ImportedRowAutoPreparationSummary {
   const decisionReasons: string[] = [];
 
+  if (input.willCreateTargetPeriod && input.targetPeriodMonthLabel) {
+    decisionReasons.push(
+      `${input.targetPeriodMonthLabel} 운영월이 없어 등록 과정에서 자동으로 추가합니다.`
+    );
+  }
+
   if (input.hasDuplicateSourceFingerprint) {
     decisionReasons.push(
       '같은 원본 식별값이 이미 있어 중복 후보로 보류합니다.'
+    );
+  }
+
+  if ((input.potentialDuplicateTransactionCount ?? 0) > 0) {
+    decisionReasons.push(
+      `같은 거래일·금액·입출금 유형의 기존 거래 ${input.potentialDuplicateTransactionCount}건이 있어 확인 후 등록해야 합니다.`
     );
   }
 
@@ -94,6 +109,12 @@ export function buildImportedRowAutoPreparationSummary(
     nextWorkflowStatus: input.nextWorkflowStatus,
     hasDuplicateSourceFingerprint: input.hasDuplicateSourceFingerprint,
     allowPlanItemMatch: input.allowPlanItemMatch,
+    ...(input.potentialDuplicateTransactionCount
+      ? {
+          potentialDuplicateTransactionCount:
+            input.potentialDuplicateTransactionCount
+        }
+      : {}),
     decisionReasons
   };
 }

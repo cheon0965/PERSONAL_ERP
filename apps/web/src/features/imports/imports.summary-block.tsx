@@ -45,6 +45,13 @@ export function CollectPreviewSummary({
           같은 원본 식별값이 이미 있어 자동 확정을 보류합니다.
         </Alert>
       ) : null}
+      {(preview.autoPreparation.potentialDuplicateTransactionCount ?? 0) > 0 ? (
+        <Alert severity="warning" variant="outlined">
+          같은 거래일·금액·입출금 유형의 기존 거래{' '}
+          {preview.autoPreparation.potentialDuplicateTransactionCount}건이 있어
+          확인 후 등록해야 합니다.
+        </Alert>
+      ) : null}
       <Stack spacing={0.5}>
         {preview.autoPreparation.decisionReasons.map((reason) => (
           <Typography

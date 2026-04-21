@@ -24,6 +24,21 @@ export type ImportedRowParseStatus =
   | 'FAILED'
   | 'SKIPPED';
 
+export type ImportBatchCollectionJobStatus =
+  | 'PENDING'
+  | 'RUNNING'
+  | 'SUCCEEDED'
+  | 'PARTIAL'
+  | 'FAILED'
+  | 'CANCELLED';
+
+export type ImportBatchCollectionJobRowStatus =
+  | 'PENDING'
+  | 'RUNNING'
+  | 'COLLECTED'
+  | 'FAILED'
+  | 'SKIPPED';
+
 export type ImportedRowAutoPreparationSummary = {
   matchedPlanItemId: string | null;
   matchedPlanItemTitle: string | null;
@@ -32,6 +47,7 @@ export type ImportedRowAutoPreparationSummary = {
   nextWorkflowStatus: CollectedTransactionPostingStatus;
   hasDuplicateSourceFingerprint: boolean;
   allowPlanItemMatch: boolean;
+  potentialDuplicateTransactionCount?: number;
   decisionReasons: string[];
 };
 
@@ -80,6 +96,7 @@ export type CollectImportedRowRequest = {
   type: CollectedTransactionType;
   fundingAccountId: string;
   categoryId?: string;
+  confirmPotentialDuplicate?: boolean;
   memo?: string;
 };
 
@@ -89,6 +106,32 @@ export type BulkCollectImportedRowsRequest = {
   fundingAccountId: string;
   categoryId?: string;
   memo?: string;
+};
+
+export type ImportBatchCollectionJobResultItem = {
+  importedRowId: string;
+  rowNumber: number;
+  status: ImportBatchCollectionJobRowStatus;
+  collectedTransactionId: string | null;
+  message: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+};
+
+export type ImportBatchCollectionJobItem = {
+  id: string;
+  importBatchId: string;
+  status: ImportBatchCollectionJobStatus;
+  requestedRowCount: number;
+  processedRowCount: number;
+  succeededCount: number;
+  failedCount: number;
+  errorMessage: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  heartbeatAt: string | null;
+  results: ImportBatchCollectionJobResultItem[];
 };
 
 export type CollectImportedRowPreview = {
@@ -109,17 +152,4 @@ export type CollectImportedRowResponse = {
   preview: CollectImportedRowPreview;
 };
 
-export type BulkCollectImportedRowsResultItem = {
-  importedRowId: string;
-  status: 'COLLECTED' | 'FAILED';
-  collectedTransactionId: string | null;
-  message: string | null;
-};
-
-export type BulkCollectImportedRowsResponse = {
-  importBatchId: string;
-  requestedRowCount: number;
-  succeededCount: number;
-  failedCount: number;
-  results: BulkCollectImportedRowsResultItem[];
-};
+export type BulkCollectImportedRowsResponse = ImportBatchCollectionJobItem;

@@ -3,11 +3,11 @@
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
-  AccountingPeriodItem,
   BulkCollectImportedRowsResponse,
   CollectImportedRowRequest,
   CreateImportBatchRequest,
   FundingAccountItem,
+  ImportBatchCollectionJobItem,
   ImportBatchItem
 } from '@personal-erp/contracts';
 import {
@@ -33,6 +33,8 @@ import {
   createImportBatch,
   createImportBatchFromFile,
   deleteImportBatch,
+  getActiveImportBatchCollectionJob,
+  getImportBatchCollectionJob,
   getImportBatches,
   importBatchesQueryKey,
   previewImportedRowCollection
@@ -77,6 +79,13 @@ export function useImportsPage(
   );
   const [selectedRowId, setSelectedRowId] = React.useState<string | null>(null);
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
+  const [bulkCollectJobId, setBulkCollectJobId] = React.useState<string | null>(
+    null
+  );
+  const [notifiedBulkCollectJobId, setNotifiedBulkCollectJobId] =
+    React.useState<string | null>(null);
+  const [bulkCollectPollingEnabled, setBulkCollectPollingEnabled] =
+    React.useState(false);
   const [isUploadDrawerOpen, setUploadDrawerOpen] = React.useState(false);
   const [isCollectDrawerOpen, setCollectDrawerOpen] = React.useState(false);
   const [uploadForm, setUploadForm] =
@@ -141,8 +150,7 @@ export function useImportsPage(
     [selectedBatch]
   );
   const selectedRows = React.useMemo(
-    () =>
-      selectedBatchRows.filter((row) => selectedRowIds.includes(row.id)),
+    () => selectedBatchRows.filter((row) => selectedRowIds.includes(row.id)),
     [selectedBatchRows, selectedRowIds]
   );
   const selectedRow = React.useMemo(
@@ -178,28 +186,51 @@ export function useImportsPage(
     [categoriesQuery.data, normalizedCollectRequest.categoryId]
   );
   const currentPeriod = currentPeriodQuery.data ?? null;
-  const currentPeriodCollectableRows = React.useMemo(
-    () =>
-      selectedBatchRows.filter(
-        (row) =>
-          isImportedRowCollectable(row) &&
-          isImportedRowWithinCurrentPeriod(row, currentPeriod)
-      ),
-    [currentPeriod, selectedBatchRows]
+  const collectableRows = React.useMemo(
+    () => selectedBatchRows.filter((row) => isImportedRowCollectable(row)),
+    [selectedBatchRows]
   );
-  const selectedCurrentPeriodCollectableRows = React.useMemo(
-    () =>
-      selectedRows.filter(
-        (row) =>
-          isImportedRowCollectable(row) &&
-          isImportedRowWithinCurrentPeriod(row, currentPeriod)
-      ),
-    [currentPeriod, selectedRows]
+  const selectedCollectableRows = React.useMemo(
+    () => selectedRows.filter((row) => isImportedRowCollectable(row)),
+    [selectedRows]
   );
   const bulkFundingAccountId =
     selectedBatch?.fundingAccountId ??
     normalizedCollectRequest.fundingAccountId ??
     '';
+  const activeBulkCollectJobQuery = useQuery({
+    queryKey: [
+      ...importBatchesQueryKey,
+      selectedBatch?.id ?? 'none',
+      'collection-jobs',
+      'active'
+    ],
+    queryFn: () => getActiveImportBatchCollectionJob(selectedBatch?.id ?? ''),
+    enabled: Boolean(selectedBatch),
+    refetchInterval: selectedBatch ? 5000 : false
+  });
+  const trackedBulkCollectJobId =
+    bulkCollectJobId ?? activeBulkCollectJobQuery.data?.id ?? null;
+  const bulkCollectJobQuery = useQuery({
+    queryKey: [
+      ...importBatchesQueryKey,
+      selectedBatch?.id ?? 'none',
+      'collection-jobs',
+      trackedBulkCollectJobId ?? 'none'
+    ],
+    queryFn: () =>
+      getImportBatchCollectionJob(
+        selectedBatch?.id ?? '',
+        trackedBulkCollectJobId ?? ''
+      ),
+    enabled: Boolean(selectedBatch && trackedBulkCollectJobId),
+    refetchInterval: bulkCollectPollingEnabled ? 1200 : false
+  });
+  const bulkCollectJob =
+    bulkCollectJobQuery.data ?? activeBulkCollectJobQuery.data ?? null;
+  const isBulkCollectJobRunning = bulkCollectJob
+    ? isImportBatchCollectionJobRunning(bulkCollectJob)
+    : false;
 
   React.useEffect(() => {
     if (initialSelectedBatchId && selectedBatchId !== initialSelectedBatchId) {
@@ -228,11 +259,68 @@ export function useImportsPage(
       current.filter((rowId) =>
         selectedBatchRows.some(
           (candidate) =>
-            candidate.id === rowId && !candidate.createdCollectedTransactionId
+            candidate.id === rowId && isImportedRowCollectable(candidate)
         )
       )
     );
   }, [selectedBatchRows]);
+
+  React.useEffect(() => {
+    if (activeBulkCollectJobQuery.data?.id && !bulkCollectJobId) {
+      setBulkCollectJobId(activeBulkCollectJobQuery.data.id);
+      setBulkCollectPollingEnabled(
+        isImportBatchCollectionJobRunning(activeBulkCollectJobQuery.data)
+      );
+    }
+  }, [activeBulkCollectJobQuery.data, bulkCollectJobId]);
+
+  React.useEffect(() => {
+    if (!bulkCollectJob) {
+      return;
+    }
+
+    if (isImportBatchCollectionJobRunning(bulkCollectJob)) {
+      setBulkCollectPollingEnabled(true);
+      return;
+    }
+
+    setBulkCollectPollingEnabled(false);
+
+    if (notifiedBulkCollectJobId === bulkCollectJob.id) {
+      return;
+    }
+
+    setNotifiedBulkCollectJobId(bulkCollectJob.id);
+    setFeedback({
+      severity:
+        bulkCollectJob.status === 'SUCCEEDED' ||
+        bulkCollectJob.status === 'PARTIAL'
+          ? 'success'
+          : 'error',
+      message: buildBulkCollectFeedbackMessage(bulkCollectJob)
+    });
+    setSelectedRowId(null);
+    setSelectedRowIds([]);
+    void Promise.all([
+      queryClient.invalidateQueries({ queryKey: importBatchesQueryKey }),
+      queryClient.invalidateQueries({
+        queryKey: collectedTransactionsQueryKey
+      }),
+      queryClient.invalidateQueries({
+        queryKey: [
+          ...importBatchesQueryKey,
+          selectedBatch?.id ?? 'none',
+          'collection-jobs',
+          'active'
+        ]
+      })
+    ]);
+  }, [
+    bulkCollectJob,
+    notifiedBulkCollectJobId,
+    queryClient,
+    selectedBatch?.id
+  ]);
 
   React.useEffect(() => {
     if (
@@ -298,9 +386,7 @@ export function useImportsPage(
         }
 
         if (!input.fundingAccountId.trim()) {
-          throw new Error(
-            'IM뱅크 PDF와 연결할 계좌/카드를 선택해 주세요.'
-          );
+          throw new Error('IM뱅크 PDF와 연결할 계좌/카드를 선택해 주세요.');
         }
 
         return createImportBatchFromFile({
@@ -343,7 +429,6 @@ export function useImportsPage(
   });
 
   const selectedRowCanCollect =
-    Boolean(currentPeriod) &&
     Boolean(selectedBatch) &&
     Boolean(selectedRow) &&
     selectedRow?.parseStatus === 'PARSED' &&
@@ -373,7 +458,6 @@ export function useImportsPage(
       ),
     enabled:
       isCollectDrawerOpen &&
-      Boolean(currentPeriod) &&
       Boolean(selectedBatch) &&
       Boolean(selectedRowCanCollect) &&
       Boolean(normalizedCollectRequest.fundingAccountId)
@@ -422,30 +506,27 @@ export function useImportsPage(
     }
   });
   const bulkCollectMutation = useMutation({
-    mutationFn: (input: {
-      importBatchId: string;
-      rowIds: string[];
-      skippedRowCount: number;
-    }) =>
+    mutationFn: (input: { importBatchId: string; rowIds: string[] }) =>
       bulkCollectImportedRows(input.importBatchId, {
         rowIds: input.rowIds,
         fundingAccountId: bulkFundingAccountId
       }),
-    onSuccess: async (result, variables) => {
+    onSuccess: async (result) => {
+      setBulkCollectJobId(result.id);
+      setNotifiedBulkCollectJobId(null);
+      setBulkCollectPollingEnabled(true);
       setFeedback({
-        severity: result.failedCount === 0 ? 'success' : 'error',
-        message: buildBulkCollectFeedbackMessage(result, {
-          skippedRowCount: variables.skippedRowCount
-        })
+        severity: 'success',
+        message: `${result.requestedRowCount}건 일괄 등록 작업을 시작했습니다.`
       });
-      setSelectedRowId(null);
-      setSelectedRowIds([]);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: importBatchesQueryKey }),
-        queryClient.invalidateQueries({
-          queryKey: collectedTransactionsQueryKey
-        })
-      ]);
+      await queryClient.invalidateQueries({
+        queryKey: [
+          ...importBatchesQueryKey,
+          result.importBatchId,
+          'collection-jobs',
+          result.id
+        ]
+      });
     },
     onError: (error) => {
       setFeedback({
@@ -528,11 +609,34 @@ export function useImportsPage(
 
     setFeedback(null);
 
+    const potentialDuplicateTransactionCount =
+      collectPreviewQuery.data?.autoPreparation
+        .potentialDuplicateTransactionCount ?? 0;
+    const request: CollectImportedRowRequest =
+      potentialDuplicateTransactionCount > 0
+        ? {
+            ...normalizedCollectRequest,
+            confirmPotentialDuplicate: false
+          }
+        : normalizedCollectRequest;
+
+    if (potentialDuplicateTransactionCount > 0) {
+      const confirmed = window.confirm(
+        `${selectedRow.title} 행은 같은 거래일·금액·입출금 유형의 기존 거래 ${potentialDuplicateTransactionCount}건과 겹칩니다. 확인 후에도 등록할까요?`
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      request.confirmPotentialDuplicate = true;
+    }
+
     try {
       await collectImportedRowMutation.mutateAsync({
         importBatchId: selectedBatch.id,
         importedRow: selectedRow,
-        request: normalizedCollectRequest
+        request
       });
     } catch {
       // React Query onError already maps the failure into the page feedback area.
@@ -544,10 +648,10 @@ export function useImportsPage(
       return;
     }
 
-    if (!currentPeriod) {
+    if (isBulkCollectJobRunning) {
       setFeedback({
         severity: 'error',
-        message: '현재 열린 운영 기간이 없어 업로드 행을 일괄 등록할 수 없습니다.'
+        message: '이미 일괄 등록 작업이 진행 중입니다. 진행률을 확인해 주세요.'
       });
       return;
     }
@@ -562,19 +666,14 @@ export function useImportsPage(
     }
 
     const hasSelection = selectedRows.length > 0;
-    const targetRows = hasSelection
-      ? selectedCurrentPeriodCollectableRows
-      : currentPeriodCollectableRows;
-    const skippedRowCount = hasSelection
-      ? selectedRows.length - targetRows.length
-      : 0;
+    const targetRows = hasSelection ? selectedCollectableRows : collectableRows;
 
     if (targetRows.length === 0) {
       setFeedback({
         severity: 'error',
         message: hasSelection
-          ? '선택한 행 중 현재 기간에 바로 등록할 수 있는 행이 없습니다.'
-          : '현재 기간에 바로 등록할 수 있는 행이 없습니다.'
+          ? '선택한 행 중 바로 등록할 수 있는 행이 없습니다.'
+          : '바로 등록할 수 있는 행이 없습니다.'
       });
       return;
     }
@@ -584,8 +683,7 @@ export function useImportsPage(
     try {
       await bulkCollectMutation.mutateAsync({
         importBatchId: selectedBatch.id,
-        rowIds: targetRows.map((row) => row.id),
-        skippedRowCount
+        rowIds: targetRows.map((row) => row.id)
       });
     } catch {
       // React Query onError already maps the failure into the page feedback area.
@@ -631,14 +729,16 @@ export function useImportsPage(
       data: collectPreviewQuery.data
     },
     currentPeriod,
-    currentPeriodCollectableRowCount: currentPeriodCollectableRows.length,
+    collectableRowCount: collectableRows.length,
     currentPeriodQuery,
     deleteSelectedBatch,
     deleteSelectedBatchPending: deleteImportBatchMutation.isPending,
     feedback,
     fundingAccounts: fundingAccountsQuery.data ?? [],
     importBatchesQuery,
-    isBulkCollectPending: bulkCollectMutation.isPending,
+    bulkCollectJob,
+    isBulkCollectPending:
+      bulkCollectMutation.isPending || isBulkCollectJobRunning,
     isCollectDrawerOpen,
     isUploadDrawerOpen,
     openUploadDrawer: () => setUploadDrawerOpen(true),
@@ -648,8 +748,7 @@ export function useImportsPage(
     selectRows: setSelectedRowIds,
     selectedBatch,
     selectedBatchRows,
-    selectedCurrentPeriodCollectableRowCount:
-      selectedCurrentPeriodCollectableRows.length,
+    selectedCollectableRowCount: selectedCollectableRows.length,
     selectedRow,
     selectedRowCanCollect,
     selectedRowId,
@@ -678,45 +777,18 @@ function isImportedRowCollectable(row: ImportedRowTableItem) {
   return row.parseStatus === 'PARSED' && !row.createdCollectedTransactionId;
 }
 
-function isImportedRowWithinCurrentPeriod(
-  row: ImportedRowTableItem,
-  currentPeriod: AccountingPeriodItem | null
-) {
-  if (!currentPeriod) {
-    return false;
-  }
-
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(row.occurredOn)) {
-    return false;
-  }
-
-  return (
-    row.occurredOn >= currentPeriod.startDate.slice(0, 10) &&
-    row.occurredOn < currentPeriod.endDate.slice(0, 10)
-  );
-}
-
 function buildBulkCollectFeedbackMessage(
-  result: BulkCollectImportedRowsResponse,
-  input: {
-    skippedRowCount: number;
-  }
+  result: BulkCollectImportedRowsResponse
 ) {
   const firstFailure = result.results.find(
     (candidate) => candidate.status === 'FAILED'
   )?.message;
   const parts = [
-    `${result.requestedRowCount}건 중 ${result.succeededCount}건을 수집 거래로 등록했습니다.`
+    `${result.requestedRowCount}건 중 ${result.processedRowCount}건 처리, ${result.succeededCount}건을 수집 거래로 등록했습니다.`
   ];
 
   if (result.failedCount > 0) {
     parts.push(`실패 ${result.failedCount}건이 남았습니다.`);
-  }
-
-  if (input.skippedRowCount > 0) {
-    parts.push(
-      `선택했지만 현재 기간 등록 대상이 아닌 ${input.skippedRowCount}건은 제외했습니다.`
-    );
   }
 
   if (firstFailure) {
@@ -724,6 +796,10 @@ function buildBulkCollectFeedbackMessage(
   }
 
   return parts.join(' ');
+}
+
+function isImportBatchCollectionJobRunning(job: ImportBatchCollectionJobItem) {
+  return job.status === 'PENDING' || job.status === 'RUNNING';
 }
 
 function buildImportsHelpContext(
@@ -751,9 +827,10 @@ function buildImportsHelpContext(
         {
           title: '막히면 확인',
           items: [
-            '열린 운영 월이 없으면 업로드 행 등록과 자동 판정 결과가 막힙니다.',
+            '현재 열린 운영 월이 없어도 업로드 행 등록은 가능하며, 필요한 월은 등록 시 자동으로 생성됩니다.',
+            '잠금된 마감월 데이터는 저장되지 않으며, 해당 사유를 바로 안내합니다.',
             '자금수단이나 카테고리 선택지가 부족하면 기준 데이터 관리 화면에서 먼저 보완합니다.',
-            '이미 수집 거래로 올린 행은 다시 등록하지 않고 연결된 수집 거래 상태만 추적합니다.'
+            '거래일·금액·입출금 유형이 같은 기존 거래가 있으면 한 번 더 확인한 뒤 등록합니다.'
           ]
         },
         {
@@ -777,8 +854,8 @@ function buildImportsHelpContext(
         }
       ],
       readModelNote: currentPeriodLabel
-        ? `${currentPeriodLabel} 운영 월이 열려 있어 자동 판정 근거를 확인한 뒤 바로 수집 거래로 올릴 수 있습니다.`
-        : '현재 열린 운영 월이 없으면 업로드는 가능하지만 업로드 행 등록과 자동 판정 결과는 막힙니다.'
+        ? `${currentPeriodLabel} 열린 운영 월은 참고 정보이며, 다른 월 거래도 필요한 운영월을 자동 준비한 뒤 등록할 수 있습니다.`
+        : '현재 열린 운영 월이 없어도 업로드 행 등록은 가능하며, 필요한 월은 등록 시 자동으로 준비됩니다.'
     };
   }
 
@@ -813,7 +890,7 @@ function buildImportsHelpContext(
       }
     ],
     readModelNote: currentPeriodLabel
-      ? `${currentPeriodLabel} 운영 월이 열려 있어 배치를 고른 뒤 바로 업로드 행 등록 작업대로 이어갈 수 있습니다.`
-      : '현재 열린 운영 월이 없으면 업로드 자체는 가능하지만, 실제 거래 등록 단계는 제한될 수 있습니다.'
+      ? `${currentPeriodLabel} 열린 운영 월은 참고 정보이며, 배치 작업대에서는 다른 월 거래도 바로 검토하고 등록할 수 있습니다.`
+      : '열린 운영 월이 없어도 업로드 자체와 행 등록 검토는 가능하며, 필요한 월은 등록 시 자동으로 준비됩니다.'
   };
 }

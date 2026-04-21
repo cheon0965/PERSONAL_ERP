@@ -1,15 +1,24 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable
+} from '@nestjs/common';
 import type {
   AuthenticatedUser,
   CollectImportedRowPreview,
   CollectImportedRowRequest,
   CollectImportedRowResponse
 } from '@personal-erp/contracts';
-import { Prisma } from '@prisma/client';
+import {
+  AccountingPeriodEventType,
+  AccountingPeriodStatus,
+  Prisma
+} from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
+import { readWorkspaceActorRef } from '../../common/auth/workspace-actor-ref.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { AccountingPeriodWriteGuardPort } from '../accounting-periods/public';
+import { parseMonthRange } from '../../common/utils/date.util';
 import {
   ImportedRowCollectionPort,
   type ImportedRowCollectionWorkspaceScope,
@@ -46,14 +55,24 @@ type RowCollectionAssessment = {
     name: string;
   } | null;
   sourceFingerprint: string;
+  potentialDuplicateTransactionCount: number;
   preview: CollectImportedRowPreview;
+};
+
+type ResolvedCollectionPeriod = {
+  id: string | null;
+  year: number;
+  month: number;
+  monthLabel: string;
+  startDate: Date;
+  endDate: Date;
+  willCreateOnCollect: boolean;
 };
 
 @Injectable()
 export class ImportedRowCollectionService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly accountingPeriodWriteGuard: AccountingPeriodWriteGuardPort,
     private readonly collectionRepository: ImportedRowCollectionPort
   ) {}
 
@@ -81,20 +100,17 @@ export class ImportedRowCollectionService {
         importedRowId
       );
     const parsedRow = readNormalizedImportedRow(importedRow);
-    const currentPeriod =
-      await this.accountingPeriodWriteGuard.assertCollectingDateAllowed(
-        workspaceScope,
-        parsedRow.occurredOn
-      );
+    const actorRef = readWorkspaceActorRef(workspace);
 
     return this.prisma.$transaction((tx) =>
       this.collectRowInTransaction({
         tx,
         workspace: workspaceScope,
+        actorRef,
         importBatchId,
         importedRowId,
         input,
-        currentPeriodId: currentPeriod.id
+        occurredOnIso: parsedRow.occurredOn
       })
     );
   }
@@ -123,11 +139,11 @@ export class ImportedRowCollectionService {
         importedRowId
       );
     const parsedRow = readNormalizedImportedRow(importedRow);
-    const currentPeriod =
-      await this.accountingPeriodWriteGuard.assertCollectingDateAllowed(
-        workspaceScope,
-        parsedRow.occurredOn
-      );
+    const targetPeriod = await this.resolveTargetCollectionPeriod({
+      client: this.prisma,
+      workspace: workspaceScope,
+      occurredOnIso: parsedRow.occurredOn
+    });
 
     const assessment = await this.evaluateRowCollection({
       client: this.prisma,
@@ -135,7 +151,7 @@ export class ImportedRowCollectionService {
       importBatchId,
       importedRowId,
       input,
-      currentPeriodId: currentPeriod.id
+      targetPeriod
     });
 
     return assessment.preview;
@@ -144,19 +160,31 @@ export class ImportedRowCollectionService {
   private async collectRowInTransaction(input: {
     tx: Prisma.TransactionClient;
     workspace: ImportedRowCollectionWorkspaceScope;
+    actorRef: ReturnType<typeof readWorkspaceActorRef>;
     importBatchId: string;
     importedRowId: string;
     input: CollectImportedRowRequest;
-    currentPeriodId: string;
+    occurredOnIso: string;
   }): Promise<CollectImportedRowResponse> {
+    const targetPeriod =
+      await this.resolveOrCreateTargetCollectionPeriodInTransaction({
+        tx: input.tx,
+        workspace: input.workspace,
+        actorRef: input.actorRef,
+        occurredOnIso: input.occurredOnIso
+      });
     const assessment = await this.evaluateRowCollection({
       client: input.tx,
       workspace: input.workspace,
       importBatchId: input.importBatchId,
       importedRowId: input.importedRowId,
       input: input.input,
-      currentPeriodId: input.currentPeriodId
+      targetPeriod
     });
+    this.assertPotentialDuplicateConfirmation(
+      assessment.potentialDuplicateTransactionCount,
+      input.input.confirmPotentialDuplicate
+    );
     const matchedPlanItem = assessment.preview.autoPreparation
       .allowPlanItemMatch
       ? assessment.matchedPlanItem
@@ -172,7 +200,7 @@ export class ImportedRowCollectionService {
               matchedPlanItemId: matchedPlanItem.id,
               importBatchId: input.importBatchId,
               importedRowId: input.importedRowId,
-              periodId: input.currentPeriodId,
+              periodId: targetPeriod.id,
               ledgerTransactionTypeId: assessment.ledgerTransactionTypeId,
               fundingAccountId: assessment.fundingAccount.id,
               categoryId: assessment.effectiveCategory?.id ?? null,
@@ -190,7 +218,7 @@ export class ImportedRowCollectionService {
             workspace: input.workspace,
             importBatchId: input.importBatchId,
             importedRowId: input.importedRowId,
-            periodId: input.currentPeriodId,
+            periodId: targetPeriod.id,
             matchedPlanItemId,
             ledgerTransactionTypeId: assessment.ledgerTransactionTypeId,
             fundingAccountId: assessment.fundingAccount.id,
@@ -224,7 +252,7 @@ export class ImportedRowCollectionService {
     importBatchId: string;
     importedRowId: string;
     input: CollectImportedRowRequest;
-    currentPeriodId: string;
+    targetPeriod: ResolvedCollectionPeriod;
   }): Promise<RowCollectionAssessment> {
     const row = await this.collectionRepository.readCollectableImportedRow(
       input.client,
@@ -233,15 +261,9 @@ export class ImportedRowCollectionService {
       input.importedRowId
     );
     const normalizedRow = readNormalizedImportedRow(row);
-    const currentCollectingPeriod =
-      await this.collectionRepository.readCurrentCollectingPeriod(
-        input.client,
-        input.workspace,
-        input.currentPeriodId
-      );
     const occurredOn = assertOccurredOnWithinPeriod(
       normalizedRow.occurredOn,
-      currentCollectingPeriod
+      input.targetPeriod
     );
     const fundingAccount = await this.collectionRepository.readFundingAccount(
       input.client,
@@ -254,17 +276,18 @@ export class ImportedRowCollectionService {
         input.workspace,
         input.input.type
       );
-    const matchedPlanItem =
-      await this.collectionRepository.readMatchedPlanItemCandidate(
-        input.client,
-        input.workspace,
-        currentCollectingPeriod.id,
-        normalizedRow.amount,
-        occurredOn,
-        fundingAccount.id,
-        ledgerTransactionTypeId,
-        input.input.categoryId ?? null
-      );
+    const matchedPlanItem = input.targetPeriod.id
+      ? await this.collectionRepository.readMatchedPlanItemCandidate(
+          input.client,
+          input.workspace,
+          input.targetPeriod.id,
+          normalizedRow.amount,
+          occurredOn,
+          fundingAccount.id,
+          ledgerTransactionTypeId,
+          input.input.categoryId ?? null
+        )
+      : null;
     const sourceFingerprint = resolveCollectedSourceFingerprint({
       existingSourceFingerprint: row.sourceFingerprint,
       sourceKind: row.batch.sourceKind,
@@ -276,7 +299,20 @@ export class ImportedRowCollectionService {
       await this.collectionRepository.hasDuplicateSourceFingerprint(
         input.client,
         input.workspace,
-        sourceFingerprint
+        sourceFingerprint,
+        input.importBatchId
+      );
+    const potentialDuplicateTransactionCount =
+      await this.collectionRepository.countPotentialDuplicateTransactions(
+        input.client,
+        input.workspace,
+        occurredOn,
+        normalizedRow.amount,
+        ledgerTransactionTypeId,
+        input.importBatchId,
+        matchedPlanItem?.existingCollectedTransactionId
+          ? [matchedPlanItem.existingCollectedTransactionId]
+          : []
       );
     const autoPreparation = resolveImportedRowAutoPreparation({
       type: input.input.type,
@@ -302,7 +338,10 @@ export class ImportedRowCollectionService {
       effectiveCategoryName: effectiveCategory?.name ?? null,
       nextWorkflowStatus: autoPreparation.nextStatus,
       hasDuplicateSourceFingerprint,
-      allowPlanItemMatch: autoPreparation.allowPlanItemMatch
+      allowPlanItemMatch: autoPreparation.allowPlanItemMatch,
+      targetPeriodMonthLabel: input.targetPeriod.monthLabel,
+      willCreateTargetPeriod: input.targetPeriod.willCreateOnCollect,
+      potentialDuplicateTransactionCount
     });
 
     return {
@@ -313,6 +352,7 @@ export class ImportedRowCollectionService {
       matchedPlanItem,
       effectiveCategory,
       sourceFingerprint,
+      potentialDuplicateTransactionCount,
       preview: buildCollectImportedRowPreview({
         importedRowId: row.id,
         occurredOn,
@@ -327,4 +367,157 @@ export class ImportedRowCollectionService {
       })
     };
   }
+
+  private async resolveTargetCollectionPeriod(input: {
+    client: PrismaClientLike;
+    workspace: ImportedRowCollectionWorkspaceScope;
+    occurredOnIso: string;
+  }): Promise<ResolvedCollectionPeriod> {
+    const occurredOn = parseOccurredOn(input.occurredOnIso);
+    const year = occurredOn.getUTCFullYear();
+    const month = occurredOn.getUTCMonth() + 1;
+    const existingPeriod = await input.client.accountingPeriod.findFirst({
+      where: {
+        tenantId: input.workspace.tenantId,
+        ledgerId: input.workspace.ledgerId,
+        year,
+        month
+      },
+      select: {
+        id: true,
+        year: true,
+        month: true,
+        startDate: true,
+        endDate: true,
+        status: true
+      }
+    });
+
+    if (existingPeriod) {
+      if (existingPeriod.status === AccountingPeriodStatus.LOCKED) {
+        throw new BadRequestException(
+          `${formatYearMonth(existingPeriod.year, existingPeriod.month)} 마감월 데이터이기 때문에 저장할 수 없습니다.`
+        );
+      }
+
+      return {
+        id: existingPeriod.id,
+        year: existingPeriod.year,
+        month: existingPeriod.month,
+        monthLabel: formatYearMonth(existingPeriod.year, existingPeriod.month),
+        startDate: existingPeriod.startDate,
+        endDate: existingPeriod.endDate,
+        willCreateOnCollect: false
+      };
+    }
+
+    const monthLabel = formatYearMonth(year, month);
+    const periodBoundary = parseMonthRange(monthLabel);
+
+    return {
+      id: null,
+      year,
+      month,
+      monthLabel,
+      startDate: periodBoundary.start,
+      endDate: periodBoundary.end,
+      willCreateOnCollect: true
+    };
+  }
+
+  private async resolveOrCreateTargetCollectionPeriodInTransaction(input: {
+    tx: Prisma.TransactionClient;
+    workspace: ImportedRowCollectionWorkspaceScope;
+    actorRef: ReturnType<typeof readWorkspaceActorRef>;
+    occurredOnIso: string;
+  }): Promise<ResolvedCollectionPeriod & { id: string }> {
+    const targetPeriod = await this.resolveTargetCollectionPeriod({
+      client: input.tx,
+      workspace: input.workspace,
+      occurredOnIso: input.occurredOnIso
+    });
+
+    if (targetPeriod.id) {
+      return targetPeriod as ResolvedCollectionPeriod & { id: string };
+    }
+
+    try {
+      const createdPeriod = await input.tx.accountingPeriod.create({
+        data: {
+          tenantId: input.workspace.tenantId,
+          ledgerId: input.workspace.ledgerId,
+          year: targetPeriod.year,
+          month: targetPeriod.month,
+          startDate: targetPeriod.startDate,
+          endDate: targetPeriod.endDate,
+          status: AccountingPeriodStatus.OPEN
+        }
+      });
+
+      await input.tx.periodStatusHistory.create({
+        data: {
+          tenantId: input.workspace.tenantId,
+          ledgerId: input.workspace.ledgerId,
+          periodId: createdPeriod.id,
+          fromStatus: null,
+          toStatus: AccountingPeriodStatus.OPEN,
+          eventType: AccountingPeriodEventType.OPEN,
+          reason: `업로드 배치 거래 등록 자동 생성 (${targetPeriod.monthLabel})`,
+          ...input.actorRef
+        }
+      });
+
+      return {
+        ...targetPeriod,
+        id: createdPeriod.id
+      };
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const latestPeriod = await this.resolveTargetCollectionPeriod({
+          client: input.tx,
+          workspace: input.workspace,
+          occurredOnIso: input.occurredOnIso
+        });
+
+        if (latestPeriod.id) {
+          return latestPeriod as ResolvedCollectionPeriod & { id: string };
+        }
+      }
+
+      throw error;
+    }
+  }
+
+  private assertPotentialDuplicateConfirmation(
+    potentialDuplicateTransactionCount: number,
+    confirmPotentialDuplicate: boolean | undefined
+  ) {
+    if (
+      potentialDuplicateTransactionCount < 1 ||
+      confirmPotentialDuplicate === true
+    ) {
+      return;
+    }
+
+    throw new ConflictException(
+      `같은 거래일·금액·입출금 유형의 기존 거래 ${potentialDuplicateTransactionCount}건이 있어 확인 없이 저장할 수 없습니다. 자동 판정 요약을 확인한 뒤 다시 등록해 주세요.`
+    );
+  }
+}
+
+function parseOccurredOn(occurredOnIso: string) {
+  const occurredOn = new Date(`${occurredOnIso}T00:00:00.000Z`);
+
+  if (Number.isNaN(occurredOn.getTime())) {
+    throw new BadRequestException('거래일이 올바르지 않습니다.');
+  }
+
+  return occurredOn;
+}
+
+function formatYearMonth(year: number, month: number) {
+  return `${year}-${String(month).padStart(2, '0')}`;
 }

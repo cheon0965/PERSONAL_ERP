@@ -59,6 +59,7 @@ export function createAccountSubjectsPrismaMock(
         select?: {
           id?: boolean;
           code?: boolean;
+          subjectKind?: boolean;
         };
       }) => {
         const items = state.accountSubjects.filter((candidate) => {
@@ -82,7 +83,10 @@ export function createAccountSubjectsPrismaMock(
 
         return items.map((candidate) => ({
           ...(args.select?.id ? { id: candidate.id } : {}),
-          ...(args.select?.code ? { code: candidate.code } : {})
+          ...(args.select?.code ? { code: candidate.code } : {}),
+          ...(args.select?.subjectKind
+            ? { subjectKind: candidate.subjectKind }
+            : {})
         }));
       }
     }

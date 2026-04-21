@@ -264,6 +264,38 @@ NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=false
 
 운영에서는 항상 `false`가 권장입니다.
 
+### 로컬 실행 데모: 업로드 배치와 IM뱅크 PDF 확인
+
+아래 순서는 실제 API/DB를 붙인 로컬 데모 기준입니다.
+
+```bash
+npm run db:up
+npm run db:migrate
+npm run db:seed
+npm run dev
+```
+
+1. Web `http://localhost:3000`에서 `demo@example.com` / `Demo1234!`로 로그인합니다.
+2. `/reference-data/funding-accounts`에서 `사업 운영 통장` 또는 `사업용 카드`가 `ACTIVE` 상태인지 확인합니다.
+3. `/imports`에서 `업로드 배치 등록`을 엽니다.
+4. 텍스트 데모는 `직접 붙여넣기`를 고르고 아래처럼 UTF-8 본문을 입력합니다.
+
+```csv
+date,title,amount
+2026-03-12,Coffee beans,19800
+2026-03-13,Fuel refill,84000
+```
+
+5. IM뱅크 PDF 데모는 원본 형식을 `IM뱅크 PDF`로 바꾸고, 활성 계좌/카드를 선택한 뒤 IM뱅크 거래내역 PDF를 첨부합니다. PDF는 10MB 이하, PDF magic bytes/확장자/content-type 검증을 통과해야 하며, 원본 파일 자체는 저장하지 않습니다.
+6. 배치가 생성되면 `/imports/[batchId]` 작업대에서 읽기 완료 행, 등록 가능 행, 연결 완료 행을 확인합니다.
+7. 행별 `등록 준비`는 계획 항목 매칭, 카테고리 보완, 중복 후보를 먼저 보여주고 단건 수집 거래로 승격합니다.
+8. `선택 행 일괄 등록` 또는 `등록 가능 행 일괄 등록`은 백그라운드 Job을 시작하고, 화면에서 처리 건수/성공/실패/진행률을 확인합니다.
+9. 같은 workspace에서 다른 사용자가 이미 업로드 배치 일괄 등록 Job을 실행 중이면 새 일괄 등록과 단건 등록은 충돌 안내로 보호됩니다.
+10. 승격된 거래는 `/transactions`에서 확인하고, 전표 준비 상태면 전표 확정을 이어서 실행합니다.
+
+업로드 배치 일괄 등록은 수집 거래 생성/흡수 단계까지 처리합니다.
+실제 회계 확정은 여전히 `/transactions`의 전표 확정과 `/journal-entries`의 전표 조회에서 확인합니다.
+
 ## 4. env 로딩 우선순위
 
 실행 시 env는 아래 순서로 적용됩니다.

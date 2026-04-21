@@ -4,6 +4,8 @@ import {
   AuditActorType,
   CollectedTransactionStatus,
   FinancialStatementKind,
+  ImportBatchCollectionJobRowStatus,
+  ImportBatchCollectionJobStatus,
   ImportBatchParseStatus,
   ImportedRowParseStatus,
   ImportSourceKind,
@@ -185,6 +187,49 @@ export type RequestTestState = {
     parseStatus: ImportBatchParseStatus;
     uploadedByMembershipId: string;
     uploadedAt: Date;
+  }>;
+  importBatchCollectionJobs: Array<{
+    id: string;
+    tenantId: string;
+    ledgerId: string;
+    importBatchId: string;
+    requestedByMembershipId: string;
+    status: ImportBatchCollectionJobStatus;
+    requestedRowCount: number;
+    processedRowCount: number;
+    succeededCount: number;
+    failedCount: number;
+    requestPayload: Record<string, unknown>;
+    errorMessage: string | null;
+    startedAt: Date | null;
+    finishedAt: Date | null;
+    heartbeatAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+  importBatchCollectionJobRows: Array<{
+    id: string;
+    jobId: string;
+    importedRowId: string;
+    rowNumber: number;
+    status: ImportBatchCollectionJobRowStatus;
+    collectedTransactionId: string | null;
+    message: string | null;
+    startedAt: Date | null;
+    finishedAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+  importBatchCollectionLocks: Array<{
+    id: string;
+    tenantId: string;
+    ledgerId: string;
+    importBatchId: string;
+    jobId: string;
+    lockedByMembershipId: string;
+    expiresAt: Date;
+    createdAt: Date;
+    updatedAt: Date;
   }>;
   importedRows: Array<{
     id: string;

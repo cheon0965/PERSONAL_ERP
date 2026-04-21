@@ -19,6 +19,7 @@ import {
 
 type TransactionFormProps = {
   currentPeriod: AccountingPeriodItem | null;
+  accountingPeriods: AccountingPeriodItem[];
   mode?: TransactionFormMode;
   initialTransaction?: CollectedTransactionDetailItem | null;
   onCompleted?: (
@@ -29,16 +30,23 @@ type TransactionFormProps = {
 
 export function TransactionForm({
   currentPeriod,
+  accountingPeriods,
   mode = 'create',
   initialTransaction = null,
   onCompleted
 }: TransactionFormProps) {
   const formState = useTransactionForm({
     currentPeriod,
+    accountingPeriods,
     mode,
     initialTransaction,
     onCompleted
   });
+  const hasCollectingPeriod = formState.collectingPeriods.length > 0;
+  const periodScopeLabel =
+    formState.collectingPeriods.length > 1
+      ? '열린 운영 기간'
+      : (formState.preferredPeriod?.monthLabel ?? currentPeriod?.monthLabel);
 
   return (
     <form
@@ -62,21 +70,21 @@ export function TransactionForm({
             {formState.feedback.message}
           </Alert>
         ) : null}
-        {!currentPeriod ? (
+        {!hasCollectingPeriod ? (
           <Alert severity="warning" variant="outlined">
             현재 열린 운영 기간이 없습니다. 먼저 `월 운영` 화면에서 운영 기간을
             시작해야 수집 거래를 저장할 수 있습니다.
           </Alert>
         ) : mode === 'edit' ? (
           <Alert severity="info" variant="outlined">
-            {currentPeriod.monthLabel} 운영 기간 안의 미확정 거래만 수정할 수
-            있습니다. 현재 입력 기준 저장 시{' '}
+            {periodScopeLabel} 범위의 미확정 거래만 수정할 수 있습니다. 현재
+            입력 기준 저장 시{' '}
             {resolveStatusLabel(formState.predictedStatus)} 상태로 반영됩니다.
           </Alert>
         ) : (
           <Alert severity="info" variant="outlined">
-            현재 수집 거래는 {currentPeriod.monthLabel} 운영 기간 안에서만
-            등록됩니다. 저장 시 {resolveStatusLabel(formState.predictedStatus)}{' '}
+            현재 수집 거래는 {periodScopeLabel} 범위 안에서 등록됩니다. 저장
+            시 {resolveStatusLabel(formState.predictedStatus)}{' '}
             상태로 반영됩니다.
           </Alert>
         )}
@@ -108,7 +116,9 @@ export function TransactionForm({
         ) : null}
 
         <TransactionFormFields
-          currentPeriod={currentPeriod}
+          currentPeriod={formState.preferredPeriod}
+          hasCollectingPeriod={hasCollectingPeriod}
+          hasMultipleCollectingPeriods={formState.collectingPeriods.length > 1}
           form={formState.form}
           availableFundingAccounts={formState.availableFundingAccounts}
           filteredCategories={formState.filteredCategories}
