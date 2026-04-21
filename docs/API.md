@@ -168,12 +168,14 @@
 - `POST /collected-transactions`
 - `PATCH /collected-transactions/:id`
 - `DELETE /collected-transactions/:id`
+- `POST /collected-transactions/confirm-bulk`
 - `POST /collected-transactions/:id/confirm`
 - `GET /import-batches`
 - `GET /import-batches/:id`
 - `POST /import-batches`
 - `POST /import-batches/files`
 - `DELETE /import-batches/:id`
+- `POST /import-batches/:id/cancel-collection`
 - `POST /import-batches/:id/rows/:rowId/collect-preview`
 - `POST /import-batches/:id/rows/:rowId/collect`
 - `POST /import-batches/:id/rows/collect`
@@ -257,9 +259,9 @@
 - Web `/recurring` -> API `/recurring-rules`
 - Web `/plan-items` -> API `/plan-items`
 - Web `/plan-items/generate` -> API `GET /accounting-periods`, `POST /plan-items/generate`
-- Web `/transactions` -> API `/collected-transactions`
+- Web `/transactions` -> API `/collected-transactions`, `POST /collected-transactions/confirm-bulk`
 - Web `/imports` -> API `/import-batches`, `POST /import-batches/files`
-- Web `/imports/[batchId]` -> API `GET /import-batches/:id`, `DELETE /import-batches/:id`, `POST /import-batches/:id/rows/collect`, `GET /import-batches/:id/collection-jobs/active`, `GET /import-batches/:id/collection-jobs/:jobId`, `POST /import-batches/:id/rows/:rowId/collect-preview`, `POST /import-batches/:id/rows/:rowId/collect`
+- Web `/imports/[batchId]` -> API `GET /import-batches/:id`, `DELETE /import-batches/:id`, `POST /import-batches/:id/cancel-collection`, `POST /import-batches/:id/rows/collect`, `GET /import-batches/:id/collection-jobs/active`, `GET /import-batches/:id/collection-jobs/:jobId`, `POST /import-batches/:id/rows/:rowId/collect-preview`, `POST /import-batches/:id/rows/:rowId/collect`
 - Web `/journal-entries` -> API `/journal-entries`
 - Web `/journal-entries/[entryId]` -> API `GET /journal-entries`, `POST /journal-entries/:id/reverse`, `POST /journal-entries/:id/correct`
 - Web `/financial-statements` -> API `/financial-statements`
@@ -606,6 +608,13 @@
 - 전표 번호는 현재 운영 기간의 원자적 sequence로 할당합니다.
 - 같은 수집 거래 재확정, 전표 번호 경합, 잠금/상태 경합은 `409 Conflict` 또는 `400 Bad Request`로 정리합니다.
 
+### `POST /collected-transactions/confirm-bulk`
+
+- 계약: `BulkConfirmCollectedTransactionsRequest -> BulkConfirmCollectedTransactionsResponse`
+- `transactionIds`를 보내면 선택한 수집 거래 중 `READY_TO_POST` 상태만 전표로 일괄 확정합니다.
+- `transactionIds`를 비우면 현재 작업공간의 `READY_TO_POST` 수집 거래 전체를 거래일/생성일 순서로 확정합니다.
+- 처리 결과는 행별 `CONFIRMED`, `SKIPPED`, `FAILED`와 생성된 전표 번호를 함께 반환하며, 선택 항목 중 전표 준비 상태가 아닌 거래는 `SKIPPED`로 남깁니다.
+
 ### `POST /recurring-rules`
 
 - 계약: `CreateRecurringRuleRequest -> RecurringRuleItem`
@@ -658,6 +667,13 @@
 - 계약: response body 없음 (`204 No Content`)
 - 현재 작업 문맥의 Owner/Manager/Editor만 업로드 배치를 삭제할 수 있습니다.
 - 이미 수집 거래와 연결된 배치는 source trace 보존을 위해 삭제를 막고 `409 Conflict`를 반환합니다.
+
+### `POST /import-batches/:id/cancel-collection`
+
+- 계약: request body 없음 -> `CancelImportBatchCollectionResponse`
+- 업로드 배치 원본과 파싱 행은 유지하고, 해당 배치에서 생성된 미확정 수집 거래만 전체 취소합니다.
+- 취소 가능한 상태는 `COLLECTED`, `REVIEWED`, `READY_TO_POST`이며, 이미 전표 확정 또는 정정 흐름에 들어간 거래가 있으면 `409 Conflict`로 차단합니다.
+- 연결된 계획 항목이 있으면 취소와 함께 `DRAFT`로 되돌리고, 진행 중인 일괄 등록 Job이 있으면 취소할 수 없습니다.
 
 ### `POST /import-batches/:id/rows/:rowId/collect-preview`
 

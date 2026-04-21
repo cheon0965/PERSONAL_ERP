@@ -37,6 +37,7 @@ import {
 } from './transactions-page.filters';
 import { buildJournalEntryFallbackItem } from './transactions-page.shared';
 import {
+  bulkConfirmCollectedTransactions,
   collectedTransactionDetailQueryKey,
   collectedTransactionsQueryKey,
   confirmCollectedTransaction,
@@ -45,6 +46,7 @@ import {
   getCollectedTransactions,
   removeCollectedTransactionItem
 } from './transactions.api';
+import { canConfirmCollectedTransaction } from './transaction-workflow';
 
 type SubmitFeedback = {
   severity: 'success' | 'error';
@@ -68,6 +70,9 @@ export function useTransactionsPage() {
   const [postingStatus, setPostingStatus] = React.useState('');
   const [drawerState, setDrawerState] =
     React.useState<TransactionDrawerState>(null);
+  const [selectedTransactionIds, setSelectedTransactionIds] = React.useState<
+    string[]
+  >([]);
   const [deleteTarget, setDeleteTarget] =
     React.useState<CollectedTransactionItem | null>(null);
 
@@ -128,6 +133,37 @@ export function useTransactionsPage() {
           error instanceof Error
             ? error.message
             : '수집 거래를 전표로 확정하지 못했습니다.'
+      });
+    }
+  });
+
+  const bulkConfirmMutation = useMutation({
+    mutationFn: bulkConfirmCollectedTransactions,
+    onSuccess: async (result) => {
+      setSelectedTransactionIds([]);
+      setFeedback({
+        severity: result.failedCount > 0 ? 'error' : 'success',
+        message:
+          result.failedCount > 0
+            ? `${result.requestedCount}건 중 ${result.succeededCount}건을 확정했고 ${result.failedCount}건은 실패했습니다.`
+            : `${result.succeededCount}건을 전표로 일괄 확정했습니다.`
+      });
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: collectedTransactionsQueryKey
+        }),
+        queryClient.invalidateQueries({ queryKey: journalEntriesQueryKey }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] })
+      ]);
+    },
+    onError: (error) => {
+      setFeedback({
+        severity: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : '수집 거래를 일괄 전표 확정하지 못했습니다.'
       });
     }
   });
@@ -269,6 +305,33 @@ export function useTransactionsPage() {
       }),
     [filteredTransactions, highlightedPlanItemId, highlightedTransactionId]
   );
+  const visibleConfirmableTransactions = React.useMemo(
+    () => visibleTransactions.filter(canConfirmCollectedTransaction),
+    [visibleTransactions]
+  );
+  const selectedTransactions = React.useMemo(
+    () =>
+      visibleTransactions.filter((transaction) =>
+        selectedTransactionIds.includes(transaction.id)
+      ),
+    [selectedTransactionIds, visibleTransactions]
+  );
+  const selectedConfirmableTransactions = React.useMemo(
+    () => selectedTransactions.filter(canConfirmCollectedTransaction),
+    [selectedTransactions]
+  );
+
+  React.useEffect(() => {
+    setSelectedTransactionIds((current) =>
+      current.filter((transactionId) =>
+        visibleTransactions.some(
+          (transaction) =>
+            transaction.id === transactionId &&
+            canConfirmCollectedTransaction(transaction)
+        )
+      )
+    );
+  }, [visibleTransactions]);
 
   function openCreateDrawer() {
     setFeedback(null);
@@ -305,6 +368,36 @@ export function useTransactionsPage() {
     void confirmMutation.mutateAsync(transaction);
   }
 
+  function bulkConfirmTransactions() {
+    const hasSelection = selectedTransactionIds.length > 0;
+    const targetTransactions = hasSelection
+      ? selectedConfirmableTransactions
+      : visibleConfirmableTransactions;
+
+    if (targetTransactions.length === 0) {
+      setFeedback({
+        severity: 'error',
+        message: hasSelection
+          ? '선택한 거래 중 전표 준비 상태가 없습니다.'
+          : '현재 목록에 전표 준비 상태 거래가 없습니다.'
+      });
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `${targetTransactions.length}건의 수집 거래를 전표로 일괄 확정할까요?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setFeedback(null);
+    void bulkConfirmMutation.mutateAsync({
+      transactionIds: targetTransactions.map((transaction) => transaction.id)
+    });
+  }
+
   function confirmDelete() {
     if (!deleteTarget) {
       return;
@@ -333,6 +426,8 @@ export function useTransactionsPage() {
     closeDeleteDialog,
     closeDrawer,
     clearFilters,
+    bulkConfirmPending: bulkConfirmMutation.isPending,
+    bulkConfirmTransactions,
     confirmDelete,
     confirmPending: confirmMutation.isPending,
     confirmTransaction,
@@ -364,11 +459,16 @@ export function useTransactionsPage() {
     openEditDrawer,
     postingStatus,
     referenceDataReadinessQuery,
+    selectedConfirmableTransactionCount: selectedConfirmableTransactions.length,
+    selectedTransactionIds,
+    selectedTransactionsCount: selectedTransactions.length,
     setCategoryName,
     setFundingAccountName,
     setKeyword,
     setPostingStatus,
+    setSelectedTransactionIds,
     transactionsQuery,
+    visibleConfirmableTransactionCount: visibleConfirmableTransactions.length,
     visibleTransactions
   };
 }

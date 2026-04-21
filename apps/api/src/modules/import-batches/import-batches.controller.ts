@@ -19,6 +19,7 @@ import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import type {
   AuthenticatedUser,
   BulkCollectImportedRowsResponse,
+  CancelImportBatchCollectionResponse,
   CollectImportedRowPreview,
   CollectImportedRowResponse,
   ImportBatchCollectionJobItem,
@@ -35,6 +36,7 @@ import {
 } from '../../common/infrastructure/operational/workspace-action.audit';
 import { CollectImportedRowUseCase } from './application/use-cases/collect-imported-row.use-case';
 import { BulkCollectImportedRowsUseCase } from './application/use-cases/bulk-collect-imported-rows.use-case';
+import { CancelImportBatchCollectionUseCase } from './application/use-cases/cancel-import-batch-collection.use-case';
 import { CreateImportBatchFromFileUseCase } from './application/use-cases/create-import-batch-from-file.use-case';
 import { CreateImportBatchUseCase } from './application/use-cases/create-import-batch.use-case';
 import { DeleteImportBatchUseCase } from './application/use-cases/delete-import-batch.use-case';
@@ -66,6 +68,7 @@ export class ImportBatchesController {
     private readonly previewImportedRowCollectionUseCase: PreviewImportedRowCollectionUseCase,
     private readonly collectImportedRowUseCase: CollectImportedRowUseCase,
     private readonly bulkCollectImportedRowsUseCase: BulkCollectImportedRowsUseCase,
+    private readonly cancelImportBatchCollectionUseCase: CancelImportBatchCollectionUseCase,
     private readonly getImportBatchCollectionJobUseCase: GetImportBatchCollectionJobUseCase,
     private readonly getActiveImportBatchCollectionJobUseCase: GetActiveImportBatchCollectionJobUseCase,
     private readonly deleteImportBatchUseCase: DeleteImportBatchUseCase,
@@ -332,6 +335,55 @@ export class ImportBatchesController {
       importBatchId,
       jobId
     );
+  }
+
+  @Post(':id/cancel-collection')
+  async cancelCollection(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') importBatchId: string
+  ): Promise<CancelImportBatchCollectionResponse> {
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      const result = await this.cancelImportBatchCollectionUseCase.execute(
+        user,
+        importBatchId
+      );
+
+      if (!result) {
+        throw new NotFoundException('업로드 배치를 찾을 수 없습니다.');
+      }
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'import_batch.cancel',
+        request,
+        workspace,
+        details: {
+          importBatchId,
+          cancelledTransactionCount: result.cancelledTransactionCount,
+          restoredPlanItemCount: result.restoredPlanItemCount
+        }
+      });
+
+      return result;
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'import_batch.cancel',
+          request,
+          workspace,
+          details: {
+            importBatchId,
+            requiredRoles: readAllowedWorkspaceRoles(
+              'import_batch.cancel'
+            ).join(',')
+          }
+        });
+      }
+
+      throw error;
+    }
   }
 
   @Delete(':id')

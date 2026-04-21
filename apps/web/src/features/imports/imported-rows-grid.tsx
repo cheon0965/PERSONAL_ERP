@@ -2,8 +2,18 @@
 
 import * as React from 'react';
 import type { GridRowSelectionModel } from '@mui/x-data-grid';
-import { Button, Chip, LinearProgress, Stack, Typography } from '@mui/material';
+import {
+  Button,
+  Chip,
+  LinearProgress,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography
+} from '@mui/material';
 import type {
+  BulkCollectImportedRowsRequest,
+  CategoryItem,
   ImportBatchCollectionJobItem,
   ImportBatchItem
 } from '@personal-erp/contracts';
@@ -14,6 +24,12 @@ import {
   type ImportedRowTableItem
 } from './imports.shared';
 
+type BulkCollectForm = {
+  type: '' | NonNullable<BulkCollectImportedRowsRequest['type']>;
+  categoryId: string;
+  memo: string;
+};
+
 export function ImportedRowsGrid({
   selectedBatch,
   rows,
@@ -22,8 +38,11 @@ export function ImportedRowsGrid({
   selectedRowsCount,
   collectableRowCount,
   selectedCollectableRowCount,
+  bulkCollectForm,
+  categories,
   bulkCollectJob,
   bulkCollectPending,
+  onBulkCollectFormChange,
   onSelectedRowIdsChange,
   onPrepareCollect,
   onBulkCollect
@@ -35,8 +54,11 @@ export function ImportedRowsGrid({
   selectedRowsCount: number;
   collectableRowCount: number;
   selectedCollectableRowCount: number;
+  bulkCollectForm: BulkCollectForm;
+  categories: CategoryItem[];
   bulkCollectJob: ImportBatchCollectionJobItem | null;
   bulkCollectPending: boolean;
+  onBulkCollectFormChange: (patch: Partial<BulkCollectForm>) => void;
   onSelectedRowIdsChange: (rowIds: string[]) => void;
   onPrepareCollect: (row: ImportedRowTableItem) => void;
   onBulkCollect: () => void;
@@ -114,6 +136,60 @@ export function ImportedRowsGrid({
       toolbar={
         selectedBatch ? (
           <Stack spacing={1.5}>
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              spacing={1.5}
+              alignItems={{ xs: 'stretch', md: 'center' }}
+            >
+              <TextField
+                select
+                label="일괄 거래유형"
+                size="small"
+                value={bulkCollectForm.type}
+                onChange={(event) => {
+                  onBulkCollectFormChange({
+                    type: event.target.value as typeof bulkCollectForm.type
+                  });
+                }}
+                sx={{ minWidth: { md: 180 } }}
+              >
+                <MenuItem value="">행 방향 자동</MenuItem>
+                <MenuItem value="EXPENSE">지출</MenuItem>
+                <MenuItem value="INCOME">수입</MenuItem>
+                <MenuItem value="TRANSFER">이체</MenuItem>
+                <MenuItem value="REVERSAL">승인취소</MenuItem>
+              </TextField>
+              <TextField
+                select
+                label="일괄 카테고리"
+                size="small"
+                value={bulkCollectForm.categoryId}
+                onChange={(event) => {
+                  onBulkCollectFormChange({
+                    categoryId: event.target.value
+                  });
+                }}
+                sx={{ minWidth: { md: 240 } }}
+              >
+                <MenuItem value="">자동/미지정</MenuItem>
+                {categories.map((category) => (
+                  <MenuItem key={category.id} value={category.id}>
+                    {category.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                label="일괄 메모"
+                size="small"
+                value={bulkCollectForm.memo}
+                onChange={(event) => {
+                  onBulkCollectFormChange({
+                    memo: event.target.value
+                  });
+                }}
+                sx={{ minWidth: { md: 220 }, flex: 1 }}
+              />
+            </Stack>
             <Stack
               direction={{ xs: 'column', md: 'row' }}
               spacing={1.5}
@@ -195,8 +271,9 @@ export function ImportedRowsGrid({
               ) : null}
             </Stack>
             <Typography variant="body2" color="text.secondary">
-              읽기 완료이면서 아직 연결되지 않은 행만 선택할 수 있습니다. 선택
-              체크는 배치 상세 일괄 등록 범위를 고르는 용도로만 사용합니다.
+              읽기 완료이면서 아직 연결되지 않은 행만 선택할 수 있습니다.
+              거래유형을 자동으로 두면 행별 입출금 방향을 따르고, 카테고리를
+              고르면 선택 범위 전체에 같은 분류를 적용합니다.
             </Typography>
           </Stack>
         ) : null

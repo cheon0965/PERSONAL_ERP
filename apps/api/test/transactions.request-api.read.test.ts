@@ -72,6 +72,56 @@ test('GET /collected-transactions returns only the current user collected transa
   }
 });
 
+test('GET /collected-transactions returns more than 100 current ledger rows', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    for (let index = 0; index < 125; index += 1) {
+      const day = String((index % 28) + 1).padStart(2, '0');
+      const createdAt = new Date(
+        `2026-04-${day}T${String(index % 24).padStart(2, '0')}:00:00.000Z`
+      );
+
+      context.state.collectedTransactions.push({
+        id: `ctx-bulk-${index + 1}`,
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: null,
+        ledgerTransactionTypeId: 'ltt-1-expense',
+        fundingAccountId: 'acc-1',
+        categoryId: 'cat-1',
+        matchedPlanItemId: null,
+        importBatchId: 'import-batch-bulk',
+        importedRowId: `imported-row-bulk-${index + 1}`,
+        sourceFingerprint: `bulk-fingerprint-${index + 1}`,
+        title: `Bulk uploaded row ${index + 1}`,
+        occurredOn: new Date(`2026-04-${day}T00:00:00.000Z`),
+        amount: 10_000 + index,
+        status: CollectedTransactionStatus.READY_TO_POST,
+        memo: null,
+        createdAt,
+        updatedAt: createdAt
+      });
+    }
+
+    const response = await context.request('/collected-transactions', {
+      headers: context.authHeaders()
+    });
+
+    const items = response.body as Array<Record<string, unknown>>;
+
+    assert.equal(response.status, 200);
+    assert.equal(items.length, 127);
+    assert.ok(items.some((item) => item.id === 'ctx-bulk-125'));
+    assert.equal(
+      items.some((item) => item.id === 'ctx-seed-3'),
+      false
+    );
+  } finally {
+    await context.close();
+  }
+});
+
 test('GET /collected-transactions keeps corrected transactions visible as CORRECTED instead of CANCELLED', async () => {
   const context = await createRequestTestContext();
 

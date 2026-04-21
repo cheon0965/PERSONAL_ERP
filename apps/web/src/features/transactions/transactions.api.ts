@@ -1,4 +1,6 @@
 import type {
+  BulkConfirmCollectedTransactionsRequest,
+  BulkConfirmCollectedTransactionsResponse,
   CollectedTransactionDetailItem,
   CollectedTransactionItem,
   CreateCollectedTransactionRequest,
@@ -210,6 +212,22 @@ export function confirmCollectedTransaction(
     {},
     fallback
   );
+}
+
+export function bulkConfirmCollectedTransactions(
+  input: BulkConfirmCollectedTransactionsRequest
+) {
+  return postJson<
+    BulkConfirmCollectedTransactionsResponse,
+    BulkConfirmCollectedTransactionsRequest
+  >('/collected-transactions/confirm-bulk', input, {
+    requestedCount: input.transactionIds?.length ?? 0,
+    processedCount: 0,
+    succeededCount: 0,
+    skippedCount: 0,
+    failedCount: 0,
+    results: []
+  });
 }
 
 export function buildCollectedTransactionFallbackItem(

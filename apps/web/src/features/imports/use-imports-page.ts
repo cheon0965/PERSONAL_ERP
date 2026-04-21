@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
+  BulkCollectImportedRowsRequest,
   BulkCollectImportedRowsResponse,
   CollectImportedRowRequest,
   CreateImportBatchRequest,
@@ -29,6 +30,7 @@ import {
   buildImportedCollectedFallbackPreview,
   buildImportedCollectedFallbackResponse,
   bulkCollectImportedRows,
+  cancelImportBatchCollection,
   collectImportedRow,
   createImportBatch,
   createImportBatchFromFile,
@@ -67,6 +69,18 @@ const defaultCollectForm: CollectImportedRowRequest = {
   memo: ''
 };
 
+type BulkCollectFormState = {
+  type: '' | NonNullable<BulkCollectImportedRowsRequest['type']>;
+  categoryId: string;
+  memo: string;
+};
+
+const defaultBulkCollectForm: BulkCollectFormState = {
+  type: '',
+  categoryId: '',
+  memo: ''
+};
+
 export function useImportsPage(
   initialSelectedBatchId: string | null = null,
   mode: 'list' | 'detail' = 'list'
@@ -92,6 +106,8 @@ export function useImportsPage(
     React.useState<ImportUploadFormState>(defaultUploadForm);
   const [collectForm, setCollectForm] =
     React.useState<CollectImportedRowRequest>(defaultCollectForm);
+  const [bulkCollectForm, setBulkCollectForm] =
+    React.useState<BulkCollectFormState>(defaultBulkCollectForm);
 
   const currentPeriodQuery = useQuery({
     queryKey: currentAccountingPeriodQueryKey,
@@ -506,11 +522,10 @@ export function useImportsPage(
     }
   });
   const bulkCollectMutation = useMutation({
-    mutationFn: (input: { importBatchId: string; rowIds: string[] }) =>
-      bulkCollectImportedRows(input.importBatchId, {
-        rowIds: input.rowIds,
-        fundingAccountId: bulkFundingAccountId
-      }),
+    mutationFn: (input: {
+      importBatchId: string;
+      request: BulkCollectImportedRowsRequest;
+    }) => bulkCollectImportedRows(input.importBatchId, input.request),
     onSuccess: async (result) => {
       setBulkCollectJobId(result.id);
       setNotifiedBulkCollectJobId(null);
@@ -561,6 +576,35 @@ export function useImportsPage(
       });
     }
   });
+  const cancelImportBatchCollectionMutation = useMutation({
+    mutationFn: (batch: ImportBatchItem) =>
+      cancelImportBatchCollection(batch.id),
+    onSuccess: async (result, batch) => {
+      setFeedback({
+        severity: 'success',
+        message: `${batch.fileName} 배치의 수집 거래 ${result.cancelledTransactionCount}건을 취소했습니다. 원계획 ${result.restoredPlanItemCount}건을 초안으로 되돌렸습니다.`
+      });
+      setCollectDrawerOpen(false);
+      setSelectedRowId(null);
+      setSelectedRowIds([]);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: importBatchesQueryKey }),
+        queryClient.invalidateQueries({
+          queryKey: collectedTransactionsQueryKey
+        }),
+        queryClient.invalidateQueries({ queryKey: ['plan-items'] })
+      ]);
+    },
+    onError: (error) => {
+      setFeedback({
+        severity: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : '업로드 배치 등록을 취소하지 못했습니다.'
+      });
+    }
+  });
 
   function handleSelectBatch(batch: ImportBatchItem) {
     setSelectedBatchId(batch.id);
@@ -587,6 +631,13 @@ export function useImportsPage(
 
   function updateCollectForm(patch: Partial<CollectImportedRowRequest>) {
     setCollectForm((current) => ({
+      ...current,
+      ...patch
+    }));
+  }
+
+  function updateBulkCollectForm(patch: Partial<BulkCollectFormState>) {
+    setBulkCollectForm((current) => ({
       ...current,
       ...patch
     }));
@@ -681,9 +732,18 @@ export function useImportsPage(
     setFeedback(null);
 
     try {
+      const categoryId = normalizeOptionalValue(bulkCollectForm.categoryId);
+      const memo = normalizeOptionalValue(bulkCollectForm.memo);
+
       await bulkCollectMutation.mutateAsync({
         importBatchId: selectedBatch.id,
-        rowIds: targetRows.map((row) => row.id)
+        request: {
+          rowIds: targetRows.map((row) => row.id),
+          ...(bulkCollectForm.type ? { type: bulkCollectForm.type } : {}),
+          fundingAccountId: bulkFundingAccountId,
+          ...(categoryId ? { categoryId } : {}),
+          ...(memo ? { memo } : {})
+        }
       });
     } catch {
       // React Query onError already maps the failure into the page feedback area.
@@ -713,13 +773,40 @@ export function useImportsPage(
     }
   }
 
+  async function cancelSelectedBatchCollection() {
+    if (!selectedBatch) {
+      return false;
+    }
+
+    const confirmed = window.confirm(
+      `${selectedBatch.fileName} 배치에서 등록된 수집 거래를 전체 취소할까요? 전표 확정 전 거래만 취소할 수 있고, 업로드 원본 행은 보존됩니다.`
+    );
+
+    if (!confirmed) {
+      return false;
+    }
+
+    setFeedback(null);
+
+    try {
+      await cancelImportBatchCollectionMutation.mutateAsync(selectedBatch);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   return {
     batches,
+    bulkCollectForm,
     canSubmitCollect:
       Boolean(selectedBatch) &&
       selectedRowCanCollect &&
       normalizedCollectRequest.fundingAccountId.length > 0,
     categories: categoriesQuery.data ?? [],
+    cancelSelectedBatchCollection,
+    cancelSelectedBatchCollectionPending:
+      cancelImportBatchCollectionMutation.isPending,
     closeCollectDrawer: () => setCollectDrawerOpen(false),
     closeUploadDrawer: () => setUploadDrawerOpen(false),
     collectForm,
@@ -760,6 +847,7 @@ export function useImportsPage(
     submitUpload,
     submitUploadPending: createImportBatchMutation.isPending,
     updateCollectForm,
+    updateBulkCollectForm,
     updateUploadForm,
     uploadFundingAccounts,
     uploadForm

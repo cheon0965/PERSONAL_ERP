@@ -135,7 +135,11 @@ export function ImportsPage({
             collectableRowCount={collectableRowCount}
             collectedRowCount={collectedRowCount}
             selectedBatchWorkbenchHref={selectedBatchWorkbenchHref}
+            cancelSelectedBatchPending={
+              page.cancelSelectedBatchCollectionPending
+            }
             deleteSelectedBatchPending={page.deleteSelectedBatchPending}
+            onCancelSelectedBatch={page.cancelSelectedBatchCollection}
             onDeleteSelectedBatch={handleDeleteSelectedBatch}
           />
         </Grid>
@@ -163,8 +167,11 @@ export function ImportsPage({
           selectedRowsCount={page.selectedRowsCount}
           collectableRowCount={page.collectableRowCount}
           selectedCollectableRowCount={page.selectedCollectableRowCount}
+          bulkCollectForm={page.bulkCollectForm}
+          categories={page.categories}
           bulkCollectJob={page.bulkCollectJob}
           bulkCollectPending={page.isBulkCollectPending}
+          onBulkCollectFormChange={page.updateBulkCollectForm}
           onSelectedRowIdsChange={page.selectRows}
           onPrepareCollect={page.prepareCollectRow}
           onBulkCollect={page.submitBulkCollect}
@@ -216,7 +223,9 @@ function ImportsSelectionSummaryCard({
   collectableRowCount,
   collectedRowCount,
   selectedBatchWorkbenchHref,
+  cancelSelectedBatchPending,
   deleteSelectedBatchPending,
+  onCancelSelectedBatch,
   onDeleteSelectedBatch
 }: {
   isDetailMode: boolean;
@@ -226,7 +235,9 @@ function ImportsSelectionSummaryCard({
   collectableRowCount: number;
   collectedRowCount: number;
   selectedBatchWorkbenchHref: string | null;
+  cancelSelectedBatchPending: boolean;
   deleteSelectedBatchPending: boolean;
+  onCancelSelectedBatch: () => void;
   onDeleteSelectedBatch: () => void;
 }) {
   return (
@@ -293,16 +304,30 @@ function ImportsSelectionSummaryCard({
               alignItems={{ xs: 'flex-start', sm: 'center' }}
             >
               <Typography variant="body2" color="text.secondary">
-                배치 삭제는 연결된 수집 거래가 없는 경우에만 허용됩니다.
+                등록 취소는 전표 확정 전 연결 거래만 되돌리고 원본 행을
+                보존합니다. 배치 삭제는 연결된 수집 거래가 없는 경우에만
+                허용됩니다.
               </Typography>
-              <Button
-                color="error"
-                variant="outlined"
-                onClick={onDeleteSelectedBatch}
-                disabled={deleteSelectedBatchPending}
-              >
-                배치 삭제
-              </Button>
+              <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                <Button
+                  color="warning"
+                  variant="outlined"
+                  onClick={onCancelSelectedBatch}
+                  disabled={
+                    cancelSelectedBatchPending || collectedRowCount === 0
+                  }
+                >
+                  등록 전체 취소
+                </Button>
+                <Button
+                  color="error"
+                  variant="outlined"
+                  onClick={onDeleteSelectedBatch}
+                  disabled={deleteSelectedBatchPending}
+                >
+                  배치 삭제
+                </Button>
+              </Stack>
             </Stack>
           ) : null}
         </Stack>

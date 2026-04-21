@@ -204,6 +204,170 @@ test('POST /collected-transactions/:id/confirm creates a journal entry and marks
   }
 });
 
+test('POST /collected-transactions/confirm-bulk confirms selected ready transactions and skips non-ready rows', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push({
+      id: 'period-open-confirm-bulk',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 3,
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.OPEN,
+      openedAt: new Date('2026-03-01T00:00:00.000Z'),
+      lockedAt: null,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
+
+    context.state.collectedTransactions.push(
+      {
+        id: 'ctx-confirm-bulk-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-open-confirm-bulk',
+        ledgerTransactionTypeId: 'ltt-1-expense',
+        fundingAccountId: 'acc-1',
+        categoryId: 'cat-1',
+        matchedPlanItemId: null,
+        importBatchId: 'import-batch-bulk-confirm',
+        importedRowId: null,
+        sourceFingerprint: null,
+        title: 'Bulk fuel refill',
+        occurredOn: new Date('2026-03-03T00:00:00.000Z'),
+        amount: 84_000,
+        status: CollectedTransactionStatus.READY_TO_POST,
+        memo: null,
+        createdAt: new Date('2026-03-03T08:00:00.000Z'),
+        updatedAt: new Date('2026-03-03T08:00:00.000Z')
+      },
+      {
+        id: 'ctx-confirm-bulk-2',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-open-confirm-bulk',
+        ledgerTransactionTypeId: 'ltt-1-expense',
+        fundingAccountId: 'acc-1',
+        categoryId: 'cat-1',
+        matchedPlanItemId: null,
+        importBatchId: 'import-batch-bulk-confirm',
+        importedRowId: null,
+        sourceFingerprint: null,
+        title: 'Bulk supplies',
+        occurredOn: new Date('2026-03-04T00:00:00.000Z'),
+        amount: 42_000,
+        status: CollectedTransactionStatus.READY_TO_POST,
+        memo: null,
+        createdAt: new Date('2026-03-04T08:00:00.000Z'),
+        updatedAt: new Date('2026-03-04T08:00:00.000Z')
+      },
+      {
+        id: 'ctx-confirm-bulk-reviewed',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        periodId: 'period-open-confirm-bulk',
+        ledgerTransactionTypeId: 'ltt-1-expense',
+        fundingAccountId: 'acc-1',
+        categoryId: null,
+        matchedPlanItemId: null,
+        importBatchId: 'import-batch-bulk-confirm',
+        importedRowId: null,
+        sourceFingerprint: null,
+        title: 'Bulk needs review',
+        occurredOn: new Date('2026-03-05T00:00:00.000Z'),
+        amount: 12_000,
+        status: CollectedTransactionStatus.REVIEWED,
+        memo: null,
+        createdAt: new Date('2026-03-05T08:00:00.000Z'),
+        updatedAt: new Date('2026-03-05T08:00:00.000Z')
+      }
+    );
+
+    const response = await context.request(
+      '/collected-transactions/confirm-bulk',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          transactionIds: [
+            'ctx-confirm-bulk-1',
+            'ctx-confirm-bulk-2',
+            'ctx-confirm-bulk-reviewed'
+          ]
+        }
+      }
+    );
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body, {
+      requestedCount: 3,
+      processedCount: 3,
+      succeededCount: 2,
+      skippedCount: 1,
+      failedCount: 0,
+      results: [
+        {
+          collectedTransactionId: 'ctx-confirm-bulk-1',
+          status: 'CONFIRMED',
+          journalEntryId: 'je-1',
+          journalEntryNumber: '202603-0001',
+          message: '202603-0001 전표를 생성했습니다.'
+        },
+        {
+          collectedTransactionId: 'ctx-confirm-bulk-2',
+          status: 'CONFIRMED',
+          journalEntryId: 'je-2',
+          journalEntryNumber: '202603-0002',
+          message: '202603-0002 전표를 생성했습니다.'
+        },
+        {
+          collectedTransactionId: 'ctx-confirm-bulk-reviewed',
+          status: 'SKIPPED',
+          journalEntryId: null,
+          journalEntryNumber: null,
+          message:
+            '전표 준비 상태가 아니거나 현재 작업공간의 수집 거래가 아닙니다.'
+        }
+      ]
+    });
+    assert.equal(
+      context.state.collectedTransactions.find(
+        (candidate) => candidate.id === 'ctx-confirm-bulk-1'
+      )?.status,
+      CollectedTransactionStatus.POSTED
+    );
+    assert.equal(
+      context.state.collectedTransactions.find(
+        (candidate) => candidate.id === 'ctx-confirm-bulk-2'
+      )?.status,
+      CollectedTransactionStatus.POSTED
+    );
+    assert.equal(
+      context.state.collectedTransactions.find(
+        (candidate) => candidate.id === 'ctx-confirm-bulk-reviewed'
+      )?.status,
+      CollectedTransactionStatus.REVIEWED
+    );
+    assert.ok(
+      context.securityEvents.some(
+        (candidate) =>
+          candidate.level === 'log' &&
+          candidate.event === 'audit.action_succeeded' &&
+          candidate.details.requestId ===
+            response.headers.get('x-request-id') &&
+          candidate.details.action === 'collected_transaction.confirm_bulk' &&
+          candidate.details.requestedCount === 3 &&
+          candidate.details.succeededCount === 2
+      )
+    );
+  } finally {
+    await context.close();
+  }
+});
+
 test('POST /collected-transactions/:id/confirm uses the allocated journal sequence instead of recounting existing entries', async () => {
   const context = await createRequestTestContext();
 

@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type {
+  BulkConfirmCollectedTransactionsResponse,
   CollectedTransactionDetailItem,
   CollectedTransactionItem,
   JournalEntryItem
@@ -42,7 +43,9 @@ import { GetCollectedTransactionDetailUseCase } from './application/use-cases/ge
 import { CreateCollectedTransactionUseCase } from './application/use-cases/create-collected-transaction.use-case';
 import { ListCollectedTransactionsUseCase } from './application/use-cases/list-collected-transactions.use-case';
 import { UpdateCollectedTransactionUseCase } from './application/use-cases/update-collected-transaction.use-case';
+import { BulkConfirmCollectedTransactionsUseCase } from './bulk-confirm-collected-transactions.use-case';
 import { ConfirmCollectedTransactionUseCase } from './confirm-collected-transaction.use-case';
+import { BulkConfirmCollectedTransactionsRequestDto } from './dto/bulk-confirm-collected-transactions.dto';
 import { CreateCollectedTransactionRequestDto } from './dto/create-collected-transaction.dto';
 import { UpdateCollectedTransactionRequestDto } from './dto/update-collected-transaction.dto';
 import { MissingOwnedCollectedTransactionReferenceError } from './domain/collected-transaction-policy';
@@ -58,6 +61,7 @@ export class CollectedTransactionsController {
     private readonly updateCollectedTransactionUseCase: UpdateCollectedTransactionUseCase,
     private readonly deleteCollectedTransactionUseCase: DeleteCollectedTransactionUseCase,
     private readonly confirmCollectedTransactionUseCase: ConfirmCollectedTransactionUseCase,
+    private readonly bulkConfirmCollectedTransactionsUseCase: BulkConfirmCollectedTransactionsUseCase,
     private readonly accountingPeriodWriteGuard: AccountingPeriodWriteGuardPort,
     private readonly securityEvents: SecurityEventLogger
   ) {}
@@ -326,6 +330,52 @@ export class CollectedTransactionsController {
             collectedTransactionId,
             requiredRoles: readAllowedWorkspaceRoles(
               'collected_transaction.delete'
+            ).join(',')
+          }
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  @Post('confirm-bulk')
+  @HttpCode(HttpStatus.OK)
+  async confirmBulk(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: BulkConfirmCollectedTransactionsRequestDto
+  ): Promise<BulkConfirmCollectedTransactionsResponse> {
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      const result = await this.bulkConfirmCollectedTransactionsUseCase.execute(
+        user,
+        dto
+      );
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'collected_transaction.confirm_bulk',
+        request,
+        workspace,
+        details: {
+          requestedCount: result.requestedCount,
+          succeededCount: result.succeededCount,
+          skippedCount: result.skippedCount,
+          failedCount: result.failedCount
+        }
+      });
+
+      return result;
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'collected_transaction.confirm_bulk',
+          request,
+          workspace,
+          details: {
+            requiredRoles: readAllowedWorkspaceRoles(
+              'collected_transaction.confirm'
             ).join(',')
           }
         });

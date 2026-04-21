@@ -80,8 +80,7 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
         ledgerId: workspace.ledgerId
       },
       select: buildCollectedTransactionSelect(),
-      orderBy: [{ occurredOn: 'desc' }, { createdAt: 'desc' }],
-      take: 100
+      orderBy: [{ occurredOn: 'desc' }, { createdAt: 'desc' }]
     });
 
     return transactions.map(mapCollectedTransactionRecordToStoredTransaction);

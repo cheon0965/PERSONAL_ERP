@@ -454,9 +454,11 @@ export function createCollectedTransactionReadMethods(
         matchedPlanItemId?: {
           not?: null;
         };
-        status?: {
-          in?: CollectedTransactionStatus[];
-        };
+        status?:
+          | CollectedTransactionStatus
+          | {
+              in?: CollectedTransactionStatus[];
+            };
       };
       select?: {
         id?: boolean;
@@ -531,9 +533,13 @@ export function createCollectedTransactionReadMethods(
         const matchesMatchedPlanItem =
           args.where?.matchedPlanItemId?.not !== null ||
           candidate.matchedPlanItemId !== null;
+        const statusFilter = args.where?.status;
         const matchesStatus =
-          !args.where?.status?.in ||
-          args.where.status.in.includes(candidate.status);
+          statusFilter === undefined
+            ? true
+            : typeof statusFilter === 'string'
+              ? candidate.status === statusFilter
+              : !statusFilter.in || statusFilter.in.includes(candidate.status);
 
         return (
           matchesId &&
@@ -551,7 +557,27 @@ export function createCollectedTransactionReadMethods(
         );
       });
 
-      items = sortCollectedTransactions(items);
+      items = args.orderBy
+        ? [...items].sort((left, right) => {
+            for (const order of args.orderBy ?? []) {
+              const direction = order.occurredOn ?? order.createdAt;
+              const leftValue = order.occurredOn
+                ? left.occurredOn.getTime()
+                : left.createdAt.getTime();
+              const rightValue = order.occurredOn
+                ? right.occurredOn.getTime()
+                : right.createdAt.getTime();
+
+              if (leftValue !== rightValue) {
+                return direction === 'asc'
+                  ? leftValue - rightValue
+                  : rightValue - leftValue;
+              }
+            }
+
+            return 0;
+          })
+        : sortCollectedTransactions(items);
 
       if (args.take !== undefined) {
         items = items.slice(0, args.take);

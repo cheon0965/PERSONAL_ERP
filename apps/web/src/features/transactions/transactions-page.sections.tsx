@@ -14,7 +14,7 @@ import type {
   CollectedTransactionItem,
   JournalEntryItem
 } from '@personal-erp/contracts';
-import type { GridColDef } from '@mui/x-data-grid';
+import type { GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
 import { formatWon } from '@/shared/lib/format';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
@@ -40,15 +40,22 @@ export function TransactionsTableSection({
   fundingAccountName,
   categoryName,
   postingStatus,
+  selectedTransactionIds,
+  selectedTransactionsCount,
+  selectedConfirmableTransactionCount,
+  visibleConfirmableTransactionCount,
   fundingAccountOptions,
   categoryOptions,
   confirmPending,
+  bulkConfirmPending,
   confirmingTransactionId,
   onKeywordChange,
   onFundingAccountChange,
   onCategoryChange,
   onPostingStatusChange,
+  onSelectedTransactionIdsChange,
   onClearFilters,
+  onBulkConfirm,
   onConfirm,
   onEdit,
   onDelete
@@ -61,15 +68,22 @@ export function TransactionsTableSection({
   fundingAccountName: string;
   categoryName: string;
   postingStatus: string;
+  selectedTransactionIds: string[];
+  selectedTransactionsCount: number;
+  selectedConfirmableTransactionCount: number;
+  visibleConfirmableTransactionCount: number;
   fundingAccountOptions: string[];
   categoryOptions: string[];
   confirmPending: boolean;
+  bulkConfirmPending: boolean;
   confirmingTransactionId: string | undefined;
   onKeywordChange: (value: string) => void;
   onFundingAccountChange: (value: string) => void;
   onCategoryChange: (value: string) => void;
   onPostingStatusChange: (value: string) => void;
+  onSelectedTransactionIdsChange: (value: string[]) => void;
   onClearFilters: () => void;
+  onBulkConfirm: () => void;
   onConfirm: (transaction: CollectedTransactionItem) => void;
   onEdit: (transaction: CollectedTransactionItem) => void;
   onDelete: (transaction: CollectedTransactionItem) => void;
@@ -81,6 +95,21 @@ export function TransactionsTableSection({
     postingStatus
   ].filter((value) => value.trim().length > 0).length;
   const hasCollectingPeriod = collectingPeriods.length > 0;
+  const rowSelectionModel = React.useMemo<GridRowSelectionModel>(
+    () => ({
+      type: 'include',
+      ids: new Set(selectedTransactionIds)
+    }),
+    [selectedTransactionIds]
+  );
+  const bulkConfirmCount =
+    selectedTransactionsCount > 0
+      ? selectedConfirmableTransactionCount
+      : visibleConfirmableTransactionCount;
+  const bulkConfirmLabel =
+    selectedTransactionsCount > 0
+      ? `선택 전표 확정 (${bulkConfirmCount}건)`
+      : `전표 준비 일괄 확정 (${bulkConfirmCount}건)`;
   const periodScopeLabel =
     collectingPeriods.length > 1
       ? '열린 운영 월'
@@ -248,6 +277,16 @@ export function TransactionsTableSection({
     ]
   );
 
+  function handleRowSelectionModelChange(model: GridRowSelectionModel) {
+    if (model.type === 'exclude') {
+      return;
+    }
+
+    onSelectedTransactionIdsChange(
+      [...model.ids].map((transactionId) => String(transactionId))
+    );
+  }
+
   return (
     <DataTableCard
       title="수집 거래 목록"
@@ -303,6 +342,18 @@ export function TransactionsTableSection({
                     variant="outlined"
                   />
                 ) : null}
+                <Chip
+                  label={`전표 준비 ${visibleConfirmableTransactionCount}건`}
+                  size="small"
+                  color="success"
+                  variant="outlined"
+                />
+                <Chip
+                  label={`선택 ${selectedTransactionsCount}건`}
+                  size="small"
+                  color={selectedTransactionsCount > 0 ? 'warning' : 'default'}
+                  variant="outlined"
+                />
               </Stack>
               <Typography variant="body2" color="text.secondary">
                 {hasCollectingPeriod
@@ -324,6 +375,16 @@ export function TransactionsTableSection({
                   필터 초기화
                 </Button>
               ) : null}
+              <Button
+                size="small"
+                variant="contained"
+                disabled={
+                  bulkConfirmPending || confirmPending || bulkConfirmCount === 0
+                }
+                onClick={onBulkConfirm}
+              >
+                {bulkConfirmLabel}
+              </Button>
             </Stack>
           </Stack>
 
@@ -401,6 +462,10 @@ export function TransactionsTableSection({
       }
       rows={hasCollectingPeriod ? rows : []}
       columns={columns}
+      checkboxSelection
+      rowSelectionModel={rowSelectionModel}
+      onRowSelectionModelChange={handleRowSelectionModelChange}
+      isRowSelectable={(params) => canConfirmCollectedTransaction(params.row)}
     />
   );
 }
