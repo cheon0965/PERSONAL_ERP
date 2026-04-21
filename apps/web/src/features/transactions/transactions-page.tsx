@@ -116,15 +116,26 @@ export function TransactionsPage() {
         fundingAccountName={page.fundingAccountName}
         categoryName={page.categoryName}
         postingStatus={page.postingStatus}
+        selectedTransactionIds={page.selectedTransactionIds}
+        selectedTransactionsCount={page.selectedTransactionsCount}
+        selectedConfirmableTransactionCount={
+          page.selectedConfirmableTransactionCount
+        }
+        visibleConfirmableTransactionCount={
+          page.visibleConfirmableTransactionCount
+        }
         fundingAccountOptions={page.fundingAccountOptions}
         categoryOptions={page.categoryOptions}
         confirmPending={page.confirmPending}
+        bulkConfirmPending={page.bulkConfirmPending}
         confirmingTransactionId={page.confirmingTransactionId}
         onKeywordChange={page.setKeyword}
         onFundingAccountChange={page.setFundingAccountName}
         onCategoryChange={page.setCategoryName}
         onPostingStatusChange={page.setPostingStatus}
+        onSelectedTransactionIdsChange={page.setSelectedTransactionIds}
         onClearFilters={page.clearFilters}
+        onBulkConfirm={page.bulkConfirmTransactions}
         onConfirm={page.confirmTransaction}
         onEdit={page.openEditDrawer}
         onDelete={page.openDeleteDialog}

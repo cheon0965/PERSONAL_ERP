@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PrismaService } from '../../common/prisma/prisma.service';
 import { AccountingPeriodsModule } from '../accounting-periods/public';
 import { ReferenceOwnershipPort } from './application/ports/reference-ownership.port';
 import { CollectedTransactionStorePort } from './application/ports/collected-transaction-store.port';
@@ -8,6 +9,7 @@ import { GetCollectedTransactionDetailUseCase } from './application/use-cases/ge
 import { CreateCollectedTransactionUseCase } from './application/use-cases/create-collected-transaction.use-case';
 import { ListCollectedTransactionsUseCase } from './application/use-cases/list-collected-transactions.use-case';
 import { UpdateCollectedTransactionUseCase } from './application/use-cases/update-collected-transaction.use-case';
+import { BulkConfirmCollectedTransactionsUseCase } from './bulk-confirm-collected-transactions.use-case';
 import { ConfirmCollectedTransactionUseCase } from './confirm-collected-transaction.use-case';
 import { PrismaReferenceOwnershipAdapter } from './infrastructure/prisma/prisma-reference-ownership.adapter';
 import { PrismaCollectedTransactionStoreAdapter } from './infrastructure/prisma/prisma-collected-transaction-store.adapter';
@@ -81,6 +83,14 @@ import { CollectedTransactionsController } from './collected-transactions.contro
         confirmStore: ConfirmCollectedTransactionStorePort
       ) => new ConfirmCollectedTransactionUseCase(confirmStore),
       inject: [ConfirmCollectedTransactionStorePort]
+    },
+    {
+      provide: BulkConfirmCollectedTransactionsUseCase,
+      useFactory: (
+        prisma: PrismaService,
+        confirmUseCase: ConfirmCollectedTransactionUseCase
+      ) => new BulkConfirmCollectedTransactionsUseCase(prisma, confirmUseCase),
+      inject: [PrismaService, ConfirmCollectedTransactionUseCase]
     }
   ]
 })

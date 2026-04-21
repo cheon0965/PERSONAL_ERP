@@ -486,9 +486,10 @@ export function createCollectedTransactionWriteMethods(
     },
     deleteMany: async (args: {
       where?: {
-        id?: string;
+        id?: string | { in?: string[] };
         tenantId?: string;
         ledgerId?: string;
+        importBatchId?: string | null;
         status?: {
           in?: CollectedTransactionStatus[];
         };
@@ -497,11 +498,18 @@ export function createCollectedTransactionWriteMethods(
       const beforeCount = state.collectedTransactions.length;
       state.collectedTransactions = state.collectedTransactions.filter(
         (candidate) => {
-          const matchesId = !args.where?.id || candidate.id === args.where.id;
+          const matchesId =
+            !args.where?.id ||
+            (typeof args.where.id === 'string'
+              ? candidate.id === args.where.id
+              : !args.where.id.in || args.where.id.in.includes(candidate.id));
           const matchesTenant =
             !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
           const matchesLedger =
             !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesImportBatch =
+            args.where?.importBatchId === undefined ||
+            candidate.importBatchId === args.where.importBatchId;
           const matchesStatus =
             !args.where?.status?.in ||
             args.where.status.in.includes(candidate.status);
@@ -510,6 +518,7 @@ export function createCollectedTransactionWriteMethods(
             matchesId &&
             matchesTenant &&
             matchesLedger &&
+            matchesImportBatch &&
             matchesStatus
           );
         }

@@ -4,12 +4,15 @@ import type { ImportBatchCollectionJobItem } from '@personal-erp/contracts';
 import {
   CollectedTransactionStatus,
   ImportBatchParseStatus,
-  ImportSourceKind
+  ImportSourceKind,
+  PlanItemStatus,
+  TransactionType
 } from '@prisma/client';
 import { createRequestTestContext } from './request-api.test-support';
 import {
   buildImportRowFingerprint,
   pushCollectedTransaction,
+  pushDraftPlanItem,
   pushImportBatch,
   pushImportedRow,
   pushOpenCollectingPeriod
@@ -188,6 +191,115 @@ test('POST /import-batches/:id/rows/collect bulk-collects selected rows and infe
   }
 });
 
+test('POST /import-batches/:id/rows/collect applies a shared type and category to selected rows', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    pushImportBatch(context, {
+      id: 'import-batch-bulk-classify',
+      sourceKind: ImportSourceKind.IM_BANK_PDF,
+      fileName: 'im-bank-classify.pdf',
+      fileHash: 'hash-bulk-classify',
+      fundingAccountId: 'acc-1',
+      rowCount: 2,
+      parseStatus: ImportBatchParseStatus.COMPLETED
+    });
+    pushImportedRow(context, {
+      id: 'imported-row-classify-1',
+      batchId: 'import-batch-bulk-classify',
+      rowNumber: 1,
+      occurredOn: '2026-03-12',
+      title: '주유소 A',
+      amount: 50_000,
+      sourceFingerprint: buildImportRowFingerprint({
+        sourceKind: ImportSourceKind.IM_BANK_PDF,
+        occurredOn: '2026-03-12',
+        amount: 50_000,
+        title: '주유소 A'
+      }),
+      parsed: {
+        occurredOn: '2026-03-12',
+        title: '주유소 A',
+        amount: 50_000,
+        direction: 'WITHDRAWAL',
+        balanceAfter: 250_000
+      }
+    });
+    pushImportedRow(context, {
+      id: 'imported-row-classify-2',
+      batchId: 'import-batch-bulk-classify',
+      rowNumber: 2,
+      occurredOn: '2026-03-13',
+      title: '주유소 B',
+      amount: 47_000,
+      sourceFingerprint: buildImportRowFingerprint({
+        sourceKind: ImportSourceKind.IM_BANK_PDF,
+        occurredOn: '2026-03-13',
+        amount: 47_000,
+        title: '주유소 B'
+      }),
+      parsed: {
+        occurredOn: '2026-03-13',
+        title: '주유소 B',
+        amount: 47_000,
+        direction: 'WITHDRAWAL',
+        balanceAfter: 203_000
+      }
+    });
+
+    const response = await context.request(
+      '/import-batches/import-batch-bulk-classify/rows/collect',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          rowIds: ['imported-row-classify-1', 'imported-row-classify-2'],
+          type: TransactionType.EXPENSE,
+          fundingAccountId: 'acc-1',
+          categoryId: 'cat-1'
+        }
+      }
+    );
+
+    assert.equal(response.status, 202);
+    const startedJob = response.body as ImportBatchCollectionJobItem;
+    const completedJob = await readCollectionJobUntilDone(
+      context,
+      'import-batch-bulk-classify',
+      startedJob.id
+    );
+
+    assert.equal(completedJob.status, 'SUCCEEDED');
+    assert.deepEqual(
+      completedJob.results.map((result) => result.message),
+      ['즉시 전표 준비 상태로 올립니다.', '즉시 전표 준비 상태로 올립니다.']
+    );
+    assert.deepEqual(
+      context.state.collectedTransactions
+        .filter((candidate) => ['ctx-4', 'ctx-5'].includes(candidate.id))
+        .map((candidate) => ({
+          ledgerTransactionTypeId: candidate.ledgerTransactionTypeId,
+          categoryId: candidate.categoryId,
+          status: candidate.status
+        })),
+      [
+        {
+          ledgerTransactionTypeId: 'ltt-1-expense',
+          categoryId: 'cat-1',
+          status: CollectedTransactionStatus.READY_TO_POST
+        },
+        {
+          ledgerTransactionTypeId: 'ltt-1-expense',
+          categoryId: 'cat-1',
+          status: CollectedTransactionStatus.READY_TO_POST
+        }
+      ]
+    );
+  } finally {
+    await context.close();
+  }
+});
+
 test('POST /import-batches/:id/rows/collect maps 승인취소 행 to the adjustment transaction type', async () => {
   const context = await createRequestTestContext();
 
@@ -333,6 +445,151 @@ test('POST /import-batches/:id/rows/collect blocks another workspace bulk job wh
     assert.equal(
       (response.body as { message: string }).message,
       '현재 워크스페이스에서 다른 업로드 배치 일괄 등록이 진행 중입니다. 완료 후 다시 시도해 주세요.'
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /import-batches/:id/cancel-collection cancels unposted collected transactions and restores matched plans', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    pushOpenCollectingPeriod(context, {
+      id: 'period-open-cancel-collection'
+    });
+    pushImportBatch(context, {
+      id: 'import-batch-cancel-collection',
+      fileName: 'cancel-collection.csv',
+      fileHash: 'hash-cancel-collection',
+      rowCount: 2
+    });
+    pushImportedRow(context, {
+      id: 'imported-row-cancel-collection-1',
+      batchId: 'import-batch-cancel-collection',
+      rowNumber: 1
+    });
+    pushImportedRow(context, {
+      id: 'imported-row-cancel-collection-2',
+      batchId: 'import-batch-cancel-collection',
+      rowNumber: 2
+    });
+    pushDraftPlanItem(context, {
+      id: 'plan-item-cancel-collection',
+      periodId: 'period-open-cancel-collection',
+      status: PlanItemStatus.MATCHED
+    });
+    pushCollectedTransaction(context, {
+      id: 'ctx-cancel-collection-1',
+      periodId: 'period-open-cancel-collection',
+      importBatchId: 'import-batch-cancel-collection',
+      importedRowId: 'imported-row-cancel-collection-1',
+      matchedPlanItemId: 'plan-item-cancel-collection',
+      status: CollectedTransactionStatus.READY_TO_POST
+    });
+    pushCollectedTransaction(context, {
+      id: 'ctx-cancel-collection-2',
+      periodId: 'period-open-cancel-collection',
+      importBatchId: 'import-batch-cancel-collection',
+      importedRowId: 'imported-row-cancel-collection-2',
+      matchedPlanItemId: null,
+      status: CollectedTransactionStatus.REVIEWED
+    });
+
+    const response = await context.request(
+      '/import-batches/import-batch-cancel-collection/cancel-collection',
+      {
+        method: 'POST',
+        headers: context.authHeaders()
+      }
+    );
+
+    assert.equal(response.status, 201);
+    assert.deepEqual(response.body, {
+      importBatchId: 'import-batch-cancel-collection',
+      cancelledTransactionCount: 2,
+      restoredPlanItemCount: 1
+    });
+    assert.equal(
+      context.state.collectedTransactions.some((candidate) =>
+        ['ctx-cancel-collection-1', 'ctx-cancel-collection-2'].includes(
+          candidate.id
+        )
+      ),
+      false
+    );
+    assert.equal(
+      context.state.planItems.find(
+        (candidate) => candidate.id === 'plan-item-cancel-collection'
+      )?.status,
+      PlanItemStatus.DRAFT
+    );
+    assert.ok(
+      context.state.importBatches.some(
+        (candidate) => candidate.id === 'import-batch-cancel-collection'
+      )
+    );
+    assert.equal(
+      context.state.importedRows.filter(
+        (candidate) => candidate.batchId === 'import-batch-cancel-collection'
+      ).length,
+      2
+    );
+    assert.ok(
+      context.securityEvents.some(
+        (candidate) =>
+          candidate.level === 'log' &&
+          candidate.event === 'audit.action_succeeded' &&
+          candidate.details.requestId ===
+            response.headers.get('x-request-id') &&
+          candidate.details.action === 'import_batch.cancel' &&
+          candidate.details.importBatchId ===
+            'import-batch-cancel-collection' &&
+          candidate.details.cancelledTransactionCount === 2
+      )
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /import-batches/:id/cancel-collection blocks batches with posted collected transactions', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    pushImportBatch(context, {
+      id: 'import-batch-cancel-posted',
+      fileName: 'cancel-posted.csv',
+      fileHash: 'hash-cancel-posted'
+    });
+    pushImportedRow(context, {
+      id: 'imported-row-cancel-posted',
+      batchId: 'import-batch-cancel-posted'
+    });
+    pushCollectedTransaction(context, {
+      id: 'ctx-cancel-posted',
+      importBatchId: 'import-batch-cancel-posted',
+      importedRowId: 'imported-row-cancel-posted',
+      status: CollectedTransactionStatus.POSTED
+    });
+
+    const response = await context.request(
+      '/import-batches/import-batch-cancel-posted/cancel-collection',
+      {
+        method: 'POST',
+        headers: context.authHeaders()
+      }
+    );
+
+    assert.equal(response.status, 409);
+    assert.equal(
+      (response.body as { message: string }).message,
+      '이미 전표 확정 또는 정정 흐름에 들어간 수집 거래가 있어 업로드 배치 등록을 전체 취소할 수 없습니다. 전표 화면에서 반전 또는 정정으로 처리해 주세요.'
+    );
+    assert.ok(
+      context.state.collectedTransactions.some(
+        (candidate) => candidate.id === 'ctx-cancel-posted'
+      )
     );
   } finally {
     await context.close();

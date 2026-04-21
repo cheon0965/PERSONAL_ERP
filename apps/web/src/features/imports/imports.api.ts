@@ -1,6 +1,7 @@
 import type {
   BulkCollectImportedRowsRequest,
   BulkCollectImportedRowsResponse,
+  CancelImportBatchCollectionResponse,
   CollectImportedRowPreview,
   CollectImportedRowRequest,
   CollectImportedRowResponse,
@@ -146,4 +147,16 @@ export function getImportBatchCollectionJob(
 
 export function deleteImportBatch(importBatchId: string) {
   return deleteJson<null>(`/import-batches/${importBatchId}`, null);
+}
+
+export function cancelImportBatchCollection(importBatchId: string) {
+  return postJson<CancelImportBatchCollectionResponse, Record<string, never>>(
+    `/import-batches/${importBatchId}/cancel-collection`,
+    {},
+    {
+      importBatchId,
+      cancelledTransactionCount: 0,
+      restoredPlanItemCount: 0
+    }
+  );
 }

@@ -53,6 +53,7 @@ export type WorkspaceAction =
   | 'journal_entry.reverse'
   | 'journal_entry.correct'
   | 'import_batch.upload'
+  | 'import_batch.cancel'
   | 'import_batch.delete';
 
 const workspaceActionAllowedRoles: Record<
@@ -107,6 +108,7 @@ const workspaceActionAllowedRoles: Record<
   'journal_entry.reverse': ['OWNER', 'MANAGER'],
   'journal_entry.correct': ['OWNER', 'MANAGER'],
   'import_batch.upload': ['OWNER', 'MANAGER', 'EDITOR'],
+  'import_batch.cancel': ['OWNER', 'MANAGER', 'EDITOR'],
   'import_batch.delete': ['OWNER', 'MANAGER', 'EDITOR']
 };
 
@@ -194,6 +196,8 @@ const workspaceActionDeniedMessages: Record<WorkspaceAction, string> = {
     'Only owners and managers can create correction journal entries.',
   'import_batch.upload':
     'Only owners, managers, and editors can upload import batches.',
+  'import_batch.cancel':
+    'Only owners, managers, and editors can cancel import batch collected transactions.',
   'import_batch.delete':
     'Only owners, managers, and editors can delete import batches or uploaded rows.'
 };

@@ -106,6 +106,32 @@ export type JournalEntryItem = {
   lines: JournalLineItem[];
 };
 
+export type BulkConfirmCollectedTransactionsRequest = {
+  transactionIds?: string[];
+};
+
+export type BulkConfirmCollectedTransactionResultStatus =
+  | 'CONFIRMED'
+  | 'SKIPPED'
+  | 'FAILED';
+
+export type BulkConfirmCollectedTransactionResultItem = {
+  collectedTransactionId: string;
+  status: BulkConfirmCollectedTransactionResultStatus;
+  journalEntryId: string | null;
+  journalEntryNumber: string | null;
+  message: string | null;
+};
+
+export type BulkConfirmCollectedTransactionsResponse = {
+  requestedCount: number;
+  processedCount: number;
+  succeededCount: number;
+  skippedCount: number;
+  failedCount: number;
+  results: BulkConfirmCollectedTransactionResultItem[];
+};
+
 export type ReverseJournalEntryRequest = {
   entryDate: string;
   reason?: string;

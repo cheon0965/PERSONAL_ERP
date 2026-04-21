@@ -115,6 +115,43 @@ export function createPlanItemsPrismaMock(
 
         candidate.updatedAt = new Date();
         return candidate;
+      },
+      updateMany: async (args: {
+        where?: {
+          id?: {
+            in?: string[];
+          };
+          tenantId?: string;
+          ledgerId?: string;
+        };
+        data: {
+          status?: PlanItemStatus;
+        };
+      }) => {
+        let updatedCount = 0;
+        state.planItems.forEach((candidate) => {
+          const matchesId =
+            !args.where?.id?.in || args.where.id.in.includes(candidate.id);
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+
+          if (!matchesId || !matchesTenant || !matchesLedger) {
+            return;
+          }
+
+          if (args.data.status) {
+            candidate.status = args.data.status;
+          }
+
+          candidate.updatedAt = new Date();
+          updatedCount += 1;
+        });
+
+        return {
+          count: updatedCount
+        };
       }
     }
   };

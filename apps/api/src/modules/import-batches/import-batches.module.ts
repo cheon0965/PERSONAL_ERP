@@ -4,6 +4,7 @@ import { ImportBatchWritePort } from './application/ports/import-batch-write.por
 import { ImportedRowCollectionPort } from './application/ports/imported-row-collection.port';
 import { CollectImportedRowUseCase } from './application/use-cases/collect-imported-row.use-case';
 import { BulkCollectImportedRowsUseCase } from './application/use-cases/bulk-collect-imported-rows.use-case';
+import { CancelImportBatchCollectionUseCase } from './application/use-cases/cancel-import-batch-collection.use-case';
 import { CreateImportBatchFromFileUseCase } from './application/use-cases/create-import-batch-from-file.use-case';
 import { CreateImportBatchUseCase } from './application/use-cases/create-import-batch.use-case';
 import { DeleteImportBatchUseCase } from './application/use-cases/delete-import-batch.use-case';
@@ -38,6 +39,7 @@ import { ImportedRowCollectionService } from './imported-row-collection.service'
     PreviewImportedRowCollectionUseCase,
     CollectImportedRowUseCase,
     BulkCollectImportedRowsUseCase,
+    CancelImportBatchCollectionUseCase,
     GetImportBatchCollectionJobUseCase,
     GetActiveImportBatchCollectionJobUseCase,
     ImportBatchCollectionJobRunner,

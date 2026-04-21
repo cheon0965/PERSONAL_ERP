@@ -108,6 +108,12 @@ export type BulkCollectImportedRowsRequest = {
   memo?: string;
 };
 
+export type CancelImportBatchCollectionResponse = {
+  importBatchId: string;
+  cancelledTransactionCount: number;
+  restoredPlanItemCount: number;
+};
+
 export type ImportBatchCollectionJobResultItem = {
   importedRowId: string;
   rowNumber: number;
