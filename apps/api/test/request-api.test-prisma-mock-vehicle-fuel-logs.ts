@@ -25,6 +25,21 @@ export function createVehicleFuelLogsPrismaMock(
               name?: boolean;
             };
           };
+          linkedCollectedTransaction?: {
+            select?: {
+              id?: boolean;
+              fundingAccountId?: boolean;
+              categoryId?: boolean;
+              status?: boolean;
+              matchedPlanItemId?: boolean;
+              postedJournalEntry?: {
+                select?: {
+                  id?: boolean;
+                  entryNumber?: boolean;
+                };
+              };
+            };
+          };
         };
       }) => {
         const candidate =
@@ -68,7 +83,14 @@ export function createVehicleFuelLogsPrismaMock(
                   ? { name: candidate.vehicle.name }
                   : {})
               }
-            : candidate.vehicle
+            : candidate.vehicle,
+          linkedCollectedTransaction: args.include?.linkedCollectedTransaction
+            ? projectLinkedCollectedTransaction(
+                state,
+                candidate.linkedCollectedTransactionId ?? null,
+                args.include.linkedCollectedTransaction.select
+              )
+            : undefined
         };
       },
       findMany: async (args: {
@@ -86,6 +108,21 @@ export function createVehicleFuelLogsPrismaMock(
             select?: {
               id?: boolean;
               name?: boolean;
+            };
+          };
+          linkedCollectedTransaction?: {
+            select?: {
+              id?: boolean;
+              fundingAccountId?: boolean;
+              categoryId?: boolean;
+              status?: boolean;
+              matchedPlanItemId?: boolean;
+              postedJournalEntry?: {
+                select?: {
+                  id?: boolean;
+                  entryNumber?: boolean;
+                };
+              };
             };
           };
         };
@@ -148,12 +185,20 @@ export function createVehicleFuelLogsPrismaMock(
                     ? { name: candidate.vehicle.name }
                     : {})
                 }
-              : candidate.vehicle
+              : candidate.vehicle,
+            linkedCollectedTransaction: args.include?.linkedCollectedTransaction
+              ? projectLinkedCollectedTransaction(
+                  state,
+                  candidate.linkedCollectedTransactionId ?? null,
+                  args.include.linkedCollectedTransaction.select
+                )
+              : undefined
           }));
       },
       create: async (args: {
         data: {
           vehicleId: string;
+          linkedCollectedTransactionId?: string | null;
           filledOn: Date;
           odometerKm: number;
           liters: number;
@@ -166,6 +211,21 @@ export function createVehicleFuelLogsPrismaMock(
             select?: {
               id?: boolean;
               name?: boolean;
+            };
+          };
+          linkedCollectedTransaction?: {
+            select?: {
+              id?: boolean;
+              fundingAccountId?: boolean;
+              categoryId?: boolean;
+              status?: boolean;
+              matchedPlanItemId?: boolean;
+              postedJournalEntry?: {
+                select?: {
+                  id?: boolean;
+                  entryNumber?: boolean;
+                };
+              };
             };
           };
         };
@@ -181,6 +241,8 @@ export function createVehicleFuelLogsPrismaMock(
 
         const created = {
           id: `fuel-generated-${vehicle.fuelLogs.length + 1}`,
+          linkedCollectedTransactionId:
+            args.data.linkedCollectedTransactionId ?? null,
           filledOn: new Date(String(args.data.filledOn)),
           odometerKm: Number(args.data.odometerKm),
           liters: Number(args.data.liters),
@@ -201,12 +263,20 @@ export function createVehicleFuelLogsPrismaMock(
                   ? { name: vehicle.name }
                   : {})
               }
-            : vehicle
+            : vehicle,
+          linkedCollectedTransaction: args.include?.linkedCollectedTransaction
+            ? projectLinkedCollectedTransaction(
+                state,
+                created.linkedCollectedTransactionId,
+                args.include.linkedCollectedTransaction.select
+              )
+            : undefined
         };
       },
       update: async (args: {
         where: { id: string };
         data: {
+          linkedCollectedTransactionId?: string | null;
           filledOn?: Date;
           odometerKm?: number;
           liters?: number;
@@ -219,6 +289,21 @@ export function createVehicleFuelLogsPrismaMock(
             select?: {
               id?: boolean;
               name?: boolean;
+            };
+          };
+          linkedCollectedTransaction?: {
+            select?: {
+              id?: boolean;
+              fundingAccountId?: boolean;
+              categoryId?: boolean;
+              status?: boolean;
+              matchedPlanItemId?: boolean;
+              postedJournalEntry?: {
+                select?: {
+                  id?: boolean;
+                  entryNumber?: boolean;
+                };
+              };
             };
           };
         };
@@ -241,6 +326,10 @@ export function createVehicleFuelLogsPrismaMock(
           throw new Error('Vehicle fuel log not found');
         }
 
+        if ('linkedCollectedTransactionId' in args.data) {
+          fuelLog.linkedCollectedTransactionId =
+            args.data.linkedCollectedTransactionId ?? null;
+        }
         if (args.data.filledOn !== undefined) {
           fuelLog.filledOn = new Date(String(args.data.filledOn));
         }
@@ -270,9 +359,111 @@ export function createVehicleFuelLogsPrismaMock(
                   ? { name: vehicle.name }
                   : {})
               }
-            : vehicle
+            : vehicle,
+          linkedCollectedTransaction: args.include?.linkedCollectedTransaction
+            ? projectLinkedCollectedTransaction(
+                state,
+                fuelLog.linkedCollectedTransactionId ?? null,
+                args.include.linkedCollectedTransaction.select
+              )
+            : undefined
+        };
+      },
+      delete: async (args: { where: { id: string } }) => {
+        const vehicle =
+          state.vehicles.find((candidate) =>
+            candidate.fuelLogs.some((fuelLog) => fuelLog.id === args.where.id)
+          ) ?? null;
+
+        if (!vehicle) {
+          throw new Error('Vehicle fuel log not found');
+        }
+
+        const fuelLog =
+          vehicle.fuelLogs.find(
+            (candidate) => candidate.id === args.where.id
+          ) ?? null;
+
+        if (!fuelLog) {
+          throw new Error('Vehicle fuel log not found');
+        }
+
+        vehicle.fuelLogs = vehicle.fuelLogs.filter(
+          (candidate) => candidate.id !== args.where.id
+        );
+
+        return {
+          ...fuelLog,
+          vehicleId: vehicle.id
         };
       }
     }
+  };
+}
+
+function projectLinkedCollectedTransaction(
+  state: RequestPrismaMockContext['state'],
+  collectedTransactionId: string | null,
+  select:
+    | {
+        id?: boolean;
+        fundingAccountId?: boolean;
+        categoryId?: boolean;
+        status?: boolean;
+        matchedPlanItemId?: boolean;
+        postedJournalEntry?: {
+          select?: {
+            id?: boolean;
+            entryNumber?: boolean;
+          };
+        };
+      }
+    | undefined
+) {
+  if (!collectedTransactionId) {
+    return null;
+  }
+
+  const collectedTransaction =
+    state.collectedTransactions.find(
+      (candidate) => candidate.id === collectedTransactionId
+    ) ?? null;
+
+  if (!collectedTransaction) {
+    return null;
+  }
+
+  const postedJournalEntry =
+    state.journalEntries.find(
+      (candidate) =>
+        candidate.sourceCollectedTransactionId === collectedTransaction.id
+    ) ?? null;
+
+  return {
+    ...(select?.id ? { id: collectedTransaction.id } : {}),
+    ...(select?.fundingAccountId
+      ? { fundingAccountId: collectedTransaction.fundingAccountId }
+      : {}),
+    ...(select?.categoryId
+      ? { categoryId: collectedTransaction.categoryId }
+      : {}),
+    ...(select?.status ? { status: collectedTransaction.status } : {}),
+    ...(select?.matchedPlanItemId
+      ? { matchedPlanItemId: collectedTransaction.matchedPlanItemId }
+      : {}),
+    ...(select?.postedJournalEntry
+      ? {
+          postedJournalEntry: postedJournalEntry
+            ? {
+                ...(select.postedJournalEntry.select?.id
+                  ? { id: postedJournalEntry.id }
+                  : {}),
+                ...(select.postedJournalEntry.select?.entryNumber
+                  ? { entryNumber: postedJournalEntry.entryNumber }
+                  : {})
+              }
+            : null
+        }
+      : {})
   };
 }

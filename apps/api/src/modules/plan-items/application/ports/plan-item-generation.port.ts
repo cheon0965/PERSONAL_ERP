@@ -59,6 +59,11 @@ export abstract class PlanItemGenerationPort {
     periodId: string
   ): Promise<PlanItemGenerationPeriod | null>;
 
+  abstract findLatestCollectingPeriodInWorkspace(
+    tenantId: string,
+    ledgerId: string
+  ): Promise<PlanItemGenerationPeriod | null>;
+
   abstract listRecurringRulesForPeriod(
     tenantId: string,
     ledgerId: string,

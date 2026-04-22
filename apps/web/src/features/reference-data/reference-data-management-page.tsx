@@ -90,6 +90,7 @@ export function ReferenceDataManagementPage({
             onCreate={page.openFundingAccountCreate}
             onEdit={page.openFundingAccountEdit}
             onTransition={page.openFundingAccountTransition}
+            onCompleteBootstrap={page.completeFundingAccountBootstrap}
           />
           <FundingAccountEditorDrawer
             editorState={page.fundingAccountEditorState}

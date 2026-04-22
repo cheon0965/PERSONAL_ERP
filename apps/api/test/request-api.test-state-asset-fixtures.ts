@@ -54,6 +54,10 @@ export function createRequestAssetStateFixtures(): Pick<
         fuelType: 'DIESEL',
         initialOdometerKm: 58_200,
         estimatedFuelEfficiencyKmPerLiter: 11.2,
+        defaultFundingAccountId: null,
+        defaultFuelCategoryId: null,
+        defaultMaintenanceCategoryId: null,
+        operatingExpensePlanOptIn: false,
         createdAt: new Date('2026-03-01T08:00:00.000Z'),
         fuelLogs: [
           {
@@ -77,6 +81,10 @@ export function createRequestAssetStateFixtures(): Pick<
         fuelType: 'GASOLINE',
         initialOdometerKm: 12_000,
         estimatedFuelEfficiencyKmPerLiter: 9.4,
+        defaultFundingAccountId: null,
+        defaultFuelCategoryId: null,
+        defaultMaintenanceCategoryId: null,
+        operatingExpensePlanOptIn: false,
         createdAt: new Date('2026-03-02T08:00:00.000Z'),
         fuelLogs: []
       }

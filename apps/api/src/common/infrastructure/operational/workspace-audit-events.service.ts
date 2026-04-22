@@ -10,6 +10,7 @@ import {
   readRequestPath,
   type RequestWithContext
 } from './request-context';
+import { OperationalAuditPublisher } from './operational-audit-publisher.service';
 import { SecurityEventLogger } from './security-event.logger';
 import {
   registerWorkspaceActionAuditRecorder,
@@ -39,7 +40,8 @@ export class WorkspaceAuditEventsService
 {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly securityEvents: SecurityEventLogger
+    private readonly securityEvents: SecurityEventLogger,
+    private readonly auditPublisher: OperationalAuditPublisher
   ) {}
 
   onModuleInit(): void {
@@ -54,7 +56,7 @@ export class WorkspaceAuditEventsService
 
   async record(input: RecordWorkspaceAuditEventInput): Promise<void> {
     try {
-      await this.prisma.workspaceAuditEvent.create({
+      const created = await this.prisma.workspaceAuditEvent.create({
         data: {
           tenantId: input.workspace.tenantId,
           ledgerId: input.workspace.ledgerId,
@@ -73,6 +75,26 @@ export class WorkspaceAuditEventsService
           path: readRequestPath(input.request),
           clientIpHash: hashClientIp(readClientIp(input.request)),
           metadata: sanitizeMetadata(input.metadata) as Prisma.InputJsonObject
+        }
+      });
+      this.auditPublisher.publish({
+        kind: 'WORKSPACE_AUDIT_EVENT',
+        eventName: input.eventName,
+        occurredAt: created.occurredAt.toISOString(),
+        tenantId: input.workspace.tenantId,
+        ledgerId: input.workspace.ledgerId,
+        actorUserId: input.workspace.userId,
+        actorMembershipId: input.workspace.membershipId,
+        resourceType: input.resourceType ?? null,
+        resourceId: input.resourceId ?? null,
+        result: input.result,
+        payload: {
+          auditEventId: created.id,
+          action: input.action ?? null,
+          reason: input.reason ?? null,
+          requestId: readRequestId(input.request) ?? null,
+          path: readRequestPath(input.request) ?? null,
+          ...sanitizeMetadata(input.metadata)
         }
       });
     } catch {

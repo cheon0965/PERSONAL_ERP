@@ -45,6 +45,11 @@ export function CollectPreviewSummary({
           같은 원본 식별값이 이미 있어 자동 확정을 보류합니다.
         </Alert>
       ) : null}
+      {preview.autoPreparation.willCreateTargetPeriod ? (
+        <Alert severity="info" variant="outlined">
+          {readTargetPeriodCreationMessage(preview.autoPreparation)}
+        </Alert>
+      ) : null}
       {(preview.autoPreparation.potentialDuplicateTransactionCount ?? 0) > 0 ? (
         <Alert severity="warning" variant="outlined">
           같은 거래일·금액·입출금 유형의 기존 거래{' '}
@@ -65,6 +70,22 @@ export function CollectPreviewSummary({
       </Stack>
     </Stack>
   );
+}
+
+function readTargetPeriodCreationMessage(
+  autoPreparation: CollectImportedRowPreview['autoPreparation']
+): string {
+  const monthLabel = autoPreparation.targetPeriodMonthLabel ?? '대상';
+
+  if (autoPreparation.targetPeriodCreationReason === 'NEW_FUNDING_ACCOUNT') {
+    return `${monthLabel} 운영월을 신규 계좌/카드 기초 업로드로 자동 생성합니다.`;
+  }
+
+  if (autoPreparation.targetPeriodCreationReason === 'INITIAL_SETUP') {
+    return `${monthLabel} 운영월을 운영 시작 전 기초 입력으로 자동 생성합니다.`;
+  }
+
+  return `${monthLabel} 운영월을 등록 과정에서 자동 생성합니다.`;
 }
 
 export function SummaryBlock({

@@ -269,7 +269,7 @@ function ReopenAccountingPeriodSection({
   return (
     <SectionCard
       title="월 재오픈"
-      description="차기 이월이나 다음 월 오프닝 스냅샷 같은 종속 결과가 아직 없다면 선택한 잠금 운영 기간을 다시 열 수 있으며, 재오픈 시 해당 기간의 마감 결과 자료도 함께 정리됩니다."
+      description="가장 최근 운영 월이 잠금 상태이고 차기 이월이나 다음 월 오프닝 스냅샷 같은 종속 결과가 아직 없을 때만 다시 열 수 있습니다."
     >
       <Stack spacing={appLayout.cardGap}>
         <InfoRow
@@ -287,7 +287,7 @@ function ReopenAccountingPeriodSection({
           }}
           helperText={
             lockedPeriods.length > 0
-              ? '잠금 월별 재오픈 가능 여부는 저장 시 차기 이월과 다음 월 오프닝 스냅샷 존재 여부로 다시 검증됩니다.'
+              ? '잠금 월별 재오픈 가능 여부는 최신 월 여부, 차기 이월, 다음 월 오프닝 스냅샷 존재 여부로 다시 검증됩니다.'
               : '현재 선택 가능한 잠금 월이 없습니다.'
           }
           disabled={!hasWorkspace || lockedPeriods.length === 0 || reopenPending}

@@ -88,6 +88,35 @@ export function readFundingAccountStatusColor(
   }
 }
 
+export function readFundingAccountBootstrapStatusLabel(
+  status: FundingAccountItem['bootstrapStatus']
+) {
+  switch (status) {
+    case 'PENDING':
+      return '기초 업로드 대기';
+    case 'COMPLETED':
+      return '기초 업로드 완료';
+    case 'NOT_REQUIRED':
+      return '대상 아님';
+    default:
+      return status;
+  }
+}
+
+export function readFundingAccountBootstrapStatusColor(
+  status: FundingAccountItem['bootstrapStatus']
+) {
+  switch (status) {
+    case 'PENDING':
+      return 'warning';
+    case 'COMPLETED':
+      return 'success';
+    case 'NOT_REQUIRED':
+    default:
+      return 'default';
+  }
+}
+
 export function readFundingAccountTransitionTitle(
   target: FundingAccountStatusActionTarget
 ) {

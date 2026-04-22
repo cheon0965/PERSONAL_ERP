@@ -46,6 +46,8 @@
     비로그인 루트 `/`에 제품 소개/회원가입 안내 메인 화면을 두고, 인증된 사용자는 `/dashboard`로 이동하도록 연결했습니다. 회원가입 화면은 표시 이름, 필수 약관 동의, 개인정보 처리 동의를 포함하는 현재 계약 기준으로 정리했습니다.
 26. Prisma 실DB 통합검증 재현성 고정
     `npm run test:prisma`가 Docker 기반 disposable MySQL을 띄워 `generate -> migrate -> minimal fixture seed -> test -> teardown`을 한 명령으로 수행하도록 정리했습니다.
+27. 보안 검증 증적과 runtime audit 예외 정리
+    GitHub CI 첫 전체 통과 증적과 required check 연결, Docker 환경 `npm run test:prisma`, GitHub `prisma-integration` 통과 확인을 완료했습니다. `@nestjs/config`, `@nestjs/swagger`, `next` 패치 업데이트로 runtime audit tracked exception도 해소해 `npm run audit:runtime`은 현재 `0 vulnerabilities` 기준으로 통과합니다.
 
 ## 현재 MVP 범위
 
@@ -53,16 +55,16 @@
 - 회원가입, 이메일 인증, 인증 메일 재발송, 필수 이용약관/개인정보 동의
 - 작업 문맥/설정 조회
 - 기준 데이터 readiness 조회와 자금수단/카테고리 제한적 관리
-- 운영 기간 조회/open/close/reopen
+- 최신 진행월 중심 운영 기간 조회/open/close/reopen
 - 수집 거래 조회/생성/수정/삭제/확정
-- 업로드 배치 조회/생성/IM뱅크 PDF 파일첨부/행 collect preview/행 collect/일괄 등록 Job 조회
+- 업로드 배치 조회/생성/IM뱅크 PDF 파일첨부/최신 진행월 기준 행 collect preview/행 collect/일괄 등록 Job 조회
 - 반복규칙 조회/생성/수정/삭제
 - 계획 항목 조회/생성(generate)과 수집 거래/전표 추적
 - 전표 조회/reverse/correct
 - 재무제표 조회/generate
 - 차기 이월 조회/generate
 - 보험 조회/생성/수정/삭제
-- 차량 조회/생성/수정과 연료/정비 이력 생성/수정
+- 차량 조회/생성/수정, 연료/정비 이력 생성/수정, 연료/정비 이력의 선택적 수집 거래 연동
 - 대시보드 요약
 - 기간 운영 전망(현재 월/다음 달 예측)
 - 사업장 설정과 내 계정/보안
@@ -80,8 +82,8 @@
 
 1. 운영 HTTPS/HSTS/Swagger 배포 리허설과 보안 증적 정리
 2. Gmail API 운영 secret 등록과 실제 수신 확인
-3. GitHub CI 첫 전체 통과 증적과 required check 연결 확인
-4. 외부 감사 저장소/장기 보관 정책 초안 정리
+3. 외부 감사 저장소/장기 보관 정책 초안 정리
+4. 운영 데이터 분류와 보존 기간 정책 구체화
 
 ## 범위 밖 항목
 

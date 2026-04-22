@@ -107,6 +107,7 @@
 - 보안 이벤트는 `SecurityEvent` 로거에서 `event=... key=value ...` 형식으로 남깁니다.
 - 관리자 회원관리에서 발생한 workspace-scoped 감사 이벤트는 `WorkspaceAuditEvent`에 저장하고, `/admin/logs` 화면에서 조회합니다.
 - 운영 지원의 수동 CSV 반출과 운영 메모 생성도 `WorkspaceAuditEvent`에 저장하고, `/admin/logs`에서 `operations_export.run`, `operations_note.create`로 추적합니다.
+- `OperationalAuditSinkPort`는 workspace 감사 이벤트, 기간 상태 이력, 업로드 일괄 등록 Job 결과, 전표 조정 이벤트를 중앙 로그/외부 감사 저장소로 비동기 발행하는 경계입니다. 로컬 기본 구현은 noop이며, sink 실패는 경고 로그만 남기고 회계 트랜잭션을 롤백하지 않습니다.
 - readiness 점검은 `GET /api/health/ready`에서 수행하고, DB 연결 실패 시 `503`으로 드러냅니다.
 - Prisma unique 충돌은 요청 경계에서 raw 500 대신 도메인 `409 Conflict` 메시지로 정리합니다.
 

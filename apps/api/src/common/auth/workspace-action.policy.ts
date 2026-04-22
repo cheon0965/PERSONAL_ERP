@@ -34,8 +34,10 @@ export type WorkspaceAction =
   | 'vehicle.update'
   | 'vehicle_fuel.create'
   | 'vehicle_fuel.update'
+  | 'vehicle_fuel.delete'
   | 'vehicle_maintenance.create'
   | 'vehicle_maintenance.update'
+  | 'vehicle_maintenance.delete'
   | 'accounting_period.open'
   | 'accounting_period.close'
   | 'accounting_period.reopen'
@@ -89,8 +91,10 @@ const workspaceActionAllowedRoles: Record<
   'vehicle.update': ['OWNER', 'MANAGER'],
   'vehicle_fuel.create': ['OWNER', 'MANAGER'],
   'vehicle_fuel.update': ['OWNER', 'MANAGER'],
+  'vehicle_fuel.delete': ['OWNER', 'MANAGER'],
   'vehicle_maintenance.create': ['OWNER', 'MANAGER'],
   'vehicle_maintenance.update': ['OWNER', 'MANAGER'],
+  'vehicle_maintenance.delete': ['OWNER', 'MANAGER'],
   'accounting_period.open': ['OWNER', 'MANAGER'],
   'accounting_period.close': ['OWNER'],
   'accounting_period.reopen': ['OWNER'],
@@ -162,10 +166,14 @@ const workspaceActionDeniedMessages: Record<WorkspaceAction, string> = {
     'Only owners and managers can create vehicle fuel logs.',
   'vehicle_fuel.update':
     'Only owners and managers can update vehicle fuel logs.',
+  'vehicle_fuel.delete':
+    'Only owners and managers can delete vehicle fuel logs.',
   'vehicle_maintenance.create':
     'Only owners and managers can create vehicle maintenance logs.',
   'vehicle_maintenance.update':
     'Only owners and managers can update vehicle maintenance logs.',
+  'vehicle_maintenance.delete':
+    'Only owners and managers can delete vehicle maintenance logs.',
   'accounting_period.open':
     'Only owners and managers can open accounting periods.',
   'accounting_period.close': 'Only owners can close accounting periods.',

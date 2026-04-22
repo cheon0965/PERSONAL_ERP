@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   InternalServerErrorException,
   Injectable,
@@ -7,7 +8,8 @@ import {
 import type {
   CollectedTransactionPostingStatus,
   CollectedTransactionSourceKind,
-  CollectedTransactionType
+  CollectedTransactionType,
+  CollectedTransactionVehicleLogSource
 } from '@personal-erp/contracts';
 import {
   CollectedTransactionStatus,
@@ -59,6 +61,20 @@ type CollectedTransactionRecord = {
   ledgerTransactionType: {
     flowKind: LedgerTransactionFlowKind;
   };
+  linkedFuelLog?: {
+    id: string;
+    vehicle: {
+      id: string;
+      name: string;
+    };
+  } | null;
+  linkedMaintenanceLog?: {
+    id: string;
+    vehicle: {
+      id: string;
+      name: string;
+    };
+  } | null;
 };
 
 type CollectedTransactionDetailRecord = CollectedTransactionRecord & {
@@ -153,6 +169,16 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
             select: {
               id: true
             }
+          },
+          linkedFuelLog: {
+            select: {
+              id: true
+            }
+          },
+          linkedMaintenanceLog: {
+            select: {
+              id: true
+            }
           }
         }
       });
@@ -160,6 +186,11 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
       if (!current) {
         throw new NotFoundException('Collected transaction not found');
       }
+
+      assertCollectedTransactionCanBeManagedDirectly({
+        linkedFuelLogId: current.linkedFuelLog?.id ?? null,
+        linkedMaintenanceLogId: current.linkedMaintenanceLog?.id ?? null
+      });
 
       assertCollectedTransactionCanBeUpdated({
         postingStatus: mapCollectedTransactionPostingStatus(current.status),
@@ -269,6 +300,16 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
             select: {
               id: true
             }
+          },
+          linkedFuelLog: {
+            select: {
+              id: true
+            }
+          },
+          linkedMaintenanceLog: {
+            select: {
+              id: true
+            }
           }
         }
       });
@@ -276,6 +317,11 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
       if (!current) {
         return false;
       }
+
+      assertCollectedTransactionCanBeManagedDirectly({
+        linkedFuelLogId: current.linkedFuelLog?.id ?? null,
+        linkedMaintenanceLogId: current.linkedMaintenanceLog?.id ?? null
+      });
 
       assertCollectedTransactionCanBeDeleted({
         postingStatus: mapCollectedTransactionPostingStatus(current.status),
@@ -391,6 +437,28 @@ function buildCollectedTransactionSelect() {
       select: {
         flowKind: true
       }
+    },
+    linkedFuelLog: {
+      select: {
+        id: true,
+        vehicle: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    },
+    linkedMaintenanceLog: {
+      select: {
+        id: true,
+        vehicle: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
     }
   } as const;
 }
@@ -429,7 +497,8 @@ function mapCollectedTransactionRecordToStoredTransaction(
     matchedPlanItemTitle: transaction.matchedPlanItem?.title ?? null,
     postedJournalEntryId: transaction.postedJournalEntry?.id ?? null,
     postedJournalEntryNumber:
-      transaction.postedJournalEntry?.entryNumber ?? null
+      transaction.postedJournalEntry?.entryNumber ?? null,
+    ...buildVehicleLogSourceFields(transaction)
   };
 }
 
@@ -467,7 +536,7 @@ function mapLedgerTransactionFlowKindToCollectedTransactionType(
 function mapCollectedTransactionSourceKind(
   transaction: Pick<
     CollectedTransactionRecord,
-    'importBatchId' | 'matchedPlanItemId'
+    'importBatchId' | 'matchedPlanItemId' | 'linkedFuelLog' | 'linkedMaintenanceLog'
   >
 ): CollectedTransactionSourceKind {
   if (transaction.importBatchId) {
@@ -478,7 +547,42 @@ function mapCollectedTransactionSourceKind(
     return 'RECURRING';
   }
 
+  if (transaction.linkedFuelLog || transaction.linkedMaintenanceLog) {
+    return 'VEHICLE_LOG';
+  }
+
   return 'MANUAL';
+}
+
+function buildVehicleLogSourceFields(
+  transaction: Pick<
+    CollectedTransactionRecord,
+    'linkedFuelLog' | 'linkedMaintenanceLog'
+  >
+): { sourceVehicleLog?: CollectedTransactionVehicleLogSource } {
+  if (transaction.linkedFuelLog) {
+    return {
+      sourceVehicleLog: {
+        kind: 'FUEL',
+        logId: transaction.linkedFuelLog.id,
+        vehicleId: transaction.linkedFuelLog.vehicle.id,
+        vehicleName: transaction.linkedFuelLog.vehicle.name
+      }
+    };
+  }
+
+  if (transaction.linkedMaintenanceLog) {
+    return {
+      sourceVehicleLog: {
+        kind: 'MAINTENANCE',
+        logId: transaction.linkedMaintenanceLog.id,
+        vehicleId: transaction.linkedMaintenanceLog.vehicle.id,
+        vehicleName: transaction.linkedMaintenanceLog.vehicle.name
+      }
+    };
+  }
+
+  return {};
 }
 
 function mapCollectedTransactionPostingStatus(
@@ -500,4 +604,17 @@ function mapCollectedTransactionPostingStatus(
     default:
       return 'REVIEWED';
   }
+}
+
+function assertCollectedTransactionCanBeManagedDirectly(input: {
+  linkedFuelLogId: string | null;
+  linkedMaintenanceLogId: string | null;
+}) {
+  if (!input.linkedFuelLogId && !input.linkedMaintenanceLogId) {
+    return;
+  }
+
+  throw new BadRequestException(
+    '차량 연료/정비 기록에서 생성된 수집거래는 차량 운영 화면에서만 수정하거나 연결 해제할 수 있습니다.'
+  );
 }

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, PlanItemStatus } from '@prisma/client';
+import { AccountingPeriodStatus, Prisma, PlanItemStatus } from '@prisma/client';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
 import type {
   GeneratedPlanItemDraft,
@@ -9,6 +9,17 @@ import type {
 @Injectable()
 export class PrismaPlanItemGenerationAdapter implements PlanItemGenerationPort {
   constructor(private readonly prisma: PrismaService) {}
+
+  private readonly periodSelect = {
+    id: true,
+    tenantId: true,
+    ledgerId: true,
+    year: true,
+    month: true,
+    startDate: true,
+    endDate: true,
+    status: true
+  } as const;
 
   findPeriodByIdInWorkspace(
     tenantId: string,
@@ -21,16 +32,25 @@ export class PrismaPlanItemGenerationAdapter implements PlanItemGenerationPort {
         tenantId,
         ledgerId
       },
-      select: {
-        id: true,
-        tenantId: true,
-        ledgerId: true,
-        year: true,
-        month: true,
-        startDate: true,
-        endDate: true,
-        status: true
-      }
+      select: this.periodSelect
+    });
+  }
+
+  findLatestCollectingPeriodInWorkspace(tenantId: string, ledgerId: string) {
+    return this.prisma.accountingPeriod.findFirst({
+      where: {
+        tenantId,
+        ledgerId,
+        status: {
+          in: [
+            AccountingPeriodStatus.OPEN,
+            AccountingPeriodStatus.IN_REVIEW,
+            AccountingPeriodStatus.CLOSING
+          ]
+        }
+      },
+      select: this.periodSelect,
+      orderBy: [{ year: 'desc' }, { month: 'desc' }]
     });
   }
 

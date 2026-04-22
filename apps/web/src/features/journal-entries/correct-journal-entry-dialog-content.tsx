@@ -185,7 +185,7 @@ export function CorrectJournalEntryDialogContent({
           setFeedback({
             severity: 'error',
             message:
-              '정정 전표 일자는 전표 입력 가능한 열린 운영 기간 안에 있어야 합니다.'
+              '정정 전표 일자는 최신 전표 입력 가능월 안에 있어야 합니다.'
           });
           return;
         }
@@ -241,9 +241,9 @@ export function CorrectJournalEntryDialogContent({
               helperText={
                 form.formState.errors.entryDate?.message ??
                 (journalWritablePeriods.length > 1
-                  ? '전표 입력 가능한 열린 운영 기간 안에서만 정정할 수 있습니다.'
+                  ? '최신 전표 입력 가능월 안에서만 정정할 수 있습니다.'
                   : adjustmentPeriod
-                    ? `${adjustmentPeriod.monthLabel} 운영 기간 안에서만 정정할 수 있습니다.`
+                    ? `${adjustmentPeriod.monthLabel} 최신 전표 입력 가능월 안에서만 정정할 수 있습니다.`
                     : '전표 입력 가능한 운영 기간이 필요합니다.')
               }
               {...form.register('entryDate')}

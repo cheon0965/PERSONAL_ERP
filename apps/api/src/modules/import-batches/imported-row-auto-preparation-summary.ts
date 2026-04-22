@@ -3,7 +3,8 @@ import type {
   CollectedTransactionPostingStatus,
   CollectedTransactionType,
   ImportedRowAutoPreparationSummary,
-  ImportedRowCollectionSummary
+  ImportedRowCollectionSummary,
+  ImportedRowTargetPeriodCreationReason
 } from '@personal-erp/contracts';
 import { LedgerTransactionFlowKind } from '@prisma/client';
 
@@ -19,6 +20,7 @@ type ImportedRowAutoPreparationSummaryInput = {
   allowPlanItemMatch: boolean;
   targetPeriodMonthLabel?: string;
   willCreateTargetPeriod?: boolean;
+  targetPeriodCreationReason?: ImportedRowTargetPeriodCreationReason | null;
   potentialDuplicateTransactionCount?: number;
 };
 
@@ -31,6 +33,18 @@ export function buildImportedRowAutoPreparationSummary(
     decisionReasons.push(
       `${input.targetPeriodMonthLabel} 운영월이 없어 등록 과정에서 자동으로 추가합니다.`
     );
+
+    if (input.targetPeriodCreationReason === 'INITIAL_SETUP') {
+      decisionReasons.push(
+        '운영 시작 전 기초 입력 예외로 운영월 자동 생성을 허용합니다.'
+      );
+    }
+
+    if (input.targetPeriodCreationReason === 'NEW_FUNDING_ACCOUNT') {
+      decisionReasons.push(
+        '신규 계좌/카드 기초 업로드 예외로 운영월 자동 생성을 허용합니다.'
+      );
+    }
   }
 
   if (input.hasDuplicateSourceFingerprint) {
@@ -109,6 +123,17 @@ export function buildImportedRowAutoPreparationSummary(
     nextWorkflowStatus: input.nextWorkflowStatus,
     hasDuplicateSourceFingerprint: input.hasDuplicateSourceFingerprint,
     allowPlanItemMatch: input.allowPlanItemMatch,
+    ...(input.willCreateTargetPeriod && input.targetPeriodMonthLabel
+      ? {
+          willCreateTargetPeriod: true,
+          targetPeriodMonthLabel: input.targetPeriodMonthLabel,
+          ...(input.targetPeriodCreationReason
+            ? {
+                targetPeriodCreationReason: input.targetPeriodCreationReason
+              }
+            : {})
+        }
+      : {}),
     ...(input.potentialDuplicateTransactionCount
       ? {
           potentialDuplicateTransactionCount:

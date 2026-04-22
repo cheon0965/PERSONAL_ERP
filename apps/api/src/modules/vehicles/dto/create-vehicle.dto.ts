@@ -4,6 +4,7 @@ import { FuelType } from '@prisma/client';
 import {
   IsEnum,
   IsInt,
+  IsBoolean,
   IsNumber,
   IsOptional,
   IsString,
@@ -34,4 +35,24 @@ export class CreateVehicleDto implements CreateVehicleRequest {
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   estimatedFuelEfficiencyKmPerLiter?: number | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsString()
+  defaultFundingAccountId?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsString()
+  defaultFuelCategoryId?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsString()
+  defaultMaintenanceCategoryId?: string | null;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  operatingExpensePlanOptIn?: boolean;
 }

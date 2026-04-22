@@ -44,7 +44,7 @@ export function buildAccountingPeriodsPageModel({
   ledgerLabel: string;
 }) {
   const hasWorkspace = ledgerLabel !== '-';
-  const canOpenPeriod =
+  const canOpenPeriodByRole =
     membershipRole === 'OWNER' || membershipRole === 'MANAGER';
   const canClosePeriod = membershipRole === 'OWNER';
   const canReopenPeriod = membershipRole === 'OWNER';
@@ -53,6 +53,15 @@ export function buildAccountingPeriodsPageModel({
     periods.find((period) => period.status !== 'LOCKED') ?? null;
   const lockedPeriods = periods.filter((period) => period.status === 'LOCKED');
   const latestPeriod = periods[0] ?? null;
+  const canOpenPeriodByLifecycle =
+    isFirstPeriod || latestPeriod?.status === 'LOCKED';
+  const canOpenPeriod = canOpenPeriodByRole && canOpenPeriodByLifecycle;
+  const openPeriodBlockReason = readOpenPeriodBlockReason({
+    canOpenPeriodByRole,
+    canOpenPeriodByLifecycle,
+    latestPeriod,
+    membershipRole
+  });
   const reopenPeriod = lockedPeriods[0] ?? null;
   const currentPeriod = openPeriod ?? latestPeriod ?? null;
   const lockedPeriodCount = lockedPeriods.length;
@@ -153,6 +162,7 @@ export function buildAccountingPeriodsPageModel({
     lockedPeriods,
     lockedPeriodCount,
     openingBalanceFundingAccounts,
+    openPeriodBlockReason,
     openPeriod,
     pageDescription,
     pageTitle,
@@ -163,6 +173,23 @@ export function buildAccountingPeriodsPageModel({
     workspaceLabel,
     membershipRole: readMembershipRoleLabel(membershipRole)
   };
+}
+
+function readOpenPeriodBlockReason(input: {
+  canOpenPeriodByRole: boolean;
+  canOpenPeriodByLifecycle: boolean;
+  latestPeriod: AccountingPeriodItem | null;
+  membershipRole: MembershipRole;
+}) {
+  if (!input.canOpenPeriodByRole) {
+    return `월 운영 시작은 소유자 또는 관리자만 실행할 수 있습니다. 현재 역할은 ${readMembershipRoleLabel(input.membershipRole)} 입니다.`;
+  }
+
+  if (!input.canOpenPeriodByLifecycle && input.latestPeriod) {
+    return `${input.latestPeriod.monthLabel} 운영 월이 아직 ${input.latestPeriod.status} 상태입니다. 새 운영 월은 최근 운영 월을 먼저 마감한 뒤 열 수 있습니다.`;
+  }
+
+  return null;
 }
 
 export function buildAccountingPeriodsHeaderConfig({

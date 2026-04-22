@@ -93,7 +93,7 @@
 - 관리자 범위는 현재 workspace의 멤버 목록/초대/역할·상태 관리, DB 메뉴 트리/메뉴 권한 관리, workspace 감사 로그 조회, 권한 정책 요약까지 포함합니다. `INITIAL_ADMIN_*`로 시드된 전역 관리자는 일반 사업장 관리자와 분리되어 전체 사용자 관리, 사업장 관리, 사업장 전환/지원 문맥, 운영 상태 점검, 보안 위협 로그, 전체 멤버십 역할·상태 관리를 수행할 수 있습니다.
 - 내비게이션 범위는 현재 workspace의 DB 메뉴 트리를 현재 멤버 역할 기준으로 필터링해 반환하는 `navigation/tree`까지 포함합니다.
 - 운영 지원 범위는 체크리스트, 예외 처리함, 월 마감 대시보드, 업로드 운영 현황, 시스템 상태, 알림 센터, 수동 CSV 반출, 운영 메모까지 포함합니다.
-- 기준/참조 범위는 조회 `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`, `vehicles/operating-summary`, `vehicles/fuel-logs`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/차량 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `DELETE /insurance-policies/:id`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/fuel-logs`, `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
+- 기준/참조 범위는 조회 `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`, `vehicles/operating-summary`, `vehicles/fuel-logs`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/차량 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `DELETE /insurance-policies/:id`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/fuel-logs`, `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `DELETE /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`, `DELETE /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
 - 운영/원장 조회 범위는 `accounting-periods`, `collected-transactions`, `journal-entries`, `plan-items`, `financial-statements`, `carry-forwards`, `import-batches`까지 포함합니다.
 - 집계/보고 조회 범위는 `dashboard/summary`, `forecast/monthly`까지 포함합니다.
 - 현재 쓰기/명령 범위는 `funding-accounts`, `categories`, `insurance-policies`, `vehicles`, `vehicle fuel logs`, `vehicle maintenance logs`, `accounting-periods`, `collected-transactions`, `recurring-rules`, `plan-items`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`까지 확장되어 있습니다.
@@ -158,8 +158,10 @@
 - `PATCH /vehicles/:id`
 - `POST /vehicles/:id/fuel-logs`
 - `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`
+- `DELETE /vehicles/:vehicleId/fuel-logs/:fuelLogId`
 - `POST /vehicles/:id/maintenance-logs`
 - `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`
+- `DELETE /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`
 
 ### 월 운영/수집/전표
 
@@ -276,8 +278,8 @@
 - Web `/insurances` -> API `/insurance-policies`
 - Web `/vehicles` -> API `/vehicles`
 - Web `/vehicles/fleet` -> API `GET /vehicles`, `POST /vehicles`, `PATCH /vehicles/:id`
-- Web `/vehicles/fuel` -> API `GET /vehicles/fuel-logs`, `POST /vehicles/:id/fuel-logs`, `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`
-- Web `/vehicles/maintenance` -> API `GET /vehicles/maintenance-logs`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`
+- Web `/vehicles/fuel` -> API `GET /vehicles/fuel-logs`, `POST /vehicles/:id/fuel-logs`, `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `DELETE /vehicles/:vehicleId/fuel-logs/:fuelLogId`
+- Web `/vehicles/maintenance` -> API `GET /vehicles/maintenance-logs`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`, `DELETE /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`
 - Web `/forecast` -> API `GET /forecast/monthly`
 - Web 라우트의 shorthand 이름과 Swagger/API module 이름이 다를 수 있으며, 계약과 백엔드 모듈명은 API 경로 기준으로 봅니다.
 
@@ -422,7 +424,8 @@
 
 - 계약: `OpenAccountingPeriodRequest -> AccountingPeriodItem`
 - 선택한 `month`의 운영 기간을 열고, 필요하면 opening balance 초기화를 시작합니다.
-- 월 오픈은 이전 월 마감과 별도 작업이며, 이미 존재하는 가장 최근 운영 기간보다 이후 월이면 선오픈할 수 있습니다.
+- 월 오픈은 월별 운영 사이클의 시작이며, 이미 존재하는 가장 최근 운영 기간이 `LOCKED` 상태일 때만 이후 월을 열 수 있습니다.
+- 운영 중에는 하나의 최신 진행월만 열어 두는 것을 기본 정책으로 삼습니다.
 
 ### `POST /accounting-periods/:id/close`
 
@@ -435,6 +438,7 @@
 - 계약: `ReopenAccountingPeriodRequest -> AccountingPeriodItem`
 - 잠금된 운영 기간을 사유와 함께 다시 엽니다.
 - 재오픈 시 해당 기간의 공식 재무제표 snapshot과 closing snapshot을 정리하고 상태를 `OPEN`으로 되돌립니다.
+- 재오픈은 최신 잠금 운영월에만 허용합니다.
 - 이미 차기 이월 record가 생성되었거나 다음 운영 기간에 opening balance snapshot이 있으면 `409 Conflict`로 막습니다.
 
 ### `GET /reference-data/readiness`
@@ -449,12 +453,14 @@
 - 계약: response `FundingAccountItem[]`
 - 현재 작업 문맥 기준 활성 자금수단만 반환합니다.
 - `?includeInactive=true`를 주면 비활성/종료 자금수단까지 함께 반환합니다.
+- 응답의 `bootstrapStatus`는 신규 계좌/카드 기초 업로드 가능성을 표시합니다. `PENDING`인 활성 `BANK`/`CARD`만 업로드 배치의 신규 계좌/카드 기초 업로드 예외 후보가 될 수 있습니다.
 
 ### `POST /funding-accounts`
 
 - 계약: `CreateFundingAccountRequest -> FundingAccountItem`
 - 현재 작업 문맥의 Owner/Manager만 새 자금수단을 생성할 수 있습니다.
 - 현재 범위는 `name`, `type` 생성과 활성 상태 기본값(`ACTIVE`), 초기 잔액 `0원`까지로 한정합니다.
+- 새 `BANK`/`CARD` 자금수단은 `bootstrapStatus=PENDING`으로 생성되어 등록 직후 기초 업로드 예외 후보가 됩니다. `CASH`는 `NOT_REQUIRED`로 생성됩니다.
 - 이름은 trim/lower 기준 normalized key로 중복을 판정하며, 동시 생성 충돌은 `409 Conflict`로 정리합니다.
 
 ### `PATCH /funding-accounts/:id`
@@ -462,6 +468,7 @@
 - 계약: `UpdateFundingAccountRequest -> FundingAccountItem`
 - 현재 작업 문맥의 Owner/Manager만 자금수단 이름 변경과 `ACTIVE/INACTIVE/CLOSED` 상태 전환을 수행할 수 있습니다.
 - 현재 범위에서 `CLOSED` 전환은 `INACTIVE -> CLOSED`일 때만 허용합니다.
+- `bootstrapStatus`는 `PENDING -> COMPLETED` 직접 전환만 허용합니다. 신규 계좌/카드의 기초 업로드를 건너뛰기로 결정한 경우 이 전환으로 예외 상태를 닫습니다.
 - `CLOSED` 자금수단은 기존 거래/반복 규칙 기록 보존용 읽기 전용 상태로 유지하며, 현재 범위에서는 다시 수정하거나 재활성화할 수 없습니다.
 - 현재 범위는 `type` 변경, 잔액 직접 수정, 하드 삭제를 지원하지 않습니다.
 - 이름 중복이나 상태 경합은 `409 Conflict`로 응답합니다.
@@ -530,7 +537,7 @@
 
 - 계약: `CreateVehicleRequest -> VehicleItem`
 - 현재 작업 문맥의 Owner/Manager만 새 차량 기본 정보를 생성할 수 있습니다.
-- 현재 범위는 `name`, `manufacturer`, `fuelType`, `initialOdometerKm`, `estimatedFuelEfficiencyKmPerLiter`까지의 차량 기본 프로필 관리로 한정하며 연료/정비 이력 생성은 별도 계약으로 분리합니다.
+- 현재 범위는 `name`, `manufacturer`, `fuelType`, `initialOdometerKm`, `estimatedFuelEfficiencyKmPerLiter`와 차량별 기본 자금수단/연료 카테고리/정비 카테고리, 차량 운영비 계획 opt-in까지의 차량 기본 프로필 관리로 한정하며 연료/정비 이력 생성은 별도 계약으로 분리합니다.
 - 운영비 요약은 `VehicleItem`이 아니라 `/vehicles/operating-summary` projection에서 읽습니다.
 - 차량 이름은 normalized key 기준으로 중복을 막고, 동시 생성 충돌은 `409 Conflict`로 정리합니다.
 
@@ -538,7 +545,7 @@
 
 - 계약: `UpdateVehicleRequest -> VehicleItem`
 - 현재 작업 문맥의 Owner/Manager만 차량 기본 정보를 수정할 수 있습니다.
-- 현재 범위는 차량 프로필 필드만 조정하며, 차량 세부 운영 이력과 하드 삭제는 지원하지 않습니다.
+- 현재 범위는 차량 프로필 필드와 차량별 운영비 기본값을 조정하며, 차량 프로필 하드 삭제는 지원하지 않습니다.
 - 즉, 현재 수정 흐름은 차량 프로필 관리에만 집중하고, 연료/정비 이력은 별도 운영 모델로 관리합니다.
 - 운영비/연비 보조 지표는 수정 응답이 아니라 별도 summary projection에서 해석합니다.
 - 같은 이름 충돌은 `409 Conflict`로 응답합니다.
@@ -547,42 +554,71 @@
 
 - 계약: response `VehicleFuelLogItem[]`
 - 현재 작업 문맥 기준 차량 연료 이력을 workspace 범위로 모아 반환합니다.
-- 연료 이력은 차량 기본 정보 응답과 분리된 별도 운영 기록 모델이며, 차량명은 read model 편의를 위해 함께 내려갑니다.
+- 연료 이력은 차량 기본 정보 응답과 분리된 별도 운영 기록 모델이며, 차량명과 `linkedCollectedTransaction` 요약은 read model 편의를 위해 함께 내려갑니다.
+- `linkedCollectedTransaction`이 있으면 차량 화면에서 회계 연동 상태, 연결 수집거래 ID, 자금수단, 카테고리, 전표 확정 여부를 확인할 수 있습니다.
 
 ### `POST /vehicles/:id/fuel-logs`
 
 - 계약: `CreateVehicleFuelLogRequest -> VehicleFuelLogItem`
 - 현재 작업 문맥의 Owner/Manager만 특정 차량에 연료 이력을 추가할 수 있습니다.
-- 현재 범위는 `filledOn`, `odometerKm`, `liters`, `amountWon`, `unitPriceWon`, `isFullTank`까지의 최소 운영 기록 필드만 지원합니다.
+- 현재 범위는 `filledOn`, `odometerKm`, `liters`, `amountWon`, `unitPriceWon`, `isFullTank`와 선택적 `accountingLink`를 지원합니다.
+- `accountingLink`를 보내면 같은 요청 안에서 표준 지출 수집거래를 함께 생성합니다. 거래일은 `filledOn`, 금액은 `amountWon`, 제목/메모는 차량명과 연료 세부값을 기준으로 생성됩니다.
+- 회계 연동을 켠 연료 기록은 0원 금액을 허용하지 않으며, 거래일이 최신 진행월 범위 안에 있어야 합니다.
+- 카테고리가 있으면 연결 수집거래는 전표 준비 상태까지 올라갈 수 있고, 카테고리가 없으면 검토 상태로 남아 이후 차량 연료 기록 수정 화면에서 보완할 수 있습니다.
 
 ### `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`
 
 - 계약: `UpdateVehicleFuelLogRequest -> VehicleFuelLogItem`
 - 현재 작업 문맥의 Owner/Manager만 특정 차량의 연료 이력을 수정할 수 있습니다.
-- 현재 범위는 연료 이력 수정만 지원하며, 삭제와 회계 자동 매칭은 후속 단계로 남겨 둡니다.
+- 미확정 연결 수집거래가 있으면 연료 기록 수정 시 날짜, 금액, 자금수단, 카테고리, 제목/메모를 함께 동기화합니다.
+- `accountingLink: null`로 저장하면 미확정 연결 수집거래를 삭제하고 연동을 해제합니다. 이미 전표 확정/정정/잠금된 연결은 해제할 수 없습니다.
+- 연결 수집거래가 `POSTED`, `CORRECTED`, `LOCKED`이면 연료 기록 수정 자체를 거절합니다. 이 경우 차량 기록은 과거 사실로 보존하고, 회계 조정은 전표 반전/정정 흐름에서 처리합니다.
+
+### `DELETE /vehicles/:vehicleId/fuel-logs/:fuelLogId`
+
+- 계약: response body 없음 (`204 No Content`)
+- 현재 작업 문맥의 Owner/Manager만 특정 차량의 연료 이력을 삭제할 수 있습니다.
+- 연결 수집거래가 없으면 연료 기록만 삭제합니다.
+- 연결 수집거래가 미확정(`COLLECTED`, `REVIEWED`, `READY_TO_POST`)이면 같은 transaction에서 연결 수집거래도 함께 삭제합니다.
+- 연결 수집거래가 `POSTED`, `CORRECTED`, `LOCKED`이거나 이미 전표와 연결되어 있으면 삭제를 거절합니다. 이 경우 차량 기록은 과거 사실로 보존하고, 회계 조정은 전표 반전/정정 흐름에서 처리합니다.
+- 현재 범위는 연료 이력 생성/수정/회계 연동까지 지원하며, 연료 이력 삭제는 후속 단계로 남겨 둡니다.
 
 ### `GET /vehicles/maintenance-logs`
 
 - 계약: response `VehicleMaintenanceLogItem[]`
 - 현재 작업 문맥 기준 차량 정비 이력을 workspace 범위로 모아 반환합니다.
-- 정비 이력은 차량 기본 정보 응답과 분리된 별도 운영 기록 모델이며, 차량명은 read model 편의를 위해 함께 내려갑니다.
+- 정비 이력은 차량 기본 정보 응답과 분리된 별도 운영 기록 모델이며, 차량명과 `linkedCollectedTransaction` 요약은 read model 편의를 위해 함께 내려갑니다.
+- `linkedCollectedTransaction`이 있으면 차량 화면에서 회계 연동 상태, 연결 수집거래 ID, 자금수단, 카테고리, 전표 확정 여부를 확인할 수 있습니다.
 
 ### `POST /vehicles/:id/maintenance-logs`
 
 - 계약: `CreateVehicleMaintenanceLogRequest -> VehicleMaintenanceLogItem`
 - 현재 작업 문맥의 Owner/Manager만 특정 차량에 정비 이력을 추가할 수 있습니다.
-- 현재 범위는 `performedOn`, `odometerKm`, `category`, `vendor`, `description`, `amountWon`, `memo`까지의 최소 운영 기록 필드만 지원합니다.
+- 현재 범위는 `performedOn`, `odometerKm`, `category`, `vendor`, `description`, `amountWon`, `memo`와 선택적 `accountingLink`를 지원합니다.
+- `accountingLink`를 보내면 같은 요청 안에서 표준 지출 수집거래를 함께 생성합니다. 거래일은 `performedOn`, 금액은 `amountWon`, 제목/메모는 차량명과 정비 세부값을 기준으로 생성됩니다.
+- 회계 연동을 켠 정비 기록은 0원 금액을 허용하지 않으며, 거래일이 최신 진행월 범위 안에 있어야 합니다.
 
 ### `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`
 
 - 계약: `UpdateVehicleMaintenanceLogRequest -> VehicleMaintenanceLogItem`
 - 현재 작업 문맥의 Owner/Manager만 특정 차량의 정비 이력을 수정할 수 있습니다.
-- 현재 범위는 정비 이력 수정만 지원하며, 삭제와 회계 자동 매칭은 후속 단계로 남겨 둡니다.
+- 미확정 연결 수집거래가 있으면 정비 기록 수정 시 날짜, 금액, 자금수단, 카테고리, 제목/메모를 함께 동기화합니다.
+- `accountingLink: null`로 저장하면 미확정 연결 수집거래를 삭제하고 연동을 해제합니다. 이미 전표 확정/정정/잠금된 연결은 해제할 수 없습니다.
+- 연결 수집거래가 `POSTED`, `CORRECTED`, `LOCKED`이면 정비 기록 수정 자체를 거절합니다. 이 경우 차량 기록은 과거 사실로 보존하고, 회계 조정은 전표 반전/정정 흐름에서 처리합니다.
+
+### `DELETE /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`
+
+- 계약: response body 없음 (`204 No Content`)
+- 현재 작업 문맥의 Owner/Manager만 특정 차량의 정비 이력을 삭제할 수 있습니다.
+- 연결 수집거래가 없으면 정비 기록만 삭제합니다.
+- 연결 수집거래가 미확정(`COLLECTED`, `REVIEWED`, `READY_TO_POST`)이면 같은 transaction에서 연결 수집거래도 함께 삭제합니다.
+- 연결 수집거래가 `POSTED`, `CORRECTED`, `LOCKED`이거나 이미 전표와 연결되어 있으면 삭제를 거절합니다. 이 경우 차량 기록은 과거 사실로 보존하고, 회계 조정은 전표 반전/정정 흐름에서 처리합니다.
+- 현재 범위는 정비 이력 생성/수정/회계 연동까지 지원하며, 정비 이력 삭제는 후속 단계로 남겨 둡니다.
 
 ### `POST /collected-transactions`
 
 - 계약: `CreateCollectedTransactionRequest -> CollectedTransactionItem`
-- 거래일을 포함하는 열린 운영 기간에 수집 거래를 생성합니다.
+- 최신 진행월 범위 안의 거래일에 수집 거래를 생성합니다.
 - 현재 API 구현 이름은 `collected-transactions`이고, Web 화면 경로는 shorthand로 `/transactions`를 사용합니다.
 - 현재 응답은 `GET /collected-transactions` 목록 아이템 shape와 동일하게 매핑됩니다.
 - 기준 데이터 readiness가 부족한 경우에도 현재 구현은 저장 요청 자체를 일괄 차단하지는 않지만, Web은 `reference-data/readiness`를 기준으로 준비 부족 안내와 이동 링크를 함께 노출합니다.
@@ -592,18 +628,21 @@
 - 계약: response `CollectedTransactionDetailItem`
 - 특정 수집 거래의 상세 값을 읽습니다.
 - 현재 Web 드로어 수정 흐름은 이 상세 응답을 기준으로 초기값을 채웁니다.
+- 차량 연료/정비 기록에서 생성된 연결 수집거래는 `sourceKind=VEHICLE_LOG`와 `sourceVehicleLog` 원본 정보를 함께 내려줍니다. 조회는 가능하지만, 수정과 삭제의 소유 진입점은 차량 운영 화면입니다.
 
 ### `PATCH /collected-transactions/:id`
 
 - 계약: `UpdateCollectedTransactionRequest -> CollectedTransactionItem`
 - 미확정 상태(`COLLECTED`, `REVIEWED`, `READY_TO_POST`)의 수집 거래를 수정합니다.
-- 거래일을 포함하는 열린 운영 기간이 있어야 하며, 이미 전표로 확정된 거래는 수정할 수 없습니다.
+- 수정 후 거래일도 최신 진행월 범위 안에 있어야 하며, 이미 전표로 확정된 거래는 수정할 수 없습니다.
+- 차량 연료/정비 기록에서 생성된 연결 수집거래는 이 엔드포인트에서 직접 수정할 수 없습니다. 날짜/금액/분류 변경은 차량 연료/정비 수정 화면에서만 동기화합니다.
 
 ### `DELETE /collected-transactions/:id`
 
 - 계약: response body 없음 (`204 No Content`)
 - 미확정 상태(`COLLECTED`, `REVIEWED`, `READY_TO_POST`)의 수집 거래를 삭제합니다.
 - 이미 전표로 이어진 거래는 삭제 대신 전표 정정/반전 흐름으로 처리해야 합니다.
+- 차량 연료/정비 기록에서 생성된 연결 수집거래는 이 엔드포인트에서 직접 삭제할 수 없습니다. 미확정 연결 해제는 차량 연료/정비 수정 화면에서 `accountingLink: null`로 처리하거나 차량 연료/정비 삭제 API에서 차량 기록과 함께 정리합니다.
 
 ### `POST /collected-transactions/:id/confirm`
 
@@ -650,13 +689,14 @@
 - 선택한 운영 기간에 대해 활성 `RecurringRule`로부터 `PlanItem`을 생성합니다.
 - 같은 규칙/예정일 조합이 이미 있으면 건너뛰고, 기본 거래유형을 해석할 수 없는 규칙은 제외합니다.
 - 최종 중복 방지는 `periodId + recurringRuleId + plannedDate` DB unique 기준으로 수행하며, 경합 시 응답 집계는 실제 commit 결과를 반영합니다.
+- 대상 기간은 최신 진행월이어야 합니다. 잠금월, 과거 열린월, 최신이 아닌 리뷰/마감 진행월에는 계획 항목을 생성하지 않습니다.
 
 ### `POST /import-batches`
 
 - 계약: `CreateImportBatchRequest -> ImportBatchItem`
 - UTF-8 CSV/TSV 또는 붙여넣기 텍스트 업로드 내용을 파싱해 배치와 행 단위 parse 결과를 저장합니다.
 - `fundingAccountId`를 함께 보내면 활성 계좌/카드 자금수단과 배치를 연결합니다. 빈 값이면 기존처럼 배치만 생성합니다.
-- 현재 row read model은 이미 승격된 행이면 수집 거래 상태, 연결된 계획 항목, 적용 카테고리 요약까지 함께 돌려줍니다.
+- 현재 row read model은 이미 등록된 행이면 수집 거래 상태, 연결된 계획 항목, 적용 카테고리 요약까지 함께 돌려줍니다.
 
 ### `POST /import-batches/files`
 
@@ -664,6 +704,7 @@
 - 현재 파일첨부 업로드는 `IM_BANK_PDF` 원본 형식을 지원합니다.
 - `fundingAccountId`는 필수이며, 현재 워크스페이스의 활성 계좌/카드 자금수단이어야 합니다.
 - IM뱅크 PDF 거래내역은 raw bytes SHA-256 `fileHash`를 계산하고, PDF 텍스트 레이어와 좌표를 읽어 `ImportedRow.rawPayload.original/parsed` 구조로 변환합니다.
+- 텍스트 레이어가 없는 스캔/이미지 PDF는 OCR 미도입 범위로 명시 차단하며, `400 Bad Request`와 `code=SCANNED_PDF_TEXT_LAYER_MISSING`를 반환합니다.
 - 원본 PDF 파일 자체는 저장하지 않고, 파일명, 해시, 파싱된 행, 행 단위 원본/정규화 payload만 저장합니다.
 - PDF magic bytes, 확장자, content-type, 10MB 크기 제한을 검증합니다.
 
@@ -685,14 +726,19 @@
 - 계약: `CollectImportedRowRequest -> CollectImportedRowPreview`
 - 파싱 완료된 업로드 행을 실제 승격 전에 평가합니다.
 - 현재 구현은 계획 항목 자동 매칭 후보, 적용 카테고리, 예상 다음 상태, duplicate fingerprint 보류 여부, 설명용 decision reason 목록을 함께 반환합니다.
+- 대상 운영월을 등록 과정에서 만들 예정이면 `willCreateTargetPeriod`, `targetPeriodMonthLabel`, `targetPeriodCreationReason(INITIAL_SETUP | NEW_FUNDING_ACCOUNT)`을 함께 반환합니다.
 - 중복 후보는 같은 현재 배치 안의 미승격 행끼리만으로 막지 않고, 이미 수기 입력됐거나 다른 배치에서 반영된 기존 수집 거래와 겹칠 때 확인 대상으로 봅니다.
+- 운영 중에는 최신 진행월 범위 밖의 행 또는 임의의 신규 운영월 자동 생성을 preview 단계에서 차단합니다.
 
 ### `POST /import-batches/:id/rows/:rowId/collect`
 
 - 계약: `CollectImportedRowRequest -> CollectImportedRowResponse`
-- 파싱 완료된 업로드 행을 수집 거래로 승격합니다.
+- 파싱 완료된 업로드 행을 수집 거래로 등록합니다.
 - 현재 응답은 생성된 `CollectedTransactionItem`뿐 아니라, 같은 요청 기준의 자동 판정 preview도 함께 돌려줍니다.
 - 현재 구현은 source fingerprint 기반 중복 감지, 미확정 계획 항목(`PlanItem`) 자동 매칭, 카테고리/상태 자동 준비를 포함합니다.
+- 운영 중에는 최신 진행월 범위의 행만 수집 거래로 등록할 수 있습니다.
+- 운영월 자동 생성은 아직 운영 기간이 없는 초기 기초데이터 적재 또는 최신 잠금 월 바로 다음 월에 대한 신규 활성 계좌/카드 기초 업로드 예외로 제한합니다.
+- 신규 계좌/카드 기초 업로드 예외는 해당 자금수단이 `bootstrapStatus=PENDING`이고 기존 수집거래, 다른 import batch, 전표 line, opening/closing snapshot line이 없을 때만 열립니다. 첫 수집 성공 후에는 `COMPLETED`로 전환됩니다.
 - 같은 업로드 행 재수집은 `importedRowId` 기준으로 막고, 반복 수집 거래 흡수는 조건부 claim으로 덮어쓰기를 방지합니다.
 - 일괄 등록 Job이 같은 workspace에서 실행 중이면 단건 collect도 같은 배치/다른 배치 여부에 따라 `409 Conflict`로 막습니다.
 - 중복/경합은 `409 Conflict`로 정리합니다.
@@ -703,8 +749,10 @@
 - 선택 행이 없으면 현재 요청 배치의 등록 가능 행 전체를 대상으로 하고, 선택 행이 있으면 선택 목록만 처리합니다.
 - 요청에서 `type`을 비우면 현재 구현은 파싱된 입출금 방향으로 `DEPOSIT -> INCOME`, `WITHDRAWAL -> EXPENSE`를 자동 판정합니다.
 - `categoryId`와 `memo`는 일괄 기본값으로 쓰이며, `typeOptions[]`에 `{ type, categoryId?, memo? }`를 넘기면 실제 적용 거래유형별로 카테고리와 메모를 별도 지정할 수 있습니다.
+- 일괄 등록도 단건 collect와 같은 최신 진행월/기초 업로드 예외 규칙을 따릅니다.
 - 응답은 `202 Accepted`와 함께 일괄 등록 Job 상태를 반환합니다. 서버는 Job/행별 결과를 저장하며, 같은 워크스페이스에서는 동시에 하나의 일괄 등록 Job만 실행됩니다.
 - Job 실행 루프는 현재 API 프로세스 안에서 시작되고, 진행률과 결과는 DB에 남긴 뒤 배치 작업대에서 폴링합니다.
+- 운영월 자동 생성이 발생한 행의 Job 결과 메시지는 `운영 시작 전 기초 입력`과 `신규 계좌/카드 기초 업로드` 사유를 구분해 남깁니다.
 
 ### `GET /import-batches/:id/collection-jobs/active`
 
@@ -739,7 +787,7 @@
 
 - 계약: `GenerateCarryForwardRequest -> CarryForwardView`
 - 잠금된 운영 기간의 closing snapshot을 다음 기간 opening balance snapshot으로 이월합니다.
-- 현재 구현은 `carryForwardRecord`와 opening balance snapshot 생성까지 포함하며, `createdJournalEntryId`는 아직 `null`일 수 있습니다.
+- 현재 구현은 opening balance snapshot 전용 정책입니다. `CarryForwardRecord.createdJournalEntryId`는 의도적으로 `null`이며, 별도 `CARRY_FORWARD` 전표는 생성하지 않습니다.
 - `replaceExisting=true`를 보내면 기존 차기 이월을 안전 취소한 뒤 현재 closing snapshot 기준으로 다시 생성합니다. 이 경우 취소 권한까지 필요합니다.
 
 ### `POST /carry-forwards/:id/cancel`
@@ -754,11 +802,11 @@
 ### `reference-data -> accounting-periods -> insurance/vehicles -> recurring-rules -> plan-items -> collected-transactions/imports -> journal-entries -> financial-statements -> carry-forwards -> forecast`
 
 1. `GET /reference-data/readiness`, `POST /funding-accounts`, `POST /categories`로 기준 데이터 준비 상태를 확인하고 필요한 자금수단/카테고리를 정리합니다.
-2. `POST /accounting-periods`로 운영 기간을 엽니다. 다음 월 선오픈은 가능하지만, 월 마감은 별도 실행입니다.
-3. `POST /insurance-policies`, `POST /vehicles`, `POST /vehicles/:id/fuel-logs`, `POST /vehicles/:id/maintenance-logs`로 보험 계약과 차량 운영 기준을 정리합니다.
+2. `POST /accounting-periods`로 운영 기간을 엽니다. 다음 월은 최근 월을 마감한 뒤 열며, 운영 중에는 하나의 최신 진행월만 열어 둡니다.
+3. `POST /insurance-policies`, `POST /vehicles`, `POST /vehicles/:id/fuel-logs`, `POST /vehicles/:id/maintenance-logs`로 보험 계약과 차량 운영 기준을 정리합니다. 차량 연료/정비 저장 시 회계 연동을 켜면 같은 요청에서 표준 수집 거래를 함께 생성합니다.
 4. `POST /recurring-rules`와 `POST /plan-items/generate`로 반복 규칙을 현재 월 계획 항목으로 펼치고, 계획 기반 수집 거래까지 생성합니다.
-5. `POST /collected-transactions` 또는 `POST /import-batches/:id/rows/:rowId/collect`로 거래일 기준 열린 운영 기간의 수집 거래를 만들거나 업로드 행을 계획 기반 수집 거래에 흡수/매칭합니다.
-6. 필요하면 `GET/PATCH/DELETE /collected-transactions/:id`로 미확정(`COLLECTED`, `REVIEWED`, `READY_TO_POST`) 수집 거래를 상세 조회, 수정, 삭제합니다.
+5. `POST /collected-transactions` 또는 `POST /import-batches/:id/rows/:rowId/collect`로 최신 진행월 범위의 수집 거래를 만들거나 업로드 행을 계획 기반 수집 거래에 흡수/매칭합니다.
+6. 필요하면 `GET/PATCH/DELETE /collected-transactions/:id`로 미확정(`COLLECTED`, `REVIEWED`, `READY_TO_POST`) 수집 거래를 상세 조회, 수정, 삭제합니다. 단, 차량 연료/정비 화면에서 생성된 연결 수집거래는 차량 화면에서만 수정하거나 연결 해제합니다.
 7. `POST /collected-transactions/:id/confirm`로 수집 거래를 `JournalEntry`로 확정합니다. 계획 항목 화면의 바로 확정도 내부적으로 이 경로를 사용합니다.
 8. 필요하면 `POST /journal-entries/:id/reverse` 또는 `POST /journal-entries/:id/correct`로 전표 조정을 수행합니다.
 9. `POST /accounting-periods/:id/close`로 운영 기간을 잠그고 closing snapshot을 만듭니다.

@@ -10,6 +10,7 @@ import {
   ImportBatchCollectionJobStatus,
   Prisma
 } from '@prisma/client';
+import { OperationalAuditPublisher } from '../../common/infrastructure/operational/operational-audit-publisher.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { buildCollectRequestForBulkRow } from './bulk-collect-imported-rows.policy';
 import { ImportedRowCollectionService } from './imported-row-collection.service';
@@ -23,7 +24,8 @@ export class ImportBatchCollectionJobRunner {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly importedRowCollectionService: ImportedRowCollectionService
+    private readonly importedRowCollectionService: ImportedRowCollectionService,
+    private readonly auditPublisher: OperationalAuditPublisher
   ) {}
 
   start(jobId: string, user: AuthenticatedUser): void {
@@ -106,6 +108,10 @@ export class ImportBatchCollectionJobRunner {
 
       await this.finishJob({
         jobId: job.id,
+        tenantId: job.tenantId,
+        ledgerId: job.ledgerId,
+        importBatchId: job.importBatchId,
+        requestedRowCount: job.requestedRowCount,
         status: resolveFinalJobStatus({
           succeededCount,
           failedCount
@@ -122,6 +128,10 @@ export class ImportBatchCollectionJobRunner {
       );
       await this.finishJob({
         jobId: job.id,
+        tenantId: job.tenantId,
+        ledgerId: job.ledgerId,
+        importBatchId: job.importBatchId,
+        requestedRowCount: job.requestedRowCount,
         status: ImportBatchCollectionJobStatus.FAILED,
         processedRowCount,
         succeededCount,
@@ -219,8 +229,9 @@ export class ImportBatchCollectionJobRunner {
         rowId: input.rowId,
         status: ImportBatchCollectionJobRowStatus.COLLECTED,
         collectedTransactionId: collected.collectedTransaction.id,
-        message:
-          collected.preview.autoPreparation.decisionReasons.at(-1) ?? null
+        message: readCollectionJobSuccessMessage(
+          collected.preview.autoPreparation
+        )
       });
       return ImportBatchCollectionJobRowStatus.COLLECTED;
     } catch (error) {
@@ -288,6 +299,10 @@ export class ImportBatchCollectionJobRunner {
 
   private async finishJob(input: {
     jobId: string;
+    tenantId: string;
+    ledgerId: string;
+    importBatchId: string;
+    requestedRowCount: number;
     status: ImportBatchCollectionJobStatus;
     processedRowCount: number;
     succeededCount: number;
@@ -314,7 +329,51 @@ export class ImportBatchCollectionJobRunner {
         jobId: input.jobId
       }
     });
+    this.auditPublisher.publish({
+      kind: 'IMPORT_BATCH_COLLECTION_JOB',
+      eventName: 'import_batch_collection_job.finished',
+      occurredAt: finishedAt.toISOString(),
+      tenantId: input.tenantId,
+      ledgerId: input.ledgerId,
+      resourceType: 'import-batch-collection-job',
+      resourceId: input.jobId,
+      result:
+        input.status === ImportBatchCollectionJobStatus.SUCCEEDED
+          ? 'SUCCESS'
+          : 'FAILED',
+      payload: {
+        importBatchId: input.importBatchId,
+        requestedRowCount: input.requestedRowCount,
+        processedRowCount: input.processedRowCount,
+        succeededCount: input.succeededCount,
+        failedCount: input.failedCount,
+        status: input.status,
+        errorMessage: input.errorMessage
+      }
+    });
   }
+}
+
+function readCollectionJobSuccessMessage(autoPreparation: {
+  willCreateTargetPeriod?: boolean;
+  targetPeriodMonthLabel?: string;
+  targetPeriodCreationReason?: 'INITIAL_SETUP' | 'NEW_FUNDING_ACCOUNT';
+  decisionReasons: string[];
+}): string | null {
+  if (
+    autoPreparation.willCreateTargetPeriod &&
+    autoPreparation.targetPeriodMonthLabel
+  ) {
+    if (autoPreparation.targetPeriodCreationReason === 'NEW_FUNDING_ACCOUNT') {
+      return `${autoPreparation.targetPeriodMonthLabel} 신규 계좌/카드 기초 업로드로 운영월을 자동 생성하고 등록했습니다.`;
+    }
+
+    if (autoPreparation.targetPeriodCreationReason === 'INITIAL_SETUP') {
+      return `${autoPreparation.targetPeriodMonthLabel} 운영 시작 전 기초 입력으로 운영월을 자동 생성하고 등록했습니다.`;
+    }
+  }
+
+  return autoPreparation.decisionReasons.at(-1) ?? null;
 }
 
 function readBulkCollectRequest(

@@ -21,6 +21,8 @@ import {
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
 import { requirePositiveMoneyWon } from '../../common/money/money-won';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { OperationalAuditPublisher } from '../../common/infrastructure/operational/operational-audit-publisher.service';
+import { publishPeriodStatusHistoryAudit } from '../../common/infrastructure/operational/period-status-history-audit';
 import { parseMonthRange } from '../../common/utils/date.util';
 import { mapAccountingPeriodRecordToItem } from './accounting-period.mapper';
 import {
@@ -29,13 +31,14 @@ import {
   normalizeOptionalText,
   readYearMonth
 } from './accounting-period.policy';
-import {
-  assertAccountingPeriodCanRecordInitialOpen
-} from './accounting-period-transition.policy';
+import { assertAccountingPeriodCanRecordInitialOpen } from './accounting-period-transition.policy';
 
 @Injectable()
 export class OpenAccountingPeriodUseCase {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditPublisher: OperationalAuditPublisher
+  ) {}
 
   async execute(
     user: AuthenticatedUser,
@@ -107,6 +110,12 @@ export class OpenAccountingPeriodUseCase {
       ) {
         throw new BadRequestException(
           '새 운영 기간은 최근 운영 기간보다 이후 월이어야 합니다.'
+        );
+      }
+
+      if (latestPeriod.status !== AccountingPeriodStatus.LOCKED) {
+        throw new ConflictException(
+          '새 운영 기간은 최근 운영 기간을 먼저 마감한 뒤 열 수 있습니다. 운영 중에는 하나의 최신 진행월만 열어 둡니다.'
         );
       }
     }
@@ -193,6 +202,8 @@ export class OpenAccountingPeriodUseCase {
             : null
         };
       });
+
+    publishPeriodStatusHistoryAudit(this.auditPublisher, createdStatusHistory);
 
     return mapAccountingPeriodRecordToItem({
       ...createdPeriod,

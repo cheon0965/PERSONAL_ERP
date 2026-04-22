@@ -14,4 +14,12 @@ export class UpdateFundingAccountDto implements UpdateFundingAccountRequest {
   @IsOptional()
   @IsIn(['ACTIVE', 'INACTIVE', 'CLOSED'])
   status?: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+
+  @ApiProperty({
+    required: false,
+    enum: ['NOT_REQUIRED', 'PENDING', 'COMPLETED']
+  })
+  @IsOptional()
+  @IsIn(['NOT_REQUIRED', 'PENDING', 'COMPLETED'])
+  bootstrapStatus?: 'NOT_REQUIRED' | 'PENDING' | 'COMPLETED';
 }

@@ -19,6 +19,8 @@ import {
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { readWorkspaceActorRef } from '../../common/auth/workspace-actor-ref.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
+import { OperationalAuditPublisher } from '../../common/infrastructure/operational/operational-audit-publisher.service';
+import { publishPeriodStatusHistoryAudit } from '../../common/infrastructure/operational/period-status-history-audit';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AccountingPeriodReaderPort } from './application/ports/accounting-period-reader.port';
 import { mapAccountingPeriodRecordToItem } from './accounting-period.mapper';
@@ -34,7 +36,8 @@ import {
 export class CloseAccountingPeriodUseCase {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly accountingPeriodReader: AccountingPeriodReaderPort
+    private readonly accountingPeriodReader: AccountingPeriodReaderPort,
+    private readonly auditPublisher: OperationalAuditPublisher
   ) {}
 
   async execute(
@@ -61,7 +64,7 @@ export class CloseAccountingPeriodUseCase {
     const lockedAt = new Date();
     const reason = normalizeOptionalText(input.note);
 
-    const { closingSnapshot, closingLineDrafts } =
+    const { closingSnapshot, closingLineDrafts, createdStatusHistory } =
       await this.prisma.$transaction(async (tx) => {
         const currentPeriod = await tx.accountingPeriod.findFirst({
           where: {
@@ -238,7 +241,7 @@ export class CloseAccountingPeriodUseCase {
           }
         });
 
-        await tx.periodStatusHistory.create({
+        const createdStatusHistory = await tx.periodStatusHistory.create({
           data: {
             tenantId: workspace.tenantId,
             ledgerId: workspace.ledgerId,
@@ -253,9 +256,12 @@ export class CloseAccountingPeriodUseCase {
 
         return {
           closingSnapshot: createdSnapshot,
-          closingLineDrafts
+          closingLineDrafts,
+          createdStatusHistory
         };
       });
+
+    publishPeriodStatusHistoryAudit(this.auditPublisher, createdStatusHistory);
 
     const refreshedPeriod =
       await this.accountingPeriodReader.findByIdInWorkspace(

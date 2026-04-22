@@ -135,7 +135,11 @@ test('manages funding accounts and categories across split reference data screen
         name: payload.name,
         type: payload.type,
         balanceWon: 0,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        bootstrapStatus:
+          payload.type === 'BANK' || payload.type === 'CARD'
+            ? 'PENDING'
+            : 'NOT_REQUIRED'
       };
 
       fundingAccounts = [...fundingAccounts, created];
@@ -304,7 +308,7 @@ test('manages funding accounts and categories across split reference data screen
 
   await expect(page).toHaveURL(/\/reference-data\/funding-accounts$/);
   await expect(
-    page.getByRole('heading', { level: 4, name: '자금수단' })
+    page.getByRole('heading', { level: 1, name: '자금수단' })
   ).toBeVisible();
   await expect(
     page.getByRole('button', { name: '자금수단 추가' })
@@ -428,7 +432,7 @@ test('manages funding accounts and categories across split reference data screen
   await page.goto('/reference-data/categories');
   await expect(page).toHaveURL(/\/reference-data\/categories$/);
   await expect(
-    page.getByRole('heading', { level: 4, name: '카테고리' })
+    page.getByRole('heading', { level: 1, name: '카테고리' })
   ).toBeVisible();
   await page.getByRole('button', { name: '카테고리 추가' }).click();
   await expect(

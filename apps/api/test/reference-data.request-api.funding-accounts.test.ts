@@ -18,14 +18,16 @@ test('GET /funding-accounts returns only active funding accounts for the current
         name: 'Main checking',
         type: 'BANK',
         balanceWon: 2_000_000,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        bootstrapStatus: 'NOT_REQUIRED'
       },
       {
         id: 'acc-1b',
         name: 'Emergency savings',
         type: 'BANK',
         balanceWon: 3_500_000,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        bootstrapStatus: 'NOT_REQUIRED'
       }
     ]);
   } finally {
@@ -63,21 +65,24 @@ test('GET /funding-accounts?includeInactive=true includes inactive funding accou
         name: 'Main checking',
         type: 'BANK',
         balanceWon: 2_000_000,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        bootstrapStatus: 'NOT_REQUIRED'
       },
       {
         id: 'acc-1b',
         name: 'Emergency savings',
         type: 'BANK',
         balanceWon: 3_500_000,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        bootstrapStatus: 'NOT_REQUIRED'
       },
       {
         id: 'acc-1c',
         name: 'Legacy cashbox',
         type: 'CASH',
         balanceWon: 0,
-        status: 'INACTIVE'
+        status: 'INACTIVE',
+        bootstrapStatus: 'NOT_REQUIRED'
       }
     ]);
   } finally {
@@ -269,14 +274,16 @@ test('GET /funding-accounts derives a live balance from opening data, imported b
         name: 'Main checking',
         type: 'BANK',
         balanceWon: 1_110_000,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        bootstrapStatus: 'NOT_REQUIRED'
       },
       {
         id: 'acc-1b',
         name: 'Emergency savings',
         type: 'BANK',
         balanceWon: 3_500_000,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        bootstrapStatus: 'NOT_REQUIRED'
       }
     ]);
   } finally {
@@ -303,7 +310,8 @@ test('POST /funding-accounts creates a funding account for the current workspace
       name: 'Operations cashbox',
       type: 'CASH',
       balanceWon: 0,
-      status: 'ACTIVE'
+      status: 'ACTIVE',
+      bootstrapStatus: 'NOT_REQUIRED'
     });
     assert.deepEqual(
       context.state.accounts.find(
@@ -319,7 +327,8 @@ test('POST /funding-accounts creates a funding account for the current workspace
         type: 'CASH',
         balanceWon: 0,
         sortOrder: 2,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        bootstrapStatus: 'NOT_REQUIRED'
       }
     );
     assert.equal(
@@ -331,6 +340,85 @@ test('POST /funding-accounts creates a funding account for the current workspace
           event.resourceId === 'acc-generated-4'
       ),
       true
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /funding-accounts marks new bank and card accounts as pending bootstrap', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/funding-accounts', {
+      method: 'POST',
+      headers: context.authHeaders(),
+      body: {
+        name: 'New statement account',
+        type: 'BANK'
+      }
+    });
+
+    assert.equal(response.status, 201);
+    assert.deepEqual(response.body, {
+      id: 'acc-generated-4',
+      name: 'New statement account',
+      type: 'BANK',
+      balanceWon: 0,
+      status: 'ACTIVE',
+      bootstrapStatus: 'PENDING'
+    });
+    assert.equal(
+      context.state.accounts.find(
+        (candidate) => candidate.id === 'acc-generated-4'
+      )?.bootstrapStatus,
+      'PENDING'
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('PATCH /funding-accounts/:id can mark pending bootstrap as completed', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accounts.push({
+      id: 'acc-pending-bootstrap',
+      userId: 'user-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      name: 'Pending statement account',
+      normalizedName: 'pending statement account',
+      type: 'BANK',
+      balanceWon: 0,
+      sortOrder: 3,
+      status: 'ACTIVE',
+      bootstrapStatus: 'PENDING'
+    });
+
+    const response = await context.request(
+      '/funding-accounts/acc-pending-bootstrap',
+      {
+        method: 'PATCH',
+        headers: context.authHeaders(),
+        body: {
+          name: 'Pending statement account',
+          bootstrapStatus: 'COMPLETED'
+        }
+      }
+    );
+
+    assert.equal(response.status, 200);
+    assert.equal(
+      (response.body as { bootstrapStatus: string }).bootstrapStatus,
+      'COMPLETED'
+    );
+    assert.equal(
+      context.state.accounts.find(
+        (candidate) => candidate.id === 'acc-pending-bootstrap'
+      )?.bootstrapStatus,
+      'COMPLETED'
     );
   } finally {
     await context.close();
@@ -386,7 +474,8 @@ test('PATCH /funding-accounts/:id renames and deactivates a funding account for 
       name: 'Main operating account',
       type: 'BANK',
       balanceWon: 2_000_000,
-      status: 'INACTIVE'
+      status: 'INACTIVE',
+      bootstrapStatus: 'NOT_REQUIRED'
     });
     assert.deepEqual(
       context.state.accounts.find((candidate) => candidate.id === 'acc-1'),
@@ -400,7 +489,8 @@ test('PATCH /funding-accounts/:id renames and deactivates a funding account for 
         type: 'BANK',
         balanceWon: 2_000_000,
         sortOrder: 0,
-        status: 'INACTIVE'
+        status: 'INACTIVE',
+        bootstrapStatus: 'NOT_REQUIRED'
       }
     );
   } finally {
@@ -439,7 +529,8 @@ test('PATCH /funding-accounts/:id can reactivate an inactive funding account for
       name: 'Legacy cashbox',
       type: 'CASH',
       balanceWon: 0,
-      status: 'ACTIVE'
+      status: 'ACTIVE',
+      bootstrapStatus: 'NOT_REQUIRED'
     });
   } finally {
     await context.close();
@@ -477,7 +568,8 @@ test('PATCH /funding-accounts/:id can close an inactive funding account for the 
       name: 'Legacy cashbox',
       type: 'CASH',
       balanceWon: 0,
-      status: 'CLOSED'
+      status: 'CLOSED',
+      bootstrapStatus: 'NOT_REQUIRED'
     });
   } finally {
     await context.close();

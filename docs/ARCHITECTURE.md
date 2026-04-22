@@ -49,6 +49,7 @@ docs/
 [ Ledger ] -------------------- read -------> [ Insight & Planning ]
 [ Ledger ] -------------------- read -------> [ Operations Support ]
 [ Recurring Automation ] ------- read ------> [ Insight & Planning ]
+[ Asset & Coverage ] -- collected expense --> [ Ledger ]
 [ Asset & Coverage ] ----------- read ------> [ Insight & Planning ]
 ```
 
@@ -58,7 +59,7 @@ docs/
 | Workspace Administration | `workspace-settings`, `admin`, `navigation`, `common/infrastructure/operational`                                                                                                                                                            | workspace 설정, 멤버/권한 정책, 감사 이벤트 저장과 조회, DB 메뉴 트리    |
 | Ledger                   | `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `reference-data-readiness`, `accounting-periods`, `collected-transactions`, `journal-entries`, `import-batches`, `financial-statements`, `carry-forwards` | 기준 데이터, 월 운영, 업로드 수집/전표, 공식 보고, 차기 이월 컨텍스트    |
 | Recurring Automation     | `recurring-rules`, `plan-items`                                                                                                                                                                                                             | 반복규칙 정의와 기간별 계획 항목 생성/정합성                             |
-| Asset & Coverage         | `vehicles`, `insurance-policies`                                                                                                                                                                                                            | 운영비 성격의 자산/보장 도메인                                           |
+| Asset & Coverage         | `vehicles`, `insurance-policies`                                                                                                                                                                                                            | 운영비 성격의 자산/보장 도메인, 차량 연료/정비 기반 수집거래 진입점      |
 | Insight & Planning       | `dashboard`, `forecast`                                                                                                                                                                                                                     | 읽기 기반 요약/예측 조합                                                 |
 | Operations Support       | `operations-console`                                                                                                                                                                                                                        | 운영 체크리스트, 예외, 월 마감/업로드 현황, 시스템 상태, 알림, 반출/메모 |
 | Platform & Contracts     | `packages/contracts`, `packages/money`, env, Prisma, health, 공통 외부 의존성 조립                                                                                                                                                          | 계약, 금액 값 기준, 런타임 기반선                                        |
@@ -71,6 +72,7 @@ docs/
 
 - Web은 HTTP + `packages/contracts`를 통해서만 API와 연결합니다.
 - `Recurring Automation`은 `Ledger`의 참조 상태를 읽을 수 있습니다.
+- `Asset & Coverage`는 차량 연료/정비 기록의 선택적 회계 연동을 위해 `Ledger`의 표준 `CollectedTransaction` 쓰기 흐름을 사용합니다.
 - `Insight & Planning`은 `Ledger`, `Recurring Automation`, `Asset & Coverage`를 읽어 조합합니다.
 - `Operations Support`는 `Ledger`, `Workspace Administration`, `health` 경계를 읽어 운영자가 처리할 위험 신호와 인수인계 기록을 조합합니다.
 - `Identity & Access`는 인증과 요청 주체 기준선만 제공하고, 도메인 write 흐름의 `TenantMembership` / `ActorRef` 판정 자체를 소유하지 않습니다.
@@ -124,7 +126,8 @@ Insight Context: controller -> read service -> read repository -> projection
 - 공통 어댑터 조립은 `apps/api/src/common/infrastructure`에서 시작합니다.
 - `application/domain/infrastructure` 폴더는 실제 전환 대상 모듈에서만 만듭니다.
 - 현재 승격 완료 모듈: `collected-transactions`, `recurring-rules`, `accounting-periods`, `import-batches`, `journal-entries`, `auth`, `admin`, `insurance-policies`, `plan-items`, `financial-statements`, `carry-forwards`, `operations-console` — `docs/completed/REFACTORING_EXECUTION_PLAN.md` 참조
-- `import-batches`는 업로드 배치/행 보존, IM뱅크 PDF 파싱, 단건 collect, 일괄 등록 Job/행별 결과/workspace 잠금을 같은 Ledger 경계 안에서 조율합니다.
+- `import-batches`는 업로드 배치/행 보존, IM뱅크 PDF 파싱, 최신 진행월 기준 단건 collect, 일괄 등록 Job/행별 결과/workspace 잠금을 같은 Ledger 경계 안에서 조율합니다. 운영월 자동 생성은 운영 시작 전 기초데이터 또는 신규 계좌/카드 기초 업로드 예외로 제한합니다.
+- `vehicles`는 연료/정비 운영 기록을 소유하되, 회계 연동을 켠 기록은 표준 `CollectedTransaction`을 생성/동기화하고 전표 확정 이후에는 차량 기록 overwrite를 막습니다.
 - `collected-transactions`, `recurring-rules`, `dashboard`, `forecast`는 모듈 바깥에서 각 모듈의 `public.ts`만 공식 진입점으로 사용합니다.
 - `dashboard`, `forecast`는 `read service -> read repository -> projection` 네이밍으로 읽기 조합 컨텍스트임을 코드에서 드러냅니다.
 - `auth`는 10개 use-case + SupportService 기반 "얇은 Hexagonal" 구조, `admin`은 4개 use-case + CommandSupport/QueryService 기반 구조를 채택했습니다.

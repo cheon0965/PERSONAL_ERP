@@ -1,7 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import type { UpdateVehicleFuelLogRequest } from '@personal-erp/contracts';
-import { IsBoolean, IsDateString, IsInt, IsNumber, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsDateString,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  Min,
+  ValidateNested
+} from 'class-validator';
 import { moneyWonApiProperty } from '../../../common/money/swagger-money';
+import { VehicleLogAccountingLinkDto } from './vehicle-log-accounting-link.dto';
 
 export class UpdateVehicleFuelLogDto implements UpdateVehicleFuelLogRequest {
   @ApiProperty()
@@ -31,4 +41,14 @@ export class UpdateVehicleFuelLogDto implements UpdateVehicleFuelLogRequest {
   @ApiProperty()
   @IsBoolean()
   isFullTank!: boolean;
+
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    type: VehicleLogAccountingLinkDto
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => VehicleLogAccountingLinkDto)
+  accountingLink?: VehicleLogAccountingLinkDto | null;
 }

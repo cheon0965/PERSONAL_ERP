@@ -1,4 +1,5 @@
 import type { MoneyWon } from './money';
+import type { CollectedTransactionPostingStatus } from './transactions';
 
 export type InsuranceCycle = 'MONTHLY' | 'YEARLY';
 
@@ -60,9 +61,24 @@ export type FuelLogItem = {
   isFullTank: boolean;
 };
 
+export type VehicleLogCollectedTransactionLink = {
+  id: string;
+  fundingAccountId: string;
+  categoryId: string | null;
+  postingStatus: CollectedTransactionPostingStatus;
+  postedJournalEntryId: string | null;
+  postedJournalEntryNumber: string | null;
+};
+
+export type VehicleLogAccountingLinkRequest = {
+  fundingAccountId: string;
+  categoryId?: string | null;
+};
+
 export type VehicleFuelLogItem = FuelLogItem & {
   vehicleId: string;
   vehicleName: string;
+  linkedCollectedTransaction: VehicleLogCollectedTransactionLink | null;
 };
 
 export type VehicleMaintenanceLogItem = {
@@ -76,6 +92,7 @@ export type VehicleMaintenanceLogItem = {
   description: string;
   amountWon: MoneyWon;
   memo: string | null;
+  linkedCollectedTransaction: VehicleLogCollectedTransactionLink | null;
 };
 
 export type VehicleItem = {
@@ -85,6 +102,10 @@ export type VehicleItem = {
   fuelType: FuelType;
   initialOdometerKm: number;
   estimatedFuelEfficiencyKmPerLiter: number | null;
+  defaultFundingAccountId: string | null;
+  defaultFuelCategoryId: string | null;
+  defaultMaintenanceCategoryId: string | null;
+  operatingExpensePlanOptIn: boolean;
 };
 
 export type VehicleOperatingSummaryItem = {
@@ -122,6 +143,10 @@ export type CreateVehicleRequest = {
   fuelType: FuelType;
   initialOdometerKm: number;
   estimatedFuelEfficiencyKmPerLiter?: number | null;
+  defaultFundingAccountId?: string | null;
+  defaultFuelCategoryId?: string | null;
+  defaultMaintenanceCategoryId?: string | null;
+  operatingExpensePlanOptIn?: boolean;
 };
 
 export type UpdateVehicleRequest = CreateVehicleRequest;
@@ -133,6 +158,7 @@ export type CreateVehicleFuelLogRequest = {
   amountWon: MoneyWon;
   unitPriceWon: MoneyWon;
   isFullTank: boolean;
+  accountingLink?: VehicleLogAccountingLinkRequest | null;
 };
 
 export type UpdateVehicleFuelLogRequest = CreateVehicleFuelLogRequest;
@@ -145,6 +171,7 @@ export type CreateVehicleMaintenanceLogRequest = {
   description: string;
   amountWon: MoneyWon;
   memo?: string | null;
+  accountingLink?: VehicleLogAccountingLinkRequest | null;
 };
 
 export type UpdateVehicleMaintenanceLogRequest =

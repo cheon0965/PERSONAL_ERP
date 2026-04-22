@@ -117,16 +117,12 @@ export function TransactionsTableSection({
     selectedTransactionsCount > 0
       ? `선택 전표 확정 (${bulkConfirmCount}건)`
       : `전표 준비 일괄 확정 (${bulkConfirmCount}건)`;
+  const writablePeriod = collectingPeriods[0] ?? null;
   const periodScopeLabel =
-    collectingPeriods.length > 1
-      ? '열린 운영 월'
-      : (currentPeriod?.monthLabel ?? collectingPeriods[0]?.monthLabel);
-  const periodRangeDescription =
-    collectingPeriods.length > 1
-      ? '열린 운영 기간'
-      : collectingPeriods[0]
-        ? `${collectingPeriods[0].startDate.slice(0, 10)} ~ ${collectingPeriods[0].endDate.slice(0, 10)}`
-        : null;
+    writablePeriod?.monthLabel ?? currentPeriod?.monthLabel;
+  const periodRangeDescription = writablePeriod
+    ? `${writablePeriod.startDate.slice(0, 10)} ~ ${writablePeriod.endDate.slice(0, 10)}`
+    : null;
   const columns = React.useMemo<GridColDef<CollectedTransactionItem>[]>(
     () => [
       { field: 'businessDate', headerName: '거래일', flex: 0.8 },
@@ -158,8 +154,34 @@ export function TransactionsTableSection({
         field: 'sourceKind',
         headerName: '등록 출처',
         flex: 0.8,
-        valueFormatter: (value) =>
-          sourceKindLabelMap[String(value)] ?? String(value)
+        renderCell: (params) => {
+          const vehicleLog = params.row.sourceVehicleLog;
+
+          if (vehicleLog) {
+            return (
+              <Button
+                size="small"
+                component={Link}
+                href={
+                  vehicleLog.kind === 'FUEL'
+                    ? '/vehicles/fuel'
+                    : '/vehicles/maintenance'
+                }
+              >
+                {vehicleLog.kind === 'FUEL'
+                  ? `${vehicleLog.vehicleName} 연료`
+                  : `${vehicleLog.vehicleName} 정비`}
+              </Button>
+            );
+          }
+
+          return (
+            <Typography variant="body2">
+              {sourceKindLabelMap[String(params.value)] ??
+                String(params.value)}
+            </Typography>
+          );
+        }
       },
       {
         field: 'postingStatus',
@@ -306,7 +328,7 @@ export function TransactionsTableSection({
       title="수집 거래 목록"
       description={
         hasCollectingPeriod
-          ? `${periodScopeLabel}의 수집 거래를 한 곳에서 검토하고 전표 준비 흐름으로 넘깁니다.`
+          ? `${periodScopeLabel} 최신 진행월의 수집 거래를 한 곳에서 검토하고 전표 준비 흐름으로 넘깁니다.`
           : '현재 열린 운영 월이 없으므로 목록이 비어 있습니다.'
       }
       toolbar={
@@ -346,7 +368,7 @@ export function TransactionsTableSection({
                 )}
                 <Typography variant="body2" fontWeight={600}>
                   {hasCollectingPeriod
-                    ? `${periodScopeLabel} 기준`
+                    ? `${periodScopeLabel} 최신 진행월 기준`
                     : '입력 가능한 운영 월이 아직 열리지 않았습니다.'}
                 </Typography>
                 {activeFilterCount > 0 ? (
@@ -371,7 +393,7 @@ export function TransactionsTableSection({
               </Stack>
               <Typography variant="body2" color="text.secondary">
                 {hasCollectingPeriod
-                  ? `${periodRangeDescription} 범위의 거래를 확인합니다. 이 표에서 수정, 삭제, 전표 확정을 바로 처리할 수 있습니다.`
+                  ? `${periodRangeDescription} 최신 진행월 범위의 거래를 확인합니다. 이 표에서 수정, 삭제, 전표 확정을 바로 처리할 수 있습니다.`
                   : '먼저 월 운영 화면에서 운영 월을 시작하면 수집 거래 입력과 전표 확정 흐름이 열립니다.'}
               </Typography>
             </Stack>

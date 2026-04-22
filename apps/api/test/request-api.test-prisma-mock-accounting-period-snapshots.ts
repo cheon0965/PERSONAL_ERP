@@ -352,6 +352,24 @@ export function createAccountingPeriodSnapshotsPrismaMock(
         where?: {
           openingSnapshotId?: string;
           closingSnapshotId?: string;
+          fundingAccountId?: string | null;
+          OR?: Array<{
+            openingSnapshot?: {
+              is?: {
+                tenantId?: string;
+                ledgerId?: string;
+              };
+            };
+            closingSnapshot?: {
+              is?: {
+                tenantId?: string;
+                ledgerId?: string;
+              };
+            };
+          }>;
+        };
+        select?: {
+          id?: boolean;
         };
         include?: {
           accountSubject?: {
@@ -367,17 +385,77 @@ export function createAccountingPeriodSnapshotsPrismaMock(
             };
           };
         };
+        take?: number;
       }) => {
-        const items = state.balanceSnapshotLines.filter((line) => {
+        let items = state.balanceSnapshotLines.filter((line) => {
           const matchesOpeningSnapshot =
             !args.where?.openingSnapshotId ||
             line.openingSnapshotId === args.where.openingSnapshotId;
           const matchesClosingSnapshot =
             !args.where?.closingSnapshotId ||
             line.closingSnapshotId === args.where.closingSnapshotId;
+          const matchesFundingAccount =
+            args.where?.fundingAccountId === undefined ||
+            line.fundingAccountId === args.where.fundingAccountId;
+          const matchesWorkspace =
+            !args.where?.OR ||
+            args.where.OR.some((relationFilter) => {
+              if (relationFilter.openingSnapshot?.is) {
+                const snapshot = line.openingSnapshotId
+                  ? state.openingBalanceSnapshots.find(
+                      (candidate) => candidate.id === line.openingSnapshotId
+                    )
+                  : null;
 
-          return matchesOpeningSnapshot && matchesClosingSnapshot;
+                return (
+                  snapshot &&
+                  (!relationFilter.openingSnapshot.is.tenantId ||
+                    snapshot.tenantId ===
+                      relationFilter.openingSnapshot.is.tenantId) &&
+                  (!relationFilter.openingSnapshot.is.ledgerId ||
+                    snapshot.ledgerId ===
+                      relationFilter.openingSnapshot.is.ledgerId)
+                );
+              }
+
+              if (relationFilter.closingSnapshot?.is) {
+                const snapshot = line.closingSnapshotId
+                  ? state.closingSnapshots.find(
+                      (candidate) => candidate.id === line.closingSnapshotId
+                    )
+                  : null;
+
+                return (
+                  snapshot &&
+                  (!relationFilter.closingSnapshot.is.tenantId ||
+                    snapshot.tenantId ===
+                      relationFilter.closingSnapshot.is.tenantId) &&
+                  (!relationFilter.closingSnapshot.is.ledgerId ||
+                    snapshot.ledgerId ===
+                      relationFilter.closingSnapshot.is.ledgerId)
+                );
+              }
+
+              return false;
+            });
+
+          return (
+            matchesOpeningSnapshot &&
+            matchesClosingSnapshot &&
+            matchesFundingAccount &&
+            matchesWorkspace
+          );
         });
+
+        if (args.take !== undefined) {
+          items = items.slice(0, args.take);
+        }
+
+        if (args.select) {
+          return items.map((line) => ({
+            ...(args.select?.id ? { id: line.id } : {})
+          }));
+        }
 
         return items.map((line) => {
           const accountSubject = resolveAccountSubject(line.accountSubjectId);

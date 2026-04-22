@@ -101,10 +101,13 @@
 - `/operations/status`, `/operations/alerts`에서 시스템 상태와 파생 알림이 정상 표시되는지 확인합니다.
 - `/operations/exports`에서 수동 CSV 반출 CTA가 동작하고, `/operations/notes`에서 운영 메모 저장 흐름이 동작하는지 확인합니다.
 - `/reference-data`, `/reference-data/funding-accounts`, `/reference-data/categories`, `/reference-data/lookups`에서 기준 데이터 하위 화면이 정상적으로 열리는지 확인합니다.
-- `/periods`에서 현재 운영 기간을 열거나 열린 기간을 확인할 수 있는지 확인합니다.
+- `/periods`에서 최신 진행월을 열거나 열린 기간을 확인할 수 있고, 최근 월 마감 전 다음 월 오픈이 차단되는지 확인합니다.
 - `/insurances`, `/vehicles`, `/recurring`에서 보험 계약, 차량 운영, 반복 규칙 화면이 데이터를 불러오는지 확인합니다.
+- `/vehicles/fuel` 또는 `/vehicles/maintenance`에서 회계 연동을 켠 연료/정비 기록을 저장하면 연결 수집거래 상태가 표시되고, `/transactions`에서 해당 거래를 조회할 수 있는지 확인합니다.
+- 차량 연료/정비에서 생성된 연결 수집거래는 `/transactions`에서 직접 수정/삭제가 막히고, 미확정 상태에서는 차량 화면에서만 동기화/연결 해제가 되는지 확인합니다.
+- 연결 수집거래를 전표 확정한 뒤에는 차량 연료/정비 기록 수정이 차단되고, 조정은 `/journal-entries`의 반전/정정 흐름으로 이어지는지 확인합니다.
 - `/plan-items/generate`에서 현재 월 계획 항목을 생성하고, `/plan-items`에서 연결된 수집 거래 상태를 추적할 수 있는지 확인합니다.
-- `/imports`에서 UTF-8 텍스트 업로드와 IM뱅크 PDF 파일첨부 업로드가 열리고, `/imports/[batchId]` 작업대에서 collect preview, 단건 승격, 일괄 등록 진행률이 표시되는지 확인합니다.
+- `/imports`에서 UTF-8 텍스트 업로드와 IM뱅크 PDF 파일첨부 업로드가 열리고, `/imports/[batchId]` 작업대에서 최신 진행월 기준 collect preview, 단건 등록, 일괄 등록 진행률이 표시되는지 확인합니다.
 - `/transactions`에서 거래 Quick Add 저장 후 목록이 갱신되고, 전표 준비 거래를 확정할 수 있는지 확인합니다.
 - `/journal-entries`에서 확정 전표를 조회하고 반전/정정 전표 CTA가 유지되는지 확인합니다.
 - `/financial-statements`, `/carry-forwards`, `/forecast`에서 재무제표 생성, 차기 이월 생성, 현재 월/다음 달 전망 확인 흐름이 깨지지 않았는지 확인합니다.

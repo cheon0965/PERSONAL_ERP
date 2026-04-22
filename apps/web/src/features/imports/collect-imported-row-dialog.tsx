@@ -56,6 +56,10 @@ export function CollectImportedRowDialog({
   onChange: (patch: Partial<CollectImportedRowRequest>) => void;
   onSubmit: () => Promise<void>;
 }) {
+  const selectedFundingAccount =
+    fundingAccounts.find((account) => account.id === collectForm.fundingAccountId) ??
+    null;
+
   return (
     <FormDrawer
       open={open}
@@ -130,9 +134,19 @@ export function CollectImportedRowDialog({
             {fundingAccounts.map((account) => (
               <MenuItem key={account.id} value={account.id}>
                 {account.name}
+                {account.bootstrapStatus === 'PENDING'
+                  ? ' (기초 업로드 대기)'
+                  : ''}
               </MenuItem>
             ))}
           </TextField>
+          {selectedFundingAccount?.bootstrapStatus === 'PENDING' ? (
+            <Alert severity="info" variant="outlined">
+              선택한 신규 계좌/카드는 기초 업로드 대기 상태입니다.
+              등록 가능 여부와 운영월 자동 생성 사유는 자동 판정 요약에서
+              확인합니다.
+            </Alert>
+          ) : null}
           <TextField
             select
             label="카테고리"

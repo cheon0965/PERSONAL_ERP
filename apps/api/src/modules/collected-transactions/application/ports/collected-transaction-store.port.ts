@@ -1,7 +1,8 @@
 import type {
   CollectedTransactionItem,
   CollectedTransactionPostingStatus,
-  CollectedTransactionSourceKind
+  CollectedTransactionSourceKind,
+  CollectedTransactionVehicleLogSource
 } from '@personal-erp/contracts';
 
 export type StoredCollectedTransaction = {
@@ -22,6 +23,7 @@ export type StoredCollectedTransaction = {
   postedJournalEntryNumber: string | null;
   matchedPlanItemId: string | null;
   matchedPlanItemTitle: string | null;
+  sourceVehicleLog?: CollectedTransactionVehicleLogSource;
 };
 
 export type StoredCollectedTransactionDetail = {
@@ -39,6 +41,7 @@ export type StoredCollectedTransactionDetail = {
   postedJournalEntryNumber: string | null;
   matchedPlanItemId: string | null;
   matchedPlanItemTitle: string | null;
+  sourceVehicleLog?: CollectedTransactionVehicleLogSource;
 };
 
 export type CollectedTransactionWorkspaceScope = {

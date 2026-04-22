@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { inflateSync } from 'node:zlib';
 import { BadRequestException } from '@nestjs/common';
+import type { ImportBatchFileUnsupportedReason } from '@personal-erp/contracts';
 import { parseMoneyWon, subtractMoneyWon } from '@personal-erp/money';
 import {
   ImportBatchParseStatus,
@@ -15,6 +16,8 @@ import {
 
 const MAX_IM_BANK_PDF_BYTES = 10 * 1024 * 1024;
 const SEOUL_TIME_OFFSET = '+09:00';
+const SCANNED_PDF_TEXT_LAYER_MISSING =
+  'SCANNED_PDF_TEXT_LAYER_MISSING' satisfies ImportBatchFileUnsupportedReason;
 
 type PdfStream = {
   objectNumber: number;
@@ -83,21 +86,25 @@ export function parseImBankPdfStatement(
   assertPdfUpload(input.buffer, input.fileName);
 
   const streams = readPdfStreams(input.buffer);
+  const contentStreams = streams.filter((stream) =>
+    isLikelyPageContentStream(stream)
+  );
+
+  if (contentStreams.length === 0) {
+    throwScannedPdfUnsupported();
+  }
+
   const unicodeMap = readToUnicodeMap(streams);
-  const positionedTexts = streams
-    .filter((stream) => isLikelyPageContentStream(stream))
-    .flatMap((stream, index) =>
-      readPositionedTexts({
-        pageNumber: index + 1,
-        stream: stream.data,
-        unicodeMap
-      })
-    );
+  const positionedTexts = contentStreams.flatMap((stream, index) =>
+    readPositionedTexts({
+      pageNumber: index + 1,
+      stream: stream.data,
+      unicodeMap
+    })
+  );
 
   if (positionedTexts.length === 0) {
-    throw new BadRequestException(
-      'PDF에서 텍스트 레이어를 찾을 수 없습니다. 스캔 PDF는 아직 지원하지 않습니다.'
-    );
+    throwScannedPdfUnsupported();
   }
 
   const header = readPdfHeader(positionedTexts, input.fingerprintScope);
@@ -127,6 +134,14 @@ export function parseImBankPdfStatement(
           : ImportBatchParseStatus.PARTIAL,
     rows
   };
+}
+
+function throwScannedPdfUnsupported(): never {
+  throw new BadRequestException({
+    code: SCANNED_PDF_TEXT_LAYER_MISSING,
+    message:
+      '텍스트 레이어가 없는 스캔 PDF는 OCR 미도입 상태라 지원하지 않습니다. IM뱅크에서 내려받은 텍스트 PDF를 업로드해 주세요.'
+  });
 }
 
 function assertPdfUpload(buffer: Buffer, fileName: string): void {
@@ -752,10 +767,7 @@ function mapPreparedImBankRowToImportedRow(input: {
   olderPreparedRows: PreparedImBankRow[];
 }): ParsedImportedRowDraft {
   const { preparedRow, header, nextPreparedRow, olderPreparedRows } = input;
-  const isReversal = detectImBankBalanceReversal(
-    preparedRow,
-    nextPreparedRow
-  );
+  const isReversal = detectImBankBalanceReversal(preparedRow, nextPreparedRow);
   const reversalTarget = isReversal
     ? findImBankReversalTarget(preparedRow, olderPreparedRows)
     : null;
@@ -989,12 +1001,7 @@ function readImBankRowTitle(
   direction: ImBankParsedDirection | null
 ): string | null {
   const title =
-    [
-      row.remarks,
-      row.memo,
-      row.branch,
-      row.transactionType
-    ].find(
+    [row.remarks, row.memo, row.branch, row.transactionType].find(
       (candidate): candidate is string =>
         candidate != null && !isStatementNotice(candidate)
     ) ?? null;

@@ -25,10 +25,28 @@ export function buildAccountingPeriodReopenEligibility(input: {
   carryForwardPending: boolean;
 }): AccountingPeriodReopenEligibility {
   const nextPeriod = findNextAccountingPeriod(input.period, input.periods);
+  const latestPeriod = findLatestAccountingPeriod(input.periods);
   const carryForwardRecordId =
     input.carryForwardView?.carryForwardRecord.id ?? null;
   const nextOpeningBalanceSourceKind =
     nextPeriod?.openingBalanceSourceKind ?? null;
+
+  if (latestPeriod && latestPeriod.id !== input.period.id) {
+    return {
+      periodId: input.period.id,
+      isReady: true,
+      canReopen: false,
+      statusLabel: '최신 월 아님',
+      statusSeverity: 'warning',
+      detailLines: [
+        `최근 운영 월 ${latestPeriod.monthLabel}이 이미 존재해 ${input.period.monthLabel}은 재오픈할 수 없습니다. 운영 중에는 하나의 최신 진행월만 열어 둡니다.`
+      ],
+      carryForwardRecordId,
+      nextPeriodId: nextPeriod?.id ?? null,
+      nextPeriodMonthLabel: nextPeriod?.monthLabel ?? null,
+      nextOpeningBalanceSourceKind
+    };
+  }
 
   if (input.carryForwardError) {
     return {
@@ -57,7 +75,7 @@ export function buildAccountingPeriodReopenEligibility(input: {
       statusLabel: '조건 확인 중',
       statusSeverity: 'info',
       detailLines: [
-        '차기 이월과 다음 월 오프닝 스냅샷 상태를 확인하고 있습니다.'
+        '최신 월 여부, 차기 이월, 다음 월 오프닝 스냅샷 상태를 확인하고 있습니다.'
       ],
       carryForwardRecordId,
       nextPeriodId: nextPeriod?.id ?? null,
@@ -79,7 +97,7 @@ export function buildAccountingPeriodReopenEligibility(input: {
       statusLabel: '재오픈 가능',
       statusSeverity: 'success',
       detailLines: [
-        '차기 이월과 다음 월 오프닝 스냅샷 종속성이 없어 재오픈할 수 있습니다.'
+        '가장 최근 운영 월이며 차기 이월과 다음 월 오프닝 스냅샷 종속성이 없어 재오픈할 수 있습니다.'
       ],
       carryForwardRecordId,
       nextPeriodId: nextPeriod?.id ?? null,
@@ -160,4 +178,21 @@ function findNextAccountingPeriod(
         candidate.year === nextYear && candidate.month === nextMonth
     ) ?? null
   );
+}
+
+function findLatestAccountingPeriod(periods: AccountingPeriodItem[]) {
+  return periods.reduce<AccountingPeriodItem | null>((latest, period) => {
+    if (!latest) {
+      return period;
+    }
+
+    if (
+      period.year > latest.year ||
+      (period.year === latest.year && period.month > latest.month)
+    ) {
+      return period;
+    }
+
+    return latest;
+  }, null);
 }

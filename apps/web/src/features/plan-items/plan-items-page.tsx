@@ -29,6 +29,7 @@ import {
   accountingPeriodsQueryKey,
   getAccountingPeriods
 } from '@/features/accounting-periods/accounting-periods.api';
+import { readLatestCollectingAccountingPeriods } from '@/features/accounting-periods/accounting-period-selection';
 import {
   getJournalEntries,
   journalEntriesQueryKey
@@ -74,8 +75,12 @@ export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
 
   const candidatePeriods = React.useMemo(
     () =>
-      (periodsQuery.data ?? []).filter((period) => period.status !== 'LOCKED'),
-    [periodsQuery.data]
+      mode === 'generate'
+        ? readLatestCollectingAccountingPeriods(periodsQuery.data ?? [])
+        : (periodsQuery.data ?? []).filter(
+            (period) => period.status !== 'LOCKED'
+          ),
+    [mode, periodsQuery.data]
   );
 
   React.useEffect(() => {

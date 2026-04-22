@@ -40,6 +40,30 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
   let vehicles = createE2EVehicles();
   let fuelLogs = createE2EVehicleFuelLogs();
   let maintenanceLogs = createE2EVehicleMaintenanceLogs();
+  const fundingAccounts = [
+    {
+      id: 'vehicle-funding-account-1',
+      name: '사업 운영 통장',
+      type: 'BANK',
+      balanceWon: 2_450_000,
+      status: 'ACTIVE',
+      bootstrapStatus: 'NOT_REQUIRED'
+    }
+  ];
+  const categories = [
+    {
+      id: 'vehicle-fuel-category-1',
+      name: '차량 연료비',
+      kind: 'EXPENSE',
+      isActive: true
+    },
+    {
+      id: 'vehicle-maintenance-category-1',
+      name: '차량 정비비',
+      kind: 'EXPENSE',
+      isActive: true
+    }
+  ];
 
   page.on('pageerror', (error) => {
     pageErrors.push(error.stack ?? error.message);
@@ -104,6 +128,24 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
         body: JSON.stringify({
           items: []
         })
+      });
+      return;
+    }
+
+    if (path === '/api/funding-accounts' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(fundingAccounts)
+      });
+      return;
+    }
+
+    if (path === '/api/categories' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(categories)
       });
       return;
     }
@@ -481,10 +523,10 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
   await page.goto('/vehicles/maintenance');
   await expect(page).toHaveURL(/\/vehicles\/maintenance$/);
   await expect(
-    page.getByRole('heading', { level: 4, name: '정비 이력', exact: true })
+    page.getByRole('heading', { level: 1, name: '정비 이력', exact: true })
   ).toBeVisible();
   const maintenanceTableCard = page
-    .getByRole('heading', { name: '정비 이력', exact: true })
+    .getByRole('heading', { level: 6, name: '정비 이력', exact: true })
     .locator('xpath=ancestor::div[contains(@class,"MuiCard-root")][1]');
   const createdMaintenanceRow = maintenanceTableCard.getByRole('row', {
     name: new RegExp(newMaintenanceDescription)

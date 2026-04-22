@@ -50,12 +50,18 @@ export const mockCollectedTransactions: CollectedTransactionItem[] = [
     amountWon: 84000,
     fundingAccountName: '비용 예비 통장',
     categoryName: '배송 차량 유류비',
-    sourceKind: 'MANUAL',
+    sourceKind: 'VEHICLE_LOG',
     postingStatus: 'READY_TO_POST',
     postedJournalEntryId: null,
     postedJournalEntryNumber: null,
     matchedPlanItemId: null,
-    matchedPlanItemTitle: null
+    matchedPlanItemTitle: null,
+    sourceVehicleLog: {
+      kind: 'FUEL',
+      logId: 'fuel-demo-1',
+      vehicleId: 'vehicle-demo-1',
+      vehicleName: '배송 차량'
+    }
   },
   {
     id: 'txn-3',
@@ -118,12 +124,18 @@ const mockCollectedTransactionDetails: Record<
     fundingAccountId: 'acc-2',
     categoryId: 'cat-4',
     memo: '업무용 차량 만땅',
-    sourceKind: 'MANUAL',
+    sourceKind: 'VEHICLE_LOG',
     postingStatus: 'READY_TO_POST',
     postedJournalEntryId: null,
     postedJournalEntryNumber: null,
     matchedPlanItemId: null,
-    matchedPlanItemTitle: null
+    matchedPlanItemTitle: null,
+    sourceVehicleLog: {
+      kind: 'FUEL',
+      logId: 'fuel-demo-1',
+      vehicleId: 'vehicle-demo-1',
+      vehicleName: '배송 차량'
+    }
   },
   'txn-3': {
     id: 'txn-3',
@@ -242,6 +254,7 @@ export function buildCollectedTransactionFallbackItem(
     postedJournalEntryNumber?: string | null;
     matchedPlanItemId?: string | null;
     matchedPlanItemTitle?: string | null;
+    sourceVehicleLog?: CollectedTransactionItem['sourceVehicleLog'];
   }
 ): CollectedTransactionItem {
   const computedPostingStatus = resolveManualCollectedTransactionPostingStatus({
@@ -269,7 +282,10 @@ export function buildCollectedTransactionFallbackItem(
     postedJournalEntryId: context.postedJournalEntryId ?? null,
     postedJournalEntryNumber: context.postedJournalEntryNumber ?? null,
     matchedPlanItemId: context.matchedPlanItemId ?? null,
-    matchedPlanItemTitle: context.matchedPlanItemTitle ?? null
+    matchedPlanItemTitle: context.matchedPlanItemTitle ?? null,
+    ...(context.sourceVehicleLog
+      ? { sourceVehicleLog: context.sourceVehicleLog }
+      : {})
   };
 }
 
@@ -321,6 +337,7 @@ function resolveCollectedTransactionDetailFallback(
     postedJournalEntryId: base?.postedJournalEntryId ?? null,
     postedJournalEntryNumber: base?.postedJournalEntryNumber ?? null,
     matchedPlanItemId: base?.matchedPlanItemId ?? null,
-    matchedPlanItemTitle: base?.matchedPlanItemTitle ?? null
+    matchedPlanItemTitle: base?.matchedPlanItemTitle ?? null,
+    ...(base?.sourceVehicleLog ? { sourceVehicleLog: base.sourceVehicleLog } : {})
   };
 }

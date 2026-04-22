@@ -138,7 +138,7 @@ export function VehiclesOverviewSection({
         <Grid size={{ xs: 12, xl: 5 }}>
           <SectionCard
             title="운영 포인트"
-            description="차량 프로필과 운영 기록을 분리해 보고, 비용 판단은 항상 수집 거래와 전표 흐름까지 함께 확인합니다."
+            description="차량 프로필과 운영 기록을 분리해 보고, 필요하면 연료·정비 저장 단계에서 바로 수집거래까지 연결합니다."
           >
             <Stack spacing={1.5}>
               <VehicleInfoRow
@@ -169,7 +169,7 @@ export function VehiclesOverviewSection({
               />
               <Typography variant="body2" color="text.secondary">
                 차량 기본 정보, 연료 이력, 정비 이력은 각각 분리해 저장하고,
-                운영비와 연비 요약은 별도 참고 수치로 따로 읽습니다.
+                회계 연동을 켠 기록만 수집거래와 전표 흐름으로 이어집니다.
               </Typography>
             </Stack>
           </SectionCard>
@@ -252,7 +252,7 @@ export function VehiclesFuelSection({
   return (
     <DataTableCard
       title="주유 / 충전 기록"
-      description="연료 사용과 충전 이력은 이 탭에서만 관리해 차량비 검토 흐름을 단순화합니다."
+      description="연료 사용과 충전 이력을 관리하고, 필요한 기록은 수집거래 연동 상태까지 함께 추적합니다."
       toolbar={
         <Stack
           direction={{ xs: 'column', md: 'row' }}
@@ -284,7 +284,7 @@ export function VehiclesFuelSection({
           </Stack>
           <Typography variant="body2" color="text.secondary">
             연료 기록은 이 표에서 먼저 보고, 추가와 수정은 드로어에서 이어서
-            처리합니다.
+            처리합니다. 회계 연동 상태는 행 단위로 함께 표시됩니다.
           </Typography>
         </Stack>
       }
@@ -324,7 +324,7 @@ export function VehiclesMaintenanceSection({
   return (
     <DataTableCard
       title="정비 이력"
-      description="정비 항목과 금액은 이 탭에서만 누적해 향후 비용 분류와 계획 판단 기준으로 사용합니다."
+      description="정비 항목과 금액을 누적하고, 필요한 기록은 수집거래 연동 상태까지 함께 추적합니다."
       toolbar={
         <Stack
           direction={{ xs: 'column', md: 'row' }}
@@ -356,7 +356,7 @@ export function VehiclesMaintenanceSection({
           </Stack>
           <Typography variant="body2" color="text.secondary">
             정비 기록은 이 표를 기준으로 확인하고, 추가와 수정은 드로어에서
-            이어서 처리합니다.
+            이어서 처리합니다. 회계 연동 상태는 행 단위로 함께 표시됩니다.
           </Typography>
         </Stack>
       }
@@ -447,8 +447,8 @@ export function VehiclesFormDrawers({
         }
         description={
           fuelDrawerState?.mode === 'edit'
-            ? '차량 연료 이력을 조정해 운영 판단과 비용 검토 기준을 맞춥니다.'
-            : '차량 연료 이력을 추가해 운영 보조 데이터와 비용 판단 흐름을 보강합니다.'
+            ? '차량 연료 이력을 조정하고 필요하면 연결된 수집거래까지 함께 갱신합니다.'
+            : '차량 연료 이력을 추가하고 필요하면 연결된 수집거래까지 함께 만듭니다.'
         }
       >
         {fuelDrawerState?.mode === 'edit' ? (
@@ -477,8 +477,8 @@ export function VehiclesFormDrawers({
         }
         description={
           maintenanceDrawerState?.mode === 'edit'
-            ? '차량 정비 이력을 조정해 운영 판단과 비용 검토 기준을 맞춥니다.'
-            : '차량 정비 이력을 추가해 운영 보조 데이터와 비용 판단 흐름을 보강합니다.'
+            ? '차량 정비 이력을 조정하고 필요하면 연결된 수집거래까지 함께 갱신합니다.'
+            : '차량 정비 이력을 추가하고 필요하면 연결된 수집거래까지 함께 만듭니다.'
         }
       >
         {maintenanceDrawerState?.mode === 'edit' ? (

@@ -19,7 +19,7 @@
 | 기준 데이터    | readiness 요약, 자금수단 관리, 카테고리 관리, 계정과목/거래유형 조회                                                                                     | `reference-data-readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types` |
 | 월 실행        | 운영 기간 open/close/reopen, 수집 거래, 업로드 배치와 일괄 등록 진행률, 전표 조회/조정                                                                   | `accounting-periods`, `collected-transactions`, `import-batches`, `journal-entries`                          |
 | 계획 자동화    | 반복 규칙, 계획 항목 생성과 추적                                                                                                                         | `recurring-rules`, `plan-items`                                                                              |
-| 운영 자산      | 보험 계약, 차량 기본 정보, 연료 이력, 정비 이력, 차량 운영 요약                                                                                          | `insurance-policies`, `vehicles`                                                                             |
+| 운영 자산      | 보험 계약, 차량 기본 정보, 연료 이력, 정비 이력, 차량 운영 요약, 연료/정비 이력의 선택적 수집 거래 연동                                                  | `insurance-policies`, `vehicles`                                                                             |
 | 보고/판단      | 대시보드, 재무제표 스냅샷, 차기 이월, 기간 전망                                                                                                          | `dashboard`, `financial-statements`, `carry-forwards`, `forecast`                                            |
 
 ## Web 화면 그룹
@@ -116,24 +116,24 @@
 - `categories`: 수입/지출 카테고리 생성, 수정, 활성/비활성 전환
 - `account-subjects`, `ledger-transaction-types`: system-managed lookup 조회
 - `insurance-policies`: 보험 계약 생성, 수정, 비활성화, 삭제
-- `vehicles`: 차량 기본 정보, 연료 이력, 정비 이력, 운영 요약
+- `vehicles`: 차량 기본 정보, 연료 이력, 정비 이력, 운영 요약, 연료/정비 이력 저장 시 선택적 수집 거래 생성/동기화
 
 ### 월 운영과 공식 보고
 
-- `accounting-periods`: open, close, reopen, 현재 기간/이력 조회
+- `accounting-periods`: 최신 진행월 중심 open, close, reopen, 현재 기간/이력 조회
 - `recurring-rules`: 반복 규칙 CRUD
 - `plan-items`: 계획 항목 생성과 기간별 추적
 - `collected-transactions`: 생성, 상세 조회, 수정, 삭제, 전표 확정
-- `import-batches`: UTF-8 텍스트 업로드 파싱, 활성 계좌/카드 연결형 IM뱅크 PDF 파일첨부 파싱, collect preview, 단건 collect, 배치 삭제, 배치 상세 일괄 등록 Job/진행률/행별 결과 조회
+- `import-batches`: UTF-8 텍스트 업로드 파싱, 활성 계좌/카드 연결형 IM뱅크 텍스트 PDF 파일첨부 파싱, 스캔/이미지 PDF 명시 차단, 최신 진행월 기준 collect preview/단건 collect, 배치 삭제, 배치 상세 일괄 등록 Job/진행률/행별 결과 조회
 - `journal-entries`: 전표 조회, 반전 전표, 정정 전표
 - `financial-statements`: 잠금 기간 재무제표 스냅샷 생성/조회
-- `carry-forwards`: closing snapshot 기반 차기 이월 생성/조회
+- `carry-forwards`: closing snapshot 기반 opening balance snapshot 전용 차기 이월 생성/조회
 - `dashboard`, `forecast`: 현재 월 운영 요약과 월별 전망
 
 ### 운영 지원 표면
 
 - `operations-console`: 운영 허브, 체크리스트, 예외 처리함, 월 마감 지원, 업로드 현황, 시스템 상태, 알림, UTF-8 CSV 반출, 운영 메모
-- `common/infrastructure/operational`: workspace 감사 이벤트 저장/조회와 운영 지원 공통 기반
+- `common/infrastructure/operational`: workspace 감사 이벤트 저장/조회, 주요 운영 이벤트 외부 감사 sink 포트, 운영 지원 공통 기반
 
 ## 운영 지원과 검증 가드
 
@@ -148,7 +148,7 @@
 ## 현재 범위 밖으로 남겨 둔 것
 
 - 자금수단 `type` 변경, 잔액 직접 수정, 하드 삭제는 현재 범위에 없습니다.
-- 차량 연료/정비 이력 삭제와 회계 자동 매칭은 아직 포함하지 않습니다.
+- 차량 연료/정비 이력은 차량 화면에서 삭제할 수 있습니다. 연결 수집거래가 없으면 로그만 삭제하고, 미확정 연결 수집거래가 있으면 같은 작업에서 함께 정리합니다. 이미 전표 확정/정정/잠금된 연결 수집거래가 있으면 차량 이력 수정/삭제는 차단하고, 회계 조정은 기존 전표 반전/정정 흐름으로 처리합니다.
 - PM2, NSSM, IIS, systemd 같은 프로세스 관리자 설정은 저장소 안에 포함하지 않습니다.
 - 외부 감사 저장소나 중앙 로그 수집기는 아직 연결하지 않았습니다.
 

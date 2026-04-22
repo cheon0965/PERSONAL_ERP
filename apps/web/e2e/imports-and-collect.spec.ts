@@ -145,7 +145,8 @@ test('@smoke uploads an import batch, collects it into a transaction, confirms i
       name: '사업 운영 통장',
       type: 'BANK',
       balanceWon: 2_450_000,
-      status: 'ACTIVE'
+      status: 'ACTIVE',
+      bootstrapStatus: 'NOT_REQUIRED'
     }
   ];
 
@@ -342,6 +343,15 @@ test('@smoke uploads an import batch, collects it into a transaction, confirms i
       return;
     }
 
+    if (path === '/api/accounting-periods' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([currentPeriod])
+      });
+      return;
+    }
+
     if (path === '/api/funding-accounts' && request.method() === 'GET') {
       await route.fulfill({
         status: 200,
@@ -368,6 +378,18 @@ test('@smoke uploads an import batch, collects it into a transaction, confirms i
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(referenceDataReadiness)
+      });
+      return;
+    }
+
+    if (
+      /^\/api\/import-batches\/[^/]+\/collection-jobs\/active$/.test(path) &&
+      request.method() === 'GET'
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(null)
       });
       return;
     }
@@ -680,7 +702,7 @@ test('@smoke uploads an import batch, collects it into a transaction, confirms i
 
   await expect(
     page.getByRole('heading', {
-      level: 4,
+      level: 1,
       name: '업로드 배치',
       exact: true
     })
@@ -702,7 +724,7 @@ test('@smoke uploads an import batch, collects it into a transaction, confirms i
   await page.getByRole('button', { name: '배치 생성' }).click();
 
   await expect(
-    page.getByText('e2e-import.csv 업로드를 등록하고 1개 행을 파싱했습니다.')
+    page.getByText('e2e-import.csv 업로드를 등록하고 1개 행을 읽었습니다.')
   ).toBeVisible();
   await expect(
     page.getByRole('gridcell', { name: 'e2e-import.csv', exact: true })
@@ -713,8 +735,10 @@ test('@smoke uploads an import batch, collects it into a transaction, confirms i
     page.getByRole('gridcell', { name: 'Coffee beans', exact: true })
   ).toBeVisible();
 
-  await page.getByRole('button', { name: '승격 준비' }).click();
-  await expect(page.getByRole('heading', { name: '행 승격' })).toBeVisible();
+  await page.getByRole('button', { name: '거래 등록' }).click();
+  await expect(
+    page.getByRole('heading', { level: 6, name: '수집 거래 등록' })
+  ).toBeVisible();
   await expect(page.getByText('자동 판정 요약')).toBeVisible();
   await expect(
     page.getByText(
@@ -727,8 +751,10 @@ test('@smoke uploads an import batch, collects it into a transaction, confirms i
   await expect(
     page.getByText('"원재료비" 카테고리를 유지합니다.')
   ).toBeVisible();
-  await page.getByLabel('메모').fill('UTF-8 업로드 승격 확인');
-  await page.getByRole('button', { name: '수집 거래로 승격' }).click();
+  await page
+    .getByRole('textbox', { name: '메모', exact: true })
+    .fill('UTF-8 업로드 승격 확인');
+  await page.getByRole('button', { name: '수집 거래로 등록' }).click();
 
   await expect(
     page.getByText('Coffee beans 행을 수집 거래로 올렸습니다.')
@@ -762,7 +788,7 @@ test('@smoke uploads an import batch, collects it into a transaction, confirms i
   await expect(page).toHaveURL(/\/journal-entries\/je-import-e2e-1$/);
   await expect(
     page.getByRole('heading', {
-      level: 4,
+      level: 1,
       name: '202604-0007 전표 상세',
       exact: true
     })

@@ -96,6 +96,10 @@ export class FundingAccountsService {
     }
 
     assertFundingAccountStatusTransition(existing.status, input.status);
+    assertFundingAccountBootstrapTransition(
+      existing.bootstrapStatus ?? 'NOT_REQUIRED',
+      input.bootstrapStatus
+    );
 
     const normalizedName = normalizeFundingAccountName(input.name);
 
@@ -110,7 +114,8 @@ export class FundingAccountsService {
       fundingAccountId,
       {
         name: normalizedName,
-        status: input.status
+        status: input.status,
+        bootstrapStatus: input.bootstrapStatus
       }
     );
 
@@ -181,4 +186,21 @@ function assertFundingAccountStatusTransition(
       '자금수단을 종료하려면 먼저 비활성 상태로 전환해 주세요.'
     );
   }
+}
+
+function assertFundingAccountBootstrapTransition(
+  currentStatus: FundingAccountItem['bootstrapStatus'],
+  nextStatus?: UpdateFundingAccountRequest['bootstrapStatus']
+) {
+  if (!nextStatus || nextStatus === currentStatus) {
+    return;
+  }
+
+  if (currentStatus === 'PENDING' && nextStatus === 'COMPLETED') {
+    return;
+  }
+
+  throw new BadRequestException(
+    '기초 업로드 상태는 대기 상태에서 완료 상태로만 직접 전환할 수 있습니다.'
+  );
 }

@@ -66,6 +66,10 @@ export class FundingAccountsRepository {
         name: input.name,
         normalizedName: normalizeCaseInsensitiveText(input.name),
         type: input.type,
+        bootstrapStatus:
+          input.type === 'BANK' || input.type === 'CARD'
+            ? 'PENDING'
+            : 'NOT_REQUIRED',
         sortOrder: (lastAccount?.sortOrder ?? -1) + 1
       }
     });
@@ -79,7 +83,10 @@ export class FundingAccountsRepository {
       data: {
         name: input.name,
         normalizedName: normalizeCaseInsensitiveText(input.name),
-        ...(input.status === undefined ? {} : { status: input.status })
+        ...(input.status === undefined ? {} : { status: input.status }),
+        ...(input.bootstrapStatus === undefined
+          ? {}
+          : { bootstrapStatus: input.bootstrapStatus })
       }
     });
   }

@@ -23,7 +23,10 @@ export function mapCollectedTransactionToItem(
     postedJournalEntryId: transaction.postedJournalEntryId,
     postedJournalEntryNumber: transaction.postedJournalEntryNumber,
     matchedPlanItemId: transaction.matchedPlanItemId ?? null,
-    matchedPlanItemTitle: transaction.matchedPlanItemTitle ?? null
+    matchedPlanItemTitle: transaction.matchedPlanItemTitle ?? null,
+    ...(transaction.sourceVehicleLog
+      ? { sourceVehicleLog: transaction.sourceVehicleLog }
+      : {})
   };
 }
 
@@ -44,6 +47,9 @@ export function mapCollectedTransactionToDetailItem(
     postedJournalEntryId: transaction.postedJournalEntryId,
     postedJournalEntryNumber: transaction.postedJournalEntryNumber,
     matchedPlanItemId: transaction.matchedPlanItemId ?? null,
-    matchedPlanItemTitle: transaction.matchedPlanItemTitle ?? null
+    matchedPlanItemTitle: transaction.matchedPlanItemTitle ?? null,
+    ...(transaction.sourceVehicleLog
+      ? { sourceVehicleLog: transaction.sourceVehicleLog }
+      : {})
   };
 }

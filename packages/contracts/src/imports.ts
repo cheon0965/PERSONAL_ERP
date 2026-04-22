@@ -39,6 +39,12 @@ export type ImportBatchCollectionJobRowStatus =
   | 'FAILED'
   | 'SKIPPED';
 
+export type ImportBatchFileUnsupportedReason = 'SCANNED_PDF_TEXT_LAYER_MISSING';
+
+export type ImportedRowTargetPeriodCreationReason =
+  | 'INITIAL_SETUP'
+  | 'NEW_FUNDING_ACCOUNT';
+
 export type ImportedRowAutoPreparationSummary = {
   matchedPlanItemId: string | null;
   matchedPlanItemTitle: string | null;
@@ -47,6 +53,9 @@ export type ImportedRowAutoPreparationSummary = {
   nextWorkflowStatus: CollectedTransactionPostingStatus;
   hasDuplicateSourceFingerprint: boolean;
   allowPlanItemMatch: boolean;
+  willCreateTargetPeriod?: boolean;
+  targetPeriodMonthLabel?: string;
+  targetPeriodCreationReason?: ImportedRowTargetPeriodCreationReason;
   potentialDuplicateTransactionCount?: number;
   decisionReasons: string[];
 };

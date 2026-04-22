@@ -1,12 +1,16 @@
-import { Button, Stack } from '@mui/material';
+import type { Route } from 'next';
+import Link from 'next/link';
+import { Button, Chip, Stack, Typography } from '@mui/material';
 import type {
   VehicleFuelLogItem,
+  VehicleLogCollectedTransactionLink,
   VehicleItem,
   VehicleMaintenanceLogItem,
   VehicleOperatingSummaryItem
 } from '@personal-erp/contracts';
 import type { GridColDef } from '@mui/x-data-grid';
 import { formatNumber, formatWon } from '@/shared/lib/format';
+import { StatusChip } from '@/shared/ui/status-chip';
 import {
   fuelColumns,
   fuelTypeLabelMap,
@@ -78,6 +82,42 @@ export function buildVehicleColumns({
         value == null ? '-' : `${formatNumber(Number(value), 2)} km/L`
     },
     {
+      field: 'expenseDefaults',
+      headerName: '운영비 기본값',
+      flex: 1.1,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap">
+          {params.row.defaultFundingAccountId ? (
+            <Chip label="자금수단" size="small" variant="outlined" />
+          ) : null}
+          {params.row.defaultFuelCategoryId ? (
+            <Chip label="연료" size="small" variant="outlined" />
+          ) : null}
+          {params.row.defaultMaintenanceCategoryId ? (
+            <Chip label="정비" size="small" variant="outlined" />
+          ) : null}
+          {params.row.operatingExpensePlanOptIn ? (
+            <Chip
+              label="계획"
+              size="small"
+              color="primary"
+              variant="outlined"
+            />
+          ) : null}
+          {!params.row.defaultFundingAccountId &&
+          !params.row.defaultFuelCategoryId &&
+          !params.row.defaultMaintenanceCategoryId &&
+          !params.row.operatingExpensePlanOptIn ? (
+            <Typography variant="body2" color="text.secondary">
+              -
+            </Typography>
+          ) : null}
+        </Stack>
+      )
+    },
+    {
       field: 'actions',
       headerName: '동작',
       flex: 0.9,
@@ -119,57 +159,187 @@ export function buildVehicleColumns({
 }
 
 export function buildFuelLogColumns({
-  onEditFuelLog
+  onEditFuelLog,
+  onDeleteFuelLog
 }: {
   onEditFuelLog: (fuelLog: VehicleFuelLogItem) => void;
+  onDeleteFuelLog: (fuelLog: VehicleFuelLogItem) => void;
 }): GridColDef<VehicleFuelLogItem>[] {
   return [
     ...fuelColumns,
+    {
+      field: 'linkedCollectedTransaction',
+      headerName: '회계 연동',
+      flex: 1.1,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) =>
+        params.row.linkedCollectedTransaction ? (
+          <VehicleLogAccountingLinkView
+            link={params.row.linkedCollectedTransaction}
+          />
+        ) : (
+          <Chip label="미연결" size="small" variant="outlined" />
+        )
+    },
     {
       field: 'actions',
       headerName: '동작',
       flex: 0.8,
       sortable: false,
       filterable: false,
-      renderCell: (params) => (
-        <Button
-          size="small"
-          variant="outlined"
-          onClick={() => {
-            onEditFuelLog(params.row);
-          }}
-        >
-          수정
-        </Button>
-      )
+      renderCell: (params) => {
+        const deleteBlockReason = readVehicleLogDeleteBlockReason(
+          params.row.linkedCollectedTransaction
+        );
+
+        return (
+          <Stack spacing={0.5} sx={{ py: 0.5 }}>
+            <Stack direction="row" spacing={1}>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => {
+                  onEditFuelLog(params.row);
+                }}
+              >
+                수정
+              </Button>
+              <Button
+                size="small"
+                color="error"
+                variant="text"
+                disabled={Boolean(deleteBlockReason)}
+                onClick={() => {
+                  onDeleteFuelLog(params.row);
+                }}
+              >
+                삭제
+              </Button>
+            </Stack>
+            {deleteBlockReason ? (
+              <Typography variant="caption" color="text.secondary">
+                {deleteBlockReason}
+              </Typography>
+            ) : null}
+          </Stack>
+        );
+      }
     }
   ];
 }
 
 export function buildMaintenanceLogColumns({
-  onEditMaintenanceLog
+  onEditMaintenanceLog,
+  onDeleteMaintenanceLog
 }: {
   onEditMaintenanceLog: (maintenanceLog: VehicleMaintenanceLogItem) => void;
+  onDeleteMaintenanceLog: (maintenanceLog: VehicleMaintenanceLogItem) => void;
 }): GridColDef<VehicleMaintenanceLogItem>[] {
   return [
     ...maintenanceColumns,
+    {
+      field: 'linkedCollectedTransaction',
+      headerName: '회계 연동',
+      flex: 1.1,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) =>
+        params.row.linkedCollectedTransaction ? (
+          <VehicleLogAccountingLinkView
+            link={params.row.linkedCollectedTransaction}
+          />
+        ) : (
+          <Chip label="미연결" size="small" variant="outlined" />
+        )
+    },
     {
       field: 'actions',
       headerName: '동작',
       flex: 0.8,
       sortable: false,
       filterable: false,
-      renderCell: (params) => (
-        <Button
-          size="small"
-          variant="outlined"
-          onClick={() => {
-            onEditMaintenanceLog(params.row);
-          }}
-        >
-          수정
-        </Button>
-      )
+      renderCell: (params) => {
+        const deleteBlockReason = readVehicleLogDeleteBlockReason(
+          params.row.linkedCollectedTransaction
+        );
+
+        return (
+          <Stack spacing={0.5} sx={{ py: 0.5 }}>
+            <Stack direction="row" spacing={1}>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => {
+                  onEditMaintenanceLog(params.row);
+                }}
+              >
+                수정
+              </Button>
+              <Button
+                size="small"
+                color="error"
+                variant="text"
+                disabled={Boolean(deleteBlockReason)}
+                onClick={() => {
+                  onDeleteMaintenanceLog(params.row);
+                }}
+              >
+                삭제
+              </Button>
+            </Stack>
+            {deleteBlockReason ? (
+              <Typography variant="caption" color="text.secondary">
+                {deleteBlockReason}
+              </Typography>
+            ) : null}
+          </Stack>
+        );
+      }
     }
   ];
+}
+
+function VehicleLogAccountingLinkView({
+  link
+}: {
+  link: VehicleLogCollectedTransactionLink;
+}) {
+  return (
+    <Stack spacing={0.5} sx={{ py: 0.5 }}>
+      <StatusChip label={link.postingStatus} />
+      {link.postedJournalEntryId && link.postedJournalEntryNumber ? (
+        <Button
+          size="small"
+          component={Link}
+          href={`/journal-entries/${link.postedJournalEntryId}` as Route}
+          sx={{ justifyContent: 'flex-start', px: 0 }}
+        >
+          {link.postedJournalEntryNumber}
+        </Button>
+      ) : null}
+    </Stack>
+  );
+}
+
+function readVehicleLogDeleteBlockReason(
+  link: VehicleLogCollectedTransactionLink | null
+) {
+  if (!link) {
+    return null;
+  }
+
+  if (link.postedJournalEntryId) {
+    return '전표 확정 후에는 전표 반전/정정으로 조정';
+  }
+
+  if (
+    link.postingStatus === 'POSTED' ||
+    link.postingStatus === 'CORRECTED' ||
+    link.postingStatus === 'LOCKED'
+  ) {
+    return '확정 상태라 삭제 불가';
+  }
+
+  return null;
 }

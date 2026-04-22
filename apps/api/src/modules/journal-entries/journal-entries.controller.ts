@@ -15,6 +15,7 @@ import type {
 import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { readAllowedWorkspaceRoles } from '../../common/auth/workspace-action.policy';
+import { OperationalAuditPublisher } from '../../common/infrastructure/operational/operational-audit-publisher.service';
 import { RequestWithContext } from '../../common/infrastructure/operational/request-context';
 import { SecurityEventLogger } from '../../common/infrastructure/operational/security-event.logger';
 import {
@@ -35,7 +36,8 @@ export class JournalEntriesController {
     private readonly journalEntriesService: JournalEntriesService,
     private readonly reverseJournalEntryUseCase: ReverseJournalEntryUseCase,
     private readonly correctJournalEntryUseCase: CorrectJournalEntryUseCase,
-    private readonly securityEvents: SecurityEventLogger
+    private readonly securityEvents: SecurityEventLogger,
+    private readonly auditPublisher: OperationalAuditPublisher
   ) {}
 
   @Get()
@@ -68,6 +70,22 @@ export class JournalEntriesController {
         details: {
           journalEntryId,
           adjustmentJournalEntryId: journalEntry.id
+        }
+      });
+      this.auditPublisher.publish({
+        kind: 'JOURNAL_ADJUSTMENT',
+        eventName: 'journal_entry.reverse',
+        occurredAt: new Date().toISOString(),
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId,
+        actorUserId: workspace.userId,
+        actorMembershipId: workspace.membershipId,
+        resourceType: 'journal-entry',
+        resourceId: journalEntryId,
+        result: 'SUCCESS',
+        payload: {
+          adjustmentJournalEntryId: journalEntry.id,
+          adjustmentEntryNumber: journalEntry.entryNumber
         }
       });
 
@@ -114,6 +132,23 @@ export class JournalEntriesController {
         details: {
           journalEntryId,
           adjustmentJournalEntryId: journalEntry.id
+        }
+      });
+      this.auditPublisher.publish({
+        kind: 'JOURNAL_ADJUSTMENT',
+        eventName: 'journal_entry.correct',
+        occurredAt: new Date().toISOString(),
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId,
+        actorUserId: workspace.userId,
+        actorMembershipId: workspace.membershipId,
+        resourceType: 'journal-entry',
+        resourceId: journalEntryId,
+        result: 'SUCCESS',
+        payload: {
+          adjustmentJournalEntryId: journalEntry.id,
+          adjustmentEntryNumber: journalEntry.entryNumber,
+          correctionReason: journalEntry.correctionReason ?? null
         }
       });
 

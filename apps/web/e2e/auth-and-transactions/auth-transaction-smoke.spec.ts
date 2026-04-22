@@ -83,14 +83,16 @@ test('@smoke protects the transactions route, restores the session, and saves a 
       name: '사업 운영 통장',
       type: 'BANK',
       balanceWon: 2_450_000,
-      status: 'ACTIVE'
+      status: 'ACTIVE',
+      bootstrapStatus: 'NOT_REQUIRED'
     },
     {
       id: 'acc-reserve',
       name: '비용 예비 통장',
       type: 'BANK',
       balanceWon: 430_000,
-      status: 'ACTIVE'
+      status: 'ACTIVE',
+      bootstrapStatus: 'NOT_REQUIRED'
     }
   ];
 

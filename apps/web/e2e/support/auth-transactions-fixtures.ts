@@ -72,14 +72,16 @@ export function createE2EFundingAccounts(): FundingAccountItem[] {
       name: '사업 운영 통장',
       type: 'BANK',
       balanceWon: 2_450_000,
-      status: 'ACTIVE'
+      status: 'ACTIVE',
+      bootstrapStatus: 'NOT_REQUIRED'
     },
     {
       id: 'acc-reserve',
       name: '비용 예비 통장',
       type: 'BANK',
       balanceWon: 430_000,
-      status: 'ACTIVE'
+      status: 'ACTIVE',
+      bootstrapStatus: 'NOT_REQUIRED'
     }
   ];
 }
@@ -210,7 +212,11 @@ export function createE2EVehicles(): VehicleItem[] {
       manufacturer: 'Hyundai',
       fuelType: 'DIESEL',
       initialOdometerKm: 58_200,
-      estimatedFuelEfficiencyKmPerLiter: 11.2
+      estimatedFuelEfficiencyKmPerLiter: 11.2,
+      defaultFundingAccountId: null,
+      defaultFuelCategoryId: null,
+      defaultMaintenanceCategoryId: null,
+      operatingExpensePlanOptIn: false
     }
   ];
 }
@@ -226,7 +232,8 @@ export function createE2EVehicleFuelLogs(): VehicleFuelLogItem[] {
       liters: 42.5,
       amountWon: 72_000,
       unitPriceWon: 1694,
-      isFullTank: true
+      isFullTank: true,
+      linkedCollectedTransaction: null
     }
   ];
 }
@@ -243,7 +250,8 @@ export function createE2EVehicleMaintenanceLogs(): VehicleMaintenanceLogItem[] {
       vendor: '현대 블루핸즈',
       description: '브레이크 패드 교체',
       amountWon: 185000,
-      memo: '전륜 패드 기준'
+      memo: '전륜 패드 기준',
+      linkedCollectedTransaction: null
     }
   ];
 }
@@ -443,7 +451,11 @@ export function buildVehicleItemFromPayload(
     fuelType: payload.fuelType,
     initialOdometerKm: payload.initialOdometerKm,
     estimatedFuelEfficiencyKmPerLiter:
-      payload.estimatedFuelEfficiencyKmPerLiter ?? null
+      payload.estimatedFuelEfficiencyKmPerLiter ?? null,
+    defaultFundingAccountId: payload.defaultFundingAccountId ?? null,
+    defaultFuelCategoryId: payload.defaultFuelCategoryId ?? null,
+    defaultMaintenanceCategoryId: payload.defaultMaintenanceCategoryId ?? null,
+    operatingExpensePlanOptIn: payload.operatingExpensePlanOptIn ?? false
   };
 }
 
@@ -487,7 +499,10 @@ export function buildVehicleFuelLogItemFromPayload(
     liters: payload.liters,
     amountWon: payload.amountWon,
     unitPriceWon: payload.unitPriceWon,
-    isFullTank: payload.isFullTank
+    isFullTank: payload.isFullTank,
+    linkedCollectedTransaction: buildVehicleLinkedCollectedTransaction(
+      payload.accountingLink
+    )
   };
 }
 
@@ -532,7 +547,10 @@ export function buildVehicleMaintenanceLogItemFromPayload(
     vendor: payload.vendor ?? null,
     description: payload.description,
     amountWon: payload.amountWon,
-    memo: payload.memo ?? null
+    memo: payload.memo ?? null,
+    linkedCollectedTransaction: buildVehicleLinkedCollectedTransaction(
+      payload.accountingLink
+    )
   };
 }
 
@@ -555,6 +573,25 @@ export function mergeVehicleMaintenanceLogsForE2E(
       return left.vehicleName.localeCompare(right.vehicleName);
     }
   );
+}
+
+function buildVehicleLinkedCollectedTransaction(
+  accountingLink:
+    | CreateVehicleFuelLogRequest['accountingLink']
+    | CreateVehicleMaintenanceLogRequest['accountingLink']
+) {
+  if (!accountingLink) {
+    return null;
+  }
+
+  return {
+    id: `ctx-e2e-${Date.now()}`,
+    fundingAccountId: accountingLink.fundingAccountId,
+    categoryId: accountingLink.categoryId ?? null,
+    postingStatus: accountingLink.categoryId ? 'READY_TO_POST' : 'REVIEWED',
+    postedJournalEntryId: null,
+    postedJournalEntryNumber: null
+  } as const;
 }
 
 export function buildReferenceDataReadinessSummary(input: {

@@ -1,4 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable
+} from '@nestjs/common';
 import type {
   AuthenticatedUser,
   CreateVehicleRequest,
@@ -12,7 +16,9 @@ import type {
   VehicleMaintenanceLogItem,
   VehicleOperatingSummaryView
 } from '@personal-erp/contracts';
+import { requirePositiveMoneyWon } from '../../common/money/money-won';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
+import { AccountingPeriodWriteGuardPort } from '../accounting-periods/public';
 import { normalizeCaseInsensitiveText } from '../../common/utils/normalize-unique-key.util';
 import {
   mapVehicleFuelLogToItem,
@@ -23,13 +29,17 @@ import { buildVehicleOperatingSummaryView } from './vehicle-operating-summary.pr
 import { VehiclesRepository } from './vehicles.repository';
 import {
   normalizeFuelLogInput,
+  normalizeVehicleLogAccountingLinkInput,
   normalizeMaintenanceLogInput,
   normalizeVehicleInput
 } from './vehicles.normalization';
 
 @Injectable()
 export class VehiclesService {
-  constructor(private readonly vehiclesRepository: VehiclesRepository) {}
+  constructor(
+    private readonly vehiclesRepository: VehiclesRepository,
+    private readonly accountingPeriodWriteGuard: AccountingPeriodWriteGuardPort
+  ) {}
 
   async findAll(user: AuthenticatedUser): Promise<VehicleItem[]> {
     const workspace = requireCurrentWorkspace(user);
@@ -75,6 +85,15 @@ export class VehiclesService {
       ledgerId: workspace.ledgerId,
       name: normalizedInput.name
     });
+    await this.vehiclesRepository.assertVehicleDefaultReferencesInWorkspace({
+      workspace: {
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId
+      },
+      defaultFundingAccountId: normalizedInput.defaultFundingAccountId,
+      defaultFuelCategoryId: normalizedInput.defaultFuelCategoryId,
+      defaultMaintenanceCategoryId: normalizedInput.defaultMaintenanceCategoryId
+    });
 
     const created = await this.vehiclesRepository.createInWorkspace(
       workspace.userId,
@@ -109,6 +128,15 @@ export class VehiclesService {
       ledgerId: workspace.ledgerId,
       name: normalizedInput.name,
       excludeVehicleId: existing.id
+    });
+    await this.vehiclesRepository.assertVehicleDefaultReferencesInWorkspace({
+      workspace: {
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId
+      },
+      defaultFundingAccountId: normalizedInput.defaultFundingAccountId,
+      defaultFuelCategoryId: normalizedInput.defaultFuelCategoryId,
+      defaultMaintenanceCategoryId: normalizedInput.defaultMaintenanceCategoryId
     });
 
     const updated = await this.vehiclesRepository.updateInWorkspace(
@@ -146,10 +174,28 @@ export class VehiclesService {
     }
 
     const normalizedInput = normalizeFuelLogInput(input, vehicle);
-    const created = await this.vehiclesRepository.createFuelLogForVehicle(
-      vehicleId,
-      normalizedInput
+    const normalizedAccountingLink = normalizeVehicleLogAccountingLinkInput(
+      input.accountingLink
     );
+    const accountingLink = normalizedAccountingLink
+      ? await this.resolveVehicleLogAccountingLink({
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId,
+          businessDate: normalizedInput.filledOn,
+          amountWon: normalizedInput.amountWon,
+          accountingLink: normalizedAccountingLink
+        })
+      : null;
+    const created = await this.vehiclesRepository.createFuelLogForVehicle({
+      vehicleId,
+      vehicleName: vehicle.name,
+      workspace: {
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId
+      },
+      log: normalizedInput,
+      accountingLink
+    });
 
     return mapVehicleFuelLogToItem(created);
   }
@@ -184,12 +230,71 @@ export class VehiclesService {
     }
 
     const normalizedInput = normalizeFuelLogInput(input, vehicle);
-    const updated = await this.vehiclesRepository.updateFuelLog(
-      fuelLogId,
-      normalizedInput
+    const normalizedAccountingLink = normalizeVehicleLogAccountingLinkInput(
+      input.accountingLink
     );
+    const accountingLink = normalizedAccountingLink
+      ? await this.resolveVehicleLogAccountingLink({
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId,
+          businessDate: normalizedInput.filledOn,
+          amountWon: normalizedInput.amountWon,
+          accountingLink: normalizedAccountingLink
+        })
+      : null;
+    const updated = await this.vehiclesRepository.updateFuelLog({
+      fuelLogId,
+      vehicleId,
+      vehicleName: vehicle.name,
+      workspace: {
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId
+      },
+      log: normalizedInput,
+      accountingLink
+    });
 
     return mapVehicleFuelLogToItem(updated);
+  }
+
+  async deleteFuelLog(
+    user: AuthenticatedUser,
+    vehicleId: string,
+    fuelLogId: string
+  ): Promise<boolean> {
+    const workspace = requireCurrentWorkspace(user);
+    const vehicle = await this.vehiclesRepository.findByIdInWorkspace(
+      vehicleId,
+      workspace.tenantId,
+      workspace.ledgerId
+    );
+
+    if (!vehicle) {
+      return false;
+    }
+
+    const existingFuelLog =
+      await this.vehiclesRepository.findFuelLogInWorkspace(
+        fuelLogId,
+        vehicleId,
+        workspace.tenantId,
+        workspace.ledgerId
+      );
+
+    if (!existingFuelLog) {
+      return false;
+    }
+
+    await this.vehiclesRepository.deleteFuelLog({
+      fuelLogId,
+      vehicleId,
+      workspace: {
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId
+      }
+    });
+
+    return true;
   }
 
   async findMaintenanceLogs(
@@ -221,11 +326,29 @@ export class VehiclesService {
     }
 
     const normalizedInput = normalizeMaintenanceLogInput(input, vehicle);
+    const normalizedAccountingLink = normalizeVehicleLogAccountingLinkInput(
+      input.accountingLink
+    );
+    const accountingLink = normalizedAccountingLink
+      ? await this.resolveVehicleLogAccountingLink({
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId,
+          businessDate: normalizedInput.performedOn,
+          amountWon: normalizedInput.amountWon,
+          accountingLink: normalizedAccountingLink
+        })
+      : null;
     const created =
-      await this.vehiclesRepository.createMaintenanceLogForVehicle(
+      await this.vehiclesRepository.createMaintenanceLogForVehicle({
         vehicleId,
-        normalizedInput
-      );
+        vehicleName: vehicle.name,
+        workspace: {
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId
+        },
+        log: normalizedInput,
+        accountingLink
+      });
 
     return mapVehicleMaintenanceLogToItem(created);
   }
@@ -260,12 +383,71 @@ export class VehiclesService {
     }
 
     const normalizedInput = normalizeMaintenanceLogInput(input, vehicle);
-    const updated = await this.vehiclesRepository.updateMaintenanceLog(
-      maintenanceLogId,
-      normalizedInput
+    const normalizedAccountingLink = normalizeVehicleLogAccountingLinkInput(
+      input.accountingLink
     );
+    const accountingLink = normalizedAccountingLink
+      ? await this.resolveVehicleLogAccountingLink({
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId,
+          businessDate: normalizedInput.performedOn,
+          amountWon: normalizedInput.amountWon,
+          accountingLink: normalizedAccountingLink
+        })
+      : null;
+    const updated = await this.vehiclesRepository.updateMaintenanceLog({
+      maintenanceLogId,
+      vehicleId,
+      vehicleName: vehicle.name,
+      workspace: {
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId
+      },
+      log: normalizedInput,
+      accountingLink
+    });
 
     return mapVehicleMaintenanceLogToItem(updated);
+  }
+
+  async deleteMaintenanceLog(
+    user: AuthenticatedUser,
+    vehicleId: string,
+    maintenanceLogId: string
+  ): Promise<boolean> {
+    const workspace = requireCurrentWorkspace(user);
+    const vehicle = await this.vehiclesRepository.findByIdInWorkspace(
+      vehicleId,
+      workspace.tenantId,
+      workspace.ledgerId
+    );
+
+    if (!vehicle) {
+      return false;
+    }
+
+    const existingMaintenanceLog =
+      await this.vehiclesRepository.findMaintenanceLogInWorkspace(
+        maintenanceLogId,
+        vehicleId,
+        workspace.tenantId,
+        workspace.ledgerId
+      );
+
+    if (!existingMaintenanceLog) {
+      return false;
+    }
+
+    await this.vehiclesRepository.deleteMaintenanceLog({
+      maintenanceLogId,
+      vehicleId,
+      workspace: {
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId
+      }
+    });
+
+    return true;
   }
 
   private async assertNoDuplicateVehicle(input: {
@@ -290,5 +472,42 @@ export class VehiclesService {
     }
 
     throw new ConflictException('같은 이름의 차량이 이미 있습니다.');
+  }
+
+  private async resolveVehicleLogAccountingLink(input: {
+    tenantId: string;
+    ledgerId: string;
+    businessDate: string;
+    amountWon: number;
+    accountingLink: {
+      fundingAccountId: string;
+      categoryId: string | null;
+    };
+  }) {
+    if (input.amountWon <= 0) {
+      throw new BadRequestException(
+        '회계 연동을 켠 차량 운영비는 0보다 큰 금액이어야 합니다.'
+      );
+    }
+
+    requirePositiveMoneyWon(
+      input.amountWon,
+      '회계 연동 거래 금액은 0보다 큰 안전한 정수여야 합니다.'
+    );
+
+    const period =
+      await this.accountingPeriodWriteGuard.assertCollectingDateAllowed(
+        {
+          tenantId: input.tenantId,
+          ledgerId: input.ledgerId
+        },
+        input.businessDate
+      );
+
+    return {
+      periodId: period.id,
+      fundingAccountId: input.accountingLink.fundingAccountId,
+      categoryId: input.accountingLink.categoryId
+    };
   }
 }

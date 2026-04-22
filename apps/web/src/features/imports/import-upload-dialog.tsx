@@ -8,7 +8,10 @@ import {
   TextField,
   Typography
 } from '@mui/material';
-import type { FundingAccountItem, ImportSourceKind } from '@personal-erp/contracts';
+import type {
+  FundingAccountItem,
+  ImportSourceKind
+} from '@personal-erp/contracts';
 import { readFundingAccountTypeLabel } from '@/features/reference-data/reference-data.shared';
 import { FormDrawer } from '@/shared/ui/form-drawer';
 import { appLayout } from '@/shared/ui/layout-metrics';
@@ -39,7 +42,7 @@ export function ImportUploadDialog({
       open={open}
       onClose={onClose}
       title="새 업로드 배치"
-      description="UTF-8 텍스트를 붙여 넣거나 IM뱅크 PDF 파일을 첨부해 업로드 배치와 업로드 행을 생성합니다."
+      description="UTF-8 텍스트를 붙여 넣거나 IM뱅크 PDF 파일을 첨부해 최신 진행월 또는 초기 기초 입력용 업로드 행을 생성합니다."
     >
       <Stack spacing={appLayout.fieldGap}>
         <TextField
@@ -117,8 +120,11 @@ export function ImportUploadDialog({
                 : 'IM뱅크에서 내려받은 거래내역 PDF를 선택해 주세요.'}
             </Typography>
             <Alert severity="info" variant="outlined">
+              텍스트 레이어가 있는 IM뱅크 원본 PDF만 지원합니다. 스캔하거나
+              이미지로 저장한 PDF는 OCR 미도입 상태라 업로드 전에 차단됩니다.
               PDF 원본은 서버에서 거래 행으로 변환한 뒤 저장하지 않고, 업로드
-              배치와 행 단위 원본 정보만 보관합니다.
+              배치와 행 단위 원본 정보만 보관합니다. 운영 중에는 최신 진행월
+              범위의 거래만 수집 거래로 등록합니다.
             </Alert>
           </Stack>
         ) : (

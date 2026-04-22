@@ -88,7 +88,7 @@ export class PrismaAccountingPeriodGatewayAdapter
       missingPeriodMessage:
         '현재 Ledger에 열린 운영 기간이 없어 수집 거래를 등록할 수 없습니다.',
       outOfRangeMessage:
-        '수집 거래 일자는 해당 일자를 포함하는 열린 운영 기간 안에 있어야 합니다.'
+        '수집 거래 일자는 최신 진행월 범위 안에 있어야 합니다.'
     });
   }
 
@@ -103,7 +103,7 @@ export class PrismaAccountingPeriodGatewayAdapter
       missingPeriodMessage:
         '현재 Ledger에 전표 입력 가능한 운영 기간이 없어 조정 전표를 등록할 수 없습니다.',
       outOfRangeMessage:
-        '조정 전표 일자는 해당 일자를 포함하는 전표 입력 가능 운영 기간 안에 있어야 합니다.'
+        '조정 전표 일자는 최신 전표 입력 가능 운영월 범위 안에 있어야 합니다.'
     });
   }
 
@@ -267,16 +267,16 @@ export class PrismaAccountingPeriodGatewayAdapter
       throw new BadRequestException(input.missingPeriodMessage);
     }
 
-    const matchedPeriod =
-      writablePeriods.find((period) =>
-        isBusinessMomentWithinPeriod(businessMoment, period)
-      ) ?? null;
+    const latestWritablePeriod = writablePeriods[0];
 
-    if (!matchedPeriod) {
+    if (
+      !latestWritablePeriod ||
+      !isBusinessMomentWithinPeriod(businessMoment, latestWritablePeriod)
+    ) {
       throw new BadRequestException(input.outOfRangeMessage);
     }
 
-    return matchedPeriod;
+    return latestWritablePeriod;
   }
 }
 

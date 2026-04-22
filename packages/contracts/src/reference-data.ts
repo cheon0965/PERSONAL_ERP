@@ -7,12 +7,18 @@ export type CategoryKind = 'INCOME' | 'EXPENSE' | 'TRANSFER';
 
 export type FundingAccountStatus = 'ACTIVE' | 'INACTIVE' | 'CLOSED';
 
+export type FundingAccountBootstrapStatus =
+  | 'NOT_REQUIRED'
+  | 'PENDING'
+  | 'COMPLETED';
+
 export type FundingAccountItem = {
   id: string;
   name: string;
   type: AccountType;
   balanceWon: MoneyWon;
   status: FundingAccountStatus;
+  bootstrapStatus: FundingAccountBootstrapStatus;
 };
 
 export type CreateFundingAccountRequest = {
@@ -23,6 +29,7 @@ export type CreateFundingAccountRequest = {
 export type UpdateFundingAccountRequest = {
   name: string;
   status?: FundingAccountStatus;
+  bootstrapStatus?: FundingAccountBootstrapStatus;
 };
 
 export type CategoryItem = {

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import {
+  Alert,
   Box,
   Button,
   Checkbox,
@@ -138,6 +139,7 @@ export function OpenAccountingPeriodSection({
   isFirstPeriod,
   isBusy,
   canOpenPeriod,
+  openPeriodBlockReason,
   canSubmitOpeningBalance,
   isSubmitting,
   openingBalanceFields,
@@ -155,6 +157,7 @@ export function OpenAccountingPeriodSection({
   isFirstPeriod: boolean;
   isBusy: boolean;
   canOpenPeriod: boolean;
+  openPeriodBlockReason: string | null;
   canSubmitOpeningBalance: boolean;
   isSubmitting: boolean;
   openingBalanceFields: Array<{ id: string }>;
@@ -181,11 +184,16 @@ export function OpenAccountingPeriodSection({
         description={
           isFirstPeriod
             ? '첫 월은 기초 잔액 라인을 함께 저장해 시작 기준을 만듭니다.'
-            : '월 오픈과 월 마감은 별도 작업입니다. 다음 운영 월을 미리 열어 둘 수 있습니다.'
+            : '새 운영 월은 최근 운영 월을 먼저 마감한 뒤 열 수 있습니다. 운영 중에는 하나의 최신 진행월만 유지합니다.'
         }
       >
         <form onSubmit={onSubmit}>
           <Stack spacing={appLayout.cardGap}>
+            {openPeriodBlockReason ? (
+              <Alert severity="info" variant="outlined">
+                {openPeriodBlockReason}
+              </Alert>
+            ) : null}
             <TextField
               label="운영 월"
               type="month"

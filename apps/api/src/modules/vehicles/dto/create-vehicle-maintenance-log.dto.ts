@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   type CreateVehicleMaintenanceLogRequest,
   type VehicleMaintenanceCategory,
@@ -10,9 +11,11 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  Min
+  Min,
+  ValidateNested
 } from 'class-validator';
 import { moneyWonApiProperty } from '../../../common/money/swagger-money';
+import { VehicleLogAccountingLinkDto } from './vehicle-log-accounting-link.dto';
 
 export class CreateVehicleMaintenanceLogDto implements CreateVehicleMaintenanceLogRequest {
   @ApiProperty()
@@ -46,4 +49,14 @@ export class CreateVehicleMaintenanceLogDto implements CreateVehicleMaintenanceL
   @IsOptional()
   @IsString()
   memo?: string | null;
+
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    type: VehicleLogAccountingLinkDto
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => VehicleLogAccountingLinkDto)
+  accountingLink?: VehicleLogAccountingLinkDto | null;
 }

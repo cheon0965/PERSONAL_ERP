@@ -19,6 +19,7 @@ import { readWorkspaceActorRef } from '../../common/auth/workspace-actor-ref.uti
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { parseMonthRange } from '../../common/utils/date.util';
+import { readCollectingAccountingPeriodStatuses } from '../accounting-periods/public';
 import {
   ImportedRowCollectionPort,
   type ImportedRowCollectionWorkspaceScope,
@@ -67,6 +68,16 @@ type ResolvedCollectionPeriod = {
   startDate: Date;
   endDate: Date;
   willCreateOnCollect: boolean;
+  creationReason: 'INITIAL_SETUP' | 'NEW_FUNDING_ACCOUNT' | null;
+};
+
+type CollectionPeriodRecord = {
+  id: string;
+  year: number;
+  month: number;
+  startDate: Date;
+  endDate: Date;
+  status: AccountingPeriodStatus;
 };
 
 @Injectable()
@@ -110,7 +121,8 @@ export class ImportedRowCollectionService {
         importBatchId,
         importedRowId,
         input,
-        occurredOnIso: parsedRow.occurredOn
+        occurredOnIso: parsedRow.occurredOn,
+        fundingAccountId: input.fundingAccountId
       })
     );
   }
@@ -142,7 +154,9 @@ export class ImportedRowCollectionService {
     const targetPeriod = await this.resolveTargetCollectionPeriod({
       client: this.prisma,
       workspace: workspaceScope,
-      occurredOnIso: parsedRow.occurredOn
+      importBatchId,
+      occurredOnIso: parsedRow.occurredOn,
+      fundingAccountId: input.fundingAccountId
     });
 
     const assessment = await this.evaluateRowCollection({
@@ -165,13 +179,16 @@ export class ImportedRowCollectionService {
     importedRowId: string;
     input: CollectImportedRowRequest;
     occurredOnIso: string;
+    fundingAccountId: string;
   }): Promise<CollectImportedRowResponse> {
     const targetPeriod =
       await this.resolveOrCreateTargetCollectionPeriodInTransaction({
         tx: input.tx,
         workspace: input.workspace,
         actorRef: input.actorRef,
-        occurredOnIso: input.occurredOnIso
+        importBatchId: input.importBatchId,
+        occurredOnIso: input.occurredOnIso,
+        fundingAccountId: input.fundingAccountId
       });
     const assessment = await this.evaluateRowCollection({
       client: input.tx,
@@ -236,6 +253,11 @@ export class ImportedRowCollectionService {
       input.tx,
       matchedPlanItemId
     );
+    await this.markFundingAccountBootstrapCompletedIfPending({
+      tx: input.tx,
+      workspace: input.workspace,
+      fundingAccountId: assessment.fundingAccount.id
+    });
 
     return {
       collectedTransaction: mapCreatedCollectedTransactionToItem(
@@ -341,6 +363,7 @@ export class ImportedRowCollectionService {
       allowPlanItemMatch: autoPreparation.allowPlanItemMatch,
       targetPeriodMonthLabel: input.targetPeriod.monthLabel,
       willCreateTargetPeriod: input.targetPeriod.willCreateOnCollect,
+      targetPeriodCreationReason: input.targetPeriod.creationReason,
       potentialDuplicateTransactionCount
     });
 
@@ -371,17 +394,17 @@ export class ImportedRowCollectionService {
   private async resolveTargetCollectionPeriod(input: {
     client: PrismaClientLike;
     workspace: ImportedRowCollectionWorkspaceScope;
+    importBatchId: string;
     occurredOnIso: string;
+    fundingAccountId: string;
   }): Promise<ResolvedCollectionPeriod> {
     const occurredOn = parseOccurredOn(input.occurredOnIso);
     const year = occurredOn.getUTCFullYear();
     const month = occurredOn.getUTCMonth() + 1;
-    const existingPeriod = await input.client.accountingPeriod.findFirst({
+    const periods = (await input.client.accountingPeriod.findMany({
       where: {
         tenantId: input.workspace.tenantId,
-        ledgerId: input.workspace.ledgerId,
-        year,
-        month
+        ledgerId: input.workspace.ledgerId
       },
       select: {
         id: true,
@@ -390,13 +413,38 @@ export class ImportedRowCollectionService {
         startDate: true,
         endDate: true,
         status: true
-      }
-    });
+      },
+      orderBy: [{ year: 'desc' }, { month: 'desc' }]
+    })) as CollectionPeriodRecord[];
+    const existingPeriod =
+      periods.find(
+        (candidate) => candidate.year === year && candidate.month === month
+      ) ?? null;
+    const latestCollectingPeriod =
+      periods.find((candidate) =>
+        isCollectingAccountingPeriodStatus(candidate.status)
+      ) ?? null;
 
     if (existingPeriod) {
       if (existingPeriod.status === AccountingPeriodStatus.LOCKED) {
         throw new BadRequestException(
           `${formatYearMonth(existingPeriod.year, existingPeriod.month)} 마감월 데이터이기 때문에 저장할 수 없습니다.`
+        );
+      }
+
+      if (
+        !isCollectingAccountingPeriodStatus(existingPeriod.status) ||
+        (latestCollectingPeriod &&
+          existingPeriod.id !== latestCollectingPeriod.id)
+      ) {
+        const latestMonthLabel = latestCollectingPeriod
+          ? formatYearMonth(
+              latestCollectingPeriod.year,
+              latestCollectingPeriod.month
+            )
+          : '없음';
+        throw new BadRequestException(
+          `${formatYearMonth(existingPeriod.year, existingPeriod.month)} 업로드 행은 최신 진행월 ${latestMonthLabel} 범위가 아니어서 등록할 수 없습니다. 운영 중에는 열린 최신 월 거래만 업로드 배치에서 수집 거래로 올릴 수 있습니다.`
         );
       }
 
@@ -407,12 +455,30 @@ export class ImportedRowCollectionService {
         monthLabel: formatYearMonth(existingPeriod.year, existingPeriod.month),
         startDate: existingPeriod.startDate,
         endDate: existingPeriod.endDate,
-        willCreateOnCollect: false
+        willCreateOnCollect: false,
+        creationReason: null
       };
     }
 
     const monthLabel = formatYearMonth(year, month);
     const periodBoundary = parseMonthRange(monthLabel);
+    const latestPeriod = periods[0] ?? null;
+    const canCreateInitialSetupPeriod = latestPeriod == null;
+    const canCreateNewFundingAccountPeriod =
+      latestPeriod?.status === AccountingPeriodStatus.LOCKED &&
+      isImmediatelyAfter(latestPeriod, { year, month }) &&
+      (await this.isNewFundingAccountBootstrapCandidate({
+        client: input.client,
+        workspace: input.workspace,
+        currentImportBatchId: input.importBatchId,
+        fundingAccountId: input.fundingAccountId
+      }));
+
+    if (!canCreateInitialSetupPeriod && !canCreateNewFundingAccountPeriod) {
+      throw new BadRequestException(
+        `${monthLabel} 운영월은 업로드 배치에서 자동으로 추가할 수 없습니다. 운영 중에는 월 운영 화면에서 최신 진행월을 먼저 열고 해당 월 거래만 등록해 주세요.`
+      );
+    }
 
     return {
       id: null,
@@ -421,7 +487,10 @@ export class ImportedRowCollectionService {
       monthLabel,
       startDate: periodBoundary.start,
       endDate: periodBoundary.end,
-      willCreateOnCollect: true
+      willCreateOnCollect: true,
+      creationReason: canCreateNewFundingAccountPeriod
+        ? 'NEW_FUNDING_ACCOUNT'
+        : 'INITIAL_SETUP'
     };
   }
 
@@ -429,12 +498,16 @@ export class ImportedRowCollectionService {
     tx: Prisma.TransactionClient;
     workspace: ImportedRowCollectionWorkspaceScope;
     actorRef: ReturnType<typeof readWorkspaceActorRef>;
+    importBatchId: string;
     occurredOnIso: string;
+    fundingAccountId: string;
   }): Promise<ResolvedCollectionPeriod & { id: string }> {
     const targetPeriod = await this.resolveTargetCollectionPeriod({
       client: input.tx,
       workspace: input.workspace,
-      occurredOnIso: input.occurredOnIso
+      importBatchId: input.importBatchId,
+      occurredOnIso: input.occurredOnIso,
+      fundingAccountId: input.fundingAccountId
     });
 
     if (targetPeriod.id) {
@@ -462,7 +535,10 @@ export class ImportedRowCollectionService {
           fromStatus: null,
           toStatus: AccountingPeriodStatus.OPEN,
           eventType: AccountingPeriodEventType.OPEN,
-          reason: `업로드 배치 거래 등록 자동 생성 (${targetPeriod.monthLabel})`,
+          reason:
+            targetPeriod.creationReason === 'NEW_FUNDING_ACCOUNT'
+              ? `신규 계좌/카드 기초 업로드 자동 생성 (${targetPeriod.monthLabel})`
+              : `업로드 배치 거래 등록 자동 생성 (${targetPeriod.monthLabel})`,
           ...input.actorRef
         }
       });
@@ -479,7 +555,9 @@ export class ImportedRowCollectionService {
         const latestPeriod = await this.resolveTargetCollectionPeriod({
           client: input.tx,
           workspace: input.workspace,
-          occurredOnIso: input.occurredOnIso
+          importBatchId: input.importBatchId,
+          occurredOnIso: input.occurredOnIso,
+          fundingAccountId: input.fundingAccountId
         });
 
         if (latestPeriod.id) {
@@ -489,6 +567,133 @@ export class ImportedRowCollectionService {
 
       throw error;
     }
+  }
+
+  private async isNewFundingAccountBootstrapCandidate(input: {
+    client: PrismaClientLike;
+    workspace: ImportedRowCollectionWorkspaceScope;
+    currentImportBatchId: string;
+    fundingAccountId: string;
+  }): Promise<boolean> {
+    const fundingAccount = await input.client.account.findFirst({
+      where: {
+        id: input.fundingAccountId,
+        tenantId: input.workspace.tenantId,
+        ledgerId: input.workspace.ledgerId
+      },
+      select: {
+        type: true,
+        status: true,
+        bootstrapStatus: true
+      }
+    });
+
+    if (
+      !fundingAccount ||
+      fundingAccount.status !== 'ACTIVE' ||
+      fundingAccount.bootstrapStatus !== 'PENDING' ||
+      !['BANK', 'CARD'].includes(fundingAccount.type)
+    ) {
+      return false;
+    }
+
+    const [
+      existingTransactions,
+      existingImportBatches,
+      existingJournalLines,
+      existingBalanceSnapshotLines
+    ] = await Promise.all([
+      input.client.collectedTransaction.findMany({
+        where: {
+          tenantId: input.workspace.tenantId,
+          ledgerId: input.workspace.ledgerId,
+          fundingAccountId: input.fundingAccountId
+        },
+        select: {
+          id: true
+        },
+        take: 1
+      }),
+      input.client.importBatch.findMany({
+        where: {
+          tenantId: input.workspace.tenantId,
+          ledgerId: input.workspace.ledgerId,
+          fundingAccountId: input.fundingAccountId,
+          id: {
+            not: input.currentImportBatchId
+          }
+        },
+        select: {
+          id: true
+        },
+        take: 1
+      }),
+      input.client.journalLine.findMany({
+        where: {
+          fundingAccountId: input.fundingAccountId,
+          journalEntry: {
+            tenantId: input.workspace.tenantId,
+            ledgerId: input.workspace.ledgerId
+          }
+        },
+        select: {
+          id: true
+        },
+        take: 1
+      }),
+      input.client.balanceSnapshotLine.findMany({
+        where: {
+          fundingAccountId: input.fundingAccountId,
+          OR: [
+            {
+              openingSnapshot: {
+                is: {
+                  tenantId: input.workspace.tenantId,
+                  ledgerId: input.workspace.ledgerId
+                }
+              }
+            },
+            {
+              closingSnapshot: {
+                is: {
+                  tenantId: input.workspace.tenantId,
+                  ledgerId: input.workspace.ledgerId
+                }
+              }
+            }
+          ]
+        },
+        select: {
+          id: true
+        },
+        take: 1
+      })
+    ]);
+
+    return (
+      existingTransactions.length === 0 &&
+      existingImportBatches.length === 0 &&
+      existingJournalLines.length === 0 &&
+      existingBalanceSnapshotLines.length === 0
+    );
+  }
+
+  private async markFundingAccountBootstrapCompletedIfPending(input: {
+    tx: Prisma.TransactionClient;
+    workspace: ImportedRowCollectionWorkspaceScope;
+    fundingAccountId: string;
+  }): Promise<void> {
+    await input.tx.account.updateMany({
+      where: {
+        id: input.fundingAccountId,
+        tenantId: input.workspace.tenantId,
+        ledgerId: input.workspace.ledgerId,
+        bootstrapStatus: 'PENDING'
+      },
+      data: {
+        bootstrapStatus: 'COMPLETED'
+      }
+    });
   }
 
   private assertPotentialDuplicateConfirmation(
@@ -520,4 +725,22 @@ function parseOccurredOn(occurredOnIso: string) {
 
 function formatYearMonth(year: number, month: number) {
   return `${year}-${String(month).padStart(2, '0')}`;
+}
+
+function isCollectingAccountingPeriodStatus(
+  status: AccountingPeriodStatus
+): boolean {
+  return readCollectingAccountingPeriodStatuses().some(
+    (candidate) => candidate === status
+  );
+}
+
+function isImmediatelyAfter(
+  left: Pick<CollectionPeriodRecord, 'year' | 'month'>,
+  right: Pick<CollectionPeriodRecord, 'year' | 'month'>
+) {
+  const nextMonth = left.month === 12 ? 1 : left.month + 1;
+  const nextYear = left.month === 12 ? left.year + 1 : left.year;
+
+  return right.year === nextYear && right.month === nextMonth;
 }

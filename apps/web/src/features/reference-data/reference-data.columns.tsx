@@ -11,6 +11,8 @@ import type { GridColDef } from '@mui/x-data-grid';
 import { formatWon } from '@/shared/lib/format';
 import {
   readCategoryKindLabel,
+  readFundingAccountBootstrapStatusColor,
+  readFundingAccountBootstrapStatusLabel,
   readFundingAccountStatusColor,
   readFundingAccountStatusLabel,
   readFundingAccountTypeLabel
@@ -38,6 +40,7 @@ export function buildFundingAccountColumns(input: {
     fundingAccount: FundingAccountItem,
     nextStatus: 'ACTIVE' | 'INACTIVE' | 'CLOSED'
   ) => void;
+  onCompleteBootstrap: (fundingAccount: FundingAccountItem) => void;
 }): GridColDef<FundingAccountItem>[] {
   return [
     { field: 'name', headerName: '자금수단', flex: 1.2 },
@@ -57,6 +60,25 @@ export function buildFundingAccountColumns(input: {
           size="small"
           color={readFundingAccountStatusColor(params.row.status)}
           variant={params.row.status === 'ACTIVE' ? 'filled' : 'outlined'}
+        />
+      )
+    },
+    {
+      field: 'bootstrapStatus',
+      headerName: '기초 업로드',
+      flex: 0.9,
+      renderCell: (params) => (
+        <Chip
+          label={readFundingAccountBootstrapStatusLabel(
+            params.row.bootstrapStatus
+          )}
+          size="small"
+          color={readFundingAccountBootstrapStatusColor(
+            params.row.bootstrapStatus
+          )}
+          variant={
+            params.row.bootstrapStatus === 'PENDING' ? 'filled' : 'outlined'
+          }
         />
       )
     },
@@ -111,6 +133,17 @@ export function buildFundingAccountColumns(input: {
             >
               {params.row.status === 'ACTIVE' ? '비활성화' : '재활성화'}
             </Button>
+            {params.row.bootstrapStatus === 'PENDING' ? (
+              <Button
+                size="small"
+                color="info"
+                onClick={() => {
+                  input.onCompleteBootstrap(params.row);
+                }}
+              >
+                기초완료
+              </Button>
+            ) : null}
             {params.row.status === 'INACTIVE' ? (
               <Button
                 size="small"

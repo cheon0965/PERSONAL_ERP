@@ -10,7 +10,12 @@ import type {
   VehicleMaintenanceLogItem,
   VehicleOperatingSummaryView
 } from '@personal-erp/contracts';
-import { fetchJson, patchJson, postJson } from '@/shared/api/fetch-json';
+import {
+  deleteJson,
+  fetchJson,
+  patchJson,
+  postJson
+} from '@/shared/api/fetch-json';
 import { buildVehicleOperatingSummaryView } from './vehicles.summary';
 
 export const vehiclesQueryKey = ['vehicles'] as const;
@@ -29,7 +34,11 @@ export const mockVehicles: VehicleItem[] = [
     manufacturer: 'Hyundai',
     fuelType: 'DIESEL',
     initialOdometerKm: 128000,
-    estimatedFuelEfficiencyKmPerLiter: 10.8
+    estimatedFuelEfficiencyKmPerLiter: 10.8,
+    defaultFundingAccountId: null,
+    defaultFuelCategoryId: null,
+    defaultMaintenanceCategoryId: null,
+    operatingExpensePlanOptIn: false
   },
   {
     id: 'veh-2',
@@ -37,7 +46,11 @@ export const mockVehicles: VehicleItem[] = [
     manufacturer: 'Kia',
     fuelType: 'GASOLINE',
     initialOdometerKm: 32400,
-    estimatedFuelEfficiencyKmPerLiter: 15.4
+    estimatedFuelEfficiencyKmPerLiter: 15.4,
+    defaultFundingAccountId: null,
+    defaultFuelCategoryId: null,
+    defaultMaintenanceCategoryId: null,
+    operatingExpensePlanOptIn: false
   }
 ];
 
@@ -51,7 +64,8 @@ export const mockVehicleFuelLogs: VehicleFuelLogItem[] = [
     liters: 52.3,
     amountWon: 84000,
     unitPriceWon: 1606,
-    isFullTank: true
+    isFullTank: true,
+    linkedCollectedTransaction: null
   },
   {
     id: 'fuel-2',
@@ -62,7 +76,8 @@ export const mockVehicleFuelLogs: VehicleFuelLogItem[] = [
     liters: 49.6,
     amountWon: 80100,
     unitPriceWon: 1615,
-    isFullTank: true
+    isFullTank: true,
+    linkedCollectedTransaction: null
   }
 ];
 
@@ -77,7 +92,8 @@ export const mockVehicleMaintenanceLogs: VehicleMaintenanceLogItem[] = [
     vendor: '현대 블루핸즈',
     description: '브레이크 패드 교체',
     amountWon: 185000,
-    memo: '전륜 패드 기준'
+    memo: '전륜 패드 기준',
+    linkedCollectedTransaction: null
   },
   {
     id: 'maintenance-2',
@@ -89,7 +105,8 @@ export const mockVehicleMaintenanceLogs: VehicleMaintenanceLogItem[] = [
     vendor: '기아 오토큐',
     description: '엔진오일 점검',
     amountWon: 42000,
-    memo: null
+    memo: null,
+    linkedCollectedTransaction: null
   }
 ];
 
@@ -173,6 +190,13 @@ export function updateVehicleFuelLog(
   );
 }
 
+export function deleteVehicleFuelLog(vehicleId: string, fuelLogId: string) {
+  return deleteJson<null>(
+    `/vehicles/${vehicleId}/fuel-logs/${fuelLogId}`,
+    null
+  );
+}
+
 export function createVehicleMaintenanceLog(
   vehicleId: string,
   input: CreateVehicleMaintenanceLogRequest,
@@ -200,6 +224,16 @@ export function updateVehicleMaintenanceLog(
   );
 }
 
+export function deleteVehicleMaintenanceLog(
+  vehicleId: string,
+  maintenanceLogId: string
+) {
+  return deleteJson<null>(
+    `/vehicles/${vehicleId}/maintenance-logs/${maintenanceLogId}`,
+    null
+  );
+}
+
 export function buildVehicleFallbackItem(
   input: CreateVehicleRequest | UpdateVehicleRequest,
   context?: {
@@ -213,7 +247,11 @@ export function buildVehicleFallbackItem(
     fuelType: input.fuelType,
     initialOdometerKm: input.initialOdometerKm,
     estimatedFuelEfficiencyKmPerLiter:
-      input.estimatedFuelEfficiencyKmPerLiter ?? null
+      input.estimatedFuelEfficiencyKmPerLiter ?? null,
+    defaultFundingAccountId: input.defaultFundingAccountId ?? null,
+    defaultFuelCategoryId: input.defaultFuelCategoryId ?? null,
+    defaultMaintenanceCategoryId: input.defaultMaintenanceCategoryId ?? null,
+    operatingExpensePlanOptIn: input.operatingExpensePlanOptIn ?? false
   };
 }
 
@@ -234,7 +272,10 @@ export function buildVehicleFuelLogFallbackItem(
     liters: input.liters,
     amountWon: input.amountWon,
     unitPriceWon: input.unitPriceWon,
-    isFullTank: input.isFullTank
+    isFullTank: input.isFullTank,
+    linkedCollectedTransaction: buildLinkedCollectedTransactionFallback(
+      input.accountingLink
+    )
   };
 }
 
@@ -258,7 +299,10 @@ export function buildVehicleMaintenanceLogFallbackItem(
     vendor: input.vendor ?? null,
     description: input.description,
     amountWon: input.amountWon,
-    memo: input.memo ?? null
+    memo: input.memo ?? null,
+    linkedCollectedTransaction: buildLinkedCollectedTransactionFallback(
+      input.accountingLink
+    )
   };
 }
 
@@ -308,6 +352,13 @@ export function mergeVehicleFuelLogItem(
   });
 }
 
+export function removeVehicleFuelLogItem(
+  current: VehicleFuelLogItem[] | undefined,
+  fuelLogId: string
+) {
+  return (current ?? []).filter((item) => item.id !== fuelLogId);
+}
+
 export function mergeVehicleMaintenanceLogItem(
   current: VehicleMaintenanceLogItem[] | undefined,
   saved: VehicleMaintenanceLogItem
@@ -328,4 +379,30 @@ export function mergeVehicleMaintenanceLogItem(
 
     return left.vehicleName.localeCompare(right.vehicleName);
   });
+}
+
+export function removeVehicleMaintenanceLogItem(
+  current: VehicleMaintenanceLogItem[] | undefined,
+  maintenanceLogId: string
+) {
+  return (current ?? []).filter((item) => item.id !== maintenanceLogId);
+}
+
+function buildLinkedCollectedTransactionFallback(
+  accountingLink:
+    | CreateVehicleFuelLogRequest['accountingLink']
+    | CreateVehicleMaintenanceLogRequest['accountingLink']
+) {
+  if (!accountingLink) {
+    return null;
+  }
+
+  return {
+    id: `ctx-vehicle-demo-${Date.now()}`,
+    fundingAccountId: accountingLink.fundingAccountId,
+    categoryId: accountingLink.categoryId ?? null,
+    postingStatus: accountingLink.categoryId ? 'READY_TO_POST' : 'REVIEWED',
+    postedJournalEntryId: null,
+    postedJournalEntryNumber: null
+  } as const;
 }

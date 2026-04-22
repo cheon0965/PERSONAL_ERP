@@ -23,7 +23,6 @@ import {
   createRecurringRulesColumns,
   RecurringRuleDrawerContent,
   RecurringRulesFeedbackAlerts,
-  RecurringRulesInfoCard,
   RecurringRulesToolbar
 } from './recurring-rules-page.sections';
 
@@ -139,19 +138,22 @@ export function RecurringRulesPage() {
         links: [
           {
             title: '보험 계약',
-            description: '보험 계약에서 생성된 연동 규칙은 보험 계약 화면에서 함께 관리합니다.',
+            description:
+              '보험 계약에서 생성된 연동 규칙은 보험 계약 화면에서 함께 관리합니다.',
             href: '/insurances',
             actionLabel: '보험 계약 보기'
           },
           {
             title: '계획 항목',
-            description: '현재 운영 월 기준으로 반복 규칙이 실제 계획으로 생성됐는지 확인합니다.',
+            description:
+              '현재 운영 월 기준으로 반복 규칙이 실제 계획으로 생성됐는지 확인합니다.',
             href: '/plan-items',
             actionLabel: '계획 항목 보기'
           },
           {
             title: '기준 데이터 준비 상태',
-            description: '자금수단이나 카테고리 선택지가 부족할 때 먼저 보완합니다.',
+            description:
+              '자금수단이나 카테고리 선택지가 부족할 때 먼저 보완합니다.',
             href: '/reference-data',
             actionLabel: '기준 데이터 보기'
           }
@@ -294,12 +296,6 @@ export function RecurringRulesPage() {
         }
         rows={data}
         columns={columns}
-      />
-
-      <RecurringRulesInfoCard
-        totalCount={data.length}
-        activeCount={activeRuleCount}
-        insuranceManagedCount={insuranceManagedRuleCount}
       />
 
       <FormDrawer

@@ -376,6 +376,7 @@ export type RequestTestState = {
     balanceWon: number;
     sortOrder?: number;
     status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+    bootstrapStatus?: 'NOT_REQUIRED' | 'PENDING' | 'COMPLETED';
   }>;
   categories: Array<{
     id: string;
@@ -505,9 +506,14 @@ export type RequestTestState = {
     fuelType: 'GASOLINE' | 'DIESEL' | 'LPG' | 'HYBRID' | 'ELECTRIC';
     initialOdometerKm: number;
     estimatedFuelEfficiencyKmPerLiter: number | null;
+    defaultFundingAccountId: string | null;
+    defaultFuelCategoryId: string | null;
+    defaultMaintenanceCategoryId: string | null;
+    operatingExpensePlanOptIn: boolean;
     createdAt: Date;
     fuelLogs: Array<{
       id: string;
+      linkedCollectedTransactionId?: string | null;
       filledOn: Date;
       odometerKm: number;
       liters: number;
@@ -519,6 +525,7 @@ export type RequestTestState = {
   vehicleMaintenanceLogs: Array<{
     id: string;
     vehicleId: string;
+    linkedCollectedTransactionId?: string | null;
     performedOn: Date;
     odometerKm: number;
     category:

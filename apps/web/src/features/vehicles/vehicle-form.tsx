@@ -2,8 +2,17 @@
 
 import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Grid, MenuItem, Stack, TextField } from '@mui/material';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  Alert,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  Grid,
+  MenuItem,
+  Stack,
+  TextField
+} from '@mui/material';
 import type {
   CreateVehicleRequest,
   UpdateVehicleRequest,
@@ -14,6 +23,14 @@ import type {
 } from '@personal-erp/contracts';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
+import {
+  categoriesManagementQueryKey,
+  categoriesQueryKey,
+  fundingAccountsManagementQueryKey,
+  fundingAccountsQueryKey,
+  getCategories,
+  getFundingAccounts
+} from '@/features/reference-data/reference-data.api';
 import { webRuntime } from '@/shared/config/env';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import {
@@ -44,7 +61,11 @@ const vehicleFormSchema = z.object({
         value.length === 0 ||
         (Number.isFinite(Number(value)) && Number(value) > 0),
       '예상 연비는 0보다 커야 합니다.'
-    )
+    ),
+  defaultFundingAccountId: z.string().trim(),
+  defaultFuelCategoryId: z.string().trim(),
+  defaultMaintenanceCategoryId: z.string().trim(),
+  operatingExpensePlanOptIn: z.boolean()
 });
 
 type VehicleFormInput = z.infer<typeof vehicleFormSchema>;
@@ -79,6 +100,52 @@ export function VehicleForm({
     resolver: zodResolver(vehicleFormSchema),
     defaultValues: buildDefaultValues()
   });
+  const selectedDefaultFundingAccountId = form.watch('defaultFundingAccountId');
+  const selectedDefaultFuelCategoryId = form.watch('defaultFuelCategoryId');
+  const selectedDefaultMaintenanceCategoryId = form.watch(
+    'defaultMaintenanceCategoryId'
+  );
+  const includeInactiveReferences = mode === 'edit';
+  const fundingAccountsQuery = useQuery({
+    queryKey: includeInactiveReferences
+      ? fundingAccountsManagementQueryKey
+      : fundingAccountsQueryKey,
+    queryFn: () =>
+      getFundingAccounts({ includeInactive: includeInactiveReferences })
+  });
+  const categoriesQuery = useQuery({
+    queryKey: includeInactiveReferences
+      ? categoriesManagementQueryKey
+      : categoriesQueryKey,
+    queryFn: () => getCategories({ includeInactive: includeInactiveReferences })
+  });
+  const fundingAccounts = fundingAccountsQuery.data ?? [];
+  const categories = categoriesQuery.data ?? [];
+  const availableFundingAccounts = React.useMemo(
+    () =>
+      fundingAccounts.filter(
+        (fundingAccount) =>
+          fundingAccount.status === 'ACTIVE' ||
+          fundingAccount.id === selectedDefaultFundingAccountId
+      ),
+    [fundingAccounts, selectedDefaultFundingAccountId]
+  );
+  const expenseCategories = React.useMemo(
+    () =>
+      categories.filter(
+        (category) =>
+          category.kind === 'EXPENSE' &&
+          (category.isActive ||
+            category.id === selectedDefaultFuelCategoryId ||
+            category.id === selectedDefaultMaintenanceCategoryId)
+      ),
+    [
+      categories,
+      selectedDefaultFuelCategoryId,
+      selectedDefaultMaintenanceCategoryId
+    ]
+  );
+  const referenceError = fundingAccountsQuery.error ?? categoriesQuery.error;
 
   const mutation = useMutation({
     mutationFn: ({
@@ -165,7 +232,11 @@ export function VehicleForm({
     form.reset(buildDefaultValues());
   }, [form, initialVehicle, mode]);
 
-  const isBusy = mutation.isPending || form.formState.isSubmitting;
+  const isBusy =
+    mutation.isPending ||
+    form.formState.isSubmitting ||
+    fundingAccountsQuery.isLoading ||
+    categoriesQuery.isLoading;
   const submitLabel = mode === 'edit' ? '차량 수정' : '차량 저장';
 
   return (
@@ -181,7 +252,12 @@ export function VehicleForm({
           estimatedFuelEfficiencyKmPerLiter:
             values.estimatedFuelEfficiencyKmPerLiter.length > 0
               ? Number(values.estimatedFuelEfficiencyKmPerLiter)
-              : null
+              : null,
+          defaultFundingAccountId: values.defaultFundingAccountId || null,
+          defaultFuelCategoryId: values.defaultFuelCategoryId || null,
+          defaultMaintenanceCategoryId:
+            values.defaultMaintenanceCategoryId || null,
+          operatingExpensePlanOptIn: values.operatingExpensePlanOptIn
         };
 
         try {
@@ -236,6 +312,13 @@ export function VehicleForm({
           차량 정보는 운영 보조 데이터이며, 실제 회계 확정은 차량비 관련 수집
           거래와 전표 흐름에서 이어집니다.
         </Alert>
+        {referenceError ? (
+          <Alert severity="error" variant="outlined">
+            {referenceError instanceof Error
+              ? referenceError.message
+              : '차량 기본 회계 기준 데이터를 불러오지 못했습니다.'}
+          </Alert>
+        ) : null}
 
         <Grid container spacing={appLayout.fieldGap}>
           <Grid size={{ xs: 12, md: 6 }}>
@@ -305,12 +388,109 @@ export function VehicleForm({
               {...form.register('estimatedFuelEfficiencyKmPerLiter')}
             />
           </Grid>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Controller
+              control={form.control}
+              name="defaultFundingAccountId"
+              render={({ field }) => (
+                <TextField
+                  select
+                  label="기본 자금수단"
+                  helperText="선택 사항"
+                  name={field.name}
+                  value={field.value}
+                  onBlur={field.onBlur}
+                  onChange={field.onChange}
+                  inputRef={field.ref}
+                  disabled={isBusy}
+                >
+                  <MenuItem value="">미지정</MenuItem>
+                  {availableFundingAccounts.map((fundingAccount) => (
+                    <MenuItem key={fundingAccount.id} value={fundingAccount.id}>
+                      {fundingAccount.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Controller
+              control={form.control}
+              name="defaultFuelCategoryId"
+              render={({ field }) => (
+                <TextField
+                  select
+                  label="연료 기본 카테고리"
+                  helperText="선택 사항"
+                  name={field.name}
+                  value={field.value}
+                  onBlur={field.onBlur}
+                  onChange={field.onChange}
+                  inputRef={field.ref}
+                  disabled={isBusy}
+                >
+                  <MenuItem value="">미지정</MenuItem>
+                  {expenseCategories.map((category) => (
+                    <MenuItem key={category.id} value={category.id}>
+                      {category.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Controller
+              control={form.control}
+              name="defaultMaintenanceCategoryId"
+              render={({ field }) => (
+                <TextField
+                  select
+                  label="정비 기본 카테고리"
+                  helperText="선택 사항"
+                  name={field.name}
+                  value={field.value}
+                  onBlur={field.onBlur}
+                  onChange={field.onChange}
+                  inputRef={field.ref}
+                  disabled={isBusy}
+                >
+                  <MenuItem value="">미지정</MenuItem>
+                  {expenseCategories.map((category) => (
+                    <MenuItem key={category.id} value={category.id}>
+                      {category.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+            />
+          </Grid>
+          <Grid size={{ xs: 12 }}>
+            <Controller
+              control={form.control}
+              name="operatingExpensePlanOptIn"
+              render={({ field }) => (
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={field.value}
+                      onChange={(event) => {
+                        field.onChange(event.target.checked);
+                      }}
+                    />
+                  }
+                  label="차량 운영비 계획 자동 생성 대상"
+                />
+              )}
+            />
+          </Grid>
         </Grid>
 
         <Button
           type="submit"
           variant="contained"
-          disabled={isBusy}
+          disabled={isBusy || Boolean(referenceError)}
           sx={{ alignSelf: 'flex-start' }}
         >
           {mutation.isPending ? '저장 중...' : submitLabel}
@@ -326,7 +506,11 @@ function buildDefaultValues(): VehicleFormInput {
     manufacturer: '',
     fuelType: 'DIESEL',
     initialOdometerKm: 0,
-    estimatedFuelEfficiencyKmPerLiter: ''
+    estimatedFuelEfficiencyKmPerLiter: '',
+    defaultFundingAccountId: '',
+    defaultFuelCategoryId: '',
+    defaultMaintenanceCategoryId: '',
+    operatingExpensePlanOptIn: false
   };
 }
 
@@ -337,6 +521,10 @@ function mapVehicleToFormInput(vehicle: VehicleItem): VehicleFormInput {
     fuelType: vehicle.fuelType,
     initialOdometerKm: vehicle.initialOdometerKm,
     estimatedFuelEfficiencyKmPerLiter:
-      vehicle.estimatedFuelEfficiencyKmPerLiter?.toString() ?? ''
+      vehicle.estimatedFuelEfficiencyKmPerLiter?.toString() ?? '',
+    defaultFundingAccountId: vehicle.defaultFundingAccountId ?? '',
+    defaultFuelCategoryId: vehicle.defaultFuelCategoryId ?? '',
+    defaultMaintenanceCategoryId: vehicle.defaultMaintenanceCategoryId ?? '',
+    operatingExpensePlanOptIn: vehicle.operatingExpensePlanOptIn
   };
 }

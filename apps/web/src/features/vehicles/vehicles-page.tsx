@@ -1,24 +1,30 @@
 'use client';
 
 import * as React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Stack } from '@mui/material';
 import type {
   VehicleFuelLogItem,
   VehicleItem,
-  VehicleMaintenanceLogItem
+  VehicleMaintenanceLogItem,
+  VehicleOperatingSummaryView
 } from '@personal-erp/contracts';
 import { subtractMoneyWon } from '@personal-erp/money';
 import { formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import { ConfirmActionDialog } from '@/shared/ui/confirm-action-dialog';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import {
+  deleteVehicleFuelLog,
+  deleteVehicleMaintenanceLog,
   getVehicleFuelLogs,
   getVehicleMaintenanceLogs,
   getVehicleOperatingSummary,
   getVehicles,
+  removeVehicleFuelLogItem,
+  removeVehicleMaintenanceLogItem,
   vehicleFuelLogsQueryKey,
   vehicleMaintenanceLogsQueryKey,
   vehicleOperatingSummaryQueryKey,
@@ -62,11 +68,17 @@ type VehicleFuelDrawerState =
   | { mode: 'edit'; fuelLog: VehicleFuelLogItem }
   | null;
 
+type VehicleLogDeleteTarget =
+  | { kind: 'fuel'; fuelLog: VehicleFuelLogItem }
+  | { kind: 'maintenance'; maintenanceLog: VehicleMaintenanceLogItem }
+  | null;
+
 export function VehiclesPage({
   section = 'overview'
 }: {
   section?: VehicleWorkspaceSection;
 }) {
+  const queryClient = useQueryClient();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const [drawerState, setDrawerState] =
     React.useState<VehicleDrawerState>(null);
@@ -74,6 +86,8 @@ export function VehiclesPage({
     React.useState<VehicleFuelDrawerState>(null);
   const [maintenanceDrawerState, setMaintenanceDrawerState] =
     React.useState<VehicleMaintenanceDrawerState>(null);
+  const [deleteTarget, setDeleteTarget] =
+    React.useState<VehicleLogDeleteTarget>(null);
   const { data: vehicles = [], error: vehiclesError } = useQuery({
     queryKey: vehiclesQueryKey,
     queryFn: getVehicles
@@ -148,12 +162,12 @@ export function VehiclesPage({
           : '정비 이력';
   const pageDescription =
     section === 'overview'
-      ? '차량 프로필, 연료 기록, 정비 이력을 분리해 관리하고 차량별 운영비를 점검하는 화면입니다.'
+      ? '차량 프로필, 연료 기록, 정비 이력을 분리해 관리하고 필요하면 회계 연동까지 이어서 차량별 운영비를 점검하는 화면입니다.'
       : section === 'fleet'
         ? '차량 프로필만 집중해서 관리하고, 연료/정비 이력은 각각의 전용 화면으로 분리해 읽기 쉽게 정리했습니다.'
         : section === 'fuel'
-          ? '주유와 충전 이력만 모아 보고, 차량비 검토에 필요한 흐름을 표 중심으로 빠르게 확인합니다.'
-          : '정비 이력만 모아 보고, 정비 비용과 최근 작업 기록을 별도 화면에서 집중해서 관리합니다.';
+          ? '주유와 충전 이력을 모아 보고, 필요하면 수집거래 연동까지 함께 관리합니다.'
+          : '정비 이력을 모아 보고, 필요하면 수집거래 연동까지 함께 관리합니다.';
 
   const handleCreateOpen = () => {
     setFeedback(null);
@@ -186,6 +200,82 @@ export function VehiclesPage({
     setFeedback(null);
     setMaintenanceDrawerState({ mode: 'edit', maintenanceLog });
   };
+  const deleteMutation = useMutation({
+    mutationFn: async (target: Exclude<VehicleLogDeleteTarget, null>) => {
+      if (target.kind === 'fuel') {
+        await deleteVehicleFuelLog(target.fuelLog.vehicleId, target.fuelLog.id);
+        return target;
+      }
+
+      await deleteVehicleMaintenanceLog(
+        target.maintenanceLog.vehicleId,
+        target.maintenanceLog.id
+      );
+      return target;
+    },
+    onSuccess: async (deletedTarget) => {
+      if (deletedTarget.kind === 'fuel') {
+        queryClient.setQueryData<VehicleFuelLogItem[]>(
+          vehicleFuelLogsQueryKey,
+          (current) =>
+            removeVehicleFuelLogItem(current, deletedTarget.fuelLog.id)
+        );
+        setFeedback({
+          severity: 'success',
+          message: `${deletedTarget.fuelLog.vehicleName} 연료 기록을 삭제했습니다. 연결된 미확정 수집거래가 있으면 함께 정리했습니다.`
+        });
+      } else {
+        queryClient.setQueryData<VehicleMaintenanceLogItem[]>(
+          vehicleMaintenanceLogsQueryKey,
+          (current) =>
+            removeVehicleMaintenanceLogItem(
+              current,
+              deletedTarget.maintenanceLog.id
+            )
+        );
+        setFeedback({
+          severity: 'success',
+          message: `${deletedTarget.maintenanceLog.vehicleName} 정비 기록을 삭제했습니다. 연결된 미확정 수집거래가 있으면 함께 정리했습니다.`
+        });
+      }
+
+      queryClient.setQueryData<VehicleOperatingSummaryView>(
+        vehicleOperatingSummaryQueryKey,
+        buildVehicleOperatingSummaryView({
+          vehicles:
+            queryClient.getQueryData<VehicleItem[]>(vehiclesQueryKey) ?? [],
+          fuelLogs:
+            queryClient.getQueryData<VehicleFuelLogItem[]>(
+              vehicleFuelLogsQueryKey
+            ) ?? [],
+          maintenanceLogs:
+            queryClient.getQueryData<VehicleMaintenanceLogItem[]>(
+              vehicleMaintenanceLogsQueryKey
+            ) ?? []
+        })
+      );
+      setDeleteTarget(null);
+
+      await queryClient.invalidateQueries({
+        queryKey:
+          deletedTarget.kind === 'fuel'
+            ? vehicleFuelLogsQueryKey
+            : vehicleMaintenanceLogsQueryKey
+      });
+      await queryClient.invalidateQueries({
+        queryKey: vehicleOperatingSummaryQueryKey
+      });
+    },
+    onError: (error) => {
+      setFeedback({
+        severity: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : '차량 기록을 삭제하지 못했습니다.'
+      });
+    }
+  });
 
   const handleFormCompleted = (
     vehicle: VehicleItem,
@@ -277,10 +367,18 @@ export function VehiclesPage({
     onCreateMaintenanceLog: handleMaintenanceCreateOpen
   });
   const fuelTableColumns = buildFuelLogColumns({
-    onEditFuelLog: handleFuelEditOpen
+    onEditFuelLog: handleFuelEditOpen,
+    onDeleteFuelLog: (fuelLog) => {
+      setFeedback(null);
+      setDeleteTarget({ kind: 'fuel', fuelLog });
+    }
   });
   const maintenanceTableColumns = buildMaintenanceLogColumns({
-    onEditMaintenanceLog: handleMaintenanceEditOpen
+    onEditMaintenanceLog: handleMaintenanceEditOpen,
+    onDeleteMaintenanceLog: (maintenanceLog) => {
+      setFeedback(null);
+      setDeleteTarget({ kind: 'maintenance', maintenanceLog });
+    }
   });
 
   useDomainHelp(buildVehiclesHelpContext(section));
@@ -413,8 +511,52 @@ export function VehiclesPage({
         onFuelCompleted={handleFuelCompleted}
         onMaintenanceCompleted={handleMaintenanceCompleted}
       />
+
+      <ConfirmActionDialog
+        open={deleteTarget !== null}
+        title={
+          deleteTarget?.kind === 'fuel' ? '연료 기록 삭제' : '정비 기록 삭제'
+        }
+        description={buildDeleteDialogDescription(deleteTarget)}
+        confirmLabel="삭제"
+        pendingLabel="삭제 중..."
+        confirmColor="error"
+        busy={deleteMutation.isPending}
+        onClose={() => {
+          if (!deleteMutation.isPending) {
+            setDeleteTarget(null);
+          }
+        }}
+        onConfirm={() => {
+          if (deleteTarget) {
+            void deleteMutation.mutateAsync(deleteTarget);
+          }
+        }}
+      />
     </Stack>
   );
+}
+
+function buildDeleteDialogDescription(target: VehicleLogDeleteTarget) {
+  if (!target) {
+    return '';
+  }
+
+  const link =
+    target.kind === 'fuel'
+      ? target.fuelLog.linkedCollectedTransaction
+      : target.maintenanceLog.linkedCollectedTransaction;
+  const vehicleName =
+    target.kind === 'fuel'
+      ? target.fuelLog.vehicleName
+      : target.maintenanceLog.vehicleName;
+  const logLabel = target.kind === 'fuel' ? '연료 기록' : '정비 기록';
+
+  if (!link) {
+    return `${vehicleName}의 ${logLabel}만 삭제합니다.`;
+  }
+
+  return `${vehicleName}의 ${logLabel}과 연결된 미확정 수집거래를 같은 작업에서 함께 삭제합니다. 이미 전표로 확정된 기록은 삭제할 수 없고 전표 상세에서 반전 또는 정정으로 조정합니다.`;
 }
 
 function buildVehiclesHelpContext(section: VehicleWorkspaceSection) {
@@ -488,14 +630,14 @@ function buildVehiclesHelpContext(section: VehicleWorkspaceSection) {
         primaryEntity: '연료 기록',
         relatedEntities: ['차량 프로필', '정비 이력', '수집 거래', '전표'],
         truthSource:
-          '연료 기록은 운영 추적용 이력이고, 공식 비용 확정은 연결된 지출 거래와 전표가 기준입니다.',
+          '연료 기록은 운영 이력이면서, 회계 연동을 켜면 연결된 지출 거래와 전표 흐름까지 이어집니다.',
         supplementarySections: [
           {
             title: '이 탭에서 하는 일',
             items: [
               '주유일 또는 충전일, 주행거리, 수량, 금액을 남겨 차량별 연료 이력을 누적합니다.',
               '최근 연료 기록과 차량별 누적 운영비를 함께 보며 이상치가 없는지 점검합니다.',
-              '연료 지출이 회계 숫자에 반영됐는지는 수집 거래 또는 전표 화면에서 이어서 확인합니다.'
+              '필요하면 저장과 함께 수집거래를 만들고, 이후 전표 확정 여부를 이어서 확인합니다.'
             ]
           },
           {
@@ -514,14 +656,14 @@ function buildVehiclesHelpContext(section: VehicleWorkspaceSection) {
         primaryEntity: '정비 이력',
         relatedEntities: ['차량 프로필', '연료 기록', '수집 거래', '전표'],
         truthSource:
-          '정비 이력은 운영 추적용 기록이고, 공식 비용 확정은 연결된 지출 거래와 전표가 기준입니다.',
+          '정비 이력은 운영 기록이면서, 회계 연동을 켜면 연결된 지출 거래와 전표 흐름까지 이어집니다.',
         supplementarySections: [
           {
             title: '이 탭에서 하는 일',
             items: [
               '정비일, 정비 분류, 주행거리, 금액을 남겨 차량별 정비 이력을 누적합니다.',
               '최근 정비 기록과 차량별 누적 운영비를 비교해 반복 정비나 큰 지출이 있었는지 확인합니다.',
-              '정비 지출이 실제 회계 숫자로 이어졌는지는 수집 거래 또는 전표 화면에서 최종 확인합니다.'
+              '필요하면 저장과 함께 수집거래를 만들고, 이후 전표 확정 여부를 최종 확인합니다.'
             ]
           },
           {
@@ -548,7 +690,7 @@ function buildVehiclesHelpContext(section: VehicleWorkspaceSection) {
           '정비 이력'
         ],
         truthSource:
-          '차량과 운영 이력 자체는 회계 확정 데이터가 아니며, 실제 비용 확정은 수집 거래 분류와 전표 반영에서 이뤄집니다.',
+          '차량과 운영 이력은 기본적으로 운영 데이터이고, 회계 연동을 켜면 수집 거래와 전표 흐름까지 이어집니다.',
         supplementarySections: [
           {
             title: '이 탭에서 먼저 볼 것',
@@ -564,7 +706,7 @@ function buildVehiclesHelpContext(section: VehicleWorkspaceSection) {
           }
         ],
         readModelNote:
-          '차량 운영비 카드가 보여도 공식 회계 숫자는 아닙니다. 월 보고에 반영하려면 해당 지출을 수집 거래에서 전표로 확정해야 합니다.'
+          '차량 운영비 카드 자체는 참고 수치입니다. 다만 연료/정비 저장 시 회계 연동을 켜고 수집거래를 확정하면 월 보고에도 자연스럽게 반영됩니다.'
       };
   }
 }

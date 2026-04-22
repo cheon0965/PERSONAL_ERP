@@ -28,6 +28,7 @@
 
 - Web의 `/transactions` 화면은 계속 `CollectedTransaction` shorthand다.
 - 현재 API 모듈은 `collected-transactions`, `journal-entries`, `financial-statements`, `carry-forwards` 중심으로 동작한다.
+- 차량 연료/정비 이력은 회계 연동을 켠 경우 표준 `CollectedTransaction`을 생성하는 운영 원천이며, 차량 전용 전표 경로나 별도 회계 원장을 만들지 않는다.
 - `apps/api/src`, `apps/web/src`, `packages/contracts` 안에서는 구형 `Transaction`을 직접 읽고 쓰는 현재 런타임 경로를 두지 않는다.
 - `apps/api/prisma/phase1-backbone.ts`는 여전히 workspace/account/category/vehicle backbone 정리를 담당하지만, 더 이상 구형 거래 delegate를 사용하지 않는다.
 - demo seed와 request mock도 신규 회계 흐름만을 기본값으로 유지한다.
@@ -39,6 +40,8 @@
 앞으로 신규 기능이나 리팩터링은 아래 규칙을 따른다.
 
 - 새 거래 입력/수집 흐름은 `Transaction`이 아니라 `CollectedTransaction`으로 넣는다.
+- 차량 연료/정비 같은 운영 자산 기반 비용도 회계 숫자에 반영하려면 `CollectedTransaction`으로 연결한 뒤 기존 전표 확정 흐름을 사용한다.
+- 수집 거래와 조정 전표 입력은 최신 진행월 범위 안에서만 허용하고, 다음 월은 최근 월 마감 이후 여는 월별 운영 모델을 따른다.
 - 회계 확정, 정정, 반전, 잠금, 마감 판단은 `JournalEntry` 계열 기준으로 구현한다.
 - 보고/분석의 공식 확정 수치는 `FinancialStatementSnapshot` 또는 그 근거인 `JournalEntry`, `ClosingSnapshot` 기준으로 읽는다.
 - 임시 호환이 필요해도 `Transaction` 위에 새 회계 규칙을 더 얹지 않는다.
@@ -73,6 +76,7 @@
 
 - `apps/api/src`, `apps/web/src`, `packages/contracts` 기준으로 레거시 Prisma `Transaction` 모델을 직접 read/write하는 현재 런타임 경로가 없어야 한다.
 - 공식 회계 숫자, 잠금/마감, 재무제표, 차기 이월이 `CollectedTransaction`, `JournalEntry`, `ClosingSnapshot`, `FinancialStatementSnapshot`, `CarryForwardRecord`만으로 성립해야 한다.
+- 차량 연료/정비 이력처럼 운영 화면에서 시작한 비용도 확정 전에는 연결 수집거래만 수정/해제할 수 있고, 전표 확정 후에는 원본 overwrite가 아니라 `JournalEntry` 반전/정정 흐름으로 처리해야 한다.
 - seed, 테스트 fixture, 문서 링크, reviewer 설명이 제거 이후 구조와 같은 기준으로 유지돼야 한다.
 - 이후 새 기능이나 리팩터링이 다시 구형 거래 delegate를 도입하지 않아야 한다.
 
@@ -81,6 +85,7 @@
 구조 개선 또는 화면 개편 시 아래 질문에 하나라도 `Transaction` 기준 답이 나오면 경계가 흐려진 것이다.
 
 - 이 입력은 `CollectedTransaction`으로 들어가는가?
+- 운영 자산 화면에서 시작한 비용이라면 표준 `CollectedTransaction`으로 연결되는가?
 - 이 확정 회계 결과는 `JournalEntry`로 남는가?
 - 이 보고 숫자는 `JournalEntry` 또는 `FinancialStatementSnapshot` 기준인가?
 - 이 변경이 레거시 `Transaction` 의존을 새로 늘리지는 않는가?
