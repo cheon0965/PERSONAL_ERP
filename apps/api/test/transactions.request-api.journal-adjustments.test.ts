@@ -202,7 +202,7 @@ test('POST /journal-entries/:id/reverse creates a reversal journal entry and mar
         headers: context.authHeaders(),
 
         body: {
-          entryDate: '2026-04-03',
+          entryDate: '2026-05-03',
 
           reason: 'Reverse the March fuel entry.'
         }
@@ -219,9 +219,9 @@ test('POST /journal-entries/:id/reverse creates a reversal journal entry and mar
 
     assert.equal(body.id, 'je-2');
 
-    assert.equal(body.entryNumber, '202604-0001');
+    assert.equal(body.entryNumber, '202605-0001');
 
-    assert.equal(createdJournalEntry?.periodId, 'period-journal-open-1');
+    assert.equal(createdJournalEntry?.periodId, 'period-journal-open-latest-1');
 
     assert.equal(body.sourceKind, 'MANUAL_ADJUSTMENT');
 
@@ -560,7 +560,7 @@ test('POST /journal-entries/:id/correct creates a correction journal entry and m
         headers: context.authHeaders(),
 
         body: {
-          entryDate: '2026-04-04',
+          entryDate: '2026-05-04',
 
           reason: 'Adjust the posted amount after invoice verification.',
 
@@ -601,9 +601,13 @@ test('POST /journal-entries/:id/correct creates a correction journal entry and m
 
     assert.equal(body.id, 'je-2');
 
-    assert.equal(body.entryNumber, '202604-0001');
+    assert.equal(body.entryNumber, '202605-0001');
 
-    assert.equal(createdJournalEntry?.periodId, 'period-journal-correct-open');
+    assert.equal(
+      createdJournalEntry?.periodId,
+
+      'period-journal-correct-open-latest'
+    );
 
     assert.equal(body.sourceKind, 'MANUAL_ADJUSTMENT');
 

@@ -17,8 +17,20 @@ export function createImportsPrismaMock(
     findCollectedTransactionByImportedRowId
   } = context;
 
-  const matchesImportBatchId = (candidateId: string, whereId?: string) =>
-    !whereId || candidateId === whereId;
+  const matchesImportBatchId = (
+    candidateId: string,
+    whereId?: string | { not?: string }
+  ) => {
+    if (!whereId) {
+      return true;
+    }
+
+    if (typeof whereId === 'string') {
+      return candidateId === whereId;
+    }
+
+    return !whereId.not || candidateId !== whereId.not;
+  };
   const sortCollectionJobRows = (
     items: typeof state.importBatchCollectionJobRows
   ) => [...items].sort((left, right) => left.rowNumber - right.rowNumber);
@@ -157,10 +169,11 @@ export function createImportsPrismaMock(
       },
       findFirst: async (args: {
         where?: {
-          id?: string;
+          id?: string | { not?: string };
           tenantId?: string;
           ledgerId?: string;
           periodId?: string | null;
+          fundingAccountId?: string | null;
         };
         include?: {
           fundingAccount?: {
@@ -177,7 +190,11 @@ export function createImportsPrismaMock(
       }) => {
         const items = state.importBatches
           .filter((candidate) => {
-            const matchesId = !args.where?.id || candidate.id === args.where.id;
+            const matchesId =
+              !args.where?.id ||
+              (typeof args.where.id === 'string'
+                ? candidate.id === args.where.id
+                : !args.where.id.not || candidate.id !== args.where.id.not);
             const matchesTenant =
               !args.where?.tenantId ||
               candidate.tenantId === args.where.tenantId;
@@ -187,8 +204,17 @@ export function createImportsPrismaMock(
             const matchesPeriod =
               args.where?.periodId === undefined ||
               candidate.periodId === args.where.periodId;
+            const matchesFundingAccount =
+              args.where?.fundingAccountId === undefined ||
+              candidate.fundingAccountId === args.where.fundingAccountId;
 
-            return matchesId && matchesTenant && matchesLedger && matchesPeriod;
+            return (
+              matchesId &&
+              matchesTenant &&
+              matchesLedger &&
+              matchesPeriod &&
+              matchesFundingAccount
+            );
           })
           .sort(
             (left, right) =>
@@ -200,9 +226,14 @@ export function createImportsPrismaMock(
       },
       findMany: async (args: {
         where?: {
+          id?: string | { not?: string };
           tenantId?: string;
           ledgerId?: string;
           periodId?: string | null;
+          fundingAccountId?: string | null;
+        };
+        select?: {
+          id?: boolean;
         };
         include?: {
           fundingAccount?: {
@@ -219,9 +250,15 @@ export function createImportsPrismaMock(
         orderBy?: {
           uploadedAt?: 'asc' | 'desc';
         };
+        take?: number;
       }) => {
-        const items = state.importBatches
+        let items = state.importBatches
           .filter((candidate) => {
+            const matchesId =
+              !args.where?.id ||
+              (typeof args.where.id === 'string'
+                ? candidate.id === args.where.id
+                : !args.where.id.not || candidate.id !== args.where.id.not);
             const matchesTenant =
               !args.where?.tenantId ||
               candidate.tenantId === args.where.tenantId;
@@ -231,13 +268,32 @@ export function createImportsPrismaMock(
             const matchesPeriod =
               args.where?.periodId === undefined ||
               candidate.periodId === args.where.periodId;
+            const matchesFundingAccount =
+              args.where?.fundingAccountId === undefined ||
+              candidate.fundingAccountId === args.where.fundingAccountId;
 
-            return matchesTenant && matchesLedger && matchesPeriod;
+            return (
+              matchesId &&
+              matchesTenant &&
+              matchesLedger &&
+              matchesPeriod &&
+              matchesFundingAccount
+            );
           })
           .sort(
             (left, right) =>
               right.uploadedAt.getTime() - left.uploadedAt.getTime()
           );
+
+        if (args.take !== undefined) {
+          items = items.slice(0, args.take);
+        }
+
+        if (args.select) {
+          return items.map((candidate) => ({
+            ...(args.select?.id ? { id: candidate.id } : {})
+          }));
+        }
 
         return items.map((candidate) =>
           projectImportBatch(candidate, args.include)
@@ -299,7 +355,7 @@ export function createImportsPrismaMock(
       },
       deleteMany: async (args: {
         where?: {
-          id?: string;
+          id?: string | { not?: string };
           tenantId?: string;
           ledgerId?: string;
         };
@@ -431,6 +487,7 @@ export function createImportsPrismaMock(
             return (
               matchesId &&
               matchesTenant &&
+              matchesId &&
               matchesLedger &&
               matchesBatch &&
               matchesStatus

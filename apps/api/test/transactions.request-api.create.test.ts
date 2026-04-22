@@ -286,7 +286,7 @@ test('POST /collected-transactions returns the created collected transaction ite
   }
 });
 
-test('POST /collected-transactions stores the transaction in the open period that contains the business date', async () => {
+test('POST /collected-transactions blocks transactions outside the latest open period', async () => {
   const context = await createRequestTestContext();
 
   try {
@@ -344,6 +344,8 @@ test('POST /collected-transactions stores the transaction in the open period tha
       }
     );
 
+    const initialTransactionCount = context.state.collectedTransactions.length;
+
     const response = await context.request('/collected-transactions', {
       method: 'POST',
 
@@ -364,27 +366,18 @@ test('POST /collected-transactions stores the transaction in the open period tha
       }
     });
 
-    assert.equal(response.status, 201);
+    assert.equal(response.status, 400);
 
     assert.equal(
-      context.state.collectedTransactions.find(
-        (candidate) => candidate.id === 'ctx-4'
-      )?.periodId,
+      (response.body as { message: string }).message,
 
-      'period-open-created-march'
+      '수집 거래 일자는 최신 진행월 범위 안에 있어야 합니다.'
     );
 
-    assert.ok(
-      context.securityEvents.some(
-        (candidate) =>
-          candidate.level === 'log' &&
-          candidate.event === 'audit.action_succeeded' &&
-          candidate.details.requestId ===
-            response.headers.get('x-request-id') &&
-          candidate.details.action === 'collected_transaction.create' &&
-          candidate.details.collectedTransactionId === 'ctx-4' &&
-          candidate.details.periodId === 'period-open-created-march'
-      )
+    assert.equal(
+      context.state.collectedTransactions.length,
+
+      initialTransactionCount
     );
   } finally {
     await context.close();

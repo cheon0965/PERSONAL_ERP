@@ -22,6 +22,7 @@ type FundingAccountRecord = {
   balanceWon: PrismaMoneyLike;
   sortOrder: number;
   status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+  bootstrapStatus?: 'NOT_REQUIRED' | 'PENDING' | 'COMPLETED';
 };
 
 type LiveFundingAccountRecord = Omit<FundingAccountRecord, 'balanceWon'> & {

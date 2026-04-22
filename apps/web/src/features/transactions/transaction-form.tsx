@@ -44,9 +44,7 @@ export function TransactionForm({
   });
   const hasCollectingPeriod = formState.collectingPeriods.length > 0;
   const periodScopeLabel =
-    formState.collectingPeriods.length > 1
-      ? '열린 운영 기간'
-      : (formState.preferredPeriod?.monthLabel ?? currentPeriod?.monthLabel);
+    formState.preferredPeriod?.monthLabel ?? currentPeriod?.monthLabel;
 
   return (
     <form
@@ -77,14 +75,14 @@ export function TransactionForm({
           </Alert>
         ) : mode === 'edit' ? (
           <Alert severity="info" variant="outlined">
-            {periodScopeLabel} 범위의 미확정 거래만 수정할 수 있습니다. 현재
-            입력 기준 저장 시{' '}
+            최신 진행월 {periodScopeLabel} 범위의 미확정 거래만 수정할 수
+            있습니다. 현재 입력 기준 저장 시{' '}
             {resolveStatusLabel(formState.predictedStatus)} 상태로 반영됩니다.
           </Alert>
         ) : (
           <Alert severity="info" variant="outlined">
-            현재 수집 거래는 {periodScopeLabel} 범위 안에서 등록됩니다. 저장
-            시 {resolveStatusLabel(formState.predictedStatus)}{' '}
+            현재 수집 거래는 최신 진행월 {periodScopeLabel} 범위 안에서
+            등록됩니다. 저장 시 {resolveStatusLabel(formState.predictedStatus)}{' '}
             상태로 반영됩니다.
           </Alert>
         )}
@@ -118,7 +116,7 @@ export function TransactionForm({
         <TransactionFormFields
           currentPeriod={formState.preferredPeriod}
           hasCollectingPeriod={hasCollectingPeriod}
-          hasMultipleCollectingPeriods={formState.collectingPeriods.length > 1}
+          hasMultipleCollectingPeriods={false}
           form={formState.form}
           availableFundingAccounts={formState.availableFundingAccounts}
           filteredCategories={formState.filteredCategories}

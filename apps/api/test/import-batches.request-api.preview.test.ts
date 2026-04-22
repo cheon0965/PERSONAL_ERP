@@ -93,17 +93,72 @@ test('POST /import-batches/:id/rows/:rowId/collect-preview announces that a miss
 
     assert.equal(response.status, 201);
     assert.equal(context.state.accountingPeriods.length, 0);
+    const body = response.body as {
+      autoPreparation: {
+        willCreateTargetPeriod?: boolean;
+        targetPeriodMonthLabel?: string;
+        targetPeriodCreationReason?: string;
+        decisionReasons: string[];
+      };
+    };
+
     assert.ok(
-      (
-        response.body as {
-          autoPreparation: {
-            decisionReasons: string[];
-          };
-        }
-      ).autoPreparation.decisionReasons.includes(
+      body.autoPreparation.decisionReasons.includes(
         '2026-02 운영월이 없어 등록 과정에서 자동으로 추가합니다.'
       )
     );
+    assert.deepEqual(
+      {
+        willCreateTargetPeriod: body.autoPreparation.willCreateTargetPeriod,
+        targetPeriodMonthLabel: body.autoPreparation.targetPeriodMonthLabel,
+        targetPeriodCreationReason:
+          body.autoPreparation.targetPeriodCreationReason
+      },
+      {
+        willCreateTargetPeriod: true,
+        targetPeriodMonthLabel: '2026-02',
+        targetPeriodCreationReason: 'INITIAL_SETUP'
+      }
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /import-batches/:id/rows/:rowId/collect-preview blocks missing target months during monthly operation', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    seedCollectableImportScenario(context, {
+      periodId: 'period-current-month-preview',
+      batchId: 'import-batch-missing-period-guard-preview',
+      rowId: 'imported-row-missing-period-guard-preview',
+      occurredOn: '2026-02-12',
+      title: 'Past month preview',
+      amount: 22_000
+    });
+
+    const response = await context.request(
+      '/import-batches/import-batch-missing-period-guard-preview/rows/imported-row-missing-period-guard-preview/collect-preview',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          type: TransactionType.EXPENSE,
+          fundingAccountId: 'acc-1',
+          categoryId: 'cat-1'
+        }
+      }
+    );
+
+    assert.equal(response.status, 400);
+    assert.deepEqual(response.body, {
+      statusCode: 400,
+      message:
+        '2026-02 운영월은 업로드 배치에서 자동으로 추가할 수 없습니다. 운영 중에는 월 운영 화면에서 최신 진행월을 먼저 열고 해당 월 거래만 등록해 주세요.',
+      error: 'Bad Request'
+    });
+    assert.equal(context.state.accountingPeriods.length, 1);
   } finally {
     await context.close();
   }

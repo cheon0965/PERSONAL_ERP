@@ -12,7 +12,7 @@ import type {
 import { useForm } from 'react-hook-form';
 import {
   findAccountingPeriodForDate,
-  readCollectingAccountingPeriods,
+  readLatestCollectingAccountingPeriods,
   resolvePreferredAccountingPeriod
 } from '@/features/accounting-periods/accounting-period-selection';
 import {
@@ -70,7 +70,7 @@ export function useTransactionForm(input: {
   const queryClient = useQueryClient();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const collectingPeriods = React.useMemo(
-    () => readCollectingAccountingPeriods(input.accountingPeriods),
+    () => readLatestCollectingAccountingPeriods(input.accountingPeriods),
     [input.accountingPeriods]
   );
   const preferredPeriod = React.useMemo(
@@ -272,7 +272,7 @@ export function useTransactionForm(input: {
       setFeedback({
         severity: 'error',
         message:
-          '거래 일자는 해당 일자를 포함하는 열린 운영 기간 안에 있어야 합니다.'
+          '거래 일자는 최신 진행월 범위 안에 있어야 합니다.'
       });
       return;
     }

@@ -7,7 +7,20 @@ export type CollectedTransactionType =
   | 'TRANSFER'
   | 'REVERSAL';
 
-export type CollectedTransactionSourceKind = 'MANUAL' | 'RECURRING' | 'IMPORT';
+export type CollectedTransactionSourceKind =
+  | 'MANUAL'
+  | 'RECURRING'
+  | 'IMPORT'
+  | 'VEHICLE_LOG';
+
+export type CollectedTransactionVehicleLogKind = 'FUEL' | 'MAINTENANCE';
+
+export type CollectedTransactionVehicleLogSource = {
+  kind: CollectedTransactionVehicleLogKind;
+  logId: string;
+  vehicleId: string;
+  vehicleName: string;
+};
 
 export type CollectedTransactionPostingStatus =
   | 'COLLECTED'
@@ -31,6 +44,7 @@ export type CollectedTransactionItem = {
   postedJournalEntryNumber: string | null;
   matchedPlanItemId: string | null;
   matchedPlanItemTitle: string | null;
+  sourceVehicleLog?: CollectedTransactionVehicleLogSource;
 };
 
 export type CollectedTransactionDetailItem = {
@@ -48,6 +62,7 @@ export type CollectedTransactionDetailItem = {
   postedJournalEntryNumber: string | null;
   matchedPlanItemId: string | null;
   matchedPlanItemTitle: string | null;
+  sourceVehicleLog?: CollectedTransactionVehicleLogSource;
 };
 
 export type CreateCollectedTransactionRequest = {

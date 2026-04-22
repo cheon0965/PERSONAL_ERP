@@ -720,6 +720,13 @@ test('POST /carry-forwards/generate creates a carry forward record and the next 
     assert.equal(body.sourcePeriod.id, 'period-carry-1');
     assert.equal(body.targetPeriod.monthLabel, '2026-05');
     assert.equal(body.targetPeriod.status, AccountingPeriodStatus.OPEN);
+    assert.equal(body.carryForwardRecord.createdJournalEntryId, null);
+    assert.equal(
+      context.state.journalEntries.filter(
+        (entry) => entry.sourceKind === 'CARRY_FORWARD'
+      ).length,
+      0
+    );
     assert.equal(body.targetOpeningBalanceSnapshot.sourceKind, 'CARRY_FORWARD');
     assert.equal(body.targetOpeningBalanceSnapshot.lines.length, 2);
     assert.deepEqual(
@@ -799,6 +806,7 @@ test('POST /carry-forwards/:id/cancel removes an unused carry forward opening sn
 
     assert.equal(response.status, 201);
     assert.equal(body.carryForwardRecord.id, fixture.carryForwardRecordId);
+    assert.equal(body.carryForwardRecord.createdJournalEntryId, null);
     assert.equal(body.sourcePeriod.id, fixture.sourcePeriodId);
     assert.equal(body.targetPeriod.id, fixture.targetPeriodId);
     assert.equal(body.targetPeriod.hasOpeningBalanceSnapshot, false);
@@ -821,6 +829,12 @@ test('POST /carry-forwards/:id/cancel removes an unused carry forward opening sn
     assert.equal(
       context.state.balanceSnapshotLines.some(
         (candidate) => candidate.openingSnapshotId === fixture.openingSnapshotId
+      ),
+      false
+    );
+    assert.equal(
+      context.state.journalEntries.some(
+        (candidate) => candidate.sourceKind === 'CARRY_FORWARD'
       ),
       false
     );

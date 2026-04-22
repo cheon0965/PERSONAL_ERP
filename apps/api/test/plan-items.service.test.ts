@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import type { AuthenticatedUser } from '@personal-erp/contracts';
 import {
   AccountingPeriodStatus,
@@ -242,6 +242,36 @@ test('GeneratePlanItemsUseCase rejects editor role because plan generation is li
   );
 });
 
+test('GeneratePlanItemsUseCase rejects generation outside the latest collecting period', async () => {
+  const selectedPeriod = createPeriod({
+    id: 'period-2026-03',
+    year: 2026,
+    month: 3
+  });
+  const latestPeriod = createPeriod({
+    id: 'period-2026-04',
+    year: 2026,
+    month: 4
+  });
+  const prisma = createPrismaMock(
+    selectedPeriod,
+    createPlanItemTestState({
+      recurringRules: [],
+      planItems: []
+    }),
+    latestPeriod
+  );
+  const useCase = new GeneratePlanItemsUseCase(
+    new PrismaPlanItemGenerationAdapter(prisma as never),
+    new PlanItemsService(prisma as never)
+  );
+
+  await assert.rejects(
+    () => useCase.execute(user, { periodId: selectedPeriod.id }),
+    BadRequestException
+  );
+});
+
 test('GeneratePlanItemsUseCase treats duplicate plan item inserts as skipped and continues with the remaining rules', async () => {
   const period = createPeriod({
     id: 'period-2026-06',
@@ -459,14 +489,16 @@ function createPlanItemTestState(input: {
 
 function createPrismaMock(
   period: ReturnType<typeof createPeriod>,
-  state: ReturnType<typeof createPlanItemTestState>
+  state: ReturnType<typeof createPlanItemTestState>,
+  latestCollectingPeriod: ReturnType<typeof createPeriod> | null = period
 ) {
   const prisma = {
     $transaction: async <T>(
       callback: (tx: Record<string, unknown>) => Promise<T>
     ) => callback(prisma),
     accountingPeriod: {
-      findFirst: async () => period
+      findFirst: async (args?: { where?: { id?: string } }) =>
+        args?.where?.id ? period : latestCollectingPeriod
     },
     recurringRule: {
       findMany: async () => state.recurringRules

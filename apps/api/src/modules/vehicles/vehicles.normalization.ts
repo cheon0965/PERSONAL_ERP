@@ -5,7 +5,8 @@ import type {
   CreateVehicleMaintenanceLogRequest,
   UpdateVehicleFuelLogRequest,
   UpdateVehicleMaintenanceLogRequest,
-  UpdateVehicleRequest
+  UpdateVehicleRequest,
+  VehicleLogAccountingLinkRequest
 } from '@personal-erp/contracts';
 import { requireNonNegativeMoneyWon } from '../../common/money/money-won';
 
@@ -19,7 +20,15 @@ export function normalizeVehicleInput(
     initialOdometerKm: input.initialOdometerKm,
     estimatedFuelEfficiencyKmPerLiter: normalizeOptionalPositiveNumber(
       input.estimatedFuelEfficiencyKmPerLiter
-    )
+    ),
+    defaultFundingAccountId: normalizeOptionalText(
+      input.defaultFundingAccountId
+    ),
+    defaultFuelCategoryId: normalizeOptionalText(input.defaultFuelCategoryId),
+    defaultMaintenanceCategoryId: normalizeOptionalText(
+      input.defaultMaintenanceCategoryId
+    ),
+    operatingExpensePlanOptIn: input.operatingExpensePlanOptIn ?? false
   };
 }
 
@@ -127,6 +136,22 @@ export function normalizeMaintenanceLogInput(
       '정비 금액은 0 이상인 안전한 정수여야 합니다.'
     ),
     memo
+  };
+}
+
+export function normalizeVehicleLogAccountingLinkInput(
+  input?: VehicleLogAccountingLinkRequest | null
+) {
+  if (!input) {
+    return null;
+  }
+
+  return {
+    fundingAccountId: normalizeRequiredText(
+      input.fundingAccountId,
+      '회계 연동 자금수단을 선택해 주세요.'
+    ),
+    categoryId: normalizeOptionalText(input.categoryId)
   };
 }
 

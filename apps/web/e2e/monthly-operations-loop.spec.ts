@@ -340,11 +340,8 @@ test('@smoke generates plan items and reflects them in the live dashboard and fo
     page.getByRole('heading', { name: '기간 운영 전망' })
   ).toBeVisible();
   await expect(page.getByText('전망 기준')).toBeVisible();
-  await expect(
-    page.getByText(
-      '아직 생성된 계획 항목이 없어 남은 계획 지출이 비어 있습니다.'
-    )
-  ).toBeVisible();
+  await expect(page.getByText('남은 계획 지출').first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: '₩0' }).first()).toBeVisible();
 
   await page.goto('/plan-items/generate');
   await expect(page).toHaveURL(/\/plan-items\/generate$/);
@@ -378,11 +375,8 @@ test('@smoke generates plan items and reflects them in the live dashboard and fo
   ).toBeVisible();
 
   await page.goto('/forecast');
-  await expect(
-    page.getByText(
-      '현재 선택한 기간에는 계획 항목 2건이 남은 계획 지출에 반영되어 있습니다.'
-    )
-  ).toBeVisible();
+  await expect(page.getByText('남은 계획 지출 ₩1,298,000')).toBeVisible();
+  await expect(page.getByText('예상 기간말 잔액 ₩2,162,000')).toBeVisible();
 
   expectNoUnhandledApiRequests(unhandledApiRequests);
   expectNoPageErrors(pageErrors);
@@ -425,9 +419,8 @@ test('@smoke generates official statements and carry-forwards for the locked mon
   await expect(page.getByText('진행 중').first()).toBeVisible();
 
   await page.goto('/forecast');
-  await expect(
-    page.getByText('기초 잔액은 2026-04 차기 이월 기준입니다.')
-  ).toBeVisible();
+  await expect(page.getByText('공식 비교 대상: 2026-04')).toBeVisible();
+  await expect(page.getByText('현재 기준: 운영 전망 기준')).toBeVisible();
 
   expectNoUnhandledApiRequests(unhandledApiRequests);
   expectNoPageErrors(pageErrors);

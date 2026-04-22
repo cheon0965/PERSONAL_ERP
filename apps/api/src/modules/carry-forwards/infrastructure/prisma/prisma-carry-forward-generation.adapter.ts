@@ -6,6 +6,8 @@ import {
   OpeningBalanceSourceKind
 } from '@prisma/client';
 import type { PrismaMoneyLike } from '../../../../common/money/prisma-money';
+import { OperationalAuditPublisher } from '../../../../common/infrastructure/operational/operational-audit-publisher.service';
+import { publishPeriodStatusHistoryAudit } from '../../../../common/infrastructure/operational/period-status-history-audit';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
 import type {
   CarryForwardGenerationContext,
@@ -14,7 +16,10 @@ import type {
 
 @Injectable()
 export class PrismaCarryForwardGenerationAdapter implements CarryForwardGenerationPort {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditPublisher: OperationalAuditPublisher
+  ) {}
 
   async readGenerationContext(
     tenantId: string,
@@ -109,7 +114,7 @@ export class PrismaCarryForwardGenerationAdapter implements CarryForwardGenerati
   async createCarryForward(
     input: Parameters<CarryForwardGenerationPort['createCarryForward']>[0]
   ): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
+    const createdStatusHistory = await this.prisma.$transaction(async (tx) => {
       const targetPeriod =
         input.existingTargetPeriod ??
         (await tx.accountingPeriod.create({
@@ -124,20 +129,20 @@ export class PrismaCarryForwardGenerationAdapter implements CarryForwardGenerati
           }
         }));
 
-      if (!input.existingTargetPeriod) {
-        await tx.periodStatusHistory.create({
-          data: {
-            tenantId: input.tenantId,
-            ledgerId: input.ledgerId,
-            periodId: targetPeriod.id,
-            fromStatus: null,
-            toStatus: AccountingPeriodStatus.OPEN,
-            eventType: AccountingPeriodEventType.OPEN,
-            reason: `${input.sourcePeriod.year}-${String(input.sourcePeriod.month).padStart(2, '0')} 이월 생성`,
-            ...input.actorRef
-          }
-        });
-      }
+      const createdStatusHistory = !input.existingTargetPeriod
+        ? await tx.periodStatusHistory.create({
+            data: {
+              tenantId: input.tenantId,
+              ledgerId: input.ledgerId,
+              periodId: targetPeriod.id,
+              fromStatus: null,
+              toStatus: AccountingPeriodStatus.OPEN,
+              eventType: AccountingPeriodEventType.OPEN,
+              reason: `${input.sourcePeriod.year}-${String(input.sourcePeriod.month).padStart(2, '0')} 이월 생성`,
+              ...input.actorRef
+            }
+          })
+        : null;
 
       const openingBalanceSnapshot = await tx.openingBalanceSnapshot.create({
         data: {
@@ -172,6 +177,15 @@ export class PrismaCarryForwardGenerationAdapter implements CarryForwardGenerati
           ...input.createdByActorRef
         }
       });
+
+      return createdStatusHistory;
     });
+
+    if (createdStatusHistory) {
+      publishPeriodStatusHistoryAudit(
+        this.auditPublisher,
+        createdStatusHistory
+      );
+    }
   }
 }

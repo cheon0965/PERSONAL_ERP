@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
 import { deflateSync } from 'node:zlib';
+import type { ImportBatchFileUnsupportedReason } from '@personal-erp/contracts';
 import {
   ImportBatchParseStatus,
   ImportedRowParseStatus,
@@ -341,6 +342,40 @@ test('POST /import-batches/files requires a funding account for IM bank PDF uplo
   }
 });
 
+test('POST /import-batches/files rejects scanned IM bank PDF without a text layer explicitly', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const formData = new FormData();
+    formData.set('sourceKind', ImportSourceKind.IM_BANK_PDF);
+    formData.set('fundingAccountId', 'acc-1');
+    formData.set(
+      'file',
+      new Blob([new Uint8Array(buildScannedImBankPdfFixture())], {
+        type: 'application/pdf'
+      }),
+      'im-bank-scanned.pdf'
+    );
+
+    const response = await context.requestFormData('/import-batches/files', {
+      headers: context.authHeaders(),
+      body: formData
+    });
+    const body = response.body as {
+      code?: ImportBatchFileUnsupportedReason;
+      message?: string;
+    };
+
+    assert.equal(response.status, 400);
+    assert.equal(body.code, 'SCANNED_PDF_TEXT_LAYER_MISSING');
+    assert.match(body.message ?? '', /텍스트 레이어가 없는 스캔 PDF/);
+    assert.equal(context.state.importBatches.length, 0);
+    assert.equal(context.state.importedRows.length, 0);
+  } finally {
+    await context.close();
+  }
+});
+
 function buildMinimalImBankPdfFixture(): Buffer {
   return buildImBankPdfFixture([
     {
@@ -359,6 +394,14 @@ function buildMinimalImBankPdfFixture(): Buffer {
       balanceAfterText: '4,559,447',
       remarks: '*** 2026년 04'
     }
+  ]);
+}
+
+function buildScannedImBankPdfFixture(): Buffer {
+  return Buffer.concat([
+    Buffer.from('%PDF-1.4\n', 'latin1'),
+    buildPdfStreamObject(1, 'q\n10 0 0 10 0 0 cm\n/Im0 Do\nQ'),
+    Buffer.from('%%EOF\n', 'latin1')
   ]);
 }
 

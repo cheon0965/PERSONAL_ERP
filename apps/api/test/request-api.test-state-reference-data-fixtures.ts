@@ -137,7 +137,8 @@ export function createRequestReferenceDataStateFixtures(): Pick<
         type: 'BANK',
         balanceWon: 2_000_000,
         sortOrder: 0,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        bootstrapStatus: 'NOT_REQUIRED'
       },
       {
         id: 'acc-1b',
@@ -148,7 +149,8 @@ export function createRequestReferenceDataStateFixtures(): Pick<
         type: 'BANK',
         balanceWon: 3_500_000,
         sortOrder: 1,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        bootstrapStatus: 'NOT_REQUIRED'
       },
       {
         id: 'acc-2',
@@ -159,7 +161,8 @@ export function createRequestReferenceDataStateFixtures(): Pick<
         type: 'BANK',
         balanceWon: 9_000_000,
         sortOrder: 0,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        bootstrapStatus: 'NOT_REQUIRED'
       }
     ],
     categories: [

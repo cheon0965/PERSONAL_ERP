@@ -124,14 +124,14 @@
 
 ### 보안 검증/CI
 
-- 현재 상태: `CI` 워크플로에 validate, e2e-smoke, security-regression, prisma-integration, audit-runtime, Semgrep CE, Gitleaks 존재
+- 현재 상태: `CI` 워크플로에 validate, e2e-smoke, security-regression, prisma-integration, audit-runtime, Semgrep CE, Gitleaks가 존재하고, GitHub CI 첫 통과 증적과 required check 연결, Docker 환경 `npm run test:prisma`, GitHub `prisma-integration` 통과 확인까지 완료됨. `audit-runtime`은 현재 `high` 게이트와 만료형 allowlist 검증을 함께 사용함
 - 근거 파일:
   `.github/workflows/ci.yml`
   `package.json`
   `docs/VALIDATION_NOTES.md`
   `pull_request_template.md`
-- 판정: `부분 적용`
-- 다음 단계: 첫 GitHub 통과 증적과 required check 연결
+- 판정: `적용`
+- 다음 단계: CI 구성 변경 시 required check와 `prisma-integration` 통과 증적 재확인
 
 ### 회원가입/비밀번호 재설정
 
@@ -164,9 +164,13 @@
 ## 현재 단계에서 가장 큰 갭
 
 1. 운영 HTTPS/HSTS와 Swagger 토글을 실제 배포 값으로 다시 확인해야 한다.
-2. CI job의 첫 GitHub 통과 증적과 required check 연결은 여전히 필요하며, `audit-runtime`의 `high` 4건은 2026-04-05 기준 tracked exception으로 문서화되었으므로 upstream 릴리스 시 재검토가 필요하다.
-3. 보안 이벤트는 남기기 시작했지만 외부 감사 저장소나 장기 보관 정책은 아직 없다.
-4. `prisma-integration` workflow는 disposable MySQL 기반으로 고정되었고, 첫 GitHub 통과 증적 확보는 아직 남아 있다.
+2. 보안 이벤트는 남기기 시작했지만 외부 감사 저장소나 장기 보관 정책은 아직 없다.
+3. 운영 데이터 분류와 장기 보관 정책은 실제 배포 환경 기준으로 더 구체화해야 한다.
+
+## 최근 해소된 갭
+
+1. runtime dependency audit의 2026-04-05 tracked exception은 2026-04-22 패치 업데이트로 해소되었고, 같은 날 `high` gate와 만료형 allowlist 구조로 상향되었다.
+2. CI job의 required check 연결과 `prisma-integration` 통과는 확인 완료되었으므로, 이후에는 CI 구성 변경 시 재확인 대상으로 관리한다.
 
 ## 현재 단계에서 이미 강한 부분
 

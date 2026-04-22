@@ -14,6 +14,7 @@ export function createFundingAccountsPrismaMock(
           tenantId?: string;
           ledgerId?: string;
           status?: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+          bootstrapStatus?: 'NOT_REQUIRED' | 'PENDING' | 'COMPLETED';
         };
         orderBy?: {
           sortOrder?: 'asc' | 'desc';
@@ -23,6 +24,7 @@ export function createFundingAccountsPrismaMock(
           name?: boolean;
           type?: boolean;
           status?: boolean;
+          bootstrapStatus?: boolean;
           sortOrder?: boolean;
         };
       }) => {
@@ -41,13 +43,18 @@ export function createFundingAccountsPrismaMock(
                 candidate.ledgerId === args.where.ledgerId;
               const matchesStatus =
                 !args.where.status || candidate.status === args.where.status;
+              const matchesBootstrapStatus =
+                !args.where.bootstrapStatus ||
+                (candidate.bootstrapStatus ?? 'NOT_REQUIRED') ===
+                  args.where.bootstrapStatus;
 
               return (
                 matchesId &&
                 matchesUser &&
                 matchesTenant &&
                 matchesLedger &&
-                matchesStatus
+                matchesStatus &&
+                matchesBootstrapStatus
               );
             })
             .sort((left, right) => {
@@ -72,6 +79,9 @@ export function createFundingAccountsPrismaMock(
           ...(args.select.name ? { name: account.name } : {}),
           ...(args.select.type ? { type: account.type } : {}),
           ...(args.select.status ? { status: account.status } : {}),
+          ...(args.select.bootstrapStatus
+            ? { bootstrapStatus: account.bootstrapStatus ?? 'NOT_REQUIRED' }
+            : {}),
           ...(args.select.sortOrder
             ? { sortOrder: account.sortOrder ?? 0 }
             : {})
@@ -83,6 +93,7 @@ export function createFundingAccountsPrismaMock(
           tenantId?: string;
           ledgerId?: string;
           status?: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+          bootstrapStatus?: 'NOT_REQUIRED' | 'PENDING' | 'COMPLETED';
         };
         select?: { balanceWon?: boolean };
         orderBy?: Array<{
@@ -108,9 +119,17 @@ export function createFundingAccountsPrismaMock(
               candidate.ledgerId === args.where.ledgerId;
             const matchesStatus =
               !args.where?.status || candidate.status === args.where.status;
+            const matchesBootstrapStatus =
+              !args.where?.bootstrapStatus ||
+              (candidate.bootstrapStatus ?? 'NOT_REQUIRED') ===
+                args.where.bootstrapStatus;
 
             return (
-              matchesUser && matchesTenant && matchesLedger && matchesStatus
+              matchesUser &&
+              matchesTenant &&
+              matchesLedger &&
+              matchesStatus &&
+              matchesBootstrapStatus
             );
           })
           .sort((left, right) => {
@@ -162,6 +181,7 @@ export function createFundingAccountsPrismaMock(
           name: string;
           normalizedName?: string;
           type: 'BANK' | 'CASH' | 'CARD';
+          bootstrapStatus?: 'NOT_REQUIRED' | 'PENDING' | 'COMPLETED';
           sortOrder?: number;
         };
       }) => {
@@ -175,7 +195,12 @@ export function createFundingAccountsPrismaMock(
           type: args.data.type,
           balanceWon: 0,
           sortOrder: args.data.sortOrder ?? 0,
-          status: 'ACTIVE' as const
+          status: 'ACTIVE' as const,
+          bootstrapStatus:
+            args.data.bootstrapStatus ??
+            (args.data.type === 'BANK' || args.data.type === 'CARD'
+              ? 'PENDING'
+              : 'NOT_REQUIRED')
         };
 
         state.accounts.push(created);
@@ -187,6 +212,7 @@ export function createFundingAccountsPrismaMock(
           name?: string;
           normalizedName?: string;
           status?: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+          bootstrapStatus?: 'NOT_REQUIRED' | 'PENDING' | 'COMPLETED';
         };
       }) => {
         const account = state.accounts.find(
@@ -206,8 +232,56 @@ export function createFundingAccountsPrismaMock(
         if (args.data.status !== undefined) {
           account.status = args.data.status;
         }
+        if (args.data.bootstrapStatus !== undefined) {
+          account.bootstrapStatus = args.data.bootstrapStatus;
+        }
 
         return account;
+      },
+      updateMany: async (args: {
+        where?: {
+          id?: string;
+          tenantId?: string;
+          ledgerId?: string;
+          bootstrapStatus?: 'NOT_REQUIRED' | 'PENDING' | 'COMPLETED';
+        };
+        data: {
+          bootstrapStatus?: 'NOT_REQUIRED' | 'PENDING' | 'COMPLETED';
+        };
+      }) => {
+        let updatedCount = 0;
+
+        state.accounts.forEach((account) => {
+          const matchesId = !args.where?.id || account.id === args.where.id;
+          const matchesTenant =
+            !args.where?.tenantId || account.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || account.ledgerId === args.where.ledgerId;
+          const matchesBootstrapStatus =
+            !args.where?.bootstrapStatus ||
+            (account.bootstrapStatus ?? 'NOT_REQUIRED') ===
+              args.where.bootstrapStatus;
+
+          if (
+            !(
+              matchesId &&
+              matchesTenant &&
+              matchesLedger &&
+              matchesBootstrapStatus
+            )
+          ) {
+            return;
+          }
+
+          if (args.data.bootstrapStatus !== undefined) {
+            account.bootstrapStatus = args.data.bootstrapStatus;
+          }
+          updatedCount += 1;
+        });
+
+        return {
+          count: updatedCount
+        };
       }
     }
   };

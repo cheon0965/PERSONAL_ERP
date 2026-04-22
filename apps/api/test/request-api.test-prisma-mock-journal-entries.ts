@@ -304,12 +304,16 @@ export function createJournalEntriesPrismaMock(
     journalLine: {
       findMany: async (args: {
         where?: {
+          fundingAccountId?: string | null;
           journalEntry?: {
             tenantId?: string;
             ledgerId?: string;
             periodId?: string;
             status?: 'POSTED' | 'REVERSED' | 'SUPERSEDED';
           };
+        };
+        select?: {
+          id?: boolean;
         };
         include?: {
           accountSubject?: {
@@ -327,6 +331,7 @@ export function createJournalEntriesPrismaMock(
             };
           };
         };
+        take?: number;
       }) => {
         const entries = state.journalEntries.filter((candidate) => {
           const matchesTenant =
@@ -347,7 +352,7 @@ export function createJournalEntriesPrismaMock(
           );
         });
 
-        return entries.flatMap((entry) =>
+        let lines = entries.flatMap((entry) =>
           entry.lines.map((line) => {
             const accountSubject = resolveAccountSubject(line.accountSubjectId);
             const fundingAccount = line.fundingAccountId
@@ -393,6 +398,24 @@ export function createJournalEntriesPrismaMock(
             };
           })
         );
+
+        if (args.where?.fundingAccountId !== undefined) {
+          lines = lines.filter(
+            (line) => line.fundingAccountId === args.where?.fundingAccountId
+          );
+        }
+
+        if (args.take !== undefined) {
+          lines = lines.slice(0, args.take);
+        }
+
+        if (args.select) {
+          return lines.map((line) => ({
+            ...(args.select?.id ? { id: line.id } : {})
+          }));
+        }
+
+        return lines;
       }
     }
   };

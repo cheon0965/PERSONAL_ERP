@@ -241,7 +241,7 @@ test('POST /accounting-periods opens the first period and records status history
   }
 });
 
-test('POST /accounting-periods opens a later period even when the previous period is still open', async () => {
+test('POST /accounting-periods blocks opening a later period while the previous period is still open', async () => {
   const context = await createRequestTestContext();
 
   try {
@@ -278,27 +278,19 @@ test('POST /accounting-periods opens a later period even when the previous perio
       headers: context.authHeaders(),
       body: {
         month: '2026-04',
-        note: '이전 월 마감 전 선오픈'
+        note: '이전 월 마감 전 오픈 시도'
       }
     });
 
-    const createdPeriod = response.body as Record<string, unknown>;
-
-    assert.equal(response.status, 201);
-    assert.equal(createdPeriod.monthLabel, '2026-04');
-    assert.equal(createdPeriod.status, AccountingPeriodStatus.OPEN);
-    assert.equal(createdPeriod.hasOpeningBalanceSnapshot, false);
-    assert.equal(context.state.accountingPeriods.length, 2);
-    assert.equal(context.state.accountingPeriods.at(-1)?.year, 2026);
-    assert.equal(context.state.accountingPeriods.at(-1)?.month, 4);
-    assert.equal(
-      context.state.periodStatusHistory.at(-1)?.periodId,
-      createdPeriod.id
-    );
-    assert.equal(
-      context.state.periodStatusHistory.at(-1)?.toStatus,
-      AccountingPeriodStatus.OPEN
-    );
+    assert.equal(response.status, 409);
+    assert.deepEqual(response.body, {
+      statusCode: 409,
+      message:
+        '새 운영 기간은 최근 운영 기간을 먼저 마감한 뒤 열 수 있습니다. 운영 중에는 하나의 최신 진행월만 열어 둡니다.',
+      error: 'Conflict'
+    });
+    assert.equal(context.state.accountingPeriods.length, 1);
+    assert.equal(context.state.periodStatusHistory.length, 1);
   } finally {
     await context.close();
   }
@@ -736,40 +728,24 @@ test('POST /accounting-periods/:id/close blocks locking when unresolved collecte
   }
 });
 
-test('POST /accounting-periods/:id/reopen reopens a locked period when the next period exists without dependent carry-forward outputs', async () => {
+test('POST /accounting-periods/:id/reopen reopens the latest locked period', async () => {
   const context = await createRequestTestContext();
 
   try {
-    context.state.accountingPeriods.push(
-      {
-        id: 'period-reopen-1',
-        tenantId: 'tenant-1',
-        ledgerId: 'ledger-1',
-        year: 2026,
-        month: 3,
-        startDate: new Date('2026-03-01T00:00:00.000Z'),
-        endDate: new Date('2026-04-01T00:00:00.000Z'),
-        status: AccountingPeriodStatus.LOCKED,
-        openedAt: new Date('2026-03-01T00:00:00.000Z'),
-        lockedAt: new Date('2026-03-31T15:00:00.000Z'),
-        createdAt: new Date('2026-03-01T00:00:00.000Z'),
-        updatedAt: new Date('2026-03-31T15:00:00.000Z')
-      },
-      {
-        id: 'period-reopen-next-open-1',
-        tenantId: 'tenant-1',
-        ledgerId: 'ledger-1',
-        year: 2026,
-        month: 4,
-        startDate: new Date('2026-04-01T00:00:00.000Z'),
-        endDate: new Date('2026-05-01T00:00:00.000Z'),
-        status: AccountingPeriodStatus.OPEN,
-        openedAt: new Date('2026-04-01T00:00:00.000Z'),
-        lockedAt: null,
-        createdAt: new Date('2026-04-01T00:00:00.000Z'),
-        updatedAt: new Date('2026-04-01T00:00:00.000Z')
-      }
-    );
+    context.state.accountingPeriods.push({
+      id: 'period-reopen-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      year: 2026,
+      month: 3,
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-01T00:00:00.000Z'),
+      status: AccountingPeriodStatus.LOCKED,
+      openedAt: new Date('2026-03-01T00:00:00.000Z'),
+      lockedAt: new Date('2026-03-31T15:00:00.000Z'),
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-31T15:00:00.000Z')
+    });
     context.state.periodStatusHistory.push(
       {
         id: 'period-history-reopen-open-1',
@@ -907,6 +883,70 @@ test('POST /accounting-periods/:id/reopen reopens a locked period when the next 
           candidate.details.periodId === 'period-reopen-1' &&
           candidate.details.reason === '재무제표 재산출 필요'
       )
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /accounting-periods/:id/reopen blocks reopening when a later operating month exists', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push(
+      {
+        id: 'period-reopen-older-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        year: 2026,
+        month: 3,
+        startDate: new Date('2026-03-01T00:00:00.000Z'),
+        endDate: new Date('2026-04-01T00:00:00.000Z'),
+        status: AccountingPeriodStatus.LOCKED,
+        openedAt: new Date('2026-03-01T00:00:00.000Z'),
+        lockedAt: new Date('2026-03-31T15:00:00.000Z'),
+        createdAt: new Date('2026-03-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-03-31T15:00:00.000Z')
+      },
+      {
+        id: 'period-reopen-older-next',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        year: 2026,
+        month: 4,
+        startDate: new Date('2026-04-01T00:00:00.000Z'),
+        endDate: new Date('2026-05-01T00:00:00.000Z'),
+        status: AccountingPeriodStatus.OPEN,
+        openedAt: new Date('2026-04-01T00:00:00.000Z'),
+        lockedAt: null,
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-01T00:00:00.000Z')
+      }
+    );
+
+    const response = await context.request(
+      '/accounting-periods/period-reopen-older-1/reopen',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          reason: '과거 월 재오픈 시도'
+        }
+      }
+    );
+
+    assert.equal(response.status, 409);
+    assert.deepEqual(response.body, {
+      statusCode: 409,
+      message:
+        '최근 운영 월 2026-04이 이미 존재해 2026-03은 재오픈할 수 없습니다. 운영 중에는 하나의 최신 진행월만 열어 둡니다.',
+      error: 'Conflict'
+    });
+    assert.equal(
+      context.state.accountingPeriods.find(
+        (candidate) => candidate.id === 'period-reopen-older-1'
+      )?.status,
+      AccountingPeriodStatus.LOCKED
     );
   } finally {
     await context.close();

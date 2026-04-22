@@ -65,6 +65,10 @@ export function createVehicleRecordsPrismaMock(
           fuelType: 'GASOLINE' | 'DIESEL' | 'LPG' | 'HYBRID' | 'ELECTRIC';
           initialOdometerKm: number;
           estimatedFuelEfficiencyKmPerLiter?: number | null;
+          defaultFundingAccountId?: string | null;
+          defaultFuelCategoryId?: string | null;
+          defaultMaintenanceCategoryId?: string | null;
+          operatingExpensePlanOptIn?: boolean;
         };
       }) => {
         const created = {
@@ -79,6 +83,12 @@ export function createVehicleRecordsPrismaMock(
           initialOdometerKm: Number(args.data.initialOdometerKm),
           estimatedFuelEfficiencyKmPerLiter:
             args.data.estimatedFuelEfficiencyKmPerLiter ?? null,
+          defaultFundingAccountId: args.data.defaultFundingAccountId ?? null,
+          defaultFuelCategoryId: args.data.defaultFuelCategoryId ?? null,
+          defaultMaintenanceCategoryId:
+            args.data.defaultMaintenanceCategoryId ?? null,
+          operatingExpensePlanOptIn:
+            args.data.operatingExpensePlanOptIn ?? false,
           createdAt: new Date(),
           fuelLogs: []
         };
@@ -96,6 +106,10 @@ export function createVehicleRecordsPrismaMock(
           fuelType?: 'GASOLINE' | 'DIESEL' | 'LPG' | 'HYBRID' | 'ELECTRIC';
           initialOdometerKm?: number;
           estimatedFuelEfficiencyKmPerLiter?: number | null;
+          defaultFundingAccountId?: string | null;
+          defaultFuelCategoryId?: string | null;
+          defaultMaintenanceCategoryId?: string | null;
+          operatingExpensePlanOptIn?: boolean;
         };
       }) => {
         const vehicle = state.vehicles.find(
@@ -124,6 +138,22 @@ export function createVehicleRecordsPrismaMock(
         if ('estimatedFuelEfficiencyKmPerLiter' in args.data) {
           vehicle.estimatedFuelEfficiencyKmPerLiter =
             args.data.estimatedFuelEfficiencyKmPerLiter ?? null;
+        }
+        if ('defaultFundingAccountId' in args.data) {
+          vehicle.defaultFundingAccountId =
+            args.data.defaultFundingAccountId ?? null;
+        }
+        if ('defaultFuelCategoryId' in args.data) {
+          vehicle.defaultFuelCategoryId =
+            args.data.defaultFuelCategoryId ?? null;
+        }
+        if ('defaultMaintenanceCategoryId' in args.data) {
+          vehicle.defaultMaintenanceCategoryId =
+            args.data.defaultMaintenanceCategoryId ?? null;
+        }
+        if ('operatingExpensePlanOptIn' in args.data) {
+          vehicle.operatingExpensePlanOptIn =
+            args.data.operatingExpensePlanOptIn ?? false;
         }
 
         return vehicle;

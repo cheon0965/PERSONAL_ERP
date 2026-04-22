@@ -6,7 +6,6 @@ import {
   Button,
   Chip,
   CircularProgress,
-  Grid,
   Stack,
   Typography
 } from '@mui/material';
@@ -14,7 +13,6 @@ import type { GridColDef } from '@mui/x-data-grid';
 import { formatDate, formatWon } from '@/shared/lib/format';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { StatusChip } from '@/shared/ui/status-chip';
-import { appLayout } from '@/shared/ui/layout-metrics';
 import { RecurringRuleForm } from './recurring-rule-form';
 import type {
   ManagedRecurringRuleDetailItem,
@@ -255,65 +253,5 @@ export function RecurringRuleDrawerContent({
       initialRule={editingRecurringRule}
       onCompleted={onCompleted}
     />
-  );
-}
-
-export function RecurringRulesInfoCard({
-  totalCount,
-  activeCount,
-  insuranceManagedCount
-}: {
-  totalCount: number;
-  activeCount: number;
-  insuranceManagedCount: number;
-}) {
-  return (
-    <Stack
-      spacing={appLayout.cardGap}
-      sx={{
-        p: appLayout.cardPadding,
-        borderRadius: 3,
-        border: '1px solid',
-        borderColor: 'divider',
-        backgroundColor: 'background.paper'
-      }}
-    >
-      <Typography variant="h6">목록 읽는 기준</Typography>
-      <Grid container spacing={appLayout.fieldGap}>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <RecurringInfoItem label="전체 규칙" value={`${totalCount}건`} />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <RecurringInfoItem label="활성 규칙" value={`${activeCount}건`} />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <RecurringInfoItem
-            label="보험 연동"
-            value={`${insuranceManagedCount}건`}
-          />
-        </Grid>
-      </Grid>
-      <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-        <Chip label={`활성 ${activeCount}건`} size="small" color="success" />
-        <Chip
-          label={`직접 관리 ${totalCount - insuranceManagedCount}건`}
-          size="small"
-          variant="outlined"
-        />
-      </Stack>
-    </Stack>
-  );
-}
-
-function RecurringInfoItem({ label, value }: { label: string; value: string }) {
-  return (
-    <Stack spacing={0.35}>
-      <Typography variant="caption" color="text.secondary">
-        {label}
-      </Typography>
-      <Typography variant="body2" fontWeight={600}>
-        {value}
-      </Typography>
-    </Stack>
   );
 }

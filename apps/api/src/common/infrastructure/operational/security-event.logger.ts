@@ -2,6 +2,11 @@ import { createHash } from 'node:crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { OperationalAuditPublisher } from './operational-audit-publisher.service';
+import type {
+  OperationalAuditEventPayload,
+  OperationalAuditEventResult
+} from './operational-audit-sink.port';
 
 type SecurityEventDetails = Record<
   string,
@@ -24,7 +29,10 @@ type SecurityThreatCategory =
 export class SecurityEventLogger {
   private readonly logger = new Logger('SecurityEvent');
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditPublisher: OperationalAuditPublisher
+  ) {}
 
   log(event: string, details: SecurityEventDetails = {}): void {
     this.write('log', event, details);
@@ -57,6 +65,19 @@ export class SecurityEventLogger {
       ? `event=${event} ${detailText}`
       : `event=${event}`;
     this.logger[level](message);
+    this.auditPublisher.publish({
+      kind: 'SECURITY_EVENT',
+      eventName: event,
+      occurredAt: new Date().toISOString(),
+      tenantId: readStringDetail(details.tenantId),
+      ledgerId: readStringDetail(details.ledgerId),
+      actorUserId: readStringDetail(details.userId),
+      actorMembershipId: readStringDetail(details.membershipId),
+      resourceType: 'security-event',
+      resourceId: readStringDetail(details.requestId),
+      result: readOperationalAuditResult(level, event),
+      payload: buildOperationalAuditPayload(level, details)
+    });
 
     if (shouldPersistThreatEvent(level, event)) {
       void this.persistThreatEvent(level, event, details).catch((error) => {
@@ -94,6 +115,46 @@ export class SecurityEventLogger {
       }
     });
   }
+}
+
+function readOperationalAuditResult(
+  level: SecurityLogLevel,
+  eventName: string
+): OperationalAuditEventResult {
+  if (
+    eventName === 'audit.action_succeeded' ||
+    eventName.endsWith('_succeeded')
+  ) {
+    return 'SUCCESS';
+  }
+
+  if (level === 'error' || eventName.includes('failed')) {
+    return 'FAILED';
+  }
+
+  if (level === 'warn' || eventName.includes('denied')) {
+    return 'DENIED';
+  }
+
+  return 'INFO';
+}
+
+function buildOperationalAuditPayload(
+  level: SecurityLogLevel,
+  details: SecurityEventDetails
+): OperationalAuditEventPayload {
+  return {
+    level,
+    ...Object.fromEntries(
+      Object.entries(details).flatMap(([key, value]) => {
+        if (value === undefined) {
+          return [];
+        }
+
+        return [[key, value]];
+      })
+    )
+  };
 }
 
 function normalizeDetailValue(value: string | number | boolean): string {
@@ -158,11 +219,17 @@ function readThreatCategory(eventName: string): SecurityThreatCategory {
     return 'SESSION';
   }
 
-  if (eventName.includes('verification') || eventName.includes('email_verified')) {
+  if (
+    eventName.includes('verification') ||
+    eventName.includes('email_verified')
+  ) {
     return 'EMAIL_VERIFICATION';
   }
 
-  if (eventName.includes('access_denied') || eventName.includes('authorization')) {
+  if (
+    eventName.includes('access_denied') ||
+    eventName.includes('authorization')
+  ) {
     return 'ACCESS_CONTROL';
   }
 

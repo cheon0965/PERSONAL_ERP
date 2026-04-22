@@ -10,6 +10,7 @@ type AccountRecord = {
   type: FundingAccountItem['type'];
   balanceWon: PrismaMoneyLike | number;
   status: FundingAccountItem['status'];
+  bootstrapStatus?: FundingAccountItem['bootstrapStatus'];
 };
 
 export function mapFundingAccountRecordToItem(
@@ -23,6 +24,7 @@ export function mapFundingAccountRecordToItem(
       typeof account.balanceWon === 'number'
         ? account.balanceWon
         : fromPrismaMoneyWon(account.balanceWon),
-    status: account.status
+    status: account.status,
+    bootstrapStatus: account.bootstrapStatus ?? 'NOT_REQUIRED'
   };
 }

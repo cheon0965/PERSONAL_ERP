@@ -38,7 +38,7 @@
 - 이 명령은 필요할 때 로그인/세션 복원/운영 체크리스트/문맥 fallback까지 포함한 브라우저 build smoke를 별도로 다시 확인합니다.
 - `npm run test:e2e`는 기준 데이터 CRUD, 반복 규칙 CRUD까지 포함한 전체 브라우저 대표 흐름 검증입니다.
 - `npm run test:prisma`는 기본 루프와 분리된 실DB Prisma/HTTP 통합 검증이며, Docker 기반 disposable MySQL을 띄운 뒤 `prisma generate -> prisma migrate deploy -> minimal fixture seed -> UUID 범위 fixture/test -> teardown`을 한 명령으로 수행합니다. 현재는 수집 거래 저장소 경계 1개와 실제 API/DB 월 운영 workflow 4개를 포함합니다. workflow는 `운영기간 open -> 업로드 배치 -> 수집 -> 전표 확정 -> close`, `반복규칙 -> plan item 생성 -> import collect 자동 매칭 -> confirm -> 재무제표 생성`, `close -> 재무제표 생성 -> reopen -> 전표 reverse/correct`, `carry-forward 생성 이후 source period reopen 409 보호` 시나리오를 검증합니다.
-- `npm run audit:runtime:full`은 `critical` gate 없이 현재 runtime advisory 전체를 다시 확인할 때 사용하는 follow-up 명령입니다.
+- `npm run audit:runtime:full`은 allowlist 적용 없이 현재 runtime advisory 전체를 다시 확인할 때 사용하는 follow-up 명령입니다.
 - 현재 기본 `npm run test`에서는 Prisma 통합 테스트가 안내 문구와 함께 skip됩니다.
 
 ## CI 게이트
@@ -53,7 +53,7 @@
 - `prisma-integration`
   `npm run test:prisma`로 disposable MySQL을 부팅하고 migration과 실제 MySQL 경계 시나리오를 수행합니다. 더 이상 GitHub secret 부재를 성공 skip으로 처리하지 않습니다.
 - `audit-runtime`
-  `npm run audit:runtime`으로 실제 배포 대상인 `api`, `web` workspace의 runtime dependency를 점검하고, 현재 CI 게이트는 `critical` 임계값 기준으로 실패를 판정합니다.
+  `npm run audit:runtime`으로 실제 배포 대상인 `api`, `web` workspace의 runtime dependency를 점검하고, 현재 CI 게이트는 `high` 임계값 기준으로 실패를 판정합니다. 예외가 필요하면 `security/runtime-audit-allowlist.json`에 만료일과 사유를 남기며, 만료되었거나 더 이상 필요 없는 entry는 gate가 바로 실패합니다.
 - `semgrep-ce`
   Semgrep CE 정적 분석을 수행합니다.
 - `gitleaks`
@@ -62,8 +62,9 @@
 설명:
 
 - 로컬 기본 검증은 `check:quick`와 `test`가 맡고, CI는 여기에 품질/보안 게이트를 추가해 회귀를 막습니다.
+- 2026-04-22 기준 GitHub CI 첫 통과 증적과 required check 연결, Docker 환경의 `npm run test:prisma`, GitHub `prisma-integration` 통과는 확인 완료된 상태로 봅니다.
 - Windows에서 `core.autocrlf=true` checkout을 쓰면 `check:quick`의 Prettier 단계가 EOL 차이로 과검출될 수 있으므로, CI와 같은 LF 기준 확인이 필요할 때는 `npm run format:check -- --end-of-line auto`를 함께 봅니다.
-- `npm run audit:runtime`은 네트워크가 필요한 명령이라 로컬보다 CI 결과를 기본 증적으로 봅니다.
+- `npm run audit:runtime`은 네트워크가 필요한 명령이라 로컬보다 CI 결과를 기본 증적으로 봅니다. 다만 현재 게이트 로직은 `security/runtime-audit-allowlist.json`의 만료/불필요 entry도 함께 검사합니다.
 - `semgrep-ce`, `gitleaks`는 로컬에서 동일하게 재현하려면 Docker가 필요합니다.
 - `semgrep-ce`는 build 산출물, test 산출물, migration, 운영 보조 script만 제외하고 애플리케이션 코드는 스캔 대상으로 둡니다.
 - 따라서 Web의 공통 인증 fetch 경계인 `apps/web/src/shared/api/fetch-json.ts`도 Semgrep 제외 대상이 아닙니다.
@@ -101,17 +102,17 @@
 - `POST /vehicles`, `PATCH /vehicles/:id`
   Owner/Manager 전용 차량 기본 정보 생성, 수정과 workspace 범위 접근통제를 검증
 - `GET /vehicles/fuel-logs`, `POST /vehicles/:id/fuel-logs`, `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`
-  Owner/Manager 전용 차량 연료 이력 생성, 수정과 workspace 범위 접근통제를 검증
+  Owner/Manager 전용 차량 연료 이력 생성, 수정, 선택적 수집거래 생성, 차량 연결 수집거래의 직접 수정 차단, 전표 확정 후 차량 기록 수정 차단, workspace 범위 접근통제를 검증
 - `GET /vehicles/maintenance-logs`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`
-  Owner/Manager 전용 차량 정비 이력 생성, 수정과 workspace 범위 접근통제를 검증
+  Owner/Manager 전용 차량 정비 이력 생성, 수정, 선택적 수집거래 생성, workspace 범위 접근통제를 검증
 - `GET /reference-data/readiness`
   현재 workspace 기준 기준 데이터 readiness, ownership 구분, 부족 항목 요약을 검증
 - `POST /funding-accounts`, `PATCH /funding-accounts/:id`
-  Owner/Manager 전용 자금수단 생성, 이름 변경, 비활성화/재활성화, 비활성 자금수단 종료와 workspace 범위 접근통제를 검증
+  Owner/Manager 전용 자금수단 생성, 신규 은행/카드 `bootstrapStatus=PENDING`, 기초 업로드 완료 직접 전환, 이름 변경, 비활성화/재활성화, 비활성 자금수단 종료와 workspace 범위 접근통제를 검증
 - `POST /categories`, `PATCH /categories/:id`
   Owner/Manager 전용 카테고리 생성, 이름 변경, 비활성화/재활성화와 workspace 범위 접근통제를 검증
 - `GET /accounting-periods`, `GET /accounting-periods/current`, `POST /accounting-periods`, `POST /accounting-periods/:id/close`, `POST /accounting-periods/:id/reopen`
-  기간 open/close/reopen, snapshot 생성/정리, 차기 이월 이후 reopen 차단, role 기반 접근통제를 검증
+  최신 진행월 중심 기간 open/close/reopen, snapshot 생성/정리, 차기 이월 이후 reopen 차단, role 기반 접근통제를 검증
 - `GET /collected-transactions`, `POST /collected-transactions`, `POST /collected-transactions/:id/confirm`
   DTO validation, 현재 workspace 접근 범위 내 참조 검증, 생성/확정 응답 shape와 전표 연계를 검증
 - `POST /collected-transactions/:id/confirm`
@@ -124,19 +125,21 @@
 - 계획 항목 view에 매칭 수집 거래 제목/상태와 전표 번호가 함께 실리는지 검증
 - 거래/반복규칙 use-case 생성 로직
 - `GET /import-batches`, `GET /import-batches/:id`, `POST /import-batches`, `POST /import-batches/files`, `POST /import-batches/:id/rows/:rowId/collect-preview`, `POST /import-batches/:id/rows/:rowId/collect`
-  UTF-8 텍스트 업로드 파싱, IM뱅크 PDF multipart 업로드, row collect preview, duplicate fingerprint 처리, 자동 계획 매칭/카테고리 보완 설명, role 기반 접근통제를 검증
+  UTF-8 텍스트 업로드 파싱, IM뱅크 PDF multipart 업로드, row collect preview, 운영월 자동 생성 사유 표시, duplicate fingerprint 처리, 자동 계획 매칭/카테고리 보완 설명, role 기반 접근통제를 검증
 - `POST /import-batches/files`
-  IM뱅크 PDF 업로드의 활성 계좌/카드 연결 필수 조건, PDF magic bytes/확장자/content-type/10MB 제한, 원본 PDF 미저장과 행 단위 payload 저장을 검증
+  IM뱅크 PDF 업로드의 활성 계좌/카드 연결 필수 조건, PDF magic bytes/확장자/content-type/10MB 제한, 텍스트 레이어 없는 스캔 PDF 명시 차단, 원본 PDF 미저장과 행 단위 payload 저장을 검증
 - `POST /import-batches/:id/rows/:rowId/collect`
-  반복 수집 거래 흡수 claim, 이미 다른 업로드 행과 연결된 대상의 `409 Conflict`, 같은 업로드 행 재수집 방지를 검증
+  최신 진행월 범위 수집, 운영 중 자동 운영월 생성 차단, 신규 계좌/카드 기초 업로드 예외의 bootstrap/회계 이력 가드와 완료 전환, 반복 수집 거래 흡수 claim, 이미 다른 업로드 행과 연결된 대상의 `409 Conflict`, 같은 업로드 행 재수집 방지를 검증
 - `POST /import-batches/:id/rows/collect`, `GET /import-batches/:id/collection-jobs/active`, `GET /import-batches/:id/collection-jobs/:jobId`
-  선택 행 또는 등록 가능 행 전체의 일괄 등록 Job 생성, 입출금 방향 기반 수입/지출/취소 유형 추론, 거래유형별 카테고리/메모 적용, 진행률/행별 결과 조회, 같은 workspace 내 동시 일괄 등록 잠금과 단건 등록 충돌 보호를 검증
+  선택 행 또는 등록 가능 행 전체의 일괄 등록 Job 생성, 입출금 방향 기반 수입/지출/취소 유형 추론, 거래유형별 카테고리/메모 적용, 운영월 자동 생성 사유별 결과 메시지, 진행률/행별 결과 조회, 같은 workspace 내 동시 일괄 등록 잠금과 단건 등록 충돌 보호를 검증
 - 계획 항목 generate use case
-  `periodId + recurringRuleId + plannedDate` DB unique 경합을 `skip`으로 해석하고 `createdCount/skippedExistingCount`가 실제 commit 결과와 맞는지 검증
+  최신 진행월 밖 생성 차단, `periodId + recurringRuleId + plannedDate` DB unique 경합을 `skip`으로 해석하고 `createdCount/skippedExistingCount`가 실제 commit 결과와 맞는지 검증
 - `POST /financial-statements/generate`, `GET /financial-statements`
   잠금 기간 공식 snapshot 생성/조회와 비교 view 조합을 검증
 - `POST /carry-forwards/generate`, `GET /carry-forwards`
-  closing snapshot 기반 차기 이월 생성과 조회를 검증
+  closing snapshot 기반 opening balance snapshot 전용 차기 이월 생성과 조회, `createdJournalEntryId=null` 정책과 별도 `CARRY_FORWARD` 전표 미생성을 검증
+- `OperationalAuditPublisher`
+  외부 감사 sink 실패가 workspace 감사 이벤트/기간 상태 이력/업로드 Job/전표 조정 발행 경계에서 핵심 회계 트랜잭션을 깨지 않도록 비동기 실패 흡수를 검증
 - 대시보드 요약 계산
 - 예측 잔액 계산
 - `GET /health`, `GET /health/ready`
@@ -178,8 +181,9 @@
 - 실제 브라우저 상호작용으로 `/recurring`에서 반복 규칙 생성, 수정, 삭제와 목록 반영이 동작하는지 검증
 - 실제 브라우저 상호작용으로 `/insurances`에서 보험 계약 생성, 수정, 비활성화와 목록 반영이 동작하는지 검증
 - 실제 브라우저 상호작용으로 `/vehicles`에서 차량 생성, 수정, 연료 이력 생성/수정, 정비 이력 생성/수정과 목록 반영이 동작하는지 검증
+- API 요청 테스트로 차량 연료/정비 저장 시 선택적 수집거래가 생성되는지, 차량에서 생성된 연결 수집거래가 거래 화면 직접 수정/삭제 경로에서 차단되는지, 미확정 연결 수집거래가 차량 로그 삭제와 함께 정리되는지, 전표 확정 이후 차량 기록 수정/삭제가 차단되는지 검증
 - 실제 브라우저 상호작용으로 `/plan-items/generate`에서 현재 월 계획 항목과 연결 반복성 수집 거래를 생성하고, `/plan-items`에서 상태를 확인하며 `dashboard`/`forecast` 반영, `/financial-statements` 생성, `/carry-forwards` 생성과 차기 이월 basis note 반영이 동작하는지 검증
-- 실제 브라우저 상호작용으로 `/imports` 업로드 배치에서 행을 기존 계획 기반 수집 거래에 흡수/매칭하거나 새 수집 거래로 승격한 뒤 `/transactions`에서 전표 확정을 실행하고 `/journal-entries`에서 생성 전표를 여는 월 운영 cross-feature 흐름을 검증
+- 실제 브라우저 상호작용으로 `/imports` 업로드 배치에서 행을 기존 계획 기반 수집 거래에 흡수/매칭하거나 새 수집 거래로 등록한 뒤 `/transactions`에서 전표 확정을 실행하고 `/journal-entries`에서 생성 전표를 여는 월 운영 cross-feature 흐름을 검증
 - API 요청 테스트로 IM뱅크 PDF 업로드와 업로드 배치 일괄 등록 Job/진행률/동시 작업 잠금 경계를 검증하고, Web 단위에서는 일괄 등록 버튼/진행률 표시와 API helper path를 함께 확인
 - 루트 `ci:local:*` 스크립트와 `docs/DEVELOPMENT_GUIDE.md` 매핑표로 GitHub Actions 주요 job을 로컬에서 다시 따를 수 있는 진입점을 제공
 - `npm run test:e2e:smoke:build`로 in-process production build/start 경로에 결과물을 올린 뒤 health route 응답 기준 최소 HTTP smoke를 자동 검증
@@ -192,14 +196,24 @@
 
 - 간결 헤더와 `도메인 가이드` 노출, 페이지 전환 시 도움말 문맥 정리 동작은 현재 전용 자동 테스트가 없음
 - 루트 `/` 공개 홍보 메인의 비로그인 CTA와 인증 사용자 `/dashboard` 이동은 현재 전용 자동 테스트가 없음
-- 차량 연료/정비 이력 분리, `GET /vehicles/operating-summary` projection 추가, 차량 `Vehicle` 물리 필드/응답/계약에서 `monthlyExpenseWon` 제거, 레거시 `Transaction` 물리 제거와 active reference guard, 메인 월 운영 루프의 `reference-data -> accounting-periods -> insurance/vehicles -> recurring-rules -> plan-items -> collected-transactions/imports -> journal-entries -> financial-statements -> carry-forwards -> forecast` 브라우저 시나리오, `imports -> collected-transactions -> journal-entries` cross-feature 브라우저 시나리오, Next.js ESLint plugin explicit registration까지는 반영됨
-- 저장소 안 우선순위로 선별했던 작업은 현재 문서 기준 모두 닫혔음
-- `.github/workflows/ci.yml`의 `prisma-integration` job은 disposable MySQL 기반 `npm run test:prisma`로 고정되었으며, 첫 GitHub 통과 증적 확보는 workflow run에서 확인하면 됨
 - Docker가 없는 개발 PC에서는 `test:prisma`, `semgrep-ce`, `gitleaks`를 로컬에서 CI와 동일하게 재현하기 어려움
 - Windows `core.autocrlf=true` checkout에서는 `npm run check:quick`의 Prettier 단계가 CI(Ubuntu LF 기준)와 다르게 보일 수 있음
-- `npm run audit:runtime`는 현재 `critical` 기준으로 gate를 걸고 있으며, 2026-04-05 재검증 기준 runtime `high` 4건은 upstream Nest 패키지의 exact dependency pin으로 남아 있어 예외 추적으로 관리 중임
 
-## 2026-04-05 Runtime Audit Follow-up
+## 최근 닫힌 공백
+
+- 차량 연료/정비 이력 분리, `GET /vehicles/operating-summary` projection 추가, 차량 `Vehicle` 물리 필드/응답/계약에서 `monthlyExpenseWon` 제거, 차량 연료/정비 이력의 선택적 수집거래 연동과 확정 후 수정 차단, 레거시 `Transaction` 물리 제거와 active reference guard, 메인 월 운영 루프의 `reference-data -> accounting-periods -> insurance/vehicles -> recurring-rules -> plan-items -> collected-transactions/imports -> journal-entries -> financial-statements -> carry-forwards -> forecast` 브라우저 시나리오, `imports -> collected-transactions -> journal-entries` cross-feature 브라우저 시나리오, Next.js ESLint plugin explicit registration까지는 반영됨
+- 이전에 저장소 안 우선순위로 선별했던 작업은 모두 닫혔음
+- `.github/workflows/ci.yml`의 `prisma-integration` job은 disposable MySQL 기반 `npm run test:prisma`로 고정되었으며, Docker 환경 로컬 실행과 GitHub workflow 통과 확인까지 완료됨
+- `npm run audit:runtime`는 현재 `high` 기준으로 gate를 걸고 있으며, 2026-04-22 기준 `npm run audit:runtime:full` 결과는 `0 vulnerabilities`입니다. 현재 `security/runtime-audit-allowlist.json`은 비어 있습니다.
+
+## 2026-04-22 CI/Prisma 증적 확인
+
+- GitHub CI 첫 통과 증적과 required check 연결은 저장소 운영 화면 기준으로 확인 완료된 상태입니다.
+- Docker가 있는 환경에서 `npm run test:prisma` 실행 확인을 완료했습니다.
+- GitHub `prisma-integration` workflow도 disposable MySQL 기반 경로로 통과 확인을 완료했습니다.
+- 따라서 CI required check 연결과 Prisma 통합 검증 첫 통과는 더 이상 미완료 공백으로 보지 않고, CI 구성 변경 시 재확인하는 유지보수 항목으로 관리합니다.
+
+## 2026-04-05 Runtime Audit Follow-up 이력
 
 - 실행: `npm run audit:runtime:full`과 동등한 runtime `npm audit --omit=dev --workspace @personal-erp/api --workspace @personal-erp/web --json`
 - 결과: `critical 0`, `high 4`
@@ -209,10 +223,32 @@
   - `@nestjs/swagger@11.2.6 -> path-to-regexp@8.3.0`
   - `express -> router@2.2.0 -> path-to-regexp@8.3.0`
 - 같은 날 npm registry 기준 최신 배포 버전도 `@nestjs/config 4.0.3`, `@nestjs/swagger 11.2.6`이며, 패키지 내부 dependency가 각각 `lodash 4.17.23`, `path-to-regexp 8.3.0`으로 고정돼 있어 로컬 비파괴 업그레이드 경로가 확인되지 않았습니다.
-- 결론: 현재 CI gate는 `npm run audit:runtime`의 `critical` 기준을 유지하고, 위 4건은 upstream 릴리스 또는 안전한 대체 경로가 나올 때까지 `tracked exception`으로 관리합니다.
+- 결론: 당시에는 CI gate를 `critical` 기준으로 유지하고, 위 4건은 upstream 릴리스 또는 안전한 대체 경로가 나올 때까지 `tracked exception`으로 관리했습니다.
+
+## 2026-04-22 Runtime Audit Follow-up
+
+- 실행: `npm run audit:runtime`과 runtime `npm audit --omit=dev --workspace @personal-erp/api --workspace @personal-erp/web --json`
+- 조치:
+  `@nestjs/config 4.0.3 -> 4.0.4`
+  `@nestjs/swagger 11.2.6 -> 11.3.2`
+  `next 15.5.14 -> 15.5.15`
+- 결과:
+  `lodash 4.18.1`, `path-to-regexp 8.4.2`, `next 15.5.15`로 갱신되었고 runtime audit 결과는 `0 vulnerabilities`입니다.
+- 결론: 2026-04-05 기준 tracked exception은 해소 완료로 전환했습니다.
+
+## 2026-04-22 Runtime Audit Gate Hardening
+
+- 실행: `npm run audit:runtime`, `npm run audit:runtime:full`
+- 조치:
+  `npm run audit:runtime`를 `high` 게이트 + 만료형 allowlist 검증 스크립트로 전환했습니다.
+  예외 파일은 `security/runtime-audit-allowlist.json`으로 고정했습니다.
+- 결과:
+  현재 runtime audit full 결과는 `0 vulnerabilities`이고, allowlist entry도 `0`건입니다.
+- 결론:
+  지금 시점에는 active exception 없이 `high` 게이트를 바로 유지하는 것이 합리적이며, 이후 unavoidable advisory가 생기면 만료일과 사유가 있는 allowlist로만 예외를 허용합니다.
 
 ## 해석
 
 현재 검증체계는 성공 경로 계약, 인증, DTO validation, 접근 범위 검증, readiness/request-id 같은 운영 신호, 핵심 쓰기 흐름, 대표 브라우저 사용자 흐름까지를 자동으로 막는 상태입니다.
 `npm run test:e2e`, `npm run test:prisma`는 빠른 기본 테스트와 분리된 대표 심화 검증으로 유지합니다.
-다음 보강 우선순위는 Docker가 있는 환경에서 `npm run test:prisma`와 GitHub `prisma-integration` 첫 통과 증적을 확보하는 것입니다.
+다음 보강 우선순위는 운영 HTTPS/HSTS/Swagger 토글 리허설과 외부 감사 저장소/장기 보관 정책 초안 정리입니다.

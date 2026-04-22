@@ -23,9 +23,12 @@ export function canEditCollectedTransaction(
   transaction: Pick<
     CollectedTransactionItem,
     'postingStatus' | 'postedJournalEntryId'
-  >
+  > & {
+    sourceKind?: CollectedTransactionItem['sourceKind'];
+  }
 ): boolean {
   return (
+    transaction.sourceKind !== 'VEHICLE_LOG' &&
     transaction.postedJournalEntryId == null &&
     isEditableCollectedTransactionStatus(transaction.postingStatus)
   );
@@ -35,7 +38,9 @@ export function canDeleteCollectedTransaction(
   transaction: Pick<
     CollectedTransactionItem,
     'postingStatus' | 'postedJournalEntryId'
-  >
+  > & {
+    sourceKind?: CollectedTransactionItem['sourceKind'];
+  }
 ): boolean {
   return canEditCollectedTransaction(transaction);
 }

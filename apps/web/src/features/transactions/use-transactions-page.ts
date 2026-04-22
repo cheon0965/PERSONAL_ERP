@@ -11,7 +11,7 @@ import {
   getCurrentAccountingPeriod
 } from '@/features/accounting-periods/accounting-periods.api';
 import {
-  readCollectingAccountingPeriods,
+  readLatestCollectingAccountingPeriods,
   resolvePreferredAccountingPeriod
 } from '@/features/accounting-periods/accounting-period-selection';
 import {
@@ -229,7 +229,7 @@ export function useTransactionsPage() {
   const currentPeriod = currentPeriodQuery.data ?? null;
   const accountingPeriods = accountingPeriodsQuery.data ?? [];
   const collectingPeriods = React.useMemo(
-    () => readCollectingAccountingPeriods(accountingPeriods),
+    () => readLatestCollectingAccountingPeriods(accountingPeriods),
     [accountingPeriods]
   );
   const preferredCollectingPeriod = React.useMemo(
@@ -272,7 +272,7 @@ export function useTransactionsPage() {
       }
     ],
     readModelNote: preferredCollectingPeriod
-      ? `${preferredCollectingPeriod.monthLabel} 운영 기간을 기본 기준으로 열린 운영 기간의 거래를 검토하고, 아직 전표가 없는 수집·검토·전표 준비 상태 거래만 수정하거나 삭제할 수 있습니다. 전표 확정은 전표 준비 상태에서만 가능합니다.`
+      ? `${preferredCollectingPeriod.monthLabel} 최신 진행월의 거래를 검토하고, 아직 전표가 없는 수집·검토·전표 준비 상태 거래만 수정하거나 삭제할 수 있습니다. 전표 확정은 전표 준비 상태에서만 가능합니다.`
       : '아직 열린 운영 기간이 없어 수집 거래 등록과 전표 확정이 잠겨 있습니다.'
   });
 
@@ -448,7 +448,7 @@ export function useTransactionsPage() {
     drawerDescription: readTransactionDrawerDescription({
       drawerMode: drawerState?.mode ?? null,
       currentPeriod: preferredCollectingPeriod,
-      hasMultipleCollectingPeriods: collectingPeriods.length > 1
+      hasMultipleCollectingPeriods: false
     }),
     drawerOpen: drawerState !== null,
     drawerState,

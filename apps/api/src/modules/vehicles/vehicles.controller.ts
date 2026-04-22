@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
+  HttpCode,
   NotFoundException,
   Param,
   Patch,
@@ -257,6 +259,61 @@ export class VehiclesController {
     }
   }
 
+  @Delete(':vehicleId/fuel-logs/:fuelLogId')
+  @HttpCode(204)
+  async deleteFuelLog(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('vehicleId') vehicleId: string,
+    @Param('fuelLogId') fuelLogId: string
+  ) {
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      assertWorkspaceActionAllowed(
+        workspace.membershipRole,
+        'vehicle_fuel.delete'
+      );
+
+      const deleted = await this.vehiclesService.deleteFuelLog(
+        user,
+        vehicleId,
+        fuelLogId
+      );
+
+      if (!deleted) {
+        throw new NotFoundException('Vehicle fuel log not found');
+      }
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'vehicle_fuel.delete',
+        request,
+        workspace,
+        details: {
+          vehicleId,
+          fuelLogId
+        }
+      });
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'vehicle_fuel.delete',
+          request,
+          workspace,
+          details: {
+            vehicleId,
+            fuelLogId,
+            requiredRoles: readAllowedWorkspaceRoles(
+              'vehicle_fuel.delete'
+            ).join(',')
+          }
+        });
+      }
+
+      throw error;
+    }
+  }
+
   @Post(':id/maintenance-logs')
   async createMaintenanceLog(
     @Req() request: RequestWithContext,
@@ -361,6 +418,61 @@ export class VehiclesController {
             maintenanceLogId,
             requiredRoles: readAllowedWorkspaceRoles(
               'vehicle_maintenance.update'
+            ).join(',')
+          }
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  @Delete(':vehicleId/maintenance-logs/:maintenanceLogId')
+  @HttpCode(204)
+  async deleteMaintenanceLog(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('vehicleId') vehicleId: string,
+    @Param('maintenanceLogId') maintenanceLogId: string
+  ) {
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      assertWorkspaceActionAllowed(
+        workspace.membershipRole,
+        'vehicle_maintenance.delete'
+      );
+
+      const deleted = await this.vehiclesService.deleteMaintenanceLog(
+        user,
+        vehicleId,
+        maintenanceLogId
+      );
+
+      if (!deleted) {
+        throw new NotFoundException('Vehicle maintenance log not found');
+      }
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'vehicle_maintenance.delete',
+        request,
+        workspace,
+        details: {
+          vehicleId,
+          maintenanceLogId
+        }
+      });
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'vehicle_maintenance.delete',
+          request,
+          workspace,
+          details: {
+            vehicleId,
+            maintenanceLogId,
+            requiredRoles: readAllowedWorkspaceRoles(
+              'vehicle_maintenance.delete'
             ).join(',')
           }
         });

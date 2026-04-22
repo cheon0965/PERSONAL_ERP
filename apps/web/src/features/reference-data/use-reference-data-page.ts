@@ -340,7 +340,30 @@ export function useReferenceDataPage(
         name: input.name,
         type: editingFundingAccount?.type ?? input.type,
         balanceWon: editingFundingAccount?.balanceWon ?? 0,
-        status: editingFundingAccount?.status ?? 'ACTIVE'
+        status: editingFundingAccount?.status ?? 'ACTIVE',
+        bootstrapStatus:
+          editingFundingAccount?.bootstrapStatus ??
+          (input.type === 'BANK' || input.type === 'CARD'
+            ? 'PENDING'
+            : 'NOT_REQUIRED')
+      }
+    });
+  }
+
+  async function completeFundingAccountBootstrap(
+    fundingAccount: FundingAccountItem
+  ) {
+    setFeedback(null);
+    await saveFundingAccountMutation.mutateAsync({
+      mode: 'edit',
+      fundingAccountId: fundingAccount.id,
+      payload: {
+        name: fundingAccount.name,
+        bootstrapStatus: 'COMPLETED'
+      },
+      fallback: {
+        ...fundingAccount,
+        bootstrapStatus: 'COMPLETED'
       }
     });
   }
@@ -394,6 +417,7 @@ export function useReferenceDataPage(
     closeFundingAccountEditor: () => setFundingAccountEditorState(null),
     closeFundingAccountStatusDialog: () =>
       setFundingAccountStatusActionTarget(null),
+    completeFundingAccountBootstrap,
     confirmCategoryToggle,
     confirmFundingAccountTransition,
     editingCategory,

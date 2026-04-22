@@ -25,14 +25,14 @@
     "prisma:seed:reset": "npm run prisma:generate && node ../../scripts/run-with-root-env.cjs tsx prisma/seed.ts --reset"
   },
   "dependencies": {
-    "@personal-erp/money": "0.1.0",
     "@nestjs/common": "^11.0.11",
-    "@nestjs/config": "^4.0.3",
+    "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.11",
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/platform-express": "^11.0.11",
     "@nestjs/schedule": "^5.0.1",
-    "@nestjs/swagger": "^11.2.6",
+    "@nestjs/swagger": "^11.3.2",
+    "@personal-erp/money": "0.1.0",
     "@prisma/client": "^6.4.1",
     "argon2": "^0.41.1",
     "class-transformer": "^0.5.1",

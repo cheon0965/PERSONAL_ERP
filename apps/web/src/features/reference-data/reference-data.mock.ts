@@ -14,35 +14,40 @@ export const mockFundingAccounts: FundingAccountItem[] = [
     name: '사업 운영 통장',
     type: 'BANK',
     balanceWon: 2_450_000,
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    bootstrapStatus: 'NOT_REQUIRED'
   },
   {
     id: 'acc-2',
     name: '비용 예비 통장',
     type: 'BANK',
     balanceWon: 430_000,
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    bootstrapStatus: 'NOT_REQUIRED'
   },
   {
     id: 'acc-3',
     name: '사업용 카드',
     type: 'CARD',
     balanceWon: 300_000,
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    bootstrapStatus: 'COMPLETED'
   },
   {
     id: 'acc-4',
     name: '이전 운영 현금 계정',
     type: 'CASH',
     balanceWon: 0,
-    status: 'INACTIVE'
+    status: 'INACTIVE',
+    bootstrapStatus: 'NOT_REQUIRED'
   },
   {
     id: 'acc-5',
     name: '종료된 정산 카드',
     type: 'CARD',
     balanceWon: 0,
-    status: 'CLOSED'
+    status: 'CLOSED',
+    bootstrapStatus: 'COMPLETED'
   }
 ];
 

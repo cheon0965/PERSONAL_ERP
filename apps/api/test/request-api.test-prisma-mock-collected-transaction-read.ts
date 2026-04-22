@@ -125,6 +125,28 @@ export function createCollectedTransactionReadMethods(
             entryNumber?: boolean;
           };
         };
+        linkedFuelLog?: {
+          select?: {
+            id?: boolean;
+            vehicle?: {
+              select?: {
+                id?: boolean;
+                name?: boolean;
+              };
+            };
+          };
+        };
+        linkedMaintenanceLog?: {
+          select?: {
+            id?: boolean;
+            vehicle?: {
+              select?: {
+                id?: boolean;
+                name?: boolean;
+              };
+            };
+          };
+        };
       };
       include?: {
         period?: {
@@ -213,6 +235,33 @@ export function createCollectedTransactionReadMethods(
       const postedJournalEntry = resolveJournalEntryByCollectedTransaction(
         candidate.id
       );
+      const linkedFuelLog =
+        state.vehicles
+          .flatMap((vehicle) =>
+            vehicle.fuelLogs.map((fuelLog) => ({
+              id: fuelLog.id,
+              vehicle: {
+                id: vehicle.id,
+                name: vehicle.name
+              },
+              linkedCollectedTransactionId:
+                fuelLog.linkedCollectedTransactionId ?? null
+            }))
+          )
+          .find(
+            (fuelLog) => fuelLog.linkedCollectedTransactionId === candidate.id
+          ) ?? null;
+      const linkedMaintenanceLog =
+        state.vehicleMaintenanceLogs.find(
+          (maintenanceLog) =>
+            (maintenanceLog.linkedCollectedTransactionId ?? null) ===
+            candidate.id
+        ) ?? null;
+      const linkedMaintenanceVehicle = linkedMaintenanceLog
+        ? (state.vehicles.find(
+            (vehicle) => vehicle.id === linkedMaintenanceLog.vehicleId
+          ) ?? null)
+        : null;
       const postingPolicyKey =
         candidate.ledgerTransactionTypeId === 'ltt-1-income'
           ? 'INCOME_BASIC'
@@ -347,6 +396,56 @@ export function createCollectedTransactionReadMethods(
                     }
                   : null
               }
+            : {}),
+          ...(args.select.linkedFuelLog
+            ? {
+                linkedFuelLog: linkedFuelLog
+                  ? {
+                      ...(args.select.linkedFuelLog.select?.id
+                        ? { id: linkedFuelLog.id }
+                        : {}),
+                      ...(args.select.linkedFuelLog.select?.vehicle
+                        ? {
+                            vehicle: {
+                              ...(args.select.linkedFuelLog.select.vehicle
+                                .select?.id
+                                ? { id: linkedFuelLog.vehicle.id }
+                                : {}),
+                              ...(args.select.linkedFuelLog.select.vehicle
+                                .select?.name
+                                ? { name: linkedFuelLog.vehicle.name }
+                                : {})
+                            }
+                          }
+                        : {})
+                    }
+                  : null
+              }
+            : {}),
+          ...(args.select.linkedMaintenanceLog
+            ? {
+                linkedMaintenanceLog: linkedMaintenanceLog
+                  ? {
+                      ...(args.select.linkedMaintenanceLog.select?.id
+                        ? { id: linkedMaintenanceLog.id }
+                        : {}),
+                      ...(args.select.linkedMaintenanceLog.select?.vehicle
+                        ? {
+                            vehicle: {
+                              ...(args.select.linkedMaintenanceLog.select
+                                .vehicle.select?.id
+                                ? { id: linkedMaintenanceVehicle?.id ?? '' }
+                                : {}),
+                              ...(args.select.linkedMaintenanceLog.select
+                                .vehicle.select?.name
+                                ? { name: linkedMaintenanceVehicle?.name ?? '' }
+                                : {})
+                            }
+                          }
+                        : {})
+                    }
+                  : null
+              }
             : {})
         };
       }
@@ -451,6 +550,7 @@ export function createCollectedTransactionReadMethods(
         occurredOn?: Date;
         amount?: number;
         ledgerTransactionTypeId?: string;
+        fundingAccountId?: string;
         matchedPlanItemId?: {
           not?: null;
         };
@@ -474,6 +574,28 @@ export function createCollectedTransactionReadMethods(
           select?: {
             id?: boolean;
             title?: boolean;
+          };
+        };
+        linkedFuelLog?: {
+          select?: {
+            id?: boolean;
+            vehicle?: {
+              select?: {
+                id?: boolean;
+                name?: boolean;
+              };
+            };
+          };
+        };
+        linkedMaintenanceLog?: {
+          select?: {
+            id?: boolean;
+            vehicle?: {
+              select?: {
+                id?: boolean;
+                name?: boolean;
+              };
+            };
           };
         };
         fundingAccountId?: boolean;
@@ -530,6 +652,9 @@ export function createCollectedTransactionReadMethods(
           args.where?.ledgerTransactionTypeId === undefined ||
           candidate.ledgerTransactionTypeId ===
             args.where.ledgerTransactionTypeId;
+        const matchesFundingAccount =
+          args.where?.fundingAccountId === undefined ||
+          candidate.fundingAccountId === args.where.fundingAccountId;
         const matchesMatchedPlanItem =
           args.where?.matchedPlanItemId?.not !== null ||
           candidate.matchedPlanItemId !== null;
@@ -552,6 +677,7 @@ export function createCollectedTransactionReadMethods(
           matchesOccurredOn &&
           matchesAmount &&
           matchesLedgerTransactionType &&
+          matchesFundingAccount &&
           matchesMatchedPlanItem &&
           matchesStatus
         );
@@ -597,6 +723,33 @@ export function createCollectedTransactionReadMethods(
         const postedJournalEntry = resolveJournalEntryByCollectedTransaction(
           candidate.id
         );
+        const linkedFuelLog =
+          state.vehicles
+            .flatMap((vehicle) =>
+              vehicle.fuelLogs.map((fuelLog) => ({
+                id: fuelLog.id,
+                vehicle: {
+                  id: vehicle.id,
+                  name: vehicle.name
+                },
+                linkedCollectedTransactionId:
+                  fuelLog.linkedCollectedTransactionId ?? null
+              }))
+            )
+            .find(
+              (fuelLog) => fuelLog.linkedCollectedTransactionId === candidate.id
+            ) ?? null;
+        const linkedMaintenanceLog =
+          state.vehicleMaintenanceLogs.find(
+            (maintenanceLog) =>
+              (maintenanceLog.linkedCollectedTransactionId ?? null) ===
+              candidate.id
+          ) ?? null;
+        const linkedMaintenanceVehicle = linkedMaintenanceLog
+          ? (state.vehicles.find(
+              (vehicle) => vehicle.id === linkedMaintenanceLog.vehicleId
+            ) ?? null)
+          : null;
 
         if (!args.select) {
           return candidate;
@@ -629,6 +782,56 @@ export function createCollectedTransactionReadMethods(
                         : {}),
                       ...(args.select.matchedPlanItem.select?.title
                         ? { title: matchedPlanItem.title }
+                        : {})
+                    }
+                  : null
+              }
+            : {}),
+          ...(args.select.linkedFuelLog
+            ? {
+                linkedFuelLog: linkedFuelLog
+                  ? {
+                      ...(args.select.linkedFuelLog.select?.id
+                        ? { id: linkedFuelLog.id }
+                        : {}),
+                      ...(args.select.linkedFuelLog.select?.vehicle
+                        ? {
+                            vehicle: {
+                              ...(args.select.linkedFuelLog.select.vehicle
+                                .select?.id
+                                ? { id: linkedFuelLog.vehicle.id }
+                                : {}),
+                              ...(args.select.linkedFuelLog.select.vehicle
+                                .select?.name
+                                ? { name: linkedFuelLog.vehicle.name }
+                                : {})
+                            }
+                          }
+                        : {})
+                    }
+                  : null
+              }
+            : {}),
+          ...(args.select.linkedMaintenanceLog
+            ? {
+                linkedMaintenanceLog: linkedMaintenanceLog
+                  ? {
+                      ...(args.select.linkedMaintenanceLog.select?.id
+                        ? { id: linkedMaintenanceLog.id }
+                        : {}),
+                      ...(args.select.linkedMaintenanceLog.select?.vehicle
+                        ? {
+                            vehicle: {
+                              ...(args.select.linkedMaintenanceLog.select
+                                .vehicle.select?.id
+                                ? { id: linkedMaintenanceVehicle?.id ?? '' }
+                                : {}),
+                              ...(args.select.linkedMaintenanceLog.select
+                                .vehicle.select?.name
+                                ? { name: linkedMaintenanceVehicle?.name ?? '' }
+                                : {})
+                            }
+                          }
                         : {})
                     }
                   : null

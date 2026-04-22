@@ -153,6 +153,12 @@ enum FundingAccountStatus {
   CLOSED
 }
 
+enum FundingAccountBootstrapStatus {
+  NOT_REQUIRED
+  PENDING
+  COMPLETED
+}
+
 enum PlanItemStatus {
   DRAFT
   MATCHED
@@ -535,28 +541,30 @@ model UserSetting {
 }
 
 model Account {
-  id                    String                 @id @default(cuid())
-  userId                String
-  tenantId              String
-  ledgerId              String
-  name                  String
-  normalizedName        String                 @db.VarChar(191)
-  type                  AccountType
-  balanceWon            Decimal                @default(0) @db.Decimal(19, 0)
-  sortOrder             Int                    @default(0)
-  status                FundingAccountStatus   @default(ACTIVE)
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant                Tenant                 @relation("TenantAccounts", fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger                Ledger                 @relation("LedgerAccounts", fields: [ledgerId], references: [id], onDelete: Cascade)
-  recurringRules        RecurringRule[]
-  insurancePolicies     InsurancePolicy[]
-  planItems             PlanItem[]
-  importBatches         ImportBatch[]
-  collectedTransactions CollectedTransaction[]
-  journalLines          JournalLine[]
-  balanceSnapshotLines  BalanceSnapshotLine[]
+  id                     String                        @id @default(cuid())
+  userId                 String
+  tenantId               String
+  ledgerId               String
+  name                   String
+  normalizedName         String                        @db.VarChar(191)
+  type                   AccountType
+  balanceWon             Decimal                       @default(0) @db.Decimal(19, 0)
+  sortOrder              Int                           @default(0)
+  status                 FundingAccountStatus          @default(ACTIVE)
+  bootstrapStatus        FundingAccountBootstrapStatus @default(NOT_REQUIRED)
+  createdAt              DateTime                      @default(now())
+  updatedAt              DateTime                      @updatedAt
+  user                   User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant                 Tenant                        @relation("TenantAccounts", fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                 Ledger                        @relation("LedgerAccounts", fields: [ledgerId], references: [id], onDelete: Cascade)
+  recurringRules         RecurringRule[]
+  insurancePolicies      InsurancePolicy[]
+  planItems              PlanItem[]
+  importBatches          ImportBatch[]
+  collectedTransactions  CollectedTransaction[]
+  journalLines           JournalLine[]
+  balanceSnapshotLines   BalanceSnapshotLine[]
+  vehicleDefaultProfiles Vehicle[]                     @relation("VehicleDefaultFundingAccount")
 
   @@unique([ledgerId, normalizedName])
   @@index([userId, sortOrder])
@@ -564,24 +572,26 @@ model Account {
 }
 
 model Category {
-  id                    String                 @id @default(cuid())
-  userId                String
-  tenantId              String
-  ledgerId              String
-  name                  String
-  normalizedName        String                 @db.VarChar(191)
-  kind                  CategoryKind
-  sortOrder             Int                    @default(0)
-  isActive              Boolean                @default(true)
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant                Tenant                 @relation("TenantCategories", fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger                Ledger                 @relation("LedgerCategories", fields: [ledgerId], references: [id], onDelete: Cascade)
-  recurringRules        RecurringRule[]
-  insurancePolicies     InsurancePolicy[]
-  planItems             PlanItem[]
-  collectedTransactions CollectedTransaction[]
+  id                                String                 @id @default(cuid())
+  userId                            String
+  tenantId                          String
+  ledgerId                          String
+  name                              String
+  normalizedName                    String                 @db.VarChar(191)
+  kind                              CategoryKind
+  sortOrder                         Int                    @default(0)
+  isActive                          Boolean                @default(true)
+  createdAt                         DateTime               @default(now())
+  updatedAt                         DateTime               @updatedAt
+  user                              User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant                            Tenant                 @relation("TenantCategories", fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                            Ledger                 @relation("LedgerCategories", fields: [ledgerId], references: [id], onDelete: Cascade)
+  recurringRules                    RecurringRule[]
+  insurancePolicies                 InsurancePolicy[]
+  planItems                         PlanItem[]
+  collectedTransactions             CollectedTransaction[]
+  vehicleDefaultFuelProfiles        Vehicle[]              @relation("VehicleDefaultFuelCategory")
+  vehicleDefaultMaintenanceProfiles Vehicle[]              @relation("VehicleDefaultMaintenanceCategory")
 
   @@unique([ledgerId, kind, normalizedName])
   @@index([userId, kind, sortOrder])
@@ -874,6 +884,8 @@ model CollectedTransaction {
   category                Category?                  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   matchedPlanItem         PlanItem?                  @relation("PlanItemMatchedCollectedTransaction", fields: [matchedPlanItemId], references: [id], onDelete: SetNull)
   postedJournalEntry      JournalEntry?              @relation("JournalEntrySourceCollectedTransaction")
+  linkedFuelLog           FuelLog?                   @relation("FuelLogLinkedCollectedTransaction")
+  linkedMaintenanceLog    VehicleMaintenanceLog?     @relation("VehicleMaintenanceLogLinkedCollectedTransaction")
 
   @@index([ledgerId, status, occurredOn])
   @@index([ledgerId, sourceFingerprint])
@@ -1067,48 +1079,62 @@ model Vehicle {
   fuelType                          FuelType
   initialOdometerKm                 Int
   estimatedFuelEfficiencyKmPerLiter Decimal?                @db.Decimal(10, 2)
+  defaultFundingAccountId           String?
+  defaultFuelCategoryId             String?
+  defaultMaintenanceCategoryId      String?
+  operatingExpensePlanOptIn         Boolean                 @default(false)
   createdAt                         DateTime                @default(now())
   updatedAt                         DateTime                @updatedAt
   user                              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenant                            Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   ledger                            Ledger                  @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  defaultFundingAccount             Account?                @relation("VehicleDefaultFundingAccount", fields: [defaultFundingAccountId], references: [id], onDelete: SetNull)
+  defaultFuelCategory               Category?               @relation("VehicleDefaultFuelCategory", fields: [defaultFuelCategoryId], references: [id], onDelete: SetNull)
+  defaultMaintenanceCategory        Category?               @relation("VehicleDefaultMaintenanceCategory", fields: [defaultMaintenanceCategoryId], references: [id], onDelete: SetNull)
   fuelLogs                          FuelLog[]
   maintenanceLogs                   VehicleMaintenanceLog[]
 
   @@unique([ledgerId, normalizedName])
+  @@index([defaultFundingAccountId])
+  @@index([defaultFuelCategoryId])
+  @@index([defaultMaintenanceCategoryId])
   @@index([userId, name])
   @@index([tenantId, ledgerId, name])
 }
 
 model FuelLog {
-  id           String   @id @default(cuid())
-  vehicleId    String
-  filledOn     DateTime
-  odometerKm   Int
-  liters       Decimal  @db.Decimal(10, 3)
-  amountWon    Decimal  @db.Decimal(19, 0)
-  unitPriceWon Decimal  @db.Decimal(19, 0)
-  isFullTank   Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  vehicle      Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  id                           String                @id @default(cuid())
+  vehicleId                    String
+  linkedCollectedTransactionId String?               @unique
+  filledOn                     DateTime
+  odometerKm                   Int
+  liters                       Decimal               @db.Decimal(10, 3)
+  amountWon                    Decimal               @db.Decimal(19, 0)
+  unitPriceWon                 Decimal               @db.Decimal(19, 0)
+  isFullTank                   Boolean               @default(false)
+  createdAt                    DateTime              @default(now())
+  updatedAt                    DateTime              @updatedAt
+  vehicle                      Vehicle               @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  linkedCollectedTransaction   CollectedTransaction? @relation("FuelLogLinkedCollectedTransaction", fields: [linkedCollectedTransactionId], references: [id], onDelete: SetNull)
 
   @@index([vehicleId, filledOn])
 }
 
 model VehicleMaintenanceLog {
-  id          String                     @id @default(cuid())
-  vehicleId   String
-  performedOn DateTime
-  odometerKm  Int
-  category    VehicleMaintenanceCategory
-  vendor      String?
-  description String
-  amountWon   Decimal                    @db.Decimal(19, 0)
-  memo        String?                    @db.Text
-  createdAt   DateTime                   @default(now())
-  updatedAt   DateTime                   @updatedAt
-  vehicle     Vehicle                    @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  id                           String                     @id @default(cuid())
+  vehicleId                    String
+  linkedCollectedTransactionId String?                    @unique
+  performedOn                  DateTime
+  odometerKm                   Int
+  category                     VehicleMaintenanceCategory
+  vendor                       String?
+  description                  String
+  amountWon                    Decimal                    @db.Decimal(19, 0)
+  memo                         String?                    @db.Text
+  createdAt                    DateTime                   @default(now())
+  updatedAt                    DateTime                   @updatedAt
+  vehicle                      Vehicle                    @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  linkedCollectedTransaction   CollectedTransaction?      @relation("VehicleMaintenanceLogLinkedCollectedTransaction", fields: [linkedCollectedTransactionId], references: [id], onDelete: SetNull)
 
   @@index([vehicleId, performedOn])
 }

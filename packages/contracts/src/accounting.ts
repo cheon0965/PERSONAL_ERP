@@ -110,6 +110,10 @@ export type CarryForwardRecordItem = {
   fromPeriodId: string;
   toPeriodId: string;
   sourceClosingSnapshotId: string;
+  /**
+   * Null by design while carry-forward is an opening-balance snapshot only.
+   * A future journal-posting policy may fill this with a CARRY_FORWARD entry.
+   */
   createdJournalEntryId: string | null;
   createdAt: string;
   createdByActorType: AuditActorType;

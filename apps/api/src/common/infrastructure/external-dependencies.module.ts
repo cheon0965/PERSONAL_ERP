@@ -6,6 +6,9 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { getApiEnv } from '../../config/api-env';
 import { ConsoleEmailSenderAdapter } from './email/console-email-sender.adapter';
 import { GmailApiEmailSenderAdapter } from './email/gmail-api-email-sender.adapter';
+import { NoopOperationalAuditSinkAdapter } from './operational/noop-operational-audit-sink.adapter';
+import { OperationalAuditPublisher } from './operational/operational-audit-publisher.service';
+import { OperationalAuditSinkPort } from './operational/operational-audit-sink.port';
 import { RequestContextInterceptor } from './operational/request-context.interceptor';
 import { SecurityEventLogger } from './operational/security-event.logger';
 import { WorkspaceAuditEventsService } from './operational/workspace-audit-events.service';
@@ -18,6 +21,12 @@ import { SystemClockAdapter } from './time/system-clock.adapter';
     RequestContextInterceptor,
     SecurityEventLogger,
     WorkspaceAuditEventsService,
+    OperationalAuditPublisher,
+    NoopOperationalAuditSinkAdapter,
+    {
+      provide: OperationalAuditSinkPort,
+      useExisting: NoopOperationalAuditSinkAdapter
+    },
     SystemClockAdapter,
     {
       provide: ClockPort,
@@ -43,7 +52,9 @@ import { SystemClockAdapter } from './time/system-clock.adapter';
     ClockPort,
     EmailSenderPort,
     SecurityEventLogger,
-    WorkspaceAuditEventsService
+    WorkspaceAuditEventsService,
+    OperationalAuditPublisher,
+    OperationalAuditSinkPort
   ]
 })
 export class ExternalDependenciesModule {}

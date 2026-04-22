@@ -25,6 +25,21 @@ export function createVehicleMaintenanceLogsPrismaMock(
               name?: boolean;
             };
           };
+          linkedCollectedTransaction?: {
+            select?: {
+              id?: boolean;
+              fundingAccountId?: boolean;
+              categoryId?: boolean;
+              status?: boolean;
+              matchedPlanItemId?: boolean;
+              postedJournalEntry?: {
+                select?: {
+                  id?: boolean;
+                  entryNumber?: boolean;
+                };
+              };
+            };
+          };
         };
       }) => {
         const candidate =
@@ -69,7 +84,14 @@ export function createVehicleMaintenanceLogsPrismaMock(
                     ? { name: vehicle.name }
                     : {})
                 }
-              : vehicle
+              : vehicle,
+          linkedCollectedTransaction: args.include?.linkedCollectedTransaction
+            ? projectLinkedCollectedTransaction(
+                state,
+                candidate.linkedCollectedTransactionId ?? null,
+                args.include.linkedCollectedTransaction.select
+              )
+            : undefined
         };
       },
       findMany: async (args: {
@@ -87,6 +109,21 @@ export function createVehicleMaintenanceLogsPrismaMock(
             select?: {
               id?: boolean;
               name?: boolean;
+            };
+          };
+          linkedCollectedTransaction?: {
+            select?: {
+              id?: boolean;
+              fundingAccountId?: boolean;
+              categoryId?: boolean;
+              status?: boolean;
+              matchedPlanItemId?: boolean;
+              postedJournalEntry?: {
+                select?: {
+                  id?: boolean;
+                  entryNumber?: boolean;
+                };
+              };
             };
           };
         };
@@ -154,13 +191,22 @@ export function createVehicleMaintenanceLogsPrismaMock(
                         ? { name: vehicle.name }
                         : {})
                     }
-                  : vehicle
+                  : vehicle,
+              linkedCollectedTransaction: args.include
+                ?.linkedCollectedTransaction
+                ? projectLinkedCollectedTransaction(
+                    state,
+                    candidate.linkedCollectedTransactionId ?? null,
+                    args.include.linkedCollectedTransaction.select
+                  )
+                : undefined
             };
           });
       },
       create: async (args: {
         data: {
           vehicleId: string;
+          linkedCollectedTransactionId?: string | null;
           performedOn: Date;
           odometerKm: number;
           category:
@@ -182,6 +228,21 @@ export function createVehicleMaintenanceLogsPrismaMock(
               name?: boolean;
             };
           };
+          linkedCollectedTransaction?: {
+            select?: {
+              id?: boolean;
+              fundingAccountId?: boolean;
+              categoryId?: boolean;
+              status?: boolean;
+              matchedPlanItemId?: boolean;
+              postedJournalEntry?: {
+                select?: {
+                  id?: boolean;
+                  entryNumber?: boolean;
+                };
+              };
+            };
+          };
         };
       }) => {
         const vehicle =
@@ -196,6 +257,8 @@ export function createVehicleMaintenanceLogsPrismaMock(
         const created = {
           id: `maintenance-generated-${state.vehicleMaintenanceLogs.length + 1}`,
           vehicleId: args.data.vehicleId,
+          linkedCollectedTransactionId:
+            args.data.linkedCollectedTransactionId ?? null,
           performedOn: new Date(String(args.data.performedOn)),
           odometerKm: Number(args.data.odometerKm),
           category: args.data.category,
@@ -218,12 +281,20 @@ export function createVehicleMaintenanceLogsPrismaMock(
                   ? { name: vehicle.name }
                   : {})
               }
-            : vehicle
+            : vehicle,
+          linkedCollectedTransaction: args.include?.linkedCollectedTransaction
+            ? projectLinkedCollectedTransaction(
+                state,
+                created.linkedCollectedTransactionId,
+                args.include.linkedCollectedTransaction.select
+              )
+            : undefined
         };
       },
       update: async (args: {
         where: { id: string };
         data: {
+          linkedCollectedTransactionId?: string | null;
           performedOn?: Date;
           odometerKm?: number;
           category?:
@@ -245,6 +316,21 @@ export function createVehicleMaintenanceLogsPrismaMock(
               name?: boolean;
             };
           };
+          linkedCollectedTransaction?: {
+            select?: {
+              id?: boolean;
+              fundingAccountId?: boolean;
+              categoryId?: boolean;
+              status?: boolean;
+              matchedPlanItemId?: boolean;
+              postedJournalEntry?: {
+                select?: {
+                  id?: boolean;
+                  entryNumber?: boolean;
+                };
+              };
+            };
+          };
         };
       }) => {
         const maintenanceLog = state.vehicleMaintenanceLogs.find(
@@ -255,6 +341,10 @@ export function createVehicleMaintenanceLogsPrismaMock(
           throw new Error('Vehicle maintenance log not found');
         }
 
+        if ('linkedCollectedTransactionId' in args.data) {
+          maintenanceLog.linkedCollectedTransactionId =
+            args.data.linkedCollectedTransactionId ?? null;
+        }
         if (args.data.performedOn !== undefined) {
           maintenanceLog.performedOn = new Date(String(args.data.performedOn));
         }
@@ -295,9 +385,99 @@ export function createVehicleMaintenanceLogsPrismaMock(
                     ? { name: vehicle.name }
                     : {})
                 }
-              : vehicle
+              : vehicle,
+          linkedCollectedTransaction: args.include?.linkedCollectedTransaction
+            ? projectLinkedCollectedTransaction(
+                state,
+                maintenanceLog.linkedCollectedTransactionId ?? null,
+                args.include.linkedCollectedTransaction.select
+              )
+            : undefined
         };
+      },
+      delete: async (args: { where: { id: string } }) => {
+        const maintenanceLog =
+          state.vehicleMaintenanceLogs.find(
+            (candidate) => candidate.id === args.where.id
+          ) ?? null;
+
+        if (!maintenanceLog) {
+          throw new Error('Vehicle maintenance log not found');
+        }
+
+        state.vehicleMaintenanceLogs = state.vehicleMaintenanceLogs.filter(
+          (candidate) => candidate.id !== args.where.id
+        );
+
+        return maintenanceLog;
       }
     }
+  };
+}
+
+function projectLinkedCollectedTransaction(
+  state: RequestPrismaMockContext['state'],
+  collectedTransactionId: string | null,
+  select:
+    | {
+        id?: boolean;
+        fundingAccountId?: boolean;
+        categoryId?: boolean;
+        status?: boolean;
+        matchedPlanItemId?: boolean;
+        postedJournalEntry?: {
+          select?: {
+            id?: boolean;
+            entryNumber?: boolean;
+          };
+        };
+      }
+    | undefined
+) {
+  if (!collectedTransactionId) {
+    return null;
+  }
+
+  const collectedTransaction =
+    state.collectedTransactions.find(
+      (candidate) => candidate.id === collectedTransactionId
+    ) ?? null;
+
+  if (!collectedTransaction) {
+    return null;
+  }
+
+  const postedJournalEntry =
+    state.journalEntries.find(
+      (candidate) =>
+        candidate.sourceCollectedTransactionId === collectedTransaction.id
+    ) ?? null;
+
+  return {
+    ...(select?.id ? { id: collectedTransaction.id } : {}),
+    ...(select?.fundingAccountId
+      ? { fundingAccountId: collectedTransaction.fundingAccountId }
+      : {}),
+    ...(select?.categoryId
+      ? { categoryId: collectedTransaction.categoryId }
+      : {}),
+    ...(select?.status ? { status: collectedTransaction.status } : {}),
+    ...(select?.matchedPlanItemId
+      ? { matchedPlanItemId: collectedTransaction.matchedPlanItemId }
+      : {}),
+    ...(select?.postedJournalEntry
+      ? {
+          postedJournalEntry: postedJournalEntry
+            ? {
+                ...(select.postedJournalEntry.select?.id
+                  ? { id: postedJournalEntry.id }
+                  : {}),
+                ...(select.postedJournalEntry.select?.entryNumber
+                  ? { entryNumber: postedJournalEntry.entryNumber }
+                  : {})
+              }
+            : null
+        }
+      : {})
   };
 }

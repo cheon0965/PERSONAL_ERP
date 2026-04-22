@@ -14,7 +14,7 @@ import {
   getCurrentAccountingPeriod
 } from '@/features/accounting-periods/accounting-periods.api';
 import {
-  readJournalWritableAccountingPeriods,
+  readLatestJournalWritableAccountingPeriods,
   resolvePreferredAccountingPeriod
 } from '@/features/accounting-periods/accounting-period-selection';
 import { formatWon } from '@/shared/lib/format';
@@ -91,7 +91,7 @@ export function JournalEntriesPage({
   const currentPeriod = currentPeriodQuery.data ?? null;
   const accountingPeriods = accountingPeriodsQuery.data ?? [];
   const journalWritablePeriods = React.useMemo(
-    () => readJournalWritableAccountingPeriods(accountingPeriods),
+    () => readLatestJournalWritableAccountingPeriods(accountingPeriods),
     [accountingPeriods]
   );
   const adjustmentPeriod = React.useMemo(
@@ -230,8 +230,7 @@ export function JournalEntriesPage({
             {currentPeriod && currentPeriod.id !== adjustmentPeriod.id
               ? `현재 운영 기준 월은 ${currentPeriod.monthLabel}이고, 조정 전표 기본 입력 월은 ${adjustmentPeriod.monthLabel}입니다.`
               : `조정 전표 기본 입력 월은 ${adjustmentPeriod.monthLabel}입니다.`}{' '}
-            반전/정정 전표는 전표 입력 가능한 열린 운영 기간의 일자로 생성할 수
-            있습니다.
+            반전/정정 전표는 최신 전표 입력 가능월의 일자로만 생성할 수 있습니다.
           </Alert>
         ) : (
           <Alert

@@ -12,7 +12,8 @@ export function FundingAccountsSection({
   canManageReferenceData,
   onCreate,
   onEdit,
-  onTransition
+  onTransition,
+  onCompleteBootstrap
 }: {
   rows: FundingAccountItem[];
   canManageReferenceData: boolean;
@@ -22,15 +23,17 @@ export function FundingAccountsSection({
     fundingAccount: FundingAccountItem,
     nextStatus: 'ACTIVE' | 'INACTIVE' | 'CLOSED'
   ) => void;
+  onCompleteBootstrap: (fundingAccount: FundingAccountItem) => void;
 }) {
   const columns = React.useMemo(
     () =>
       buildFundingAccountColumns({
         canManageReferenceData,
         onEdit,
-        onTransition
+        onTransition,
+        onCompleteBootstrap
       }),
-    [canManageReferenceData, onEdit, onTransition]
+    [canManageReferenceData, onCompleteBootstrap, onEdit, onTransition]
   );
   const statusSummary = React.useMemo(() => {
     const counts: Record<FundingAccountItem['status'], number> = {

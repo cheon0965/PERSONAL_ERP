@@ -56,6 +56,18 @@ export class GeneratePlanItemsUseCase {
       );
     }
 
+    const latestCollectingPeriod =
+      await this.planItemGenerationPort.findLatestCollectingPeriodInWorkspace(
+        workspace.tenantId,
+        workspace.ledgerId
+      );
+
+    if (!latestCollectingPeriod || latestCollectingPeriod.id !== period.id) {
+      throw new BadRequestException(
+        `계획 항목은 최신 진행월에서만 생성할 수 있습니다. 현재 선택월은 ${formatYearMonth(period.year, period.month)}이고, 최신 진행월은 ${latestCollectingPeriod ? formatYearMonth(latestCollectingPeriod.year, latestCollectingPeriod.month) : '없음'}입니다.`
+      );
+    }
+
     const [recurringRules, existingItems, transactionTypes] = await Promise.all(
       [
         this.planItemGenerationPort.listRecurringRulesForPeriod(
@@ -197,6 +209,10 @@ export class GeneratePlanItemsUseCase {
       }
     };
   }
+}
+
+function formatYearMonth(year: number, month: number) {
+  return `${year}-${String(month).padStart(2, '0')}`;
 }
 
 function assertGeneratePermission(

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException
 } from '@nestjs/common';
@@ -15,6 +16,8 @@ import {
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { readWorkspaceActorRef } from '../../common/auth/workspace-actor-ref.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
+import { OperationalAuditPublisher } from '../../common/infrastructure/operational/operational-audit-publisher.service';
+import { publishPeriodStatusHistoryAudit } from '../../common/infrastructure/operational/period-status-history-audit';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AccountingPeriodReaderPort } from './application/ports/accounting-period-reader.port';
 import { mapAccountingPeriodRecordToItem } from './accounting-period.mapper';
@@ -28,7 +31,8 @@ import {
 export class ReopenAccountingPeriodUseCase {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly accountingPeriodReader: AccountingPeriodReaderPort
+    private readonly accountingPeriodReader: AccountingPeriodReaderPort,
+    private readonly auditPublisher: OperationalAuditPublisher
   ) {}
 
   async execute(
@@ -89,12 +93,31 @@ export class ReopenAccountingPeriodUseCase {
         nextPeriod?.openingBalanceSnapshot?.sourceKind ?? null
     });
 
+    const latestPeriod = await this.prisma.accountingPeriod.findFirst({
+      where: {
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId
+      },
+      select: {
+        id: true,
+        year: true,
+        month: true
+      },
+      orderBy: [{ year: 'desc' }, { month: 'desc' }]
+    });
+
+    if (latestPeriod && latestPeriod.id !== period.id) {
+      throw new ConflictException(
+        `최근 운영 월 ${formatYearMonth(latestPeriod.year, latestPeriod.month)}이 이미 존재해 ${formatYearMonth(period.year, period.month)}은 재오픈할 수 없습니다. 운영 중에는 하나의 최신 진행월만 열어 둡니다.`
+      );
+    }
+
     const reason = normalizeOptionalText(input.reason);
     if (!reason) {
       throw new BadRequestException('재오픈 사유를 입력해 주세요.');
     }
 
-    await this.prisma.$transaction(async (tx) => {
+    const createdStatusHistory = await this.prisma.$transaction(async (tx) => {
       await tx.financialStatementSnapshot.deleteMany({
         where: {
           tenantId: workspace.tenantId,
@@ -121,7 +144,7 @@ export class ReopenAccountingPeriodUseCase {
         }
       });
 
-      await tx.periodStatusHistory.create({
+      return tx.periodStatusHistory.create({
         data: {
           tenantId: workspace.tenantId,
           ledgerId: workspace.ledgerId,
@@ -134,6 +157,8 @@ export class ReopenAccountingPeriodUseCase {
         }
       });
     });
+
+    publishPeriodStatusHistoryAudit(this.auditPublisher, createdStatusHistory);
 
     const refreshedPeriod =
       await this.accountingPeriodReader.findByIdInWorkspace(
@@ -152,6 +177,10 @@ export class ReopenAccountingPeriodUseCase {
 
     return mapAccountingPeriodRecordToItem(refreshedPeriod);
   }
+}
+
+function formatYearMonth(year: number, month: number) {
+  return `${year}-${String(month).padStart(2, '0')}`;
 }
 
 function assertReopenPermission(

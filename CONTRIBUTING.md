@@ -85,6 +85,7 @@
 - `npm run check:quick`에는 `npm run docs:check`가 포함되며, 문서의 `npm run` 표기와 `docs/API.md`, `docs/CURRENT_CAPABILITIES.md`, `docs/OPERATIONS_CHECKLIST.md`, `docs/VALIDATION_NOTES.md`의 Web/API surface가 실제 라우트와 controller 기반 Swagger surface와 맞는지 함께 확인합니다.
 - 인증/세션, CORS, 보안 헤더, 브라우저/API 경계 정책을 바꿨다면 `npm run test:security:api`를 같이 봅니다.
 - `package.json` 또는 lockfile을 바꿨다면 `npm run audit:runtime`와 CI `audit-runtime` 결과를 같이 확인합니다.
+- 불가피한 runtime advisory 예외를 추가할 때는 `security/runtime-audit-allowlist.json`에 `id`, `package`, `severity`, `trackedAt`, `expiresOn`, `reason`을 함께 남기고, 해소되면 바로 제거합니다.
 - 남아 있는 runtime advisory 상세를 다시 볼 때는 `npm run audit:runtime:full`을 사용합니다.
 - 브라우저 흐름을 건드리면 `npm run test:e2e`를 추가로 봅니다.
 - Next.js build 결과물, 공용 라우팅, 인증 복원, 운영 체크리스트 smoke에 영향을 줄 수 있다면 `npm run test:e2e:smoke:build`를 추가로 봅니다.

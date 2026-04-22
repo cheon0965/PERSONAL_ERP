@@ -174,6 +174,7 @@ export function AccountingPeriodsPage({
     lockedPeriodCount,
     membershipRole: membershipRoleLabel,
     openingBalanceFundingAccounts,
+    openPeriodBlockReason,
     openPeriod,
     pageDescription,
     pageTitle,
@@ -341,6 +342,16 @@ export function AccountingPeriodsPage({
   const handleOpenPeriodSubmit = form.handleSubmit(async (values) => {
     setFeedback(null);
 
+    if (!canOpenPeriod) {
+      setFeedback({
+        severity: 'error',
+        message:
+          openPeriodBlockReason ??
+          '현재 상태에서는 새 운영 기간을 시작할 수 없습니다.'
+      });
+      return;
+    }
+
     try {
       await openMutation.mutateAsync({
         month: values.month,
@@ -453,6 +464,7 @@ export function AccountingPeriodsPage({
     isFirstPeriod,
     isBusy: openFormBusy,
     canOpenPeriod,
+    openPeriodBlockReason,
     canSubmitOpeningBalance,
     isSubmitting: openMutation.isPending,
     openingBalanceFields,
@@ -507,10 +519,9 @@ export function AccountingPeriodsPage({
         </Alert>
       ) : null}
 
-      {!canOpenPeriod && hasWorkspace ? (
+      {openPeriodBlockReason && hasWorkspace ? (
         <Alert severity="info" variant="outlined">
-          월 운영 시작은 소유자 또는 관리자만 실행할 수 있습니다. 현재 역할은{' '}
-          {membershipRoleLabel} 입니다.
+          {openPeriodBlockReason}
         </Alert>
       ) : null}
       <ReferenceDataReadinessAlert
