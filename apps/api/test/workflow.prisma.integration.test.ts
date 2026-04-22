@@ -84,7 +84,9 @@ test('Real API/DB integration covers register -> verify-email -> login -> auth/m
       body: {
         email,
         password,
-        name: 'Prisma Register Owner'
+        name: 'Prisma Register Owner',
+        termsAccepted: true,
+        privacyConsentAccepted: true
       }
     });
 

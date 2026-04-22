@@ -58,6 +58,13 @@ type TransactionDrawerState =
   | { mode: 'edit'; transactionId: string }
   | null;
 
+function areStringArraysEqual(left: string[], right: string[]) {
+  return (
+    left.length === right.length &&
+    left.every((value, index) => value === right[index])
+  );
+}
+
 export function useTransactionsPage() {
   const searchParams = useSearchParams();
   const highlightedTransactionId = searchParams?.get('transactionId') ?? null;
@@ -322,15 +329,17 @@ export function useTransactionsPage() {
   );
 
   React.useEffect(() => {
-    setSelectedTransactionIds((current) =>
-      current.filter((transactionId) =>
+    setSelectedTransactionIds((current) => {
+      const next = current.filter((transactionId) =>
         visibleTransactions.some(
           (transaction) =>
             transaction.id === transactionId &&
             canConfirmCollectedTransaction(transaction)
         )
-      )
-    );
+      );
+
+      return areStringArraysEqual(current, next) ? current : next;
+    });
   }, [visibleTransactions]);
 
   function openCreateDrawer() {

@@ -42,10 +42,15 @@
 24. 전체 관리자 운영 필수 기능 구현
     전체 사용자 관리, 사업장 관리, 지원 모드, 보안 위협 로그, 운영 상태 화면과 관련 API/테스트/문서 동기화까지 완료했습니다.
     실행 계획은 [`completed/SYSTEM_ADMIN_OPERATIONS_EXECUTION_PLAN.md`](./completed/SYSTEM_ADMIN_OPERATIONS_EXECUTION_PLAN.md)에 보관합니다.
+25. 공개 진입점과 회원가입 동의 화면 정리
+    비로그인 루트 `/`에 제품 소개/회원가입 안내 메인 화면을 두고, 인증된 사용자는 `/dashboard`로 이동하도록 연결했습니다. 회원가입 화면은 표시 이름, 필수 약관 동의, 개인정보 처리 동의를 포함하는 현재 계약 기준으로 정리했습니다.
+26. Prisma 실DB 통합검증 재현성 고정
+    `npm run test:prisma`가 Docker 기반 disposable MySQL을 띄워 `generate -> migrate -> minimal fixture seed -> test -> teardown`을 한 명령으로 수행하도록 정리했습니다.
 
 ## 현재 MVP 범위
 
-- 로그인
+- 비로그인 공개 홍보 메인과 로그인
+- 회원가입, 이메일 인증, 인증 메일 재발송, 필수 이용약관/개인정보 동의
 - 작업 문맥/설정 조회
 - 기준 데이터 readiness 조회와 자금수단/카테고리 제한적 관리
 - 운영 기간 조회/open/close/reopen
@@ -75,8 +80,8 @@
 
 1. 운영 HTTPS/HSTS/Swagger 배포 리허설과 보안 증적 정리
 2. Gmail API 운영 secret 등록과 실제 수신 확인
-3. Docker 기반 로컬 CI 재현성 보강
-4. `PRISMA_INTEGRATION_DATABASE_URL` GitHub secret 등록과 첫 `prisma-integration` 통과 증적 확보
+3. GitHub CI 첫 전체 통과 증적과 required check 연결 확인
+4. 외부 감사 저장소/장기 보관 정책 초안 정리
 
 ## 범위 밖 항목
 

@@ -81,6 +81,11 @@
 - `POST /auth/refresh`
 - `POST /auth/logout`
 
+`POST /auth/register`는 `email`, `password`, `name`과 함께 필수 동의값
+`termsAccepted: true`, `privacyConsentAccepted: true`를 요구합니다. `name`은
+가입 시 입력한 닉네임/표시 이름으로 저장되며, 이메일 인증 후 생성되는 기본
+워크스페이스의 소유자 표시 이름에도 사용됩니다.
+
 ## 현재 구현 범위 요약
 
 - 인증/계정 범위는 회원가입, 이메일 인증, 인증 메일 재발송, 사업장 초대 수락, 로그인, 세션 refresh/logout, `auth/me`, 계정 보안, 프로필 수정, 비밀번호 변경, 세션 종료까지 10개 독립 use-case 기반으로 운영합니다.
@@ -88,10 +93,10 @@
 - 관리자 범위는 현재 workspace의 멤버 목록/초대/역할·상태 관리, DB 메뉴 트리/메뉴 권한 관리, workspace 감사 로그 조회, 권한 정책 요약까지 포함합니다. `INITIAL_ADMIN_*`로 시드된 전역 관리자는 일반 사업장 관리자와 분리되어 전체 사용자 관리, 사업장 관리, 사업장 전환/지원 문맥, 운영 상태 점검, 보안 위협 로그, 전체 멤버십 역할·상태 관리를 수행할 수 있습니다.
 - 내비게이션 범위는 현재 workspace의 DB 메뉴 트리를 현재 멤버 역할 기준으로 필터링해 반환하는 `navigation/tree`까지 포함합니다.
 - 운영 지원 범위는 체크리스트, 예외 처리함, 월 마감 대시보드, 업로드 운영 현황, 시스템 상태, 알림 센터, 수동 CSV 반출, 운영 메모까지 포함합니다.
-- 기준/참조 범위는 조회 `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`, `vehicles/operating-summary`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/차량 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `DELETE /insurance-policies/:id`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
+- 기준/참조 범위는 조회 `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`, `vehicles/operating-summary`, `vehicles/fuel-logs`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/차량 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `DELETE /insurance-policies/:id`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/fuel-logs`, `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
 - 운영/원장 조회 범위는 `accounting-periods`, `collected-transactions`, `journal-entries`, `plan-items`, `financial-statements`, `carry-forwards`, `import-batches`까지 포함합니다.
 - 집계/보고 조회 범위는 `dashboard/summary`, `forecast/monthly`까지 포함합니다.
-- 현재 쓰기/명령 범위는 `funding-accounts`, `categories`, `insurance-policies`, `vehicles`, `vehicle maintenance logs`, `accounting-periods`, `collected-transactions`, `recurring-rules`, `plan-items`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`까지 확장되어 있습니다.
+- 현재 쓰기/명령 범위는 `funding-accounts`, `categories`, `insurance-policies`, `vehicles`, `vehicle fuel logs`, `vehicle maintenance logs`, `accounting-periods`, `collected-transactions`, `recurring-rules`, `plan-items`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`까지 확장되어 있습니다.
 - 즉, 현재 저장소의 API surface는 초기 reference-data/transactions 수준을 넘어 기준 데이터, 보험/차량 운영 기준, 반복 계획, 수집, 업로드 배치, 전표, 공식 보고, 차기 이월, 기간 전망까지 포함합니다.
 
 ## 보호 엔드포인트
@@ -697,6 +702,7 @@
 - 계약: `BulkCollectImportedRowsRequest -> BulkCollectImportedRowsResponse`
 - 선택 행이 없으면 현재 요청 배치의 등록 가능 행 전체를 대상으로 하고, 선택 행이 있으면 선택 목록만 처리합니다.
 - 요청에서 `type`을 비우면 현재 구현은 파싱된 입출금 방향으로 `DEPOSIT -> INCOME`, `WITHDRAWAL -> EXPENSE`를 자동 판정합니다.
+- `categoryId`와 `memo`는 일괄 기본값으로 쓰이며, `typeOptions[]`에 `{ type, categoryId?, memo? }`를 넘기면 실제 적용 거래유형별로 카테고리와 메모를 별도 지정할 수 있습니다.
 - 응답은 `202 Accepted`와 함께 일괄 등록 Job 상태를 반환합니다. 서버는 Job/행별 결과를 저장하며, 같은 워크스페이스에서는 동시에 하나의 일괄 등록 Job만 실행됩니다.
 - Job 실행 루프는 현재 API 프로세스 안에서 시작되고, 진행률과 결과는 DB에 남긴 뒤 배치 작업대에서 폴링합니다.
 

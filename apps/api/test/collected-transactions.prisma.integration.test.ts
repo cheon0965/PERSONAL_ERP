@@ -38,7 +38,7 @@ test(
   {
     skip: shouldRunPrismaIntegration
       ? false
-      : 'Run `npm run test:prisma` to execute this test against a configured MySQL database.'
+      : 'Run `npm run test:prisma` to execute this test against a disposable MySQL database.'
   },
   async (t) => {
     const resolvedDatabaseEnv = resolvePrismaIntegrationDatabaseEnv();

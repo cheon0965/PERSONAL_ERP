@@ -53,7 +53,9 @@ test('auth API helpers call the registration and verification endpoints', async 
       await registerWithPassword({
         email: 'owner@example.com',
         password: 'Owner1234!',
-        name: 'Owner User'
+        name: 'Owner User',
+        termsAccepted: true,
+        privacyConsentAccepted: true
       }),
       { status: 'verification_sent' }
     );
@@ -81,7 +83,9 @@ test('auth API helpers call the registration and verification endpoints', async 
         body: {
           email: 'owner@example.com',
           password: 'Owner1234!',
-          name: 'Owner User'
+          name: 'Owner User',
+          termsAccepted: true,
+          privacyConsentAccepted: true
         }
       },
       {

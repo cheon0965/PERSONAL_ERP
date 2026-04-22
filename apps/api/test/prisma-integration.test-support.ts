@@ -72,7 +72,7 @@ export async function createRealApiPrismaIntegrationContext(
 ): Promise<RealApiPrismaIntegrationContext | null> {
   if (!shouldRunPrismaIntegration) {
     t.skip(
-      'Run `npm run test:prisma` to execute this test against a configured MySQL database.'
+      'Run `npm run test:prisma` to execute this test against a disposable MySQL database.'
     );
     return null;
   }

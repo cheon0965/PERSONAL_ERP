@@ -137,27 +137,33 @@ DATABASE_URL=mysql://<username>:<password>@<host>:<port>/<database>
 DATABASE_URL=mysql://erp_user:local_erp_not_for_prod@localhost:3306/personal_erp
 ```
 
-`npm run test:prisma`용 전용 연결 대상은 아래 키를 기준으로 분리합니다.
+`npm run test:prisma`는 기본적으로 외부 DB URL에 의존하지 않습니다.
+러너가 Docker 기반 disposable MySQL을 한 번 띄운 뒤 아래 순서로 닫습니다.
 
-```env
-PRISMA_INTEGRATION_DATABASE_URL=mysql://erp_user:local_erp_not_for_prod@localhost:3306/personal_erp
-```
+1. MySQL 8.4 컨테이너를 임의 localhost 포트로 시작
+2. `prisma generate`
+3. `prisma migrate deploy`
+4. 최소 쓰기 fixture seed 생성/삭제로 DB 쓰기 경계 확인
+5. UUID 범위의 통합 테스트 fixture 생성과 실제 API/Prisma 테스트 실행
+6. 컨테이너 teardown
 
 적용 규칙:
 
-- `npm run test:prisma`는 `PRISMA_INTEGRATION_DATABASE_URL`을 먼저 봅니다.
-- 로컬/수동 실행에서는 이 값이 없으면 `DATABASE_URL`로 fallback 합니다.
-- CI에서는 `PRISMA_INTEGRATION_DATABASE_URL`이 없으면 `DATABASE_URL`로 fallback 하지 않습니다.
-- 가능하면 전용 테스트 DB를 따로 두고, 아직 준비되지 않았다면 같은 로컬 bootstrap DB로 시작해도 됩니다.
+- 로컬과 CI 모두 기본 모드는 disposable Docker DB입니다.
+- `.github/workflows/ci.yml`의 `prisma-integration` job은 더 이상 `PRISMA_INTEGRATION_DATABASE_URL` secret에 의존하지 않습니다.
+- Docker daemon이 필요합니다. 컨테이너 image는 기본 `mysql:8.4`이며 `PRISMA_INTEGRATION_DOCKER_IMAGE`로 바꿀 수 있습니다.
+- 디버깅 중 컨테이너를 남겨야 하면 `PRISMA_INTEGRATION_KEEP_DOCKER=1`을 설정합니다.
+- 외부/shared DB로 강제로 돌려야 하는 예외 상황에서만 아래처럼 명시적으로 전환합니다.
+
+```env
+PRISMA_INTEGRATION_DATABASE_MODE=existing
+PRISMA_INTEGRATION_DATABASE_URL=mysql://erp_user:local_erp_not_for_prod@localhost:3306/personal_erp_prisma
+```
+
+외부 DB 모드 주의:
+
+- CI에서는 existing 모드를 쓰더라도 `DATABASE_URL` fallback을 허용하지 않습니다.
 - 이 값을 production DB로 가리키게 두지 않습니다.
-
-### 3-1. GitHub Actions shared test DB secret
-
-- `.github/workflows/ci.yml`의 `prisma-integration` job이 `secrets.PRISMA_INTEGRATION_DATABASE_URL`를 읽습니다.
-- 저장소 또는 조직 secret 이름은 코드와 동일하게 `PRISMA_INTEGRATION_DATABASE_URL`로 맞춥니다.
-- secret이 설정된 workflow run에서는 `npm run test:prisma`가 실제 MySQL 경계 시나리오를 수행합니다.
-- secret이 없는 workflow run에서는 CI가 `DATABASE_URL`로 우회하지 않고, 명시적인 skip 이유를 출력한 뒤 성공 종료합니다.
-- 이 secret은 shared test DB 또는 CI 전용 DB를 가리켜야 하며 production DB를 가리키면 안 됩니다.
 
 운영 서버 예시:
 
@@ -326,7 +332,6 @@ ACCESS_TOKEN_TTL=15m
 REFRESH_TOKEN_TTL=7d
 EMAIL_VERIFICATION_TTL=30m
 DATABASE_URL=mysql://erp_user:local_erp_not_for_prod@localhost:3306/personal_erp
-PRISMA_INTEGRATION_DATABASE_URL=mysql://erp_user:local_erp_not_for_prod@localhost:3306/personal_erp
 DEMO_EMAIL=demo@example.com
 INITIAL_ADMIN_EMAIL=owner@example.com
 INITIAL_ADMIN_NAME=Initial Admin
@@ -432,7 +437,7 @@ npm run start --workspace @personal-erp/web
 ## 8. 운영에서 피해야 할 설정
 
 - 로컬 개발용 DB 계정과 운영 DB 계정을 동일하게 사용하지 않습니다.
-- `PRISMA_INTEGRATION_DATABASE_URL`을 production DB에 연결하지 않습니다.
+- `PRISMA_INTEGRATION_DATABASE_MODE=existing`으로 production DB를 검증 대상으로 연결하지 않습니다.
 - `NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=true`로 운영하지 않습니다.
 - 외부 SECRET 폴더의 실제 비밀 파일을 저장소에 복사해 커밋하지 않습니다.
 - 운영 서버에서 `docker-compose.yml`의 로컬 개발용 MySQL bootstrap 기본값을 재사용하지 않습니다.

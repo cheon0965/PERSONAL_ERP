@@ -63,10 +63,10 @@ export function getPrismaIntegrationMissingDatabaseMessage(
   env: NodeJS.ProcessEnv = process.env
 ) {
   if (shouldRequireDedicatedPrismaIntegrationDatabaseUrl(env)) {
-    return `Skipping Prisma integration test because ${prismaIntegrationDatabaseUrlEnvKey} is not configured in CI. CI intentionally does not fall back to ${fallbackDatabaseUrlEnvKey}.`;
+    return `Skipping Prisma integration test because the Prisma integration runner did not provide ${prismaIntegrationDatabaseUrlEnvKey} in CI. Run npm run test:prisma so the disposable MySQL database is provisioned automatically.`;
   }
 
-  return `Skipping Prisma integration test because neither ${prismaIntegrationDatabaseUrlEnvKey} nor ${fallbackDatabaseUrlEnvKey} is configured. Prefer ${prismaIntegrationDatabaseUrlEnvKey} for a dedicated test database.`;
+  return `Skipping Prisma integration test because neither ${prismaIntegrationDatabaseUrlEnvKey} nor ${fallbackDatabaseUrlEnvKey} is configured. Run npm run test:prisma so the disposable MySQL database is provisioned automatically, or set PRISMA_INTEGRATION_DATABASE_MODE=existing with ${prismaIntegrationDatabaseUrlEnvKey}.`;
 }
 
 export function getPrismaIntegrationUnreachableMessage(

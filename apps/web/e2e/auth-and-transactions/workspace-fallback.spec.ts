@@ -104,7 +104,7 @@ test('@smoke shows safe context fallback when no workspace is connected', async 
 
   await page.goto('/dashboard');
   await expect(
-    page.getByRole('heading', { name: '워크스페이스에 로그인' })
+    page.getByRole('heading', { name: '운영 포털 로그인' })
   ).toBeVisible();
 
   await page.getByLabel('이메일').fill('demo@example.com');
@@ -114,15 +114,15 @@ test('@smoke shows safe context fallback when no workspace is connected', async 
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByText('연결된 사업장 없음').first()).toBeVisible();
 
-  await page.getByRole('button', { name: '문맥' }).click();
+  await page.getByRole('button', { name: '기준' }).click();
   await expect(
-    page.getByText('현재 워크스페이스를 먼저 확인해 주세요.')
+    page.getByText('현재 사업장 연결 상태를 먼저 확인해 주세요.')
   ).toBeVisible();
   await page.getByRole('link', { name: '설정으로 이동' }).click();
 
   await expect(page).toHaveURL(/\/settings$/);
   await expect(
-    page.getByRole('heading', { name: '현재 작업 문맥' }).first()
+    page.getByRole('heading', { name: '현재 작업 기준' }).first()
   ).toBeVisible();
   await expect(page.getByText('연결된 사업장 없음').first()).toBeVisible();
 

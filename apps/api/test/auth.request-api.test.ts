@@ -5,6 +5,19 @@ import {
   readCookieValue,
   readSetCookieHeader
 } from './request-api.test-support';
+
+function buildRegisterRequest(input: {
+  email: string;
+  password: string;
+  name: string;
+}) {
+  return {
+    ...input,
+    termsAccepted: true,
+    privacyConsentAccepted: true
+  };
+}
+
 test('POST /auth/login returns access token and a refresh cookie for valid credentials', async () => {
   const context = await createRequestTestContext();
 
@@ -485,11 +498,11 @@ test('POST /auth/register sends verification email and verified users can login'
   try {
     const registerResponse = await context.request('/auth/register', {
       method: 'POST',
-      body: {
+      body: buildRegisterRequest({
         email: 'owner@example.com',
         password: 'Owner1234!',
         name: 'Owner User'
-      }
+      })
     });
 
     assert.equal(registerResponse.status, 200);
@@ -621,11 +634,11 @@ test('POST /auth/register returns a generic response for an existing verified em
   try {
     const response = await context.request('/auth/register', {
       method: 'POST',
-      body: {
+      body: buildRegisterRequest({
         email: 'demo@example.com',
         password: 'Changed1234!',
         name: 'Changed User'
-      }
+      })
     });
 
     assert.equal(response.status, 200);
@@ -633,6 +646,30 @@ test('POST /auth/register returns a generic response for an existing verified em
       status: 'verification_sent'
     });
     assert.equal(context.state.sentEmails.length, 0);
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /auth/register requires mandatory terms and privacy consent', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/auth/register', {
+      method: 'POST',
+      body: {
+        email: 'missing-consent@example.com',
+        password: 'Owner1234!',
+        name: 'Missing Consent',
+        termsAccepted: false,
+        privacyConsentAccepted: false
+      }
+    });
+
+    assert.equal(response.status, 400);
+    const message = (response.body as { message: string[] }).message;
+    assert.ok(message.includes('이용약관에 동의해 주세요.'));
+    assert.ok(message.includes('개인정보 수집·이용에 동의해 주세요.'));
   } finally {
     await context.close();
   }
@@ -648,11 +685,11 @@ test('POST /auth/register returns 403 for disallowed browser origins', async () 
         origin: 'http://evil.example.com',
         referer: 'http://evil.example.com/register'
       },
-      body: {
+      body: buildRegisterRequest({
         email: 'owner@example.com',
         password: 'Owner1234!',
         name: 'Owner User'
-      }
+      })
     });
 
     assert.equal(response.status, 403);
@@ -683,11 +720,11 @@ test('POST /auth/verify-email rejects invalid, expired, and consumed tokens', as
 
     await context.request('/auth/register', {
       method: 'POST',
-      body: {
+      body: buildRegisterRequest({
         email: 'expired-owner@example.com',
         password: 'Owner1234!',
         name: 'Expired Owner'
-      }
+      })
     });
     const expiredToken = readEmailVerificationToken(
       context.state.sentEmails.at(-1)?.text
@@ -709,11 +746,11 @@ test('POST /auth/verify-email rejects invalid, expired, and consumed tokens', as
 
     await context.request('/auth/register', {
       method: 'POST',
-      body: {
+      body: buildRegisterRequest({
         email: 'consumed-owner@example.com',
         password: 'Owner1234!',
         name: 'Consumed Owner'
-      }
+      })
     });
     const consumedToken = readEmailVerificationToken(
       context.state.sentEmails.at(-1)?.text
@@ -753,11 +790,11 @@ test('POST /auth/resend-verification reissues tokens without leaking account sta
   try {
     const registerResponse = await context.request('/auth/register', {
       method: 'POST',
-      body: {
+      body: buildRegisterRequest({
         email: 'resend-owner@example.com',
         password: 'Owner1234!',
         name: 'Resend Owner'
-      }
+      })
     });
 
     assert.equal(registerResponse.status, 200);
@@ -864,11 +901,11 @@ test('auth registration email endpoints enforce rate limits', async () => {
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const response = await context.request('/auth/register', {
         method: 'POST',
-        body: {
+        body: buildRegisterRequest({
           email: 'rate-owner@example.com',
           password: 'Owner1234!',
           name: 'Rate Owner'
-        }
+        })
       });
 
       assert.equal(response.status, 200);
@@ -876,11 +913,11 @@ test('auth registration email endpoints enforce rate limits', async () => {
 
     const registerLimitResponse = await context.request('/auth/register', {
       method: 'POST',
-      body: {
+      body: buildRegisterRequest({
         email: 'rate-owner@example.com',
         password: 'Owner1234!',
         name: 'Rate Owner'
-      }
+      })
     });
 
     assert.equal(registerLimitResponse.status, 429);
@@ -911,11 +948,11 @@ test('auth registration email endpoints enforce rate limits', async () => {
 
     await context.request('/auth/register', {
       method: 'POST',
-      body: {
+      body: buildRegisterRequest({
         email: 'resend-rate-owner@example.com',
         password: 'Owner1234!',
         name: 'Resend Rate Owner'
-      }
+      })
     });
 
     for (let attempt = 0; attempt < 3; attempt += 1) {
