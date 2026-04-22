@@ -17,6 +17,8 @@
 
 현재 구현 상세는 [`docs/CURRENT_CAPABILITIES.md`](./docs/CURRENT_CAPABILITIES.md)에, 실제 화면 기준 흐름은 [`docs/SCREEN_FLOW_GUIDE.md`](./docs/SCREEN_FLOW_GUIDE.md)에 정리합니다.
 
+루트 `/`는 비로그인 사용자에게 제품 소개와 회원가입 안내를 보여주는 공개 메인 화면이며, 인증된 사용자는 `/dashboard`로 이동합니다.
+
 ## 월 운영 사이클
 
 `작업 문맥/설정 확인 -> 운영 지원 점검 -> 기준 데이터 준비 -> 월 운영 시작 -> 보험/차량 운영 정리 -> 반복 규칙 -> 계획 항목 -> 업로드 배치 또는 수집 거래 -> 전표 확정/반전/정정 -> 월 마감 -> 재무제표 -> 차기 이월 -> 기간 전망`
@@ -153,7 +155,7 @@ npm run db:deploy
 
 - `npm run check:quick`에는 `npm run docs:check`, `npm run money:check`, lint, typecheck가 포함됩니다.
 - `npm run docs:check`는 문서의 `npm run` 표기와 현재 Web/API surface를 실제 코드와 대조합니다.
-- `npm run test:prisma`는 로컬에서는 `PRISMA_INTEGRATION_DATABASE_URL` 우선, `DATABASE_URL` fallback을 허용하지만 CI에서는 `PRISMA_INTEGRATION_DATABASE_URL` 전용으로 동작합니다.
+- `npm run test:prisma`는 Docker 기반 disposable MySQL을 띄워 `generate -> migrate -> minimal fixture seed -> test -> teardown`을 한 명령으로 수행합니다. 외부 DB가 꼭 필요할 때만 `PRISMA_INTEGRATION_DATABASE_MODE=existing`과 `PRISMA_INTEGRATION_DATABASE_URL`을 함께 설정합니다.
 - `npm run ci:local:core`는 `validate + e2e-smoke + security-regression + audit-runtime`에 가까운 로컬 기본 루프입니다.
 
 ## 워크스페이스 구조

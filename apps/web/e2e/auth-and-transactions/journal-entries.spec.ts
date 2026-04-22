@@ -237,6 +237,15 @@ test('@smoke manages journal entry reversal and correction through the journal e
       return;
     }
 
+    if (path === '/api/accounting-periods' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([currentPeriod])
+      });
+      return;
+    }
+
     if (path === '/api/account-subjects' && request.method() === 'GET') {
       await route.fulfill({
         status: 200,
@@ -433,7 +442,7 @@ test('@smoke manages journal entry reversal and correction through the journal e
 
   await page.goto('/journal-entries');
   await expect(
-    page.getByRole('heading', { name: '워크스페이스에 로그인' })
+    page.getByRole('heading', { name: '운영 포털 로그인' })
   ).toBeVisible();
 
   await page.getByLabel('이메일').fill('demo@example.com');
@@ -443,15 +452,13 @@ test('@smoke manages journal entry reversal and correction through the journal e
   await expect(page).toHaveURL(/\/journal-entries$/);
   await expect(page.getByRole('heading', { name: '전표 조회' })).toBeVisible();
   await expect(
-    page.getByText(
-      '현재 열린 운영 기간은 2026-05이며, 반전/정정 전표는 이 기간 안의 일자로만 생성할 수 있습니다.'
-    )
+    page.getByText(/조정 전표 기본 입력 월은 2026-05입니다/)
   ).toBeVisible();
 
   await page.goto('/journal-entries/je-income-1');
   await expect(page).toHaveURL(/\/journal-entries\/je-income-1$/);
   await expect(
-    page.getByRole('heading', { level: 4, name: '202605-0001 전표 상세' })
+    page.getByRole('heading', { level: 1, name: '202605-0001 전표 상세' })
   ).toBeVisible();
   await page.getByRole('button', { name: '반전 전표 생성' }).click();
 
@@ -476,7 +483,7 @@ test('@smoke manages journal entry reversal and correction through the journal e
   await page.goto('/journal-entries/je-expense-1');
   await expect(page).toHaveURL(/\/journal-entries\/je-expense-1$/);
   await expect(
-    page.getByRole('heading', { level: 4, name: '202605-0002 전표 상세' })
+    page.getByRole('heading', { level: 1, name: '202605-0002 전표 상세' })
   ).toBeVisible();
   await page.getByRole('button', { name: '정정 전표 생성' }).click();
 

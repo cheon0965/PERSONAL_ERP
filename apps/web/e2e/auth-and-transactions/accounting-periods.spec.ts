@@ -143,6 +143,15 @@ test('@smoke manages the accounting period lifecycle through open, close, and re
       return;
     }
 
+    if (path === '/api/carry-forwards' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(null)
+      });
+      return;
+    }
+
     if (
       path === '/api/accounting-periods/current' &&
       request.method() === 'GET'
@@ -336,7 +345,7 @@ test('@smoke manages the accounting period lifecycle through open, close, and re
 
   await page.goto('/periods');
   await expect(
-    page.getByRole('heading', { name: '워크스페이스에 로그인' })
+    page.getByRole('heading', { name: '운영 포털 로그인' })
   ).toBeVisible();
 
   await page.getByLabel('이메일').fill('demo@example.com');
@@ -345,13 +354,13 @@ test('@smoke manages the accounting period lifecycle through open, close, and re
 
   await expect(page).toHaveURL(/\/periods$/);
   await expect(
-    page.getByRole('heading', { level: 4, name: '운영 기간', exact: true })
+    page.getByRole('heading', { level: 1, name: '운영 기간', exact: true })
   ).toBeVisible();
 
   await page.goto('/periods/open');
   await expect(page).toHaveURL(/\/periods\/open$/);
   await expect(
-    page.getByRole('heading', { level: 4, name: '월 운영 시작', exact: true })
+    page.getByRole('heading', { level: 1, name: '월 운영 시작', exact: true })
   ).toBeVisible();
 
   const openForm = page.locator('#open-accounting-period-form');
@@ -378,7 +387,7 @@ test('@smoke manages the accounting period lifecycle through open, close, and re
   await expect(page).toHaveURL(/\/periods\/close$/);
   await expect(
     page.getByRole('heading', {
-      level: 4,
+      level: 1,
       name: '월 마감 / 재오픈',
       exact: true
     })

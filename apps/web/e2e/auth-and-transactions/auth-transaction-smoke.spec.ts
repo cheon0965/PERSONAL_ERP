@@ -328,6 +328,15 @@ test('@smoke protects the transactions route, restores the session, and saves a 
       return;
     }
 
+    if (path === '/api/accounting-periods' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([currentPeriod])
+      });
+      return;
+    }
+
     if (path === '/api/journal-entries' && request.method() === 'GET') {
       await route.fulfill({
         status: 200,
@@ -415,7 +424,7 @@ test('@smoke protects the transactions route, restores the session, and saves a 
 
   try {
     await expect(
-      page.getByRole('heading', { name: '워크스페이스에 로그인' })
+      page.getByRole('heading', { name: '운영 포털 로그인' })
     ).toBeVisible();
   } catch (error) {
     throw new Error(
@@ -426,7 +435,7 @@ test('@smoke protects the transactions route, restores the session, and saves a 
   }
 
   await expect(
-    page.getByRole('heading', { name: '워크스페이스에 로그인' })
+    page.getByRole('heading', { name: '운영 포털 로그인' })
   ).toBeVisible();
 
   await page.getByLabel('이메일').fill('demo@example.com');
@@ -435,14 +444,12 @@ test('@smoke protects the transactions route, restores the session, and saves a 
 
   await expect(page).toHaveURL(/\/transactions$/);
   await expect(
-    page.getByRole('heading', { level: 4, name: '수집 거래', exact: true })
+    page.getByRole('heading', { level: 1, name: '수집 거래', exact: true })
   ).toBeVisible();
   await expect(page.getByText('Demo User')).toBeVisible();
-  await expect(
-    page.getByRole('heading', { name: 'Demo Workspace / 사업 장부' })
-  ).toBeVisible();
-  await expect(page.getByRole('button', { name: '문맥' })).toBeVisible();
-  await page.getByRole('button', { name: '문맥' }).click();
+  await expect(page.getByText('Demo Workspace / 사업 장부')).toBeVisible();
+  await expect(page.getByRole('button', { name: '기준' })).toBeVisible();
+  await page.getByRole('button', { name: '기준' }).click();
   await expect(page.getByRole('link', { name: '운영 월' })).toBeVisible();
   await page.keyboard.press('Escape');
 
@@ -450,12 +457,10 @@ test('@smoke protects the transactions route, restores the session, and saves a 
 
   await expect(page).toHaveURL(/\/transactions$/);
   await expect(
-    page.getByRole('heading', { level: 4, name: '수집 거래', exact: true })
+    page.getByRole('heading', { level: 1, name: '수집 거래', exact: true })
   ).toBeVisible();
   await expect(page.getByText('Demo User')).toBeVisible();
-  await expect(
-    page.getByRole('heading', { name: 'Demo Workspace / 사업 장부' })
-  ).toBeVisible();
+  await expect(page.getByText('Demo Workspace / 사업 장부')).toBeVisible();
 
   await page.getByRole('button', { name: '수집 거래 등록' }).click();
   await expect(

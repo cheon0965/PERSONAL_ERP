@@ -241,7 +241,7 @@ test('manages recurring rules through the recurring rules UI', async ({
 
   await page.goto('/recurring');
   await expect(
-    page.getByRole('heading', { name: '워크스페이스에 로그인' })
+    page.getByRole('heading', { name: '운영 포털 로그인' })
   ).toBeVisible();
 
   await page.getByLabel('이메일').fill('demo@example.com');

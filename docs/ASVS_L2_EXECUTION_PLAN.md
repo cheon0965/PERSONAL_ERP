@@ -63,8 +63,7 @@
 
 - 비밀번호 재설정
 - MFA/2FA
-- 관리자 전용 권한 체계
-- binary multipart/file storage 보안
+- 외부 파일 storage/다운로드 보안
 - 외부 결제/SMS 연동
 - 모바일 앱 전용 토큰 저장소
 
@@ -76,7 +75,7 @@
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ------------- |
 | 인증               | 비밀번호 검증, JWT 기반 인증 존재                                                                                            | `부분 충족`   |
 | 세션 관리          | 서버측 refresh 세션, rotation/revoke/reuse detection, Web 메모리 access token 복원                                           | `부분 충족`   |
-| 접근통제           | 전역 guard, workspace 접근통제 존재                                                                                          | `부분 충족`   |
+| 접근통제           | 전역 guard, workspace 접근통제, 목록/집계 응답 current workspace 범위 검증                                                   | `상대적 강점` |
 | 입력검증/API       | DTO validation과 요청 테스트 존재                                                                                            | `상대적 강점` |
 | 데이터 보호        | 민감데이터 분류/캐시/토큰 저장 정책 미흡                                                                                     | `부분 충족`   |
 | 통신/브라우저 보안 | CORS allowlist, security headers, no-store, browser origin allowlist 적용                                                    | `부분 충족`   |
@@ -337,7 +336,7 @@ P4 완료 반영:
 1. 운영 HTTPS + `Strict-Transport-Security` + `SWAGGER_ENABLED` 리허설
 2. CI 보안 job 첫 통과 증적과 required check 연결 확인
 3. `npm run audit:runtime` 예외 추적 재검토와 upstream 릴리스 확인
-4. `PRISMA_INTEGRATION_DATABASE_URL` GitHub secret 등록과 첫 `prisma-integration` 통과 증적 확보
+4. disposable DB 기반 `prisma-integration` 첫 GitHub 통과 증적 확보
 5. 외부 감사 저장소/장기 보관 정책 초안 정리
 
 이 다섯 개만 해도 현재 프로젝트의 보안 성숙도와 포트폴리오 설명력이 크게 올라갑니다.

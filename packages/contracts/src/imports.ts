@@ -100,12 +100,19 @@ export type CollectImportedRowRequest = {
   memo?: string;
 };
 
+export type BulkCollectImportedRowsTypeOption = {
+  type: CollectedTransactionType;
+  categoryId?: string;
+  memo?: string;
+};
+
 export type BulkCollectImportedRowsRequest = {
   rowIds?: string[];
   type?: CollectedTransactionType;
   fundingAccountId: string;
   categoryId?: string;
   memo?: string;
+  typeOptions?: BulkCollectImportedRowsTypeOption[];
 };
 
 export type CancelImportBatchCollectionResponse = {

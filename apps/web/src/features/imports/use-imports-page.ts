@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   BulkCollectImportedRowsRequest,
   BulkCollectImportedRowsResponse,
+  CollectedTransactionType,
   CollectImportedRowRequest,
   CreateImportBatchRequest,
   FundingAccountItem,
@@ -69,16 +70,30 @@ const defaultCollectForm: CollectImportedRowRequest = {
   memo: ''
 };
 
-type BulkCollectFormState = {
-  type: '' | NonNullable<BulkCollectImportedRowsRequest['type']>;
+export const bulkCollectTransactionTypes: CollectedTransactionType[] = [
+  'INCOME',
+  'EXPENSE',
+  'TRANSFER',
+  'REVERSAL'
+];
+
+type BulkCollectTypeOptionFormState = {
   categoryId: string;
   memo: string;
+};
+
+export type BulkCollectFormState = {
+  type: '' | CollectedTransactionType;
+  categoryId: string;
+  memo: string;
+  typeOptions: Record<CollectedTransactionType, BulkCollectTypeOptionFormState>;
 };
 
 const defaultBulkCollectForm: BulkCollectFormState = {
   type: '',
   categoryId: '',
-  memo: ''
+  memo: '',
+  typeOptions: buildDefaultBulkCollectTypeOptions()
 };
 
 export function useImportsPage(
@@ -734,6 +749,9 @@ export function useImportsPage(
     try {
       const categoryId = normalizeOptionalValue(bulkCollectForm.categoryId);
       const memo = normalizeOptionalValue(bulkCollectForm.memo);
+      const typeOptions = buildBulkCollectTypeOptionsPayload(
+        bulkCollectForm.typeOptions
+      );
 
       await bulkCollectMutation.mutateAsync({
         importBatchId: selectedBatch.id,
@@ -742,7 +760,8 @@ export function useImportsPage(
           ...(bulkCollectForm.type ? { type: bulkCollectForm.type } : {}),
           fundingAccountId: bulkFundingAccountId,
           ...(categoryId ? { categoryId } : {}),
-          ...(memo ? { memo } : {})
+          ...(memo ? { memo } : {}),
+          ...(typeOptions.length > 0 ? { typeOptions } : {})
         }
       });
     } catch {
@@ -859,6 +878,39 @@ function isImportBatchFundingAccount(fundingAccount: FundingAccountItem) {
     fundingAccount.status === 'ACTIVE' &&
     (fundingAccount.type === 'BANK' || fundingAccount.type === 'CARD')
   );
+}
+
+function buildDefaultBulkCollectTypeOptions(): Record<
+  CollectedTransactionType,
+  BulkCollectTypeOptionFormState
+> {
+  return {
+    INCOME: { categoryId: '', memo: '' },
+    EXPENSE: { categoryId: '', memo: '' },
+    TRANSFER: { categoryId: '', memo: '' },
+    REVERSAL: { categoryId: '', memo: '' }
+  };
+}
+
+function buildBulkCollectTypeOptionsPayload(
+  typeOptions: BulkCollectFormState['typeOptions']
+): NonNullable<BulkCollectImportedRowsRequest['typeOptions']> {
+  return bulkCollectTransactionTypes.flatMap((type) => {
+    const categoryId = normalizeOptionalValue(typeOptions[type].categoryId);
+    const memo = normalizeOptionalValue(typeOptions[type].memo);
+
+    if (!categoryId && !memo) {
+      return [];
+    }
+
+    return [
+      {
+        type,
+        ...(categoryId ? { categoryId } : {}),
+        ...(memo ? { memo } : {})
+      }
+    ];
+  });
 }
 
 function isImportedRowCollectable(row: ImportedRowTableItem) {

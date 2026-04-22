@@ -53,14 +53,14 @@ test('resolvePrismaIntegrationDatabaseEnv does not fall back to DATABASE_URL in 
 test('getPrismaIntegrationMissingDatabaseMessage names both supported env keys', () => {
   assert.equal(
     getPrismaIntegrationMissingDatabaseMessage({}),
-    'Skipping Prisma integration test because neither PRISMA_INTEGRATION_DATABASE_URL nor DATABASE_URL is configured. Prefer PRISMA_INTEGRATION_DATABASE_URL for a dedicated test database.'
+    'Skipping Prisma integration test because neither PRISMA_INTEGRATION_DATABASE_URL nor DATABASE_URL is configured. Run npm run test:prisma so the disposable MySQL database is provisioned automatically, or set PRISMA_INTEGRATION_DATABASE_MODE=existing with PRISMA_INTEGRATION_DATABASE_URL.'
   );
 });
 
 test('getPrismaIntegrationMissingDatabaseMessage requires the dedicated key in CI', () => {
   assert.equal(
     getPrismaIntegrationMissingDatabaseMessage({ CI: 'true' }),
-    'Skipping Prisma integration test because PRISMA_INTEGRATION_DATABASE_URL is not configured in CI. CI intentionally does not fall back to DATABASE_URL.'
+    'Skipping Prisma integration test because the Prisma integration runner did not provide PRISMA_INTEGRATION_DATABASE_URL in CI. Run npm run test:prisma so the disposable MySQL database is provisioned automatically.'
   );
 });
 

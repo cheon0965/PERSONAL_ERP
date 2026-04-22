@@ -3,6 +3,7 @@
 import * as React from 'react';
 import type { GridRowSelectionModel } from '@mui/x-data-grid';
 import {
+  Box,
   Button,
   Chip,
   LinearProgress,
@@ -12,7 +13,6 @@ import {
   Typography
 } from '@mui/material';
 import type {
-  BulkCollectImportedRowsRequest,
   CategoryItem,
   ImportBatchCollectionJobItem,
   ImportBatchItem
@@ -23,11 +23,21 @@ import {
   readImportedRowParseStatusLabel,
   type ImportedRowTableItem
 } from './imports.shared';
+import {
+  bulkCollectTransactionTypes,
+  type BulkCollectFormState
+} from './use-imports-page';
 
-type BulkCollectForm = {
-  type: '' | NonNullable<BulkCollectImportedRowsRequest['type']>;
-  categoryId: string;
-  memo: string;
+type BulkCollectTransactionType = keyof BulkCollectFormState['typeOptions'];
+
+const bulkCollectTransactionTypeLabels: Record<
+  BulkCollectTransactionType,
+  string
+> = {
+  INCOME: '수입',
+  EXPENSE: '지출',
+  TRANSFER: '이체',
+  REVERSAL: '승인취소'
 };
 
 export function ImportedRowsGrid({
@@ -54,11 +64,11 @@ export function ImportedRowsGrid({
   selectedRowsCount: number;
   collectableRowCount: number;
   selectedCollectableRowCount: number;
-  bulkCollectForm: BulkCollectForm;
+  bulkCollectForm: BulkCollectFormState;
   categories: CategoryItem[];
   bulkCollectJob: ImportBatchCollectionJobItem | null;
   bulkCollectPending: boolean;
-  onBulkCollectFormChange: (patch: Partial<BulkCollectForm>) => void;
+  onBulkCollectFormChange: (patch: Partial<BulkCollectFormState>) => void;
   onSelectedRowIdsChange: (rowIds: string[]) => void;
   onPrepareCollect: (row: ImportedRowTableItem) => void;
   onBulkCollect: () => void;
@@ -123,6 +133,23 @@ export function ImportedRowsGrid({
     onSelectedRowIdsChange([...model.ids].map((rowId) => String(rowId)));
   }
 
+  function updateBulkCollectTypeOption(
+    type: BulkCollectTransactionType,
+    patch: Partial<
+      BulkCollectFormState['typeOptions'][BulkCollectTransactionType]
+    >
+  ) {
+    onBulkCollectFormChange({
+      typeOptions: {
+        ...bulkCollectForm.typeOptions,
+        [type]: {
+          ...bulkCollectForm.typeOptions[type],
+          ...patch
+        }
+      }
+    });
+  }
+
   return (
     <DataTableCard
       title={
@@ -161,7 +188,7 @@ export function ImportedRowsGrid({
               </TextField>
               <TextField
                 select
-                label="일괄 카테고리"
+                label="기본 카테고리"
                 size="small"
                 value={bulkCollectForm.categoryId}
                 onChange={(event) => {
@@ -179,7 +206,7 @@ export function ImportedRowsGrid({
                 ))}
               </TextField>
               <TextField
-                label="일괄 메모"
+                label="기본 메모"
                 size="small"
                 value={bulkCollectForm.memo}
                 onChange={(event) => {
@@ -189,6 +216,81 @@ export function ImportedRowsGrid({
                 }}
                 sx={{ minWidth: { md: 220 }, flex: 1 }}
               />
+            </Stack>
+            <Stack spacing={1}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                fontWeight={700}
+              >
+                거래유형별 적용값
+              </Typography>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: {
+                    xs: 'minmax(0, 1fr)',
+                    lg: 'repeat(2, minmax(0, 1fr))'
+                  },
+                  gap: 1
+                }}
+              >
+                {bulkCollectTransactionTypes.map((type) => {
+                  const label = bulkCollectTransactionTypeLabels[type];
+                  const typeCategories =
+                    type === 'REVERSAL'
+                      ? categories
+                      : categories.filter((category) => category.kind === type);
+
+                  return (
+                    <Stack
+                      key={type}
+                      direction={{ xs: 'column', sm: 'row' }}
+                      spacing={1}
+                      alignItems={{ xs: 'stretch', sm: 'center' }}
+                      sx={{ minWidth: 0 }}
+                    >
+                      <Typography
+                        variant="body2"
+                        fontWeight={700}
+                        sx={{ width: { sm: 72 }, flexShrink: 0 }}
+                      >
+                        {label}
+                      </Typography>
+                      <TextField
+                        select
+                        label={`${label} 카테고리`}
+                        size="small"
+                        value={bulkCollectForm.typeOptions[type].categoryId}
+                        onChange={(event) => {
+                          updateBulkCollectTypeOption(type, {
+                            categoryId: event.target.value
+                          });
+                        }}
+                        sx={{ minWidth: 0, flex: 1 }}
+                      >
+                        <MenuItem value="">기본값</MenuItem>
+                        {typeCategories.map((category) => (
+                          <MenuItem key={category.id} value={category.id}>
+                            {category.name}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                      <TextField
+                        label={`${label} 메모`}
+                        size="small"
+                        value={bulkCollectForm.typeOptions[type].memo}
+                        onChange={(event) => {
+                          updateBulkCollectTypeOption(type, {
+                            memo: event.target.value
+                          });
+                        }}
+                        sx={{ minWidth: 0, flex: 1 }}
+                      />
+                    </Stack>
+                  );
+                })}
+              </Box>
             </Stack>
             <Stack
               direction={{ xs: 'column', md: 'row' }}
@@ -272,8 +374,8 @@ export function ImportedRowsGrid({
             </Stack>
             <Typography variant="body2" color="text.secondary">
               읽기 완료이면서 아직 연결되지 않은 행만 선택할 수 있습니다.
-              거래유형을 자동으로 두면 행별 입출금 방향을 따르고, 카테고리를
-              고르면 선택 범위 전체에 같은 분류를 적용합니다.
+              거래유형별 적용값은 해당 유형 행에 기본 카테고리와 메모보다 먼저
+              반영됩니다.
             </Typography>
           </Stack>
         ) : null

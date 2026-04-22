@@ -1,9 +1,19 @@
 import type {
   BulkCollectImportedRowsRequest,
+  BulkCollectImportedRowsTypeOption,
   CollectImportedRowRequest
 } from '@personal-erp/contracts';
 import type { Prisma } from '@prisma/client';
 import { TransactionType } from '@prisma/client';
+
+const BULK_COLLECT_TRANSACTION_TYPES = new Set<
+  CollectImportedRowRequest['type']
+>([
+  TransactionType.INCOME,
+  TransactionType.EXPENSE,
+  TransactionType.TRANSFER,
+  TransactionType.REVERSAL
+]);
 
 export function normalizeBulkCollectRowIds(rowIds?: string[]): string[] | null {
   if (!rowIds) {
@@ -26,32 +36,73 @@ export function normalizeOptionalBulkCollectString(
 export function normalizeBulkCollectRequest(
   input: BulkCollectImportedRowsRequest
 ): BulkCollectImportedRowsRequest {
+  const categoryId = normalizeOptionalBulkCollectString(input.categoryId);
+  const memo = normalizeOptionalBulkCollectString(input.memo);
+  const typeOptions = normalizeBulkCollectTypeOptions(input.typeOptions);
+
   return {
     ...(input.rowIds
       ? { rowIds: normalizeBulkCollectRowIds(input.rowIds) ?? [] }
       : {}),
     ...(input.type ? { type: input.type } : {}),
     fundingAccountId: input.fundingAccountId.trim(),
-    ...(normalizeOptionalBulkCollectString(input.categoryId)
-      ? { categoryId: normalizeOptionalBulkCollectString(input.categoryId) }
-      : {}),
-    ...(normalizeOptionalBulkCollectString(input.memo)
-      ? { memo: normalizeOptionalBulkCollectString(input.memo) }
-      : {})
+    ...(categoryId ? { categoryId } : {}),
+    ...(memo ? { memo } : {}),
+    ...(typeOptions.length > 0 ? { typeOptions } : {})
   };
+}
+
+export function normalizeBulkCollectTypeOptions(
+  typeOptions?: BulkCollectImportedRowsTypeOption[]
+): BulkCollectImportedRowsTypeOption[] {
+  if (!typeOptions) {
+    return [];
+  }
+
+  const optionByType = new Map<
+    CollectImportedRowRequest['type'],
+    BulkCollectImportedRowsTypeOption
+  >();
+
+  typeOptions.forEach((option) => {
+    if (!BULK_COLLECT_TRANSACTION_TYPES.has(option.type)) {
+      return;
+    }
+
+    const categoryId = normalizeOptionalBulkCollectString(option.categoryId);
+    const memo = normalizeOptionalBulkCollectString(option.memo);
+
+    if (!categoryId && !memo) {
+      optionByType.delete(option.type);
+      return;
+    }
+
+    optionByType.set(option.type, {
+      type: option.type,
+      ...(categoryId ? { categoryId } : {}),
+      ...(memo ? { memo } : {})
+    });
+  });
+
+  return [...optionByType.values()];
 }
 
 export function buildCollectRequestForBulkRow(input: {
   request: BulkCollectImportedRowsRequest;
   rawPayload: Prisma.JsonValue;
 }): CollectImportedRowRequest {
+  const type = input.request.type ?? resolveBulkCollectType(input.rawPayload);
+  const typeOption = input.request.typeOptions?.find(
+    (candidate) => candidate.type === type
+  );
+  const categoryId = typeOption?.categoryId ?? input.request.categoryId;
+  const memo = typeOption?.memo ?? input.request.memo;
+
   return {
-    type: input.request.type ?? resolveBulkCollectType(input.rawPayload),
+    type,
     fundingAccountId: input.request.fundingAccountId,
-    ...(input.request.categoryId
-      ? { categoryId: input.request.categoryId }
-      : {}),
-    ...(input.request.memo ? { memo: input.request.memo } : {})
+    ...(categoryId ? { categoryId } : {}),
+    ...(memo ? { memo } : {})
   };
 }
 

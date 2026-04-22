@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import type {
   AuthenticatedUser,
   BulkCollectImportedRowsRequest,
+  BulkCollectImportedRowsTypeOption,
   CollectedTransactionType
 } from '@personal-erp/contracts';
 import {
@@ -331,6 +332,7 @@ function readBulkCollectRequest(
     typeof record.type === 'string' && isCollectedTransactionType(record.type)
       ? record.type
       : undefined;
+  const typeOptions = readBulkCollectTypeOptions(record.typeOptions);
 
   return {
     ...(Array.isArray(record.rowIds)
@@ -345,8 +347,47 @@ function readBulkCollectRequest(
     ...(typeof record.categoryId === 'string'
       ? { categoryId: record.categoryId }
       : {}),
-    ...(typeof record.memo === 'string' ? { memo: record.memo } : {})
+    ...(typeof record.memo === 'string' ? { memo: record.memo } : {}),
+    ...(typeOptions.length > 0 ? { typeOptions } : {})
   };
+}
+
+function readBulkCollectTypeOptions(
+  value: unknown
+): BulkCollectImportedRowsTypeOption[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((option) => {
+    if (!option || typeof option !== 'object' || Array.isArray(option)) {
+      return [];
+    }
+
+    const record = option as Record<string, unknown>;
+    if (
+      typeof record.type !== 'string' ||
+      !isCollectedTransactionType(record.type)
+    ) {
+      return [];
+    }
+
+    const categoryId =
+      typeof record.categoryId === 'string' ? record.categoryId : undefined;
+    const memo = typeof record.memo === 'string' ? record.memo : undefined;
+
+    if (!categoryId && !memo) {
+      return [];
+    }
+
+    return [
+      {
+        type: record.type,
+        ...(categoryId ? { categoryId } : {}),
+        ...(memo ? { memo } : {})
+      }
+    ];
+  });
 }
 
 function resolveFinalJobStatus(input: {

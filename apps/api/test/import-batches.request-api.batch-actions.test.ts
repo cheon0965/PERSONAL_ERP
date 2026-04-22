@@ -300,6 +300,132 @@ test('POST /import-batches/:id/rows/collect applies a shared type and category t
   }
 });
 
+test('POST /import-batches/:id/rows/collect applies category and memo by inferred transaction type', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    pushOpenCollectingPeriod(context, {
+      id: 'period-open-bulk-type-options'
+    });
+    pushImportBatch(context, {
+      id: 'import-batch-bulk-type-options',
+      sourceKind: ImportSourceKind.IM_BANK_PDF,
+      fileName: 'im-bank-type-options.pdf',
+      fileHash: 'hash-bulk-type-options',
+      fundingAccountId: 'acc-1',
+      rowCount: 2,
+      parseStatus: ImportBatchParseStatus.COMPLETED
+    });
+    pushImportedRow(context, {
+      id: 'imported-row-type-options-income',
+      batchId: 'import-batch-bulk-type-options',
+      rowNumber: 1,
+      occurredOn: '2026-03-24',
+      title: '정산 입금',
+      amount: 140_000,
+      sourceFingerprint: buildImportRowFingerprint({
+        sourceKind: ImportSourceKind.IM_BANK_PDF,
+        occurredOn: '2026-03-24',
+        amount: 140_000,
+        title: '정산 입금'
+      }),
+      parsed: {
+        occurredOn: '2026-03-24',
+        title: '정산 입금',
+        amount: 140_000,
+        direction: 'DEPOSIT',
+        balanceAfter: 370_000
+      }
+    });
+    pushImportedRow(context, {
+      id: 'imported-row-type-options-expense',
+      batchId: 'import-batch-bulk-type-options',
+      rowNumber: 2,
+      occurredOn: '2026-03-25',
+      title: '주유 결제',
+      amount: 60_000,
+      sourceFingerprint: buildImportRowFingerprint({
+        sourceKind: ImportSourceKind.IM_BANK_PDF,
+        occurredOn: '2026-03-25',
+        amount: 60_000,
+        title: '주유 결제'
+      }),
+      parsed: {
+        occurredOn: '2026-03-25',
+        title: '주유 결제',
+        amount: 60_000,
+        direction: 'WITHDRAWAL',
+        balanceAfter: 310_000
+      }
+    });
+
+    const response = await context.request(
+      '/import-batches/import-batch-bulk-type-options/rows/collect',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          rowIds: [
+            'imported-row-type-options-income',
+            'imported-row-type-options-expense'
+          ],
+          fundingAccountId: 'acc-1',
+          categoryId: 'cat-1c',
+          memo: '공통 메모',
+          typeOptions: [
+            {
+              type: TransactionType.INCOME,
+              categoryId: 'cat-1b',
+              memo: '수입 일괄 메모'
+            },
+            {
+              type: TransactionType.EXPENSE,
+              categoryId: 'cat-1',
+              memo: '지출 일괄 메모'
+            }
+          ]
+        }
+      }
+    );
+
+    assert.equal(response.status, 202);
+    const startedJob = response.body as ImportBatchCollectionJobItem;
+    const completedJob = await readCollectionJobUntilDone(
+      context,
+      'import-batch-bulk-type-options',
+      startedJob.id
+    );
+
+    assert.equal(completedJob.status, 'SUCCEEDED');
+    assert.deepEqual(
+      context.state.collectedTransactions
+        .filter((candidate) => ['ctx-4', 'ctx-5'].includes(candidate.id))
+        .map((candidate) => ({
+          ledgerTransactionTypeId: candidate.ledgerTransactionTypeId,
+          categoryId: candidate.categoryId,
+          memo: candidate.memo,
+          status: candidate.status
+        })),
+      [
+        {
+          ledgerTransactionTypeId: 'ltt-1-income',
+          categoryId: 'cat-1b',
+          memo: '수입 일괄 메모',
+          status: CollectedTransactionStatus.READY_TO_POST
+        },
+        {
+          ledgerTransactionTypeId: 'ltt-1-expense',
+          categoryId: 'cat-1',
+          memo: '지출 일괄 메모',
+          status: CollectedTransactionStatus.READY_TO_POST
+        }
+      ]
+    );
+  } finally {
+    await context.close();
+  }
+});
+
 test('POST /import-batches/:id/rows/collect maps 승인취소 행 to the adjustment transaction type', async () => {
   const context = await createRequestTestContext();
 

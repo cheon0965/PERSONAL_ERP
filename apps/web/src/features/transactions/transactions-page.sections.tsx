@@ -31,6 +31,13 @@ import {
   resolveCollectedTransactionActionHint
 } from './transaction-workflow';
 
+function areStringArraysEqual(left: string[], right: string[]) {
+  return (
+    left.length === right.length &&
+    left.every((value, index) => value === right[index])
+  );
+}
+
 export function TransactionsTableSection({
   currentPeriod,
   collectingPeriods,
@@ -282,9 +289,16 @@ export function TransactionsTableSection({
       return;
     }
 
-    onSelectedTransactionIdsChange(
-      [...model.ids].map((transactionId) => String(transactionId))
+    const nextSelectedTransactionIds = [...model.ids].map((transactionId) =>
+      String(transactionId)
     );
+    if (
+      areStringArraysEqual(nextSelectedTransactionIds, selectedTransactionIds)
+    ) {
+      return;
+    }
+
+    onSelectedTransactionIdsChange(nextSelectedTransactionIds);
   }
 
   return (

@@ -97,6 +97,8 @@ export type RegisterRequest = {
   email: string;
   password: string;
   name: string;
+  termsAccepted: boolean;
+  privacyConsentAccepted: boolean;
 };
 
 export type UpdateAccountProfileRequest = {

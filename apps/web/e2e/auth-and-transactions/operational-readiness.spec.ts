@@ -209,7 +209,7 @@ test('@smoke surfaces operational checklist guidance across empty states and rea
 
   await page.goto('/dashboard');
   await expect(
-    page.getByRole('heading', { name: '워크스페이스에 로그인' })
+    page.getByRole('heading', { name: '운영 포털 로그인' })
   ).toBeVisible();
 
   await page.getByLabel('이메일').fill('demo@example.com');
@@ -228,7 +228,7 @@ test('@smoke surfaces operational checklist guidance across empty states and rea
     .click();
   await expect(page).toHaveURL(/\/periods$/);
   await expect(
-    page.getByRole('heading', { level: 4, name: '운영 기간', exact: true })
+    page.getByRole('heading', { level: 1, name: '운영 기간', exact: true })
   ).toBeVisible();
 
   await page.goto('/transactions');
