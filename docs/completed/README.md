@@ -23,6 +23,7 @@
 - [`IN_REPO_EXECUTION_PLAN.md`](./IN_REPO_EXECUTION_PLAN.md): 저장소 안에서 선별한 후속 작업을 모두 완료한 뒤 보관한 실행계획
 - [`LEGACY_TRANSACTION_REMOVAL_PREP.md`](./LEGACY_TRANSACTION_REMOVAL_PREP.md): 구형 `Transaction` 제거 직전 인벤토리, backfill/rollback, 삭제 순서를 남긴 준비 메모
 - [`LEGACY_TRANSACTION_SCHEMA_REMOVAL_CHECKLIST.md`](./LEGACY_TRANSACTION_SCHEMA_REMOVAL_CHECKLIST.md): 구형 `Transaction` 물리 제거에서 정리한 schema/code touchpoint 체크리스트
+- [`LIABILITY_MANAGEMENT_EXECUTION_PLAN.md`](./LIABILITY_MANAGEMENT_EXECUTION_PLAN.md): 부채 계약/상환 일정 화면, 계획 항목·업로드 매칭·상환 전표 정책, 문서 동기화까지 완료 후 보관한 실행 계획
 - [`MONEY_INTEGRITY_EXECUTION_PLAN.md`](./MONEY_INTEGRITY_EXECUTION_PLAN.md): `MoneyWon`, 금액 컬럼 `Decimal(19,0)` 승격, exact arithmetic, 금액 raw 연산 가드까지 완료 후 보관한 실행 계획
 - [`MONTHLY_OPERATION_BUSINESS_LOGIC_ALIGNMENT_EXECUTION_PLAN.md`](./MONTHLY_OPERATION_BUSINESS_LOGIC_ALIGNMENT_EXECUTION_PLAN.md): 최신 진행월 하나 기준의 월 운영 정책, 업로드 배치 bootstrap, 차량 운영비 후속 범위, 스캔 PDF/감사 sink/carry-forward 정책 정리를 완료 후 보관한 실행 계획
 - [`OPERATIONS_SUPPORT_SURFACES_EXECUTION_PLAN.md`](./OPERATIONS_SUPPORT_SURFACES_EXECUTION_PLAN.md): 사업장 설정, 내 계정/보안, 권한 정책 요약, 운영 허브/체크리스트/예외/마감/업로드 현황, 시스템 상태/알림, 수동 CSV 반출, 운영 메모/인수인계까지 완료 후 보관한 실행 계획

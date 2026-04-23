@@ -19,6 +19,7 @@ import { CarryForwardsModule } from './modules/carry-forwards/public';
 import { ImportBatchesModule } from './modules/import-batches/public';
 import { RecurringRulesModule } from './modules/recurring-rules/public';
 import { InsurancePoliciesModule } from './modules/insurance-policies/insurance-policies.module';
+import { LiabilitiesModule } from './modules/liabilities/public';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { DashboardModule } from './modules/dashboard/public';
 import { ForecastModule } from './modules/forecast/public';
@@ -56,6 +57,7 @@ import { NavigationModule } from './modules/navigation/public';
     ImportBatchesModule,
     RecurringRulesModule,
     InsurancePoliciesModule,
+    LiabilitiesModule,
     VehiclesModule,
     DashboardModule,
     ForecastModule

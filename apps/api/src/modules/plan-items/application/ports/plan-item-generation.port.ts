@@ -42,7 +42,8 @@ export type GeneratedPlanItemDraft = {
   tenantId: string;
   ledgerId: string;
   periodId: string;
-  recurringRuleId: string;
+  recurringRuleId?: string | null;
+  liabilityRepaymentScheduleId?: string | null;
   ledgerTransactionTypeId: string;
   fundingAccountId: string;
   categoryId?: string;
@@ -50,6 +51,20 @@ export type GeneratedPlanItemDraft = {
   plannedAmount: number;
   plannedDate: Date;
   matchedCollectedTransactionStatus: 'READY_TO_POST' | 'REVIEWED';
+};
+
+export type PlanItemGenerationLiabilityRepaymentSchedule = {
+  id: string;
+  liabilityAgreementId: string;
+  dueDate: Date;
+  totalAmount: PrismaMoneyLike;
+  agreement: {
+    lenderName: string;
+    productName: string;
+    defaultFundingAccountId: string;
+    interestExpenseCategoryId: string | null;
+    feeExpenseCategoryId: string | null;
+  };
 };
 
 export abstract class PlanItemGenerationPort {
@@ -81,6 +96,13 @@ export abstract class PlanItemGenerationPort {
     tenantId: string,
     ledgerId: string
   ): Promise<PlanItemGenerationTransactionType[]>;
+
+  abstract listLiabilityRepaymentSchedulesForPeriod(
+    tenantId: string,
+    ledgerId: string,
+    periodStartDate: Date,
+    periodEndDate: Date
+  ): Promise<PlanItemGenerationLiabilityRepaymentSchedule[]>;
 
   abstract createGeneratedPlanItems(items: GeneratedPlanItemDraft[]): Promise<{
     createdCount: number;

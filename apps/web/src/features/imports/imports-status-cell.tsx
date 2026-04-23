@@ -39,6 +39,14 @@ export function ImportedRowStatusCell({
     );
   }
 
+  if (!row.isCurrentPeriodRow) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        운영월 밖
+      </Typography>
+    );
+  }
+
   return (
     <Button
       size="small"

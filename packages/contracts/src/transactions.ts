@@ -11,7 +11,8 @@ export type CollectedTransactionSourceKind =
   | 'MANUAL'
   | 'RECURRING'
   | 'IMPORT'
-  | 'VEHICLE_LOG';
+  | 'VEHICLE_LOG'
+  | 'LIABILITY_REPAYMENT';
 
 export type CollectedTransactionVehicleLogKind = 'FUEL' | 'MAINTENANCE';
 
@@ -20,6 +21,12 @@ export type CollectedTransactionVehicleLogSource = {
   logId: string;
   vehicleId: string;
   vehicleName: string;
+};
+
+export type CollectedTransactionLiabilityRepaymentSource = {
+  repaymentScheduleId: string;
+  liabilityAgreementId: string;
+  liabilityAgreementTitle: string;
 };
 
 export type CollectedTransactionPostingStatus =
@@ -45,6 +52,7 @@ export type CollectedTransactionItem = {
   matchedPlanItemId: string | null;
   matchedPlanItemTitle: string | null;
   sourceVehicleLog?: CollectedTransactionVehicleLogSource;
+  sourceLiabilityRepayment?: CollectedTransactionLiabilityRepaymentSource;
 };
 
 export type CollectedTransactionDetailItem = {
@@ -63,6 +71,7 @@ export type CollectedTransactionDetailItem = {
   matchedPlanItemId: string | null;
   matchedPlanItemTitle: string | null;
   sourceVehicleLog?: CollectedTransactionVehicleLogSource;
+  sourceLiabilityRepayment?: CollectedTransactionLiabilityRepaymentSource;
 };
 
 export type CreateCollectedTransactionRequest = {

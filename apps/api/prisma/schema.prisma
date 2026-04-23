@@ -167,6 +167,34 @@ enum PlanItemStatus {
   EXPIRED
 }
 
+enum LiabilityAgreementStatus {
+  ACTIVE
+  PAID_OFF
+  ARCHIVED
+}
+
+enum LiabilityInterestRateType {
+  FIXED
+  VARIABLE
+}
+
+enum LiabilityRepaymentMethod {
+  EQUAL_PRINCIPAL
+  EQUAL_PAYMENT
+  INTEREST_ONLY
+  BULLET
+  MANUAL
+}
+
+enum LiabilityRepaymentScheduleStatus {
+  SCHEDULED
+  PLANNED
+  MATCHED
+  POSTED
+  SKIPPED
+  CANCELLED
+}
+
 enum ImportSourceKind {
   CARD_EXCEL
   BANK_CSV
@@ -281,6 +309,7 @@ model User {
   categories              Category[]
   recurringRules          RecurringRule[]
   insurancePolicies       InsurancePolicy[]
+  liabilityAgreements     LiabilityAgreement[]
   vehicles                Vehicle[]
   authSessions            AuthSession[]
   memberships             TenantMembership[]
@@ -317,6 +346,7 @@ model Tenant {
   categories                  Category[]                    @relation("TenantCategories")
   recurringRules              RecurringRule[]               @relation("TenantRecurringRules")
   insurancePolicies           InsurancePolicy[]
+  liabilityAgreements         LiabilityAgreement[]
   vehicles                    Vehicle[]
   periods                     AccountingPeriod[]
   periodStatusHistory         PeriodStatusHistory[]
@@ -386,6 +416,7 @@ model Ledger {
   categories                  Category[]                   @relation("LedgerCategories")
   recurringRules              RecurringRule[]              @relation("LedgerRecurringRules")
   insurancePolicies           InsurancePolicy[]
+  liabilityAgreements         LiabilityAgreement[]
   vehicles                    Vehicle[]
   periods                     AccountingPeriod[]
   periodStatusHistory         PeriodStatusHistory[]
@@ -562,6 +593,7 @@ model Account {
   ledger                 Ledger                        @relation("LedgerAccounts", fields: [ledgerId], references: [id], onDelete: Cascade)
   recurringRules         RecurringRule[]
   insurancePolicies      InsurancePolicy[]
+  liabilityPaymentProfiles LiabilityAgreement[]        @relation("LiabilityDefaultFundingAccount")
   planItems              PlanItem[]
   importBatches          ImportBatch[]
   collectedTransactions  CollectedTransaction[]
@@ -591,6 +623,8 @@ model Category {
   ledger                            Ledger                 @relation("LedgerCategories", fields: [ledgerId], references: [id], onDelete: Cascade)
   recurringRules                    RecurringRule[]
   insurancePolicies                 InsurancePolicy[]
+  liabilityInterestProfiles         LiabilityAgreement[] @relation("LiabilityInterestExpenseCategory")
+  liabilityFeeProfiles              LiabilityAgreement[] @relation("LiabilityFeeExpenseCategory")
   planItems                         PlanItem[]
   collectedTransactions             CollectedTransaction[]
   vehicleDefaultFuelProfiles        Vehicle[]              @relation("VehicleDefaultFuelCategory")
@@ -699,6 +733,7 @@ model AccountSubject {
   updatedAt            DateTime                    @updatedAt
   tenant               Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   ledger               Ledger                      @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  liabilityProfiles    LiabilityAgreement[]        @relation("LiabilityAccountSubject")
   journalLines         JournalLine[]
   balanceSnapshotLines BalanceSnapshotLine[]
 
@@ -754,6 +789,7 @@ model PlanItem {
   category                    Category?             @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   matchedCollectedTransaction CollectedTransaction? @relation("PlanItemMatchedCollectedTransaction")
   postedJournalEntry          JournalEntry?         @relation("JournalEntrySourcePlanItem")
+  linkedLiabilityRepayment    LiabilityRepaymentSchedule? @relation("LiabilityRepaymentLinkedPlanItem")
 
   @@unique([periodId, recurringRuleId, plannedDate])
   @@index([periodId, status, plannedDate])
@@ -923,6 +959,7 @@ model JournalEntry {
   correctsJournalEntry         JournalEntry?          @relation("JournalEntryCorrection", fields: [correctsJournalEntryId], references: [id], onDelete: SetNull)
   correctionEntries            JournalEntry[]         @relation("JournalEntryCorrection")
   createdCarryForwardRecord    CarryForwardRecord?    @relation("CarryForwardCreatedJournalEntry")
+  postedLiabilityRepayment     LiabilityRepaymentSchedule? @relation("LiabilityRepaymentPostedJournalEntry")
   lines                        JournalLine[]
 
   @@unique([ledgerId, entryNumber])
@@ -1069,6 +1106,73 @@ model InsurancePolicy {
   @@index([tenantId, ledgerId, isActive])
   @@index([accountId])
   @@index([categoryId])
+}
+
+model LiabilityAgreement {
+  id                        String                    @id @default(cuid())
+  userId                    String
+  tenantId                  String
+  ledgerId                  String
+  defaultFundingAccountId   String
+  liabilityAccountSubjectId String?
+  interestExpenseCategoryId String?
+  feeExpenseCategoryId      String?
+  lenderName                String
+  normalizedLenderName      String                    @db.VarChar(191)
+  productName               String
+  normalizedProductName     String                    @db.VarChar(191)
+  loanNumberLast4           String?                   @db.VarChar(4)
+  principalAmount           Decimal                   @db.Decimal(19, 0)
+  borrowedAt                DateTime
+  maturityDate              DateTime?
+  interestRate              Decimal?                  @db.Decimal(7, 4)
+  interestRateType          LiabilityInterestRateType @default(FIXED)
+  repaymentMethod           LiabilityRepaymentMethod  @default(MANUAL)
+  paymentDay                Int?
+  status                    LiabilityAgreementStatus  @default(ACTIVE)
+  memo                      String?                   @db.Text
+  createdAt                 DateTime                  @default(now())
+  updatedAt                 DateTime                  @updatedAt
+  user                      User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant                    Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                    Ledger                    @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  defaultFundingAccount     Account                   @relation("LiabilityDefaultFundingAccount", fields: [defaultFundingAccountId], references: [id], onDelete: Restrict)
+  liabilityAccountSubject   AccountSubject?           @relation("LiabilityAccountSubject", fields: [liabilityAccountSubjectId], references: [id], onDelete: SetNull)
+  interestExpenseCategory   Category?                 @relation("LiabilityInterestExpenseCategory", fields: [interestExpenseCategoryId], references: [id], onDelete: SetNull)
+  feeExpenseCategory        Category?                 @relation("LiabilityFeeExpenseCategory", fields: [feeExpenseCategoryId], references: [id], onDelete: SetNull)
+  repaymentSchedules        LiabilityRepaymentSchedule[]
+
+  @@unique([ledgerId, normalizedLenderName, normalizedProductName], map: "LiabilityAgreement_ledger_normlender_normproduct_key")
+  @@index([tenantId, ledgerId, status])
+  @@index([defaultFundingAccountId])
+  @@index([liabilityAccountSubjectId])
+  @@index([interestExpenseCategoryId])
+  @@index([feeExpenseCategoryId])
+}
+
+model LiabilityRepaymentSchedule {
+  id                            String                           @id @default(cuid())
+  tenantId                      String
+  ledgerId                      String
+  liabilityAgreementId          String
+  dueDate                       DateTime
+  principalAmount               Decimal                          @default(0) @db.Decimal(19, 0)
+  interestAmount                Decimal                          @default(0) @db.Decimal(19, 0)
+  feeAmount                     Decimal                          @default(0) @db.Decimal(19, 0)
+  totalAmount                   Decimal                          @db.Decimal(19, 0)
+  status                        LiabilityRepaymentScheduleStatus @default(SCHEDULED)
+  linkedPlanItemId              String?                          @unique
+  postedJournalEntryId          String?                          @unique
+  memo                          String?                          @db.Text
+  createdAt                     DateTime                         @default(now())
+  updatedAt                     DateTime                         @updatedAt
+  agreement                     LiabilityAgreement               @relation(fields: [liabilityAgreementId], references: [id], onDelete: Cascade)
+  linkedPlanItem                PlanItem?                        @relation("LiabilityRepaymentLinkedPlanItem", fields: [linkedPlanItemId], references: [id], onDelete: SetNull)
+  postedJournalEntry            JournalEntry?                    @relation("LiabilityRepaymentPostedJournalEntry", fields: [postedJournalEntryId], references: [id], onDelete: SetNull)
+
+  @@unique([liabilityAgreementId, dueDate], map: "LiabilityRepayment_agreement_due_key")
+  @@index([tenantId, ledgerId, dueDate, status], map: "LiabilityRepayment_tenant_ledger_due_status_idx")
+  @@index([ledgerId, dueDate], map: "LiabilityRepayment_ledger_due_idx")
 }
 
 model Vehicle {

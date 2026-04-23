@@ -1,4 +1,5 @@
 import type { ElementType } from 'react';
+import AccountBalanceRoundedIcon from '@mui/icons-material/AccountBalanceRounded';
 import ArticleRoundedIcon from '@mui/icons-material/ArticleRounded';
 import AdminPanelSettingsRoundedIcon from '@mui/icons-material/AdminPanelSettingsRounded';
 import AutoGraphRoundedIcon from '@mui/icons-material/AutoGraphRounded';
@@ -31,6 +32,7 @@ const navigationIconMap: Record<string, ElementType> = {
   fuel: LocalGasStationRoundedIcon,
   insurance: HealthAndSafetyRoundedIcon,
   journal: ArticleRoundedIcon,
+  liabilities: AccountBalanceRoundedIcon,
   maintenance: MiscellaneousServicesRoundedIcon,
   operations: RuleFolderRoundedIcon,
   planItems: ViewListRoundedIcon,

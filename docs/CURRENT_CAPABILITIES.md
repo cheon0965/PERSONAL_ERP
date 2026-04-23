@@ -19,7 +19,7 @@
 | 기준 데이터 | readiness 요약, 자금수단 관리, 카테고리 관리, 계정과목/거래유형 조회                                                                                                                                                                      | `reference-data-readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types` |
 | 월 실행     | 운영 기간 open/close/reopen, 수집 거래, 업로드 배치와 일괄 등록 진행률/중단, 전표 조회/조정                                                                                                                                               | `accounting-periods`, `collected-transactions`, `import-batches`, `journal-entries`                          |
 | 계획 자동화 | 반복 규칙, 계획 항목 생성과 추적                                                                                                                                                                                                          | `recurring-rules`, `plan-items`                                                                              |
-| 운영 자산   | 보험 계약, 차량 기본 정보, 연료 이력, 정비 이력, 차량 운영 요약, 연료/정비 이력의 선택적 수집 거래 연동                                                                                                                                   | `insurance-policies`, `vehicles`                                                                             |
+| 운영 자산   | 보험 계약, 부채 계약/상환 일정, 차량 기본 정보, 연료 이력, 정비 이력, 차량 운영 요약, 연료/정비 이력의 선택적 수집 거래 연동                                                                                                              | `insurance-policies`, `liabilities`, `vehicles`                                                              |
 | 보고 / 판단 | 대시보드, 재무제표 스냅샷, 차기 이월, 기간 전망                                                                                                                                                                                           | `dashboard`, `financial-statements`, `carry-forwards`, `forecast`                                            |
 
 ## Web 화면 그룹
@@ -74,6 +74,7 @@
 - `/reference-data/categories`
 - `/reference-data/lookups`
 - `/insurances`
+- `/liabilities`
 - `/vehicles`
 - `/vehicles/fleet`
 - `/vehicles/fuel`
@@ -117,6 +118,7 @@
 - `categories`: 수입/지출 카테고리 생성, 수정, 활성/비활성 전환
 - `account-subjects`, `ledger-transaction-types`: system-managed lookup 조회
 - `insurance-policies`: 보험 계약 생성, 수정, 비활성화, 삭제
+- `liabilities`: 부채 계약 생성/수정/보관, 상환 일정 생성/수정, 현재 운영월 계획 항목/수집 거래 생성, 상환 전표 확정 시 원금/이자 분리
 - `vehicles`: 차량 기본 정보, 연료 이력, 정비 이력, 운영 요약, 연료/정비 이력 저장 시 선택적 수집 거래 생성/동기화
 
 ### 월 운영과 공식 보고
@@ -149,6 +151,7 @@
 ## 현재 범위 밖으로 남겨 둔 것
 
 - 자금수단 `type` 변경과 잔액 직접 수정은 현재 범위에 없습니다. 자금수단 삭제는 거래/전표/계획/반복/보험/업로드/이월/차량 기본값 참조가 없는 깨끗한 항목에만 허용합니다.
+- 부채 관리는 1차 범위에서 수동 상환 일정과 계획 항목 연결을 지원합니다. 실시간 은행 대출 API 연동, 자동 변동금리 재계산, 외화 차입, 유효이자율 상각표는 아직 범위에 없습니다.
 - 차량 연료/정비 이력은 차량 화면에서 삭제할 수 있습니다. 연결 수집거래가 없으면 로그만 삭제하고, 미확정 연결 수집거래가 있으면 같은 작업에서 함께 정리합니다. 이미 전표 확정/정정/잠금된 연결 수집거래가 있으면 차량 이력 수정/삭제는 차단하고, 회계 조정은 기존 전표 반전/정정 흐름으로 처리합니다.
 - PM2, NSSM, IIS, systemd 같은 프로세스 관리자 설정은 저장소 안에 포함하지 않습니다.
 - 외부 감사 저장소나 중앙 로그 수집기는 아직 연결하지 않았습니다.

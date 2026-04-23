@@ -8,6 +8,7 @@ import type {
 import {
   CollectedTransactionStatus,
   ImportBatchCollectionJobStatus,
+  LiabilityRepaymentScheduleStatus,
   PlanItemStatus
 } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../../../common/auth/required-workspace.util';
@@ -118,6 +119,7 @@ export class CancelImportBatchCollectionUseCase {
       ];
 
       let restoredPlanItemCount = 0;
+      let restoredLiabilityRepaymentScheduleCount = 0;
       if (matchedPlanItemIds.length > 0) {
         const restored = await tx.planItem.updateMany({
           where: {
@@ -132,6 +134,22 @@ export class CancelImportBatchCollectionUseCase {
           }
         });
         restoredPlanItemCount = restored.count;
+
+        const restoredRepayments =
+          await tx.liabilityRepaymentSchedule.updateMany({
+            where: {
+              linkedPlanItemId: {
+                in: matchedPlanItemIds
+              },
+              tenantId: workspace.tenantId,
+              ledgerId: workspace.ledgerId,
+              status: LiabilityRepaymentScheduleStatus.MATCHED
+            },
+            data: {
+              status: LiabilityRepaymentScheduleStatus.PLANNED
+            }
+          });
+        restoredLiabilityRepaymentScheduleCount = restoredRepayments.count;
       }
 
       let cancelledTransactionCount = 0;
@@ -161,7 +179,8 @@ export class CancelImportBatchCollectionUseCase {
       return {
         importBatchId,
         cancelledTransactionCount,
-        restoredPlanItemCount
+        restoredPlanItemCount,
+        restoredLiabilityRepaymentScheduleCount
       };
     });
   }

@@ -97,10 +97,12 @@
   지원 문맥 설정/해제, 세션 기준 current workspace 반영, 일반 사용자 접근 차단을 검증
 - 전체 관리자 `GET /admin/operations/status`, `GET /admin/security-threats`
   운영 상태 요약, 최근 실패/거부 감사 이벤트, 최근 보안 위협 로그 조회와 권한 거부를 검증
-- `GET /funding-accounts`, `GET /categories`, `GET /account-subjects`, `GET /ledger-transaction-types`, `GET /insurance-policies`, `GET /vehicles`, `GET /vehicles/operating-summary`
+- `GET /funding-accounts`, `GET /categories`, `GET /account-subjects`, `GET /ledger-transaction-types`, `GET /insurance-policies`, `GET /liabilities`, `GET /liabilities/overview`, `GET /vehicles`, `GET /vehicles/operating-summary`
   현재 workspace/ledger 기준 활성 참조 데이터와 운영 보조 자산 데이터만 반환하는지 검증
 - `GET /insurance-policies?includeInactive=true`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`
   Owner/Manager 전용 보험 계약 생성, 수정, 비활성화/재활성화와 workspace 범위 접근통제를 검증
+- `POST /liabilities`, `PATCH /liabilities/:id`, `POST /liabilities/:id/archive`, `GET /liabilities/:id/repayments`, `POST /liabilities/:id/repayments`, `PATCH /liabilities/:id/repayments/:repaymentId`, `POST /liabilities/:id/repayments/:repaymentId/generate-plan-item`
+  Owner/Manager/Editor 부채 계약·상환 일정 관리, 현재 운영월 계획 항목/수집 거래 생성, 상환 확정 시 원금/이자 분리 전표 경계를 검증
 - `POST /vehicles`, `PATCH /vehicles/:id`
   Owner/Manager 전용 차량 기본 정보 생성, 수정과 workspace 범위 접근통제를 검증
 - `GET /vehicles/fuel-logs`, `POST /vehicles/:id/fuel-logs`, `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`
@@ -135,7 +137,7 @@
 - `POST /import-batches/:id/rows/collect`, `GET /import-batches/:id/collection-jobs/active`, `GET /import-batches/:id/collection-jobs/:jobId`, `POST /import-batches/:id/collection-jobs/:jobId/cancel`
   선택 행 또는 등록 가능 행 전체의 일괄 등록 Job 생성, 입출금 방향 기반 수입/지출/취소 유형 추론, 거래유형별 카테고리/메모 적용, 운영월 자동 생성 사유별 결과 메시지, 진행률/행별 결과 조회, 일괄 등록 Job 중단 요청, 같은 workspace 내 동시 일괄 등록 잠금과 단건 등록 충돌 보호를 검증
 - 계획 항목 generate use case
-  최신 진행월 밖 생성 차단, `periodId + recurringRuleId + plannedDate` DB unique 경합을 `skip`으로 해석하고 `createdCount/skippedExistingCount`가 실제 commit 결과와 맞는지 검증
+  최신 진행월 밖 생성 차단, `periodId + recurringRuleId + plannedDate` DB unique 경합을 `skip`으로 해석하고 `createdCount/skippedExistingCount`가 실제 commit 결과와 맞는지 검증하며, 운영월 부채 상환 예정도 계획 항목과 전표 준비 수집 거래로 연결되는지 확인
 - `POST /financial-statements/generate`, `GET /financial-statements`
   잠금 기간 공식 snapshot 생성/조회와 비교 view 조합을 검증
 - `POST /carry-forwards/generate`, `GET /carry-forwards`

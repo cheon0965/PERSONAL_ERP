@@ -4,6 +4,7 @@ import { createAdminPrismaMock } from './request-api.test-prisma-mock-admin';
 import { createAssetsPrismaMock } from './request-api.test-prisma-mock-assets';
 import { createAuthPrismaMock } from './request-api.test-prisma-mock-auth';
 import { createImportsPrismaMock } from './request-api.test-prisma-mock-imports';
+import { createLiabilitiesPrismaMock } from './request-api.test-prisma-mock-liabilities';
 import { createNavigationPrismaMock } from './request-api.test-prisma-mock-navigation';
 import { createOperationsPrismaMock } from './request-api.test-prisma-mock-operations';
 import { createPlanItemsPrismaMock } from './request-api.test-prisma-mock-plan-items';
@@ -91,6 +92,7 @@ export function createPrismaMock(
     ...createAdminPrismaMock(context),
     ...createNavigationPrismaMock(context),
     ...createImportsPrismaMock(context),
+    ...createLiabilitiesPrismaMock(context),
     ...createOperationsPrismaMock(context),
     ...createPlanItemsPrismaMock(context),
     ...createAccountingPeriodsPrismaMock(context),

@@ -6,6 +6,7 @@ import {
   AccountingPeriodStatus,
   CollectedTransactionStatus,
   CategoryKind,
+  LiabilityRepaymentScheduleStatus,
   PlanItemStatus,
   Prisma
 } from '@prisma/client';
@@ -426,6 +427,21 @@ function createPlanItemTestState(input: {
     plannedDate: Date;
     status: PlanItemStatus;
   }>;
+  liabilityRepaymentSchedules?: Array<{
+    id: string;
+    liabilityAgreementId: string;
+    dueDate: Date;
+    totalAmount: number;
+    status: LiabilityRepaymentScheduleStatus;
+    linkedPlanItemId: string | null;
+    agreement: {
+      lenderName: string;
+      productName: string;
+      defaultFundingAccountId: string;
+      interestExpenseCategoryId: string | null;
+      feeExpenseCategoryId: string | null;
+    };
+  }>;
 }) {
   const accounts = Array.from(
     new Map(
@@ -459,6 +475,7 @@ function createPlanItemTestState(input: {
   return {
     recurringRules: input.recurringRules,
     planItems: [...input.planItems],
+    liabilityRepaymentSchedules: [...(input.liabilityRepaymentSchedules ?? [])],
     collectedTransactions: [] as Array<{
       id: string;
       matchedPlanItemId: string | null;
@@ -569,7 +586,8 @@ function createPrismaMock(
                     status: matchedCollectedTransaction.status
                   }
                 : null,
-              postedJournalEntry: null
+              postedJournalEntry: null,
+              linkedLiabilityRepayment: null
             };
           })
           .sort(
@@ -635,6 +653,31 @@ function createPrismaMock(
         return {
           id: createdPlanItemId
         };
+      }
+    },
+    liabilityRepaymentSchedule: {
+      findMany: async () => state.liabilityRepaymentSchedules,
+      update: async (args: {
+        where: {
+          id: string;
+        };
+        data: {
+          linkedPlanItemId?: string;
+          status?: LiabilityRepaymentScheduleStatus;
+        };
+      }) => {
+        const target = state.liabilityRepaymentSchedules.find(
+          (schedule) => schedule.id === args.where.id
+        );
+
+        if (!target) {
+          throw new Error(
+            `Missing liability repayment schedule: ${args.where.id}`
+          );
+        }
+
+        Object.assign(target, args.data);
+        return target;
       }
     }
   };

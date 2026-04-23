@@ -57,8 +57,9 @@ export function CollectImportedRowDialog({
   onSubmit: () => Promise<void>;
 }) {
   const selectedFundingAccount =
-    fundingAccounts.find((account) => account.id === collectForm.fundingAccountId) ??
-    null;
+    fundingAccounts.find(
+      (account) => account.id === collectForm.fundingAccountId
+    ) ?? null;
 
   return (
     <FormDrawer
@@ -103,6 +104,12 @@ export function CollectImportedRowDialog({
               {selectedRow.parseError}
             </Alert>
           ) : null}
+          {selectedRow.parseStatus === 'PARSED' &&
+          !selectedRow.isCurrentPeriodRow ? (
+            <Alert severity="warning" variant="outlined">
+              현재 운영월 범위 밖의 업로드 행은 수집 거래로 등록할 수 없습니다.
+            </Alert>
+          ) : null}
           <TextField
             select
             label="거래 유형"
@@ -142,9 +149,8 @@ export function CollectImportedRowDialog({
           </TextField>
           {selectedFundingAccount?.bootstrapStatus === 'PENDING' ? (
             <Alert severity="info" variant="outlined">
-              선택한 신규 계좌/카드는 기초 업로드 대기 상태입니다.
-              등록 가능 여부와 운영월 자동 생성 사유는 자동 판정 요약에서
-              확인합니다.
+              선택한 신규 계좌/카드는 기초 업로드 대기 상태입니다. 등록 가능
+              여부와 운영월 자동 생성 사유는 자동 판정 요약에서 확인합니다.
             </Alert>
           ) : null}
           <TextField
@@ -200,8 +206,7 @@ export function CollectImportedRowDialog({
                 <CollectPreviewSummary preview={collectPreview.data} />
               ) : (
                 <Typography variant="body2" color="text.secondary">
-                  거래 유형과 자금수단을 선택하면 자동 판정 결과를
-                  표시합니다.
+                  거래 유형과 자금수단을 선택하면 자동 판정 결과를 표시합니다.
                 </Typography>
               )}
             </Stack>

@@ -31,6 +31,12 @@ export type WorkspaceAction =
   | 'insurance_policy.create'
   | 'insurance_policy.update'
   | 'insurance_policy.delete'
+  | 'liability_agreement.create'
+  | 'liability_agreement.update'
+  | 'liability_agreement.archive'
+  | 'liability_repayment.create'
+  | 'liability_repayment.update'
+  | 'liability_repayment.generate_plan_item'
   | 'vehicle.create'
   | 'vehicle.update'
   | 'vehicle_fuel.create'
@@ -89,6 +95,12 @@ const workspaceActionAllowedRoles: Record<
   'insurance_policy.create': ['OWNER', 'MANAGER'],
   'insurance_policy.update': ['OWNER', 'MANAGER'],
   'insurance_policy.delete': ['OWNER', 'MANAGER'],
+  'liability_agreement.create': ['OWNER', 'MANAGER', 'EDITOR'],
+  'liability_agreement.update': ['OWNER', 'MANAGER', 'EDITOR'],
+  'liability_agreement.archive': ['OWNER', 'MANAGER', 'EDITOR'],
+  'liability_repayment.create': ['OWNER', 'MANAGER', 'EDITOR'],
+  'liability_repayment.update': ['OWNER', 'MANAGER', 'EDITOR'],
+  'liability_repayment.generate_plan_item': ['OWNER', 'MANAGER', 'EDITOR'],
   'vehicle.create': ['OWNER', 'MANAGER'],
   'vehicle.update': ['OWNER', 'MANAGER'],
   'vehicle_fuel.create': ['OWNER', 'MANAGER'],
@@ -164,6 +176,18 @@ const workspaceActionDeniedMessages: Record<WorkspaceAction, string> = {
     'Only owners and managers can update insurance policies.',
   'insurance_policy.delete':
     'Only owners and managers can delete insurance policies.',
+  'liability_agreement.create':
+    'Only owners, managers, and editors can create liability agreements.',
+  'liability_agreement.update':
+    'Only owners, managers, and editors can update liability agreements.',
+  'liability_agreement.archive':
+    'Only owners, managers, and editors can archive liability agreements.',
+  'liability_repayment.create':
+    'Only owners, managers, and editors can create liability repayment schedules.',
+  'liability_repayment.update':
+    'Only owners, managers, and editors can update liability repayment schedules.',
+  'liability_repayment.generate_plan_item':
+    'Only owners, managers, and editors can generate liability repayment plan items.',
   'vehicle.create': 'Only owners and managers can create vehicles.',
   'vehicle.update': 'Only owners and managers can update vehicles.',
   'vehicle_fuel.create':

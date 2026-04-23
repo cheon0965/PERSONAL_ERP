@@ -7,6 +7,7 @@ import {
   ImportBatchCollectionJobStatus,
   ImportBatchParseStatus,
   ImportSourceKind,
+  LiabilityRepaymentScheduleStatus,
   PlanItemStatus,
   TransactionType
 } from '@prisma/client';
@@ -188,6 +189,110 @@ test('POST /import-batches/:id/rows/collect bulk-collects selected rows and infe
         (candidate) => candidate.id === 'ctx-5'
       )?.ledgerTransactionTypeId,
       'ltt-1-expense'
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /import-batches/:id/rows/collect queues only current operating month rows when mixed-period rows are selected', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    pushOpenCollectingPeriod(context, {
+      id: 'period-current-upload',
+      year: 2026,
+      month: 3,
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-01T00:00:00.000Z')
+    });
+    pushImportBatch(context, {
+      id: 'import-batch-current-period-only',
+      sourceKind: ImportSourceKind.IM_BANK_PDF,
+      fileName: 'mixed-months.pdf',
+      fileHash: 'hash-current-period-only',
+      fundingAccountId: 'acc-1',
+      rowCount: 2,
+      parseStatus: ImportBatchParseStatus.COMPLETED
+    });
+    pushImportedRow(context, {
+      id: 'imported-row-current-period',
+      batchId: 'import-batch-current-period-only',
+      rowNumber: 1,
+      occurredOn: '2026-03-12',
+      title: '현재 운영월 출금',
+      amount: 17_000,
+      sourceFingerprint: buildImportRowFingerprint({
+        sourceKind: ImportSourceKind.IM_BANK_PDF,
+        occurredOn: '2026-03-12',
+        amount: 17_000,
+        title: '현재 운영월 출금'
+      }),
+      parsed: {
+        occurredOn: '2026-03-12',
+        title: '현재 운영월 출금',
+        amount: 17_000,
+        direction: 'WITHDRAWAL',
+        balanceAfter: 233_000
+      }
+    });
+    pushImportedRow(context, {
+      id: 'imported-row-past-period',
+      batchId: 'import-batch-current-period-only',
+      rowNumber: 2,
+      occurredOn: '2026-02-28',
+      title: '이전월 출금',
+      amount: 9_000,
+      sourceFingerprint: buildImportRowFingerprint({
+        sourceKind: ImportSourceKind.IM_BANK_PDF,
+        occurredOn: '2026-02-28',
+        amount: 9_000,
+        title: '이전월 출금'
+      }),
+      parsed: {
+        occurredOn: '2026-02-28',
+        title: '이전월 출금',
+        amount: 9_000,
+        direction: 'WITHDRAWAL',
+        balanceAfter: 242_000
+      }
+    });
+
+    const response = await context.request(
+      '/import-batches/import-batch-current-period-only/rows/collect',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          rowIds: ['imported-row-current-period', 'imported-row-past-period'],
+          fundingAccountId: 'acc-1'
+        }
+      }
+    );
+
+    assert.equal(response.status, 202);
+    const startedJob = response.body as ImportBatchCollectionJobItem;
+    assert.equal(startedJob.requestedRowCount, 1);
+
+    const completedJob = await readCollectionJobUntilDone(
+      context,
+      'import-batch-current-period-only',
+      startedJob.id
+    );
+    assert.equal(completedJob.status, 'SUCCEEDED');
+    assert.equal(completedJob.processedRowCount, 1);
+    assert.equal(completedJob.succeededCount, 1);
+    assert.equal(completedJob.failedCount, 0);
+    assert.deepEqual(
+      completedJob.results.map((result) => result.importedRowId),
+      ['imported-row-current-period']
+    );
+    assert.equal(
+      context.state.collectedTransactions.some(
+        (transaction) =>
+          transaction.importedRowId === 'imported-row-past-period'
+      ),
+      false
     );
   } finally {
     await context.close();
@@ -721,6 +826,23 @@ test('POST /import-batches/:id/cancel-collection cancels unposted collected tran
       periodId: 'period-open-cancel-collection',
       status: PlanItemStatus.MATCHED
     });
+    context.state.liabilityRepaymentSchedules.push({
+      id: 'liability-repayment-cancel-collection',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      liabilityAgreementId: 'liability-agreement-cancel-collection',
+      dueDate: new Date('2026-03-11T00:00:00.000Z'),
+      principalAmount: 18_000,
+      interestAmount: 1_800,
+      feeAmount: 0,
+      totalAmount: 19_800,
+      status: LiabilityRepaymentScheduleStatus.MATCHED,
+      linkedPlanItemId: 'plan-item-cancel-collection',
+      postedJournalEntryId: null,
+      memo: null,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
     pushCollectedTransaction(context, {
       id: 'ctx-cancel-collection-1',
       periodId: 'period-open-cancel-collection',
@@ -750,7 +872,8 @@ test('POST /import-batches/:id/cancel-collection cancels unposted collected tran
     assert.deepEqual(response.body, {
       importBatchId: 'import-batch-cancel-collection',
       cancelledTransactionCount: 2,
-      restoredPlanItemCount: 1
+      restoredPlanItemCount: 1,
+      restoredLiabilityRepaymentScheduleCount: 1
     });
     assert.equal(
       context.state.collectedTransactions.some((candidate) =>
@@ -765,6 +888,12 @@ test('POST /import-batches/:id/cancel-collection cancels unposted collected tran
         (candidate) => candidate.id === 'plan-item-cancel-collection'
       )?.status,
       PlanItemStatus.DRAFT
+    );
+    assert.equal(
+      context.state.liabilityRepaymentSchedules.find(
+        (candidate) => candidate.id === 'liability-repayment-cancel-collection'
+      )?.status,
+      LiabilityRepaymentScheduleStatus.PLANNED
     );
     assert.ok(
       context.state.importBatches.some(

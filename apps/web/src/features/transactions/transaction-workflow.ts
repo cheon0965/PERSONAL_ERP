@@ -29,6 +29,7 @@ export function canEditCollectedTransaction(
 ): boolean {
   return (
     transaction.sourceKind !== 'VEHICLE_LOG' &&
+    transaction.sourceKind !== 'LIABILITY_REPAYMENT' &&
     transaction.postedJournalEntryId == null &&
     isEditableCollectedTransactionStatus(transaction.postingStatus)
   );

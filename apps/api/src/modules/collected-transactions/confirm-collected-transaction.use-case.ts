@@ -180,6 +180,10 @@ export class ConfirmCollectedTransactionUseCase {
         await ctx.markMatchedPlanItemConfirmed(
           latestCollectedTransaction.matchedPlanItemId
         );
+        await ctx.markMatchedLiabilityRepaymentPosted(
+          latestCollectedTransaction.matchedPlanItemId,
+          created.id
+        );
 
         return created;
       }

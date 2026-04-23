@@ -8,6 +8,7 @@ import {
 import type { CollectImportedRowRequest } from '@personal-erp/contracts';
 import {
   CollectedTransactionStatus,
+  LiabilityRepaymentScheduleStatus,
   PlanItemStatus,
   Prisma
 } from '@prisma/client';
@@ -439,6 +440,20 @@ export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
       },
       data: {
         status: PlanItemStatus.MATCHED
+      }
+    });
+    await tx.liabilityRepaymentSchedule.updateMany({
+      where: {
+        linkedPlanItemId: matchedPlanItemId,
+        status: {
+          in: [
+            LiabilityRepaymentScheduleStatus.SCHEDULED,
+            LiabilityRepaymentScheduleStatus.PLANNED
+          ]
+        }
+      },
+      data: {
+        status: LiabilityRepaymentScheduleStatus.MATCHED
       }
     });
   }

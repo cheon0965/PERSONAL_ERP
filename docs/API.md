@@ -94,10 +94,10 @@
 - 관리자 범위는 현재 workspace의 멤버 목록/초대/역할·상태 관리, DB 메뉴 트리/메뉴 권한 관리, workspace 감사 로그 조회, 권한 정책 요약까지 포함합니다. `INITIAL_ADMIN_*`로 시드된 전역 관리자는 일반 사업장 관리자와 분리되어 전체 사용자 관리, 사업장 관리, 사업장 전환/지원 문맥, 운영 상태 점검, 보안 위협 로그, 전체 멤버십 역할·상태 관리를 수행할 수 있습니다.
 - 내비게이션 범위는 현재 workspace의 DB 메뉴 트리를 현재 멤버 역할 기준으로 필터링해 반환하는 `navigation/tree`까지 포함합니다.
 - 운영 지원 범위는 체크리스트, 예외 처리함, 월 마감 대시보드, 업로드 운영 현황, 시스템 상태, 알림 센터, 수동 CSV 반출, 운영 메모까지 포함합니다.
-- 기준/참조 범위는 조회 `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`, `vehicles/operating-summary`, `vehicles/fuel-logs`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/차량 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `DELETE /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `DELETE /insurance-policies/:id`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/fuel-logs`, `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `DELETE /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`, `DELETE /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
+- 기준/참조 범위는 조회 `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `liabilities`, `vehicles`, `vehicles/operating-summary`, `vehicles/fuel-logs`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/부채 계약/차량 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `DELETE /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `DELETE /insurance-policies/:id`, `POST /liabilities`, `PATCH /liabilities/:id`, `POST /liabilities/:id/archive`, `POST /liabilities/:id/repayments`, `PATCH /liabilities/:id/repayments/:repaymentId`, `POST /liabilities/:id/repayments/:repaymentId/generate-plan-item`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/fuel-logs`, `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `DELETE /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`, `DELETE /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
 - 운영/원장 조회 범위는 `accounting-periods`, `collected-transactions`, `journal-entries`, `plan-items`, `financial-statements`, `carry-forwards`, `import-batches`까지 포함합니다.
 - 집계/보고 조회 범위는 `dashboard/summary`, `forecast/monthly`까지 포함합니다.
-- 현재 쓰기/명령 범위는 `funding-accounts`, `categories`, `insurance-policies`, `vehicles`, `vehicle fuel logs`, `vehicle maintenance logs`, `accounting-periods`, `collected-transactions`, `recurring-rules`, `plan-items`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`까지 확장되어 있습니다.
+- 현재 쓰기/명령 범위는 `funding-accounts`, `categories`, `insurance-policies`, `liabilities`, `vehicles`, `vehicle fuel logs`, `vehicle maintenance logs`, `accounting-periods`, `collected-transactions`, `recurring-rules`, `plan-items`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`까지 확장되어 있습니다.
 - 즉, 현재 저장소의 API surface는 초기 reference-data/transactions 수준을 넘어 기준 데이터, 보험/차량 운영 기준, 반복 계획, 수집, 업로드 배치, 전표, 공식 보고, 차기 이월, 기간 전망까지 포함합니다.
 
 ## 보호 엔드포인트
@@ -154,6 +154,15 @@
 - `POST /insurance-policies`
 - `PATCH /insurance-policies/:id`
 - `DELETE /insurance-policies/:id`
+- `GET /liabilities`
+- `GET /liabilities/overview`
+- `POST /liabilities`
+- `PATCH /liabilities/:id`
+- `POST /liabilities/:id/archive`
+- `GET /liabilities/:id/repayments`
+- `POST /liabilities/:id/repayments`
+- `PATCH /liabilities/:id/repayments/:repaymentId`
+- `POST /liabilities/:id/repayments/:repaymentId/generate-plan-item`
 - `GET /vehicles`
 - `GET /vehicles/operating-summary`
 - `GET /vehicles/fuel-logs`
@@ -281,6 +290,7 @@
 - Web `/carry-forwards` -> API `/carry-forwards`
 - Web `/carry-forwards/[periodId]` -> API `GET /carry-forwards?fromPeriodId=<id>`, `POST /carry-forwards/generate`
 - Web `/insurances` -> API `/insurance-policies`
+- Web `/liabilities` -> API `GET /liabilities`, `GET /liabilities/overview`, `POST /liabilities`, `PATCH /liabilities/:id`, `POST /liabilities/:id/archive`, `GET /liabilities/:id/repayments`, `POST /liabilities/:id/repayments`, `PATCH /liabilities/:id/repayments/:repaymentId`, `POST /liabilities/:id/repayments/:repaymentId/generate-plan-item`
 - Web `/vehicles` -> API `/vehicles`
 - Web `/vehicles/fleet` -> API `GET /vehicles`, `POST /vehicles`, `PATCH /vehicles/:id`
 - Web `/vehicles/fuel` -> API `GET /vehicles/fuel-logs`, `POST /vehicles/:id/fuel-logs`, `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `DELETE /vehicles/:vehicleId/fuel-logs/:fuelLogId`
@@ -544,6 +554,61 @@
 - 계약: response body 없음 (`204 No Content`)
 - 현재 작업 문맥의 Owner/Manager만 보험 계약을 삭제할 수 있습니다.
 - 현재 구현은 보험 계약과 연결된 반복 규칙이 있으면 함께 삭제해 이후 자동 생성 기준에서도 제거합니다.
+
+### `GET /liabilities`
+
+- 계약: response `LiabilityAgreementItem[]`
+- 현재 작업 문맥 기준 부채 계약을 반환합니다.
+- 기본 응답은 보관 계약을 제외하고, `?includeArchived=true`를 주면 보관 계약까지 함께 반환합니다.
+
+### `GET /liabilities/overview`
+
+- 계약: response `LiabilityOverviewResponse`
+- 현재 작업 문맥의 활성/비보관 부채 계약, 남은 원금 추정치, 최신 진행월 상환 예정액, 다음 상환일을 요약합니다.
+- 이 값은 운영 보조 read model이며, 공식 부채 잔액은 전표와 재무제표 경계에서 확정됩니다.
+
+### `POST /liabilities`
+
+- 계약: `CreateLiabilityAgreementRequest -> LiabilityAgreementItem`
+- 현재 작업 문맥의 Owner/Manager/Editor가 새 부채 계약을 생성할 수 있습니다.
+- 대출 기관, 상품명, 원금, 실행일, 만기일, 금리, 상환 방식, 기본 출금 자금수단, 부채 계정과목, 이자/수수료 카테고리를 관리합니다.
+- 같은 장부 안의 금융기관/상품명 조합은 normalized key 기준으로 중복을 막습니다.
+
+### `PATCH /liabilities/:id`
+
+- 계약: `UpdateLiabilityAgreementRequest -> LiabilityAgreementItem`
+- 현재 작업 문맥의 Owner/Manager/Editor가 부채 계약 기준 필드를 수정할 수 있습니다.
+- 이미 생성된 상환 일정이나 확정 전표는 이 계약 수정으로 소급 삭제하지 않습니다.
+
+### `POST /liabilities/:id/archive`
+
+- 계약: response `LiabilityAgreementItem`
+- 부채 계약을 물리 삭제하지 않고 `ARCHIVED` 상태로 전환합니다.
+- 보관된 계약은 이후 월별 계획 항목 자동 생성 대상에서 제외됩니다.
+
+### `GET /liabilities/:id/repayments`
+
+- 계약: response `LiabilityRepaymentScheduleItem[]`
+- 선택한 부채 계약의 상환 일정을 예정일 오름차순으로 반환합니다.
+- 응답에는 연결 계획 항목, 매칭 수집 거래, 확정 전표 요약이 함께 포함됩니다.
+
+### `POST /liabilities/:id/repayments`
+
+- 계약: `CreateLiabilityRepaymentScheduleRequest -> LiabilityRepaymentScheduleItem`
+- 원금 상환액, 이자, 수수료, 예정일을 입력해 상환 일정을 추가합니다.
+- 총액은 원금+이자+수수료 합계로 계산하며, 하나 이상의 금액은 0보다 커야 합니다.
+
+### `PATCH /liabilities/:id/repayments/:repaymentId`
+
+- 계약: `UpdateLiabilityRepaymentScheduleRequest -> LiabilityRepaymentScheduleItem`
+- 아직 계획 항목과 연결되지 않았고 전표 확정되지 않은 상환 일정만 수정할 수 있습니다.
+- 이미 전표 확정된 일정은 수정을 차단하고, 회계 조정은 전표 반전/정정 흐름을 사용합니다.
+
+### `POST /liabilities/:id/repayments/:repaymentId/generate-plan-item`
+
+- 계약: response `GenerateLiabilityPlanItemResponse`
+- 상환 예정일이 최신 진행월 범위 안이면 계획 항목과 전표 준비 수집 거래를 함께 생성합니다.
+- 이후 수집 거래 확정 시 원금 상환은 부채 차변, 이자/수수료는 비용 차변, 출금 자금수단은 자산 대변으로 분리됩니다.
 
 ### `GET /vehicles`
 
@@ -834,11 +899,11 @@
 
 ## 현재 구현 흐름
 
-### `reference-data -> accounting-periods -> insurance/vehicles -> recurring-rules -> plan-items -> collected-transactions/imports -> journal-entries -> financial-statements -> carry-forwards -> forecast`
+### `reference-data -> accounting-periods -> insurance/liabilities/vehicles -> recurring-rules -> plan-items -> collected-transactions/imports -> journal-entries -> financial-statements -> carry-forwards -> forecast`
 
 1. `GET /reference-data/readiness`, `POST /funding-accounts`, `POST /categories`로 기준 데이터 준비 상태를 확인하고 필요한 자금수단/카테고리를 정리합니다.
 2. `POST /accounting-periods`로 운영 기간을 엽니다. 다음 월은 최근 월을 마감한 뒤 열며, 운영 중에는 하나의 최신 진행월만 열어 둡니다.
-3. `POST /insurance-policies`, `POST /vehicles`, `POST /vehicles/:id/fuel-logs`, `POST /vehicles/:id/maintenance-logs`로 보험 계약과 차량 운영 기준을 정리합니다. 차량 연료/정비 저장 시 회계 연동을 켜면 같은 요청에서 표준 수집 거래를 함께 생성합니다.
+3. `POST /insurance-policies`, `POST /liabilities`, `POST /liabilities/:id/repayments`, `POST /vehicles`, `POST /vehicles/:id/fuel-logs`, `POST /vehicles/:id/maintenance-logs`로 보험 계약, 부채 상환 기준, 차량 운영 기준을 정리합니다. 부채 상환 일정은 계획 항목/수집 거래로 연결하고, 차량 연료/정비 저장 시 회계 연동을 켜면 같은 요청에서 표준 수집 거래를 함께 생성합니다.
 4. `POST /recurring-rules`와 `POST /plan-items/generate`로 반복 규칙을 현재 월 계획 항목으로 펼치고, 계획 기반 수집 거래까지 생성합니다.
 5. `POST /collected-transactions` 또는 `POST /import-batches/:id/rows/:rowId/collect`로 최신 진행월 범위의 수집 거래를 만들거나 업로드 행을 계획 기반 수집 거래에 흡수/매칭합니다.
 6. 필요하면 `GET/PATCH/DELETE /collected-transactions/:id`로 미확정(`COLLECTED`, `REVIEWED`, `READY_TO_POST`) 수집 거래를 상세 조회, 수정, 삭제합니다. 단, 차량 연료/정비 화면에서 생성된 연결 수집거래는 차량 화면에서만 수정하거나 연결 해제합니다.
@@ -866,7 +931,7 @@
 - 모든 보호 엔드포인트는 `user.currentWorkspace`에서 선택된 `tenantId`, `ledgerId`, `membershipId`, `membershipRole` 문맥을 기준으로 동작합니다.
 - 현재 구현은 단순 user-scoped 전단계가 아니라 workspace-scoped tenant/ledger 모델을 사용합니다.
 - 조회 엔드포인트는 인증된 workspace 범위 내 데이터만 반환합니다.
-- `insurance-policies`, `vehicles`도 개인 생활용 고정 데이터가 아니라 현재 workspace/ledger 기준 사업 운영 보조 자산 데이터만 반환합니다.
+- `insurance-policies`, `liabilities`, `vehicles`도 개인 생활용 고정 데이터가 아니라 현재 workspace/ledger 기준 사업 운영 보조 자산 데이터만 반환합니다.
 - 쓰기 권한은 workspace membership role로 제어합니다.
 - `OWNER`, `MANAGER`: `admin_member.read`
 - `OWNER`: `admin_member.invite`, `admin_member.update_role`, `admin_member.update_status`, `admin_member.remove`, `admin_audit_log.read`

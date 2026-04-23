@@ -105,8 +105,14 @@ export function ImportedRowsGrid({
       .filter((item) => item.count > 0);
   }, [rows]);
   const collectedCount = rows.filter((row) => row.collectionSummary).length;
-  const collectableCount = rows.filter(
-    (row) => row.parseStatus === 'PARSED' && !row.createdCollectedTransactionId
+  const collectableCount = rows.filter((row) =>
+    isImportedRowCollectable(row)
+  ).length;
+  const outsideCurrentPeriodCount = rows.filter(
+    (row) =>
+      row.parseStatus === 'PARSED' &&
+      !row.createdCollectedTransactionId &&
+      !row.isCurrentPeriodRow
   ).length;
   const rowSelectionModel = React.useMemo<GridRowSelectionModel>(
     () => ({
@@ -196,7 +202,8 @@ export function ImportedRowsGrid({
         )
       : 0;
   const canCancelBulkCollectJob =
-    bulkCollectJob?.status === 'PENDING' || bulkCollectJob?.status === 'RUNNING';
+    bulkCollectJob?.status === 'PENDING' ||
+    bulkCollectJob?.status === 'RUNNING';
 
   function handleRowSelectionModelChange(model: GridRowSelectionModel) {
     if (model.type === 'exclude') {
@@ -263,6 +270,14 @@ export function ImportedRowsGrid({
                   color="primary"
                   variant="outlined"
                 />
+                {outsideCurrentPeriodCount > 0 ? (
+                  <Chip
+                    label={`운영월 밖 ${outsideCurrentPeriodCount}건`}
+                    size="small"
+                    color="warning"
+                    variant="outlined"
+                  />
+                ) : null}
                 <Chip
                   label={`연결 완료 ${collectedCount}건`}
                   size="small"
@@ -439,9 +454,9 @@ export function ImportedRowsGrid({
                     </Typography>
                   )}
                   <Typography variant="body2" color="text.secondary">
-                    읽기 완료이면서 아직 연결되지 않은 행만 선택할 수 있습니다.
-                    거래유형별 적용값은 해당 유형 행에 기본 카테고리와 메모보다
-                    먼저 반영됩니다.
+                    읽기 완료, 미연결, 현재 운영월 범위에 있는 행만 선택할 수
+                    있습니다. 거래유형별 적용값은 해당 유형 행에 기본 카테고리와
+                    메모보다 먼저 반영됩니다.
                   </Typography>
                 </Stack>
                 <Collapse in={isTypeOverridesOpen} unmountOnExit>
@@ -567,7 +582,7 @@ export function ImportedRowsGrid({
               >
                 <Typography variant="body2" color="text.secondary">
                   선택한 행이 있으면 그 범위에만 적용하고, 선택이 없으면 현재
-                  배치의 등록 가능 행 전체를 대상으로 처리합니다.
+                  배치의 현재 운영월 등록 가능 행 전체를 대상으로 처리합니다.
                 </Typography>
                 <Button
                   variant="contained"
@@ -645,7 +660,11 @@ export function ImportedRowsGrid({
 }
 
 function isImportedRowCollectable(row: ImportedRowTableItem) {
-  return row.parseStatus === 'PARSED' && !row.createdCollectedTransactionId;
+  return (
+    row.parseStatus === 'PARSED' &&
+    !row.createdCollectedTransactionId &&
+    row.isCurrentPeriodRow
+  );
 }
 
 function resolveImportedRowBulkCollectType(
