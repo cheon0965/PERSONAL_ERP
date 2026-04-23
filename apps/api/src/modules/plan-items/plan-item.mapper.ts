@@ -35,6 +35,14 @@ type PlanItemRecord = {
     id: string;
     entryNumber: string;
   } | null;
+  linkedLiabilityRepayment: {
+    id: string;
+    liabilityAgreementId: string;
+    agreement: {
+      lenderName: string;
+      productName: string;
+    };
+  } | null;
 };
 
 export function mapPlanItemRecordToItem(record: PlanItemRecord): PlanItemItem {

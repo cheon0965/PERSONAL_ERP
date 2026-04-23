@@ -2,6 +2,7 @@ import { ConflictException, Injectable } from '@nestjs/common';
 import {
   CollectedTransactionStatus,
   JournalEntryStatus,
+  LiabilityRepaymentScheduleStatus,
   PlanItemStatus,
   Prisma
 } from '@prisma/client';
@@ -46,6 +47,25 @@ const confirmationCollectedTransactionInclude = {
       postingPolicyKey: true
     }
   },
+  matchedPlanItem: {
+    select: {
+      linkedLiabilityRepayment: {
+        select: {
+          id: true,
+          principalAmount: true,
+          interestAmount: true,
+          feeAmount: true,
+          totalAmount: true,
+          postedJournalEntryId: true,
+          agreement: {
+            select: {
+              liabilityAccountSubjectId: true
+            }
+          }
+        }
+      }
+    }
+  },
   importedRow: {
     select: {
       id: true,
@@ -75,6 +95,34 @@ function mapPrismaToConfirmationCollectedTransaction(
     amount: fromPrismaMoneyWon(record.amount as PrismaMoneyLike),
     status: record.status,
     matchedPlanItemId: record.matchedPlanItemId,
+    matchedLiabilityRepaymentSchedule: record.matchedPlanItem
+      ?.linkedLiabilityRepayment
+      ? {
+          id: record.matchedPlanItem.linkedLiabilityRepayment.id,
+          principalAmount: fromPrismaMoneyWon(
+            record.matchedPlanItem.linkedLiabilityRepayment
+              .principalAmount as PrismaMoneyLike
+          ),
+          interestAmount: fromPrismaMoneyWon(
+            record.matchedPlanItem.linkedLiabilityRepayment
+              .interestAmount as PrismaMoneyLike
+          ),
+          feeAmount: fromPrismaMoneyWon(
+            record.matchedPlanItem.linkedLiabilityRepayment
+              .feeAmount as PrismaMoneyLike
+          ),
+          totalAmount: fromPrismaMoneyWon(
+            record.matchedPlanItem.linkedLiabilityRepayment
+              .totalAmount as PrismaMoneyLike
+          ),
+          postedJournalEntryId:
+            record.matchedPlanItem.linkedLiabilityRepayment
+              .postedJournalEntryId,
+          liabilityAccountSubjectId:
+            record.matchedPlanItem.linkedLiabilityRepayment.agreement
+              .liabilityAccountSubjectId
+        }
+      : null,
     period: record.period
       ? {
           id: record.period.id,
@@ -371,6 +419,26 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
       },
       data: {
         status: PlanItemStatus.CONFIRMED
+      }
+    });
+  }
+
+  async markMatchedLiabilityRepaymentPosted(
+    matchedPlanItemId: string | null | undefined,
+    journalEntryId: string
+  ): Promise<void> {
+    if (!matchedPlanItemId) {
+      return;
+    }
+
+    await this.tx.liabilityRepaymentSchedule.updateMany({
+      where: {
+        linkedPlanItemId: matchedPlanItemId,
+        postedJournalEntryId: null
+      },
+      data: {
+        status: LiabilityRepaymentScheduleStatus.POSTED,
+        postedJournalEntryId: journalEntryId
       }
     });
   }

@@ -128,6 +128,7 @@ export type CancelImportBatchCollectionResponse = {
   importBatchId: string;
   cancelledTransactionCount: number;
   restoredPlanItemCount: number;
+  restoredLiabilityRepaymentScheduleCount?: number;
 };
 
 export type ImportBatchCollectionJobResultItem = {

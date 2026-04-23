@@ -9,6 +9,7 @@ import type {
   CollectedTransactionPostingStatus,
   CollectedTransactionSourceKind,
   CollectedTransactionType,
+  CollectedTransactionLiabilityRepaymentSource,
   CollectedTransactionVehicleLogSource
 } from '@personal-erp/contracts';
 import {
@@ -47,6 +48,14 @@ type CollectedTransactionRecord = {
   matchedPlanItemId: string | null;
   matchedPlanItem: {
     title: string;
+    linkedLiabilityRepayment: {
+      id: string;
+      liabilityAgreementId: string;
+      agreement: {
+        lenderName: string;
+        productName: string;
+      };
+    } | null;
   } | null;
   postedJournalEntry: {
     id: string;
@@ -179,6 +188,15 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
             select: {
               id: true
             }
+          },
+          matchedPlanItem: {
+            select: {
+              linkedLiabilityRepayment: {
+                select: {
+                  id: true
+                }
+              }
+            }
           }
         }
       });
@@ -189,7 +207,9 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
 
       assertCollectedTransactionCanBeManagedDirectly({
         linkedFuelLogId: current.linkedFuelLog?.id ?? null,
-        linkedMaintenanceLogId: current.linkedMaintenanceLog?.id ?? null
+        linkedMaintenanceLogId: current.linkedMaintenanceLog?.id ?? null,
+        linkedLiabilityRepaymentScheduleId:
+          current.matchedPlanItem?.linkedLiabilityRepayment?.id ?? null
       });
 
       assertCollectedTransactionCanBeUpdated({
@@ -310,6 +330,15 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
             select: {
               id: true
             }
+          },
+          matchedPlanItem: {
+            select: {
+              linkedLiabilityRepayment: {
+                select: {
+                  id: true
+                }
+              }
+            }
           }
         }
       });
@@ -320,7 +349,9 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
 
       assertCollectedTransactionCanBeManagedDirectly({
         linkedFuelLogId: current.linkedFuelLog?.id ?? null,
-        linkedMaintenanceLogId: current.linkedMaintenanceLog?.id ?? null
+        linkedMaintenanceLogId: current.linkedMaintenanceLog?.id ?? null,
+        linkedLiabilityRepaymentScheduleId:
+          current.matchedPlanItem?.linkedLiabilityRepayment?.id ?? null
       });
 
       assertCollectedTransactionCanBeDeleted({
@@ -414,7 +445,19 @@ function buildCollectedTransactionSelect() {
     matchedPlanItemId: true,
     matchedPlanItem: {
       select: {
-        title: true
+        title: true,
+        linkedLiabilityRepayment: {
+          select: {
+            id: true,
+            liabilityAgreementId: true,
+            agreement: {
+              select: {
+                lenderName: true,
+                productName: true
+              }
+            }
+          }
+        }
       }
     },
     postedJournalEntry: {
@@ -498,6 +541,7 @@ function mapCollectedTransactionRecordToStoredTransaction(
     postedJournalEntryId: transaction.postedJournalEntry?.id ?? null,
     postedJournalEntryNumber:
       transaction.postedJournalEntry?.entryNumber ?? null,
+    ...buildLiabilityRepaymentSourceFields(transaction),
     ...buildVehicleLogSourceFields(transaction)
   };
 }
@@ -536,9 +580,17 @@ function mapLedgerTransactionFlowKindToCollectedTransactionType(
 function mapCollectedTransactionSourceKind(
   transaction: Pick<
     CollectedTransactionRecord,
-    'importBatchId' | 'matchedPlanItemId' | 'linkedFuelLog' | 'linkedMaintenanceLog'
+    | 'importBatchId'
+    | 'matchedPlanItemId'
+    | 'matchedPlanItem'
+    | 'linkedFuelLog'
+    | 'linkedMaintenanceLog'
   >
 ): CollectedTransactionSourceKind {
+  if (transaction.matchedPlanItem?.linkedLiabilityRepayment) {
+    return 'LIABILITY_REPAYMENT';
+  }
+
   if (transaction.importBatchId) {
     return 'IMPORT';
   }
@@ -552,6 +604,31 @@ function mapCollectedTransactionSourceKind(
   }
 
   return 'MANUAL';
+}
+
+function buildLiabilityRepaymentSourceFields(
+  transaction: Pick<CollectedTransactionRecord, 'matchedPlanItem'>
+): {
+  sourceLiabilityRepayment?: CollectedTransactionLiabilityRepaymentSource;
+} {
+  const repayment = transaction.matchedPlanItem?.linkedLiabilityRepayment;
+
+  if (!repayment) {
+    return {};
+  }
+
+  return {
+    sourceLiabilityRepayment: {
+      repaymentScheduleId: repayment.id,
+      liabilityAgreementId: repayment.liabilityAgreementId,
+      liabilityAgreementTitle: [
+        repayment.agreement.lenderName,
+        repayment.agreement.productName
+      ]
+        .filter(Boolean)
+        .join(' ')
+    }
+  };
 }
 
 function buildVehicleLogSourceFields(
@@ -609,9 +686,20 @@ function mapCollectedTransactionPostingStatus(
 function assertCollectedTransactionCanBeManagedDirectly(input: {
   linkedFuelLogId: string | null;
   linkedMaintenanceLogId: string | null;
+  linkedLiabilityRepaymentScheduleId: string | null;
 }) {
-  if (!input.linkedFuelLogId && !input.linkedMaintenanceLogId) {
+  if (
+    !input.linkedFuelLogId &&
+    !input.linkedMaintenanceLogId &&
+    !input.linkedLiabilityRepaymentScheduleId
+  ) {
     return;
+  }
+
+  if (input.linkedLiabilityRepaymentScheduleId) {
+    throw new BadRequestException(
+      '부채 상환 예정에서 생성된 수집거래는 부채 관리 화면에서만 수정하거나 연결 상태를 확인할 수 있습니다.'
+    );
   }
 
   throw new BadRequestException(

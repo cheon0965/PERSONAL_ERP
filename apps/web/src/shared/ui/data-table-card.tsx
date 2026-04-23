@@ -18,6 +18,8 @@ type DataTableCardProps<T extends { id: string }> = {
   rows: T[];
   columns: GridColDef<T>[];
   height?: number;
+  rowHeight?: DataGridProps<T>['rowHeight'];
+  getRowHeight?: DataGridProps<T>['getRowHeight'];
   checkboxSelection?: boolean;
   rowSelectionModel?: GridRowSelectionModel;
   onRowSelectionModelChange?: DataGridProps<T>['onRowSelectionModelChange'];
@@ -32,6 +34,8 @@ export function DataTableCard<T extends { id: string }>({
   rows,
   columns,
   height = 440,
+  rowHeight,
+  getRowHeight,
   checkboxSelection = false,
   rowSelectionModel,
   onRowSelectionModelChange,
@@ -74,6 +78,8 @@ export function DataTableCard<T extends { id: string }>({
             <DataGrid
               rows={rows}
               columns={columns}
+              rowHeight={rowHeight}
+              getRowHeight={getRowHeight}
               pageSizeOptions={[5, 10, 20]}
               initialState={{
                 pagination: {

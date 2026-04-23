@@ -6,7 +6,11 @@ import type { RequestTestState } from './request-api.test-types';
 
 export function createRequestOperationsStateFixtures(): Pick<
   RequestTestState,
-  'collectedTransactions' | 'recurringRules' | 'planItems' | 'journalEntries'
+  | 'collectedTransactions'
+  | 'recurringRules'
+  | 'planItems'
+  | 'liabilityRepaymentSchedules'
+  | 'journalEntries'
 > {
   return {
     collectedTransactions: [
@@ -110,6 +114,7 @@ export function createRequestOperationsStateFixtures(): Pick<
       }
     ],
     planItems: [],
+    liabilityRepaymentSchedules: [],
     journalEntries: []
   };
 }

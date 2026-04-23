@@ -10,6 +10,7 @@ import {
   ImportedRowParseStatus,
   ImportSourceKind,
   LedgerTransactionFlowKind,
+  LiabilityRepaymentScheduleStatus,
   OperationalNoteKind,
   RecurrenceFrequency,
   OpeningBalanceSourceKind,
@@ -441,6 +442,23 @@ export type RequestTestState = {
     plannedAmount: number;
     plannedDate: Date;
     status: PlanItemStatus;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+  liabilityRepaymentSchedules: Array<{
+    id: string;
+    tenantId: string;
+    ledgerId: string;
+    liabilityAgreementId: string;
+    dueDate: Date;
+    principalAmount: number;
+    interestAmount: number;
+    feeAmount: number;
+    totalAmount: number;
+    status: LiabilityRepaymentScheduleStatus;
+    linkedPlanItemId: string | null;
+    postedJournalEntryId: string | null;
+    memo: string | null;
     createdAt: Date;
     updatedAt: Date;
   }>;

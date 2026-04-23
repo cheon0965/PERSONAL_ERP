@@ -1,5 +1,6 @@
 import type {
   CollectedTransactionItem,
+  CollectedTransactionLiabilityRepaymentSource,
   CollectedTransactionPostingStatus,
   CollectedTransactionSourceKind,
   CollectedTransactionVehicleLogSource
@@ -24,6 +25,7 @@ export type StoredCollectedTransaction = {
   matchedPlanItemId: string | null;
   matchedPlanItemTitle: string | null;
   sourceVehicleLog?: CollectedTransactionVehicleLogSource;
+  sourceLiabilityRepayment?: CollectedTransactionLiabilityRepaymentSource;
 };
 
 export type StoredCollectedTransactionDetail = {
@@ -42,6 +44,7 @@ export type StoredCollectedTransactionDetail = {
   matchedPlanItemId: string | null;
   matchedPlanItemTitle: string | null;
   sourceVehicleLog?: CollectedTransactionVehicleLogSource;
+  sourceLiabilityRepayment?: CollectedTransactionLiabilityRepaymentSource;
 };
 
 export type CollectedTransactionWorkspaceScope = {

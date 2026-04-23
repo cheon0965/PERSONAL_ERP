@@ -68,25 +68,34 @@ export class GeneratePlanItemsUseCase {
       );
     }
 
-    const [recurringRules, existingItems, transactionTypes] = await Promise.all(
-      [
-        this.planItemGenerationPort.listRecurringRulesForPeriod(
-          workspace.tenantId,
-          workspace.ledgerId,
-          period.startDate,
-          period.endDate
-        ),
-        this.planItemGenerationPort.listExistingItemsForPeriod(
-          workspace.tenantId,
-          workspace.ledgerId,
-          period.id
-        ),
-        this.planItemGenerationPort.listActiveTransactionTypes(
-          workspace.tenantId,
-          workspace.ledgerId
-        )
-      ]
-    );
+    const [
+      recurringRules,
+      existingItems,
+      transactionTypes,
+      liabilityRepaymentSchedules
+    ] = await Promise.all([
+      this.planItemGenerationPort.listRecurringRulesForPeriod(
+        workspace.tenantId,
+        workspace.ledgerId,
+        period.startDate,
+        period.endDate
+      ),
+      this.planItemGenerationPort.listExistingItemsForPeriod(
+        workspace.tenantId,
+        workspace.ledgerId,
+        period.id
+      ),
+      this.planItemGenerationPort.listActiveTransactionTypes(
+        workspace.tenantId,
+        workspace.ledgerId
+      ),
+      this.planItemGenerationPort.listLiabilityRepaymentSchedulesForPeriod(
+        workspace.tenantId,
+        workspace.ledgerId,
+        period.startDate,
+        period.endDate
+      )
+    ]);
 
     const defaultTypeIdByFlow = new Map<LedgerTransactionFlowKind, string>();
     const flowKindByTransactionTypeId = new Map<
@@ -116,7 +125,8 @@ export class GeneratePlanItemsUseCase {
       tenantId: string;
       ledgerId: string;
       periodId: string;
-      recurringRuleId: string;
+      recurringRuleId?: string | null;
+      liabilityRepaymentScheduleId?: string | null;
       ledgerTransactionTypeId: string;
       fundingAccountId: string;
       categoryId?: string;
@@ -181,6 +191,41 @@ export class GeneratePlanItemsUseCase {
             })
         });
       }
+    }
+
+    const liabilityExpenseTypeId = defaultTypeIdByFlow.get(
+      LedgerTransactionFlowKind.EXPENSE
+    );
+    for (const repaymentSchedule of liabilityRepaymentSchedules) {
+      if (!liabilityExpenseTypeId) {
+        excludedRuleCount += 1;
+        continue;
+      }
+
+      createData.push({
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId,
+        periodId: period.id,
+        recurringRuleId: null,
+        liabilityRepaymentScheduleId: repaymentSchedule.id,
+        ledgerTransactionTypeId: liabilityExpenseTypeId,
+        fundingAccountId:
+          repaymentSchedule.agreement.defaultFundingAccountId,
+        categoryId:
+          repaymentSchedule.agreement.interestExpenseCategoryId ??
+          repaymentSchedule.agreement.feeExpenseCategoryId ??
+          undefined,
+        title: [
+          repaymentSchedule.agreement.lenderName,
+          repaymentSchedule.agreement.productName,
+          '상환'
+        ]
+          .filter(Boolean)
+          .join(' '),
+        plannedAmount: fromPrismaMoneyWon(repaymentSchedule.totalAmount),
+        plannedDate: repaymentSchedule.dueDate,
+        matchedCollectedTransactionStatus: 'READY_TO_POST'
+      });
     }
 
     const creationResult =

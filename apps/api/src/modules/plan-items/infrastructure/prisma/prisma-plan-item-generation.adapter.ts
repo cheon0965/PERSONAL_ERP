@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { AccountingPeriodStatus, Prisma, PlanItemStatus } from '@prisma/client';
+import {
+  AccountingPeriodStatus,
+  LiabilityAgreementStatus,
+  LiabilityRepaymentScheduleStatus,
+  Prisma,
+  PlanItemStatus
+} from '@prisma/client';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
 import type {
   GeneratedPlanItemDraft,
@@ -121,6 +127,51 @@ export class PrismaPlanItemGenerationAdapter implements PlanItemGenerationPort {
     });
   }
 
+  listLiabilityRepaymentSchedulesForPeriod(
+    tenantId: string,
+    ledgerId: string,
+    periodStartDate: Date,
+    periodEndDate: Date
+  ) {
+    return this.prisma.liabilityRepaymentSchedule.findMany({
+      where: {
+        tenantId,
+        ledgerId,
+        dueDate: {
+          gte: periodStartDate,
+          lt: periodEndDate
+        },
+        linkedPlanItemId: null,
+        status: {
+          in: [
+            LiabilityRepaymentScheduleStatus.SCHEDULED,
+            LiabilityRepaymentScheduleStatus.PLANNED,
+            LiabilityRepaymentScheduleStatus.MATCHED
+          ]
+        },
+        agreement: {
+          status: LiabilityAgreementStatus.ACTIVE
+        }
+      },
+      select: {
+        id: true,
+        liabilityAgreementId: true,
+        dueDate: true,
+        totalAmount: true,
+        agreement: {
+          select: {
+            lenderName: true,
+            productName: true,
+            defaultFundingAccountId: true,
+            interestExpenseCategoryId: true,
+            feeExpenseCategoryId: true
+          }
+        }
+      },
+      orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }]
+    });
+  }
+
   async createGeneratedPlanItems(items: GeneratedPlanItemDraft[]) {
     let createdCount = 0;
     let skippedExistingCount = 0;
@@ -132,12 +183,12 @@ export class PrismaPlanItemGenerationAdapter implements PlanItemGenerationPort {
     await this.prisma.$transaction(async (tx) => {
       for (const item of items) {
         try {
-          await tx.planItem.create({
+          const createdPlanItem = await tx.planItem.create({
             data: {
               tenantId: item.tenantId,
               ledgerId: item.ledgerId,
               periodId: item.periodId,
-              recurringRuleId: item.recurringRuleId,
+              recurringRuleId: item.recurringRuleId ?? null,
               ledgerTransactionTypeId: item.ledgerTransactionTypeId,
               fundingAccountId: item.fundingAccountId,
               categoryId: item.categoryId,
@@ -159,8 +210,22 @@ export class PrismaPlanItemGenerationAdapter implements PlanItemGenerationPort {
                   status: item.matchedCollectedTransactionStatus
                 }
               }
+            },
+            select: {
+              id: true
             }
           });
+          if (item.liabilityRepaymentScheduleId) {
+            await tx.liabilityRepaymentSchedule.update({
+              where: {
+                id: item.liabilityRepaymentScheduleId
+              },
+              data: {
+                linkedPlanItemId: createdPlanItem.id,
+                status: LiabilityRepaymentScheduleStatus.MATCHED
+              }
+            });
+          }
           createdCount += 1;
         } catch (error) {
           if (isPlanItemDuplicateError(error)) {

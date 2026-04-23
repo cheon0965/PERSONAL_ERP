@@ -414,7 +414,9 @@ export class ImportBatchesController {
         details: {
           importBatchId,
           cancelledTransactionCount: result.cancelledTransactionCount,
-          restoredPlanItemCount: result.restoredPlanItemCount
+          restoredPlanItemCount: result.restoredPlanItemCount,
+          restoredLiabilityRepaymentScheduleCount:
+            result.restoredLiabilityRepaymentScheduleCount ?? 0
         }
       });
 

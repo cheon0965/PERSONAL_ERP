@@ -460,6 +460,9 @@ export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
             rows={tableRows}
             columns={columns}
             height={460}
+            getRowHeight={({ model }) =>
+              model.matchedCollectedTransactionId ? 104 : undefined
+            }
           />
 
           {!canGenerate ? (

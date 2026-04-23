@@ -359,6 +359,14 @@ export const defaultWorkspaceNavigationTree = [
         allowedRoles: OPERATORS
       },
       {
+        key: 'liabilities',
+        label: '부채 관리',
+        description: '은행 대출과 상환 일정을 관리합니다.',
+        href: '/liabilities',
+        iconKey: 'liabilities',
+        allowedRoles: OPERATORS_AND_EDITORS
+      },
+      {
         key: 'vehicles-hub',
         label: '차량 운영',
         description: '차량 기준과 비용 기록을 관리합니다.',

@@ -24,6 +24,9 @@ export function mapCollectedTransactionToItem(
     postedJournalEntryNumber: transaction.postedJournalEntryNumber,
     matchedPlanItemId: transaction.matchedPlanItemId ?? null,
     matchedPlanItemTitle: transaction.matchedPlanItemTitle ?? null,
+    ...(transaction.sourceLiabilityRepayment
+      ? { sourceLiabilityRepayment: transaction.sourceLiabilityRepayment }
+      : {}),
     ...(transaction.sourceVehicleLog
       ? { sourceVehicleLog: transaction.sourceVehicleLog }
       : {})
@@ -48,6 +51,9 @@ export function mapCollectedTransactionToDetailItem(
     postedJournalEntryNumber: transaction.postedJournalEntryNumber,
     matchedPlanItemId: transaction.matchedPlanItemId ?? null,
     matchedPlanItemTitle: transaction.matchedPlanItemTitle ?? null,
+    ...(transaction.sourceLiabilityRepayment
+      ? { sourceLiabilityRepayment: transaction.sourceLiabilityRepayment }
+      : {}),
     ...(transaction.sourceVehicleLog
       ? { sourceVehicleLog: transaction.sourceVehicleLog }
       : {})

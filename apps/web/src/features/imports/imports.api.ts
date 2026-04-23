@@ -174,7 +174,8 @@ export function cancelImportBatchCollection(importBatchId: string) {
     {
       importBatchId,
       cancelledTransactionCount: 0,
-      restoredPlanItemCount: 0
+      restoredPlanItemCount: 0,
+      restoredLiabilityRepaymentScheduleCount: 0
     }
   );
 }

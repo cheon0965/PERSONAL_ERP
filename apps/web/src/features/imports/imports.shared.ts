@@ -1,4 +1,5 @@
 import type {
+  AccountingPeriodItem,
   CollectImportedRowResponse,
   ImportBatchParseStatus,
   ImportBatchItem,
@@ -29,6 +30,7 @@ export type ImportedRowTableItem = ImportBatchItem['rows'][number] & {
   direction: 'WITHDRAWAL' | 'DEPOSIT' | 'REVERSAL' | null;
   collectTypeHint: 'INCOME' | 'EXPENSE' | 'TRANSFER' | 'REVERSAL' | null;
   balanceAfter: number | null;
+  isCurrentPeriodRow: boolean;
 };
 
 export function buildCollectSuccessMessage(
@@ -82,6 +84,21 @@ export function normalizeOptionalValue(
   return normalized ? normalized : undefined;
 }
 
+export function isImportedRowOccurredOnInPeriod(
+  occurredOn: string,
+  period: AccountingPeriodItem | null
+): boolean {
+  if (!period) {
+    return false;
+  }
+
+  const occurredOnDate = occurredOn.slice(0, 10);
+  const startDate = period.startDate.slice(0, 10);
+  const endDate = period.endDate.slice(0, 10);
+
+  return occurredOnDate >= startDate && occurredOnDate < endDate;
+}
+
 export function readImportBatchParseStatusLabel(
   status: ImportBatchParseStatus | string
 ) {
@@ -123,9 +140,7 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
 function readParsedDirection(
   value: unknown
 ): 'WITHDRAWAL' | 'DEPOSIT' | 'REVERSAL' | null {
-  return value === 'WITHDRAWAL' ||
-    value === 'DEPOSIT' ||
-    value === 'REVERSAL'
+  return value === 'WITHDRAWAL' || value === 'DEPOSIT' || value === 'REVERSAL'
     ? value
     : null;
 }

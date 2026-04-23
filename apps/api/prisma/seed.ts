@@ -16,6 +16,10 @@ import {
   InsuranceCycle,
   JournalEntrySourceKind,
   JournalEntryStatus,
+  LiabilityAgreementStatus,
+  LiabilityInterestRateType,
+  LiabilityRepaymentMethod,
+  LiabilityRepaymentScheduleStatus,
   OpeningBalanceSourceKind,
   OperationalNoteKind,
   PlanItemStatus,
@@ -219,6 +223,37 @@ const DEMO_INSURANCE_POLICIES = [
     linkedRecurringRuleKey: 'liabilityInsuranceRule',
     renewalDate: date('2026-09-15T00:00:00.000Z'),
     isActive: true
+  }
+] as const;
+
+const DEMO_LIABILITY_AGREEMENTS = [
+  {
+    fixtureId: 'workingCapitalLoan',
+    lenderName: '하나은행',
+    productName: '운전자금 대출',
+    loanNumberLast4: '1207',
+    principalAmount: 30000000,
+    borrowedAt: date('2026-01-15T00:00:00.000Z'),
+    maturityDate: date('2028-01-15T00:00:00.000Z'),
+    interestRate: new Prisma.Decimal('4.2000'),
+    interestRateType: LiabilityInterestRateType.FIXED,
+    repaymentMethod: LiabilityRepaymentMethod.EQUAL_PAYMENT,
+    paymentDay: 25,
+    defaultFundingAccountKey: 'mainAccount',
+    interestExpenseCategoryKey: 'utilitiesCategory',
+    feeExpenseCategoryKey: null,
+    status: LiabilityAgreementStatus.ACTIVE,
+    memo: '월 운영 현금흐름에서 원금과 이자를 분리 확인하는 데모 대출',
+    schedules: [
+      {
+        dueDate: date('2026-04-25T00:00:00.000Z'),
+        principalAmount: 1000000,
+        interestAmount: 105000,
+        feeAmount: 0,
+        status: LiabilityRepaymentScheduleStatus.SCHEDULED,
+        memo: '4월 정기 상환 예정'
+      }
+    ]
   }
 ] as const;
 
@@ -983,6 +1018,8 @@ type SeedSummary = {
   categories: SummaryItem;
   recurringRules: SummaryItem;
   insurancePolicies: SummaryItem;
+  liabilityAgreements: SummaryItem;
+  liabilityRepaymentSchedules: SummaryItem;
   vehicles: SummaryItem;
   fuelLogs: SummaryItem;
   maintenanceLogs: SummaryItem;
@@ -1171,6 +1208,8 @@ function createSummary(): SeedSummary {
     categories: createSummaryItem(),
     recurringRules: createSummaryItem(),
     insurancePolicies: createSummaryItem(),
+    liabilityAgreements: createSummaryItem(),
+    liabilityRepaymentSchedules: createSummaryItem(),
     vehicles: createSummaryItem(),
     fuelLogs: createSummaryItem(),
     maintenanceLogs: createSummaryItem(),
@@ -1207,6 +1246,8 @@ function printSummary(summary: SeedSummary) {
     `  - categories: created ${summary.categories.created}, skipped ${summary.categories.skipped}`,
     `  - recurring rules: created ${summary.recurringRules.created}, skipped ${summary.recurringRules.skipped}`,
     `  - insurance policies: created ${summary.insurancePolicies.created}, skipped ${summary.insurancePolicies.skipped}`,
+    `  - liability agreements: created ${summary.liabilityAgreements.created}, skipped ${summary.liabilityAgreements.skipped}`,
+    `  - liability repayment schedules: created ${summary.liabilityRepaymentSchedules.created}, skipped ${summary.liabilityRepaymentSchedules.skipped}`,
     `  - vehicles: created ${summary.vehicles.created}, skipped ${summary.vehicles.skipped}`,
     `  - fuel logs: created ${summary.fuelLogs.created}, skipped ${summary.fuelLogs.skipped}`,
     `  - maintenance logs: created ${summary.maintenanceLogs.created}, skipped ${summary.maintenanceLogs.skipped}`,
@@ -1613,6 +1654,176 @@ async function ensureDemoInsurancePolicies(
     });
 
     summary.insurancePolicies.created += 1;
+  }
+}
+
+async function ensureDemoLiabilityAgreements(
+  userId: string,
+  tenantId: string,
+  ledgerId: string,
+  accountIds: SimpleIdMap,
+  categoryIds: SimpleIdMap,
+  summary: SeedSummary
+) {
+  const liabilityAccountSubject = await prisma.accountSubject.findFirst({
+    where: {
+      tenantId,
+      ledgerId,
+      code: DEMO_ACCOUNT_SUBJECT_CODES.liability,
+      isActive: true
+    },
+    select: {
+      id: true
+    }
+  });
+
+  if (!liabilityAccountSubject) {
+    throw new Error('Missing liability account subject for demo liability seed');
+  }
+
+  for (const agreement of DEMO_LIABILITY_AGREEMENTS) {
+    const defaultFundingAccountId = requireMapValue(
+      accountIds,
+      agreement.defaultFundingAccountKey,
+      'liability funding account'
+    );
+    const interestExpenseCategoryId = requireMapValue(
+      categoryIds,
+      agreement.interestExpenseCategoryKey,
+      'liability interest category'
+    );
+    const feeExpenseCategoryId = agreement.feeExpenseCategoryKey
+      ? requireMapValue(
+          categoryIds,
+          agreement.feeExpenseCategoryKey,
+          'liability fee category'
+        )
+      : null;
+    const existingAgreement = await prisma.liabilityAgreement.findFirst({
+      where: {
+        tenantId,
+        ledgerId,
+        normalizedLenderName: normalizeCaseInsensitiveText(
+          agreement.lenderName
+        ),
+        normalizedProductName: normalizeCaseInsensitiveText(
+          agreement.productName
+        )
+      },
+      select: {
+        id: true
+      }
+    });
+    const savedAgreement = existingAgreement
+      ? await prisma.liabilityAgreement.update({
+          where: {
+            id: existingAgreement.id
+          },
+          data: {
+            defaultFundingAccountId,
+            liabilityAccountSubjectId: liabilityAccountSubject.id,
+            interestExpenseCategoryId,
+            feeExpenseCategoryId,
+            lenderName: agreement.lenderName,
+            normalizedLenderName: normalizeCaseInsensitiveText(
+              agreement.lenderName
+            ),
+            productName: agreement.productName,
+            normalizedProductName: normalizeCaseInsensitiveText(
+              agreement.productName
+            ),
+            loanNumberLast4: agreement.loanNumberLast4,
+            principalAmount: agreement.principalAmount,
+            borrowedAt: agreement.borrowedAt,
+            maturityDate: agreement.maturityDate,
+            interestRate: agreement.interestRate,
+            interestRateType: agreement.interestRateType,
+            repaymentMethod: agreement.repaymentMethod,
+            paymentDay: agreement.paymentDay,
+            status: agreement.status,
+            memo: agreement.memo
+          },
+          select: {
+            id: true
+          }
+        })
+      : await prisma.liabilityAgreement.create({
+          data: {
+            userId,
+            tenantId,
+            ledgerId,
+            defaultFundingAccountId,
+            liabilityAccountSubjectId: liabilityAccountSubject.id,
+            interestExpenseCategoryId,
+            feeExpenseCategoryId,
+            lenderName: agreement.lenderName,
+            normalizedLenderName: normalizeCaseInsensitiveText(
+              agreement.lenderName
+            ),
+            productName: agreement.productName,
+            normalizedProductName: normalizeCaseInsensitiveText(
+              agreement.productName
+            ),
+            loanNumberLast4: agreement.loanNumberLast4,
+            principalAmount: agreement.principalAmount,
+            borrowedAt: agreement.borrowedAt,
+            maturityDate: agreement.maturityDate,
+            interestRate: agreement.interestRate,
+            interestRateType: agreement.interestRateType,
+            repaymentMethod: agreement.repaymentMethod,
+            paymentDay: agreement.paymentDay,
+            status: agreement.status,
+            memo: agreement.memo
+          },
+          select: {
+            id: true
+          }
+        });
+
+    trackSummary(summary.liabilityAgreements, Boolean(existingAgreement));
+
+    for (const schedule of agreement.schedules) {
+      const existingSchedule = await prisma.liabilityRepaymentSchedule.findFirst({
+        where: {
+          liabilityAgreementId: savedAgreement.id,
+          dueDate: schedule.dueDate
+        },
+        select: {
+          id: true
+        }
+      });
+      const scheduleData = {
+        tenantId,
+        ledgerId,
+        liabilityAgreementId: savedAgreement.id,
+        dueDate: schedule.dueDate,
+        principalAmount: schedule.principalAmount,
+        interestAmount: schedule.interestAmount,
+        feeAmount: schedule.feeAmount,
+        totalAmount:
+          schedule.principalAmount + schedule.interestAmount + schedule.feeAmount,
+        status: schedule.status,
+        memo: schedule.memo
+      };
+
+      if (existingSchedule) {
+        await prisma.liabilityRepaymentSchedule.update({
+          where: {
+            id: existingSchedule.id
+          },
+          data: scheduleData
+        });
+      } else {
+        await prisma.liabilityRepaymentSchedule.create({
+          data: scheduleData
+        });
+      }
+
+      trackSummary(
+        summary.liabilityRepaymentSchedules,
+        Boolean(existingSchedule)
+      );
+    }
   }
 }
 
@@ -3272,6 +3483,15 @@ async function main() {
     accountIds,
     categoryIds,
     recurringRuleIds,
+    summary
+  );
+
+  await ensureDemoLiabilityAgreements(
+    userId,
+    backbone.tenantId,
+    backbone.ledgerId,
+    accountIds,
+    categoryIds,
     summary
   );
 

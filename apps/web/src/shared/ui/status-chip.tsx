@@ -20,7 +20,13 @@ const colorMap: Record<
   ACTIVE: 'primary',
   PENDING: 'warning',
   CANCELLED: 'error',
-  PAUSED: 'warning'
+  PAUSED: 'warning',
+  PAID_OFF: 'success',
+  ARCHIVED: 'default',
+  SCHEDULED: 'info',
+  PLANNED: 'primary',
+  MATCHED: 'primary',
+  SKIPPED: 'warning'
 };
 
 const labelMap: Record<string, string> = {
@@ -38,7 +44,13 @@ const labelMap: Record<string, string> = {
   ACTIVE: '활성',
   PENDING: '대기',
   CANCELLED: '중지',
-  PAUSED: '일시중지'
+  PAUSED: '일시중지',
+  PAID_OFF: '완납',
+  ARCHIVED: '보관',
+  SCHEDULED: '예정',
+  PLANNED: '계획',
+  MATCHED: '거래 연결',
+  SKIPPED: '건너뜀'
 };
 
 export function resolveStatusLabel(label: string): string {

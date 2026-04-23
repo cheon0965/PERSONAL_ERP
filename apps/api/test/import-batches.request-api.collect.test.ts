@@ -7,6 +7,7 @@ import {
   ImportBatchParseStatus,
   ImportedRowParseStatus,
   ImportSourceKind,
+  LiabilityRepaymentScheduleStatus,
   PlanItemStatus,
   TransactionType
 } from '@prisma/client';
@@ -24,6 +25,23 @@ test('POST /import-batches/:id/rows/:rowId/collect creates a collected transacti
 
   try {
     seedCollectableImportScenario(context);
+    context.state.liabilityRepaymentSchedules.push({
+      id: 'liability-repayment-collect-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      liabilityAgreementId: 'liability-agreement-collect-1',
+      dueDate: new Date('2026-03-11T00:00:00.000Z'),
+      principalAmount: 18_000,
+      interestAmount: 1_800,
+      feeAmount: 0,
+      totalAmount: 19_800,
+      status: LiabilityRepaymentScheduleStatus.PLANNED,
+      linkedPlanItemId: 'plan-item-collect-1',
+      postedJournalEntryId: null,
+      memo: null,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-01T00:00:00.000Z')
+    });
 
     const response = await context.request(
       '/import-batches/import-batch-collect/rows/imported-row-collect-1/collect',
@@ -112,6 +130,12 @@ test('POST /import-batches/:id/rows/:rowId/collect creates a collected transacti
         (candidate) => candidate.id === 'plan-item-collect-1'
       )?.status,
       PlanItemStatus.MATCHED
+    );
+    assert.equal(
+      context.state.liabilityRepaymentSchedules.find(
+        (candidate) => candidate.id === 'liability-repayment-collect-1'
+      )?.status,
+      LiabilityRepaymentScheduleStatus.MATCHED
     );
     assert.ok(
       context.securityEvents.some(

@@ -16,6 +16,7 @@ import {
   currentAccountingPeriodQueryKey,
   getCurrentAccountingPeriod
 } from '@/features/accounting-periods/accounting-periods.api';
+import { liabilitiesQueryKey } from '@/features/liabilities/liabilities.api';
 import {
   categoriesQueryKey,
   fundingAccountsQueryKey,
@@ -46,6 +47,7 @@ import {
 } from './imports.api';
 import {
   buildCollectSuccessMessage,
+  isImportedRowOccurredOnInPeriod,
   normalizeOptionalValue,
   readParsedRowPreview,
   type FeedbackState,
@@ -166,6 +168,7 @@ export function useImportsPage(
       null,
     [batches, selectedBatchId]
   );
+  const currentPeriod = currentPeriodQuery.data ?? null;
   const selectedBatchRows = React.useMemo<ImportedRowTableItem[]>(
     () =>
       (selectedBatch?.rows ?? []).map((row) => {
@@ -178,10 +181,13 @@ export function useImportsPage(
           amount: parsed?.amount ?? null,
           direction: parsed?.direction ?? null,
           collectTypeHint: parsed?.collectTypeHint ?? null,
-          balanceAfter: parsed?.balanceAfter ?? null
+          balanceAfter: parsed?.balanceAfter ?? null,
+          isCurrentPeriodRow: parsed
+            ? isImportedRowOccurredOnInPeriod(parsed.occurredOn, currentPeriod)
+            : false
         };
       }),
-    [selectedBatch]
+    [currentPeriod, selectedBatch]
   );
   const selectedRows = React.useMemo(
     () => selectedBatchRows.filter((row) => selectedRowIds.includes(row.id)),
@@ -219,7 +225,6 @@ export function useImportsPage(
         : null,
     [categoriesQuery.data, normalizedCollectRequest.categoryId]
   );
-  const currentPeriod = currentPeriodQuery.data ?? null;
   const collectableRows = React.useMemo(
     () => selectedBatchRows.filter((row) => isImportedRowCollectable(row)),
     [selectedBatchRows]
@@ -470,8 +475,7 @@ export function useImportsPage(
   const selectedRowCanCollect =
     Boolean(selectedBatch) &&
     Boolean(selectedRow) &&
-    selectedRow?.parseStatus === 'PARSED' &&
-    !selectedRow?.createdCollectedTransactionId;
+    Boolean(selectedRow && isImportedRowCollectable(selectedRow));
   const collectPreviewQuery = useQuery({
     queryKey: [
       'import-row-collect-preview',
@@ -550,7 +554,9 @@ export function useImportsPage(
       setBulkCollectJobId(result.id);
       setNotifiedBulkCollectJobId(null);
       setBulkCollectPollingEnabled(true);
-      notifySuccess(`${result.requestedRowCount}건 일괄 등록 작업을 시작했습니다.`);
+      notifySuccess(
+        `${result.requestedRowCount}건 일괄 등록 작업을 시작했습니다.`
+      );
       await queryClient.invalidateQueries({
         queryKey: [
           ...importBatchesQueryKey,
@@ -644,7 +650,8 @@ export function useImportsPage(
         queryClient.invalidateQueries({
           queryKey: collectedTransactionsQueryKey
         }),
-        queryClient.invalidateQueries({ queryKey: ['plan-items'] })
+        queryClient.invalidateQueries({ queryKey: ['plan-items'] }),
+        queryClient.invalidateQueries({ queryKey: liabilitiesQueryKey })
       ]);
     },
     onError: (error) => {
@@ -666,6 +673,17 @@ export function useImportsPage(
   }
 
   function handlePrepareCollectRow(row: ImportedRowTableItem) {
+    if (!isImportedRowCollectable(row)) {
+      setFeedback({
+        severity: 'error',
+        message:
+          row.parseStatus === 'PARSED' && !row.isCurrentPeriodRow
+            ? '현재 운영월 범위의 업로드 행만 수집 거래로 등록할 수 있습니다.'
+            : '이 업로드 행은 아직 수집 거래로 등록할 수 없습니다.'
+      });
+      return;
+    }
+
     setSelectedRowId(row.id);
     setCollectForm((current) => ({
       ...current,
@@ -979,7 +997,11 @@ function buildBulkCollectTypeOptionsPayload(
 }
 
 function isImportedRowCollectable(row: ImportedRowTableItem) {
-  return row.parseStatus === 'PARSED' && !row.createdCollectedTransactionId;
+  return (
+    row.parseStatus === 'PARSED' &&
+    !row.createdCollectedTransactionId &&
+    row.isCurrentPeriodRow
+  );
 }
 
 function buildBulkCollectFeedbackMessage(

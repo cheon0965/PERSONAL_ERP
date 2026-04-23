@@ -8,7 +8,8 @@ export const sourceKindLabelMap: Record<string, string> = {
   MANUAL: '직접 입력',
   RECURRING: '반복 규칙 생성',
   IMPORT: '파일 업로드',
-  VEHICLE_LOG: '차량 운영 기록'
+  VEHICLE_LOG: '차량 운영 기록',
+  LIABILITY_REPAYMENT: '부채 상환'
 };
 
 export function resolveLatestLinkedJournalEntry(

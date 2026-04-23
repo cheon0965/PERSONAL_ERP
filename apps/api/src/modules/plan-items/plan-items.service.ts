@@ -71,6 +71,18 @@ const planItemViewInclude = Prisma.validator<Prisma.PlanItemInclude>()({
       id: true,
       entryNumber: true
     }
+  },
+  linkedLiabilityRepayment: {
+    select: {
+      id: true,
+      liabilityAgreementId: true,
+      agreement: {
+        select: {
+          lenderName: true,
+          productName: true
+        }
+      }
+    }
   }
 });
 

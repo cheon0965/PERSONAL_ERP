@@ -23,6 +23,15 @@ export type ConfirmationCollectedTransaction = {
   amount: number;
   status: CollectedTransactionStatus;
   matchedPlanItemId: string | null;
+  matchedLiabilityRepaymentSchedule: {
+    id: string;
+    principalAmount: number;
+    interestAmount: number;
+    feeAmount: number;
+    totalAmount: number;
+    postedJournalEntryId: string | null;
+    liabilityAccountSubjectId: string | null;
+  } | null;
   period: {
     id: string;
     year: number;
@@ -133,6 +142,11 @@ export abstract class ConfirmTransactionContext {
 
   abstract markMatchedPlanItemConfirmed(
     matchedPlanItemId: string | null | undefined
+  ): Promise<void>;
+
+  abstract markMatchedLiabilityRepaymentPosted(
+    matchedPlanItemId: string | null | undefined,
+    journalEntryId: string
   ): Promise<void>;
 
   abstract findReversalTarget(

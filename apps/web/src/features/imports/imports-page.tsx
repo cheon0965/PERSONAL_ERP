@@ -28,9 +28,7 @@ export function ImportsPage({
   const router = useRouter();
   const page = useImportsPage(selectedBatchId, mode);
   const isDetailMode = mode === 'detail';
-  const collectableRowCount = page.selectedBatchRows.filter(
-    (row) => row.parseStatus === 'PARSED' && !row.createdCollectedTransactionId
-  ).length;
+  const collectableRowCount = page.collectableRowCount;
   const collectedRowCount = page.selectedBatchRows.filter((row) =>
     Boolean(row.createdCollectedTransactionId)
   ).length;

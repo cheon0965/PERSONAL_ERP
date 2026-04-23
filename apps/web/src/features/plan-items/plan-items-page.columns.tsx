@@ -67,6 +67,7 @@ export function buildPlanItemColumns({
       field: 'executionLink',
       headerName: '실행 연결',
       flex: 1.6,
+      minWidth: 280,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
@@ -137,8 +138,16 @@ function PlanItemLinkCell({
       item.matchedCollectedTransactionStatus === 'READY_TO_POST';
 
     return (
-      <Stack spacing={0.5} sx={{ py: 0.5 }}>
-        <Stack direction="row" spacing={1} alignItems="center">
+      <Stack spacing={0.5} sx={{ py: 0.5, width: '100%', minWidth: 0 }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="center"
+          sx={{
+            minWidth: 0,
+            '& .MuiButton-root, & .MuiChip-root': { flexShrink: 0 }
+          }}
+        >
           {item.matchedCollectedTransactionStatus ? (
             <StatusChip label={item.matchedCollectedTransactionStatus} />
           ) : null}
@@ -147,12 +156,21 @@ function PlanItemLinkCell({
               size="small"
               component={Link}
               href={`/journal-entries/${linkedJournalEntry.id}`}
+              sx={{ whiteSpace: 'nowrap' }}
             >
               {linkedJournalEntry.entryNumber}
             </Button>
           ) : null}
         </Stack>
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="center"
+          sx={{
+            minWidth: 0,
+            '& .MuiButton-root': { flexShrink: 0, whiteSpace: 'nowrap' }
+          }}
+        >
           {canConfirm ? (
             <Button
               size="small"
@@ -176,7 +194,13 @@ function PlanItemLinkCell({
           </Button>
         </Stack>
         {actionHint ? (
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            noWrap
+            title={actionHint}
+            sx={{ maxWidth: '100%' }}
+          >
             {actionHint}
           </Typography>
         ) : null}
