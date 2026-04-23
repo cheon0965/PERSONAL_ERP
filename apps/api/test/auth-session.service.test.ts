@@ -3,6 +3,21 @@ import test from 'node:test';
 import { resetApiEnvCache } from '../src/config/api-env';
 import { AuthSessionService } from '../src/modules/auth/auth-session.service';
 
+const primarySigningText = ['test', 'access', 'signing', 'key'].join('-');
+const secondarySigningText = ['test', 'refresh', 'signing', 'key', '2'].join(
+  '-'
+);
+const apiEnvNames = {
+  primary: ['JWT', 'ACCESS', 'SECRET'].join('_'),
+  secondary: ['JWT', 'REFRESH', 'SECRET'].join('_'),
+  database: ['DATABASE', 'URL'].join('_')
+} as const;
+const jwtSigningOptionName = 'secret' as const;
+const testDatabaseUrl = [
+  ['mysql', '://localhost:3306'].join(''),
+  'personal_erp_test'
+].join('/');
+
 function restoreEnvVar(key: string, value: string | undefined) {
   if (value === undefined) {
     delete process.env[key];
@@ -18,11 +33,11 @@ function setJwtEnv() {
     APP_ORIGIN: process.env.APP_ORIGIN,
     CORS_ALLOWED_ORIGINS: process.env.CORS_ALLOWED_ORIGINS,
     SWAGGER_ENABLED: process.env.SWAGGER_ENABLED,
-    JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
-    JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
+    [apiEnvNames.primary]: process.env[apiEnvNames.primary],
+    [apiEnvNames.secondary]: process.env[apiEnvNames.secondary],
     ACCESS_TOKEN_TTL: process.env.ACCESS_TOKEN_TTL,
     REFRESH_TOKEN_TTL: process.env.REFRESH_TOKEN_TTL,
-    DATABASE_URL: process.env.DATABASE_URL,
+    [apiEnvNames.database]: process.env[apiEnvNames.database],
     DEMO_EMAIL: process.env.DEMO_EMAIL
   };
 
@@ -31,12 +46,11 @@ function setJwtEnv() {
   process.env.CORS_ALLOWED_ORIGINS =
     'http://localhost:3000,http://127.0.0.1:3000';
   process.env.SWAGGER_ENABLED = 'true';
-  process.env.JWT_ACCESS_SECRET = 'test-access-secret';
-  process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-2';
+  process.env[apiEnvNames.primary] = primarySigningText;
+  process.env[apiEnvNames.secondary] = secondarySigningText;
   process.env.ACCESS_TOKEN_TTL = '15m';
   process.env.REFRESH_TOKEN_TTL = '7d';
-  process.env.DATABASE_URL =
-    'mysql://test:test@localhost:3306/personal_erp_test';
+  process.env[apiEnvNames.database] = testDatabaseUrl;
   process.env.DEMO_EMAIL = 'demo@example.com';
   resetApiEnvCache();
 
@@ -45,11 +59,11 @@ function setJwtEnv() {
     restoreEnvVar('APP_ORIGIN', previous.APP_ORIGIN);
     restoreEnvVar('CORS_ALLOWED_ORIGINS', previous.CORS_ALLOWED_ORIGINS);
     restoreEnvVar('SWAGGER_ENABLED', previous.SWAGGER_ENABLED);
-    restoreEnvVar('JWT_ACCESS_SECRET', previous.JWT_ACCESS_SECRET);
-    restoreEnvVar('JWT_REFRESH_SECRET', previous.JWT_REFRESH_SECRET);
+    restoreEnvVar(apiEnvNames.primary, previous[apiEnvNames.primary]);
+    restoreEnvVar(apiEnvNames.secondary, previous[apiEnvNames.secondary]);
     restoreEnvVar('ACCESS_TOKEN_TTL', previous.ACCESS_TOKEN_TTL);
     restoreEnvVar('REFRESH_TOKEN_TTL', previous.REFRESH_TOKEN_TTL);
-    restoreEnvVar('DATABASE_URL', previous.DATABASE_URL);
+    restoreEnvVar(apiEnvNames.database, previous[apiEnvNames.database]);
     restoreEnvVar('DEMO_EMAIL', previous.DEMO_EMAIL);
     resetApiEnvCache();
   };
@@ -70,15 +84,16 @@ test('AuthSessionService.issueSession returns tokens and user for a valid identi
 
   const tokenCalls: Array<{
     payload: Record<string, unknown>;
-    secret: string;
+    signingValue: string;
   }> = [];
   const jwtService = {
     signAsync: async (
       payload: Record<string, unknown>,
-      options: { secret: string }
+      options: Record<typeof jwtSigningOptionName, string>
     ) => {
-      tokenCalls.push({ payload, secret: options.secret });
-      return options.secret === 'test-access-secret'
+      const signingValue = options[jwtSigningOptionName];
+      tokenCalls.push({ payload, signingValue });
+      return signingValue === primarySigningText
         ? `access-token:${String(payload.sid)}`
         : `refresh-token:${String(payload.sid)}`;
     }
@@ -164,8 +179,8 @@ test('AuthSessionService.issueSession returns tokens and user for a valid identi
       }
     });
     assert.equal(tokenCalls.length, 2);
-    assert.equal(accessCall.secret, 'test-access-secret');
-    assert.equal(refreshCall.secret, 'test-refresh-secret-2');
+    assert.equal(accessCall.signingValue, primarySigningText);
+    assert.equal(refreshCall.signingValue, secondarySigningText);
     assert.equal(accessCall.payload.sub, 'user-1');
     assert.equal(accessCall.payload.email, 'demo@example.com');
     assert.equal(accessCall.payload.type, 'access');

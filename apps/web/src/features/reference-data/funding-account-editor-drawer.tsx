@@ -2,6 +2,7 @@
 
 import { Alert } from '@mui/material';
 import type { FundingAccountItem } from '@personal-erp/contracts';
+import type { FeedbackAlertValue } from '@/shared/ui/feedback-alert';
 import { FormDrawer } from '@/shared/ui/form-drawer';
 import {
   FundingAccountManagementForm,
@@ -12,12 +13,14 @@ import type { FundingAccountEditorState } from './reference-data.shared';
 export function FundingAccountEditorDrawer({
   editorState,
   editingFundingAccount,
+  feedback,
   busy,
   onClose,
   onSubmit
 }: {
   editorState: FundingAccountEditorState;
   editingFundingAccount: FundingAccountItem | null;
+  feedback: FeedbackAlertValue;
   busy: boolean;
   onClose: () => void;
   onSubmit: (input: FundingAccountManagementSubmitInput) => Promise<void>;
@@ -39,6 +42,7 @@ export function FundingAccountEditorDrawer({
         </Alert>
       ) : (
         <FundingAccountManagementForm
+          feedback={feedback}
           mode={editorState?.mode ?? 'create'}
           initialFundingAccount={editingFundingAccount}
           busy={busy}

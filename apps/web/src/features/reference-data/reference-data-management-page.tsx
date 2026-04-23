@@ -7,6 +7,7 @@ import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { CategoriesSection } from './categories-section';
 import { CategoryEditorDrawer } from './category-editor-drawer';
 import { CategoryToggleDialog } from './category-toggle-dialog';
+import { FundingAccountDeleteDialog } from './funding-account-delete-dialog';
 import { FundingAccountEditorDrawer } from './funding-account-editor-drawer';
 import { FundingAccountsSection } from './funding-accounts-section';
 import { FundingAccountStatusDialog } from './funding-account-status-dialog';
@@ -33,6 +34,8 @@ export function ReferenceDataManagementPage({
   const activeCategoriesCount = page.categories.filter(
     (item) => item.isActive
   ).length;
+  const editorOpen =
+    page.fundingAccountEditorState !== null || page.categoryEditorState !== null;
 
   return (
     <Stack spacing={appLayout.pageGap}>
@@ -69,7 +72,7 @@ export function ReferenceDataManagementPage({
 
       <ReferenceDataSectionNav />
 
-      {page.feedback ? (
+      {page.feedback?.severity === 'error' && !editorOpen ? (
         <Alert severity={page.feedback.severity} variant="outlined">
           {page.feedback.message}
         </Alert>
@@ -91,10 +94,12 @@ export function ReferenceDataManagementPage({
             onEdit={page.openFundingAccountEdit}
             onTransition={page.openFundingAccountTransition}
             onCompleteBootstrap={page.completeFundingAccountBootstrap}
+            onDelete={page.openFundingAccountDelete}
           />
           <FundingAccountEditorDrawer
             editorState={page.fundingAccountEditorState}
             editingFundingAccount={page.editingFundingAccount}
+            feedback={page.feedback}
             busy={page.saveFundingAccountPending}
             onClose={page.closeFundingAccountEditor}
             onSubmit={page.submitFundingAccount}
@@ -105,6 +110,14 @@ export function ReferenceDataManagementPage({
             onClose={page.closeFundingAccountStatusDialog}
             onConfirm={() => {
               void page.confirmFundingAccountTransition();
+            }}
+          />
+          <FundingAccountDeleteDialog
+            target={page.fundingAccountDeleteTarget}
+            busy={page.deleteFundingAccountPending}
+            onClose={page.closeFundingAccountDeleteDialog}
+            onConfirm={() => {
+              void page.confirmFundingAccountDelete();
             }}
           />
         </>
@@ -122,6 +135,7 @@ export function ReferenceDataManagementPage({
           <CategoryEditorDrawer
             editorState={page.categoryEditorState}
             editingCategory={page.editingCategory}
+            feedback={page.feedback}
             busy={page.saveCategoryPending}
             onClose={page.closeCategoryEditor}
             onSubmit={page.submitCategory}

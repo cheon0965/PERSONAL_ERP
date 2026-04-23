@@ -1064,6 +1064,166 @@ test('GET /auth/me returns the authenticated user', async () => {
   }
 });
 
+test('GET /auth/workspaces returns active workspace memberships with current marker', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.memberships.push({
+      id: 'membership-user-1-other',
+      tenantId: 'tenant-2',
+      userId: 'user-1',
+      role: 'VIEWER',
+      status: 'ACTIVE',
+      joinedAt: new Date('2026-03-15T00:00:00.000Z'),
+      invitedByMembershipId: 'membership-2',
+      lastAccessAt: null
+    });
+
+    const response = await context.request('/auth/workspaces', {
+      headers: context.authHeaders()
+    });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body, {
+      items: [
+        {
+          tenant: {
+            id: 'tenant-1',
+            slug: 'demo-tenant',
+            name: 'Demo Workspace',
+            status: 'ACTIVE'
+          },
+          membership: {
+            id: 'membership-1',
+            role: 'OWNER',
+            status: 'ACTIVE'
+          },
+          ledger: {
+            id: 'ledger-1',
+            name: '사업 장부',
+            baseCurrency: 'KRW',
+            timezone: 'Asia/Seoul',
+            status: 'ACTIVE'
+          },
+          isCurrent: true
+        },
+        {
+          tenant: {
+            id: 'tenant-2',
+            slug: 'other-tenant',
+            name: 'Other Workspace',
+            status: 'ACTIVE'
+          },
+          membership: {
+            id: 'membership-user-1-other',
+            role: 'VIEWER',
+            status: 'ACTIVE'
+          },
+          ledger: {
+            id: 'ledger-2',
+            name: 'Other Ledger',
+            baseCurrency: 'KRW',
+            timezone: 'Asia/Seoul',
+            status: 'ACTIVE'
+          },
+          isCurrent: false
+        }
+      ]
+    });
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /auth/current-workspace stores the selected workspace on the current session', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.memberships.push({
+      id: 'membership-user-1-other',
+      tenantId: 'tenant-2',
+      userId: 'user-1',
+      role: 'VIEWER',
+      status: 'ACTIVE',
+      joinedAt: new Date('2026-03-15T00:00:00.000Z'),
+      invitedByMembershipId: 'membership-2',
+      lastAccessAt: null
+    });
+
+    const switchResponse = await context.request('/auth/current-workspace', {
+      method: 'POST',
+      headers: context.authHeaders(),
+      body: {
+        tenantId: 'tenant-2'
+      }
+    });
+
+    assert.equal(switchResponse.status, 201);
+    assert.equal(
+      (
+        switchResponse.body as {
+          user: { currentWorkspace: { tenant: { id: string } } };
+        }
+      ).user.currentWorkspace.tenant.id,
+      'tenant-2'
+    );
+    assert.equal(
+      context.state.authSessions.find(
+        (candidate) => candidate.id === 'session-user-1'
+      )?.currentTenantId,
+      'tenant-2'
+    );
+
+    const meResponse = await context.request('/auth/me', {
+      headers: context.authHeaders()
+    });
+
+    assert.equal(meResponse.status, 200);
+    assert.equal(
+      (meResponse.body as { currentWorkspace: { tenant: { id: string } } })
+        .currentWorkspace.tenant.id,
+      'tenant-2'
+    );
+    assert.equal(
+      (
+        meResponse.body as {
+          currentWorkspace: { membership: { role: string } };
+        }
+      ).currentWorkspace.membership.role,
+      'VIEWER'
+    );
+    assert.ok(
+      context.securityEvents.some(
+        (candidate) =>
+          candidate.level === 'log' &&
+          candidate.event === 'auth.workspace_switched' &&
+          candidate.details.tenantId === 'tenant-2'
+      )
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /auth/current-workspace rejects a workspace without active membership', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/auth/current-workspace', {
+      method: 'POST',
+      headers: context.authHeaders(),
+      body: {
+        tenantId: 'tenant-2'
+      }
+    });
+
+    assert.equal(response.status, 403);
+  } finally {
+    await context.close();
+  }
+});
+
 test('GET /auth/account-security returns profile, sessions, and recent events', async () => {
   const context = await createRequestTestContext();
 

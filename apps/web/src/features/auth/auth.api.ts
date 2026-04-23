@@ -2,21 +2,28 @@ import type {
   AuthenticatedUser,
   AcceptInvitationRequest,
   AcceptInvitationResponse,
+  AuthenticatedWorkspaceListResponse,
   LoginRequest,
   LoginResponse,
   RegisterRequest,
   RegisterResponse,
   ResendVerificationRequest,
+  SwitchWorkspaceRequest,
+  SwitchWorkspaceResponse,
   VerifyEmailRequest,
   VerifyEmailResponse
 } from '@personal-erp/contracts';
 import {
   ApiRequestError,
+  fetchJson,
+  postJson,
   UnauthorizedRequestError
 } from '../../shared/api/fetch-json';
 import { webEnv } from '../../shared/config/env';
 
 const API_BASE_URL = webEnv.NEXT_PUBLIC_API_BASE_URL;
+
+export const authWorkspacesQueryKey = ['auth', 'workspaces'] as const;
 
 export async function loginWithPassword(
   input: LoginRequest
@@ -70,6 +77,28 @@ export async function getCurrentUser(
     method: 'GET',
     accessToken
   });
+}
+
+export function getAccessibleWorkspaces() {
+  return fetchJson<AuthenticatedWorkspaceListResponse>('/auth/workspaces', {
+    items: []
+  });
+}
+
+export function switchCurrentWorkspace(input: SwitchWorkspaceRequest) {
+  return postJson<SwitchWorkspaceResponse, SwitchWorkspaceRequest>(
+    '/auth/current-workspace',
+    input,
+    {
+      user: {
+        id: '',
+        email: '',
+        name: '',
+        currentWorkspace: null
+      },
+      workspaces: []
+    }
+  );
 }
 
 export async function refreshSession(): Promise<LoginResponse> {

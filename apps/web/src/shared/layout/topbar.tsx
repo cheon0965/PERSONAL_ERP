@@ -9,8 +9,10 @@ import LockRoundedIcon from '@mui/icons-material/LockRounded';
 import ManageAccountsRoundedIcon from '@mui/icons-material/ManageAccountsRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import SecurityRoundedIcon from '@mui/icons-material/SecurityRounded';
+import SwapHorizRoundedIcon from '@mui/icons-material/SwapHorizRounded';
 import VerifiedUserRoundedIcon from '@mui/icons-material/VerifiedUserRounded';
 import {
+  Alert,
   AppBar,
   Avatar,
   Box,
@@ -25,7 +27,12 @@ import {
   Tooltip,
   Typography
 } from '@mui/material';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import {
+  authWorkspacesQueryKey,
+  getAccessibleWorkspaces
+} from '@/features/auth/auth.api';
 import { useAccountAvatar } from '@/shared/auth/account-avatar';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { membershipRoleLabelMap } from '@/shared/auth/auth-labels';
@@ -34,7 +41,8 @@ import { sidebarWidth } from './sidebar-nav';
 
 export function Topbar() {
   const router = useRouter();
-  const { logout, user } = useAuthSession();
+  const queryClient = useQueryClient();
+  const { logout, switchWorkspace, user } = useAuthSession();
   const { activeContext, setDrawerOpen } = useDomainHelpStore();
   const currentWorkspace = user?.currentWorkspace ?? null;
   const isSystemAdmin = user?.isSystemAdmin === true;
@@ -55,6 +63,21 @@ export function Topbar() {
   const handleAccountClose = React.useCallback(() => {
     setAccountAnchorEl(null);
   }, []);
+  const workspacesQuery = useQuery({
+    queryKey: authWorkspacesQueryKey,
+    queryFn: getAccessibleWorkspaces,
+    enabled: Boolean(user) && !isSystemAdmin
+  });
+  const workspaceSwitchMutation = useMutation({
+    mutationFn: (input: { tenantId: string; ledgerId?: string }) =>
+      switchWorkspace(input.tenantId, input.ledgerId),
+    onSuccess: () => {
+      queryClient.clear();
+      handleContextClose();
+      router.refresh();
+    }
+  });
+  const workspaceOptions = workspacesQuery.data?.items ?? [];
 
   return (
     <>
@@ -198,7 +221,12 @@ export function Topbar() {
               >
                 <Stack direction="row" alignItems="center" spacing={0.75}>
                   <Avatar
-                    sx={{ width: 32, height: 32, fontSize: '0.875rem', ...avatarSx }}
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      fontSize: '0.875rem',
+                      ...avatarSx
+                    }}
                   >
                     {avatarContent}
                   </Avatar>
@@ -247,7 +275,9 @@ export function Topbar() {
         <Box sx={{ width: 340, maxWidth: 'calc(100vw - 32px)', p: 2 }}>
           <Stack spacing={1.5}>
             <Stack direction="row" spacing={1.25} alignItems="center">
-              <Avatar sx={{ width: 48, height: 48, fontSize: '1.25rem', ...avatarSx }}>
+              <Avatar
+                sx={{ width: 48, height: 48, fontSize: '1.25rem', ...avatarSx }}
+              >
                 {avatarContent}
               </Avatar>
               <Stack sx={{ minWidth: 0 }}>
@@ -415,6 +445,90 @@ export function Topbar() {
                   />
                 </Stack>
 
+                {workspaceOptions.length > 1 ? (
+                  <>
+                    <Divider flexItem />
+                    <Stack spacing={0.75}>
+                      <Stack
+                        direction="row"
+                        spacing={0.5}
+                        alignItems="center"
+                        justifyContent="space-between"
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          접근 가능한 사업장
+                        </Typography>
+                        <SwapHorizRoundedIcon
+                          fontSize="small"
+                          sx={{ color: 'text.secondary' }}
+                        />
+                      </Stack>
+                      {workspaceSwitchMutation.error ? (
+                        <Alert severity="error" variant="outlined">
+                          {workspaceSwitchMutation.error instanceof Error
+                            ? workspaceSwitchMutation.error.message
+                            : '사업장 전환에 실패했습니다.'}
+                        </Alert>
+                      ) : null}
+                      {workspaceOptions.map((workspace) => (
+                        <ButtonBase
+                          key={`${workspace.tenant.id}:${workspace.ledger?.id ?? 'default'}`}
+                          disabled={
+                            workspace.isCurrent ||
+                            workspaceSwitchMutation.isPending
+                          }
+                          onClick={() =>
+                            workspaceSwitchMutation.mutate({
+                              tenantId: workspace.tenant.id,
+                              ...(workspace.ledger?.id
+                                ? { ledgerId: workspace.ledger.id }
+                                : {})
+                            })
+                          }
+                          sx={createWorkspaceSwitchItemSx(workspace.isCurrent)}
+                        >
+                          <Stack spacing={0.35} sx={{ minWidth: 0, flex: 1 }}>
+                            <Stack
+                              direction="row"
+                              spacing={0.75}
+                              alignItems="center"
+                              sx={{ minWidth: 0 }}
+                            >
+                              <Typography
+                                variant="body2"
+                                fontWeight={700}
+                                noWrap
+                              >
+                                {workspace.tenant.name}
+                              </Typography>
+                              {workspace.isCurrent ? (
+                                <Chip
+                                  label="현재"
+                                  size="small"
+                                  color="primary"
+                                  variant="outlined"
+                                  sx={{ height: 20, borderRadius: 999 }}
+                                />
+                              ) : null}
+                            </Stack>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              noWrap
+                            >
+                              {workspace.tenant.slug} /{' '}
+                              {workspace.ledger?.name ?? '기본 장부 미선정'} /{' '}
+                              {membershipRoleLabelMap[
+                                workspace.membership.role
+                              ] ?? workspace.membership.role}
+                            </Typography>
+                          </Stack>
+                        </ButtonBase>
+                      ))}
+                    </Stack>
+                  </>
+                ) : null}
+
                 <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                   <Button
                     component={Link}
@@ -502,3 +616,26 @@ const topbarIconButtonSx = {
   borderColor: '#d7dee8',
   backgroundColor: '#ffffff'
 } as const;
+
+function createWorkspaceSwitchItemSx(selected: boolean) {
+  return {
+    width: '100%',
+    minHeight: 58,
+    px: 1,
+    py: 0.75,
+    borderRadius: 1,
+    border: '1px solid',
+    borderColor: selected ? 'primary.main' : '#d7dee8',
+    backgroundColor: selected ? '#eff6ff' : '#ffffff',
+    textAlign: 'left',
+    justifyContent: 'flex-start',
+    opacity: selected ? 1 : undefined,
+    '&:hover': {
+      backgroundColor: selected ? '#eff6ff' : '#f8fafc'
+    },
+    '&.Mui-disabled': {
+      opacity: 1,
+      color: 'inherit'
+    }
+  } as const;
+}

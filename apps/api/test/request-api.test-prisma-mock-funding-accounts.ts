@@ -282,6 +282,28 @@ export function createFundingAccountsPrismaMock(
         return {
           count: updatedCount
         };
+      },
+      deleteMany: async (args: {
+        where?: {
+          id?: string;
+          tenantId?: string;
+          ledgerId?: string;
+        };
+      }) => {
+        const before = state.accounts.length;
+        state.accounts = state.accounts.filter((account) => {
+          const matchesId = !args.where?.id || account.id === args.where.id;
+          const matchesTenant =
+            !args.where?.tenantId || account.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || account.ledgerId === args.where.ledgerId;
+
+          return !(matchesId && matchesTenant && matchesLedger);
+        });
+
+        return {
+          count: before - state.accounts.length
+        };
       }
     }
   };

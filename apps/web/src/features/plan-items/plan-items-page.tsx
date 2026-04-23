@@ -20,6 +20,7 @@ import type {
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import { useAppNotification } from '@/shared/providers/notification-provider';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
@@ -58,6 +59,7 @@ type PlanItemsPageProps = {
 
 export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
   const queryClient = useQueryClient();
+  const { notifySuccess } = useAppNotification();
   const searchParams = useSearchParams();
   const highlightedPlanItemId = searchParams?.get('planItemId') ?? null;
   const periodSearchParam = searchParams?.get('periodId') ?? null;
@@ -151,10 +153,9 @@ export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
       );
     },
     onSuccess: async (createdEntry) => {
-      setFeedback({
-        severity: 'success',
-        message: `${createdEntry.entryNumber} 전표를 생성하고 연결된 수집 거래를 확정했습니다.`
-      });
+      notifySuccess(
+        `${createdEntry.entryNumber} 전표를 생성하고 연결된 수집 거래를 확정했습니다.`
+      );
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['plan-items'] }),
@@ -263,10 +264,9 @@ export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
 
     try {
       const result = await mutation.mutateAsync(selectedPeriod);
-      setFeedback({
-        severity: 'success',
-        message: `${result.period.monthLabel} 계획 항목을 생성했습니다. 신규 ${result.generation.createdCount}건, 기존 유지 ${result.generation.skippedExistingCount}건, 제외 규칙 ${result.generation.excludedRuleCount}건입니다.`
-      });
+      notifySuccess(
+        `${result.period.monthLabel} 계획 항목을 생성했습니다. 신규 ${result.generation.createdCount}건, 기존 유지 ${result.generation.skippedExistingCount}건, 제외 규칙 ${result.generation.excludedRuleCount}건입니다.`
+      );
     } catch (error) {
       setFeedback({
         severity: 'error',
@@ -333,7 +333,7 @@ export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
         </Alert>
       ) : null}
 
-      {feedback ? (
+      {feedback?.severity === 'error' ? (
         <Alert severity={feedback.severity} variant="outlined">
           {feedback.message}
         </Alert>

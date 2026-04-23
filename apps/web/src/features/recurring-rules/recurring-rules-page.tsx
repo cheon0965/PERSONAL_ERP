@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack } from '@mui/material';
 import { webRuntime } from '@/shared/config/env';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import { useAppNotification } from '@/shared/providers/notification-provider';
 import { ConfirmActionDialog } from '@/shared/ui/confirm-action-dialog';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { FormDrawer } from '@/shared/ui/form-drawer';
@@ -38,6 +39,7 @@ type RecurringRuleDrawerState =
 
 export function RecurringRulesPage() {
   const queryClient = useQueryClient();
+  const { notifySuccess } = useAppNotification();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const [drawerState, setDrawerState] =
     React.useState<RecurringRuleDrawerState>(null);
@@ -69,10 +71,7 @@ export function RecurringRulesPage() {
       deleteRecurringRule(recurringRule.id),
     onSuccess: async (_response, recurringRule) => {
       setDeleteTarget(null);
-      setFeedback({
-        severity: 'success',
-        message: `${recurringRule.title} 반복 규칙을 삭제했습니다.`
-      });
+      notifySuccess(`${recurringRule.title} 반복 규칙을 삭제했습니다.`);
 
       queryClient.setQueryData<ManagedRecurringRuleItem[]>(
         recurringRulesQueryKey,
@@ -216,21 +215,20 @@ export function RecurringRulesPage() {
       return;
     }
 
+    setFeedback(null);
     void deleteMutation.mutateAsync(deleteTarget);
   }, [deleteMutation, deleteTarget]);
 
   const handleFormCompleted = React.useCallback(
     (recurringRule: ManagedRecurringRuleItem, mode: 'create' | 'edit') => {
       setDrawerState(null);
-      setFeedback({
-        severity: 'success',
-        message:
-          mode === 'edit'
-            ? `${recurringRule.title} 반복 규칙을 수정했습니다.`
-            : `${recurringRule.title} 반복 규칙을 등록했습니다.`
-      });
+      notifySuccess(
+        mode === 'edit'
+          ? `${recurringRule.title} 반복 규칙을 수정했습니다.`
+          : `${recurringRule.title} 반복 규칙을 등록했습니다.`
+      );
     },
-    []
+    [notifySuccess]
   );
 
   const columns = React.useMemo(

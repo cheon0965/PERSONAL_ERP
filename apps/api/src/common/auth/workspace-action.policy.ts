@@ -25,6 +25,7 @@ export type WorkspaceAction =
   | 'admin_audit_log.read'
   | 'funding_account.create'
   | 'funding_account.update'
+  | 'funding_account.delete'
   | 'category.create'
   | 'category.update'
   | 'insurance_policy.create'
@@ -82,6 +83,7 @@ const workspaceActionAllowedRoles: Record<
   'admin_audit_log.read': ['OWNER'],
   'funding_account.create': ['OWNER', 'MANAGER'],
   'funding_account.update': ['OWNER', 'MANAGER'],
+  'funding_account.delete': ['OWNER', 'MANAGER'],
   'category.create': ['OWNER', 'MANAGER'],
   'category.update': ['OWNER', 'MANAGER'],
   'insurance_policy.create': ['OWNER', 'MANAGER'],
@@ -152,6 +154,8 @@ const workspaceActionDeniedMessages: Record<WorkspaceAction, string> = {
     'Only owners and managers can create funding accounts.',
   'funding_account.update':
     'Only owners and managers can update funding accounts.',
+  'funding_account.delete':
+    'Only owners and managers can delete unused funding accounts.',
   'category.create': 'Only owners and managers can create categories.',
   'category.update': 'Only owners and managers can update categories.',
   'insurance_policy.create':

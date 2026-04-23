@@ -12,6 +12,7 @@ import type {
 import { subtractMoneyWon } from '@personal-erp/money';
 import { formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import { useAppNotification } from '@/shared/providers/notification-provider';
 import { ConfirmActionDialog } from '@/shared/ui/confirm-action-dialog';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
@@ -79,6 +80,7 @@ export function VehiclesPage({
   section?: VehicleWorkspaceSection;
 }) {
   const queryClient = useQueryClient();
+  const { notifySuccess } = useAppNotification();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const [drawerState, setDrawerState] =
     React.useState<VehicleDrawerState>(null);
@@ -220,10 +222,9 @@ export function VehiclesPage({
           (current) =>
             removeVehicleFuelLogItem(current, deletedTarget.fuelLog.id)
         );
-        setFeedback({
-          severity: 'success',
-          message: `${deletedTarget.fuelLog.vehicleName} 연료 기록을 삭제했습니다. 연결된 미확정 수집거래가 있으면 함께 정리했습니다.`
-        });
+        notifySuccess(
+          `${deletedTarget.fuelLog.vehicleName} 연료 기록을 삭제했습니다. 연결된 미확정 수집거래가 있으면 함께 정리했습니다.`
+        );
       } else {
         queryClient.setQueryData<VehicleMaintenanceLogItem[]>(
           vehicleMaintenanceLogsQueryKey,
@@ -233,10 +234,9 @@ export function VehiclesPage({
               deletedTarget.maintenanceLog.id
             )
         );
-        setFeedback({
-          severity: 'success',
-          message: `${deletedTarget.maintenanceLog.vehicleName} 정비 기록을 삭제했습니다. 연결된 미확정 수집거래가 있으면 함께 정리했습니다.`
-        });
+        notifySuccess(
+          `${deletedTarget.maintenanceLog.vehicleName} 정비 기록을 삭제했습니다. 연결된 미확정 수집거래가 있으면 함께 정리했습니다.`
+        );
       }
 
       queryClient.setQueryData<VehicleOperatingSummaryView>(
@@ -282,13 +282,11 @@ export function VehiclesPage({
     mode: 'create' | 'edit'
   ) => {
     setDrawerState(null);
-    setFeedback({
-      severity: 'success',
-      message:
-        mode === 'edit'
-          ? `${vehicle.name} 차량 정보를 수정했습니다.`
-          : `${vehicle.name} 차량을 등록했습니다.`
-    });
+    notifySuccess(
+      mode === 'edit'
+        ? `${vehicle.name} 차량 정보를 수정했습니다.`
+        : `${vehicle.name} 차량을 등록했습니다.`
+    );
   };
 
   const handleFuelCompleted = (
@@ -296,13 +294,11 @@ export function VehiclesPage({
     mode: 'create' | 'edit'
   ) => {
     setFuelDrawerState(null);
-    setFeedback({
-      severity: 'success',
-      message:
-        mode === 'edit'
-          ? `${fuelLog.vehicleName} 연료 기록을 수정했습니다.`
-          : `${fuelLog.vehicleName} 연료 기록을 추가했습니다.`
-    });
+    notifySuccess(
+      mode === 'edit'
+        ? `${fuelLog.vehicleName} 연료 기록을 수정했습니다.`
+        : `${fuelLog.vehicleName} 연료 기록을 추가했습니다.`
+    );
   };
 
   const handleMaintenanceCompleted = (
@@ -310,13 +306,11 @@ export function VehiclesPage({
     mode: 'create' | 'edit'
   ) => {
     setMaintenanceDrawerState(null);
-    setFeedback({
-      severity: 'success',
-      message:
-        mode === 'edit'
-          ? `${maintenanceLog.vehicleName} 정비 기록을 수정했습니다.`
-          : `${maintenanceLog.vehicleName} 정비 기록을 추가했습니다.`
-    });
+    notifySuccess(
+      mode === 'edit'
+        ? `${maintenanceLog.vehicleName} 정비 기록을 수정했습니다.`
+        : `${maintenanceLog.vehicleName} 정비 기록을 추가했습니다.`
+    );
   };
 
   const primaryAction =
@@ -434,7 +428,7 @@ export function VehiclesPage({
 
       <VehiclesSectionNav />
 
-      {feedback ? (
+      {feedback?.severity === 'error' ? (
         <Alert severity={feedback.severity} variant="outlined">
           {feedback.message}
         </Alert>

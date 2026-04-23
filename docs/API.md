@@ -59,6 +59,7 @@
 7. Web은 access token을 메모리 런타임 상태에만 유지합니다.
 8. 새로고침이나 `401` 이후 복구가 필요하면 `POST /auth/refresh`로 새 access token을 받습니다.
 9. 현재 사용자 확인은 `GET /auth/me`를 사용합니다.
+10. 한 사용자가 여러 사업장에 속하면 `GET /auth/workspaces`로 접근 가능한 사업장을 확인하고, `POST /auth/current-workspace`로 현재 세션의 작업 문맥을 전환합니다.
 
 ## 브라우저/API 경계 보안
 
@@ -88,12 +89,12 @@
 
 ## 현재 구현 범위 요약
 
-- 인증/계정 범위는 회원가입, 이메일 인증, 인증 메일 재발송, 사업장 초대 수락, 로그인, 세션 refresh/logout, `auth/me`, 계정 보안, 프로필 수정, 비밀번호 변경, 세션 종료까지 10개 독립 use-case 기반으로 운영합니다.
+- 인증/계정 범위는 회원가입, 이메일 인증, 인증 메일 재발송, 사업장 초대 수락, 로그인, 세션 refresh/logout, `auth/me`, 접근 가능 사업장 목록, 세션 단위 사업장 전환, 계정 보안, 프로필 수정, 비밀번호 변경, 세션 종료까지 독립 use-case 기반으로 운영합니다.
 - 설정 범위는 현재 workspace의 사업장/기본 장부 설정 조회와 Owner/Manager 수정까지 포함합니다.
 - 관리자 범위는 현재 workspace의 멤버 목록/초대/역할·상태 관리, DB 메뉴 트리/메뉴 권한 관리, workspace 감사 로그 조회, 권한 정책 요약까지 포함합니다. `INITIAL_ADMIN_*`로 시드된 전역 관리자는 일반 사업장 관리자와 분리되어 전체 사용자 관리, 사업장 관리, 사업장 전환/지원 문맥, 운영 상태 점검, 보안 위협 로그, 전체 멤버십 역할·상태 관리를 수행할 수 있습니다.
 - 내비게이션 범위는 현재 workspace의 DB 메뉴 트리를 현재 멤버 역할 기준으로 필터링해 반환하는 `navigation/tree`까지 포함합니다.
 - 운영 지원 범위는 체크리스트, 예외 처리함, 월 마감 대시보드, 업로드 운영 현황, 시스템 상태, 알림 센터, 수동 CSV 반출, 운영 메모까지 포함합니다.
-- 기준/참조 범위는 조회 `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`, `vehicles/operating-summary`, `vehicles/fuel-logs`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/차량 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `DELETE /insurance-policies/:id`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/fuel-logs`, `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `DELETE /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`, `DELETE /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
+- 기준/참조 범위는 조회 `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `vehicles`, `vehicles/operating-summary`, `vehicles/fuel-logs`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/차량 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `DELETE /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `DELETE /insurance-policies/:id`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/fuel-logs`, `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `DELETE /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`, `DELETE /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
 - 운영/원장 조회 범위는 `accounting-periods`, `collected-transactions`, `journal-entries`, `plan-items`, `financial-statements`, `carry-forwards`, `import-batches`까지 포함합니다.
 - 집계/보고 조회 범위는 `dashboard/summary`, `forecast/monthly`까지 포함합니다.
 - 현재 쓰기/명령 범위는 `funding-accounts`, `categories`, `insurance-policies`, `vehicles`, `vehicle fuel logs`, `vehicle maintenance logs`, `accounting-periods`, `collected-transactions`, `recurring-rules`, `plan-items`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`까지 확장되어 있습니다.
@@ -106,6 +107,8 @@
 ### 인증/기준 데이터
 
 - `GET /auth/me`
+- `GET /auth/workspaces`
+- `POST /auth/current-workspace`
 - `GET /auth/account-security`
 - `PATCH /auth/account-profile`
 - `POST /auth/change-password`
@@ -141,6 +144,7 @@
 - `GET /funding-accounts`
 - `POST /funding-accounts`
 - `PATCH /funding-accounts/:id`
+- `DELETE /funding-accounts/:id`
 - `GET /categories`
 - `POST /categories`
 - `PATCH /categories/:id`
@@ -188,6 +192,7 @@
 - `POST /import-batches/:id/rows/collect`
 - `GET /import-batches/:id/collection-jobs/active`
 - `GET /import-batches/:id/collection-jobs/:jobId`
+- `POST /import-batches/:id/collection-jobs/:jobId/cancel`
 - `GET /journal-entries`
 - `POST /journal-entries/:id/reverse`
 - `POST /journal-entries/:id/correct`
@@ -268,7 +273,7 @@
 - Web `/plan-items/generate` -> API `GET /accounting-periods`, `POST /plan-items/generate`
 - Web `/transactions` -> API `/collected-transactions`, `POST /collected-transactions/confirm-bulk`
 - Web `/imports` -> API `/import-batches`, `POST /import-batches/files`
-- Web `/imports/[batchId]` -> API `GET /import-batches/:id`, `DELETE /import-batches/:id`, `POST /import-batches/:id/cancel-collection`, `POST /import-batches/:id/rows/collect`, `GET /import-batches/:id/collection-jobs/active`, `GET /import-batches/:id/collection-jobs/:jobId`, `POST /import-batches/:id/rows/:rowId/collect-preview`, `POST /import-batches/:id/rows/:rowId/collect`
+- Web `/imports/[batchId]` -> API `GET /import-batches/:id`, `DELETE /import-batches/:id`, `POST /import-batches/:id/cancel-collection`, `POST /import-batches/:id/rows/collect`, `GET /import-batches/:id/collection-jobs/active`, `GET /import-batches/:id/collection-jobs/:jobId`, `POST /import-batches/:id/collection-jobs/:jobId/cancel`, `POST /import-batches/:id/rows/:rowId/collect-preview`, `POST /import-batches/:id/rows/:rowId/collect`
 - Web `/journal-entries` -> API `/journal-entries`
 - Web `/journal-entries/[entryId]` -> API `GET /journal-entries`, `POST /journal-entries/:id/reverse`, `POST /journal-entries/:id/correct`
 - Web `/financial-statements` -> API `/financial-statements`
@@ -380,6 +385,19 @@
 - 아직 가입된 사용자가 없으면 `registration_required` 상태를 반환합니다.
 - 초대 token 원문은 DB에 저장하지 않고, 소비된 초대는 다시 사용할 수 없습니다.
 
+### `GET /auth/workspaces`
+
+- 계약: response `AuthenticatedWorkspaceListResponse`
+- 현재 사용자가 `ACTIVE` 멤버십으로 접근할 수 있는 사업장과 기본 장부, 멤버 역할, 현재 선택 여부를 반환합니다.
+- 응답은 현재 로그인 세션의 `currentWorkspace`와 비교한 `isCurrent` 값을 포함합니다.
+
+### `POST /auth/current-workspace`
+
+- 계약: `SwitchWorkspaceRequest -> SwitchWorkspaceResponse`
+- 현재 사용자가 `ACTIVE` 멤버십으로 연결된 사업장만 세션의 작업 문맥으로 선택할 수 있습니다.
+- `ledgerId`를 생략하면 선택 사업장의 기본 장부를 사용하고, 명시한 장부가 해당 사업장에 없으면 전환을 거부합니다.
+- 전환 결과는 같은 access token/session으로 이어지며, 이후 보호 API는 새 `currentWorkspace` 기준으로 동작합니다.
+
 ### `PATCH /admin/members/:membershipId/role`
 
 - 계약: `UpdateTenantMemberRoleRequest -> AdminMemberItem`
@@ -426,6 +444,7 @@
 - 선택한 `month`의 운영 기간을 열고, 필요하면 opening balance 초기화를 시작합니다.
 - 월 오픈은 월별 운영 사이클의 시작이며, 이미 존재하는 가장 최근 운영 기간이 `LOCKED` 상태일 때만 이후 월을 열 수 있습니다.
 - 운영 중에는 하나의 최신 진행월만 열어 두는 것을 기본 정책으로 삼습니다.
+- 첫 월의 opening balance와 이후 차기 이월 opening balance는 거래 등록 예외가 아니라 해당 월 시작 잔액 기준입니다.
 
 ### `POST /accounting-periods/:id/close`
 
@@ -453,14 +472,14 @@
 - 계약: response `FundingAccountItem[]`
 - 현재 작업 문맥 기준 활성 자금수단만 반환합니다.
 - `?includeInactive=true`를 주면 비활성/종료 자금수단까지 함께 반환합니다.
-- 응답의 `bootstrapStatus`는 신규 계좌/카드 기초 업로드 가능성을 표시합니다. `PENDING`인 활성 `BANK`/`CARD`만 업로드 배치의 신규 계좌/카드 기초 업로드 예외 후보가 될 수 있습니다.
+- 응답의 `bootstrapStatus`는 신규 계좌/카드의 시작 잔액 초기화가 아직 닫히지 않았는지 표시합니다. `PENDING`인 활성 `BANK`/`CARD`만 업로드 배치의 신규 계좌/카드 bootstrap 후보가 될 수 있습니다.
 
 ### `POST /funding-accounts`
 
 - 계약: `CreateFundingAccountRequest -> FundingAccountItem`
 - 현재 작업 문맥의 Owner/Manager만 새 자금수단을 생성할 수 있습니다.
 - 현재 범위는 `name`, `type` 생성과 활성 상태 기본값(`ACTIVE`), 초기 잔액 `0원`까지로 한정합니다.
-- 새 `BANK`/`CARD` 자금수단은 `bootstrapStatus=PENDING`으로 생성되어 등록 직후 기초 업로드 예외 후보가 됩니다. `CASH`는 `NOT_REQUIRED`로 생성됩니다.
+- 새 `BANK`/`CARD` 자금수단은 `bootstrapStatus=PENDING`으로 생성되어 등록 직후 시작 잔액 초기화 후보가 됩니다. `CASH`는 `NOT_REQUIRED`로 생성됩니다.
 - 이름은 trim/lower 기준 normalized key로 중복을 판정하며, 동시 생성 충돌은 `409 Conflict`로 정리합니다.
 
 ### `PATCH /funding-accounts/:id`
@@ -468,10 +487,17 @@
 - 계약: `UpdateFundingAccountRequest -> FundingAccountItem`
 - 현재 작업 문맥의 Owner/Manager만 자금수단 이름 변경과 `ACTIVE/INACTIVE/CLOSED` 상태 전환을 수행할 수 있습니다.
 - 현재 범위에서 `CLOSED` 전환은 `INACTIVE -> CLOSED`일 때만 허용합니다.
-- `bootstrapStatus`는 `PENDING -> COMPLETED` 직접 전환만 허용합니다. 신규 계좌/카드의 기초 업로드를 건너뛰기로 결정한 경우 이 전환으로 예외 상태를 닫습니다.
+- `bootstrapStatus`는 `PENDING -> COMPLETED` 직접 전환만 허용합니다. 신규 계좌/카드의 시작 잔액 초기화를 업로드 없이 닫기로 결정한 경우 이 전환으로 bootstrap 상태를 닫습니다.
 - `CLOSED` 자금수단은 기존 거래/반복 규칙 기록 보존용 읽기 전용 상태로 유지하며, 현재 범위에서는 다시 수정하거나 재활성화할 수 없습니다.
-- 현재 범위는 `type` 변경, 잔액 직접 수정, 하드 삭제를 지원하지 않습니다.
+- 현재 범위는 `type` 변경과 잔액 직접 수정을 지원하지 않습니다.
 - 이름 중복이나 상태 경합은 `409 Conflict`로 응답합니다.
+
+### `DELETE /funding-accounts/:id`
+
+- 현재 작업 문맥의 Owner/Manager만 미사용 자금수단을 삭제할 수 있습니다.
+- 삭제 전 현재 장부의 반복 규칙, 보험 계약, 계획 항목, 업로드 배치, 수집 거래, 전표 라인, 잔액 스냅샷, 차량 기본값 참조를 확인합니다.
+- 연결된 항목이 하나라도 있으면 `409 Conflict`를 반환하고, 거래내역이나 관련 설정을 먼저 정리하도록 안내합니다.
+- 참조가 없는 깨끗한 자금수단은 `ACTIVE/INACTIVE/CLOSED` 상태와 무관하게 삭제할 수 있습니다.
 
 ### `GET /categories`
 
@@ -737,8 +763,10 @@
 - 현재 응답은 생성된 `CollectedTransactionItem`뿐 아니라, 같은 요청 기준의 자동 판정 preview도 함께 돌려줍니다.
 - 현재 구현은 source fingerprint 기반 중복 감지, 미확정 계획 항목(`PlanItem`) 자동 매칭, 카테고리/상태 자동 준비를 포함합니다.
 - 운영 중에는 최신 진행월 범위의 행만 수집 거래로 등록할 수 있습니다.
-- 운영월 자동 생성은 아직 운영 기간이 없는 초기 기초데이터 적재 또는 최신 잠금 월 바로 다음 월에 대한 신규 활성 계좌/카드 기초 업로드 예외로 제한합니다.
-- 신규 계좌/카드 기초 업로드 예외는 해당 자금수단이 `bootstrapStatus=PENDING`이고 기존 수집거래, 다른 import batch, 전표 line, opening/closing snapshot line이 없을 때만 열립니다. 첫 수집 성공 후에는 `COMPLETED`로 전환됩니다.
+- 운영월 자동 생성은 일반 거래 입력 예외가 아니라 초기화 지원입니다. 아직 운영 기간이 없는 최초 시작월 또는 최신 잠금 월 바로 다음 월에 대한 신규 활성 계좌/카드 bootstrap일 때만 허용합니다.
+- 과거월 여러 개를 업로드로 다시 열거나 최신 진행월 밖 거래를 수집하는 용도로는 사용할 수 없습니다.
+- 운영월을 자동 생성하는 업로드 행에 `parsed.balanceAfter`와 `parsed.signedAmount`가 모두 있으면 `balanceAfter - signedAmount`를 첫 거래 직전 잔액으로 계산해 해당 자금수단의 opening balance snapshot line을 함께 생성합니다. 은행/현금은 `1010 현금및예금`, 카드는 `2100 카드미지급금` 기준입니다.
+- 신규 계좌/카드 bootstrap은 해당 자금수단이 `bootstrapStatus=PENDING`이고 기존 수집거래, 다른 import batch, 전표 line, opening/closing snapshot line이 없을 때만 열립니다. 첫 수집 성공 후에는 `COMPLETED`로 전환됩니다.
 - 같은 업로드 행 재수집은 `importedRowId` 기준으로 막고, 반복 수집 거래 흡수는 조건부 claim으로 덮어쓰기를 방지합니다.
 - 일괄 등록 Job이 같은 workspace에서 실행 중이면 단건 collect도 같은 배치/다른 배치 여부에 따라 `409 Conflict`로 막습니다.
 - 중복/경합은 `409 Conflict`로 정리합니다.
@@ -749,10 +777,10 @@
 - 선택 행이 없으면 현재 요청 배치의 등록 가능 행 전체를 대상으로 하고, 선택 행이 있으면 선택 목록만 처리합니다.
 - 요청에서 `type`을 비우면 현재 구현은 파싱된 입출금 방향으로 `DEPOSIT -> INCOME`, `WITHDRAWAL -> EXPENSE`를 자동 판정합니다.
 - `categoryId`와 `memo`는 일괄 기본값으로 쓰이며, `typeOptions[]`에 `{ type, categoryId?, memo? }`를 넘기면 실제 적용 거래유형별로 카테고리와 메모를 별도 지정할 수 있습니다.
-- 일괄 등록도 단건 collect와 같은 최신 진행월/기초 업로드 예외 규칙을 따릅니다.
+- 일괄 등록도 단건 collect와 같은 최신 진행월/초기화 지원 규칙을 따릅니다.
 - 응답은 `202 Accepted`와 함께 일괄 등록 Job 상태를 반환합니다. 서버는 Job/행별 결과를 저장하며, 같은 워크스페이스에서는 동시에 하나의 일괄 등록 Job만 실행됩니다.
 - Job 실행 루프는 현재 API 프로세스 안에서 시작되고, 진행률과 결과는 DB에 남긴 뒤 배치 작업대에서 폴링합니다.
-- 운영월 자동 생성이 발생한 행의 Job 결과 메시지는 `운영 시작 전 기초 입력`과 `신규 계좌/카드 기초 업로드` 사유를 구분해 남깁니다.
+- 운영월 자동 생성이 발생한 행의 Job 결과 메시지는 `운영 시작 전 기초 입력`과 `신규 계좌/카드 bootstrap` 사유를 구분해 남깁니다.
 
 ### `GET /import-batches/:id/collection-jobs/active`
 
@@ -765,6 +793,13 @@
 - 계약: `void -> ImportBatchCollectionJobItem`
 - 특정 일괄 등록 Job의 전체 진행률(`requestedRowCount`, `processedRowCount`, `succeededCount`, `failedCount`)과 행별 결과를 조회합니다.
 - Job 상태는 `PENDING`, `RUNNING`, `SUCCEEDED`, `PARTIAL`, `FAILED`, `CANCELLED` 중 하나입니다.
+
+### `POST /import-batches/:id/collection-jobs/:jobId/cancel`
+
+- 계약: request body 없음 -> `ImportBatchCollectionJobItem`
+- 아직 대기 중이거나 실행 중인 일괄 등록 Job을 `CANCELLED`로 표시하고, 더 이상 새 업로드 행을 처리하지 않도록 중단을 요청합니다.
+- 이미 처리 중인 단일 행은 트랜잭션 경계가 끝난 뒤 반영될 수 있으며, 이후 runner가 lock을 정리하고 최종 처리 건수를 갱신합니다.
+- 완료, 실패, 부분 완료 등 이미 종료된 Job에는 추가 데이터 변경 없이 현재 Job 상태를 반환합니다.
 
 ### `POST /journal-entries/:id/reverse`
 

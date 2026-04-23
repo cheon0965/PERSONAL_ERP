@@ -19,6 +19,8 @@ import {
   getFundingAccounts
 } from '@/features/reference-data/reference-data.api';
 import { webRuntime } from '@/shared/config/env';
+import { useAppNotification } from '@/shared/providers/notification-provider';
+import { FeedbackAlert } from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import {
   buildInsurancePolicyFallbackItem,
@@ -68,6 +70,7 @@ export function InsurancePolicyForm({
   onCompleted
 }: InsurancePolicyFormProps) {
   const queryClient = useQueryClient();
+  const { notifySuccess } = useAppNotification();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const includeInactiveFundingAccounts =
     mode === 'edit' && Boolean(initialPolicy?.fundingAccountId);
@@ -255,13 +258,11 @@ export function InsurancePolicyForm({
             });
           }
 
-          setFeedback({
-            severity: 'success',
-            message:
-              mode === 'edit'
-                ? '보험 계약과 연결된 반복 규칙을 함께 수정했습니다.'
-                : '보험 계약과 연결된 반복 규칙을 함께 저장했습니다.'
-          });
+          notifySuccess(
+            mode === 'edit'
+              ? '보험 계약과 연결된 반복 규칙을 함께 수정했습니다.'
+              : '보험 계약과 연결된 반복 규칙을 함께 저장했습니다.'
+          );
         } catch (error) {
           setFeedback({
             severity: 'error',
@@ -278,7 +279,6 @@ export function InsurancePolicyForm({
       <Stack spacing={appLayout.cardGap}>
         <InsurancePolicyReferenceAlerts
           referenceError={referenceError}
-          feedback={feedback}
         />
 
         <InsurancePolicyFieldGrid
@@ -287,6 +287,7 @@ export function InsurancePolicyForm({
           availableCategories={availableCategories}
         />
 
+        <FeedbackAlert feedback={feedback} />
         <Button
           type="submit"
           variant="contained"

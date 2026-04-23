@@ -411,6 +411,8 @@ model AuthSession {
   refreshTokenHash String    @db.Text
   expiresAt        DateTime
   revokedAt        DateTime?
+  currentTenantId  String?
+  currentLedgerId  String?
   supportTenantId  String?
   supportLedgerId  String?
   supportStartedAt DateTime?
@@ -420,6 +422,7 @@ model AuthSession {
 
   @@index([userId, expiresAt])
   @@index([userId, revokedAt])
+  @@index([currentTenantId, currentLedgerId])
   @@index([supportTenantId, supportLedgerId])
 }
 

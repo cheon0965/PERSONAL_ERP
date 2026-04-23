@@ -87,7 +87,7 @@ export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
     tx: PrismaClientLike,
     workspace: ImportedRowCollectionWorkspaceScope,
     fundingAccountId: string
-  ): Promise<{ id: string; name: string }> {
+  ): Promise<{ id: string; name: string; type: 'BANK' | 'CASH' | 'CARD' }> {
     const fundingAccount = await tx.account.findFirst({
       where: {
         id: fundingAccountId,
@@ -96,7 +96,8 @@ export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
       },
       select: {
         id: true,
-        name: true
+        name: true,
+        type: true
       }
     });
 

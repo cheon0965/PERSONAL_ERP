@@ -40,6 +40,7 @@ import { getApiEnv } from '../../config/api-env';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { Public } from '../../common/auth/public.decorator';
 import { AuthAccountSecurityService } from './auth-account-security.service';
+import { AuthWorkspaceService } from './auth-workspace.service';
 import { AcceptInvitationUseCase } from './application/use-cases/accept-invitation.use-case';
 import { ChangePasswordUseCase } from './application/use-cases/change-password.use-case';
 import { LoginUseCase } from './application/use-cases/login.use-case';
@@ -55,6 +56,7 @@ import { AcceptInvitationDto } from './dto/accept-invitation.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
+import { SwitchWorkspaceDto } from './dto/switch-workspace.dto';
 import { UpdateAccountProfileDto } from './dto/update-account-profile.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 
@@ -80,6 +82,7 @@ function getRefreshCookieOptions() {
 export class AuthController {
   constructor(
     private readonly authAccountSecurityService: AuthAccountSecurityService,
+    private readonly authWorkspaceService: AuthWorkspaceService,
     private readonly registerUseCase: RegisterUseCase,
     private readonly verifyEmailUseCase: VerifyEmailUseCase,
     private readonly resendVerificationEmailUseCase: ResendVerificationEmailUseCase,
@@ -227,6 +230,33 @@ export class AuthController {
   @Header('Cache-Control', 'no-store')
   getMe(@CurrentUser() user: AuthenticatedUser) {
     return user;
+  }
+
+  @Get('workspaces')
+  @ApiBearerAuth()
+  @Header('Cache-Control', 'no-store')
+  getWorkspaces(@CurrentUser() user: AuthenticatedUser) {
+    return this.authWorkspaceService.listWorkspaces(user);
+  }
+
+  @Post('current-workspace')
+  @ApiBearerAuth()
+  @Header('Cache-Control', 'no-store')
+  async switchCurrentWorkspace(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentSessionId() currentSessionId: string | undefined,
+    @Body() dto: SwitchWorkspaceDto
+  ) {
+    return this.authWorkspaceService.switchCurrentWorkspace(
+      user,
+      currentSessionId,
+      dto,
+      {
+        clientIp: readClientIp(request),
+        requestId: readRequestId(request)
+      }
+    );
   }
 
   @Get('account-security')

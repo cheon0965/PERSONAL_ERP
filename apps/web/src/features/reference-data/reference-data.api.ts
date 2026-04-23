@@ -9,7 +9,12 @@ import type {
   UpdateCategoryRequest,
   UpdateFundingAccountRequest
 } from '@personal-erp/contracts';
-import { fetchJson, patchJson, postJson } from '@/shared/api/fetch-json';
+import {
+  deleteJson,
+  fetchJson,
+  patchJson,
+  postJson
+} from '@/shared/api/fetch-json';
 import {
   mockAccountSubjects,
   mockCategories,
@@ -81,6 +86,10 @@ export function updateFundingAccount(
     input,
     fallback
   );
+}
+
+export function deleteFundingAccount(fundingAccountId: string) {
+  return deleteJson<null>(`/funding-accounts/${fundingAccountId}`, null);
 }
 
 export function getCategories(input?: { includeInactive?: boolean }) {

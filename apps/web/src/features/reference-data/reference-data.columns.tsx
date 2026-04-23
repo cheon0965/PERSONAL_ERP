@@ -41,6 +41,7 @@ export function buildFundingAccountColumns(input: {
     nextStatus: 'ACTIVE' | 'INACTIVE' | 'CLOSED'
   ) => void;
   onCompleteBootstrap: (fundingAccount: FundingAccountItem) => void;
+  onDelete: (fundingAccount: FundingAccountItem) => void;
 }): GridColDef<FundingAccountItem>[] {
   return [
     { field: 'name', headerName: '자금수단', flex: 1.2 },
@@ -91,7 +92,7 @@ export function buildFundingAccountColumns(input: {
     {
       field: 'actions',
       headerName: '관리',
-      flex: 1.8,
+      flex: 2.1,
       sortable: false,
       filterable: false,
       renderCell: (params) => {
@@ -105,9 +106,20 @@ export function buildFundingAccountColumns(input: {
 
         if (params.row.status === 'CLOSED') {
           return (
-            <Typography variant="caption" color="text.secondary">
-              종료 계정은 읽기 전용
-            </Typography>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Typography variant="caption" color="text.secondary">
+                종료 계정은 읽기 전용
+              </Typography>
+              <Button
+                size="small"
+                color="error"
+                onClick={() => {
+                  input.onDelete(params.row);
+                }}
+              >
+                삭제
+              </Button>
+            </Stack>
           );
         }
 
@@ -155,6 +167,15 @@ export function buildFundingAccountColumns(input: {
                 종료
               </Button>
             ) : null}
+            <Button
+              size="small"
+              color="error"
+              onClick={() => {
+                input.onDelete(params.row);
+              }}
+            >
+              삭제
+            </Button>
           </Stack>
         );
       }

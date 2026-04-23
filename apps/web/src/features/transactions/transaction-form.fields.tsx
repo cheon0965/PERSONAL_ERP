@@ -7,6 +7,10 @@ import type {
   FundingAccountItem
 } from '@personal-erp/contracts';
 import { Controller, type UseFormReturn } from 'react-hook-form';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import type { TransactionFormInput } from './transaction-form.schema';
 import { readFundingAccountOptionLabel } from './transaction-form.mapper';
@@ -18,6 +22,7 @@ export function TransactionFormFields({
   form,
   availableFundingAccounts,
   filteredCategories,
+  feedback,
   includeReversalTypeOption,
   isBusy,
   submitLabel
@@ -28,6 +33,7 @@ export function TransactionFormFields({
   form: UseFormReturn<TransactionFormInput>;
   availableFundingAccounts: FundingAccountItem[];
   filteredCategories: CategoryItem[];
+  feedback: FeedbackAlertValue;
   includeReversalTypeOption: boolean;
   isBusy: boolean;
   submitLabel: string;
@@ -172,6 +178,7 @@ export function TransactionFormFields({
           />
         </Grid>
       </Grid>
+      <FeedbackAlert feedback={feedback} />
       <Button
         type="submit"
         variant="contained"

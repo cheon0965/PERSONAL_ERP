@@ -82,6 +82,22 @@ export class ImportBatchCollectionJobRunner {
 
     try {
       for (const row of job.rows) {
+        if (await this.isJobCancelled(job.id)) {
+          await this.finishJob({
+            jobId: job.id,
+            tenantId: job.tenantId,
+            ledgerId: job.ledgerId,
+            importBatchId: job.importBatchId,
+            requestedRowCount: job.requestedRowCount,
+            status: ImportBatchCollectionJobStatus.CANCELLED,
+            processedRowCount,
+            succeededCount,
+            failedCount,
+            errorMessage: '사용자가 업로드 배치 일괄 등록 작업을 중단했습니다.'
+          });
+          return;
+        }
+
         const result = await this.processRow({
           jobId: job.id,
           importBatchId: job.importBatchId,
@@ -104,6 +120,22 @@ export class ImportBatchCollectionJobRunner {
           succeededCount,
           failedCount
         });
+
+        if (await this.isJobCancelled(job.id)) {
+          await this.finishJob({
+            jobId: job.id,
+            tenantId: job.tenantId,
+            ledgerId: job.ledgerId,
+            importBatchId: job.importBatchId,
+            requestedRowCount: job.requestedRowCount,
+            status: ImportBatchCollectionJobStatus.CANCELLED,
+            processedRowCount,
+            succeededCount,
+            failedCount,
+            errorMessage: '사용자가 업로드 배치 일괄 등록 작업을 중단했습니다.'
+          });
+          return;
+        }
       }
 
       await this.finishJob({
@@ -310,20 +342,50 @@ export class ImportBatchCollectionJobRunner {
     errorMessage: string | null;
   }) {
     const finishedAt = new Date();
-    await this.prisma.importBatchCollectionJob.update({
-      where: {
-        id: input.jobId
-      },
-      data: {
-        status: input.status,
-        processedRowCount: input.processedRowCount,
-        succeededCount: input.succeededCount,
-        failedCount: input.failedCount,
-        errorMessage: input.errorMessage,
-        finishedAt,
-        heartbeatAt: finishedAt
+    if (input.status === ImportBatchCollectionJobStatus.CANCELLED) {
+      await this.prisma.importBatchCollectionJob.update({
+        where: {
+          id: input.jobId
+        },
+        data: {
+          status: input.status,
+          processedRowCount: input.processedRowCount,
+          succeededCount: input.succeededCount,
+          failedCount: input.failedCount,
+          errorMessage: input.errorMessage,
+          finishedAt,
+          heartbeatAt: finishedAt
+        }
+      });
+    } else {
+      const updated = await this.prisma.importBatchCollectionJob.updateMany({
+        where: {
+          id: input.jobId,
+          status: {
+            not: ImportBatchCollectionJobStatus.CANCELLED
+          }
+        },
+        data: {
+          status: input.status,
+          processedRowCount: input.processedRowCount,
+          succeededCount: input.succeededCount,
+          failedCount: input.failedCount,
+          errorMessage: input.errorMessage,
+          finishedAt,
+          heartbeatAt: finishedAt
+        }
+      });
+
+      if (updated.count === 0) {
+        await this.prisma.importBatchCollectionLock.deleteMany({
+          where: {
+            jobId: input.jobId
+          }
+        });
+        return;
       }
-    });
+    }
+
     await this.prisma.importBatchCollectionLock.deleteMany({
       where: {
         jobId: input.jobId
@@ -351,6 +413,19 @@ export class ImportBatchCollectionJobRunner {
         errorMessage: input.errorMessage
       }
     });
+  }
+
+  private async isJobCancelled(jobId: string): Promise<boolean> {
+    const job = await this.prisma.importBatchCollectionJob.findFirst({
+      where: {
+        id: jobId
+      },
+      select: {
+        status: true
+      }
+    });
+
+    return job?.status === ImportBatchCollectionJobStatus.CANCELLED;
   }
 }
 

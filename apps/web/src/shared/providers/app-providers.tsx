@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { usePathname } from 'next/navigation';
 import { AuthProvider } from '@/shared/auth/auth-provider';
+import { NotificationProvider } from '@/shared/providers/notification-provider';
 import { QueryProvider } from '@/shared/providers/query-provider';
 import { ThemeRegistry } from '@/shared/providers/theme-registry';
 
@@ -20,9 +21,11 @@ export function AppProviders({ children }: React.PropsWithChildren) {
   return (
     <ThemeRegistry>
       <QueryProvider>
-        <AuthProvider>
-          <DomainHelpProvider>{children}</DomainHelpProvider>
-        </AuthProvider>
+        <NotificationProvider>
+          <AuthProvider>
+            <DomainHelpProvider>{children}</DomainHelpProvider>
+          </AuthProvider>
+        </NotificationProvider>
       </QueryProvider>
     </ThemeRegistry>
   );

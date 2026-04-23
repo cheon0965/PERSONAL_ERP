@@ -4,8 +4,12 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Alert, Button, MenuItem, Stack, TextField } from '@mui/material';
 import type { AccountType, FundingAccountItem } from '@personal-erp/contracts';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 
 const fundingAccountManagementSchema = z.object({
@@ -17,17 +21,21 @@ type FundingAccountManagementFormInput = z.infer<
   typeof fundingAccountManagementSchema
 >;
 
+const defaultFundingAccountType: AccountType = 'BANK';
+
 export type FundingAccountManagementSubmitInput = {
   name: string;
   type: AccountType;
 };
 
 export function FundingAccountManagementForm({
+  feedback,
   mode,
   initialFundingAccount,
   busy,
   onSubmit
 }: {
+  feedback: FeedbackAlertValue;
   mode: 'create' | 'edit';
   initialFundingAccount?: FundingAccountItem | null;
   busy: boolean;
@@ -39,7 +47,7 @@ export function FundingAccountManagementForm({
     resolver: zodResolver(fundingAccountManagementSchema),
     defaultValues: {
       name: '',
-      type: 'BANK'
+      type: defaultFundingAccountType
     }
   });
 
@@ -47,14 +55,14 @@ export function FundingAccountManagementForm({
     if (mode === 'edit' && initialFundingAccount) {
       form.reset({
         name: initialFundingAccount.name,
-        type: initialFundingAccount.type
+        type: normalizeFundingAccountType(initialFundingAccount.type)
       });
       return;
     }
 
     form.reset({
       name: '',
-      type: 'BANK'
+      type: defaultFundingAccountType
     });
   }, [form, initialFundingAccount, mode]);
 
@@ -82,22 +90,35 @@ export function FundingAccountManagementForm({
           {...form.register('name')}
         />
 
-        <TextField
-          select
-          label="유형"
-          disabled={busy || mode === 'edit'}
-          helperText={
-            mode === 'edit'
-              ? '기존 거래와 전표 맥락을 바꾸지 않기 위해 생성 후에는 유형을 유지합니다.'
-              : '통장, 현금, 카드 중 실제 운영 형태에 맞는 유형을 선택합니다.'
-          }
-          {...form.register('type')}
-        >
-          <MenuItem value="BANK">통장</MenuItem>
-          <MenuItem value="CASH">현금</MenuItem>
-          <MenuItem value="CARD">카드</MenuItem>
-        </TextField>
+        <Controller
+          control={form.control}
+          name="type"
+          render={({ field }) => (
+            <TextField
+              select
+              label="유형"
+              name={field.name}
+              value={field.value ?? defaultFundingAccountType}
+              onBlur={field.onBlur}
+              onChange={field.onChange}
+              inputRef={field.ref}
+              disabled={busy || mode === 'edit'}
+              error={Boolean(form.formState.errors.type)}
+              helperText={
+                form.formState.errors.type?.message ??
+                (mode === 'edit'
+                  ? '기존 거래와 전표 맥락을 바꾸지 않기 위해 생성 후에는 유형을 유지합니다.'
+                  : '통장, 현금, 카드 중 실제 운영 형태에 맞는 유형을 선택합니다.')
+              }
+            >
+              <MenuItem value="BANK">통장</MenuItem>
+              <MenuItem value="CASH">현금</MenuItem>
+              <MenuItem value="CARD">카드</MenuItem>
+            </TextField>
+          )}
+        />
 
+        <FeedbackAlert feedback={feedback} />
         <Button
           type="submit"
           variant="contained"
@@ -113,4 +134,12 @@ export function FundingAccountManagementForm({
       </Stack>
     </form>
   );
+}
+
+function normalizeFundingAccountType(
+  type: AccountType | undefined
+): AccountType {
+  return type === 'BANK' || type === 'CASH' || type === 'CARD'
+    ? type
+    : defaultFundingAccountType;
 }

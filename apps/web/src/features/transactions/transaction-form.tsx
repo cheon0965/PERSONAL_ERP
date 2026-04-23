@@ -63,11 +63,6 @@ export function TransactionForm({
             error={formState.referenceError}
           />
         ) : null}
-        {formState.feedback ? (
-          <Alert severity={formState.feedback.severity} variant="outlined">
-            {formState.feedback.message}
-          </Alert>
-        ) : null}
         {!hasCollectingPeriod ? (
           <Alert severity="warning" variant="outlined">
             현재 열린 운영 기간이 없습니다. 먼저 `월 운영` 화면에서 운영 기간을
@@ -120,6 +115,7 @@ export function TransactionForm({
           form={formState.form}
           availableFundingAccounts={formState.availableFundingAccounts}
           filteredCategories={formState.filteredCategories}
+          feedback={formState.feedback}
           includeReversalTypeOption={formState.selectedType === 'REVERSAL'}
           isBusy={formState.isBusy}
           submitLabel={

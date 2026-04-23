@@ -30,6 +30,25 @@ export function createInsurancePoliciesPrismaMock(
 
   return {
     insurancePolicy: {
+      count: async (args: {
+        where?: {
+          accountId?: string | null;
+          tenantId?: string;
+          ledgerId?: string;
+        };
+      }) => {
+        return state.insurancePolicies.filter((candidate) => {
+          const matchesAccount =
+            args.where?.accountId === undefined ||
+            candidate.accountId === args.where.accountId;
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+
+          return matchesAccount && matchesTenant && matchesLedger;
+        }).length;
+      },
       findFirst: async (args: {
         where?: {
           id?: string | { not?: string };

@@ -26,6 +26,7 @@ import {
   referenceDataReadinessQueryKey
 } from '@/features/reference-data/reference-data.api';
 import { webRuntime } from '@/shared/config/env';
+import { useAppNotification } from '@/shared/providers/notification-provider';
 import { resolveStatusLabel } from '@/shared/ui/status-chip';
 import {
   buildCollectedTransactionFallbackItem,
@@ -68,6 +69,7 @@ export function useTransactionForm(input: {
   ) => void;
 }) {
   const queryClient = useQueryClient();
+  const { notifySuccess } = useAppNotification();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const collectingPeriods = React.useMemo(
     () => readLatestCollectingAccountingPeriods(input.accountingPeriods),
@@ -335,13 +337,11 @@ export function useTransactionForm(input: {
         });
       }
 
-      setFeedback({
-        severity: 'success',
-        message:
-          input.mode === 'edit'
-            ? `수집 거래를 수정했고 ${resolveStatusLabel(saved.postingStatus)} 상태로 반영했습니다.`
-            : `수집 거래를 등록했고 ${resolveStatusLabel(saved.postingStatus)} 상태로 반영했습니다.`
-      });
+      notifySuccess(
+        input.mode === 'edit'
+          ? `수집 거래를 수정했고 ${resolveStatusLabel(saved.postingStatus)} 상태로 반영했습니다.`
+          : `수집 거래를 등록했고 ${resolveStatusLabel(saved.postingStatus)} 상태로 반영했습니다.`
+      );
     } catch (error) {
       setFeedback({
         severity: 'error',

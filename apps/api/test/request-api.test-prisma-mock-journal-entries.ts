@@ -302,6 +302,40 @@ export function createJournalEntriesPrismaMock(
     },
 
     journalLine: {
+      count: async (args: {
+        where?: {
+          fundingAccountId?: string | null;
+          journalEntry?: {
+            tenantId?: string;
+            ledgerId?: string;
+            is?: {
+              tenantId?: string;
+              ledgerId?: string;
+            };
+          };
+        };
+      }) => {
+        const relationFilter = args.where?.journalEntry;
+        const tenantId =
+          relationFilter?.tenantId ?? relationFilter?.is?.tenantId;
+        const ledgerId =
+          relationFilter?.ledgerId ?? relationFilter?.is?.ledgerId;
+
+        return state.journalEntries
+          .filter((candidate) => {
+            const matchesTenant = !tenantId || candidate.tenantId === tenantId;
+            const matchesLedger = !ledgerId || candidate.ledgerId === ledgerId;
+
+            return matchesTenant && matchesLedger;
+          })
+          .flatMap((entry) => entry.lines)
+          .filter((line) => {
+            return (
+              args.where?.fundingAccountId === undefined ||
+              line.fundingAccountId === args.where.fundingAccountId
+            );
+          }).length;
+      },
       findMany: async (args: {
         where?: {
           fundingAccountId?: string | null;

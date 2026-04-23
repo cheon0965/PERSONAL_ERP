@@ -10,17 +10,10 @@ import {
   readFundingAccountOptionLabel
 } from './insurance-policy-form.model';
 
-type SubmitFeedback = {
-  severity: 'success' | 'error';
-  message: string;
-} | null;
-
 export function InsurancePolicyReferenceAlerts({
-  referenceError,
-  feedback
+  referenceError
 }: {
   referenceError: unknown;
-  feedback: SubmitFeedback;
 }) {
   return (
     <>
@@ -29,11 +22,6 @@ export function InsurancePolicyReferenceAlerts({
           title="보험 계약 반복 규칙 기준 조회에 실패했습니다."
           error={referenceError}
         />
-      ) : null}
-      {feedback ? (
-        <Alert severity={feedback.severity} variant="outlined">
-          {feedback.message}
-        </Alert>
       ) : null}
       <Alert severity="info" variant="outlined">
         보험 계약을 저장하면 연결된 반복 규칙이 함께 생성되거나 갱신됩니다. 실제

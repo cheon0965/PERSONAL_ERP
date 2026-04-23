@@ -124,7 +124,7 @@ export function RecurringRulesFeedbackAlerts({
 }) {
   return (
     <>
-      {feedback ? (
+      {feedback?.severity === 'error' ? (
         <Alert severity={feedback.severity} variant="outlined">
           {feedback.message}
         </Alert>

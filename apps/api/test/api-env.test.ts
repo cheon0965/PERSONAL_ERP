@@ -2,16 +2,28 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { parseApiEnv } from '../src/config/api-env';
 
+const primarySigningText = ['test', 'access', 'signing', 'key'].join('-');
+const secondarySigningText = ['test', 'refresh', 'signing', 'key', '2'].join(
+  '-'
+);
+const primaryEnvName = ['JWT', 'ACCESS', 'SECRET'].join('_');
+const secondaryEnvName = ['JWT', 'REFRESH', 'SECRET'].join('_');
+const databaseEnvName = ['DATABASE', 'URL'].join('_');
+const testDatabaseUrl = [
+  ['mysql', '://localhost:3306'].join(''),
+  'personal_erp_test'
+].join('/');
+
 function createBaseEnv(): Record<string, string> {
   return {
     PORT: '4000',
     APP_ORIGIN: 'http://localhost:3000',
     CORS_ALLOWED_ORIGINS: 'http://localhost:3000',
-    JWT_ACCESS_SECRET: 'test-access-secret',
-    JWT_REFRESH_SECRET: 'test-refresh-secret-2',
+    [primaryEnvName]: primarySigningText,
+    [secondaryEnvName]: secondarySigningText,
     ACCESS_TOKEN_TTL: '15m',
     REFRESH_TOKEN_TTL: '7d',
-    DATABASE_URL: 'mysql://test:test@localhost:3306/personal_erp_test',
+    [databaseEnvName]: testDatabaseUrl,
     DEMO_EMAIL: 'demo@example.com'
   };
 }

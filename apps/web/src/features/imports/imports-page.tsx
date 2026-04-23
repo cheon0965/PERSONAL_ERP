@@ -104,7 +104,7 @@ export function ImportsPage({
         secondaryActionHref={isDetailMode ? '/imports' : '/transactions'}
       />
 
-      {page.feedback ? (
+      {page.feedback?.severity === 'error' ? (
         <Alert severity={page.feedback.severity} variant="outlined">
           {page.feedback.message}
         </Alert>
@@ -171,10 +171,12 @@ export function ImportsPage({
           categories={page.categories}
           bulkCollectJob={page.bulkCollectJob}
           bulkCollectPending={page.isBulkCollectPending}
+          cancelBulkCollectPending={page.cancelBulkCollectJobPending}
           onBulkCollectFormChange={page.updateBulkCollectForm}
           onSelectedRowIdsChange={page.selectRows}
           onPrepareCollect={page.prepareCollectRow}
           onBulkCollect={page.submitBulkCollect}
+          onCancelBulkCollect={page.cancelBulkCollectJob}
         />
       ) : (
         <SectionCard

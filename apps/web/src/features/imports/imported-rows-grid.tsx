@@ -55,10 +55,12 @@ export function ImportedRowsGrid({
   categories,
   bulkCollectJob,
   bulkCollectPending,
+  cancelBulkCollectPending,
   onBulkCollectFormChange,
   onSelectedRowIdsChange,
   onPrepareCollect,
-  onBulkCollect
+  onBulkCollect,
+  onCancelBulkCollect
 }: {
   selectedBatch: ImportBatchItem | null;
   rows: ImportedRowTableItem[];
@@ -71,10 +73,12 @@ export function ImportedRowsGrid({
   categories: CategoryItem[];
   bulkCollectJob: ImportBatchCollectionJobItem | null;
   bulkCollectPending: boolean;
+  cancelBulkCollectPending: boolean;
   onBulkCollectFormChange: (patch: Partial<BulkCollectFormState>) => void;
   onSelectedRowIdsChange: (rowIds: string[]) => void;
   onPrepareCollect: (row: ImportedRowTableItem) => void;
   onBulkCollect: () => void;
+  onCancelBulkCollect: () => void;
 }) {
   const [isTypeOverridesOpen, setTypeOverridesOpen] = React.useState(false);
   const parseSummary = React.useMemo(() => {
@@ -191,6 +195,8 @@ export function ImportedRowsGrid({
             100
         )
       : 0;
+  const canCancelBulkCollectJob =
+    bulkCollectJob?.status === 'PENDING' || bulkCollectJob?.status === 'RUNNING';
 
   function handleRowSelectionModelChange(model: GridRowSelectionModel) {
     if (model.type === 'exclude') {
@@ -594,9 +600,22 @@ export function ImportedRowsGrid({
                         {bulkCollectJob.succeededCount}건 · 실패{' '}
                         {bulkCollectJob.failedCount}건
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {bulkCollectProgress}%
-                      </Typography>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography variant="body2" color="text.secondary">
+                          {bulkCollectProgress}%
+                        </Typography>
+                        {canCancelBulkCollectJob ? (
+                          <Button
+                            size="small"
+                            color="warning"
+                            variant="outlined"
+                            disabled={cancelBulkCollectPending}
+                            onClick={onCancelBulkCollect}
+                          >
+                            작업 중단
+                          </Button>
+                        ) : null}
+                      </Stack>
                     </Stack>
                     <LinearProgress
                       variant="determinate"

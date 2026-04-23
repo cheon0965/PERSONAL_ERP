@@ -15,6 +15,8 @@ import {
   getFundingAccounts
 } from '@/features/reference-data/reference-data.api';
 import { webRuntime } from '@/shared/config/env';
+import { useAppNotification } from '@/shared/providers/notification-provider';
+import { FeedbackAlert } from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import {
   buildRecurringRuleFallbackItem,
@@ -69,6 +71,7 @@ export function RecurringRuleForm({
   onCompleted
 }: RecurringRuleFormProps) {
   const queryClient = useQueryClient();
+  const { notifySuccess } = useAppNotification();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const includeInactiveCategories =
     mode === 'edit' && Boolean(initialRule?.categoryId);
@@ -238,13 +241,11 @@ export function RecurringRuleForm({
             form.reset(buildCreateResetValues(values));
           }
 
-          setFeedback({
-            severity: 'success',
-            message:
-              mode === 'edit'
-                ? '반복 규칙을 수정했고 계획 기준 목록을 새로고침했습니다.'
-                : '반복 규칙을 저장했고 계획 기준 목록을 새로고침했습니다.'
-          });
+          notifySuccess(
+            mode === 'edit'
+              ? '반복 규칙을 수정했고 계획 기준 목록을 새로고침했습니다.'
+              : '반복 규칙을 저장했고 계획 기준 목록을 새로고침했습니다.'
+          );
         } catch (error) {
           setFeedback({
             severity: 'error',
@@ -260,7 +261,6 @@ export function RecurringRuleForm({
     >
       <Stack spacing={appLayout.cardGap}>
         <RecurringRuleReferenceAlerts
-          feedback={feedback}
           mode={mode}
           referenceError={referenceError}
         />
@@ -269,6 +269,7 @@ export function RecurringRuleForm({
           filteredCategories={filteredCategories}
           form={form}
         />
+        <FeedbackAlert feedback={feedback} />
         <Button
           type="submit"
           variant="contained"

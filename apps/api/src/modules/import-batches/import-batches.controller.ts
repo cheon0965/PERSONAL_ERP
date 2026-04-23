@@ -37,6 +37,7 @@ import {
 import { CollectImportedRowUseCase } from './application/use-cases/collect-imported-row.use-case';
 import { BulkCollectImportedRowsUseCase } from './application/use-cases/bulk-collect-imported-rows.use-case';
 import { CancelImportBatchCollectionUseCase } from './application/use-cases/cancel-import-batch-collection.use-case';
+import { CancelImportBatchCollectionJobUseCase } from './application/use-cases/cancel-import-batch-collection-job.use-case';
 import { CreateImportBatchFromFileUseCase } from './application/use-cases/create-import-batch-from-file.use-case';
 import { CreateImportBatchUseCase } from './application/use-cases/create-import-batch.use-case';
 import { DeleteImportBatchUseCase } from './application/use-cases/delete-import-batch.use-case';
@@ -69,6 +70,7 @@ export class ImportBatchesController {
     private readonly collectImportedRowUseCase: CollectImportedRowUseCase,
     private readonly bulkCollectImportedRowsUseCase: BulkCollectImportedRowsUseCase,
     private readonly cancelImportBatchCollectionUseCase: CancelImportBatchCollectionUseCase,
+    private readonly cancelImportBatchCollectionJobUseCase: CancelImportBatchCollectionJobUseCase,
     private readonly getImportBatchCollectionJobUseCase: GetImportBatchCollectionJobUseCase,
     private readonly getActiveImportBatchCollectionJobUseCase: GetActiveImportBatchCollectionJobUseCase,
     private readonly deleteImportBatchUseCase: DeleteImportBatchUseCase,
@@ -335,6 +337,56 @@ export class ImportBatchesController {
       importBatchId,
       jobId
     );
+  }
+
+  @Post(':id/collection-jobs/:jobId/cancel')
+  async cancelCollectionJob(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') importBatchId: string,
+    @Param('jobId') jobId: string
+  ): Promise<ImportBatchCollectionJobItem> {
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      const result = await this.cancelImportBatchCollectionJobUseCase.execute(
+        user,
+        importBatchId,
+        jobId
+      );
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'import_batch.cancel',
+        request,
+        workspace,
+        details: {
+          importBatchId,
+          jobId,
+          status: result.status,
+          processedRowCount: result.processedRowCount,
+          requestedRowCount: result.requestedRowCount
+        }
+      });
+
+      return result;
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'import_batch.cancel',
+          request,
+          workspace,
+          details: {
+            importBatchId,
+            jobId,
+            requiredRoles: readAllowedWorkspaceRoles(
+              'import_batch.cancel'
+            ).join(',')
+          }
+        });
+      }
+
+      throw error;
+    }
   }
 
   @Post(':id/cancel-collection')

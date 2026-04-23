@@ -7,6 +7,26 @@ export function createVehicleRecordsPrismaMock(
 
   return {
     vehicle: {
+      count: async (args: {
+        where?: {
+          tenantId?: string;
+          ledgerId?: string;
+          defaultFundingAccountId?: string | null;
+        };
+      }) => {
+        return state.vehicles.filter((candidate) => {
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesDefaultFundingAccount =
+            args.where?.defaultFundingAccountId === undefined ||
+            candidate.defaultFundingAccountId ===
+              args.where.defaultFundingAccountId;
+
+          return matchesTenant && matchesLedger && matchesDefaultFundingAccount;
+        }).length;
+      },
       findFirst: async (args: {
         where?: {
           id?: string;

@@ -13,11 +13,13 @@ import type {
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { membershipRoleLabelMap } from '@/shared/auth/auth-labels';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import { useAppNotification } from '@/shared/providers/notification-provider';
 import {
   accountSubjectsQueryKey,
   categoriesManagementQueryKey,
   createCategory,
   createFundingAccount,
+  deleteFundingAccount,
   fundingAccountsManagementQueryKey,
   getAccountSubjects,
   getCategories,
@@ -35,6 +37,7 @@ import {
   readFundingAccountTransitionSuccessMessage,
   type CategoryEditorState,
   type FeedbackState,
+  type FundingAccountDeleteTarget,
   type FundingAccountEditorState,
   type FundingAccountStatusActionTarget
 } from './reference-data.shared';
@@ -48,6 +51,7 @@ export function useReferenceDataPage(
   section: ReferenceDataManagementSection = 'funding-accounts'
 ) {
   const queryClient = useQueryClient();
+  const { notifySuccess } = useAppNotification();
   const { user } = useAuthSession();
   const [feedback, setFeedback] = React.useState<FeedbackState>(null);
   const [fundingAccountEditorState, setFundingAccountEditorState] =
@@ -58,6 +62,8 @@ export function useReferenceDataPage(
     fundingAccountStatusActionTarget,
     setFundingAccountStatusActionTarget
   ] = React.useState<FundingAccountStatusActionTarget>(null);
+  const [fundingAccountDeleteTarget, setFundingAccountDeleteTarget] =
+    React.useState<FundingAccountDeleteTarget>(null);
   const [categoryToggleTarget, setCategoryToggleTarget] =
     React.useState<CategoryItem | null>(null);
 
@@ -147,13 +153,11 @@ export function useReferenceDataPage(
     },
     onSuccess: async (saved, variables) => {
       setFundingAccountEditorState(null);
-      setFeedback({
-        severity: 'success',
-        message:
-          variables.mode === 'create'
-            ? `${saved.name} 자금수단을 추가했습니다.`
-            : `${saved.name} 자금수단을 저장했습니다.`
-      });
+      notifySuccess(
+        variables.mode === 'create'
+          ? `${saved.name} 자금수단을 추가했습니다.`
+          : `${saved.name} 자금수단을 저장했습니다.`
+      );
 
       await invalidateReferenceDataQueries(queryClient);
     },
@@ -190,13 +194,11 @@ export function useReferenceDataPage(
     },
     onSuccess: async (saved, variables) => {
       setCategoryEditorState(null);
-      setFeedback({
-        severity: 'success',
-        message:
-          variables.mode === 'create'
-            ? `${saved.name} 카테고리를 추가했습니다.`
-            : `${saved.name} 카테고리를 저장했습니다.`
-      });
+      notifySuccess(
+        variables.mode === 'create'
+          ? `${saved.name} 카테고리를 추가했습니다.`
+          : `${saved.name} 카테고리를 저장했습니다.`
+      );
 
       await invalidateReferenceDataQueries(queryClient);
     },
@@ -226,13 +228,12 @@ export function useReferenceDataPage(
       ),
     onSuccess: async (saved, variables) => {
       setFundingAccountStatusActionTarget(null);
-      setFeedback({
-        severity: 'success',
-        message: readFundingAccountTransitionSuccessMessage(
+      notifySuccess(
+        readFundingAccountTransitionSuccessMessage(
           variables.fundingAccount.name,
           saved.status
         )
-      });
+      );
 
       await invalidateReferenceDataQueries(queryClient);
     },
@@ -243,6 +244,26 @@ export function useReferenceDataPage(
           error instanceof Error
             ? error.message
             : '자금수단 상태를 변경하지 못했습니다.'
+      });
+    }
+  });
+
+  const deleteFundingAccountMutation = useMutation({
+    mutationFn: (fundingAccount: FundingAccountItem) =>
+      deleteFundingAccount(fundingAccount.id),
+    onSuccess: async (_result, fundingAccount) => {
+      setFundingAccountDeleteTarget(null);
+      notifySuccess(`${fundingAccount.name} 자금수단을 삭제했습니다.`);
+
+      await invalidateReferenceDataQueries(queryClient);
+    },
+    onError: (error) => {
+      setFeedback({
+        severity: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : '자금수단을 삭제하지 못했습니다.'
       });
     }
   });
@@ -262,10 +283,7 @@ export function useReferenceDataPage(
       ),
     onSuccess: async (saved) => {
       setCategoryToggleTarget(null);
-      setFeedback({
-        severity: 'success',
-        message: readCategoryToggleSuccessMessage(saved)
-      });
+      notifySuccess(readCategoryToggleSuccessMessage(saved));
 
       await invalidateReferenceDataQueries(queryClient);
     },
@@ -302,6 +320,11 @@ export function useReferenceDataPage(
       fundingAccount,
       nextStatus
     });
+  }
+
+  function openFundingAccountDelete(fundingAccount: FundingAccountItem) {
+    setFeedback(null);
+    setFundingAccountDeleteTarget(fundingAccount);
   }
 
   function openCategoryCreate() {
@@ -393,9 +416,19 @@ export function useReferenceDataPage(
       return;
     }
 
+    setFeedback(null);
     await transitionFundingAccountMutation.mutateAsync(
       fundingAccountStatusActionTarget
     );
+  }
+
+  async function confirmFundingAccountDelete() {
+    if (!fundingAccountDeleteTarget) {
+      return;
+    }
+
+    setFeedback(null);
+    await deleteFundingAccountMutation.mutateAsync(fundingAccountDeleteTarget);
   }
 
   async function confirmCategoryToggle() {
@@ -403,6 +436,7 @@ export function useReferenceDataPage(
       return;
     }
 
+    setFeedback(null);
     await toggleCategoryMutation.mutateAsync(categoryToggleTarget);
   }
 
@@ -415,14 +449,17 @@ export function useReferenceDataPage(
     closeCategoryEditor: () => setCategoryEditorState(null),
     closeCategoryToggle: () => setCategoryToggleTarget(null),
     closeFundingAccountEditor: () => setFundingAccountEditorState(null),
+    closeFundingAccountDeleteDialog: () => setFundingAccountDeleteTarget(null),
     closeFundingAccountStatusDialog: () =>
       setFundingAccountStatusActionTarget(null),
     completeFundingAccountBootstrap,
     confirmCategoryToggle,
+    confirmFundingAccountDelete,
     confirmFundingAccountTransition,
     editingCategory,
     editingFundingAccount,
     feedback,
+    fundingAccountDeleteTarget,
     fundingAccountEditorState,
     fundingAccountStatusActionTarget,
     fundingAccounts: managedFundingAccounts,
@@ -431,10 +468,12 @@ export function useReferenceDataPage(
     openCategoryEdit,
     openCategoryToggle,
     openFundingAccountCreate,
+    openFundingAccountDelete,
     openFundingAccountEdit,
     openFundingAccountTransition,
     queryErrors,
     saveCategoryPending: saveCategoryMutation.isPending,
+    deleteFundingAccountPending: deleteFundingAccountMutation.isPending,
     saveFundingAccountPending: saveFundingAccountMutation.isPending,
     submitCategory,
     submitFundingAccount,
@@ -569,7 +608,8 @@ function buildReferenceDataHelpContext(
             items: [
               '운영 통장, 카드, 현금 같은 실제 입출금 기준을 추가하거나 이름을 정리합니다.',
               '더 이상 쓰지 않는 자금수단은 비활성 또는 종료 상태로 바꿔 새 입력 선택지에서 분리합니다.',
-              '기존 거래와 이월 추적을 위해 종료된 자금수단도 읽기 전용 기준으로 남길 수 있습니다.'
+              '거래, 전표, 계획, 업로드, 이월, 차량 기본값 등에서 사용하지 않은 깨끗한 자금수단은 삭제할 수 있습니다.',
+              '기존 거래와 이월 추적이 필요한 자금수단은 종료된 읽기 전용 기준으로 남길 수 있습니다.'
             ]
           },
           navigationSection

@@ -13,6 +13,11 @@ export type AuthSessionSupportContext = {
   startedAt: Date | null;
 };
 
+export type AuthSessionWorkspaceContext = {
+  tenantId: string | null;
+  ledgerId: string | null;
+};
+
 export type AuthSessionResult = LoginResponse & {
   sessionId: string;
   refreshToken: string;

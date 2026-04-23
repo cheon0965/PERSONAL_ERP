@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import type {
   AuthenticatedUser,
-  AuthenticatedWorkspace
+  AuthenticatedWorkspace,
+  AuthenticatedWorkspaceOption
 } from '@personal-erp/contracts';
 import type {
   LedgerStatus,
@@ -30,6 +31,11 @@ export type AuthenticatedSupportContext = {
   startedAt: Date | null;
 };
 
+export type AuthenticatedWorkspaceSelectionContext = {
+  tenantId: string | null;
+  ledgerId: string | null;
+};
+
 const membershipRoleRank: Record<TenantMembershipRole, number> = {
   OWNER: 0,
   MANAGER: 1,
@@ -43,11 +49,13 @@ export class AuthenticatedWorkspaceResolver {
 
   async buildAuthenticatedUser(
     identity: AuthenticatedIdentity,
-    supportContext?: AuthenticatedSupportContext
+    supportContext?: AuthenticatedSupportContext,
+    workspaceSelection?: AuthenticatedWorkspaceSelectionContext
   ): Promise<AuthenticatedUser> {
     const currentWorkspace = await this.resolveCurrentWorkspace(
       identity.id,
-      identity.isSystemAdmin ? supportContext : undefined
+      identity.isSystemAdmin ? supportContext : undefined,
+      workspaceSelection
     );
 
     return {
@@ -61,7 +69,8 @@ export class AuthenticatedWorkspaceResolver {
 
   async resolveCurrentWorkspace(
     userId: string,
-    supportContext?: AuthenticatedSupportContext
+    supportContext?: AuthenticatedSupportContext,
+    workspaceSelection?: AuthenticatedWorkspaceSelectionContext
   ): Promise<AuthenticatedWorkspace | null> {
     if (supportContext?.tenantId) {
       const supportWorkspace = await this.resolveSupportWorkspace(
@@ -71,6 +80,14 @@ export class AuthenticatedWorkspaceResolver {
       if (supportWorkspace) {
         return supportWorkspace;
       }
+    }
+
+    const selectedWorkspace = await this.resolveSelectedWorkspace(
+      userId,
+      workspaceSelection
+    );
+    if (selectedWorkspace) {
+      return selectedWorkspace;
     }
 
     const memberships = await this.prisma.tenantMembership.findMany({
@@ -92,48 +109,82 @@ export class AuthenticatedWorkspaceResolver {
       return null;
     }
 
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: currentMembership.tenantId },
-      select: {
-        id: true,
-        slug: true,
-        name: true,
-        status: true,
-        defaultLedgerId: true
-      }
-    });
+    return this.buildWorkspaceFromMembership(currentMembership);
+  }
 
-    if (!tenant) {
+  async resolveSelectedWorkspace(
+    userId: string,
+    workspaceSelection?: AuthenticatedWorkspaceSelectionContext,
+    requireSelectedLedger = false
+  ): Promise<AuthenticatedWorkspace | null> {
+    if (!workspaceSelection?.tenantId) {
       return null;
     }
 
-    const ledger = await this.resolveCurrentLedger(
-      tenant.id,
-      tenant.defaultLedgerId ?? undefined
+    const membership = await this.prisma.tenantMembership.findFirst({
+      where: {
+        userId,
+        tenantId: workspaceSelection.tenantId,
+        status: 'ACTIVE'
+      },
+      select: {
+        id: true,
+        role: true,
+        status: true,
+        tenantId: true,
+        joinedAt: true
+      }
+    });
+
+    if (!membership) {
+      return null;
+    }
+
+    return this.buildWorkspaceFromMembership(
+      membership,
+      workspaceSelection.ledgerId ?? undefined,
+      requireSelectedLedger
+    );
+  }
+
+  async listAccessibleWorkspaces(
+    userId: string,
+    currentWorkspace?: AuthenticatedWorkspace | null
+  ): Promise<AuthenticatedWorkspaceOption[]> {
+    const memberships = await this.prisma.tenantMembership.findMany({
+      where: {
+        userId,
+        status: 'ACTIVE'
+      },
+      select: {
+        id: true,
+        role: true,
+        status: true,
+        tenantId: true,
+        joinedAt: true
+      }
+    });
+
+    const workspaces = await Promise.all(
+      sortMemberships(memberships).map((membership) =>
+        this.buildWorkspaceFromMembership(membership)
+      )
     );
 
-    return {
-      tenant: {
-        id: tenant.id,
-        slug: tenant.slug,
-        name: tenant.name,
-        status: tenant.status as TenantStatus
-      },
-      membership: {
-        id: currentMembership.id,
-        role: currentMembership.role,
-        status: currentMembership.status
-      },
-      ledger: ledger
-        ? {
-            id: ledger.id,
-            name: ledger.name,
-            baseCurrency: ledger.baseCurrency,
-            timezone: ledger.timezone,
-            status: ledger.status as LedgerStatus
-          }
-        : null
-    };
+    return workspaces.flatMap((workspace) => {
+      if (!workspace) {
+        return [];
+      }
+
+      return [
+        {
+          ...workspace,
+          isCurrent:
+            currentWorkspace?.membership.id === workspace.membership.id &&
+            currentWorkspace?.tenant.id === workspace.tenant.id
+        }
+      ];
+    });
   }
 
   private async resolveCurrentLedger(
@@ -250,6 +301,56 @@ export class AuthenticatedWorkspaceResolver {
         }
       : null;
   }
+
+  private async buildWorkspaceFromMembership(
+    membership: MembershipRecord,
+    selectedLedgerId?: string,
+    requireSelectedLedger = false
+  ): Promise<AuthenticatedWorkspace | null> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: membership.tenantId },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        status: true,
+        defaultLedgerId: true
+      }
+    });
+
+    if (!tenant) {
+      return null;
+    }
+
+    const selectedLedger = selectedLedgerId
+      ? await this.resolveLedgerById(tenant.id, selectedLedgerId)
+      : null;
+    if (selectedLedgerId && !selectedLedger && requireSelectedLedger) {
+      return null;
+    }
+
+    const ledger =
+      selectedLedger ??
+      (await this.resolveCurrentLedger(
+        tenant.id,
+        tenant.defaultLedgerId ?? undefined
+      ));
+
+    return {
+      tenant: {
+        id: tenant.id,
+        slug: tenant.slug,
+        name: tenant.name,
+        status: tenant.status as TenantStatus
+      },
+      membership: {
+        id: membership.id,
+        role: membership.role,
+        status: membership.status
+      },
+      ledger
+    };
+  }
 }
 
 function pickCurrentMembership(
@@ -259,7 +360,13 @@ function pickCurrentMembership(
     return null;
   }
 
-  const [currentMembership] = [...memberships].sort((left, right) => {
+  const [currentMembership] = sortMemberships(memberships);
+
+  return currentMembership ?? null;
+}
+
+function sortMemberships(memberships: MembershipRecord[]): MembershipRecord[] {
+  return [...memberships].sort((left, right) => {
     const roleDelta =
       membershipRoleRank[left.role] - membershipRoleRank[right.role];
     if (roleDelta !== 0) {
@@ -268,6 +375,4 @@ function pickCurrentMembership(
 
     return left.joinedAt.getTime() - right.joinedAt.getTime();
   });
-
-  return currentMembership ?? null;
 }

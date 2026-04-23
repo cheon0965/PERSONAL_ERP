@@ -35,7 +35,7 @@
 
 - `npm run test:e2e:smoke:build`는 CI와 동일하게 in-process `Next.js` production build/start 경로를 올린 뒤 health route 기준 최소 HTTP smoke로 build 결과물과 서버 기동을 확인합니다.
 - `npm run test:e2e:smoke:build:browser`는 루트 래퍼 명령이며, 내부적으로 Web workspace의 browser build smoke를 호출합니다.
-- 이 명령은 필요할 때 로그인/세션 복원/운영 체크리스트/문맥 fallback까지 포함한 브라우저 build smoke를 별도로 다시 확인합니다.
+- 이 명령은 필요할 때 로그인/세션 복원/운영 체크리스트/현재 작업 기준 fallback까지 포함한 브라우저 build smoke를 별도로 다시 확인합니다.
 - `npm run test:e2e`는 기준 데이터 CRUD, 반복 규칙 CRUD까지 포함한 전체 브라우저 대표 흐름 검증입니다.
 - `npm run test:prisma`는 기본 루프와 분리된 실DB Prisma/HTTP 통합 검증이며, Docker 기반 disposable MySQL을 띄운 뒤 `prisma generate -> prisma migrate deploy -> minimal fixture seed -> UUID 범위 fixture/test -> teardown`을 한 명령으로 수행합니다. 현재는 수집 거래 저장소 경계 1개와 실제 API/DB 월 운영 workflow 4개를 포함합니다. workflow는 `운영기간 open -> 업로드 배치 -> 수집 -> 전표 확정 -> close`, `반복규칙 -> plan item 생성 -> import collect 자동 매칭 -> confirm -> 재무제표 생성`, `close -> 재무제표 생성 -> reopen -> 전표 reverse/correct`, `carry-forward 생성 이후 source period reopen 409 보호` 시나리오를 검증합니다.
 - `npm run audit:runtime:full`은 allowlist 적용 없이 현재 runtime advisory 전체를 다시 확인할 때 사용하는 follow-up 명령입니다.
@@ -79,6 +79,8 @@
 - 인증 세션 생성/회전/로그아웃
 - 보호 라우트의 `401`
 - `GET /auth/me`
+- `GET /auth/workspaces`, `POST /auth/current-workspace`
+  초대 등으로 여러 사업장 멤버십이 있는 사용자가 접근 가능한 사업장 목록을 확인하고, 현재 세션의 사업장/장부 기준을 명시적으로 전환하며, 전환 후 `GET /auth/me`가 선택 사업장을 반환하는지 검증
 - `GET /auth/account-security`, `PATCH /auth/account-profile`, `POST /auth/change-password`, `DELETE /auth/sessions/:sessionId`
   현재 사용자 프로필/세션/최근 이벤트 조회, 이름 수정, 비밀번호 변경, 다른 활성 세션 종료를 검증
 - `GET /settings/workspace`, `PATCH /settings/workspace`
@@ -107,8 +109,8 @@
   Owner/Manager 전용 차량 정비 이력 생성, 수정, 선택적 수집거래 생성, workspace 범위 접근통제를 검증
 - `GET /reference-data/readiness`
   현재 workspace 기준 기준 데이터 readiness, ownership 구분, 부족 항목 요약을 검증
-- `POST /funding-accounts`, `PATCH /funding-accounts/:id`
-  Owner/Manager 전용 자금수단 생성, 신규 은행/카드 `bootstrapStatus=PENDING`, 기초 업로드 완료 직접 전환, 이름 변경, 비활성화/재활성화, 비활성 자금수단 종료와 workspace 범위 접근통제를 검증
+- `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `DELETE /funding-accounts/:id`
+  Owner/Manager 전용 자금수단 생성, 신규 은행/카드 `bootstrapStatus=PENDING`, 시작 잔액 초기화 완료 직접 전환, 이름 변경, 비활성화/재활성화, 비활성 자금수단 종료, 미사용 자금수단 삭제, 거래내역이 있는 자금수단 삭제 차단과 workspace 범위 접근통제를 검증
 - `POST /categories`, `PATCH /categories/:id`
   Owner/Manager 전용 카테고리 생성, 이름 변경, 비활성화/재활성화와 workspace 범위 접근통제를 검증
 - `GET /accounting-periods`, `GET /accounting-periods/current`, `POST /accounting-periods`, `POST /accounting-periods/:id/close`, `POST /accounting-periods/:id/reopen`
@@ -129,9 +131,9 @@
 - `POST /import-batches/files`
   IM뱅크 PDF 업로드의 활성 계좌/카드 연결 필수 조건, PDF magic bytes/확장자/content-type/10MB 제한, 텍스트 레이어 없는 스캔 PDF 명시 차단, 원본 PDF 미저장과 행 단위 payload 저장을 검증
 - `POST /import-batches/:id/rows/:rowId/collect`
-  최신 진행월 범위 수집, 운영 중 자동 운영월 생성 차단, 신규 계좌/카드 기초 업로드 예외의 bootstrap/회계 이력 가드와 완료 전환, 반복 수집 거래 흡수 claim, 이미 다른 업로드 행과 연결된 대상의 `409 Conflict`, 같은 업로드 행 재수집 방지를 검증
-- `POST /import-batches/:id/rows/collect`, `GET /import-batches/:id/collection-jobs/active`, `GET /import-batches/:id/collection-jobs/:jobId`
-  선택 행 또는 등록 가능 행 전체의 일괄 등록 Job 생성, 입출금 방향 기반 수입/지출/취소 유형 추론, 거래유형별 카테고리/메모 적용, 운영월 자동 생성 사유별 결과 메시지, 진행률/행별 결과 조회, 같은 workspace 내 동시 일괄 등록 잠금과 단건 등록 충돌 보호를 검증
+  최신 진행월 범위 수집, 운영 중 임의 과거월/신규 운영월 생성 차단, 자동 운영월 생성 시 거래후잔액 기반 기초금액 snapshot 생성, 신규 계좌/카드 bootstrap의 회계 이력 가드와 완료 전환, 반복 수집 거래 흡수 claim, 이미 다른 업로드 행과 연결된 대상의 `409 Conflict`, 같은 업로드 행 재수집 방지를 검증
+- `POST /import-batches/:id/rows/collect`, `GET /import-batches/:id/collection-jobs/active`, `GET /import-batches/:id/collection-jobs/:jobId`, `POST /import-batches/:id/collection-jobs/:jobId/cancel`
+  선택 행 또는 등록 가능 행 전체의 일괄 등록 Job 생성, 입출금 방향 기반 수입/지출/취소 유형 추론, 거래유형별 카테고리/메모 적용, 운영월 자동 생성 사유별 결과 메시지, 진행률/행별 결과 조회, 일괄 등록 Job 중단 요청, 같은 workspace 내 동시 일괄 등록 잠금과 단건 등록 충돌 보호를 검증
 - 계획 항목 generate use case
   최신 진행월 밖 생성 차단, `periodId + recurringRuleId + plannedDate` DB unique 경합을 `skip`으로 해석하고 `createdCount/skippedExistingCount`가 실제 commit 결과와 맞는지 검증
 - `POST /financial-statements/generate`, `GET /financial-statements`
@@ -177,7 +179,7 @@
 - 브라우저 기준 로그인 후 세션 복원
 - 실제 브라우저 상호작용으로 거래 Quick Add 성공 및 목록 갱신
 - `/transactions` 진입 시 기준 데이터 readiness API가 함께 조회되어도 브라우저 스모크가 계속 통과하는지 검증
-- 실제 브라우저 상호작용으로 `/reference-data`에서 자금수단 생성, 수정, 비활성화/재활성화, 비활성 자금수단 종료와 카테고리 생성/수정/비활성화/재활성화가 동작하는지 검증
+- 실제 브라우저 상호작용으로 `/reference-data`에서 자금수단 생성, 수정, 비활성화/재활성화, 비활성 자금수단 종료, 미사용 자금수단 삭제와 카테고리 생성/수정/비활성화/재활성화가 동작하는지 검증
 - 실제 브라우저 상호작용으로 `/recurring`에서 반복 규칙 생성, 수정, 삭제와 목록 반영이 동작하는지 검증
 - 실제 브라우저 상호작용으로 `/insurances`에서 보험 계약 생성, 수정, 비활성화와 목록 반영이 동작하는지 검증
 - 실제 브라우저 상호작용으로 `/vehicles`에서 차량 생성, 수정, 연료 이력 생성/수정, 정비 이력 생성/수정과 목록 반영이 동작하는지 검증
@@ -187,7 +189,7 @@
 - API 요청 테스트로 IM뱅크 PDF 업로드와 업로드 배치 일괄 등록 Job/진행률/동시 작업 잠금 경계를 검증하고, Web 단위에서는 일괄 등록 버튼/진행률 표시와 API helper path를 함께 확인
 - 루트 `ci:local:*` 스크립트와 `docs/DEVELOPMENT_GUIDE.md` 매핑표로 GitHub Actions 주요 job을 로컬에서 다시 따를 수 있는 진입점을 제공
 - `npm run test:e2e:smoke:build`로 in-process production build/start 경로에 결과물을 올린 뒤 health route 응답 기준 최소 HTTP smoke를 자동 검증
-- `npm run test:e2e:smoke:build:browser`로는 로그인/세션 복원, 운영 체크리스트 핵심 CTA, 작업 문맥 fallback 같은 브라우저 build smoke를 루트 래퍼 경로로 필요 시 별도로 검증
+- `npm run test:e2e:smoke:build:browser`로는 로그인/세션 복원, 운영 체크리스트 핵심 CTA, 현재 작업 기준 fallback 같은 브라우저 build smoke를 루트 래퍼 경로로 필요 시 별도로 검증
 - CI의 `e2e-smoke` 잡은 개발 서버가 아니라 build 결과물 기준 HTTP smoke를 실행
 - 실제 브라우저 상호작용으로 `dashboard`, `reference-data`, `periods`, `insurances`, `vehicles`, `recurring`, `plan-items`, `imports`, `transactions`, `journal-entries`, `financial-statements`, `carry-forwards`, `forecast`, `settings`, `admin`, `operations`의 대표 운영 체크리스트 empty state, readiness 경고, fallback CTA가 유지되는지 검증
 - 기준 데이터 CRUD, 반복 규칙 CRUD, 보험 계약 CRUD, 차량 기본 정보 CRUD 브라우저 검증은 현재 `npm run test:e2e` 전체 브라우저 회귀 범위에 남기고, CI smoke에서는 제외합니다.

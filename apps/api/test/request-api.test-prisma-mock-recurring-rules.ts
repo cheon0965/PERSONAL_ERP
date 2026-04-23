@@ -21,6 +21,25 @@ export function createRecurringRulesPrismaMock(
 
   return {
     recurringRule: {
+      count: async (args: {
+        where?: {
+          accountId?: string;
+          tenantId?: string;
+          ledgerId?: string;
+        };
+      }) => {
+        return state.recurringRules.filter((candidate) => {
+          const matchesAccount =
+            !args.where?.accountId ||
+            candidate.accountId === args.where.accountId;
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+
+          return matchesAccount && matchesTenant && matchesLedger;
+        }).length;
+      },
       findFirst: async (args: {
         where?: {
           id?: string;
