@@ -112,11 +112,15 @@ export function createAuthPrismaMock(
       supportTenantId?: boolean;
       supportLedgerId?: boolean;
       supportStartedAt?: boolean;
+      currentTenantId?: boolean;
+      currentLedgerId?: boolean;
     }
   ) => {
     if (!select) {
       return {
         ...session,
+        currentTenantId: session.currentTenantId ?? null,
+        currentLedgerId: session.currentLedgerId ?? null,
         supportTenantId: session.supportTenantId ?? null,
         supportLedgerId: session.supportLedgerId ?? null,
         supportStartedAt: session.supportStartedAt ?? null
@@ -129,6 +133,12 @@ export function createAuthPrismaMock(
       ...(select.updatedAt ? { updatedAt: session.updatedAt } : {}),
       ...(select.expiresAt ? { expiresAt: session.expiresAt } : {}),
       ...(select.revokedAt ? { revokedAt: session.revokedAt } : {}),
+      ...(select.currentTenantId
+        ? { currentTenantId: session.currentTenantId ?? null }
+        : {}),
+      ...(select.currentLedgerId
+        ? { currentLedgerId: session.currentLedgerId ?? null }
+        : {}),
       ...(select.supportTenantId
         ? { supportTenantId: session.supportTenantId ?? null }
         : {}),
@@ -213,6 +223,8 @@ export function createAuthPrismaMock(
               supportTenantId?: boolean;
               supportLedgerId?: boolean;
               supportStartedAt?: boolean;
+              currentTenantId?: boolean;
+              currentLedgerId?: boolean;
             };
             orderBy?: Array<Record<string, string>>;
             take?: number;
@@ -562,12 +574,16 @@ export function createAuthPrismaMock(
           supportTenantId?: string | null;
           supportLedgerId?: string | null;
           supportStartedAt?: Date | null;
+          currentTenantId?: string | null;
+          currentLedgerId?: string | null;
         };
       }) => {
         const now = new Date();
         const created = {
           ...args.data,
           revokedAt: null,
+          currentTenantId: args.data.currentTenantId ?? null,
+          currentLedgerId: args.data.currentLedgerId ?? null,
           supportTenantId: args.data.supportTenantId ?? null,
           supportLedgerId: args.data.supportLedgerId ?? null,
           supportStartedAt: args.data.supportStartedAt ?? null,
@@ -583,6 +599,8 @@ export function createAuthPrismaMock(
           supportTenantId?: boolean;
           supportLedgerId?: boolean;
           supportStartedAt?: boolean;
+          currentTenantId?: boolean;
+          currentLedgerId?: boolean;
         };
       }) => {
         const session =
@@ -609,6 +627,8 @@ export function createAuthPrismaMock(
           supportTenantId?: string | null;
           supportLedgerId?: string | null;
           supportStartedAt?: Date | null;
+          currentTenantId?: string | null;
+          currentLedgerId?: string | null;
         };
       }) => {
         const session = state.authSessions.find(
@@ -636,6 +656,8 @@ export function createAuthPrismaMock(
           supportTenantId?: string | null;
           supportLedgerId?: string | null;
           supportStartedAt?: Date | null;
+          currentTenantId?: string | null;
+          currentLedgerId?: string | null;
         };
       }) => {
         let count = 0;

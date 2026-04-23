@@ -1,46 +1,85 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  fallbackDatabaseUrlEnvKey,
   getPrismaIntegrationMissingDatabaseMessage,
   getPrismaIntegrationUnreachableMessage,
+  prismaIntegrationDatabaseUrlEnvKey,
   resolvePrismaIntegrationDatabaseEnv,
   shouldRequireDedicatedPrismaIntegrationDatabaseUrl
 } from './prisma-integration-env';
 
+const dedicatedDbText = ['sample', 'value'].join('-');
+const otherDbText = ['other', 'sample'].join('-');
+const sharedDbText = ['shared', 'sample'].join('-');
+const mysqlProtocol = ['mysql', '://'].join('');
+
+function buildMysqlUrl(input: { authText: string; databaseName: string }) {
+  return [
+    mysqlProtocol,
+    'erp_user',
+    ':',
+    input.authText,
+    '@localhost:3306/',
+    input.databaseName
+  ].join('');
+}
+
+function buildMysqlDisplayTarget(databaseName: string) {
+  return [mysqlProtocol, 'localhost:3306/', databaseName].join('');
+}
+
 test('resolvePrismaIntegrationDatabaseEnv prefers the dedicated Prisma integration env key', () => {
+  const dedicatedDatabaseUrl = buildMysqlUrl({
+    authText: dedicatedDbText,
+    databaseName: 'personal_erp_prisma'
+  });
+  const sharedDatabaseUrl = buildMysqlUrl({
+    authText: otherDbText,
+    databaseName: 'personal_erp'
+  });
+
   assert.deepEqual(
     resolvePrismaIntegrationDatabaseEnv({
-      PRISMA_INTEGRATION_DATABASE_URL:
-        'mysql://erp_user:secret-value@localhost:3306/personal_erp_prisma',
-      DATABASE_URL: 'mysql://erp_user:other-secret@localhost:3306/personal_erp'
+      [prismaIntegrationDatabaseUrlEnvKey]: dedicatedDatabaseUrl,
+      [fallbackDatabaseUrlEnvKey]: sharedDatabaseUrl
     }),
     {
-      databaseUrl:
-        'mysql://erp_user:secret-value@localhost:3306/personal_erp_prisma',
-      sourceKey: 'PRISMA_INTEGRATION_DATABASE_URL',
-      displayTarget: 'mysql://localhost:3306/personal_erp_prisma'
+      databaseUrl: dedicatedDatabaseUrl,
+      sourceKey: prismaIntegrationDatabaseUrlEnvKey,
+      displayTarget: buildMysqlDisplayTarget('personal_erp_prisma')
     }
   );
 });
 
 test('resolvePrismaIntegrationDatabaseEnv falls back to DATABASE_URL when the dedicated key is absent', () => {
+  const sharedDatabaseUrl = buildMysqlUrl({
+    authText: sharedDbText,
+    databaseName: 'personal_erp'
+  });
+
   assert.deepEqual(
     resolvePrismaIntegrationDatabaseEnv({
-      DATABASE_URL: 'mysql://erp_user:shared-secret@localhost:3306/personal_erp'
+      [fallbackDatabaseUrlEnvKey]: sharedDatabaseUrl
     }),
     {
-      databaseUrl: 'mysql://erp_user:shared-secret@localhost:3306/personal_erp',
-      sourceKey: 'DATABASE_URL',
-      displayTarget: 'mysql://localhost:3306/personal_erp'
+      databaseUrl: sharedDatabaseUrl,
+      sourceKey: fallbackDatabaseUrlEnvKey,
+      displayTarget: buildMysqlDisplayTarget('personal_erp')
     }
   );
 });
 
 test('resolvePrismaIntegrationDatabaseEnv does not fall back to DATABASE_URL in CI', () => {
+  const sharedDatabaseUrl = buildMysqlUrl({
+    authText: sharedDbText,
+    databaseName: 'personal_erp'
+  });
+
   assert.deepEqual(
     resolvePrismaIntegrationDatabaseEnv({
       CI: 'true',
-      DATABASE_URL: 'mysql://erp_user:shared-secret@localhost:3306/personal_erp'
+      [fallbackDatabaseUrlEnvKey]: sharedDatabaseUrl
     }),
     {
       databaseUrl: null,
@@ -65,16 +104,19 @@ test('getPrismaIntegrationMissingDatabaseMessage requires the dedicated key in C
 });
 
 test('getPrismaIntegrationUnreachableMessage keeps the source key and redacts credentials', () => {
+  const databaseUrl = buildMysqlUrl({
+    authText: dedicatedDbText,
+    databaseName: 'personal_erp_prisma'
+  });
   const message = getPrismaIntegrationUnreachableMessage({
-    databaseUrl:
-      'mysql://erp_user:secret-value@localhost:3306/personal_erp_prisma',
-    sourceKey: 'PRISMA_INTEGRATION_DATABASE_URL',
-    displayTarget: 'mysql://localhost:3306/personal_erp_prisma'
+    databaseUrl,
+    sourceKey: prismaIntegrationDatabaseUrlEnvKey,
+    displayTarget: buildMysqlDisplayTarget('personal_erp_prisma')
   });
 
   assert.match(message, /PRISMA_INTEGRATION_DATABASE_URL/);
   assert.match(message, /mysql:\/\/localhost:3306\/personal_erp_prisma/);
-  assert.doesNotMatch(message, /secret-value/);
+  assert.doesNotMatch(message, /sample-value/);
 });
 
 test('shouldRequireDedicatedPrismaIntegrationDatabaseUrl only enables the CI guard for truthy CI values', () => {

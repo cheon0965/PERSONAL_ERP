@@ -32,6 +32,8 @@ import {
   getFundingAccounts
 } from '@/features/reference-data/reference-data.api';
 import { webRuntime } from '@/shared/config/env';
+import { useAppNotification } from '@/shared/providers/notification-provider';
+import { FeedbackAlert } from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import {
   buildVehicleFallbackItem,
@@ -95,6 +97,7 @@ export function VehicleForm({
   onCompleted
 }: VehicleFormProps) {
   const queryClient = useQueryClient();
+  const { notifySuccess } = useAppNotification();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const form = useForm<VehicleFormInput>({
     resolver: zodResolver(vehicleFormSchema),
@@ -282,13 +285,11 @@ export function VehicleForm({
             });
           }
 
-          setFeedback({
-            severity: 'success',
-            message:
-              mode === 'edit'
-                ? '차량 정보를 수정했고 목록을 새로고침했습니다.'
-                : '차량 정보를 저장했고 목록을 새로고침했습니다.'
-          });
+          notifySuccess(
+            mode === 'edit'
+              ? '차량 정보를 수정했고 목록을 새로고침했습니다.'
+              : '차량 정보를 저장했고 목록을 새로고침했습니다.'
+          );
         } catch (error) {
           setFeedback({
             severity: 'error',
@@ -303,11 +304,6 @@ export function VehicleForm({
       })}
     >
       <Stack spacing={appLayout.cardGap}>
-        {feedback ? (
-          <Alert severity={feedback.severity} variant="outlined">
-            {feedback.message}
-          </Alert>
-        ) : null}
         <Alert severity="info" variant="outlined">
           차량 정보는 운영 보조 데이터이며, 실제 회계 확정은 차량비 관련 수집
           거래와 전표 흐름에서 이어집니다.
@@ -487,6 +483,7 @@ export function VehicleForm({
           </Grid>
         </Grid>
 
+        <FeedbackAlert feedback={feedback} />
         <Button
           type="submit"
           variant="contained"

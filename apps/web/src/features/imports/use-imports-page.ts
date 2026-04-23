@@ -26,12 +26,14 @@ import {
 } from '@/features/reference-data/reference-data.api';
 import { collectedTransactionsQueryKey } from '@/features/transactions/transactions.api';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import { useAppNotification } from '@/shared/providers/notification-provider';
 import {
   buildImportBatchFallbackItem,
   buildImportedCollectedFallbackPreview,
   buildImportedCollectedFallbackResponse,
   bulkCollectImportedRows,
   cancelImportBatchCollection,
+  cancelImportBatchCollectionJob,
   collectImportedRow,
   createImportBatch,
   createImportBatchFromFile,
@@ -101,6 +103,7 @@ export function useImportsPage(
   mode: 'list' | 'detail' = 'list'
 ) {
   const queryClient = useQueryClient();
+  const { notifySuccess } = useAppNotification();
   const hasPinnedSelectedBatch = initialSelectedBatchId != null;
   const [feedback, setFeedback] = React.useState<FeedbackState>(null);
   const [selectedBatchId, setSelectedBatchId] = React.useState<string | null>(
@@ -262,6 +265,9 @@ export function useImportsPage(
   const isBulkCollectJobRunning = bulkCollectJob
     ? isImportBatchCollectionJobRunning(bulkCollectJob)
     : false;
+  const canCancelBulkCollectJob = bulkCollectJob
+    ? isImportBatchCollectionJobCancellable(bulkCollectJob)
+    : false;
 
   React.useEffect(() => {
     if (initialSelectedBatchId && selectedBatchId !== initialSelectedBatchId) {
@@ -322,14 +328,17 @@ export function useImportsPage(
     }
 
     setNotifiedBulkCollectJobId(bulkCollectJob.id);
-    setFeedback({
-      severity:
-        bulkCollectJob.status === 'SUCCEEDED' ||
-        bulkCollectJob.status === 'PARTIAL'
-          ? 'success'
-          : 'error',
-      message: buildBulkCollectFeedbackMessage(bulkCollectJob)
-    });
+    if (
+      bulkCollectJob.status === 'SUCCEEDED' ||
+      bulkCollectJob.status === 'PARTIAL'
+    ) {
+      notifySuccess(buildBulkCollectFeedbackMessage(bulkCollectJob));
+    } else {
+      setFeedback({
+        severity: 'error',
+        message: buildBulkCollectFeedbackMessage(bulkCollectJob)
+      });
+    }
     setSelectedRowId(null);
     setSelectedRowIds([]);
     void Promise.all([
@@ -438,10 +447,9 @@ export function useImportsPage(
       return createImportBatch(request, buildImportBatchFallbackItem(request));
     },
     onSuccess: async (created) => {
-      setFeedback({
-        severity: 'success',
-        message: `${created.fileName} 업로드를 등록하고 ${created.rowCount}개 행을 읽었습니다.`
-      });
+      notifySuccess(
+        `${created.fileName} 업로드를 등록하고 ${created.rowCount}개 행을 읽었습니다.`
+      );
       setUploadDrawerOpen(false);
       setSelectedBatchId(created.id);
       setSelectedRowId(null);
@@ -513,10 +521,7 @@ export function useImportsPage(
         })
       ),
     onSuccess: async (created) => {
-      setFeedback({
-        severity: 'success',
-        message: buildCollectSuccessMessage(created)
-      });
+      notifySuccess(buildCollectSuccessMessage(created));
       setCollectDrawerOpen(false);
       setSelectedRowId(null);
       await Promise.all([
@@ -545,10 +550,7 @@ export function useImportsPage(
       setBulkCollectJobId(result.id);
       setNotifiedBulkCollectJobId(null);
       setBulkCollectPollingEnabled(true);
-      setFeedback({
-        severity: 'success',
-        message: `${result.requestedRowCount}건 일괄 등록 작업을 시작했습니다.`
-      });
+      notifySuccess(`${result.requestedRowCount}건 일괄 등록 작업을 시작했습니다.`);
       await queryClient.invalidateQueries({
         queryKey: [
           ...importBatchesQueryKey,
@@ -568,13 +570,49 @@ export function useImportsPage(
       });
     }
   });
+  const cancelBulkCollectJobMutation = useMutation({
+    mutationFn: (input: { importBatchId: string; jobId: string }) =>
+      cancelImportBatchCollectionJob(input.importBatchId, input.jobId),
+    onSuccess: async (result) => {
+      setBulkCollectJobId(result.id);
+      setNotifiedBulkCollectJobId(null);
+      setBulkCollectPollingEnabled(!result.finishedAt);
+      notifySuccess(
+        `${result.requestedRowCount}건 일괄 등록 작업 중단을 요청했습니다. 이미 처리 중인 행은 완료된 뒤 멈춥니다.`
+      );
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: [
+            ...importBatchesQueryKey,
+            result.importBatchId,
+            'collection-jobs',
+            result.id
+          ]
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [
+            ...importBatchesQueryKey,
+            result.importBatchId,
+            'collection-jobs',
+            'active'
+          ]
+        })
+      ]);
+    },
+    onError: (error) => {
+      setFeedback({
+        severity: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : '업로드 행 일괄 등록 작업을 중단하지 못했습니다.'
+      });
+    }
+  });
   const deleteImportBatchMutation = useMutation({
     mutationFn: (batch: ImportBatchItem) => deleteImportBatch(batch.id),
     onSuccess: async (_result, batch) => {
-      setFeedback({
-        severity: 'success',
-        message: `${batch.fileName} 배치를 삭제했습니다.`
-      });
+      notifySuccess(`${batch.fileName} 배치를 삭제했습니다.`);
       setCollectDrawerOpen(false);
       setSelectedBatchId(null);
       setSelectedRowId(null);
@@ -595,10 +633,9 @@ export function useImportsPage(
     mutationFn: (batch: ImportBatchItem) =>
       cancelImportBatchCollection(batch.id),
     onSuccess: async (result, batch) => {
-      setFeedback({
-        severity: 'success',
-        message: `${batch.fileName} 배치의 수집 거래 ${result.cancelledTransactionCount}건을 취소했습니다. 원계획 ${result.restoredPlanItemCount}건을 초안으로 되돌렸습니다.`
-      });
+      notifySuccess(
+        `${batch.fileName} 배치의 수집 거래 ${result.cancelledTransactionCount}건을 취소했습니다. 원계획 ${result.restoredPlanItemCount}건을 초안으로 되돌렸습니다.`
+      );
       setCollectDrawerOpen(false);
       setSelectedRowId(null);
       setSelectedRowIds([]);
@@ -769,6 +806,32 @@ export function useImportsPage(
     }
   }
 
+  async function cancelBulkCollectJob() {
+    if (!selectedBatch || !bulkCollectJob || !canCancelBulkCollectJob) {
+      return false;
+    }
+
+    const confirmed = window.confirm(
+      `${selectedBatch.fileName} 배치의 일괄 등록 작업을 중단할까요? 이미 처리 중인 행은 완료될 수 있고, 아직 시작하지 않은 행은 등록하지 않습니다.`
+    );
+
+    if (!confirmed) {
+      return false;
+    }
+
+    setFeedback(null);
+
+    try {
+      await cancelBulkCollectJobMutation.mutateAsync({
+        importBatchId: selectedBatch.id,
+        jobId: bulkCollectJob.id
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async function deleteSelectedBatch() {
     if (!selectedBatch) {
       return false;
@@ -843,6 +906,8 @@ export function useImportsPage(
     fundingAccounts: fundingAccountsQuery.data ?? [],
     importBatchesQuery,
     bulkCollectJob,
+    cancelBulkCollectJob,
+    cancelBulkCollectJobPending: cancelBulkCollectJobMutation.isPending,
     isBulkCollectPending:
       bulkCollectMutation.isPending || isBulkCollectJobRunning,
     isCollectDrawerOpen,
@@ -939,6 +1004,16 @@ function buildBulkCollectFeedbackMessage(
 }
 
 function isImportBatchCollectionJobRunning(job: ImportBatchCollectionJobItem) {
+  return (
+    job.status === 'PENDING' ||
+    job.status === 'RUNNING' ||
+    (job.status === 'CANCELLED' && !job.finishedAt)
+  );
+}
+
+function isImportBatchCollectionJobCancellable(
+  job: ImportBatchCollectionJobItem
+) {
   return job.status === 'PENDING' || job.status === 'RUNNING';
 }
 

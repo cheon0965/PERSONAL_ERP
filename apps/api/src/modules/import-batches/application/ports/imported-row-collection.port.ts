@@ -71,7 +71,7 @@ export abstract class ImportedRowCollectionPort {
     tx: PrismaClientLike,
     workspace: ImportedRowCollectionWorkspaceScope,
     fundingAccountId: string
-  ): Promise<{ id: string; name: string }>;
+  ): Promise<{ id: string; name: string; type: 'BANK' | 'CASH' | 'CARD' }>;
 
   abstract readLedgerTransactionTypeId(
     tx: PrismaClientLike,

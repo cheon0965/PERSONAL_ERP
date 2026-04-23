@@ -64,7 +64,7 @@ export function TransactionsPage() {
           상단에 먼저 배치했습니다.
         </Alert>
       ) : null}
-      {page.feedback ? (
+      {page.feedback?.severity === 'error' ? (
         <Alert severity={page.feedback.severity} variant="outlined">
           {page.feedback.message}
         </Alert>

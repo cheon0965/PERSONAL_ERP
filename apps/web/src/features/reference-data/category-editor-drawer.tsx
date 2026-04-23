@@ -2,6 +2,7 @@
 
 import { Alert } from '@mui/material';
 import type { CategoryItem } from '@personal-erp/contracts';
+import type { FeedbackAlertValue } from '@/shared/ui/feedback-alert';
 import { FormDrawer } from '@/shared/ui/form-drawer';
 import {
   CategoryManagementForm,
@@ -12,12 +13,14 @@ import type { CategoryEditorState } from './reference-data.shared';
 export function CategoryEditorDrawer({
   editorState,
   editingCategory,
+  feedback,
   busy,
   onClose,
   onSubmit
 }: {
   editorState: CategoryEditorState;
   editingCategory: CategoryItem | null;
+  feedback: FeedbackAlertValue;
   busy: boolean;
   onClose: () => void;
   onSubmit: (input: CategoryManagementSubmitInput) => Promise<void>;
@@ -39,6 +42,7 @@ export function CategoryEditorDrawer({
         </Alert>
       ) : (
         <CategoryManagementForm
+          feedback={feedback}
           mode={editorState?.mode ?? 'create'}
           initialCategory={editingCategory}
           busy={busy}

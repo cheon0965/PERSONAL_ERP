@@ -36,6 +36,8 @@ import {
 import { canEditCollectedTransaction } from '@/features/transactions/transaction-workflow';
 import { webRuntime } from '@/shared/config/env';
 import { createNonNegativeMoneyWonSchema } from '@/shared/lib/money';
+import { useAppNotification } from '@/shared/providers/notification-provider';
+import { FeedbackAlert } from '@/shared/ui/feedback-alert';
 import { resolveStatusLabel } from '@/shared/ui/status-chip';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import {
@@ -113,6 +115,7 @@ export function VehicleMaintenanceForm({
   onCompleted
 }: VehicleMaintenanceFormProps) {
   const queryClient = useQueryClient();
+  const { notifySuccess } = useAppNotification();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const form = useForm<VehicleMaintenanceFormInput>({
     resolver: zodResolver(vehicleMaintenanceFormSchema),
@@ -384,13 +387,11 @@ export function VehicleMaintenanceForm({
             });
           }
 
-          setFeedback({
-            severity: 'success',
-            message:
-              mode === 'edit'
-                ? '정비 기록을 수정했고 회계 연동 상태까지 함께 반영했습니다.'
-                : '정비 기록을 저장했고 회계 연동 상태까지 함께 반영했습니다.'
-          });
+          notifySuccess(
+            mode === 'edit'
+              ? '정비 기록을 수정했고 회계 연동 상태까지 함께 반영했습니다.'
+              : '정비 기록을 저장했고 회계 연동 상태까지 함께 반영했습니다.'
+          );
         } catch (error) {
           setFeedback({
             severity: 'error',
@@ -405,11 +406,6 @@ export function VehicleMaintenanceForm({
       })}
     >
       <Stack spacing={appLayout.cardGap}>
-        {feedback ? (
-          <Alert severity={feedback.severity} variant="outlined">
-            {feedback.message}
-          </Alert>
-        ) : null}
         <Alert severity="info" variant="outlined">
           정비 이력은 차량 운영 판단용 기록입니다. 회계 연동을 켜면 이 저장과
           함께 수집거래를 만들고, 이후 전표 확정까지 기존 회계 흐름으로
@@ -652,6 +648,7 @@ export function VehicleMaintenanceForm({
           ) : null}
         </Grid>
 
+        <FeedbackAlert feedback={feedback} />
         <Button
           type="submit"
           variant="contained"

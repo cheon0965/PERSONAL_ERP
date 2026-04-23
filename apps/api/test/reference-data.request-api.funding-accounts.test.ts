@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { AccountingPeriodStatus, AuditActorType } from '@prisma/client';
+import {
+  AccountingPeriodStatus,
+  AuditActorType,
+  CollectedTransactionStatus
+} from '@prisma/client';
 import { createRequestTestContext } from './request-api.test-support';
 
 test('GET /funding-accounts returns only active funding accounts for the current workspace ledger', async () => {
@@ -445,6 +449,156 @@ test('POST /funding-accounts returns 403 when the current membership cannot crea
       context.state.workspaceAuditEvents.some(
         (event) =>
           event.action === 'funding_account.create' &&
+          event.eventName === 'authorization.action_denied' &&
+          event.result === 'DENIED'
+      ),
+      true
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('DELETE /funding-accounts/:id deletes an unused funding account for the current workspace', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accounts.push({
+      id: 'acc-clean-delete',
+      userId: 'user-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      name: 'Mistaken account',
+      normalizedName: 'mistaken account',
+      type: 'CASH',
+      balanceWon: 0,
+      sortOrder: 5,
+      status: 'ACTIVE',
+      bootstrapStatus: 'NOT_REQUIRED'
+    });
+
+    const response = await context.request(
+      '/funding-accounts/acc-clean-delete',
+      {
+        method: 'DELETE',
+        headers: context.authHeaders()
+      }
+    );
+
+    assert.equal(response.status, 204);
+    assert.equal(
+      context.state.accounts.some(
+        (candidate) => candidate.id === 'acc-clean-delete'
+      ),
+      false
+    );
+    assert.equal(
+      context.state.workspaceAuditEvents.some(
+        (event) =>
+          event.action === 'funding_account.delete' &&
+          event.eventName === 'audit.action_succeeded' &&
+          event.result === 'SUCCESS' &&
+          event.resourceId === 'acc-clean-delete'
+      ),
+      true
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('DELETE /funding-accounts/:id rejects deleting a funding account with transaction history', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accounts.push({
+      id: 'acc-history-delete',
+      userId: 'user-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      name: 'Account with history',
+      normalizedName: 'account with history',
+      type: 'BANK',
+      balanceWon: 0,
+      sortOrder: 5,
+      status: 'INACTIVE',
+      bootstrapStatus: 'NOT_REQUIRED'
+    });
+    context.state.collectedTransactions.push({
+      id: 'ctx-history-delete',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: null,
+      ledgerTransactionTypeId: 'ltt-1-expense',
+      fundingAccountId: 'acc-history-delete',
+      categoryId: 'cat-1',
+      matchedPlanItemId: null,
+      importBatchId: null,
+      importedRowId: null,
+      sourceFingerprint: null,
+      title: 'Historical expense',
+      occurredOn: new Date('2026-04-01T00:00:00.000Z'),
+      amount: 10_000,
+      status: CollectedTransactionStatus.COLLECTED,
+      memo: null,
+      createdAt: new Date('2026-04-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-04-01T00:00:00.000Z')
+    });
+
+    const response = await context.request(
+      '/funding-accounts/acc-history-delete',
+      {
+        method: 'DELETE',
+        headers: context.authHeaders()
+      }
+    );
+
+    assert.equal(response.status, 409);
+    const errorBody = response.body as { message: string };
+    assert.match(errorBody.message, /수집 거래 1건/);
+    assert.equal(
+      context.state.accounts.some(
+        (candidate) => candidate.id === 'acc-history-delete'
+      ),
+      true
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('DELETE /funding-accounts/:id returns 403 when the current membership cannot delete funding accounts', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.memberships[0]!.role = 'VIEWER';
+    context.state.accounts.push({
+      id: 'acc-clean-delete-viewer',
+      userId: 'user-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      name: 'Viewer delete account',
+      normalizedName: 'viewer delete account',
+      type: 'CASH',
+      balanceWon: 0,
+      sortOrder: 5,
+      status: 'ACTIVE',
+      bootstrapStatus: 'NOT_REQUIRED'
+    });
+
+    const response = await context.request(
+      '/funding-accounts/acc-clean-delete-viewer',
+      {
+        method: 'DELETE',
+        headers: context.authHeaders()
+      }
+    );
+
+    assert.equal(response.status, 403);
+    assert.equal(
+      context.state.workspaceAuditEvents.some(
+        (event) =>
+          event.action === 'funding_account.delete' &&
           event.eventName === 'authorization.action_denied' &&
           event.result === 'DENIED'
       ),

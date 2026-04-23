@@ -35,7 +35,7 @@
     workspace-scoped 관리자 화면, 멤버 초대/역할/상태 관리, 초대 수락 흐름, 감사 이벤트 영속화/조회, 공통 감사 저장 경계, 테스트/문서 동기화까지 완료.
     실행 계획은 [`completed/ADMIN_MEMBER_LOG_MANAGEMENT_PLAN.md`](./completed/ADMIN_MEMBER_LOG_MANAGEMENT_PLAN.md)에 보관합니다.
 22. 운영 보조 화면 1차 체계 구현
-    사업장 설정, 내 계정/보안, 권한 정책 요약, 운영 체크리스트, 예외 처리함, 월 마감 대시보드, 업로드 운영 현황, 시스템 상태/헬스, 감사 로그 고도화, 알림 센터, 수동 UTF-8 CSV 반출, 운영 메모/인수인계까지 완료.
+    사업장 설정, 내 계정/보안, 권한 정책 요약, 운영 체크리스트, 예외 처리함, 월 마감, 업로드 운영 현황, 시스템 상태/헬스, 로그관리 고도화, 알림 / 이벤트 센터, 수동 UTF-8 CSV 반출, 운영 메모 / 인수인계까지 완료.
     실행 계획은 [`completed/OPERATIONS_SUPPORT_SURFACES_EXECUTION_PLAN.md`](./completed/OPERATIONS_SUPPORT_SURFACES_EXECUTION_PLAN.md)에 보관합니다.
 23. 핵심 원장 P0 리팩토링 1차 반영
     `accounting-periods`, `import-batches`, `journal-entries`, `operations-console`의 우선 경계를 현재 리팩토링 기준선에 맞춰 분리하기 시작했고, 이후 P1 모듈(`auth`, `admin`, `insurance-policies`, `plan-items`, `financial-statements`, `carry-forwards`)과 Web 대형 파일 분해까지 완료하여 [`completed/REFACTORING_EXECUTION_PLAN.md`](./completed/REFACTORING_EXECUTION_PLAN.md)에 보관합니다.
@@ -53,7 +53,7 @@
 
 - 비로그인 공개 홍보 메인과 로그인
 - 회원가입, 이메일 인증, 인증 메일 재발송, 필수 이용약관/개인정보 동의
-- 작업 문맥/설정 조회
+- 현재 사업장 / 장부와 설정 조회
 - 기준 데이터 readiness 조회와 자금수단/카테고리 제한적 관리
 - 최신 진행월 중심 운영 기간 조회/open/close/reopen
 - 수집 거래 조회/생성/수정/삭제/확정
@@ -68,9 +68,9 @@
 - 대시보드 요약
 - 기간 운영 전망(현재 월/다음 달 예측)
 - 사업장 설정과 내 계정/보안
-- 관리자 멤버 초대/역할·상태 관리, 메뉴/권한, 권한 정책 요약, 감사 로그
-- 운영 지원 허브, 체크리스트, 예외 처리함, 월 마감/업로드 운영 현황
-- 시스템 상태/헬스, 알림 센터, 수동 CSV 내보내기, 운영 메모/인수인계
+- 관리자 멤버 초대/역할·상태 관리, 메뉴 / 권한 관리, 권한 정책 요약, 로그관리
+- 운영 허브, 운영 체크리스트, 예외 처리함, 월 마감/업로드 운영 현황
+- 시스템 상태/헬스, 알림 / 이벤트 센터, 수동 CSV 내보내기, 운영 메모 / 인수인계
 - 디자인 시스템 공통 컴포넌트와 대시보드형 화면 패턴
 
 ## 문서 역할 경계

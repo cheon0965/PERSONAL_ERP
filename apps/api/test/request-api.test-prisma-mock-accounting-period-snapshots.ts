@@ -348,6 +348,74 @@ export function createAccountingPeriodSnapshotsPrismaMock(
       }
     },
     balanceSnapshotLine: {
+      count: async (args: {
+        where?: {
+          fundingAccountId?: string | null;
+          OR?: Array<{
+            openingSnapshot?: {
+              is?: {
+                tenantId?: string;
+                ledgerId?: string;
+              };
+            };
+            closingSnapshot?: {
+              is?: {
+                tenantId?: string;
+                ledgerId?: string;
+              };
+            };
+          }>;
+        };
+      }) => {
+        return state.balanceSnapshotLines.filter((line) => {
+          const matchesFundingAccount =
+            args.where?.fundingAccountId === undefined ||
+            line.fundingAccountId === args.where.fundingAccountId;
+          const matchesWorkspace =
+            !args.where?.OR ||
+            args.where.OR.some((relationFilter) => {
+              if (relationFilter.openingSnapshot?.is) {
+                const snapshot = line.openingSnapshotId
+                  ? state.openingBalanceSnapshots.find(
+                      (candidate) => candidate.id === line.openingSnapshotId
+                    )
+                  : null;
+
+                return (
+                  snapshot &&
+                  (!relationFilter.openingSnapshot.is.tenantId ||
+                    snapshot.tenantId ===
+                      relationFilter.openingSnapshot.is.tenantId) &&
+                  (!relationFilter.openingSnapshot.is.ledgerId ||
+                    snapshot.ledgerId ===
+                      relationFilter.openingSnapshot.is.ledgerId)
+                );
+              }
+
+              if (relationFilter.closingSnapshot?.is) {
+                const snapshot = line.closingSnapshotId
+                  ? state.closingSnapshots.find(
+                      (candidate) => candidate.id === line.closingSnapshotId
+                    )
+                  : null;
+
+                return (
+                  snapshot &&
+                  (!relationFilter.closingSnapshot.is.tenantId ||
+                    snapshot.tenantId ===
+                      relationFilter.closingSnapshot.is.tenantId) &&
+                  (!relationFilter.closingSnapshot.is.ledgerId ||
+                    snapshot.ledgerId ===
+                      relationFilter.closingSnapshot.is.ledgerId)
+                );
+              }
+
+              return false;
+            });
+
+          return matchesFundingAccount && matchesWorkspace;
+        }).length;
+      },
       findMany: async (args: {
         where?: {
           openingSnapshotId?: string;

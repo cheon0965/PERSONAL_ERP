@@ -6,7 +6,8 @@ import {
   getCurrentUser,
   loginWithPassword,
   logoutSession,
-  refreshSession
+  refreshSession,
+  switchCurrentWorkspace
 } from '@/features/auth/auth.api';
 import {
   getStoredAccessToken,
@@ -25,6 +26,10 @@ type AuthSessionContextValue = {
   login: (input: LoginRequest) => Promise<AuthenticatedUser>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<AuthenticatedUser | null>;
+  switchWorkspace: (
+    tenantId: string,
+    ledgerId?: string
+  ) => Promise<AuthenticatedUser>;
 };
 
 const AuthSessionContext = React.createContext<AuthSessionContextValue | null>(
@@ -154,15 +159,33 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     }
   }, [applyUnauthenticatedState]);
 
+  const switchWorkspace = React.useCallback(
+    async (tenantId: string, ledgerId?: string) => {
+      const result = await switchCurrentWorkspace({
+        tenantId,
+        ...(ledgerId ? { ledgerId } : {})
+      });
+
+      React.startTransition(() => {
+        setUser(result.user);
+        setStatus('authenticated');
+      });
+
+      return result.user;
+    },
+    []
+  );
+
   const value = React.useMemo<AuthSessionContextValue>(
     () => ({
       status,
       user,
       login,
       logout,
-      refreshUser
+      refreshUser,
+      switchWorkspace
     }),
-    [login, logout, refreshUser, status, user]
+    [login, logout, refreshUser, status, switchWorkspace, user]
   );
 
   return (

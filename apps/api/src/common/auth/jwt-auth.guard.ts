@@ -149,6 +149,9 @@ export class JwtAuthGuard implements CanActivate {
         tenantId: session.supportTenantId,
         ledgerId: session.supportLedgerId,
         startedAt: session.supportStartedAt
+      }, {
+        tenantId: session.currentTenantId,
+        ledgerId: session.currentLedgerId
       }),
       sessionId: session.id
     };

@@ -258,6 +258,8 @@ export type RequestTestState = {
     refreshTokenHash: string;
     expiresAt: Date;
     revokedAt: Date | null;
+    currentTenantId?: string | null;
+    currentLedgerId?: string | null;
     supportTenantId?: string | null;
     supportLedgerId?: string | null;
     supportStartedAt?: Date | null;

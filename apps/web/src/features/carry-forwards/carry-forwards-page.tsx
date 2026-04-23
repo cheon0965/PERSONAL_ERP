@@ -19,6 +19,7 @@ import type {
 } from '@personal-erp/contracts';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import { useAppNotification } from '@/shared/providers/notification-provider';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -57,6 +58,7 @@ export function CarryForwardsPage({
 }: CarryForwardsPageProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { notifySuccess } = useAppNotification();
   const { user } = useAuthSession();
   const [feedback, setFeedback] = React.useState<{
     severity: 'success' | 'error';
@@ -184,12 +186,11 @@ export function CarryForwardsPage({
           return;
         }
 
-        setFeedback({
-          severity: 'success',
-          message: options?.replaceExisting
+        notifySuccess(
+          options?.replaceExisting
             ? `${result.sourcePeriod.monthLabel} 차기 이월을 현재 마감 기준으로 다시 생성했습니다.`
             : `${result.sourcePeriod.monthLabel} 마감 결과를 ${result.targetPeriod.monthLabel} 오프닝 기준으로 이월했습니다.`
-        });
+        );
       } catch (error) {
         setFeedback({
           severity: 'error',
@@ -212,10 +213,7 @@ export function CarryForwardsPage({
 
     try {
       const result = await cancelMutation.mutateAsync(view);
-      setFeedback({
-        severity: 'success',
-        message: `${result.sourcePeriod.monthLabel} 차기 이월을 취소했습니다.`
-      });
+      notifySuccess(`${result.sourcePeriod.monthLabel} 차기 이월을 취소했습니다.`);
     } catch (error) {
       setFeedback({
         severity: 'error',
@@ -321,7 +319,7 @@ export function CarryForwardsPage({
 
       <CarryForwardsSectionNav selectedPeriodId={selectedPeriodId || null} />
 
-      {feedback ? (
+      {feedback?.severity === 'error' ? (
         <Alert severity={feedback.severity} variant="outlined">
           {feedback.message}
         </Alert>

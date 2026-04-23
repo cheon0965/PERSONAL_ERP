@@ -90,4 +90,14 @@ export class FundingAccountsRepository {
       }
     });
   }
+
+  deleteInWorkspace(accountId: string, tenantId: string, ledgerId: string) {
+    return this.prisma.account.deleteMany({
+      where: {
+        id: accountId,
+        tenantId,
+        ledgerId
+      }
+    });
+  }
 }

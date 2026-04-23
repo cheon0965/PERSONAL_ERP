@@ -19,6 +19,7 @@ import {
 } from '@/features/accounting-periods/accounting-period-selection';
 import { formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import { useAppNotification } from '@/shared/providers/notification-provider';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -55,6 +56,7 @@ export function JournalEntriesPage({
   layout?: JournalEntriesLayout;
 }) {
   const router = useRouter();
+  const { notifySuccess } = useAppNotification();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const [selectedAdjustment, setSelectedAdjustment] =
     React.useState<AdjustmentSelection>(null);
@@ -201,7 +203,7 @@ export function JournalEntriesPage({
           secondaryActionDisabled={!selectedEntryCanAdjust}
         />
 
-        {feedback ? (
+        {feedback?.severity === 'error' ? (
           <Alert severity={feedback.severity} variant="outlined">
             {feedback.message}
           </Alert>
@@ -273,13 +275,11 @@ export function JournalEntriesPage({
         journalWritablePeriods={journalWritablePeriods}
         onClose={() => setSelectedAdjustment(null)}
         onCompleted={(createdEntry, mode) => {
-          setFeedback({
-            severity: 'success',
-            message:
-              mode === 'reverse'
-                ? `${createdEntry.entryNumber} 반전 전표를 생성했습니다.`
-                : `${createdEntry.entryNumber} 정정 전표를 생성했습니다.`
-          });
+          notifySuccess(
+            mode === 'reverse'
+              ? `${createdEntry.entryNumber} 반전 전표를 생성했습니다.`
+              : `${createdEntry.entryNumber} 정정 전표를 생성했습니다.`
+          );
           setSelectedAdjustment(null);
           router.replace(`/journal-entries/${createdEntry.id}` as Route);
         }}

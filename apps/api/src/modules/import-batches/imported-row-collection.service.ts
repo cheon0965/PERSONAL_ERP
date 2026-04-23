@@ -1,8 +1,10 @@
 import {
   BadRequestException,
   ConflictException,
+  InternalServerErrorException,
   Injectable
 } from '@nestjs/common';
+import { isMoneyWon, subtractMoneyWon } from '@personal-erp/money';
 import type {
   AuthenticatedUser,
   CollectImportedRowPreview,
@@ -12,6 +14,8 @@ import type {
 import {
   AccountingPeriodEventType,
   AccountingPeriodStatus,
+  BalanceSnapshotKind,
+  OpeningBalanceSourceKind,
   Prisma
 } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
@@ -30,6 +34,7 @@ import {
   buildCollectImportedRowPreview,
   buildImportedRowAutoPreparationSummary
 } from './imported-row-auto-preparation-summary';
+import type { ParsedImportedRowPayload } from './import-batch.policy';
 import { mapCreatedCollectedTransactionToItem } from './imported-row-collection.mapper';
 import {
   assertOccurredOnWithinPeriod,
@@ -40,15 +45,12 @@ import type { PlanItemCollectionCandidate } from './imported-row-collection.type
 
 type RowCollectionAssessment = {
   occurredOn: Date;
-  normalizedRow: {
-    occurredOn: string;
-    title: string;
-    amount: number;
-  };
+  normalizedRow: ParsedImportedRowPayload;
   ledgerTransactionTypeId: string;
   fundingAccount: {
     id: string;
     name: string;
+    type: 'BANK' | 'CASH' | 'CARD';
   };
   matchedPlanItem: PlanItemCollectionCandidate | null;
   effectiveCategory: {
@@ -202,6 +204,14 @@ export class ImportedRowCollectionService {
       assessment.potentialDuplicateTransactionCount,
       input.input.confirmPotentialDuplicate
     );
+    await this.createOpeningBalanceFromImportedBalanceIfNeeded({
+      tx: input.tx,
+      workspace: input.workspace,
+      actorRef: input.actorRef,
+      targetPeriod,
+      normalizedRow: assessment.normalizedRow,
+      fundingAccount: assessment.fundingAccount
+    });
     const matchedPlanItem = assessment.preview.autoPreparation
       .allowPlanItemMatch
       ? assessment.matchedPlanItem
@@ -569,6 +579,99 @@ export class ImportedRowCollectionService {
     }
   }
 
+  private async createOpeningBalanceFromImportedBalanceIfNeeded(input: {
+    tx: Prisma.TransactionClient;
+    workspace: ImportedRowCollectionWorkspaceScope;
+    actorRef: ReturnType<typeof readWorkspaceActorRef>;
+    targetPeriod: ResolvedCollectionPeriod & { id: string };
+    normalizedRow: ParsedImportedRowPayload;
+    fundingAccount: {
+      id: string;
+      type: 'BANK' | 'CASH' | 'CARD';
+    };
+  }): Promise<void> {
+    if (!input.targetPeriod.willCreateOnCollect) {
+      return;
+    }
+
+    const openingBalanceAmount = resolveImportedOpeningBalanceAmount(
+      input.normalizedRow
+    );
+    if (openingBalanceAmount == null) {
+      return;
+    }
+
+    const accountSubjectId =
+      await this.resolveOpeningBalanceAccountSubjectId({
+        tx: input.tx,
+        workspace: input.workspace,
+        fundingAccountType: input.fundingAccount.type
+      });
+
+    const openingBalanceSnapshot =
+      await input.tx.openingBalanceSnapshot.create({
+        data: {
+          tenantId: input.workspace.tenantId,
+          ledgerId: input.workspace.ledgerId,
+          effectivePeriodId: input.targetPeriod.id,
+          sourceKind: OpeningBalanceSourceKind.INITIAL_SETUP,
+          createdByActorType: input.actorRef.actorType,
+          createdByMembershipId: input.actorRef.actorMembershipId
+        }
+      });
+
+    await input.tx.balanceSnapshotLine.createMany({
+      data: [
+        {
+          snapshotKind: BalanceSnapshotKind.OPENING,
+          openingSnapshotId: openingBalanceSnapshot.id,
+          accountSubjectId,
+          fundingAccountId: input.fundingAccount.id,
+          balanceAmount: openingBalanceAmount
+        }
+      ]
+    });
+  }
+
+  private async resolveOpeningBalanceAccountSubjectId(input: {
+    tx: Prisma.TransactionClient;
+    workspace: ImportedRowCollectionWorkspaceScope;
+    fundingAccountType: 'BANK' | 'CASH' | 'CARD';
+  }): Promise<string> {
+    const expected = resolveOpeningBalanceAccountSubject(
+      input.fundingAccountType
+    );
+    const accountSubjects = await input.tx.accountSubject.findMany({
+      where: {
+        tenantId: input.workspace.tenantId,
+        ledgerId: input.workspace.ledgerId,
+        code: {
+          in: [expected.code]
+        },
+        isActive: true
+      },
+      select: {
+        id: true,
+        code: true,
+        subjectKind: true
+      }
+    });
+    const accountSubject =
+      accountSubjects.find(
+        (candidate) =>
+          candidate.code === expected.code &&
+          candidate.subjectKind === expected.subjectKind
+      ) ?? null;
+
+    if (!accountSubject) {
+      throw new InternalServerErrorException(
+        `현재 Ledger에 업로드 기초금액용 기본 계정과목 ${expected.code}이 준비되어 있지 않습니다.`
+      );
+    }
+
+    return accountSubject.id;
+  }
+
   private async isNewFundingAccountBootstrapCandidate(input: {
     client: PrismaClientLike;
     workspace: ImportedRowCollectionWorkspaceScope;
@@ -743,4 +846,40 @@ function isImmediatelyAfter(
   const nextYear = left.month === 12 ? left.year + 1 : left.year;
 
   return right.year === nextYear && right.month === nextMonth;
+}
+
+function resolveImportedOpeningBalanceAmount(
+  parsedRow: ParsedImportedRowPayload
+) {
+  if (
+    !isMoneyWon(parsedRow.balanceAfter) ||
+    !isMoneyWon(parsedRow.signedAmount)
+  ) {
+    return null;
+  }
+
+  try {
+    return subtractMoneyWon(parsedRow.balanceAfter, parsedRow.signedAmount);
+  } catch {
+    return null;
+  }
+}
+
+function resolveOpeningBalanceAccountSubject(
+  fundingAccountType: 'BANK' | 'CASH' | 'CARD'
+): {
+  code: '1010' | '2100';
+  subjectKind: 'ASSET' | 'LIABILITY';
+} {
+  if (fundingAccountType === 'CARD') {
+    return {
+      code: '2100',
+      subjectKind: 'LIABILITY'
+    };
+  }
+
+  return {
+    code: '1010',
+    subjectKind: 'ASSET'
+  };
 }

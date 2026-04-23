@@ -6,6 +6,10 @@ import { Alert, Button, MenuItem, Stack, TextField } from '@mui/material';
 import type { CategoryItem, CategoryKind } from '@personal-erp/contracts';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 
 const categoryManagementSchema = z.object({
@@ -21,11 +25,13 @@ export type CategoryManagementSubmitInput = {
 };
 
 export function CategoryManagementForm({
+  feedback,
   mode,
   initialCategory,
   busy,
   onSubmit
 }: {
+  feedback: FeedbackAlertValue;
   mode: 'create' | 'edit';
   initialCategory?: CategoryItem | null;
   busy: boolean;
@@ -94,6 +100,7 @@ export function CategoryManagementForm({
           <MenuItem value="TRANSFER">이체</MenuItem>
         </TextField>
 
+        <FeedbackAlert feedback={feedback} />
         <Button
           type="submit"
           variant="contained"

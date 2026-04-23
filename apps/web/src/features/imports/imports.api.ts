@@ -145,6 +145,24 @@ export function getImportBatchCollectionJob(
   );
 }
 
+export function cancelImportBatchCollectionJob(
+  importBatchId: string,
+  jobId: string
+) {
+  return postJson<ImportBatchCollectionJobItem, Record<string, never>>(
+    `/import-batches/${importBatchId}/collection-jobs/${jobId}/cancel`,
+    {},
+    {
+      ...bulkCollectFallback,
+      id: jobId,
+      importBatchId,
+      status: 'CANCELLED',
+      errorMessage: '사용자가 업로드 배치 일괄 등록 작업을 중단했습니다.',
+      heartbeatAt: new Date().toISOString()
+    }
+  );
+}
+
 export function deleteImportBatch(importBatchId: string) {
   return deleteJson<null>(`/import-batches/${importBatchId}`, null);
 }

@@ -145,7 +145,14 @@ test('POST /import-batches/:id/rows/:rowId/collect auto-creates the target opera
       batchId: 'import-batch-auto-period-collect',
       occurredOn: '2026-02-12',
       title: 'Auto-open collect',
-      amount: 22_000
+      amount: 22_000,
+      parsed: {
+        occurredOn: '2026-02-12',
+        title: 'Auto-open collect',
+        amount: 22_000,
+        signedAmount: -22_000,
+        balanceAfter: 228_000
+      }
     });
 
     const response = await context.request(
@@ -182,6 +189,29 @@ test('POST /import-batches/:id/rows/:rowId/collect auto-creates the target opera
       context.state.collectedTransactions.at(-1)?.periodId,
       'period-1'
     );
+    assert.deepEqual(context.state.openingBalanceSnapshots, [
+      {
+        id: 'opening-snapshot-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        effectivePeriodId: 'period-1',
+        sourceKind: 'INITIAL_SETUP',
+        createdAt: context.state.openingBalanceSnapshots[0]?.createdAt,
+        createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+        createdByMembershipId: 'membership-1'
+      }
+    ]);
+    assert.deepEqual(context.state.balanceSnapshotLines, [
+      {
+        id: 'balance-snapshot-line-1',
+        snapshotKind: 'OPENING',
+        openingSnapshotId: 'opening-snapshot-1',
+        closingSnapshotId: null,
+        accountSubjectId: 'as-1-1010',
+        fundingAccountId: 'acc-1',
+        balanceAmount: 250_000
+      }
+    ]);
     assert.ok(
       context.state.periodStatusHistory.some(
         (candidate) =>
@@ -292,7 +322,14 @@ test('POST /import-batches/:id/rows/:rowId/collect can create the next month for
       batchId: 'import-batch-new-card-bootstrap',
       occurredOn: '2026-04-02',
       title: 'New card opening purchase',
-      amount: 33_000
+      amount: 33_000,
+      parsed: {
+        occurredOn: '2026-04-02',
+        title: 'New card opening purchase',
+        amount: 33_000,
+        signedAmount: 33_000,
+        balanceAfter: 83_000
+      }
     });
 
     const response = await context.request(
@@ -358,6 +395,30 @@ test('POST /import-batches/:id/rows/:rowId/collect can create the next month for
       context.state.collectedTransactions.at(-1)?.fundingAccountId,
       'acc-new-card-bootstrap'
     );
+    const createdPeriodId = context.state.accountingPeriods.at(-1)?.id;
+    assert.deepEqual(context.state.openingBalanceSnapshots, [
+      {
+        id: 'opening-snapshot-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        effectivePeriodId: createdPeriodId,
+        sourceKind: 'INITIAL_SETUP',
+        createdAt: context.state.openingBalanceSnapshots[0]?.createdAt,
+        createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+        createdByMembershipId: 'membership-1'
+      }
+    ]);
+    assert.deepEqual(context.state.balanceSnapshotLines, [
+      {
+        id: 'balance-snapshot-line-1',
+        snapshotKind: 'OPENING',
+        openingSnapshotId: 'opening-snapshot-1',
+        closingSnapshotId: null,
+        accountSubjectId: 'as-1-2100',
+        fundingAccountId: 'acc-new-card-bootstrap',
+        balanceAmount: 50_000
+      }
+    ]);
     assert.equal(
       context.state.accounts.find(
         (candidate) => candidate.id === 'acc-new-card-bootstrap'

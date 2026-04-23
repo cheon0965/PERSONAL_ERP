@@ -153,6 +153,7 @@ export function createImportsPrismaMock(
           tenantId?: string;
           ledgerId?: string;
           periodId?: string | null;
+          fundingAccountId?: string | null;
         };
       }) => {
         return state.importBatches.filter((candidate) => {
@@ -163,8 +164,16 @@ export function createImportsPrismaMock(
           const matchesPeriod =
             args.where?.periodId === undefined ||
             candidate.periodId === args.where.periodId;
+          const matchesFundingAccount =
+            args.where?.fundingAccountId === undefined ||
+            candidate.fundingAccountId === args.where.fundingAccountId;
 
-          return matchesTenant && matchesLedger && matchesPeriod;
+          return (
+            matchesTenant &&
+            matchesLedger &&
+            matchesPeriod &&
+            matchesFundingAccount
+          );
         }).length;
       },
       findFirst: async (args: {
@@ -526,6 +535,43 @@ export function createImportsPrismaMock(
 
         Object.assign(candidate, args.data, { updatedAt: new Date() });
         return candidate;
+      },
+      updateMany: async (args: {
+        where?: {
+          id?: string;
+          status?: {
+            not?: ImportBatchCollectionJobStatus;
+          };
+        };
+        data: Partial<{
+          status: ImportBatchCollectionJobStatus;
+          processedRowCount: number;
+          succeededCount: number;
+          failedCount: number;
+          errorMessage: string | null;
+          startedAt: Date;
+          finishedAt: Date;
+          heartbeatAt: Date;
+        }>;
+      }) => {
+        let count = 0;
+        state.importBatchCollectionJobs.forEach((candidate) => {
+          const matchesId = !args.where?.id || candidate.id === args.where.id;
+          const matchesStatus =
+            !args.where?.status?.not ||
+            candidate.status !== args.where.status.not;
+
+          if (!matchesId || !matchesStatus) {
+            return;
+          }
+
+          Object.assign(candidate, args.data, { updatedAt: new Date() });
+          count += 1;
+        });
+
+        return {
+          count
+        };
       },
       deleteMany: async (args: {
         where?: {

@@ -169,15 +169,32 @@ jobs:
           fetch-depth: 0
 
       - name: Run Gitleaks CLI
-        run: >-
-          docker run --rm
-          -v "${{ github.workspace }}:/repo"
-          -w /repo
-          ghcr.io/gitleaks/gitleaks:v8.30.0
-          detect
-          --source .
-          --redact
-          --exit-code 1
+        env:
+          GITLEAKS_LOG_OPTS: >-
+            ${{ github.event_name == 'pull_request' && format('{0}..{1}',
+            github.event.pull_request.base.sha,
+            github.event.pull_request.head.sha) || '' }}
+        run: |
+          set -euo pipefail
+
+          gitleaks_args=(
+            detect
+            --source .
+            --redact
+            --exit-code 1
+          )
+
+          if [ -n "${GITLEAKS_LOG_OPTS}" ]; then
+            gitleaks_args+=(--log-opts "${GITLEAKS_LOG_OPTS}")
+          else
+            gitleaks_args+=(--no-git)
+          fi
+
+          docker run --rm \
+            -v "${{ github.workspace }}:/repo" \
+            -w /repo \
+            ghcr.io/gitleaks/gitleaks:v8.30.0 \
+            "${gitleaks_args[@]}"
 
   CI:
     if: always()

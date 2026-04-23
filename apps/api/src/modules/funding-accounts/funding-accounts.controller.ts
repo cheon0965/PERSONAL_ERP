@@ -1,8 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
+  HttpCode,
+  HttpStatus,
   NotFoundException,
   Param,
   Patch,
@@ -136,6 +139,57 @@ export class FundingAccountsController {
             fundingAccountId,
             requiredRoles: readAllowedWorkspaceRoles(
               'funding_account.update'
+            ).join(',')
+          }
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async delete(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') fundingAccountId: string
+  ): Promise<void> {
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      assertWorkspaceActionAllowed(
+        workspace.membershipRole,
+        'funding_account.delete'
+      );
+
+      const deleted = await this.fundingAccountsService.delete(
+        user,
+        fundingAccountId
+      );
+
+      if (!deleted) {
+        throw new NotFoundException('Funding account not found');
+      }
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'funding_account.delete',
+        request,
+        workspace,
+        details: {
+          fundingAccountId
+        }
+      });
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'funding_account.delete',
+          request,
+          workspace,
+          details: {
+            fundingAccountId,
+            requiredRoles: readAllowedWorkspaceRoles(
+              'funding_account.delete'
             ).join(',')
           }
         });

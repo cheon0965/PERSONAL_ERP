@@ -8,6 +8,25 @@ export function createPlanItemsPrismaMock(
 
   return {
     planItem: {
+      count: async (args: {
+        where?: {
+          tenantId?: string;
+          ledgerId?: string;
+          fundingAccountId?: string;
+        };
+      }) => {
+        return state.planItems.filter((candidate) => {
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesFundingAccount =
+            !args.where?.fundingAccountId ||
+            candidate.fundingAccountId === args.where.fundingAccountId;
+
+          return matchesTenant && matchesLedger && matchesFundingAccount;
+        }).length;
+      },
       findMany: async (args: {
         where?: {
           tenantId?: string;

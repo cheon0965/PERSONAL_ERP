@@ -28,6 +28,9 @@ export class RefreshSessionUseCase {
         tenantId: session.supportTenantId,
         ledgerId: session.supportLedgerId,
         startedAt: session.supportStartedAt
+      }, {
+        tenantId: session.currentTenantId,
+        ledgerId: session.currentLedgerId
       });
       this.rateLimit.clearRefreshAttempts(context.clientIp);
       this.securityEvents.log('auth.refresh_succeeded', {

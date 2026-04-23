@@ -24,6 +24,7 @@ import {
 } from '@/features/reference-data/reference-data.api';
 import { webRuntime } from '@/shared/config/env';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import { useAppNotification } from '@/shared/providers/notification-provider';
 import {
   buildTransactionCompletedMessage,
   readTransactionDrawerDescription,
@@ -70,6 +71,7 @@ export function useTransactionsPage() {
   const highlightedTransactionId = searchParams?.get('transactionId') ?? null;
   const highlightedPlanItemId = searchParams?.get('planItemId') ?? null;
   const queryClient = useQueryClient();
+  const { notifySuccess } = useAppNotification();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const [keyword, setKeyword] = React.useState('');
   const [fundingAccountName, setFundingAccountName] = React.useState('');
@@ -121,10 +123,9 @@ export function useTransactionsPage() {
         buildJournalEntryFallbackItem(transaction)
       ),
     onSuccess: async (createdEntry) => {
-      setFeedback({
-        severity: 'success',
-        message: `${createdEntry.entryNumber} 전표를 생성하고 수집 거래를 확정했습니다.`
-      });
+      notifySuccess(
+        `${createdEntry.entryNumber} 전표를 생성하고 수집 거래를 확정했습니다.`
+      );
 
       await Promise.all([
         queryClient.invalidateQueries({
@@ -148,13 +149,14 @@ export function useTransactionsPage() {
     mutationFn: bulkConfirmCollectedTransactions,
     onSuccess: async (result) => {
       setSelectedTransactionIds([]);
-      setFeedback({
-        severity: result.failedCount > 0 ? 'error' : 'success',
-        message:
-          result.failedCount > 0
-            ? `${result.requestedCount}건 중 ${result.succeededCount}건을 확정했고 ${result.failedCount}건은 실패했습니다.`
-            : `${result.succeededCount}건을 전표로 일괄 확정했습니다.`
-      });
+      if (result.failedCount > 0) {
+        setFeedback({
+          severity: 'error',
+          message: `${result.requestedCount}건 중 ${result.succeededCount}건을 확정했고 ${result.failedCount}건은 실패했습니다.`
+        });
+      } else {
+        notifySuccess(`${result.succeededCount}건을 전표로 일괄 확정했습니다.`);
+      }
 
       await Promise.all([
         queryClient.invalidateQueries({
@@ -180,10 +182,7 @@ export function useTransactionsPage() {
       deleteCollectedTransaction(transaction.id),
     onSuccess: async (_response, transaction) => {
       setDeleteTarget(null);
-      setFeedback({
-        severity: 'success',
-        message: `${transaction.title} 수집 거래를 삭제했습니다.`
-      });
+      notifySuccess(`${transaction.title} 수집 거래를 삭제했습니다.`);
 
       queryClient.setQueryData<CollectedTransactionItem[]>(
         collectedTransactionsQueryKey,
@@ -412,6 +411,7 @@ export function useTransactionsPage() {
       return;
     }
 
+    setFeedback(null);
     void deleteMutation.mutateAsync(deleteTarget);
   }
 
@@ -420,10 +420,7 @@ export function useTransactionsPage() {
     mode: 'create' | 'edit'
   ) {
     setDrawerState(null);
-    setFeedback({
-      severity: 'success',
-      message: buildTransactionCompletedMessage(transaction, mode)
-    });
+    notifySuccess(buildTransactionCompletedMessage(transaction, mode));
   }
 
   return {

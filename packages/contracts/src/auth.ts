@@ -37,12 +37,30 @@ export type AuthenticatedWorkspace = {
   };
 };
 
+export type AuthenticatedWorkspaceOption = AuthenticatedWorkspace & {
+  isCurrent: boolean;
+};
+
 export type AuthenticatedUser = {
   id: string;
   email: string;
   name: string;
   isSystemAdmin?: boolean;
   currentWorkspace: AuthenticatedWorkspace | null;
+};
+
+export type AuthenticatedWorkspaceListResponse = {
+  items: AuthenticatedWorkspaceOption[];
+};
+
+export type SwitchWorkspaceRequest = {
+  tenantId: string;
+  ledgerId?: string;
+};
+
+export type SwitchWorkspaceResponse = {
+  user: AuthenticatedUser;
+  workspaces: AuthenticatedWorkspaceOption[];
 };
 
 export type AccountProfileItem = {

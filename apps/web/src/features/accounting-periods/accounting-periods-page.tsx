@@ -33,6 +33,7 @@ import { ReferenceDataReadinessAlert } from '@/features/reference-data/reference
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { getTodayMonthInputValue } from '@/shared/lib/date-input';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import { useAppNotification } from '@/shared/providers/notification-provider';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -82,6 +83,7 @@ export function AccountingPeriodsPage({
   section?: PeriodWorkspaceSection;
 }) {
   const queryClient = useQueryClient();
+  const { notifySuccess } = useAppNotification();
   const { user } = useAuthSession();
   const searchParams = useSearchParams();
   const requestedReopenPeriodId = searchParams?.get('reopenPeriodId') ?? null;
@@ -368,10 +370,7 @@ export function AccountingPeriodsPage({
         note: values.note.trim() || undefined
       });
 
-      setFeedback({
-        severity: 'success',
-        message: `${values.month} 운영 기간을 시작했습니다.`
-      });
+      notifySuccess(`${values.month} 운영 기간을 시작했습니다.`);
     } catch (mutationError) {
       setFeedback({
         severity: 'error',
@@ -392,10 +391,7 @@ export function AccountingPeriodsPage({
 
     try {
       const result = await closeMutation.mutateAsync(openPeriod);
-      setFeedback({
-        severity: 'success',
-        message: `${result.period.monthLabel} 월 마감을 완료했습니다.`
-      });
+      notifySuccess(`${result.period.monthLabel} 월 마감을 완료했습니다.`);
     } catch (mutationError) {
       setFeedback({
         severity: 'error',
@@ -422,10 +418,7 @@ export function AccountingPeriodsPage({
         }
       });
       setReopenReason('');
-      setFeedback({
-        severity: 'success',
-        message: `${result.monthLabel} 월을 재오픈했습니다.`
-      });
+      notifySuccess(`${result.monthLabel} 월을 재오픈했습니다.`);
     } catch (mutationError) {
       setFeedback({
         severity: 'error',
@@ -529,7 +522,7 @@ export function AccountingPeriodsPage({
         context="monthly-operation"
       />
 
-      {feedback ? (
+      {feedback?.severity === 'error' ? (
         <Alert severity={feedback.severity} variant="outlined">
           {feedback.message}
         </Alert>

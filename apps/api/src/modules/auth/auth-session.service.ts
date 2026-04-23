@@ -18,7 +18,8 @@ import type {
   AuthenticatedIdentity,
   AuthRequestContext,
   AuthSessionResult,
-  AuthSessionSupportContext
+  AuthSessionSupportContext,
+  AuthSessionWorkspaceContext
 } from './auth.types';
 
 type AccessTokenPayload = {
@@ -40,6 +41,8 @@ type AuthSessionRecord = {
   refreshTokenHash: string;
   expiresAt: Date;
   revokedAt: Date | null;
+  currentTenantId: string | null;
+  currentLedgerId: string | null;
   supportTenantId: string | null;
   supportLedgerId: string | null;
   supportStartedAt: Date | null;
@@ -59,7 +62,8 @@ export class AuthSessionService {
 
   async issueSession(
     user: AuthenticatedIdentity,
-    supportContext?: AuthSessionSupportContext
+    supportContext?: AuthSessionSupportContext,
+    workspaceContext?: AuthSessionWorkspaceContext
   ): Promise<AuthSessionResult> {
     const sessionId = randomUUID();
     const refreshExpiresAt = new Date(
@@ -91,6 +95,8 @@ export class AuthSessionService {
         userId: user.id,
         refreshTokenHash: await argon2.hash(refreshToken),
         expiresAt: refreshExpiresAt,
+        currentTenantId: workspaceContext?.tenantId ?? null,
+        currentLedgerId: workspaceContext?.ledgerId ?? null,
         supportTenantId: supportContext?.tenantId ?? null,
         supportLedgerId: supportContext?.ledgerId ?? null,
         supportStartedAt: supportContext?.startedAt ?? null
@@ -103,7 +109,8 @@ export class AuthSessionService {
       refreshToken,
       user: await this.authenticatedWorkspaceResolver.buildAuthenticatedUser(
         user,
-        supportContext
+        supportContext,
+        workspaceContext
       )
     };
   }
@@ -200,6 +207,31 @@ export class AuthSessionService {
         revokedAt: this.clock.now()
       }
     });
+  }
+
+  async updateCurrentWorkspace(
+    sessionId: string,
+    userId: string,
+    workspaceContext: AuthSessionWorkspaceContext
+  ): Promise<void> {
+    const result = await this.prisma.authSession.updateMany({
+      where: {
+        id: sessionId,
+        userId,
+        revokedAt: null
+      },
+      data: {
+        currentTenantId: workspaceContext.tenantId,
+        currentLedgerId: workspaceContext.ledgerId
+      }
+    });
+
+    if (result.count === 0) {
+      throw createSecurityTaggedUnauthorizedError(
+        'session_not_active',
+        'Invalid session'
+      );
+    }
   }
 
   async listUserSessions(

@@ -24,6 +24,7 @@ export function createCollectedTransactionReadMethods(
         tenantId?: string;
         ledgerId?: string;
         periodId?: string | null;
+        fundingAccountId?: string;
       };
     }) => {
       return state.collectedTransactions.filter((candidate) => {
@@ -34,8 +35,16 @@ export function createCollectedTransactionReadMethods(
         const matchesPeriod =
           args.where?.periodId === undefined ||
           candidate.periodId === args.where.periodId;
+        const matchesFundingAccount =
+          !args.where?.fundingAccountId ||
+          candidate.fundingAccountId === args.where.fundingAccountId;
 
-        return matchesTenant && matchesLedger && matchesPeriod;
+        return (
+          matchesTenant &&
+          matchesLedger &&
+          matchesPeriod &&
+          matchesFundingAccount
+        );
       }).length;
     },
     findUnique: async (args: {

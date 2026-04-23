@@ -8,6 +8,7 @@ import { sumMoneyWon } from '@personal-erp/money';
 import { webRuntime } from '@/shared/config/env';
 import { formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import { useAppNotification } from '@/shared/providers/notification-provider';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
@@ -38,6 +39,7 @@ type InsurancePolicyDrawerState =
 
 export function InsurancePoliciesPage() {
   const queryClient = useQueryClient();
+  const { notifySuccess } = useAppNotification();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const [drawerState, setDrawerState] =
     React.useState<InsurancePolicyDrawerState>(null);
@@ -63,12 +65,11 @@ export function InsurancePoliciesPage() {
       deleteInsurancePolicy(insurancePolicy.id),
     onSuccess: async (_response, insurancePolicy) => {
       setDeleteTarget(null);
-      setFeedback({
-        severity: 'success',
-        message: insurancePolicy.linkedRecurringRuleId
+      notifySuccess(
+        insurancePolicy.linkedRecurringRuleId
           ? `${insurancePolicy.productName} 보험 계약과 연결된 반복 규칙을 함께 삭제했습니다.`
           : `${insurancePolicy.productName} 보험 계약을 삭제했습니다.`
-      });
+      );
 
       queryClient.setQueryData<InsurancePolicyItem[]>(
         insurancePoliciesQueryKey,
@@ -174,21 +175,20 @@ export function InsurancePoliciesPage() {
       return;
     }
 
+    setFeedback(null);
     void deleteMutation.mutateAsync(deleteTarget);
   }, [deleteMutation, deleteTarget]);
 
   const handleFormCompleted = React.useCallback(
     (insurancePolicy: InsurancePolicyItem, mode: 'create' | 'edit') => {
       setDrawerState(null);
-      setFeedback({
-        severity: 'success',
-        message:
-          mode === 'edit'
-            ? `${insurancePolicy.productName} 보험 계약과 연결 규칙을 수정했습니다.`
-            : `${insurancePolicy.productName} 보험 계약과 연결 규칙을 등록했습니다.`
-      });
+      notifySuccess(
+        mode === 'edit'
+          ? `${insurancePolicy.productName} 보험 계약과 연결 규칙을 수정했습니다.`
+          : `${insurancePolicy.productName} 보험 계약과 연결 규칙을 등록했습니다.`
+      );
     },
-    []
+    [notifySuccess]
   );
 
   const columns = React.useMemo(
@@ -239,7 +239,7 @@ export function InsurancePoliciesPage() {
         secondaryActionHref="/recurring"
       />
 
-      {feedback ? (
+      {feedback?.severity === 'error' ? (
         <Alert severity={feedback.severity} variant="outlined">
           {feedback.message}
         </Alert>

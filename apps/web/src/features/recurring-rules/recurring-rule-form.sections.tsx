@@ -10,17 +10,10 @@ import {
   readFundingAccountOptionLabel
 } from './recurring-rule-form.model';
 
-type SubmitFeedback = {
-  severity: 'success' | 'error';
-  message: string;
-} | null;
-
 export function RecurringRuleReferenceAlerts({
-  feedback,
   mode,
   referenceError
 }: {
-  feedback: SubmitFeedback;
   mode: 'create' | 'edit';
   referenceError: unknown;
 }) {
@@ -31,11 +24,6 @@ export function RecurringRuleReferenceAlerts({
           title="자금수단 또는 카테고리 조회에 실패했습니다."
           error={referenceError}
         />
-      ) : null}
-      {feedback ? (
-        <Alert severity={feedback.severity} variant="outlined">
-          {feedback.message}
-        </Alert>
       ) : null}
       <Alert severity="info" variant="outlined">
         {mode === 'edit'

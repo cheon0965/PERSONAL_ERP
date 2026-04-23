@@ -16,6 +16,7 @@ import {
 import type { AccountingPeriodItem } from '@personal-erp/contracts';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { useAuthSession } from '@/shared/auth/auth-provider';
+import { useAppNotification } from '@/shared/providers/notification-provider';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -51,6 +52,7 @@ export function FinancialStatementsPage({
 }: FinancialStatementsPageProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { notifySuccess } = useAppNotification();
   const { user } = useAuthSession();
   const [feedback, setFeedback] = React.useState<{
     severity: 'success' | 'error';
@@ -142,10 +144,9 @@ export function FinancialStatementsPage({
         return;
       }
 
-      setFeedback({
-        severity: 'success',
-        message: `${result.period.monthLabel} 공식 재무제표 스냅샷을 생성했습니다.`
-      });
+      notifySuccess(
+        `${result.period.monthLabel} 공식 재무제표 스냅샷을 생성했습니다.`
+      );
     } catch (error) {
       setFeedback({
         severity: 'error',
@@ -228,7 +229,7 @@ export function FinancialStatementsPage({
         selectedPeriodId={selectedPeriodId || null}
       />
 
-      {feedback ? (
+      {feedback?.severity === 'error' ? (
         <Alert severity={feedback.severity} variant="outlined">
           {feedback.message}
         </Alert>
