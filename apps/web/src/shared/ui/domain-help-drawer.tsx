@@ -19,10 +19,13 @@ import {
   type DomainHelpContextType,
   useDomainHelpStore
 } from '../providers/domain-help-provider';
+import { brandTokens } from '../theme/tokens';
 import { SegmentedTabs } from './section-tabs';
 
 type HelpTabValue = 'overview' | 'checkpoints' | 'followup';
-type HelpSection = NonNullable<DomainHelpContextType['supplementarySections']>[number];
+type HelpSection = NonNullable<
+  DomainHelpContextType['supplementarySections']
+>[number];
 
 const STANDARD_HELP_TABS = [
   { value: 'overview' as const, label: '개요' },
@@ -60,7 +63,7 @@ export function DomainHelpDrawer() {
         sx: {
           width: { xs: '100%', sm: 520, lg: 560 },
           p: 0,
-          backgroundImage: 'none'
+          backgroundColor: brandTokens.palette.background
         }
       }}
     >
@@ -69,31 +72,65 @@ export function DomainHelpDrawer() {
           p: 3,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between'
+          justifyContent: 'space-between',
+          borderBottom: '1px solid',
+          borderColor: alpha(brandTokens.palette.primaryBright, 0.12),
+          background: `linear-gradient(135deg, ${alpha(
+            brandTokens.palette.surface,
+            0.96
+          )}, ${alpha(brandTokens.palette.primaryTint, 0.92)})`
         }}
       >
         <Stack direction="row" spacing={1} alignItems="center">
-          <HelpOutlineRoundedIcon color="primary" />
+          <Box
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 34,
+              height: 34,
+              borderRadius: 999,
+              background: brandTokens.gradient.brand,
+              color: '#ffffff',
+              boxShadow: '0 10px 22px rgba(11, 92, 255, 0.18)'
+            }}
+          >
+            <HelpOutlineRoundedIcon fontSize="small" />
+          </Box>
           <Typography variant="h6" fontWeight={700}>
             화면 도움말
           </Typography>
         </Stack>
-        <IconButton onClick={handleClose} size="small">
+        <IconButton
+          onClick={handleClose}
+          size="small"
+          sx={{
+            border: '1px solid',
+            borderColor: alpha(brandTokens.palette.primaryBright, 0.16),
+            backgroundColor: alpha(brandTokens.palette.surface, 0.72)
+          }}
+        >
           <CloseRoundedIcon />
         </IconButton>
       </Box>
 
-      <Divider />
+      <Divider sx={{ borderColor: alpha(brandTokens.palette.primary, 0.06) }} />
 
       <Box sx={{ p: 3, overflowY: 'auto' }}>
         <Stack spacing={2.25}>
           <Box
             sx={(theme) => ({
               p: 2.5,
-              borderRadius: 2,
+              borderRadius: 3,
               border: '1px solid',
-              borderColor: alpha(theme.palette.primary.main, 0.16),
-              background: `linear-gradient(180deg, ${alpha(theme.palette.primary.main, 0.08)} 0%, ${alpha(theme.palette.primary.main, 0.02)} 100%)`
+              borderColor: alpha(theme.palette.primary.main, 0.18),
+              background: `radial-gradient(circle at 100% 0%, ${alpha(
+                brandTokens.palette.secondary,
+                0.2
+              )}, transparent 38%), linear-gradient(180deg, ${alpha(
+                theme.palette.primary.main,
+                0.08
+              )} 0%, ${alpha(theme.palette.primary.main, 0.02)} 100%)`
             })}
           >
             <Stack spacing={1.25}>
@@ -231,25 +268,21 @@ export function DomainHelpDrawer() {
         sx={{
           mt: 'auto',
           p: 3,
-          bgcolor: 'action.hover',
+          bgcolor: alpha(brandTokens.palette.primaryTint, 0.82),
           borderTop: '1px solid',
-          borderColor: 'divider'
+          borderColor: alpha(brandTokens.palette.primaryBright, 0.12)
         }}
       >
         <Typography variant="caption" color="text.secondary">
-          현재 화면의 도움말 탭을 기준으로 읽는 순서, 확인 기준, 이어지는
-          화면을 빠르게 확인할 수 있습니다.
+          현재 화면의 도움말 탭을 기준으로 읽는 순서, 확인 기준, 이어지는 화면을
+          빠르게 확인할 수 있습니다.
         </Typography>
       </Box>
     </Drawer>
   );
 }
 
-function HelpSupplementarySection({
-  section
-}: {
-  section: HelpSection;
-}) {
+function HelpSupplementarySection({ section }: { section: HelpSection }) {
   return (
     <HelpPanelCard title={section.title}>
       <Stack spacing={1.5}>
@@ -279,10 +312,10 @@ function HelpSupplementarySection({
                 key={`${section.title}-${fact.label}`}
                 sx={{
                   p: 1.5,
-                  borderRadius: 1.5,
+                  borderRadius: 2,
                   border: '1px solid',
-                  borderColor: 'divider',
-                  bgcolor: 'background.default'
+                  borderColor: alpha(brandTokens.palette.primaryBright, 0.12),
+                  bgcolor: alpha(brandTokens.palette.surface, 0.8)
                 }}
               >
                 <Typography variant="caption" color="text.secondary">
@@ -327,10 +360,10 @@ function HelpSupplementarySection({
                 key={`${section.title}-${link.href}-${link.title}`}
                 sx={{
                   p: 1.5,
-                  borderRadius: 1.5,
+                  borderRadius: 2,
                   border: '1px solid',
-                  borderColor: 'divider',
-                  bgcolor: 'background.default'
+                  borderColor: alpha(brandTokens.palette.primaryBright, 0.12),
+                  bgcolor: alpha(brandTokens.palette.surface, 0.8)
                 }}
               >
                 <Stack spacing={1}>
@@ -373,22 +406,25 @@ function HelpPanelCard({
 }) {
   return (
     <Box
-      sx={(theme) => ({
+      sx={{
         p: 2.25,
-        borderRadius: 1.75,
+        borderRadius: 2.5,
         border: '1px solid',
         borderColor:
           tone === 'primary'
-            ? alpha(theme.palette.primary.main, 0.18)
-            : 'divider',
-        bgcolor:
+            ? alpha(brandTokens.palette.primaryBright, 0.18)
+            : alpha(brandTokens.palette.primaryBright, 0.1),
+        background:
           tone === 'primary'
-            ? 'primary.main'
+            ? brandTokens.gradient.brand
             : tone === 'subtle'
-              ? 'action.hover'
-              : 'background.paper',
+              ? `linear-gradient(180deg, ${alpha(
+                  brandTokens.palette.primaryTint,
+                  0.86
+                )}, ${alpha(brandTokens.palette.secondaryTint, 0.64)})`
+              : brandTokens.gradient.card,
         color: tone === 'primary' ? 'primary.contrastText' : 'text.primary'
-      })}
+      }}
     >
       <Stack spacing={1.25}>
         <Typography

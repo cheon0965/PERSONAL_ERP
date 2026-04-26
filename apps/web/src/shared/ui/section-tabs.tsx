@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { alpha } from '@mui/material/styles';
 import type { Theme } from '@mui/material/styles';
 import { Box, ButtonBase, Stack, Typography } from '@mui/material';
+import { brandTokens } from '@/shared/theme/tokens';
 
 type SectionTabItem = {
   href: string;
@@ -52,9 +53,12 @@ export function SectionTabs({
         p: 0.6,
         borderRadius: 3.25,
         border: '1px solid',
-        borderColor: '#d7dee8',
-        background: '#ffffff',
-        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.05)'
+        borderColor: alpha(brandTokens.palette.primaryBright, 0.14),
+        background: `linear-gradient(180deg, ${alpha(
+          brandTokens.palette.surface,
+          0.96
+        )}, ${alpha(brandTokens.palette.primaryTint, 0.9)})`,
+        boxShadow: '0 10px 24px rgba(6, 34, 111, 0.06)'
       }}
     >
       <Box
@@ -97,8 +101,11 @@ export function SegmentedTabs<TValue extends string>({
         p: 0.6,
         borderRadius: 3.25,
         border: '1px solid',
-        borderColor: '#d7dee8',
-        background: '#ffffff'
+        borderColor: alpha(brandTokens.palette.primaryBright, 0.14),
+        background: `linear-gradient(180deg, ${alpha(
+          brandTokens.palette.surface,
+          0.96
+        )}, ${alpha(brandTokens.palette.primaryTint, 0.9)})`
       }}
     >
       <Box
@@ -192,7 +199,7 @@ function TabButtonContent({
           sx={{
             display: 'inline-flex',
             flexShrink: 0,
-            color: selected ? 'primary.dark' : 'text.primary'
+            color: selected ? 'primary.contrastText' : 'text.secondary'
           }}
         >
           {item.icon}
@@ -218,8 +225,7 @@ function TabButtonContent({
 }
 
 function resolveTabGridColumns(itemCount: number) {
-  const mobileColumns =
-    itemCount <= 1 ? '1fr' : 'repeat(2, minmax(0, 1fr))';
+  const mobileColumns = itemCount <= 1 ? '1fr' : 'repeat(2, minmax(0, 1fr))';
   const minimumWidth = itemCount > 6 ? 112 : itemCount > 4 ? 124 : 140;
 
   return {
@@ -241,25 +247,25 @@ function createTabButtonSx(selected: boolean, disabled = false) {
     textDecoration: 'none',
     border: '1px solid',
     borderColor: selected
-      ? alpha(theme.palette.primary.main, 0.36)
+      ? alpha(brandTokens.palette.primaryBright, 0.48)
       : 'transparent',
-    color: selected ? theme.palette.primary.dark : theme.palette.text.primary,
-    backgroundColor: selected
-      ? alpha(theme.palette.primary.main, 0.16)
-      : 'transparent',
+    color: selected
+      ? theme.palette.primary.contrastText
+      : theme.palette.text.primary,
+    background: selected ? brandTokens.gradient.brand : 'transparent',
     boxShadow: selected
-      ? `inset 0 0 0 1px ${alpha(theme.palette.primary.main, 0.08)}`
+      ? `0 10px 20px ${alpha(brandTokens.palette.primaryBright, 0.16)}`
       : 'none',
     transition:
       'background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease',
     opacity: disabled ? 0.48 : 1,
     '&:hover': {
       backgroundColor: selected
-        ? alpha(theme.palette.primary.main, 0.2)
+        ? undefined
         : alpha(theme.palette.text.primary, 0.045),
       borderColor: selected
-        ? alpha(theme.palette.primary.main, 0.42)
-        : '#d7dee8'
+        ? alpha(brandTokens.palette.secondary, 0.7)
+        : brandTokens.palette.border
     },
     '&.Mui-focusVisible': {
       outline: `2px solid ${alpha(theme.palette.primary.main, 0.58)}`,

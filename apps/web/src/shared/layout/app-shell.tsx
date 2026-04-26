@@ -9,7 +9,12 @@ import { Topbar } from './topbar';
 
 export function AppShell({ children }: React.PropsWithChildren) {
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default' }}>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        backgroundColor: 'background.default'
+      }}
+    >
       <SidebarNav />
       <Topbar />
       <DomainHelpDrawer />

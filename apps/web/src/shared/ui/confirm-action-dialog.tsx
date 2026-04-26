@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Box,
   Button,
   Dialog,
   DialogActions,
@@ -8,6 +9,8 @@ import {
   DialogContentText,
   DialogTitle
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import { brandTokens } from '@/shared/theme/tokens';
 
 type ConfirmActionDialogProps = {
   open: boolean;
@@ -38,13 +41,44 @@ export function ConfirmActionDialog({
       onClose={busy ? undefined : onClose}
       maxWidth="xs"
       fullWidth
+      PaperProps={{
+        sx: {
+          overflow: 'hidden',
+          border: '1px solid',
+          borderColor: alpha(brandTokens.palette.primaryBright, 0.14),
+          background: brandTokens.gradient.card,
+          boxShadow: brandTokens.shadow.cardStrong
+        }
+      }}
     >
-      <DialogTitle>{title}</DialogTitle>
+      <DialogTitle
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.25,
+          pb: 1
+        }}
+      >
+        <Box
+          sx={{
+            width: 10,
+            height: 32,
+            borderRadius: 999,
+            background:
+              confirmColor === 'error'
+                ? brandTokens.palette.error
+                : confirmColor === 'warning'
+                  ? brandTokens.palette.warning
+                  : brandTokens.gradient.brand
+          }}
+        />
+        {title}
+      </DialogTitle>
       <DialogContent>
         <DialogContentText>{description}</DialogContentText>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={busy}>
+      <DialogActions sx={{ px: 3, pb: 2.5 }}>
+        <Button onClick={onClose} disabled={busy} variant="outlined">
           취소
         </Button>
         <Button

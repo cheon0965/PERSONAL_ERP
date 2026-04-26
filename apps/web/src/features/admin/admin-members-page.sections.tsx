@@ -18,6 +18,7 @@ import type {
   TenantMembershipStatus
 } from '@personal-erp/contracts';
 import { ConfirmActionDialog } from '@/shared/ui/confirm-action-dialog';
+import { GridActionCell } from '@/shared/ui/data-grid-cell';
 import { FormDrawer } from '@/shared/ui/form-drawer';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { SectionCard } from '@/shared/ui/section-card';
@@ -130,9 +131,9 @@ export function createAdminMembersColumns(input: {
       headerName: '관리',
       sortable: false,
       filterable: false,
-      width: 180,
+      width: 190,
       renderCell: (params) => (
-        <Stack direction="row" spacing={1}>
+        <GridActionCell>
           <Button
             size="small"
             disabled={!input.canManageMembers}
@@ -150,7 +151,7 @@ export function createAdminMembersColumns(input: {
           >
             제거
           </Button>
-        </Stack>
+        </GridActionCell>
       )
     }
   ];

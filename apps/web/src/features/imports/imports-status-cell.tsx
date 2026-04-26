@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Typography } from '@mui/material';
+import { GridActionCell } from '@/shared/ui/data-grid-cell';
 import { StatusChip } from '@/shared/ui/status-chip';
 import type { ImportedRowTableItem } from './imports.shared';
 
@@ -16,7 +17,7 @@ export function ImportedRowStatusCell({
 }) {
   if (row.collectionSummary) {
     return (
-      <Stack direction="row" spacing={1} alignItems="center">
+      <GridActionCell>
         <StatusChip
           label={row.collectionSummary.createdCollectedTransactionStatus}
         />
@@ -27,7 +28,7 @@ export function ImportedRowStatusCell({
         >
           보기
         </Button>
-      </Stack>
+      </GridActionCell>
     );
   }
 

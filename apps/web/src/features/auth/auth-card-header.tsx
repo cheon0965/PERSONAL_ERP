@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { Box, Stack, Typography } from '@mui/material';
+import { BrandLogo } from '@/shared/brand/brand-logo';
 
 type AuthCardHeaderProps = {
   eyebrow?: string;
@@ -20,6 +21,7 @@ export function AuthCardHeader({
 }: AuthCardHeaderProps) {
   return (
     <Stack spacing={1.25}>
+      <BrandLogo width={150} />
       <Stack
         direction="row"
         justifyContent="space-between"
@@ -63,7 +65,9 @@ export function AuthCardHeader({
         </Stack>
 
         {aside ? (
-          <Box sx={{ display: { xs: 'none', sm: 'inline-flex' }, flexShrink: 0 }}>
+          <Box
+            sx={{ display: { xs: 'none', sm: 'inline-flex' }, flexShrink: 0 }}
+          >
             {aside}
           </Box>
         ) : null}

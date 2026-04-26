@@ -23,6 +23,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { resendVerificationEmail, verifyEmail } from '@/features/auth/auth.api';
+import { brandTokens } from '@/shared/theme/tokens';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { AuthCardHeader } from './auth-card-header';
 
@@ -79,26 +80,23 @@ export function VerifyEmailPage() {
       sx={{
         minHeight: '100vh',
         py: appLayout.authPagePaddingY,
-        background:
-          'radial-gradient(circle at top right, rgba(34,197,94,0.2), transparent 32%), radial-gradient(circle at bottom left, rgba(15,23,42,0.12), transparent 30%), linear-gradient(180deg, #fbfdf9 0%, #eff7ec 100%)'
+        backgroundColor: brandTokens.palette.background
       }}
     >
       <Container maxWidth="sm">
         <Card
           sx={{
             overflow: 'hidden',
-            boxShadow: '0 22px 48px rgba(15, 23, 42, 0.14)',
-            background:
-              'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98))',
+            boxShadow: brandTokens.shadow.cardStrong,
+            background: `linear-gradient(180deg, ${alpha(brandTokens.palette.surface, 0.98)}, ${alpha(brandTokens.palette.surfaceSoft, 0.98)})`,
             '&::before': {
               content: '""',
               display: 'block',
               height: 5,
-              background:
-                'linear-gradient(90deg, rgba(34,197,94,1), rgba(14,165,233,0.9))'
+              background: `linear-gradient(90deg, ${brandTokens.palette.secondary}, ${brandTokens.palette.primary})`
             }
           }}
-          >
+        >
           <CardContent sx={{ p: appLayout.authSurfacePadding }}>
             <Stack spacing={appLayout.authSurfaceGap} alignItems="stretch">
               <AuthCardHeader
@@ -116,8 +114,8 @@ export function VerifyEmailPage() {
                       borderRadius: 3.5,
                       backgroundColor:
                         status === 'failed'
-                          ? alpha('#dc2626', 0.08)
-                          : alpha('#16a34a', 0.1),
+                          ? alpha(brandTokens.palette.error, 0.08)
+                          : alpha(brandTokens.palette.secondary, 0.12),
                       color: status === 'failed' ? 'error.main' : 'success.main'
                     }}
                   >
@@ -156,8 +154,8 @@ export function VerifyEmailPage() {
                   sx={{
                     p: 2.25,
                     borderRadius: 4,
-                    backgroundColor: alpha('#0ea5e9', 0.05),
-                    border: `1px solid ${alpha('#0ea5e9', 0.12)}`
+                    backgroundColor: alpha(brandTokens.palette.secondary, 0.08),
+                    border: `1px solid ${alpha(brandTokens.palette.secondaryDark, 0.18)}`
                   }}
                 >
                   <form

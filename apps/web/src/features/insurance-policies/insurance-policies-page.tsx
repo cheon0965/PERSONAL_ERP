@@ -23,8 +23,7 @@ import {
   buildInsurancePolicyColumns,
   InsuranceDeleteDialog,
   InsurancePoliciesToolbar,
-  InsurancePolicyDrawer,
-  InsuranceSummaryGrid
+  InsurancePolicyDrawer
 } from './insurance-policies-page.sections';
 
 type SubmitFeedback = {
@@ -267,14 +266,6 @@ export function InsurancePoliciesPage() {
         }
         rows={data}
         columns={columns}
-      />
-
-      <InsuranceSummaryGrid
-        inactiveCount={inactivePolicyCount}
-        linkedCount={linkedPolicyCount}
-        totalCount={data.length}
-        totalPremium={formatWon(totalPremium)}
-        unlinkedCount={unlinkedPolicyCount}
       />
 
       <InsurancePolicyDrawer

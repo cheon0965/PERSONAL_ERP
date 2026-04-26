@@ -4,6 +4,7 @@ import type { ElementType } from 'react';
 import TrendingUpRoundedIcon from '@mui/icons-material/TrendingUpRounded';
 import { alpha } from '@mui/material/styles';
 import { Box, Card, CardContent, Stack, Typography } from '@mui/material';
+import { brandTokens } from '@/shared/theme/tokens';
 import { appLayout } from './layout-metrics';
 
 type SummaryCardTone = 'neutral' | 'primary' | 'success' | 'warning';
@@ -29,36 +30,36 @@ const toneStyles: Record<
   }
 > = {
   neutral: {
-    accent: '#0f172a',
-    iconColor: '#0f172a',
-    iconBackground: alpha('#0f172a', 0.08),
-    badgeBackground: alpha('#0f172a', 0.06),
-    badgeColor: '#334155',
-    glowColor: alpha('#0f172a', 0.08)
+    accent: brandTokens.palette.primary,
+    iconColor: brandTokens.palette.primary,
+    iconBackground: alpha(brandTokens.palette.primaryBright, 0.1),
+    badgeBackground: alpha(brandTokens.palette.primaryBright, 0.07),
+    badgeColor: brandTokens.palette.textMuted,
+    glowColor: alpha(brandTokens.palette.primaryBright, 0.1)
   },
   primary: {
-    accent: '#2563eb',
-    iconColor: '#2563eb',
-    iconBackground: alpha('#2563eb', 0.12),
-    badgeBackground: alpha('#2563eb', 0.08),
-    badgeColor: '#1d4ed8',
-    glowColor: alpha('#2563eb', 0.12)
+    accent: brandTokens.palette.primaryBright,
+    iconColor: brandTokens.palette.primaryBright,
+    iconBackground: alpha(brandTokens.palette.primaryBright, 0.12),
+    badgeBackground: alpha(brandTokens.palette.primaryBright, 0.1),
+    badgeColor: brandTokens.palette.primary,
+    glowColor: alpha(brandTokens.palette.primaryBright, 0.14)
   },
   success: {
-    accent: '#15803d',
-    iconColor: '#15803d',
-    iconBackground: alpha('#15803d', 0.12),
-    badgeBackground: alpha('#15803d', 0.08),
-    badgeColor: '#166534',
-    glowColor: alpha('#15803d', 0.12)
+    accent: brandTokens.palette.secondary,
+    iconColor: brandTokens.palette.secondaryDark,
+    iconBackground: alpha(brandTokens.palette.secondary, 0.16),
+    badgeBackground: alpha(brandTokens.palette.secondary, 0.12),
+    badgeColor: brandTokens.palette.secondaryDark,
+    glowColor: alpha(brandTokens.palette.secondary, 0.18)
   },
   warning: {
-    accent: '#d97706',
-    iconColor: '#d97706',
-    iconBackground: alpha('#d97706', 0.14),
-    badgeBackground: alpha('#d97706', 0.1),
-    badgeColor: '#b45309',
-    glowColor: alpha('#d97706', 0.12)
+    accent: brandTokens.palette.warning,
+    iconColor: brandTokens.palette.warning,
+    iconBackground: alpha(brandTokens.palette.warning, 0.14),
+    badgeBackground: alpha(brandTokens.palette.warning, 0.1),
+    badgeColor: brandTokens.palette.warning,
+    glowColor: alpha(brandTokens.palette.warning, 0.12)
   }
 };
 
@@ -79,15 +80,18 @@ export function SummaryCard({
         height: '100%',
         display: 'flex',
         overflow: 'hidden',
-        background:
-          'linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96))',
+        borderColor: alpha(toneStyle.accent, 0.16),
+        background: `radial-gradient(circle at 100% 0%, ${toneStyle.glowColor}, transparent 34%), ${brandTokens.gradient.card}`,
         '&::before': {
           content: '""',
           position: 'absolute',
           inset: '0 auto auto 0',
           width: '100%',
-          height: 4,
-          background: `linear-gradient(90deg, ${toneStyle.accent}, ${alpha(toneStyle.accent, 0.2)})`
+          height: 5,
+          background: `linear-gradient(90deg, ${toneStyle.accent}, ${alpha(
+            brandTokens.palette.secondary,
+            0.72
+          )}, ${alpha(toneStyle.accent, 0.08)})`
         },
         '&::after': {
           content: '""',
@@ -142,7 +146,9 @@ export function SummaryCard({
                 justifyContent: 'center',
                 width: 42,
                 height: 42,
-                borderRadius: 3,
+                borderRadius: 3.25,
+                border: '1px solid',
+                borderColor: alpha(toneStyle.accent, 0.18),
                 backgroundColor: toneStyle.iconBackground,
                 color: toneStyle.iconColor
               }}

@@ -26,7 +26,9 @@ import {
 import type { NavigationMenuItem } from '@personal-erp/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthSession } from '@/shared/auth/auth-provider';
+import { BrandLogo } from '@/shared/brand/brand-logo';
 import { resolveNavigationIcon } from '@/shared/navigation/navigation-icons';
+import { brandTokens } from '@/shared/theme/tokens';
 import {
   getWorkspaceNavigationTree,
   workspaceNavigationQueryKey
@@ -153,11 +155,10 @@ export function SidebarNav() {
           borderBottomLeftRadius: 24,
           borderBottomRightRadius: 24,
           borderRight: '1px solid',
-          borderColor: 'divider',
-          background:
-            'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(241,245,249,0.94))',
+          borderColor: alpha(brandTokens.palette.primaryBright, 0.12),
+          backgroundColor: brandTokens.palette.surface,
           overflowY: 'auto',
-          boxShadow: '18px 0 50px rgba(15, 23, 42, 0.06)'
+          boxShadow: '14px 0 36px rgba(6, 34, 111, 0.06)'
         }
       }}
       open
@@ -171,22 +172,20 @@ export function SidebarNav() {
             alignItems: 'center',
             width: '100%',
             minHeight: { xs: 60, md: 64 },
-            px: 3,
+            pl: 1.5,
+            pr: 1.25,
             textDecoration: 'none',
             color: 'text.primary'
           }}
         >
-          <Typography
-            variant="h6"
-            sx={{ fontWeight: 850, letterSpacing: '-0.03em' }}
-          >
-            PERSONAL ERP
-          </Typography>
+          <BrandLogo priority sx={{ width: { xs: 180, md: 192 } }} />
         </Box>
       </Toolbar>
       <Divider />
       <Box sx={{ px: 1.5, py: 2 }}>
-        {navigationQuery.isLoading && workspaceItems.length === 0 && !isSystemAdmin ? (
+        {navigationQuery.isLoading &&
+        workspaceItems.length === 0 &&
+        !isSystemAdmin ? (
           <Stack spacing={1.25}>
             {Array.from({ length: 7 }).map((_, index) => (
               <Skeleton key={index} variant="rounded" height={42} />
@@ -200,8 +199,8 @@ export function SidebarNav() {
               p: 2,
               borderRadius: 3,
               border: '1px solid',
-              borderColor: 'warning.light',
-              bgcolor: 'warning.50'
+              borderColor: alpha(brandTokens.palette.warning, 0.28),
+              bgcolor: alpha(brandTokens.palette.warningSoft, 0.8)
             }}
           >
             <Typography variant="subtitle2" color="warning.dark">
@@ -217,16 +216,14 @@ export function SidebarNav() {
           </Box>
         ) : null}
 
-        {!navigationQuery.isLoading &&
-        !isSystemAdmin &&
-        items.length === 0 ? (
+        {!navigationQuery.isLoading && !isSystemAdmin && items.length === 0 ? (
           <Box
             sx={{
               p: 2,
               borderRadius: 3,
               border: '1px dashed',
-              borderColor: 'divider',
-              bgcolor: alpha('#ffffff', 0.72)
+              borderColor: alpha(brandTokens.palette.primaryBright, 0.18),
+              bgcolor: alpha(brandTokens.palette.surface, 0.78)
             }}
           >
             <Typography variant="subtitle2">표시할 메뉴가 없습니다.</Typography>
@@ -269,8 +266,8 @@ export function SidebarNav() {
               p: 2,
               borderRadius: 3,
               border: '1px dashed',
-              borderColor: 'divider',
-              bgcolor: alpha('#ffffff', 0.72)
+              borderColor: alpha(brandTokens.palette.primaryBright, 0.18),
+              bgcolor: alpha(brandTokens.palette.surface, 0.78)
             }}
           >
             <Typography variant="subtitle2">사업장 운영 문맥 없음</Typography>
@@ -282,9 +279,7 @@ export function SidebarNav() {
           </Box>
         ) : null}
 
-        {isSystemAdmin &&
-        hasWorkspaceContext &&
-        navigationQuery.isLoading ? (
+        {isSystemAdmin && hasWorkspaceContext && navigationQuery.isLoading ? (
           <Stack spacing={1.25} sx={{ mt: 0.75 }}>
             {Array.from({ length: 5 }).map((_, index) => (
               <Skeleton key={index} variant="rounded" height={38} />
@@ -303,8 +298,8 @@ export function SidebarNav() {
               p: 2,
               borderRadius: 3,
               border: '1px dashed',
-              borderColor: 'divider',
-              bgcolor: alpha('#ffffff', 0.72)
+              borderColor: alpha(brandTokens.palette.primaryBright, 0.18),
+              bgcolor: alpha(brandTokens.palette.surface, 0.78)
             }}
           >
             <Typography variant="subtitle2">
@@ -537,18 +532,14 @@ function buildSystemAdminNavigationItems(input: {
       depth: 0,
       isVisible: true,
       allowedRoles: SYSTEM_ADMIN_MENU_ROLES,
-      children: [...children].sort((left, right) => left.sortOrder - right.sortOrder)
+      children: [...children].sort(
+        (left, right) => left.sortOrder - right.sortOrder
+      )
     }
   ];
 }
 
-function SidebarSectionLabel({
-  title,
-  sx
-}: {
-  title: string;
-  sx?: object;
-}) {
+function SidebarSectionLabel({ title, sx }: { title: string; sx?: object }) {
   return (
     <Box sx={sx}>
       <Typography
@@ -558,7 +549,8 @@ function SidebarSectionLabel({
           display: 'block',
           fontWeight: 800,
           letterSpacing: '0.05em',
-          textTransform: 'uppercase'
+          textTransform: 'uppercase',
+          color: alpha(brandTokens.palette.primary, 0.74)
         }}
       >
         {title}
@@ -594,19 +586,21 @@ function NavigationNode({
       <Stack
         direction="row"
         alignItems="center"
-        sx={(theme) => ({
+        sx={{
           borderRadius: isRoot ? 4 : 3,
           border: isRoot ? '1px solid' : '1px solid transparent',
           borderColor: isRoot
-            ? alpha(theme.palette.primary.main, selected ? 0.24 : 0.1)
-            : 'transparent',
-          bgcolor: isRoot
             ? selected
-              ? alpha(theme.palette.primary.main, 0.1)
-              : alpha('#ffffff', 0.72)
+              ? brandTokens.palette.borderStrong
+              : brandTokens.palette.border
             : 'transparent',
-          boxShadow: isRoot ? '0 10px 24px rgba(15, 23, 42, 0.04)' : 'none'
-        })}
+          backgroundColor: isRoot
+            ? selected
+              ? brandTokens.palette.surfaceMuted
+              : brandTokens.palette.surface
+            : 'transparent',
+          boxShadow: isRoot ? '0 8px 18px rgba(11, 23, 61, 0.04)' : 'none'
+        }}
       >
         <NodeButton
           item={item}
@@ -639,7 +633,7 @@ function NavigationNode({
               ml: isRoot ? 1.1 : 0.75,
               pl: 1,
               borderLeft: '1px solid',
-              borderColor: 'divider'
+              borderColor: brandTokens.palette.border
             }}
           >
             {item.children.map((child) => (
@@ -675,20 +669,38 @@ function NodeButton({
     <ListItemButton
       selected={selected}
       onClick={item.href ? undefined : () => onToggle(item.key)}
-      sx={(theme) => ({
+      sx={{
+        position: 'relative',
         flex: 1,
         minWidth: 0,
         borderRadius: isRoot ? 4 : 3,
         px: isRoot ? 1.5 : 1.2,
+        pr: selected ? (isRoot ? 2.25 : 1.95) : isRoot ? 1.5 : 1.2,
         py: isRoot ? 1.15 : 0.85,
-        color: selected ? 'primary.main' : 'text.primary',
+        color: selected ? brandTokens.palette.primaryDark : 'text.primary',
         '&.Mui-selected': {
-          bgcolor: alpha(theme.palette.primary.main, 0.1)
+          bgcolor: alpha('#0b173d', 0.045),
+          boxShadow: `inset 3px 0 0 ${brandTokens.palette.primaryBright}`
+        },
+        '&.Mui-selected::after': {
+          content: '""',
+          position: 'absolute',
+          top: '50%',
+          right: 8,
+          width: 4,
+          height: isRoot ? 26 : 20,
+          borderRadius: 999,
+          backgroundColor: brandTokens.palette.primaryBright,
+          transform: 'translateY(-50%)',
+          boxShadow: `0 0 0 3px ${alpha(brandTokens.palette.primaryBright, 0.12)}`
         },
         '&.Mui-selected:hover': {
-          bgcolor: alpha(theme.palette.primary.main, 0.14)
+          bgcolor: alpha('#0b173d', 0.065)
+        },
+        '&:hover': {
+          bgcolor: alpha('#0b173d', 0.035)
         }
-      })}
+      }}
     >
       <ListItemIcon sx={{ minWidth: isRoot ? 40 : 30 }}>
         {Icon ? (

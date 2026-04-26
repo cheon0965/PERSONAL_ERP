@@ -1,14 +1,24 @@
 'use client';
 
+import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import { Button } from '@mui/material';
-import type { ImportBatchItem } from '@personal-erp/contracts';
+import type {
+  AccountingPeriodItem,
+  ImportBatchItem
+} from '@personal-erp/contracts';
 import type { GridColDef } from '@mui/x-data-grid';
 import { formatWon } from '@/shared/lib/format';
 import { StatusChip } from '@/shared/ui/status-chip';
 import { ImportedRowStatusCell } from './imports-status-cell';
-import { sourceKindOptions, type ImportedRowTableItem } from './imports.shared';
+import {
+  isImportedRowOccurredOnInPeriod,
+  readParsedRowPreview,
+  sourceKindOptions,
+  type ImportedRowTableItem
+} from './imports.shared';
 
 export function buildImportBatchColumns(input: {
+  currentPeriod: AccountingPeriodItem | null;
   selectedBatchId: string | null;
   onSelectBatch: (batch: ImportBatchItem) => void;
   actionLabel?: string;
@@ -47,24 +57,75 @@ export function buildImportBatchColumns(input: {
       flex: 0.6
     },
     {
+      field: 'collectableRowCount',
+      headerName: '등록 가능 행',
+      flex: 0.8,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) =>
+        `${countCollectableBatchRows(params.row, input.currentPeriod)}건`
+    },
+    {
+      field: 'collectedRowCount',
+      headerName: '연결 완료 행',
+      flex: 0.8,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => `${countCollectedBatchRows(params.row)}건`
+    },
+    {
       field: 'actions',
       headerName: '동작',
       flex: 0.9,
+      minWidth: 150,
       sortable: false,
       filterable: false,
-      renderCell: (params) => (
-        <Button
-          size="small"
-          variant={
-            input.selectedBatchId === params.row.id ? 'contained' : 'text'
-          }
-          onClick={() => input.onSelectBatch(params.row)}
-        >
-          {input.actionLabel ?? '행 보기'}
-        </Button>
-      )
+      renderCell: (params) => {
+        const selected = input.selectedBatchId === params.row.id;
+
+        return (
+          <Button
+            size="small"
+            variant={selected ? 'contained' : 'outlined'}
+            href={selected ? `/imports/${params.row.id}` : undefined}
+            endIcon={selected ? <ArrowForwardRoundedIcon /> : undefined}
+            onClick={
+              selected
+                ? undefined
+                : () => {
+                    input.onSelectBatch(params.row);
+                  }
+            }
+            sx={{ whiteSpace: 'nowrap' }}
+          >
+            {selected ? '작업대 열기' : (input.actionLabel ?? '선택')}
+          </Button>
+        );
+      }
     }
   ];
+}
+
+function countCollectableBatchRows(
+  batch: ImportBatchItem,
+  currentPeriod: AccountingPeriodItem | null
+) {
+  return batch.rows.filter((row) => {
+    if (row.parseStatus !== 'PARSED' || row.createdCollectedTransactionId) {
+      return false;
+    }
+
+    const parsed = readParsedRowPreview(row);
+
+    return parsed
+      ? isImportedRowOccurredOnInPeriod(parsed.occurredOn, currentPeriod)
+      : false;
+  }).length;
+}
+
+function countCollectedBatchRows(batch: ImportBatchItem) {
+  return batch.rows.filter((row) => Boolean(row.createdCollectedTransactionId))
+    .length;
 }
 
 export function buildImportedRowsColumns(input: {

@@ -5,6 +5,7 @@ import { Button, Chip, Grid, Stack, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { formatNumber } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import { brandTokens } from '@/shared/theme/tokens';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -225,7 +226,6 @@ export function OperationsHomePage() {
           ))}
         </Grid>
       </SectionCard>
-
     </Stack>
   );
 }
@@ -256,7 +256,10 @@ function PriorityCard({
         borderRadius: 3,
         border: '1px solid',
         borderColor: tone === 'success' ? 'success.light' : 'warning.light',
-        backgroundColor: tone === 'success' ? 'success.50' : 'warning.50'
+        backgroundColor:
+          tone === 'success'
+            ? brandTokens.palette.successSoft
+            : brandTokens.palette.warningSoft
       }}
     >
       <Stack

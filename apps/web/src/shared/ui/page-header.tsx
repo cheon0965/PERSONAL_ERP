@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import type { Route } from 'next';
 import Link from 'next/link';
 import {
+  Box,
   Button,
   Chip,
   Stack,
@@ -11,6 +12,7 @@ import {
   type ButtonProps,
   type ChipProps
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { brandTokens } from '../theme/tokens';
 import { appLayout } from './layout-metrics';
 
@@ -33,6 +35,7 @@ type PageHeaderProps = {
   description?: string;
   badges?: PageHeaderBadge[];
   metadata?: PageHeaderMetadataItem[];
+  metadataSingleRow?: boolean;
   primaryActionLabel?: string;
   primaryActionHref?: PageHeaderHref;
   primaryActionOnClick?: () => void;
@@ -48,7 +51,10 @@ type PageHeaderProps = {
 export function PageHeader({
   eyebrow,
   title,
+  description,
   badges = [],
+  metadata = [],
+  metadataSingleRow = false,
   primaryActionLabel,
   primaryActionHref,
   primaryActionOnClick,
@@ -75,11 +81,20 @@ export function PageHeader({
         py: appLayout.pageHeaderPadding,
         borderRadius: `${brandTokens.radius.lg}px`,
         border: '1px solid',
-        borderColor: brandTokens.palette.border,
+        borderColor: alpha(brandTokens.palette.primaryBright, 0.14),
         color: brandTokens.palette.text,
         backgroundColor: brandTokens.palette.surface,
         boxShadow: brandTokens.shadow.card,
         isolation: 'isolate',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          inset: '0 auto auto 0',
+          width: { xs: 7, md: 9 },
+          height: '100%',
+          backgroundColor: alpha(brandTokens.palette.primaryBright, 0.58),
+          opacity: 1
+        },
         '& > *': {
           position: 'relative',
           zIndex: 1
@@ -103,7 +118,7 @@ export function PageHeader({
             <Typography
               variant="caption"
               sx={{
-                color: brandTokens.palette.textMuted,
+                color: brandTokens.palette.primary,
                 fontWeight: 800,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase'
@@ -159,6 +174,19 @@ export function PageHeader({
               </Stack>
             ) : null}
           </Stack>
+          {description ? (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                mt: appLayout.pageHeaderDescriptionOffset,
+                maxWidth: 760,
+                lineHeight: 1.75
+              }}
+            >
+              {description}
+            </Typography>
+          ) : null}
         </Stack>
 
         {hasActions ? (
@@ -192,6 +220,58 @@ export function PageHeader({
         ) : null}
       </Stack>
 
+      {metadata.length > 0 ? (
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: metadataSingleRow
+              ? `repeat(${metadata.length}, minmax(140px, 1fr))`
+              : {
+                  xs: 'repeat(1, minmax(0, 1fr))',
+                  sm: `repeat(${Math.min(metadata.length, 3)}, minmax(0, 1fr))`
+                },
+            overflowX: metadataSingleRow ? 'auto' : 'visible',
+            gap: appLayout.pageHeaderMetaGap
+          }}
+        >
+          {metadata.map((item) => (
+            <Box
+              key={item.label}
+              sx={{
+                minWidth: 0,
+                p: 1.25,
+                borderRadius: 3,
+                border: '1px solid',
+                borderColor: alpha(brandTokens.palette.primaryBright, 0.12),
+                backgroundColor: alpha(brandTokens.palette.surface, 0.68),
+                backdropFilter: 'blur(10px)'
+              }}
+            >
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: 'block', fontWeight: 700 }}
+              >
+                {item.label}
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  mt: 0.35,
+                  minWidth: 0,
+                  color: brandTokens.palette.primaryDark,
+                  fontWeight: 800,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {item.value}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      ) : null}
     </Stack>
   );
 }
@@ -263,10 +343,10 @@ function renderActionButton({
 
 const buttonSurfaceSx = {
   borderRadius: 999,
-  minHeight: 34,
-  px: 1.5,
+  minHeight: 36,
+  px: 1.65,
   textTransform: 'none',
-  fontWeight: 700,
+  fontWeight: 800,
   fontSize: '0.875rem',
   whiteSpace: 'nowrap',
   boxShadow: 'none'

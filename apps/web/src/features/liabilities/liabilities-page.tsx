@@ -1,6 +1,9 @@
 'use client';
 
 import * as React from 'react';
+import type { Route } from 'next';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   useMutation,
   useQuery,
@@ -10,8 +13,6 @@ import {
 import {
   Alert,
   Button,
-  Card,
-  CardContent,
   Chip,
   Grid,
   MenuItem,
@@ -28,6 +29,7 @@ import type {
   LiabilityAgreementItem,
   LiabilityAgreementStatus,
   LiabilityInterestRateType,
+  LiabilityOverviewItem,
   LiabilityOverviewResponse,
   LiabilityRepaymentMethod,
   LiabilityRepaymentScheduleItem,
@@ -35,7 +37,7 @@ import type {
   UpdateLiabilityAgreementRequest,
   UpdateLiabilityRepaymentScheduleRequest
 } from '@personal-erp/contracts';
-import { addMoneyWon } from '@personal-erp/money';
+import { addMoneyWon, subtractMoneyWon } from '@personal-erp/money';
 import {
   accountSubjectsQueryKey,
   categoriesManagementQueryKey,
@@ -50,11 +52,16 @@ import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { useAppNotification } from '@/shared/providers/notification-provider';
 import { ConfirmActionDialog } from '@/shared/ui/confirm-action-dialog';
 import { DataTableCard } from '@/shared/ui/data-table-card';
-import { FeedbackAlert, type FeedbackAlertValue } from '@/shared/ui/feedback-alert';
+import { GridActionCell } from '@/shared/ui/data-grid-cell';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { FormDrawer } from '@/shared/ui/form-drawer';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
+import { SectionCard } from '@/shared/ui/section-card';
 import { StatusChip } from '@/shared/ui/status-chip';
 import {
   archiveLiabilityAgreement,
@@ -142,7 +149,10 @@ const agreementStatusLabelMap: Record<LiabilityAgreementStatus, string> = {
   ARCHIVED: '보관'
 };
 
-const repaymentStatusLabelMap: Record<LiabilityRepaymentScheduleStatus, string> = {
+const repaymentStatusLabelMap: Record<
+  LiabilityRepaymentScheduleStatus,
+  string
+> = {
   SCHEDULED: '예정',
   PLANNED: '계획',
   MATCHED: '거래 연결',
@@ -164,126 +174,96 @@ const repaymentMethodLabelMap: Record<LiabilityRepaymentMethod, string> = {
   MANUAL: '수동'
 };
 
-export function LiabilitiesPage() {
+type LiabilitiesPageMode = 'list' | 'detail';
+
+type LiabilitiesPageProps = {
+  mode?: LiabilitiesPageMode;
+  selectedAgreementId?: string | null;
+};
+
+export function LiabilitiesPage({
+  mode = 'list',
+  selectedAgreementId: pinnedAgreementId = null
+}: LiabilitiesPageProps) {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const { notifySuccess } = useAppNotification();
-  const [selectedAgreementId, setSelectedAgreementId] = React.useState<
-    string | null
-  >(null);
+  const isDetailMode = mode === 'detail';
   const [agreementDrawerState, setAgreementDrawerState] =
     React.useState<AgreementDrawerState>(null);
   const [repaymentDrawerState, setRepaymentDrawerState] =
     React.useState<RepaymentDrawerState>(null);
   const [archiveTarget, setArchiveTarget] =
     React.useState<AgreementArchiveTarget>(null);
-  const [feedback, setFeedback] =
-    React.useState<FeedbackAlertValue>(null);
+  const [feedback, setFeedback] = React.useState<FeedbackAlertValue>(null);
 
-  const { data: agreements = [], error: agreementsError } = useQuery({
+  const agreementsQuery = useQuery({
     queryKey: liabilitiesQueryKey,
     queryFn: () => getLiabilities({ includeArchived: true })
   });
-  const { data: overview, error: overviewError } = useQuery({
+  const overviewQuery = useQuery({
     queryKey: liabilitiesOverviewQueryKey,
     queryFn: getLiabilityOverview
   });
-  const { data: repayments = [], error: repaymentsError } = useQuery({
-    queryKey: liabilityRepaymentsQueryKey(selectedAgreementId),
-    queryFn: () => getLiabilityRepayments(selectedAgreementId)
-  });
-  const { data: fundingAccounts = [], error: fundingAccountsError } = useQuery({
+  const fundingAccountsQuery = useQuery({
     queryKey: fundingAccountsManagementQueryKey,
     queryFn: () => getFundingAccounts({ includeInactive: true })
   });
-  const { data: categories = [], error: categoriesError } = useQuery({
+  const categoriesQuery = useQuery({
     queryKey: categoriesManagementQueryKey,
     queryFn: () => getCategories({ includeInactive: true })
   });
-  const { data: accountSubjects = [], error: accountSubjectsError } = useQuery({
+  const accountSubjectsQuery = useQuery({
     queryKey: accountSubjectsQueryKey,
     queryFn: getAccountSubjects
   });
-
-  React.useEffect(() => {
-    if (selectedAgreementId) {
-      const stillExists = agreements.some(
-        (agreement) => agreement.id === selectedAgreementId
-      );
-
-      if (stillExists) {
-        return;
-      }
-    }
-
-    setSelectedAgreementId(agreements[0]?.id ?? null);
-  }, [agreements, selectedAgreementId]);
-
-  useDomainHelp({
-    title: '부채 관리 사용 가이드',
-    description:
-      '은행 대출과 같은 부채 계약과 월별 상환 일정을 정리해 계획 항목, 수집 거래, 전표 확정 흐름까지 이어지게 하는 운영 화면입니다.',
-    primaryEntity: '부채 계약과 상환 일정',
-    relatedEntities: ['계획 항목', '수집 거래', '전표', '계정과목'],
-    truthSource:
-      '부채 계약은 상환 기준 데이터이고, 실제 회계 반영은 상환 일정에서 만든 계획 항목과 전표 확정 시점에 이뤄집니다.',
-    supplementarySections: [
-      {
-        title: '바로 쓰는 순서',
-        items: [
-          '대출 기관, 상품명, 원금, 납부 자금수단을 입력해 부채 계약을 등록합니다.',
-          '계약을 선택한 뒤 운영 월에 해당하는 상환 예정일과 원금, 이자, 수수료를 입력합니다.',
-          '상환 일정에서 계획 생성을 실행해 계획 항목과 전표 준비 수집 거래를 연결합니다.',
-          '실제 출금 확인 후 수집 거래 화면에서 전표로 확정합니다.'
-        ]
-      },
-      {
-        title: '이어지는 화면',
-        links: [
-          {
-            title: '계획 항목',
-            description: '상환 일정에서 생성된 월 계획을 확인합니다.',
-            href: '/plan-items',
-            actionLabel: '계획 항목 보기'
-          },
-          {
-            title: '수집 거래',
-            description: '상환 거래를 전표 준비 상태에서 검토하고 확정합니다.',
-            href: '/transactions',
-            actionLabel: '수집 거래 보기'
-          },
-          {
-            title: '전표 조회',
-            description: '확정된 원금 상환과 이자 비용 전표를 확인합니다.',
-            href: '/journal-entries',
-            actionLabel: '전표 보기'
-          }
-        ]
-      }
-    ],
-    readModelNote:
-      '상환 일정은 운영 계획입니다. 원금 감소와 이자 비용은 수집 거래 확정으로 생성된 전표를 기준으로 보고서에 반영됩니다.'
+  const agreements = agreementsQuery.data ?? [];
+  const overview = overviewQuery.data ?? null;
+  const fundingAccounts = fundingAccountsQuery.data ?? [];
+  const categories = categoriesQuery.data ?? [];
+  const accountSubjects = accountSubjectsQuery.data ?? [];
+  const selectedAgreement =
+    isDetailMode && pinnedAgreementId
+      ? (agreements.find((agreement) => agreement.id === pinnedAgreementId) ??
+        null)
+      : null;
+  const selectedAgreementMissing =
+    isDetailMode &&
+    Boolean(pinnedAgreementId) &&
+    agreementsQuery.data !== undefined &&
+    selectedAgreement == null;
+  const repaymentsQuery = useQuery({
+    queryKey: liabilityRepaymentsQueryKey(
+      isDetailMode && !selectedAgreementMissing ? pinnedAgreementId : null
+    ),
+    queryFn: () => getLiabilityRepayments(pinnedAgreementId),
+    enabled:
+      isDetailMode && Boolean(pinnedAgreementId) && !selectedAgreementMissing
   });
+  const repayments = repaymentsQuery.data ?? [];
+
+  useDomainHelp(buildLiabilitiesHelpContext(mode));
 
   const activeAgreements = agreements.filter(
     (agreement) => agreement.status === 'ACTIVE'
   );
-  const selectedAgreement =
-    agreements.find((agreement) => agreement.id === selectedAgreementId) ??
-    null;
-  const nextDueRepayment =
-    repayments
-      .filter(
-        (repayment) =>
-          !['POSTED', 'CANCELLED', 'SKIPPED'].includes(repayment.status)
-      )
-      .sort((left, right) => left.dueDate.localeCompare(right.dueDate))[0] ??
-    null;
   const overviewData =
     overview ??
     buildFallbackOverview({
       agreements,
-      repayments
+      repayments: isDetailMode ? repayments : []
     });
+  const selectedAgreementOverview = React.useMemo(() => {
+    if (!selectedAgreement) {
+      return null;
+    }
+
+    return (
+      overviewData.items.find(
+        (item) => item.liabilityAgreementId === selectedAgreement.id
+      ) ?? buildLiabilityOverviewItemFallback(selectedAgreement, repayments)
+    );
+  }, [overviewData.items, repayments, selectedAgreement]);
 
   const saveAgreementMutation = useMutation({
     mutationFn: ({
@@ -298,16 +278,23 @@ export function LiabilitiesPage() {
 
       return createLiabilityAgreement(payload, fallback);
     },
-    onSuccess: async (saved) => {
+    onSuccess: async (saved, variables) => {
       queryClient.setQueryData<LiabilityAgreementItem[]>(
         liabilitiesQueryKey,
         (current) => mergeLiabilityAgreementItem(current, saved)
       );
-      setSelectedAgreementId(saved.id);
       setAgreementDrawerState(null);
-      notifySuccess(`${saved.lenderName} ${saved.productName} 계약을 저장했습니다.`);
+      notifySuccess(
+        `${saved.lenderName} ${saved.productName} 계약을 저장했습니다.`
+      );
 
       await invalidateLiabilityQueries(queryClient);
+
+      if (!isDetailMode && variables.mode === 'create') {
+        React.startTransition(() => {
+          router.push(buildLiabilityDetailHref(saved.id));
+        });
+      }
     },
     onError: (error) => {
       setFeedback({
@@ -332,7 +319,9 @@ export function LiabilitiesPage() {
         (current) => mergeLiabilityAgreementItem(current, saved)
       );
       setArchiveTarget(null);
-      notifySuccess(`${saved.lenderName} ${saved.productName} 계약을 보관했습니다.`);
+      notifySuccess(
+        `${saved.lenderName} ${saved.productName} 계약을 보관했습니다.`
+      );
 
       await invalidateLiabilityQueries(queryClient);
     },
@@ -392,27 +381,31 @@ export function LiabilitiesPage() {
       agreement: LiabilityAgreementItem;
       repayment: LiabilityRepaymentScheduleItem;
     }) =>
-      generateLiabilityRepaymentPlanItem(input.agreement.id, input.repayment.id, {
-        repayment: {
-          ...input.repayment,
-          status: 'MATCHED',
-          linkedPlanItemId:
+      generateLiabilityRepaymentPlanItem(
+        input.agreement.id,
+        input.repayment.id,
+        {
+          repayment: {
+            ...input.repayment,
+            status: 'MATCHED',
+            linkedPlanItemId:
+              input.repayment.linkedPlanItemId ??
+              `plan-liability-demo-${Date.now()}`,
+            matchedCollectedTransactionId:
+              input.repayment.matchedCollectedTransactionId ??
+              `tx-liability-demo-${Date.now()}`,
+            matchedCollectedTransactionTitle:
+              input.repayment.matchedCollectedTransactionTitle ??
+              `${input.agreement.lenderName} ${input.agreement.productName} 상환`
+          },
+          createdPlanItemId:
             input.repayment.linkedPlanItemId ??
             `plan-liability-demo-${Date.now()}`,
-          matchedCollectedTransactionId:
+          createdCollectedTransactionId:
             input.repayment.matchedCollectedTransactionId ??
-            `tx-liability-demo-${Date.now()}`,
-          matchedCollectedTransactionTitle:
-            input.repayment.matchedCollectedTransactionTitle ??
-            `${input.agreement.lenderName} ${input.agreement.productName} 상환`
-        },
-        createdPlanItemId:
-          input.repayment.linkedPlanItemId ??
-          `plan-liability-demo-${Date.now()}`,
-        createdCollectedTransactionId:
-          input.repayment.matchedCollectedTransactionId ??
-          `tx-liability-demo-${Date.now()}`
-      }),
+            `tx-liability-demo-${Date.now()}`
+        }
+      ),
     onSuccess: async (response) => {
       queryClient.setQueryData<LiabilityRepaymentScheduleItem[]>(
         liabilityRepaymentsQueryKey(response.repayment.liabilityAgreementId),
@@ -443,10 +436,6 @@ export function LiabilitiesPage() {
   const agreementColumns = React.useMemo(
     () =>
       buildAgreementColumns({
-        selectedAgreementId,
-        onSelect: (agreement) => {
-          setSelectedAgreementId(agreement.id);
-        },
         onEdit: (agreement) => {
           setFeedback(null);
           setAgreementDrawerState({ mode: 'edit', agreement });
@@ -456,7 +445,7 @@ export function LiabilitiesPage() {
           setArchiveTarget(agreement);
         }
       }),
-    [selectedAgreementId]
+    []
   );
   const repaymentColumns = React.useMemo(
     () =>
@@ -491,58 +480,126 @@ export function LiabilitiesPage() {
   );
 
   const referenceError =
-    fundingAccountsError ?? categoriesError ?? accountSubjectsError;
-  const pageError = agreementsError ?? overviewError;
+    fundingAccountsQuery.error ??
+    categoriesQuery.error ??
+    accountSubjectsQuery.error;
+  const pageError = agreementsQuery.error ?? overviewQuery.error;
 
   return (
     <Stack spacing={appLayout.pageGap}>
       <PageHeader
         eyebrow="보조 운영 영역"
-        title="부채 관리"
-        description="은행 대출과 같은 부채 계약을 월 운영 계획, 수집 거래, 전표 확정 흐름으로 연결합니다."
+        title={
+          isDetailMode
+            ? selectedAgreement
+              ? `${selectedAgreement.lenderName} ${selectedAgreement.productName} 상세`
+              : '부채 계약 상세'
+            : '부채 계약 목록'
+        }
+        description={
+          isDetailMode
+            ? '선택한 부채 계약의 기준과 상환 일정을 분리된 상세 화면에서 관리합니다.'
+            : '계약 기준은 목록에서 정리하고, 선택한 계약의 상환 일정과 계획 연결은 상세 화면에서 이어집니다.'
+        }
         badges={[
-          {
-            label: `활성 ${activeAgreements.length}건`,
-            color: activeAgreements.length > 0 ? 'success' : 'default'
-          },
-          {
-            label: nextDueRepayment
-              ? `다음 상환 ${formatDate(nextDueRepayment.dueDate)}`
-              : '상환 일정 점검 필요',
-            color: nextDueRepayment ? 'primary' : 'warning'
-          }
+          isDetailMode
+            ? {
+                label: selectedAgreement
+                  ? agreementStatusLabelMap[selectedAgreement.status]
+                  : '계약 확인 필요',
+                color:
+                  selectedAgreement?.status === 'ACTIVE' ? 'success' : 'default'
+              }
+            : {
+                label: `활성 ${activeAgreements.length}건`,
+                color: activeAgreements.length > 0 ? 'success' : 'default'
+              },
+          isDetailMode
+            ? {
+                label: selectedAgreementOverview?.nextDueDate
+                  ? `다음 상환 ${formatDate(selectedAgreementOverview.nextDueDate)}`
+                  : '상환 일정 점검 필요',
+                color: selectedAgreementOverview?.nextDueDate
+                  ? 'primary'
+                  : 'warning'
+              }
+            : {
+                label: overviewData.nextDueDate
+                  ? `다음 상환 ${formatDate(overviewData.nextDueDate)}`
+                  : '상환 일정 점검 필요',
+                color: overviewData.nextDueDate ? 'primary' : 'warning'
+              }
         ]}
         metadata={[
-          {
-            label: '잔여 원금',
-            value: formatWon(overviewData.remainingPrincipalWon)
-          },
-          {
-            label: '운영 월 상환 예정',
-            value: formatWon(overviewData.currentPeriodDueWon)
-          },
-          {
-            label: '전체 계약',
-            value: `${overviewData.totalAgreementCount}건`
-          }
+          isDetailMode
+            ? {
+                label: '잔여 원금 추정',
+                value: formatWon(
+                  selectedAgreementOverview?.remainingPrincipalWon ?? 0
+                )
+              }
+            : {
+                label: '잔여 원금',
+                value: formatWon(overviewData.remainingPrincipalWon)
+              },
+          isDetailMode
+            ? {
+                label: '상환 일정',
+                value: `${repayments.length}건`
+              }
+            : {
+                label: '운영 월 상환 예정',
+                value: formatWon(overviewData.currentPeriodDueWon)
+              },
+          isDetailMode
+            ? {
+                label: '계약 상태',
+                value: selectedAgreement
+                  ? agreementStatusLabelMap[selectedAgreement.status]
+                  : '-'
+              }
+            : {
+                label: '전체 계약',
+                value: `${overviewData.totalAgreementCount}건`
+              }
         ]}
-        primaryActionLabel="부채 계약 등록"
-        primaryActionOnClick={() => {
-          setFeedback(null);
-          setAgreementDrawerState({ mode: 'create' });
-        }}
-        secondaryActionLabel="계획 항목 보기"
-        secondaryActionHref="/plan-items"
+        primaryActionLabel={isDetailMode ? '상환 일정 추가' : '부채 계약 등록'}
+        primaryActionOnClick={
+          isDetailMode
+            ? () => {
+                if (!selectedAgreement) {
+                  return;
+                }
+
+                setFeedback(null);
+                setRepaymentDrawerState({
+                  mode: 'create',
+                  agreement: selectedAgreement
+                });
+              }
+            : () => {
+                setFeedback(null);
+                setAgreementDrawerState({ mode: 'create' });
+              }
+        }
+        primaryActionDisabled={isDetailMode && !selectedAgreement}
+        secondaryActionLabel={
+          isDetailMode ? '부채 목록 보기' : '계획 항목 보기'
+        }
+        secondaryActionHref={isDetailMode ? '/liabilities' : '/plan-items'}
       />
 
       <FeedbackAlert feedback={feedback} />
       {pageError ? (
-        <QueryErrorAlert title="부채 정보 조회에 실패했습니다." error={pageError} />
+        <QueryErrorAlert
+          title="부채 정보 조회에 실패했습니다."
+          error={pageError}
+        />
       ) : null}
-      {repaymentsError ? (
+      {isDetailMode && repaymentsQuery.error ? (
         <QueryErrorAlert
           title="상환 일정 조회에 실패했습니다."
-          error={repaymentsError}
+          error={repaymentsQuery.error}
         />
       ) : null}
       {referenceError ? (
@@ -552,68 +609,293 @@ export function LiabilitiesPage() {
         />
       ) : null}
 
-      <LiabilitySummaryCards overview={overviewData} />
-
-      <DataTableCard
-        title="부채 계약 목록"
-        description="계약을 선택하면 아래 상환 일정이 바뀝니다. 보관된 계약은 새 운영 계획 생성 대상에서 제외됩니다."
-        toolbar={
-          <AgreementToolbar
-            activeCount={activeAgreements.length}
-            archivedCount={
-              agreements.filter((agreement) => agreement.status === 'ARCHIVED')
-                .length
-            }
-            paidOffCount={
-              agreements.filter((agreement) => agreement.status === 'PAID_OFF')
-                .length
-            }
-          />
-        }
-        rows={agreements}
-        columns={agreementColumns}
-        height={430}
-        rowHeight={64}
-      />
-
-      <DataTableCard
-        title={
-          selectedAgreement
-            ? `${selectedAgreement.lenderName} ${selectedAgreement.productName} 상환 일정`
-            : '상환 일정'
-        }
-        description="상환 일정에서 계획 생성을 실행하면 운영 월 계획 항목과 전표 준비 수집 거래가 함께 만들어집니다."
-        actions={
-          <Button
-            size="small"
-            variant="contained"
-            disabled={!selectedAgreement}
-            onClick={() => {
-              if (!selectedAgreement) {
-                return;
-              }
-
-              setFeedback(null);
-              setRepaymentDrawerState({
-                mode: 'create',
-                agreement: selectedAgreement
-              });
-            }}
+      {isDetailMode ? (
+        selectedAgreementMissing ? (
+          <SectionCard
+            title="선택한 부채 계약을 찾을 수 없습니다"
+            description="보관 상태가 바뀌었거나 잘못된 링크로 진입했을 수 있습니다."
           >
-            상환 일정 추가
-          </Button>
-        }
-        toolbar={
-          <RepaymentToolbar
-            repayments={repayments}
-            selectedAgreement={selectedAgreement}
+            <Stack spacing={1.5}>
+              <Typography variant="body2" color="text.secondary">
+                부채 계약 목록으로 돌아가 다시 선택해 주세요.
+              </Typography>
+              <div>
+                <Button
+                  component={Link}
+                  href="/liabilities"
+                  variant="contained"
+                >
+                  부채 목록 보기
+                </Button>
+              </div>
+            </Stack>
+          </SectionCard>
+        ) : !selectedAgreement ? (
+          agreementsQuery.data === undefined && !agreementsQuery.error ? (
+            <SectionCard
+              title="부채 계약을 불러오는 중입니다"
+              description="선택한 계약 기준과 상환 일정을 준비하고 있습니다."
+            >
+              <Typography variant="body2" color="text.secondary">
+                잠시만 기다려 주세요.
+              </Typography>
+            </SectionCard>
+          ) : (
+            <SectionCard
+              title="등록된 부채 계약이 없습니다"
+              description="먼저 목록 화면에서 계약 기준을 등록한 뒤 상세 화면으로 이동해 주세요."
+            >
+              <Stack spacing={1.5}>
+                <Typography variant="body2" color="text.secondary">
+                  계약을 만들면 상환 일정과 계획 생성 흐름을 이 상세 화면에서
+                  바로 이어서 관리할 수 있습니다.
+                </Typography>
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={1}
+                  useFlexGap
+                  flexWrap="wrap"
+                >
+                  <Button
+                    component={Link}
+                    href="/liabilities"
+                    variant="contained"
+                  >
+                    부채 목록 보기
+                  </Button>
+                  <Button
+                    component={Link}
+                    href="/plan-items"
+                    variant="outlined"
+                  >
+                    계획 항목 보기
+                  </Button>
+                </Stack>
+              </Stack>
+            </SectionCard>
+          )
+        ) : (
+          <>
+            <SectionCard
+              title="계약 전환"
+              description="다른 부채 계약 상세로 바로 이동하거나 목록 화면으로 돌아갈 수 있습니다."
+            >
+              <Grid
+                container
+                spacing={appLayout.fieldGap}
+                alignItems="flex-start"
+              >
+                <Grid size={{ xs: 12, md: 5 }}>
+                  <TextField
+                    select
+                    fullWidth
+                    label="부채 계약"
+                    value={selectedAgreement.id}
+                    onChange={(event) => {
+                      router.push(buildLiabilityDetailHref(event.target.value));
+                    }}
+                    helperText="상세 화면 안에서 다른 계약으로 바로 전환할 수 있습니다."
+                    disabled={agreements.length === 0}
+                  >
+                    {agreements.map((agreement) => (
+                      <MenuItem key={agreement.id} value={agreement.id}>
+                        {agreement.lenderName} {agreement.productName}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid size={{ xs: 12, md: 7 }}>
+                  <Stack spacing={1.25}>
+                    <Typography variant="body2" color="text.secondary">
+                      {selectedAgreement.status === 'ACTIVE'
+                        ? '이 계약은 현재 운영 기준에 포함됩니다. 상환 일정 추가와 계획 항목 연결을 이 화면에서 이어서 진행합니다.'
+                        : '현재 활성 계약은 아니지만, 기존 상환 일정과 연결 이력은 이 상세 화면에서 계속 확인할 수 있습니다.'}
+                    </Typography>
+                    <Stack
+                      direction={{ xs: 'column', sm: 'row' }}
+                      spacing={1}
+                      useFlexGap
+                      flexWrap="wrap"
+                    >
+                      <Button
+                        component={Link}
+                        href="/liabilities"
+                        variant="outlined"
+                      >
+                        부채 목록 보기
+                      </Button>
+                      <Button
+                        component={Link}
+                        href="/transactions"
+                        variant="text"
+                      >
+                        수집 거래 보기
+                      </Button>
+                    </Stack>
+                  </Stack>
+                </Grid>
+              </Grid>
+            </SectionCard>
+
+            <SectionCard
+              title="계약 기준"
+              description="상환 일정 상세로 내려가기 전에 대출 조건, 자금수단, 분개 기준 카테고리를 먼저 확인합니다."
+            >
+              <Stack spacing={appLayout.cardGap}>
+                <Grid container spacing={appLayout.fieldGap}>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <AgreementDetailItem
+                      label="대출 기관 / 상품"
+                      value={`${selectedAgreement.lenderName} ${selectedAgreement.productName}`}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <AgreementDetailItem
+                      label="원금 / 실행일"
+                      value={`${formatWon(selectedAgreement.principalAmount)} / ${formatDate(selectedAgreement.borrowedAt)}`}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <AgreementDetailItem
+                      label="만기 / 납부일"
+                      value={`${formatDate(selectedAgreement.maturityDate)} / ${selectedAgreement.paymentDay ? `${selectedAgreement.paymentDay}일` : '-'}`}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <AgreementDetailItem
+                      label="금리 / 방식"
+                      value={`${selectedAgreement.interestRate == null ? '-' : `${selectedAgreement.interestRate.toFixed(2)}%`} / ${repaymentMethodLabelMap[selectedAgreement.repaymentMethod]}`}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <AgreementDetailItem
+                      label="자금수단 / 부채 계정과목"
+                      value={`${selectedAgreement.defaultFundingAccountName} / ${selectedAgreement.liabilityAccountSubjectName ?? '미설정'}`}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <AgreementDetailItem
+                      label="이자 / 수수료 카테고리"
+                      value={`${selectedAgreement.interestExpenseCategoryName ?? '미설정'} / ${selectedAgreement.feeExpenseCategoryName ?? '미설정'}`}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <AgreementDetailItem
+                      label="상태 / 금리 유형"
+                      value={`${agreementStatusLabelMap[selectedAgreement.status]} / ${interestRateTypeLabelMap[selectedAgreement.interestRateType]}`}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <AgreementDetailItem
+                      label="대출번호 끝 4자리"
+                      value={selectedAgreement.loanNumberLast4 ?? '-'}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <AgreementDetailItem
+                      label="메모"
+                      value={selectedAgreement.memo ?? '-'}
+                    />
+                  </Grid>
+                </Grid>
+
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={1}
+                  useFlexGap
+                  flexWrap="wrap"
+                >
+                  <Button
+                    variant="outlined"
+                    onClick={() => {
+                      setFeedback(null);
+                      setAgreementDrawerState({
+                        mode: 'edit',
+                        agreement: selectedAgreement
+                      });
+                    }}
+                  >
+                    계약 수정
+                  </Button>
+                  <Button
+                    color="warning"
+                    disabled={selectedAgreement.status === 'ARCHIVED'}
+                    onClick={() => {
+                      setFeedback(null);
+                      setArchiveTarget(selectedAgreement);
+                    }}
+                  >
+                    계약 보관
+                  </Button>
+                  <Button
+                    component={Link}
+                    href="/journal-entries"
+                    variant="text"
+                  >
+                    전표 보기
+                  </Button>
+                </Stack>
+              </Stack>
+            </SectionCard>
+
+            <DataTableCard
+              title={`${selectedAgreement.lenderName} ${selectedAgreement.productName} 상환 일정`}
+              description="상환 일정에서 계획 생성을 실행하면 운영 월 계획 항목과 전표 준비 수집 거래가 함께 만들어집니다."
+              actions={
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={() => {
+                    setFeedback(null);
+                    setRepaymentDrawerState({
+                      mode: 'create',
+                      agreement: selectedAgreement
+                    });
+                  }}
+                >
+                  상환 일정 추가
+                </Button>
+              }
+              toolbar={
+                <RepaymentToolbar
+                  repayments={repayments}
+                  selectedAgreement={selectedAgreement}
+                />
+              }
+              rows={repayments}
+              columns={repaymentColumns}
+              height={470}
+              rowHeight={64}
+            />
+          </>
+        )
+      ) : (
+        <>
+          <DataTableCard
+            title="부채 계약 목록"
+            description="상세 보기로 들어가면 선택 계약의 상환 일정과 계획 연결 작업을 전용 화면에서 이어서 처리합니다."
+            toolbar={
+              <AgreementToolbar
+                activeCount={activeAgreements.length}
+                archivedCount={
+                  agreements.filter(
+                    (agreement) => agreement.status === 'ARCHIVED'
+                  ).length
+                }
+                paidOffCount={
+                  agreements.filter(
+                    (agreement) => agreement.status === 'PAID_OFF'
+                  ).length
+                }
+              />
+            }
+            rows={agreements}
+            columns={agreementColumns}
+            height={430}
+            rowHeight={64}
           />
-        }
-        rows={repayments}
-        columns={repaymentColumns}
-        height={470}
-        rowHeight={64}
-      />
+        </>
+      )}
 
       <AgreementDrawer
         drawerState={agreementDrawerState}
@@ -688,55 +970,22 @@ export function LiabilitiesPage() {
   );
 }
 
-function LiabilitySummaryCards({
-  overview
+function AgreementDetailItem({
+  label,
+  value
 }: {
-  overview: LiabilityOverviewResponse;
+  label: string;
+  value: React.ReactNode;
 }) {
   return (
-    <Grid container spacing={appLayout.sectionGap}>
-      <Grid size={{ xs: 12, md: 3 }}>
-        <SummaryCard
-          label="잔여 원금"
-          value={formatWon(overview.remainingPrincipalWon)}
-        />
-      </Grid>
-      <Grid size={{ xs: 12, md: 3 }}>
-        <SummaryCard
-          label="운영 월 상환 예정"
-          value={formatWon(overview.currentPeriodDueWon)}
-        />
-      </Grid>
-      <Grid size={{ xs: 12, md: 3 }}>
-        <SummaryCard
-          label="다음 상환일"
-          value={formatDate(overview.nextDueDate)}
-        />
-      </Grid>
-      <Grid size={{ xs: 12, md: 3 }}>
-        <SummaryCard
-          label="활성 계약"
-          value={`${overview.activeAgreementCount}건`}
-        />
-      </Grid>
-    </Grid>
-  );
-}
-
-function SummaryCard({ label, value }: { label: string; value: string }) {
-  return (
-    <Card sx={{ height: '100%' }}>
-      <CardContent>
-        <Stack spacing={0.75}>
-          <Typography variant="caption" color="text.secondary">
-            {label}
-          </Typography>
-          <Typography variant="h6" fontWeight={800}>
-            {value}
-          </Typography>
-        </Stack>
-      </CardContent>
-    </Card>
+    <Stack spacing={0.5}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body1" fontWeight={700}>
+        {value}
+      </Typography>
+    </Stack>
   );
 }
 
@@ -758,8 +1007,16 @@ function AgreementToolbar({
     >
       <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
         <Chip label={`상환 중 ${activeCount}건`} size="small" color="success" />
-        <Chip label={`완납 ${paidOffCount}건`} size="small" variant="outlined" />
-        <Chip label={`보관 ${archivedCount}건`} size="small" variant="outlined" />
+        <Chip
+          label={`완납 ${paidOffCount}건`}
+          size="small"
+          variant="outlined"
+        />
+        <Chip
+          label={`보관 ${archivedCount}건`}
+          size="small"
+          variant="outlined"
+        />
       </Stack>
       <Typography variant="body2" color="text.secondary">
         계약 기준을 먼저 정리한 뒤 월별 상환 일정을 연결합니다.
@@ -815,13 +1072,9 @@ function RepaymentToolbar({
 }
 
 function buildAgreementColumns({
-  selectedAgreementId,
-  onSelect,
   onEdit,
   onArchive
 }: {
-  selectedAgreementId: string | null;
-  onSelect: (agreement: LiabilityAgreementItem) => void;
   onEdit: (agreement: LiabilityAgreementItem) => void;
   onArchive: (agreement: LiabilityAgreementItem) => void;
 }): GridColDef<LiabilityAgreementItem>[] {
@@ -872,29 +1125,30 @@ function buildAgreementColumns({
       headerName: '상태',
       flex: 0.8,
       minWidth: 105,
-      renderCell: (params) => (
-        <StatusChip label={params.row.status} />
-      )
+      renderCell: (params) => <StatusChip label={params.row.status} />
     },
     {
       field: 'actions',
       headerName: '동작',
       flex: 1.9,
-      minWidth: 230,
+      minWidth: 300,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
-        <Stack direction="row" spacing={1}>
+        <GridActionCell>
+          <Button
+            component={Link}
+            href={buildLiabilityDetailHref(params.row.id)}
+            size="small"
+            variant="contained"
+          >
+            상세 보기
+          </Button>
           <Button
             size="small"
-            variant={
-              selectedAgreementId === params.row.id ? 'contained' : 'outlined'
-            }
-            onClick={() => onSelect(params.row)}
+            variant="outlined"
+            onClick={() => onEdit(params.row)}
           >
-            선택
-          </Button>
-          <Button size="small" variant="outlined" onClick={() => onEdit(params.row)}>
             수정
           </Button>
           <Button
@@ -905,7 +1159,7 @@ function buildAgreementColumns({
           >
             보관
           </Button>
-        </Stack>
+        </GridActionCell>
       )
     }
   ];
@@ -961,9 +1215,7 @@ function buildRepaymentColumns({
       headerName: '상태',
       flex: 1,
       minWidth: 120,
-      renderCell: (params) => (
-        <StatusChip label={params.row.status} />
-      )
+      renderCell: (params) => <StatusChip label={params.row.status} />
     },
     {
       field: 'matchedCollectedTransactionTitle',
@@ -993,7 +1245,7 @@ function buildRepaymentColumns({
           ['POSTED', 'SKIPPED', 'CANCELLED'].includes(params.row.status);
 
         return (
-          <Stack direction="row" spacing={1}>
+          <GridActionCell>
             <Button
               size="small"
               variant="outlined"
@@ -1010,7 +1262,7 @@ function buildRepaymentColumns({
             >
               {busyRepaymentId === params.row.id ? '생성 중' : '계획 생성'}
             </Button>
-          </Stack>
+          </GridActionCell>
         );
       }
     }
@@ -1185,7 +1437,9 @@ function AgreementDrawer({
               <TextField
                 label="상품명"
                 value={form.productName}
-                onChange={(event) => setField('productName', event.target.value)}
+                onChange={(event) =>
+                  setField('productName', event.target.value)
+                }
                 fullWidth
                 required
               />
@@ -1228,7 +1482,9 @@ function AgreementDrawer({
                 label="만기일"
                 type="date"
                 value={form.maturityDate}
-                onChange={(event) => setField('maturityDate', event.target.value)}
+                onChange={(event) =>
+                  setField('maturityDate', event.target.value)
+                }
                 InputLabelProps={{ shrink: true }}
                 fullWidth
               />
@@ -1238,7 +1494,9 @@ function AgreementDrawer({
                 label="금리"
                 type="number"
                 value={form.interestRate}
-                onChange={(event) => setField('interestRate', event.target.value)}
+                onChange={(event) =>
+                  setField('interestRate', event.target.value)
+                }
                 fullWidth
               />
             </Grid>
@@ -1255,11 +1513,13 @@ function AgreementDrawer({
                 }
                 fullWidth
               >
-                {Object.entries(interestRateTypeLabelMap).map(([value, label]) => (
-                  <MenuItem key={value} value={value}>
-                    {label}
-                  </MenuItem>
-                ))}
+                {Object.entries(interestRateTypeLabelMap).map(
+                  ([value, label]) => (
+                    <MenuItem key={value} value={value}>
+                      {label}
+                    </MenuItem>
+                  )
+                )}
               </TextField>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
@@ -1275,11 +1535,13 @@ function AgreementDrawer({
                 }
                 fullWidth
               >
-                {Object.entries(repaymentMethodLabelMap).map(([value, label]) => (
-                  <MenuItem key={value} value={value}>
-                    {label}
-                  </MenuItem>
-                ))}
+                {Object.entries(repaymentMethodLabelMap).map(
+                  ([value, label]) => (
+                    <MenuItem key={value} value={value}>
+                      {label}
+                    </MenuItem>
+                  )
+                )}
               </TextField>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
@@ -1376,11 +1638,13 @@ function AgreementDrawer({
                 }
                 fullWidth
               >
-                {Object.entries(agreementStatusLabelMap).map(([value, label]) => (
-                  <MenuItem key={value} value={value}>
-                    {label}
-                  </MenuItem>
-                ))}
+                {Object.entries(agreementStatusLabelMap).map(
+                  ([value, label]) => (
+                    <MenuItem key={value} value={value}>
+                      {label}
+                    </MenuItem>
+                  )
+                )}
               </TextField>
             </Grid>
             <Grid size={{ xs: 12 }}>
@@ -1401,7 +1665,11 @@ function AgreementDrawer({
             disabled={busy || availableFundingAccounts.length === 0}
             sx={{ alignSelf: 'flex-start' }}
           >
-            {busy ? '저장 중...' : drawerState?.mode === 'edit' ? '수정' : '저장'}
+            {busy
+              ? '저장 중...'
+              : drawerState?.mode === 'edit'
+                ? '수정'
+                : '저장'}
           </Button>
         </Stack>
       </form>
@@ -1556,11 +1824,13 @@ function RepaymentDrawer({
                 }
                 fullWidth
               >
-                {Object.entries(repaymentStatusLabelMap).map(([value, label]) => (
-                  <MenuItem key={value} value={value}>
-                    {label}
-                  </MenuItem>
-                ))}
+                {Object.entries(repaymentStatusLabelMap).map(
+                  ([value, label]) => (
+                    <MenuItem key={value} value={value}>
+                      {label}
+                    </MenuItem>
+                  )
+                )}
               </TextField>
             </Grid>
             <Grid size={{ xs: 12 }}>
@@ -1575,8 +1845,17 @@ function RepaymentDrawer({
             </Grid>
           </Grid>
           <FeedbackAlert feedback={localFeedback} />
-          <Button type="submit" variant="contained" disabled={busy} sx={{ alignSelf: 'flex-start' }}>
-            {busy ? '저장 중...' : drawerState?.mode === 'edit' ? '수정' : '저장'}
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={busy}
+            sx={{ alignSelf: 'flex-start' }}
+          >
+            {busy
+              ? '저장 중...'
+              : drawerState?.mode === 'edit'
+                ? '수정'
+                : '저장'}
           </Button>
         </Stack>
       </form>
@@ -1619,10 +1898,12 @@ function mapAgreementToForm(
     principalAmount: String(agreement.principalAmount),
     borrowedAt: agreement.borrowedAt.slice(0, 10),
     maturityDate: agreement.maturityDate?.slice(0, 10) ?? '',
-    interestRate: agreement.interestRate == null ? '' : String(agreement.interestRate),
+    interestRate:
+      agreement.interestRate == null ? '' : String(agreement.interestRate),
     interestRateType: agreement.interestRateType,
     repaymentMethod: agreement.repaymentMethod,
-    paymentDay: agreement.paymentDay == null ? '' : String(agreement.paymentDay),
+    paymentDay:
+      agreement.paymentDay == null ? '' : String(agreement.paymentDay),
     defaultFundingAccountId: agreement.defaultFundingAccountId,
     liabilityAccountSubjectId: agreement.liabilityAccountSubjectId ?? '',
     interestExpenseCategoryId: agreement.interestExpenseCategoryId ?? '',
@@ -1657,7 +1938,10 @@ function buildAgreementPayload(
 
   let interestRate: number | null = null;
   if (form.interestRate.trim()) {
-    const parsedInterestRate = parseNonNegativeNumber(form.interestRate, '금리');
+    const parsedInterestRate = parseNonNegativeNumber(
+      form.interestRate,
+      '금리'
+    );
     if ('error' in parsedInterestRate) {
       return parsedInterestRate;
     }
@@ -1699,7 +1983,9 @@ function buildAgreementPayload(
   };
 }
 
-function buildDefaultRepaymentForm(paymentDay?: number | null): RepaymentFormState {
+function buildDefaultRepaymentForm(
+  paymentDay?: number | null
+): RepaymentFormState {
   return {
     dueDate: nextDateInput(paymentDay ?? 25),
     principalAmount: '',
@@ -1734,7 +2020,10 @@ function buildRepaymentPayload(
     return principalAmount;
   }
 
-  const interestAmount = parseNonNegativeInteger(form.interestAmount || '0', '이자');
+  const interestAmount = parseNonNegativeInteger(
+    form.interestAmount || '0',
+    '이자'
+  );
   if ('error' in interestAmount) {
     return interestAmount;
   }
@@ -1769,10 +2058,7 @@ function buildRepaymentPayload(
   };
 }
 
-function parsePositiveInteger(
-  value: string,
-  label: string
-): NumberParseResult {
+function parsePositiveInteger(value: string, label: string): NumberParseResult {
   const parsed = parseNonNegativeInteger(value, label);
   if ('error' in parsed) {
     return parsed;
@@ -1856,31 +2142,175 @@ function buildFallbackOverview({
   agreements: LiabilityAgreementItem[];
   repayments: LiabilityRepaymentScheduleItem[];
 }): LiabilityOverviewResponse {
+  const overviewItems = agreements.map((agreement) =>
+    buildLiabilityOverviewItemFallback(
+      agreement,
+      repayments.filter(
+        (repayment) => repayment.liabilityAgreementId === agreement.id
+      )
+    )
+  );
   const activeAgreements = agreements.filter(
     (agreement) => agreement.status === 'ACTIVE'
   );
-  const openRepayments = repayments.filter(
-    (repayment) => !['POSTED', 'CANCELLED', 'SKIPPED'].includes(repayment.status)
-  );
+  const nextDueDate =
+    overviewItems
+      .map((item) => item.nextDueDate)
+      .filter((value): value is string => Boolean(value))
+      .sort((left, right) => left.localeCompare(right))[0] ?? null;
 
   return {
     generatedAt: new Date().toISOString(),
     totalAgreementCount: agreements.length,
     activeAgreementCount: activeAgreements.length,
-    remainingPrincipalWon: activeAgreements.reduce(
-      (sum, agreement) => sum + agreement.principalAmount,
+    remainingPrincipalWon: overviewItems
+      .filter((item) => item.status === 'ACTIVE')
+      .reduce((sum, item) => sum + item.remainingPrincipalWon, 0),
+    currentPeriodDueWon: overviewItems.reduce(
+      (sum, item) => sum + item.currentPeriodDueWon,
       0
     ),
+    nextDueDate,
+    items: overviewItems
+  };
+}
+
+function buildLiabilityOverviewItemFallback(
+  agreement: LiabilityAgreementItem,
+  repayments: LiabilityRepaymentScheduleItem[]
+): LiabilityOverviewItem {
+  const postedPrincipalWon = repayments
+    .filter((repayment) => repayment.status === 'POSTED')
+    .reduce((sum, repayment) => sum + repayment.principalAmount, 0);
+  const openRepayments = repayments.filter(
+    (repayment) =>
+      !['POSTED', 'CANCELLED', 'SKIPPED'].includes(repayment.status)
+  );
+  const nextDueDate =
+    openRepayments.sort((left, right) =>
+      left.dueDate.localeCompare(right.dueDate)
+    )[0]?.dueDate ?? null;
+
+  return {
+    liabilityAgreementId: agreement.id,
+    lenderName: agreement.lenderName,
+    productName: agreement.productName,
+    status: agreement.status,
+    remainingPrincipalWon: Math.max(
+      subtractMoneyWon(agreement.principalAmount, postedPrincipalWon),
+      0
+    ),
+    nextDueDate,
     currentPeriodDueWon: openRepayments.reduce(
       (sum, repayment) => sum + repayment.totalAmount,
       0
     ),
-    nextDueDate:
-      openRepayments
-        .sort((left, right) => left.dueDate.localeCompare(right.dueDate))[0]
-        ?.dueDate ?? null,
-    items: []
+    scheduledCount: repayments.filter(
+      (repayment) => repayment.status === 'SCHEDULED'
+    ).length,
+    plannedCount: repayments.filter(
+      (repayment) => repayment.status === 'PLANNED'
+    ).length,
+    matchedCount: repayments.filter(
+      (repayment) => repayment.status === 'MATCHED'
+    ).length,
+    postedCount: repayments.filter((repayment) => repayment.status === 'POSTED')
+      .length
   };
+}
+
+function buildLiabilitiesHelpContext(mode: LiabilitiesPageMode) {
+  if (mode === 'detail') {
+    return {
+      title: '부채 계약 상세 도움말',
+      description:
+        '이 화면은 선택한 부채 계약의 기준과 상환 일정을 집중해서 관리하는 상세 화면입니다.',
+      primaryEntity: '부채 계약 상세',
+      relatedEntities: ['상환 일정', '계획 항목', '수집 거래', '전표'],
+      truthSource:
+        '부채 계약은 상환 기준 데이터이고, 실제 회계 반영은 상환 일정에서 만든 계획 항목과 전표 확정 시점에 이뤄집니다.',
+      supplementarySections: [
+        {
+          title: '이 탭에서 하는 일',
+          items: [
+            '선택한 계약의 대출 조건과 자금수단, 계정과목 연결을 먼저 확인합니다.',
+            '월별 상환 일정을 추가하거나 수정하고 계획 항목 생성을 실행합니다.',
+            '생성된 계획과 연결 거래를 수집 거래/전표 화면으로 넘겨 실제 회계 반영을 이어갑니다.'
+          ]
+        },
+        {
+          title: '이어지는 화면',
+          links: [
+            {
+              title: '부채 계약 목록',
+              description: '다른 계약을 선택하거나 신규 계약을 등록합니다.',
+              href: '/liabilities',
+              actionLabel: '부채 목록 보기'
+            },
+            {
+              title: '수집 거래',
+              description:
+                '상환 거래를 전표 준비 상태에서 검토하고 확정합니다.',
+              href: '/transactions',
+              actionLabel: '수집 거래 보기'
+            },
+            {
+              title: '전표 조회',
+              description: '확정된 원금 상환과 이자 비용 전표를 확인합니다.',
+              href: '/journal-entries',
+              actionLabel: '전표 보기'
+            }
+          ]
+        }
+      ],
+      readModelNote:
+        '상환 일정은 운영 계획입니다. 원금 감소와 이자 비용은 수집 거래 확정으로 생성된 전표를 기준으로 보고서에 반영됩니다.'
+    };
+  }
+
+  return {
+    title: '부채 계약 목록 도움말',
+    description:
+      '이 화면은 부채 계약 기준을 정리하고, 개별 계약 상세 화면으로 이어지는 시작 화면입니다.',
+    primaryEntity: '부채 계약 목록',
+    relatedEntities: ['상환 일정', '계획 항목', '수집 거래', '전표'],
+    truthSource:
+      '부채 계약은 상환 기준 데이터이고, 실제 회계 반영은 상환 일정에서 만든 계획 항목과 전표 확정 시점에 이뤄집니다.',
+    supplementarySections: [
+      {
+        title: '바로 쓰는 순서',
+        items: [
+          '대출 기관, 상품명, 원금, 납부 자금수단을 입력해 부채 계약을 등록합니다.',
+          '목록에서 상세 보기로 내려가 운영 월 상환 예정일과 원금, 이자, 수수료를 입력합니다.',
+          '상세 화면에서 계획 생성을 실행해 계획 항목과 전표 준비 수집 거래를 연결합니다.',
+          '실제 출금 확인 후 수집 거래 화면에서 전표로 확정합니다.'
+        ]
+      },
+      {
+        title: '이어지는 화면',
+        links: [
+          {
+            title: '계획 항목',
+            description: '상환 일정에서 생성된 월 계획을 확인합니다.',
+            href: '/plan-items',
+            actionLabel: '계획 항목 보기'
+          },
+          {
+            title: '수집 거래',
+            description: '상환 거래를 전표 준비 상태에서 검토하고 확정합니다.',
+            href: '/transactions',
+            actionLabel: '수집 거래 보기'
+          }
+        ]
+      }
+    ],
+    readModelNote:
+      '상환 일정은 운영 계획입니다. 원금 감소와 이자 비용은 수집 거래 확정으로 생성된 전표를 기준으로 보고서에 반영됩니다.'
+  };
+}
+
+function buildLiabilityDetailHref(agreementId: string): Route {
+  return `/liabilities/${agreementId}` as Route;
 }
 
 async function invalidateLiabilityQueries(queryClient: QueryClient) {

@@ -27,6 +27,7 @@ import {
   Tooltip,
   Typography
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import {
@@ -37,6 +38,7 @@ import { useAccountAvatar } from '@/shared/auth/account-avatar';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { membershipRoleLabelMap } from '@/shared/auth/auth-labels';
 import { useDomainHelpStore } from '../providers/domain-help-provider';
+import { brandTokens } from '../theme/tokens';
 import { sidebarWidth } from './sidebar-nav';
 
 export function Topbar() {
@@ -88,8 +90,9 @@ export function Topbar() {
         sx={{
           borderRadius: 0,
           borderBottom: '1px solid',
-          borderColor: '#d7dee8',
-          backgroundColor: '#ffffff',
+          borderColor: alpha(brandTokens.palette.primaryBright, 0.14),
+          backgroundColor: brandTokens.palette.surface,
+          boxShadow: '0 8px 22px rgba(6, 34, 111, 0.05)',
           ml: { lg: `${sidebarWidth}px` },
           width: { lg: `calc(100% - ${sidebarWidth}px)` }
         }}
@@ -206,7 +209,7 @@ export function Topbar() {
               sx={{
                 pl: 1,
                 borderLeft: '1px solid',
-                borderColor: '#d7dee8'
+                borderColor: alpha(brandTokens.palette.primaryBright, 0.12)
               }}
             >
               <ButtonBase
@@ -216,7 +219,18 @@ export function Topbar() {
                   maxWidth: { xs: 44, sm: 260 },
                   borderRadius: 999,
                   px: { xs: 0.25, sm: 0.75 },
-                  py: 0.25
+                  py: 0.25,
+                  transition:
+                    'background-color 160ms ease, box-shadow 160ms ease',
+                  '&:hover': {
+                    backgroundColor: alpha(
+                      brandTokens.palette.primaryBright,
+                      0.07
+                    )
+                  },
+                  '&.Mui-focusVisible': {
+                    boxShadow: brandTokens.shadow.focus
+                  }
                 }}
               >
                 <Stack direction="row" alignItems="center" spacing={0.75}>
@@ -605,7 +619,9 @@ const topbarButtonSx = {
   borderRadius: 999,
   textTransform: 'none',
   fontWeight: 700,
-  whiteSpace: 'nowrap'
+  whiteSpace: 'nowrap',
+  borderColor: alpha(brandTokens.palette.primaryBright, 0.24),
+  backgroundColor: alpha(brandTokens.palette.surface, 0.72)
 } as const;
 
 const topbarIconButtonSx = {
@@ -613,8 +629,9 @@ const topbarIconButtonSx = {
   height: 34,
   borderRadius: 999,
   border: '1px solid',
-  borderColor: '#d7dee8',
-  backgroundColor: '#ffffff'
+  borderColor: alpha(brandTokens.palette.primaryBright, 0.18),
+  backgroundColor: alpha(brandTokens.palette.primaryBright, 0.08),
+  color: brandTokens.palette.primaryBright
 } as const;
 
 function createWorkspaceSwitchItemSx(selected: boolean) {
@@ -623,15 +640,24 @@ function createWorkspaceSwitchItemSx(selected: boolean) {
     minHeight: 58,
     px: 1,
     py: 0.75,
-    borderRadius: 1,
+    borderRadius: 2,
     border: '1px solid',
-    borderColor: selected ? 'primary.main' : '#d7dee8',
-    backgroundColor: selected ? '#eff6ff' : '#ffffff',
+    borderColor: selected
+      ? alpha(brandTokens.palette.primaryBright, 0.42)
+      : brandTokens.palette.border,
+    background: selected
+      ? `linear-gradient(135deg, ${alpha(
+          brandTokens.palette.primaryBright,
+          0.1
+        )}, ${alpha(brandTokens.palette.secondary, 0.16)})`
+      : brandTokens.palette.surface,
     textAlign: 'left',
     justifyContent: 'flex-start',
     opacity: selected ? 1 : undefined,
     '&:hover': {
-      backgroundColor: selected ? '#eff6ff' : '#f8fafc'
+      backgroundColor: selected
+        ? alpha(brandTokens.palette.secondary, 0.18)
+        : alpha(brandTokens.palette.primaryBright, 0.06)
     },
     '&.Mui-disabled': {
       opacity: 1,

@@ -29,6 +29,8 @@ import { useRouter } from 'next/navigation';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { registerWithPassword } from '@/features/auth/auth.api';
+import { BrandLogo } from '@/shared/brand/brand-logo';
+import { brandTokens } from '@/shared/theme/tokens';
 import { appLayout } from '@/shared/ui/layout-metrics';
 
 const requiredAgreementMessage =
@@ -63,15 +65,15 @@ type RegisterFormInput = z.infer<typeof registerSchema>;
 
 const stableTextFieldSx = {
   '& .MuiOutlinedInput-root': {
-    bgcolor: '#ffffff'
+    bgcolor: brandTokens.palette.surface
   },
   '& .MuiInputBase-input': {
     bgcolor: 'transparent'
   },
   '& .MuiInputBase-input:-webkit-autofill': {
-    WebkitBoxShadow: '0 0 0 1000px #ffffff inset',
-    WebkitTextFillColor: '#0f172a',
-    caretColor: '#0f172a',
+    WebkitBoxShadow: `0 0 0 1000px ${brandTokens.palette.surface} inset`,
+    WebkitTextFillColor: brandTokens.palette.text,
+    caretColor: brandTokens.palette.text,
     transition: 'background-color 9999s ease-out'
   }
 };
@@ -159,7 +161,7 @@ export function RegisterPage() {
         display: 'flex',
         alignItems: 'center',
         py: appLayout.authPagePaddingY,
-        background: 'linear-gradient(180deg, #f6f8fb 0%, #eef3f8 100%)'
+        backgroundColor: brandTokens.palette.background
       }}
     >
       <Container maxWidth="lg">
@@ -167,8 +169,8 @@ export function RegisterPage() {
           sx={{
             overflow: 'hidden',
             borderRadius: 2,
-            border: `1px solid ${alpha('#0f172a', 0.08)}`,
-            boxShadow: '0 20px 45px rgba(15, 23, 42, 0.12)'
+            border: `1px solid ${alpha(brandTokens.palette.primary, 0.1)}`,
+            boxShadow: brandTokens.shadow.cardStrong
           }}
         >
           <Grid container alignItems="stretch">
@@ -365,33 +367,26 @@ function RegisterIntroPanel() {
         justifyContent: 'space-between',
         p: appLayout.authSurfacePadding,
         color: 'common.white',
-        background:
-          'linear-gradient(145deg, #172033 0%, #1f3a5f 56%, #0f766e 100%)'
+        background: brandTokens.gradient.brand
       }}
     >
       <Stack spacing={2.5}>
         <Box
           sx={{
-            width: 46,
-            height: 46,
-            borderRadius: 2,
             display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: alpha('#ffffff', 0.12),
-            border: `1px solid ${alpha('#ffffff', 0.16)}`
+            lineHeight: 0
           }}
         >
-          <PersonAddAltRoundedIcon fontSize="small" />
+          <BrandLogo
+            priority
+            sx={{
+              width: { xs: 196, md: 214 },
+              filter: 'drop-shadow(0 12px 24px rgba(6, 23, 79, 0.2))'
+            }}
+          />
         </Box>
 
         <Stack spacing={1.25}>
-          <Typography
-            variant="overline"
-            sx={{ color: alpha('#ffffff', 0.72), fontWeight: 800 }}
-          >
-            PERSONAL ERP
-          </Typography>
           <Typography
             variant="h3"
             sx={{
@@ -450,8 +445,8 @@ function TermsAgreementSection({
         p: { xs: 1.75, md: 2 },
         borderRadius: '8px',
         border: '1px solid',
-        borderColor: alpha('#0f172a', 0.08),
-        bgcolor: '#f8fafc'
+        borderColor: alpha(brandTokens.palette.primary, 0.08),
+        bgcolor: brandTokens.palette.surfaceSoft
       }}
     >
       <Stack
@@ -479,8 +474,8 @@ function TermsAgreementSection({
           pr: 1,
           borderRadius: '8px',
           border: '1px solid',
-          borderColor: alpha('#0f172a', 0.08),
-          bgcolor: '#ffffff'
+          borderColor: alpha(brandTokens.palette.primary, 0.08),
+          bgcolor: brandTokens.palette.surface
         }}
       >
         <Stack spacing={1.5} sx={{ p: 1.75 }}>

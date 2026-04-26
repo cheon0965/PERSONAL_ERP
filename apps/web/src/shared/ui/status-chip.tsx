@@ -1,6 +1,6 @@
 'use client';
 
-import { Chip } from '@mui/material';
+import { Chip, type ChipProps } from '@mui/material';
 
 const colorMap: Record<
   string,
@@ -53,16 +53,33 @@ const labelMap: Record<string, string> = {
   SKIPPED: '건너뜀'
 };
 
+const filledStatuses = new Set([
+  'ACTIVE',
+  'OPEN',
+  'POSTED',
+  'READY_TO_POST',
+  'MATCHED',
+  'PAID_OFF',
+  'CANCELLED'
+]);
+
 export function resolveStatusLabel(label: string): string {
   return labelMap[label] ?? label;
 }
 
 export function StatusChip({ label }: { label: string }) {
+  const color = colorMap[label] ?? 'default';
+  const variant: ChipProps['variant'] = filledStatuses.has(label)
+    ? 'filled'
+    : 'outlined';
+
   return (
     <Chip
       label={resolveStatusLabel(label)}
-      color={colorMap[label] ?? 'default'}
+      color={color}
+      variant={variant}
       size="small"
+      sx={{ minWidth: 68 }}
     />
   );
 }

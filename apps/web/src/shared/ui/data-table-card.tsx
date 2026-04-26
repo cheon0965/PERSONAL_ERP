@@ -8,6 +8,8 @@ import {
   type GridRowSelectionModel
 } from '@mui/x-data-grid';
 import { Card, CardContent, Stack, Typography } from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import { brandTokens } from '@/shared/theme/tokens';
 import { appLayout } from './layout-metrics';
 
 type DataTableCardProps<T extends { id: string }> = {
@@ -41,8 +43,27 @@ export function DataTableCard<T extends { id: string }>({
   onRowSelectionModelChange,
   isRowSelectable
 }: DataTableCardProps<T>) {
+  const resolvedRowHeight = rowHeight ?? 64;
+
   return (
-    <Card sx={{ height: '100%', display: 'flex' }}>
+    <Card
+      sx={{
+        position: 'relative',
+        height: '100%',
+        display: 'flex',
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          inset: '0 0 auto 0',
+          height: 3,
+          background: `linear-gradient(90deg, ${alpha(
+            brandTokens.palette.primaryBright,
+            0.68
+          )}, ${alpha(brandTokens.palette.secondary, 0.7)}, transparent)`
+        }
+      }}
+    >
       <CardContent sx={{ p: appLayout.cardPadding, flex: 1, width: '100%' }}>
         <Stack spacing={appLayout.cardGap} sx={{ height: '100%' }}>
           <Stack
@@ -74,11 +95,18 @@ export function DataTableCard<T extends { id: string }>({
             {actions ? <div>{actions}</div> : null}
           </Stack>
           {toolbar ? <div>{toolbar}</div> : null}
-          <div style={{ width: '100%', height }}>
+          <div
+            style={{
+              width: '100%',
+              height,
+              borderRadius: 16,
+              overflow: 'hidden'
+            }}
+          >
             <DataGrid
               rows={rows}
               columns={columns}
-              rowHeight={rowHeight}
+              rowHeight={resolvedRowHeight}
               getRowHeight={getRowHeight}
               pageSizeOptions={[5, 10, 20]}
               initialState={{
@@ -94,6 +122,29 @@ export function DataTableCard<T extends { id: string }>({
               rowSelectionModel={rowSelectionModel}
               onRowSelectionModelChange={onRowSelectionModelChange}
               isRowSelectable={isRowSelectable}
+              sx={{
+                '& .MuiDataGrid-cell': {
+                  display: 'flex',
+                  alignItems: 'center',
+                  py: 0.75,
+                  lineHeight: 1.45
+                },
+                '& .MuiDataGrid-cell > *': {
+                  maxWidth: '100%'
+                },
+                '& .MuiDataGrid-cell .MuiButton-root': {
+                  minHeight: 30,
+                  px: 1.1,
+                  whiteSpace: 'nowrap'
+                },
+                '& .MuiDataGrid-cell .MuiChip-root': {
+                  flexShrink: 0,
+                  maxWidth: '100%'
+                },
+                '& .MuiDataGrid-cell .MuiTypography-root': {
+                  lineHeight: 1.45
+                }
+              }}
             />
           </div>
         </Stack>

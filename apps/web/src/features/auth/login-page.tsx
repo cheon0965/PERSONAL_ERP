@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import type { Route } from 'next';
-import BusinessCenterRoundedIcon from '@mui/icons-material/BusinessCenterRounded';
 import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
 import PersonAddAltRoundedIcon from '@mui/icons-material/PersonAddAltRounded';
 import {
@@ -23,6 +22,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useAuthSession } from '@/shared/auth/auth-provider';
+import { BrandLogo } from '@/shared/brand/brand-logo';
+import { brandTokens } from '@/shared/theme/tokens';
 import { appLayout } from '@/shared/ui/layout-metrics';
 
 const loginSchema = z.object({
@@ -66,7 +67,7 @@ export function LoginPage() {
         display: 'flex',
         alignItems: 'center',
         py: appLayout.authPagePaddingY,
-        background: 'linear-gradient(180deg, #f6f8fb 0%, #eef3f8 100%)'
+        backgroundColor: brandTokens.palette.background
       }}
     >
       <Container maxWidth="md">
@@ -74,8 +75,8 @@ export function LoginPage() {
           sx={{
             overflow: 'hidden',
             borderRadius: 2,
-            border: `1px solid ${alpha('#0f172a', 0.08)}`,
-            boxShadow: '0 20px 45px rgba(15, 23, 42, 0.12)'
+            border: `1px solid ${alpha(brandTokens.palette.primary, 0.1)}`,
+            boxShadow: brandTokens.shadow.cardStrong
           }}
         >
           <Grid container alignItems="stretch">
@@ -89,37 +90,31 @@ export function LoginPage() {
                   justifyContent: 'space-between',
                   p: appLayout.authSurfacePadding,
                   color: 'common.white',
-                  background:
-                    'linear-gradient(145deg, #172033 0%, #1f3a5f 58%, #0f766e 100%)'
+                  background: brandTokens.gradient.brand
                 }}
               >
-                <Stack spacing={2}>
+                <Stack spacing={2.5}>
                   <Box
                     sx={{
-                      width: 46,
-                      height: 46,
-                      borderRadius: 2,
                       display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: alpha('#ffffff', 0.12),
-                      border: `1px solid ${alpha('#ffffff', 0.16)}`
+                      alignSelf: 'flex-start',
+                      lineHeight: 0
                     }}
                   >
-                    <BusinessCenterRoundedIcon fontSize="small" />
+                    <BrandLogo
+                      priority
+                      sx={{
+                        width: { xs: 182, md: 204 },
+                        opacity: 0.94,
+                        '& img': {
+                          filter:
+                            'brightness(0) invert(1) drop-shadow(0 10px 18px rgba(3, 21, 74, 0.2))'
+                        }
+                      }}
+                    />
                   </Box>
 
                   <Stack spacing={1.25}>
-                    <Typography
-                      variant="overline"
-                      sx={{
-                        color: alpha('#ffffff', 0.7),
-                        fontWeight: 700,
-                        letterSpacing: 0
-                      }}
-                    >
-                      PERSONAL ERP
-                    </Typography>
                     <Typography
                       variant="h3"
                       sx={{
@@ -130,7 +125,7 @@ export function LoginPage() {
                         letterSpacing: 0
                       }}
                     >
-                      운영 포털 로그인
+                      운영 포털
                     </Typography>
                     <Typography
                       variant="body1"
