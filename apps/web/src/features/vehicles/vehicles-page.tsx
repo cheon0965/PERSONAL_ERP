@@ -419,6 +419,7 @@ export function VehiclesPage({
               : '-'
           }
         ]}
+        metadataSingleRow
         primaryActionLabel={primaryAction.label}
         primaryActionOnClick={primaryAction.onClick}
         primaryActionDisabled={primaryAction.disabled}

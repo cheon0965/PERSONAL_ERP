@@ -460,9 +460,6 @@ export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
             rows={tableRows}
             columns={columns}
             height={460}
-            getRowHeight={({ model }) =>
-              model.matchedCollectedTransactionId ? 104 : undefined
-            }
           />
 
           {!canGenerate ? (
@@ -470,31 +467,6 @@ export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
               계획 생성은 소유자, 관리자, 편집자만 실행할 수 있습니다.
             </Alert>
           ) : null}
-
-          <Grid container spacing={appLayout.sectionGap}>
-            <Grid size={{ xs: 12 }}>
-              <SectionCard title="요약">
-                <Stack spacing={1.25}>
-                  <SummaryRow
-                    label="총 계획 항목"
-                    value={`${summary?.totalCount ?? 0}건`}
-                  />
-                  <SummaryRow
-                    label="계획 총액"
-                    value={formatWon(summary?.totalPlannedAmount ?? 0)}
-                  />
-                  <SummaryRow
-                    label="초안 / 연결 / 확정"
-                    value={`${summary?.draftCount ?? 0} / ${summary?.matchedCount ?? 0} / ${summary?.confirmedCount ?? 0}`}
-                  />
-                  <SummaryRow
-                    label="제외 / 만료"
-                    value={`${summary?.skippedCount ?? 0} / ${summary?.expiredCount ?? 0}`}
-                  />
-                </Stack>
-              </SectionCard>
-            </Grid>
-          </Grid>
         </>
       ) : null}
     </Stack>
@@ -542,7 +514,8 @@ function buildPlanItemsHelpContext(mode: PlanItemsPageMode) {
             },
             {
               title: '수집 거래',
-              description: '연결된 실제 거래를 검토하고 전표 준비 상태를 확인합니다.',
+              description:
+                '연결된 실제 거래를 검토하고 전표 준비 상태를 확인합니다.',
               href: '/transactions',
               actionLabel: '수집 거래 보기'
             }
@@ -576,19 +549,22 @@ function buildPlanItemsHelpContext(mode: PlanItemsPageMode) {
         links: [
           {
             title: '수집 거래',
-            description: '계획 항목과 연결된 실제 거래를 검토하고 전표 준비 상태까지 이어서 확인합니다.',
+            description:
+              '계획 항목과 연결된 실제 거래를 검토하고 전표 준비 상태까지 이어서 확인합니다.',
             href: '/transactions',
             actionLabel: '수집 거래 보기'
           },
           {
             title: '전표 조회',
-            description: '확정된 계획이 실제 전표로 반영됐는지 공식 회계 기준으로 확인합니다.',
+            description:
+              '확정된 계획이 실제 전표로 반영됐는지 공식 회계 기준으로 확인합니다.',
             href: '/journal-entries',
             actionLabel: '전표 보기'
           },
           {
             title: '계획 생성',
-            description: '선택한 운영 월의 계획 항목을 다시 생성하거나 보강합니다.',
+            description:
+              '선택한 운영 월의 계획 항목을 다시 생성하거나 보강합니다.',
             href: '/plan-items/generate',
             actionLabel: '계획 생성 보기'
           }

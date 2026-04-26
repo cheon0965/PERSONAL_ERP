@@ -140,6 +140,7 @@ export default function SettingsPage() {
             value: user ? `${user.name} <${user.email}>` : '활성 세션 없음'
           }
         ]}
+        metadataSingleRow
         primaryActionLabel="기준 데이터 보기"
         primaryActionHref="/reference-data"
         secondaryActionLabel="사업장 설정"

@@ -23,6 +23,7 @@ import type {
 import type { GridColDef } from '@mui/x-data-grid';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { formatDate, formatWon } from '@/shared/lib/format';
+import { GridActionCell } from '@/shared/ui/data-grid-cell';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { SectionCard } from '@/shared/ui/section-card';
@@ -120,14 +121,16 @@ export function buildPeriodColumns({
       headerAlign: 'center',
       renderCell: (params) =>
         params.row.status === 'LOCKED' ? (
-          <Button
-            component={Link}
-            href={buildReopenWorkbenchHref(params.row.id)}
-            size="small"
-            variant="outlined"
-          >
-            재오픈 검토
-          </Button>
+          <GridActionCell justifyContent="center">
+            <Button
+              component={Link}
+              href={buildReopenWorkbenchHref(params.row.id)}
+              size="small"
+              variant="outlined"
+            >
+              재오픈 검토
+            </Button>
+          </GridActionCell>
         ) : null
     }
   ];

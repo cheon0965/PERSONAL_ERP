@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import { formatDate, formatWon } from '@/shared/lib/format';
+import { GridActionCell } from '@/shared/ui/data-grid-cell';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { StatusChip } from '@/shared/ui/status-chip';
 import { RecurringRuleForm } from './recurring-rule-form';
@@ -79,6 +80,7 @@ export function createRecurringRulesColumns(input: {
       field: 'actions',
       headerName: '동작',
       flex: 1.5,
+      minWidth: 220,
       sortable: false,
       filterable: false,
       renderCell: (params) =>
@@ -92,7 +94,7 @@ export function createRecurringRulesColumns(input: {
             보험 계약에서 관리
           </Button>
         ) : (
-          <Stack direction="row" spacing={1}>
+          <GridActionCell>
             <Button
               size="small"
               variant="outlined"
@@ -107,7 +109,7 @@ export function createRecurringRulesColumns(input: {
             >
               삭제
             </Button>
-          </Stack>
+          </GridActionCell>
         )
     }
   ];

@@ -4,6 +4,7 @@ import * as React from 'react';
 import type { Route } from 'next';
 import { CircularProgress, Stack, Typography } from '@mui/material';
 import { usePathname, useRouter } from 'next/navigation';
+import { brandTokens } from '@/shared/theme/tokens';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { useAuthSession } from './auth-provider';
 
@@ -44,8 +45,7 @@ export function AuthGuard({ children }: React.PropsWithChildren) {
         justifyContent="center"
         spacing={appLayout.fieldGap}
         sx={{
-          background:
-            'radial-gradient(circle at top, rgba(37, 99, 235, 0.12), transparent 42%), #f5f7fb'
+          backgroundColor: brandTokens.palette.background
         }}
       >
         {isTimedOut ? (

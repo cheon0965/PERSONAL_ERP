@@ -265,6 +265,7 @@ export function buildAccountingPeriodsHeaderConfig({
         value: membershipRole
       }
     ],
+    metadataSingleRow: true,
     primaryActionLabel: primaryAction.label,
     primaryActionHref: primaryAction.href,
     secondaryActionLabel: secondaryAction.label,

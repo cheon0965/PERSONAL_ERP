@@ -1,4 +1,4 @@
-# Contributing
+# 협업 가이드
 
 ## 목표
 
@@ -20,12 +20,12 @@
 - 브랜치 예시: `feat/auth-refresh`, `fix/dashboard-summary`, `docs/windows-env-guide`
 - PR 제목 예시: `feat: add transaction mutation flow`
 - PR 본문에는 목적, 변경 범위, 검증 방법, 문서 반영 여부를 적습니다.
-- 계약, env, migration, 운영 문서 변경이 있으면 PR 체크리스트에서 명시합니다.
+- 계약, env, 마이그레이션, 운영 문서 변경이 있으면 PR 체크리스트에서 명시합니다.
 
 ## GitHub 저장소 설정 체크리스트
 
 - 아래 항목은 `저장소 설정이 허용하는 범위에서 목표로 삼는 운영 기준`입니다.
-- Default branch는 `main`으로 둡니다.
+- 기본 브랜치는 `main`으로 둡니다.
 - `main` 보호 브랜치 규칙에서 PR 기반 머지를 강제합니다.
 - `main` 보호 브랜치 규칙에서 상태 검사 통과를 강제합니다.
 - 필수 상태 검사는 GitHub UI에 표시되는 `validate` 또는 `CI / validate` 항목으로 지정합니다.
@@ -33,7 +33,7 @@
 - `main` 직접 push는 차단합니다.
 - 현재 기준 CODEOWNERS 기본 범위는 전체 저장소이며, 기본 책임자는 `@cheon0965`입니다.
 - 저장소가 단일 유지보수 단계인 동안에는 승인 리뷰 강제를 기본값으로 두지 않고, 협업 인원이 늘면 CODEOWNERS 리뷰 강제를 다시 검토합니다.
-- 현재 private repository 플랜이나 GitHub 설정 상태에 따라 ruleset/server-side enforcement가 바로 활성화되지 않을 수 있습니다.
+- 현재 비공개 저장소 플랜이나 GitHub 설정 상태에 따라 규칙 집합/서버 강제가 바로 활성화되지 않을 수 있습니다.
 - 이 경우에도 저장소 운영 규칙 자체는 `작업 브랜치 -> PR -> CI 확인`을 기본 흐름으로 유지합니다.
 
 ## 릴리즈와 태그 규칙
@@ -45,16 +45,16 @@
 
 ## 구조 규칙
 
-- Web은 `app -> features -> shared` 흐름을 유지합니다.
-- API 기본 흐름은 `controller -> service -> repository -> mapper/calculator` 입니다.
-- `collected-transactions`, `recurring-rules`는 `controller -> use-case -> port -> adapter` 경계를 사용합니다.
-- `dashboard`, `forecast`는 `controller -> read service -> read repository -> projection` 흐름을 사용합니다.
+- 웹은 `app -> features -> shared` 흐름을 유지합니다.
+- API 기본 흐름은 `컨트롤러 -> 서비스 -> 저장소 -> 변환기/계산기`입니다.
+- `collected-transactions`, `recurring-rules`는 `컨트롤러 -> 유스케이스 -> 포트 -> 어댑터` 경계를 사용합니다.
+- `dashboard`, `forecast`는 `컨트롤러 -> 읽기 서비스 -> 읽기 저장소 -> 투영` 흐름을 사용합니다.
 - 공용 계약은 `packages/contracts`를 단일 소스로 사용합니다.
 - 사용자 경계가 필요한 데이터는 `user.currentWorkspace`와 `tenantId` / `ledgerId` / `membershipRole` 기준으로 다룹니다.
 - `dashboard`, `forecast`는 읽기/조합 컨텍스트로 보고, `collected-transactions`, `recurring-rules`의 쓰기 규칙을 직접 소유하지 않습니다.
-- 다른 모듈의 `repository`, `adapter`, `controller`를 직접 import하는 방식은 기본 규칙으로 사용하지 않습니다.
+- 다른 모듈의 저장소, 어댑터, 컨트롤러를 직접 가져다 쓰는 방식은 기본 규칙으로 사용하지 않습니다.
 - `collected-transactions`, `recurring-rules`, `dashboard`, `forecast`를 모듈 밖에서 참조할 때는 각 모듈의 `public.ts`만 공식 진입점으로 사용합니다.
-- 서비스 분리, 메시지 브로커, outbox, gateway 도입은 별도 ADR 없이 진행하지 않습니다.
+- 서비스 분리, 메시지 브로커, 아웃박스, 게이트웨이 도입은 별도 ADR 없이 진행하지 않습니다.
 
 ## 비밀정보 규칙
 
@@ -65,39 +65,39 @@
 - macOS/Linux에서는 같은 의미의 절대 경로를 사용하고, 자세한 예시는 `README.md`와 `ENVIRONMENT_SETUP.md`를 기준으로 맞춥니다.
 - 실제 비밀값 파일은 Git에 추가하지 않습니다.
 
-## DB 변경 규칙
+## 데이터베이스 변경 규칙
 
 - 스키마 변경은 `npm run db:migrate` 기준으로 진행합니다.
 - `db:push:unsafe`는 로컬 복구나 예외 상황이 아니면 기본 흐름으로 쓰지 않습니다.
 - 스키마 PR에는 migration 파일이 함께 포함되어야 합니다.
 
-## fallback 규칙
+## 대체 응답 규칙
 
-- demo fallback은 기본적으로 끈 상태가 기준입니다.
+- 데모 대체 응답은 기본적으로 끈 상태가 기준입니다.
 - 로컬 개발에서만 `NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=true`로 명시적으로 켭니다.
 - 현재 권장 위치는 `C:\secrets\personal-erp\web.env` 입니다.
-- fallback 정책이 바뀌면 [FALLBACK_POLICY.md](./docs/FALLBACK_POLICY.md) 를 같이 갱신합니다.
+- 대체 응답 정책이 바뀌면 [FALLBACK_POLICY.md](./docs/FALLBACK_POLICY.md) 를 같이 갱신합니다.
 
 ## 테스트 규칙
 
 - 최소 실행 기준: `npm run check:quick`
 - PR 전 권장 기준: `npm run test`
-- `npm run check:quick`에는 `npm run docs:check`가 포함되며, 문서의 `npm run` 표기와 `docs/API.md`, `docs/CURRENT_CAPABILITIES.md`, `docs/OPERATIONS_CHECKLIST.md`, `docs/VALIDATION_NOTES.md`의 Web/API surface가 실제 라우트와 controller 기반 Swagger surface와 맞는지 함께 확인합니다.
+- `npm run check:quick`에는 `npm run docs:check`가 포함되며, 문서의 `npm run` 표기와 `docs/API.md`, `docs/CURRENT_CAPABILITIES.md`, `docs/OPERATIONS_CHECKLIST.md`, `docs/VALIDATION_NOTES.md`의 웹/API 표면이 실제 라우트와 컨트롤러 기반 Swagger 표면과 맞는지 함께 확인합니다.
 - 인증/세션, CORS, 보안 헤더, 브라우저/API 경계 정책을 바꿨다면 `npm run test:security:api`를 같이 봅니다.
-- `package.json` 또는 lockfile을 바꿨다면 `npm run audit:runtime`와 CI `audit-runtime` 결과를 같이 확인합니다.
-- 불가피한 runtime advisory 예외를 추가할 때는 `security/runtime-audit-allowlist.json`에 `id`, `package`, `severity`, `trackedAt`, `expiresOn`, `reason`을 함께 남기고, 해소되면 바로 제거합니다.
-- 남아 있는 runtime advisory 상세를 다시 볼 때는 `npm run audit:runtime:full`을 사용합니다.
+- `package.json` 또는 잠금 파일을 바꿨다면 `npm run audit:runtime`와 CI `audit-runtime` 결과를 같이 확인합니다.
+- 불가피한 런타임 보안 권고 예외를 추가할 때는 `security/runtime-audit-allowlist.json`에 `id`, `package`, `severity`, `trackedAt`, `expiresOn`, `reason`을 함께 남기고, 해소되면 바로 제거합니다.
+- 남아 있는 런타임 보안 권고 상세를 다시 볼 때는 `npm run audit:runtime:full`을 사용합니다.
 - 브라우저 흐름을 건드리면 `npm run test:e2e`를 추가로 봅니다.
-- Next.js build 결과물, 공용 라우팅, 인증 복원, 운영 체크리스트 smoke에 영향을 줄 수 있다면 `npm run test:e2e:smoke:build`를 추가로 봅니다.
+- Next.js build 결과물, 공용 라우팅, 인증 복원, 운영 체크리스트 스모크 검증에 영향을 줄 수 있다면 `npm run test:e2e:smoke:build`를 추가로 봅니다.
 - Prisma/MySQL 경계를 건드리면 `npm run test:prisma`를 대표 심화 검증으로 사용합니다.
 - 인증, 소유권 검증, 월말 계산 로직을 건드리면 관련 테스트를 같이 수정합니다.
-- 금액 필드나 금액 집계/반올림/배분을 건드리면 `@personal-erp/money` helper와 `npm run money:check` 기준을 함께 확인합니다.
+- 금액 필드나 금액 집계/반올림/배분을 건드리면 `@personal-erp/money` 도우미 함수와 `npm run money:check` 기준을 함께 확인합니다.
 
 ## 금액 규칙
 
-- HTTP 계약의 금액은 `MoneyWon` 의미의 `number`이며 KRW 원 단위 safe integer만 허용합니다.
-- Prisma 영속 금액 컬럼은 `Decimal(19,0)` 기준으로 유지하고, API mapper/adapter 경계에서 `MoneyWon(number)`로 변환합니다.
-- 금액 합산, 차감, `HALF_UP` 반올림, 배분 잔차 보정은 `@personal-erp/money`를 사용하고 money package 밖에서 raw `Number(...)`, `+/-`, `+=/-=`를 새로 추가하지 않습니다.
+- HTTP 계약의 금액은 `MoneyWon` 의미의 `number`이며 KRW 원 단위 안전한 정수만 허용합니다.
+- Prisma 영속 금액 컬럼은 `Decimal(19,0)` 기준으로 유지하고, API 변환기/어댑터 경계에서 `MoneyWon(number)`로 변환합니다.
+- 금액 합산, 차감, `HALF_UP` 반올림, 배분 잔차 보정은 `@personal-erp/money`를 사용하고 `money` 패키지 밖에서 직접 `Number(...)`, `+/-`, `+=/-=`를 새로 추가하지 않습니다.
 - 이 규칙은 `npm run money:check`와 `npm run check:quick`에 포함된 정적 가드로 검증합니다.
 
 ## 문서 갱신 규칙
@@ -111,14 +111,14 @@
 
 ## 계약과 문서 동기화 규칙
 
-- Web과 API가 함께 쓰는 요청/응답 shape 변경은 항상 `packages/contracts`부터 반영합니다.
-- 현재 구현된 엔드포인트 목록, DTO validation, 인증 노출 상태는 Swagger(`api/docs`)를 기준으로 확인합니다.
+- Web과 API가 함께 쓰는 요청/응답 형태 변경은 항상 `packages/contracts`부터 반영합니다.
+- 현재 구현된 엔드포인트 목록, DTO 검증, 인증 노출 상태는 Swagger(`api/docs`)를 기준으로 확인합니다.
 - `docs/API.md`는 사람이 읽는 API 요약과 인증/쓰기 흐름 설명만 유지합니다.
 - `README.md`는 저장소 진입점과 빠른 시작만 담당하고, 상세 API 기준 문서 역할은 맡기지 않습니다.
 - `docs/CURRENT_CAPABILITIES.md`는 현재 구현된 기능과 운영 지원 범위의 요약 기준입니다.
 - `docs/VALIDATION_NOTES.md`는 “지금 실제로 무엇을 검증하고 있는가”와 남은 공백만 기록합니다.
 - `docs/PROJECT_PLAN.md`는 중기 로드맵, `PORTFOLIO_ARCHITECTURE_GUIDE.md`는 프로젝트 목적, 판단 원칙, 현재 아키텍처 설명을 기록합니다.
-- API, env, fallback, 테스트 범위가 바뀌면 관련 문서를 같은 PR에서 함께 갱신합니다.
+- API, env, 대체 응답 정책, 테스트 범위가 바뀌면 관련 문서를 같은 PR에서 함께 갱신합니다.
 - 이 우선순위 자체가 바뀌는 구조 결정이면 ADR을 추가합니다.
 
 ## ADR 작성 기준

@@ -9,6 +9,8 @@ import {
   Stack,
   Typography
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import { brandTokens } from '@/shared/theme/tokens';
 
 type FormDrawerProps = {
   open: boolean;
@@ -34,7 +36,7 @@ export function FormDrawer({
         sx: {
           width: { xs: '100%', sm: 520 },
           maxWidth: '100%',
-          backgroundImage: 'none'
+          backgroundColor: brandTokens.palette.background
         }
       }}
     >
@@ -45,7 +47,13 @@ export function FormDrawer({
           display: 'flex',
           alignItems: 'flex-start',
           justifyContent: 'space-between',
-          gap: 2
+          gap: 2,
+          borderBottom: '1px solid',
+          borderColor: alpha(brandTokens.palette.primaryBright, 0.12),
+          background: `linear-gradient(135deg, ${alpha(
+            brandTokens.palette.surface,
+            0.95
+          )}, ${alpha(brandTokens.palette.primaryTint, 0.9)})`
         }}
       >
         <Box sx={{ minWidth: 0 }}>
@@ -60,12 +68,21 @@ export function FormDrawer({
             </Typography>
           ) : null}
         </Box>
-        <IconButton onClick={onClose} aria-label="닫기" size="small">
+        <IconButton
+          onClick={onClose}
+          aria-label="닫기"
+          size="small"
+          sx={{
+            border: '1px solid',
+            borderColor: alpha(brandTokens.palette.primaryBright, 0.16),
+            backgroundColor: alpha(brandTokens.palette.surface, 0.72)
+          }}
+        >
           <CloseRoundedIcon />
         </IconButton>
       </Box>
 
-      <Divider />
+      <Divider sx={{ borderColor: alpha(brandTokens.palette.primary, 0.06) }} />
 
       <Box
         sx={{

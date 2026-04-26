@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Alert, Button, Chip, Grid, Stack, Typography } from '@mui/material';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import { brandTokens } from '@/shared/theme/tokens';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { SectionCard } from '@/shared/ui/section-card';
@@ -297,8 +298,7 @@ export function AdminHomePage() {
           {
             title: '사업장 관리',
             href: '/admin/tenants',
-            description:
-              '사업장 상태, 기본 장부, 멤버 구성을 확인합니다.',
+            description: '사업장 상태, 기본 장부, 멤버 구성을 확인합니다.',
             actionLabel: '사업장 관리 열기'
           },
           {
@@ -370,6 +370,7 @@ export function AdminHomePage() {
             value: canReadPolicy ? '확인 가능' : '권한 필요'
           }
         ]}
+        metadataSingleRow
         primaryActionLabel="회원 관리 열기"
         primaryActionHref="/admin/members"
         primaryActionDisabled={!canReadMembers}
@@ -444,7 +445,10 @@ function AdminPriorityCard({
         borderRadius: 3,
         border: '1px solid',
         borderColor: tone === 'success' ? 'success.light' : 'warning.light',
-        backgroundColor: tone === 'success' ? 'success.50' : 'warning.50'
+        backgroundColor:
+          tone === 'success'
+            ? brandTokens.palette.successSoft
+            : brandTokens.palette.warningSoft
       }}
     >
       <Stack

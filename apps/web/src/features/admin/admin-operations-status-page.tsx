@@ -20,6 +20,7 @@ import type {
 import { useQuery } from '@tanstack/react-query';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import { brandTokens } from '@/shared/theme/tokens';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -262,9 +263,9 @@ function StatusComponentCard({
               : 'divider',
         bgcolor:
           component.status === 'ERROR'
-            ? 'error.50'
+            ? brandTokens.palette.errorSoft
             : component.status === 'WARNING'
-              ? 'warning.50'
+              ? brandTokens.palette.warningSoft
               : 'background.default'
       }}
     >
@@ -285,11 +286,7 @@ function StatusComponentCard({
   );
 }
 
-function SecurityThreatRow({
-  event
-}: {
-  event: AdminSecurityThreatEventItem;
-}) {
+function SecurityThreatRow({ event }: { event: AdminSecurityThreatEventItem }) {
   return (
     <Stack
       spacing={0.75}

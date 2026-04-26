@@ -1,6 +1,6 @@
 import type { Route } from 'next';
 import Link from 'next/link';
-import { Button, Chip, Stack, Typography } from '@mui/material';
+import { Button, Chip, Typography } from '@mui/material';
 import type {
   VehicleFuelLogItem,
   VehicleLogCollectedTransactionLink,
@@ -10,6 +10,11 @@ import type {
 } from '@personal-erp/contracts';
 import type { GridColDef } from '@mui/x-data-grid';
 import { formatNumber, formatWon } from '@/shared/lib/format';
+import {
+  GridActionCell,
+  GridInlineCell,
+  GridStackCell
+} from '@/shared/ui/data-grid-cell';
 import { StatusChip } from '@/shared/ui/status-chip';
 import {
   fuelColumns,
@@ -88,7 +93,7 @@ export function buildVehicleColumns({
       sortable: false,
       filterable: false,
       renderCell: (params) => (
-        <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap">
+        <GridActionCell>
           {params.row.defaultFundingAccountId ? (
             <Chip label="자금수단" size="small" variant="outlined" />
           ) : null}
@@ -114,17 +119,18 @@ export function buildVehicleColumns({
               -
             </Typography>
           ) : null}
-        </Stack>
+        </GridActionCell>
       )
     },
     {
       field: 'actions',
       headerName: '동작',
       flex: 0.9,
+      minWidth: 270,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
-        <Stack direction="row" spacing={1}>
+        <GridActionCell>
           <Button
             size="small"
             variant="outlined"
@@ -152,7 +158,7 @@ export function buildVehicleColumns({
           >
             정비 기록
           </Button>
-        </Stack>
+        </GridActionCell>
       )
     }
   ];
@@ -179,13 +185,16 @@ export function buildFuelLogColumns({
             link={params.row.linkedCollectedTransaction}
           />
         ) : (
-          <Chip label="미연결" size="small" variant="outlined" />
+          <GridInlineCell>
+            <Chip label="미연결" size="small" variant="outlined" />
+          </GridInlineCell>
         )
     },
     {
       field: 'actions',
       headerName: '동작',
       flex: 0.8,
+      minWidth: 170,
       sortable: false,
       filterable: false,
       renderCell: (params) => {
@@ -194,8 +203,8 @@ export function buildFuelLogColumns({
         );
 
         return (
-          <Stack spacing={0.5} sx={{ py: 0.5 }}>
-            <Stack direction="row" spacing={1}>
+          <GridStackCell>
+            <GridActionCell>
               <Button
                 size="small"
                 variant="outlined"
@@ -216,13 +225,13 @@ export function buildFuelLogColumns({
               >
                 삭제
               </Button>
-            </Stack>
+            </GridActionCell>
             {deleteBlockReason ? (
               <Typography variant="caption" color="text.secondary">
                 {deleteBlockReason}
               </Typography>
             ) : null}
-          </Stack>
+          </GridStackCell>
         );
       }
     }
@@ -250,13 +259,16 @@ export function buildMaintenanceLogColumns({
             link={params.row.linkedCollectedTransaction}
           />
         ) : (
-          <Chip label="미연결" size="small" variant="outlined" />
+          <GridInlineCell>
+            <Chip label="미연결" size="small" variant="outlined" />
+          </GridInlineCell>
         )
     },
     {
       field: 'actions',
       headerName: '동작',
       flex: 0.8,
+      minWidth: 170,
       sortable: false,
       filterable: false,
       renderCell: (params) => {
@@ -265,8 +277,8 @@ export function buildMaintenanceLogColumns({
         );
 
         return (
-          <Stack spacing={0.5} sx={{ py: 0.5 }}>
-            <Stack direction="row" spacing={1}>
+          <GridStackCell>
+            <GridActionCell>
               <Button
                 size="small"
                 variant="outlined"
@@ -287,13 +299,13 @@ export function buildMaintenanceLogColumns({
               >
                 삭제
               </Button>
-            </Stack>
+            </GridActionCell>
             {deleteBlockReason ? (
               <Typography variant="caption" color="text.secondary">
                 {deleteBlockReason}
               </Typography>
             ) : null}
-          </Stack>
+          </GridStackCell>
         );
       }
     }
@@ -306,7 +318,7 @@ function VehicleLogAccountingLinkView({
   link: VehicleLogCollectedTransactionLink;
 }) {
   return (
-    <Stack spacing={0.5} sx={{ py: 0.5 }}>
+    <GridStackCell>
       <StatusChip label={link.postingStatus} />
       {link.postedJournalEntryId && link.postedJournalEntryNumber ? (
         <Button
@@ -318,7 +330,7 @@ function VehicleLogAccountingLinkView({
           {link.postedJournalEntryNumber}
         </Button>
       ) : null}
-    </Stack>
+    </GridStackCell>
   );
 }
 

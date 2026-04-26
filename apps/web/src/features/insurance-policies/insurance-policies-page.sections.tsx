@@ -1,11 +1,11 @@
 'use client';
 
-import { Button, Chip, Grid, Stack, Typography } from '@mui/material';
+import { Button, Chip, Stack, Typography } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import type { InsurancePolicyItem } from '@personal-erp/contracts';
 import { ConfirmActionDialog } from '@/shared/ui/confirm-action-dialog';
+import { GridActionCell } from '@/shared/ui/data-grid-cell';
 import { FormDrawer } from '@/shared/ui/form-drawer';
-import { appLayout } from '@/shared/ui/layout-metrics';
 import { StatusChip } from '@/shared/ui/status-chip';
 import { formatDate, formatWon } from '@/shared/lib/format';
 import { InsurancePolicyForm } from './insurance-policy-form';
@@ -77,10 +77,11 @@ export function buildInsurancePolicyColumns({
       field: 'actions',
       headerName: '동작',
       flex: 1.5,
+      minWidth: 190,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
-        <Stack direction="row" spacing={1}>
+        <GridActionCell>
           <Button
             size="small"
             variant="outlined"
@@ -99,7 +100,7 @@ export function buildInsurancePolicyColumns({
           >
             삭제
           </Button>
-        </Stack>
+        </GridActionCell>
       )
     }
   ];
@@ -146,63 +147,6 @@ export function InsurancePoliciesToolbar({
         처리합니다.
       </Typography>
     </Stack>
-  );
-}
-
-export function InsuranceSummaryGrid({
-  inactiveCount,
-  linkedCount,
-  totalCount,
-  totalPremium,
-  unlinkedCount
-}: {
-  inactiveCount: number;
-  linkedCount: number;
-  totalCount: number;
-  totalPremium: string;
-  unlinkedCount: number;
-}) {
-  return (
-    <Grid container spacing={appLayout.sectionGap}>
-      <Grid size={{ xs: 12 }}>
-        <Stack
-          spacing={appLayout.cardGap}
-          sx={{
-            p: appLayout.cardPadding,
-            borderRadius: 3,
-            border: '1px solid',
-            borderColor: 'divider',
-            backgroundColor: 'background.paper'
-          }}
-        >
-          <Typography variant="h6">목록 읽는 기준</Typography>
-          <Grid container spacing={appLayout.fieldGap}>
-            <Grid size={{ xs: 12, sm: 4 }}>
-              <InfoItem label="활성 월 보험료" value={totalPremium} />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 4 }}>
-              <InfoItem label="전체 계약" value={`${totalCount}건`} />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 4 }}>
-              <InfoItem label="비활성" value={`${inactiveCount}건`} />
-            </Grid>
-          </Grid>
-          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-            <Chip
-              label={`연결 완료 ${linkedCount}건`}
-              size="small"
-              color="success"
-            />
-            <Chip
-              label={`미연결 ${unlinkedCount}건`}
-              size="small"
-              color={unlinkedCount > 0 ? 'warning' : 'default'}
-              variant="outlined"
-            />
-          </Stack>
-        </Stack>
-      </Grid>
-    </Grid>
   );
 }
 
@@ -274,17 +218,5 @@ export function InsuranceDeleteDialog({
       onClose={onClose}
       onConfirm={onConfirm}
     />
-  );
-}
-function InfoItem({ label, value }: { label: string; value: string }) {
-  return (
-    <Stack spacing={0.35}>
-      <Typography variant="caption" color="text.secondary">
-        {label}
-      </Typography>
-      <Typography variant="body2" fontWeight={600}>
-        {value}
-      </Typography>
-    </Stack>
   );
 }

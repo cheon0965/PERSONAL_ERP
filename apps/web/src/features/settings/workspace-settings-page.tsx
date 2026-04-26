@@ -133,6 +133,7 @@ export function WorkspaceSettingsPage() {
             value: canManage ? '있음' : '없음'
           }
         ]}
+        metadataSingleRow
         primaryActionLabel="설정 저장"
         primaryActionOnClick={() => mutation.mutate(form)}
         primaryActionDisabled={

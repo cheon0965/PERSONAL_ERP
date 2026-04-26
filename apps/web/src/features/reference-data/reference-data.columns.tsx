@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Chip, Stack, Typography } from '@mui/material';
+import { Button, Chip, Typography } from '@mui/material';
 import type {
   AccountSubjectItem,
   CategoryItem,
@@ -9,6 +9,7 @@ import type {
 } from '@personal-erp/contracts';
 import type { GridColDef } from '@mui/x-data-grid';
 import { formatWon } from '@/shared/lib/format';
+import { GridActionCell, GridInlineCell } from '@/shared/ui/data-grid-cell';
 import {
   readCategoryKindLabel,
   readFundingAccountBootstrapStatusColor,
@@ -56,12 +57,14 @@ export function buildFundingAccountColumns(input: {
       headerName: '상태',
       flex: 0.7,
       renderCell: (params) => (
-        <Chip
-          label={readFundingAccountStatusLabel(params.row.status)}
-          size="small"
-          color={readFundingAccountStatusColor(params.row.status)}
-          variant={params.row.status === 'ACTIVE' ? 'filled' : 'outlined'}
-        />
+        <GridInlineCell>
+          <Chip
+            label={readFundingAccountStatusLabel(params.row.status)}
+            size="small"
+            color={readFundingAccountStatusColor(params.row.status)}
+            variant={params.row.status === 'ACTIVE' ? 'filled' : 'outlined'}
+          />
+        </GridInlineCell>
       )
     },
     {
@@ -69,18 +72,20 @@ export function buildFundingAccountColumns(input: {
       headerName: '기초 업로드',
       flex: 0.9,
       renderCell: (params) => (
-        <Chip
-          label={readFundingAccountBootstrapStatusLabel(
-            params.row.bootstrapStatus
-          )}
-          size="small"
-          color={readFundingAccountBootstrapStatusColor(
-            params.row.bootstrapStatus
-          )}
-          variant={
-            params.row.bootstrapStatus === 'PENDING' ? 'filled' : 'outlined'
-          }
-        />
+        <GridInlineCell>
+          <Chip
+            label={readFundingAccountBootstrapStatusLabel(
+              params.row.bootstrapStatus
+            )}
+            size="small"
+            color={readFundingAccountBootstrapStatusColor(
+              params.row.bootstrapStatus
+            )}
+            variant={
+              params.row.bootstrapStatus === 'PENDING' ? 'filled' : 'outlined'
+            }
+          />
+        </GridInlineCell>
       )
     },
     {
@@ -93,6 +98,7 @@ export function buildFundingAccountColumns(input: {
       field: 'actions',
       headerName: '관리',
       flex: 2.1,
+      minWidth: 420,
       sortable: false,
       filterable: false,
       renderCell: (params) => {
@@ -106,7 +112,7 @@ export function buildFundingAccountColumns(input: {
 
         if (params.row.status === 'CLOSED') {
           return (
-            <Stack direction="row" spacing={1} alignItems="center">
+            <GridActionCell>
               <Typography variant="caption" color="text.secondary">
                 종료 계정은 읽기 전용
               </Typography>
@@ -119,12 +125,12 @@ export function buildFundingAccountColumns(input: {
               >
                 삭제
               </Button>
-            </Stack>
+            </GridActionCell>
           );
         }
 
         return (
-          <Stack direction="row" spacing={1}>
+          <GridActionCell>
             <Button
               size="small"
               onClick={() => {
@@ -176,7 +182,7 @@ export function buildFundingAccountColumns(input: {
             >
               삭제
             </Button>
-          </Stack>
+          </GridActionCell>
         );
       }
     }
@@ -201,23 +207,26 @@ export function buildCategoryColumns(input: {
       headerName: '상태',
       flex: 0.7,
       renderCell: (params) => (
-        <Chip
-          label={params.row.isActive ? '활성' : '비활성'}
-          size="small"
-          color={params.row.isActive ? 'success' : 'default'}
-          variant={params.row.isActive ? 'filled' : 'outlined'}
-        />
+        <GridInlineCell>
+          <Chip
+            label={params.row.isActive ? '활성' : '비활성'}
+            size="small"
+            color={params.row.isActive ? 'success' : 'default'}
+            variant={params.row.isActive ? 'filled' : 'outlined'}
+          />
+        </GridInlineCell>
       )
     },
     {
       field: 'actions',
       headerName: '관리',
       flex: 1.3,
+      minWidth: 220,
       sortable: false,
       filterable: false,
       renderCell: (params) =>
         input.canManageReferenceData ? (
-          <Stack direction="row" spacing={1}>
+          <GridActionCell>
             <Button
               size="small"
               onClick={() => {
@@ -235,7 +244,7 @@ export function buildCategoryColumns(input: {
             >
               {params.row.isActive ? '비활성화' : '재활성화'}
             </Button>
-          </Stack>
+          </GridActionCell>
         ) : (
           <Typography variant="caption" color="text.secondary">
             소유자/관리자 전용

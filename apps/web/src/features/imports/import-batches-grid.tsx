@@ -2,19 +2,24 @@
 
 import * as React from 'react';
 import { Chip, Stack, Typography } from '@mui/material';
-import type { ImportBatchItem } from '@personal-erp/contracts';
+import type {
+  AccountingPeriodItem,
+  ImportBatchItem
+} from '@personal-erp/contracts';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { buildImportBatchColumns } from './imports.columns';
 import { readImportBatchParseStatusLabel } from './imports.shared';
 
 export function ImportBatchesGrid({
   batches,
+  currentPeriod,
   selectedBatchId,
   onSelectBatch,
   helperText = '선택한 배치 기준으로 업로드 행 작업대로 바로 이동합니다.',
   actionLabel = '작업대 열기'
 }: {
   batches: ImportBatchItem[];
+  currentPeriod: AccountingPeriodItem | null;
   selectedBatchId: string | null;
   onSelectBatch: (batch: ImportBatchItem) => void;
   helperText?: string;
@@ -86,6 +91,7 @@ export function ImportBatchesGrid({
       }
       rows={batches}
       columns={buildImportBatchColumns({
+        currentPeriod,
         selectedBatchId,
         onSelectBatch,
         actionLabel

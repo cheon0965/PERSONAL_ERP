@@ -3,7 +3,7 @@
 import type {} from '@mui/x-data-grid/themeAugmentation';
 import { koKR as dataGridKoKR } from '@mui/x-data-grid/locales';
 import { koKR as materialKoKR } from '@mui/material/locale';
-import { createTheme } from '@mui/material/styles';
+import { alpha, createTheme } from '@mui/material/styles';
 import { brandTokens } from './tokens';
 
 export const appTheme = createTheme(
@@ -16,19 +16,35 @@ export const appTheme = createTheme(
       mode: 'light',
       primary: {
         main: brandTokens.palette.primary,
-        dark: brandTokens.palette.primaryDark
+        dark: brandTokens.palette.primaryDark,
+        light: brandTokens.palette.primaryBright,
+        contrastText: '#ffffff'
       },
       secondary: {
-        main: brandTokens.palette.secondary
+        main: brandTokens.palette.secondary,
+        dark: brandTokens.palette.secondaryDark,
+        light: brandTokens.palette.secondarySoft,
+        contrastText: brandTokens.palette.primaryDark
+      },
+      info: {
+        main: brandTokens.palette.info,
+        light: brandTokens.palette.infoSoft,
+        contrastText: '#ffffff'
       },
       success: {
-        main: brandTokens.palette.success
+        main: brandTokens.palette.success,
+        light: brandTokens.palette.successSoft,
+        contrastText: '#ffffff'
       },
       warning: {
-        main: brandTokens.palette.warning
+        main: brandTokens.palette.warning,
+        light: brandTokens.palette.warningSoft,
+        contrastText: brandTokens.palette.primaryDark
       },
       error: {
-        main: brandTokens.palette.error
+        main: brandTokens.palette.error,
+        light: brandTokens.palette.errorSoft,
+        contrastText: '#ffffff'
       },
       background: {
         default: brandTokens.palette.background,
@@ -63,7 +79,8 @@ export const appTheme = createTheme(
       MuiCssBaseline: {
         styleOverrides: {
           body: {
-            backgroundColor: brandTokens.palette.background
+            backgroundColor: brandTokens.palette.background,
+            color: brandTokens.palette.text
           }
         }
       },
@@ -72,14 +89,17 @@ export const appTheme = createTheme(
           root: {
             borderRadius: brandTokens.radius.lg,
             boxShadow: brandTokens.shadow.card,
-            border: `1px solid ${brandTokens.palette.border}`
+            border: `1px solid ${alpha(brandTokens.palette.primary, 0.1)}`,
+            background: brandTokens.gradient.card,
+            backgroundImage: brandTokens.gradient.card
           }
         }
       },
       MuiPaper: {
         styleOverrides: {
           root: {
-            borderRadius: brandTokens.radius.lg
+            borderRadius: brandTokens.radius.lg,
+            backgroundImage: 'none'
           }
         }
       },
@@ -89,15 +109,235 @@ export const appTheme = createTheme(
         },
         styleOverrides: {
           root: {
-            borderRadius: 14,
-            minHeight: 42
+            borderRadius: 999,
+            minHeight: 42,
+            fontWeight: 800,
+            letterSpacing: '-0.01em',
+            transition:
+              'background 180ms ease, background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms ease',
+            '&:hover': {
+              transform: 'translateY(-1px)'
+            },
+            '&.MuiButton-sizeSmall': {
+              minHeight: 34,
+              paddingInline: 14
+            },
+            '&.Mui-disabled': {
+              opacity: 0.56
+            },
+            '&.Mui-focusVisible': {
+              boxShadow: brandTokens.shadow.focus
+            }
+          },
+          containedPrimary: {
+            background: brandTokens.gradient.brand,
+            boxShadow: brandTokens.shadow.button,
+            '&:hover': {
+              background: brandTokens.gradient.brandHover,
+              boxShadow: '0 14px 30px rgba(11, 92, 255, 0.26)'
+            }
+          },
+          containedSecondary: {
+            background: `linear-gradient(135deg, ${brandTokens.palette.secondary} 0%, ${brandTokens.palette.secondaryDark} 100%)`,
+            color: brandTokens.palette.primaryDark,
+            boxShadow: '0 12px 24px rgba(52, 199, 184, 0.24)',
+            '&:hover': {
+              background: `linear-gradient(135deg, ${brandTokens.palette.secondary} 0%, ${brandTokens.palette.primaryBright} 100%)`,
+              boxShadow: '0 14px 30px rgba(52, 199, 184, 0.28)'
+            }
+          },
+          containedSuccess: {
+            background: `linear-gradient(135deg, ${brandTokens.palette.success} 0%, ${brandTokens.palette.secondaryDark} 100%)`,
+            boxShadow: '0 12px 24px rgba(15, 159, 117, 0.2)'
+          },
+          containedWarning: {
+            background: `linear-gradient(135deg, #f4b23e 0%, ${brandTokens.palette.warning} 100%)`,
+            color: brandTokens.palette.primaryDark,
+            boxShadow: '0 12px 24px rgba(226, 138, 11, 0.18)'
+          },
+          containedError: {
+            background: `linear-gradient(135deg, #f05b78 0%, ${brandTokens.palette.error} 100%)`,
+            boxShadow: '0 12px 24px rgba(223, 63, 95, 0.2)'
+          },
+          outlinedPrimary: {
+            borderColor: alpha(brandTokens.palette.primaryBright, 0.34),
+            color: brandTokens.palette.primary,
+            backgroundColor: alpha(brandTokens.palette.primaryBright, 0.04),
+            '&:hover': {
+              borderColor: brandTokens.palette.primaryBright,
+              backgroundColor: alpha(brandTokens.palette.primaryBright, 0.1)
+            }
+          },
+          outlinedSecondary: {
+            borderColor: alpha(brandTokens.palette.secondary, 0.5),
+            color: brandTokens.palette.secondaryDark,
+            backgroundColor: alpha(brandTokens.palette.secondary, 0.06),
+            '&:hover': {
+              borderColor: brandTokens.palette.secondaryDark,
+              backgroundColor: alpha(brandTokens.palette.secondary, 0.14)
+            }
+          },
+          outlinedSuccess: {
+            borderColor: alpha(brandTokens.palette.success, 0.42),
+            color: brandTokens.palette.success,
+            backgroundColor: alpha(brandTokens.palette.success, 0.06),
+            '&:hover': {
+              borderColor: brandTokens.palette.success,
+              backgroundColor: alpha(brandTokens.palette.success, 0.12)
+            }
+          },
+          outlinedWarning: {
+            borderColor: alpha(brandTokens.palette.warning, 0.44),
+            color: brandTokens.palette.warning,
+            backgroundColor: alpha(brandTokens.palette.warning, 0.08),
+            '&:hover': {
+              borderColor: brandTokens.palette.warning,
+              backgroundColor: alpha(brandTokens.palette.warning, 0.14)
+            }
+          },
+          outlinedError: {
+            borderColor: alpha(brandTokens.palette.error, 0.42),
+            color: brandTokens.palette.error,
+            backgroundColor: alpha(brandTokens.palette.error, 0.06),
+            '&:hover': {
+              borderColor: brandTokens.palette.error,
+              backgroundColor: alpha(brandTokens.palette.error, 0.12)
+            }
+          },
+          textPrimary: {
+            color: brandTokens.palette.primary,
+            backgroundColor: alpha(brandTokens.palette.primaryBright, 0.05),
+            '&:hover': {
+              backgroundColor: alpha(brandTokens.palette.primaryBright, 0.08)
+            }
+          },
+          textWarning: {
+            color: brandTokens.palette.warning,
+            backgroundColor: alpha(brandTokens.palette.warning, 0.07),
+            '&:hover': {
+              backgroundColor: alpha(brandTokens.palette.warning, 0.1)
+            }
+          },
+          textError: {
+            color: brandTokens.palette.error,
+            backgroundColor: alpha(brandTokens.palette.error, 0.07),
+            '&:hover': {
+              backgroundColor: alpha(brandTokens.palette.error, 0.1)
+            }
+          },
+          textSuccess: {
+            color: brandTokens.palette.success,
+            backgroundColor: alpha(brandTokens.palette.success, 0.07),
+            '&:hover': {
+              backgroundColor: alpha(brandTokens.palette.success, 0.1)
+            }
           }
         }
       },
       MuiChip: {
         styleOverrides: {
           root: {
-            borderRadius: 10
+            borderRadius: 999,
+            fontWeight: 800,
+            letterSpacing: '-0.01em',
+            '&.MuiChip-filled': {
+              boxShadow: '0 8px 18px rgba(6, 34, 111, 0.08)'
+            },
+            '&.MuiChip-colorPrimary': {
+              backgroundColor: alpha(brandTokens.palette.primaryBright, 0.12),
+              borderColor: alpha(brandTokens.palette.primaryBright, 0.28),
+              color: brandTokens.palette.primary
+            },
+            '&.MuiChip-filled.MuiChip-colorPrimary': {
+              background: brandTokens.gradient.brand,
+              color: '#ffffff'
+            },
+            '&.MuiChip-colorSecondary': {
+              backgroundColor: alpha(brandTokens.palette.secondary, 0.14),
+              borderColor: alpha(brandTokens.palette.secondary, 0.34),
+              color: brandTokens.palette.secondaryDark
+            },
+            '&.MuiChip-filled.MuiChip-colorSecondary': {
+              backgroundColor: brandTokens.palette.secondary,
+              color: brandTokens.palette.primaryDark
+            },
+            '&.MuiChip-colorSuccess': {
+              backgroundColor: alpha(brandTokens.palette.success, 0.12),
+              borderColor: alpha(brandTokens.palette.success, 0.34),
+              color: brandTokens.palette.success
+            },
+            '&.MuiChip-filled.MuiChip-colorSuccess': {
+              backgroundColor: brandTokens.palette.success,
+              color: '#ffffff'
+            },
+            '&.MuiChip-colorWarning': {
+              backgroundColor: alpha(brandTokens.palette.warning, 0.14),
+              borderColor: alpha(brandTokens.palette.warning, 0.34),
+              color: '#9a5b00'
+            },
+            '&.MuiChip-filled.MuiChip-colorWarning': {
+              backgroundColor: brandTokens.palette.warning,
+              color: brandTokens.palette.primaryDark
+            },
+            '&.MuiChip-colorError': {
+              backgroundColor: alpha(brandTokens.palette.error, 0.12),
+              borderColor: alpha(brandTokens.palette.error, 0.34),
+              color: brandTokens.palette.error
+            },
+            '&.MuiChip-filled.MuiChip-colorError': {
+              backgroundColor: brandTokens.palette.error,
+              color: '#ffffff'
+            },
+            '&.MuiChip-colorInfo': {
+              backgroundColor: alpha(brandTokens.palette.info, 0.12),
+              borderColor: alpha(brandTokens.palette.info, 0.32),
+              color: brandTokens.palette.info
+            },
+            '&.MuiChip-filled.MuiChip-colorInfo': {
+              backgroundColor: brandTokens.palette.info,
+              color: '#ffffff'
+            }
+          },
+          label: {
+            paddingInline: 10
+          }
+        }
+      },
+      MuiAlert: {
+        styleOverrides: {
+          root: {
+            borderRadius: 16,
+            fontWeight: 600
+          },
+          outlinedInfo: {
+            borderColor: alpha(brandTokens.palette.info, 0.28),
+            backgroundColor: alpha(brandTokens.palette.info, 0.06)
+          },
+          outlinedSuccess: {
+            borderColor: alpha(brandTokens.palette.success, 0.3),
+            backgroundColor: alpha(brandTokens.palette.success, 0.07)
+          },
+          outlinedWarning: {
+            borderColor: alpha(brandTokens.palette.warning, 0.32),
+            backgroundColor: alpha(brandTokens.palette.warning, 0.08)
+          },
+          outlinedError: {
+            borderColor: alpha(brandTokens.palette.error, 0.3),
+            backgroundColor: alpha(brandTokens.palette.error, 0.07)
+          }
+        }
+      },
+      MuiIconButton: {
+        styleOverrides: {
+          root: {
+            transition:
+              'background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease',
+            '&:hover': {
+              transform: 'translateY(-1px)'
+            },
+            '&.Mui-focusVisible': {
+              boxShadow: brandTokens.shadow.focus
+            }
           }
         }
       },
@@ -115,18 +355,57 @@ export const appTheme = createTheme(
         styleOverrides: {
           root: {
             borderRadius: 14,
-            backgroundColor: '#fff'
+            backgroundColor: brandTokens.palette.surface,
+            '&:hover .MuiOutlinedInput-notchedOutline': {
+              borderColor: alpha(brandTokens.palette.primaryBright, 0.48)
+            },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: brandTokens.palette.primaryBright,
+              boxShadow: brandTokens.shadow.focus
+            }
           }
         }
       },
       MuiDataGrid: {
         styleOverrides: {
           root: {
-            border: 'none'
-          },
-          columnHeaders: {
-            backgroundColor: brandTokens.palette.surfaceSoft,
-            fontWeight: 700
+            border: 'none',
+            color: brandTokens.palette.text,
+            '--DataGrid-rowBorderColor': alpha(
+              brandTokens.palette.primary,
+              0.08
+            ),
+            '& .MuiDataGrid-columnHeaders': {
+              background:
+                'linear-gradient(180deg, rgba(240,246,255,0.98), rgba(233,247,250,0.98))',
+              borderRadius: 14,
+              border: `1px solid ${alpha(brandTokens.palette.primaryBright, 0.12)}`
+            },
+            '& .MuiDataGrid-columnHeaderTitle': {
+              fontWeight: 800,
+              color: brandTokens.palette.primaryDark
+            },
+            '& .MuiDataGrid-row': {
+              borderRadius: 12,
+              transition: 'background-color 140ms ease'
+            },
+            '& .MuiDataGrid-row:hover': {
+              backgroundColor: alpha(brandTokens.palette.primaryBright, 0.05)
+            },
+            '& .MuiDataGrid-cell': {
+              borderColor: alpha(brandTokens.palette.primary, 0.08)
+            },
+            '& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus': {
+              outline: 'none'
+            },
+            '& .MuiDataGrid-cell:focus-within, & .MuiDataGrid-columnHeader:focus-within':
+              {
+                outline: `2px solid ${alpha(brandTokens.palette.secondary, 0.38)}`,
+                outlineOffset: -2
+              },
+            '& .MuiDataGrid-footerContainer': {
+              borderColor: alpha(brandTokens.palette.primary, 0.08)
+            }
           }
         }
       }

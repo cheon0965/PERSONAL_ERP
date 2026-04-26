@@ -11,7 +11,6 @@ import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
 import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
 import PersonAddAltRoundedIcon from '@mui/icons-material/PersonAddAltRounded';
 import ReceiptLongRoundedIcon from '@mui/icons-material/ReceiptLongRounded';
-import RouteRoundedIcon from '@mui/icons-material/RouteRounded';
 import SettingsSuggestRoundedIcon from '@mui/icons-material/SettingsSuggestRounded';
 import UploadFileRoundedIcon from '@mui/icons-material/UploadFileRounded';
 import {
@@ -27,6 +26,8 @@ import {
 import { alpha } from '@mui/material/styles';
 import { useRouter } from 'next/navigation';
 import { useAuthSession } from '@/shared/auth/auth-provider';
+import { BrandLogo } from '@/shared/brand/brand-logo';
+import { brandTokens } from '@/shared/theme/tokens';
 import { appLayout } from '@/shared/ui/layout-metrics';
 
 const featureCards = [
@@ -35,42 +36,42 @@ const featureCards = [
     description:
       '현재 운영 월의 준비 상태, 최근 흐름, 처리할 예외를 한 화면에서 확인합니다.',
     icon: DashboardRoundedIcon,
-    color: '#2563eb'
+    color: brandTokens.palette.primary
   },
   {
     title: '수집 거래',
     description:
       '수기 입력, 업로드, 반복 규칙에서 들어온 거래를 검토하고 전표 준비 상태로 정리합니다.',
     icon: ReceiptLongRoundedIcon,
-    color: '#0f766e'
+    color: brandTokens.palette.secondaryDark
   },
   {
     title: '전표 확정',
     description:
       '준비된 수집 거래를 공식 전표로 확정해 회계 기준 데이터와 운영 기록을 분리합니다.',
     icon: AssessmentRoundedIcon,
-    color: '#7c3aed'
+    color: brandTokens.palette.info
   },
   {
     title: '업로드 배치',
     description:
       '은행·카드 명세 행을 검토하고 필요한 행만 수집 거래로 승격합니다.',
     icon: UploadFileRoundedIcon,
-    color: '#d97706'
+    color: brandTokens.palette.warning
   },
   {
     title: '월 운영과 마감',
     description:
       '운영 월 시작, 닫기, 재개방 흐름을 기준으로 데이터 입력 범위를 안정적으로 관리합니다.',
     icon: CalendarMonthRoundedIcon,
-    color: '#15803d'
+    color: brandTokens.palette.secondary
   },
   {
     title: '기준 데이터',
     description:
       '자금수단, 카테고리, 거래 유형을 먼저 맞춰 이후 거래·전표 흐름을 흔들리지 않게 합니다.',
     icon: SettingsSuggestRoundedIcon,
-    color: '#be123c'
+    color: brandTokens.palette.primaryDark
   }
 ];
 
@@ -122,6 +123,17 @@ const previewRows = [
   }
 ];
 
+const marketingBorderColor = alpha(brandTokens.palette.primary, 0.08);
+const marketingBorderStrong = alpha(brandTokens.palette.primary, 0.1);
+const marketingGlassBackground = alpha(brandTokens.palette.surface, 0.92);
+const marketingOverlayBackground = {
+  xs: alpha(brandTokens.palette.background, 0.88),
+  md: alpha(brandTokens.palette.background, 0.48)
+} as const;
+const marketingReadableMutedText = '#34456c';
+const marketingReadableSubtleText = '#42557d';
+const marketingStrengthBackground = `linear-gradient(160deg, ${brandTokens.palette.primaryDark} 0%, ${brandTokens.palette.primary} 58%, ${brandTokens.palette.secondaryDark} 100%)`;
+
 export function PublicHomePage() {
   const router = useRouter();
   const { status } = useAuthSession();
@@ -137,7 +149,13 @@ export function PublicHomePage() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#f6f8fb', color: 'text.primary' }}>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        bgcolor: brandTokens.palette.background,
+        color: 'text.primary'
+      }}
+    >
       <LandingHeader />
       <Box component="main">
         <HeroSection />
@@ -157,7 +175,7 @@ function PublicHomeLoading() {
       alignItems="center"
       justifyContent="center"
       spacing={2}
-      sx={{ bgcolor: '#f6f8fb' }}
+      sx={{ bgcolor: brandTokens.palette.background }}
     >
       <CircularProgress size={28} />
       <Typography variant="body2" color="text.secondary">
@@ -176,8 +194,8 @@ function LandingHeader() {
         top: 0,
         zIndex: 20,
         borderBottom: '1px solid',
-        borderColor: alpha('#0f172a', 0.08),
-        bgcolor: alpha('#ffffff', 0.92),
+        borderColor: marketingBorderColor,
+        bgcolor: marketingGlassBackground,
         backdropFilter: 'blur(16px)'
       }}
     >
@@ -189,25 +207,17 @@ function LandingHeader() {
           spacing={2}
           sx={{ minHeight: 68 }}
         >
-          <Stack direction="row" alignItems="center" spacing={1.25}>
-            <Box
-              sx={{
-                width: 36,
-                height: 36,
-                borderRadius: '8px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'common.white',
-                bgcolor: '#0f172a'
-              }}
-            >
-              <RouteRoundedIcon fontSize="small" />
-            </Box>
-            <Typography variant="h6" sx={{ fontWeight: 800, letterSpacing: 0 }}>
-              PERSONAL ERP
-            </Typography>
-          </Stack>
+          <Box
+            component={Link}
+            href="/"
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              textDecoration: 'none'
+            }}
+          >
+            <BrandLogo priority width="clamp(156px, 18vw, 190px)" />
+          </Box>
 
           <Stack
             direction="row"
@@ -269,7 +279,7 @@ function HeroSection() {
         display: 'flex',
         alignItems: 'center',
         borderBottom: '1px solid',
-        borderColor: alpha('#0f172a', 0.08)
+        borderColor: marketingBorderColor
       }}
     >
       <HeroOperationsScene />
@@ -278,10 +288,7 @@ function HeroSection() {
         sx={{
           position: 'absolute',
           inset: 0,
-          bgcolor: {
-            xs: alpha('#f6f8fb', 0.86),
-            md: alpha('#f6f8fb', 0.46)
-          }
+          bgcolor: marketingOverlayBackground
         }}
       />
 
@@ -303,24 +310,17 @@ function HeroSection() {
             <Chip
               label="수집 거래부터 전표까지"
               size="small"
-              sx={{ bgcolor: '#ecfdf5', color: '#166534' }}
+              sx={{
+                bgcolor: brandTokens.palette.secondarySoft,
+                color: brandTokens.palette.secondaryDark
+              }}
             />
           </Stack>
 
           <Stack spacing={1.75}>
-            <Typography
-              component="h1"
-              variant="h2"
-              sx={{
-                fontWeight: 900,
-                fontSize: { xs: '2.45rem', md: '4.5rem' },
-                lineHeight: 1,
-                letterSpacing: 0,
-                color: '#0f172a'
-              }}
-            >
-              PERSONAL ERP
-            </Typography>
+            <Box component="h1" sx={{ m: 0, lineHeight: 0 }}>
+              <BrandLogo priority width="clamp(280px, 46vw, 620px)" />
+            </Box>
             <Typography
               variant="h5"
               sx={{
@@ -329,7 +329,7 @@ function HeroSection() {
                 fontSize: { xs: '1.22rem', md: '1.75rem' },
                 lineHeight: 1.35,
                 letterSpacing: 0,
-                color: '#1f2937'
+                color: brandTokens.palette.text
               }}
             >
               소규모 사업자의 월 운영, 수집 거래, 전표, 마감을 한 흐름으로
@@ -337,8 +337,11 @@ function HeroSection() {
             </Typography>
             <Typography
               variant="body1"
-              color="text.secondary"
-              sx={{ maxWidth: 600, lineHeight: 1.8 }}
+              sx={{
+                maxWidth: 600,
+                color: marketingReadableMutedText,
+                lineHeight: 1.8
+              }}
             >
               흩어진 거래 후보를 모으고, 기준 데이터를 점검하고, 공식 전표와 월
               마감까지 이어지는 운영 포털입니다. 지금 필요한 업무만 빠르게
@@ -363,7 +366,7 @@ function HeroSection() {
               variant="outlined"
               size="large"
               startIcon={<LoginRoundedIcon />}
-              sx={{ px: 3, bgcolor: alpha('#ffffff', 0.72) }}
+              sx={{ px: 3, bgcolor: alpha(brandTokens.palette.surface, 0.78) }}
             >
               기존 계정 로그인
             </Button>
@@ -381,14 +384,21 @@ function HeroSection() {
                     p: { xs: 1.15, sm: 1.5 },
                     borderRadius: '8px',
                     border: '1px solid',
-                    borderColor: alpha('#0f172a', 0.08),
-                    bgcolor: alpha('#ffffff', 0.72)
+                    borderColor: marketingBorderColor,
+                    bgcolor: alpha(brandTokens.palette.surface, 0.78)
                   }}
                 >
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography
+                    variant="caption"
+                    sx={{ color: marketingReadableSubtleText }}
+                  >
                     {label}
                   </Typography>
-                  <Typography variant="body2" fontWeight={800}>
+                  <Typography
+                    variant="body2"
+                    sx={{ color: brandTokens.palette.primaryDark }}
+                    fontWeight={800}
+                  >
                     {value}
                   </Typography>
                 </Box>
@@ -425,9 +435,9 @@ function HeroOperationsScene() {
           sx={{
             borderRadius: '8px',
             border: '1px solid',
-            borderColor: alpha('#0f172a', 0.1),
-            bgcolor: alpha('#ffffff', 0.94),
-            boxShadow: '0 24px 70px rgba(15, 23, 42, 0.12)',
+            borderColor: marketingBorderStrong,
+            bgcolor: alpha(brandTokens.palette.surface, 0.94),
+            boxShadow: '0 24px 70px rgba(6, 23, 79, 0.12)',
             overflow: 'hidden'
           }}
         >
@@ -439,12 +449,16 @@ function HeroOperationsScene() {
               px: 2,
               py: 1.5,
               borderBottom: '1px solid',
-              borderColor: alpha('#0f172a', 0.08),
-              bgcolor: '#ffffff'
+              borderColor: marketingBorderColor,
+              bgcolor: brandTokens.palette.surface
             }}
           >
             <Stack direction="row" spacing={0.75}>
-              {['#ef4444', '#f59e0b', '#10b981'].map((color) => (
+              {[
+                brandTokens.palette.error,
+                brandTokens.palette.warning,
+                brandTokens.palette.secondaryDark
+              ].map((color) => (
                 <Box
                   key={color}
                   sx={{
@@ -466,9 +480,9 @@ function HeroOperationsScene() {
               size={{ xs: 4 }}
               sx={{
                 p: 2,
-                bgcolor: '#f8fafc',
+                bgcolor: brandTokens.palette.surfaceSoft,
                 borderRight: '1px solid',
-                borderColor: alpha('#0f172a', 0.08),
+                borderColor: marketingBorderColor,
                 minHeight: 420
               }}
             >
@@ -483,8 +497,14 @@ function HeroOperationsScene() {
                       sx={{
                         p: 1,
                         borderRadius: '8px',
-                        bgcolor: index === 1 ? '#dbeafe' : 'transparent',
-                        color: index === 1 ? '#1d4ed8' : '#475569'
+                        bgcolor:
+                          index === 1
+                            ? alpha(brandTokens.palette.secondary, 0.16)
+                            : 'transparent',
+                        color:
+                          index === 1
+                            ? brandTokens.palette.primary
+                            : brandTokens.palette.textMuted
                       }}
                     >
                       <Box
@@ -492,7 +512,10 @@ function HeroOperationsScene() {
                           width: 8,
                           height: 8,
                           borderRadius: '50%',
-                          bgcolor: index === 1 ? '#2563eb' : '#cbd5e1'
+                          bgcolor:
+                            index === 1
+                              ? brandTokens.palette.primary
+                              : brandTokens.palette.border
                         }}
                       />
                       <Typography variant="caption" fontWeight={800}>
@@ -525,9 +548,24 @@ function HeroOperationsScene() {
 
                 <Grid container spacing={1.25}>
                   {[
-                    ['이번 달 거래', '128건', '#dbeafe', '#1d4ed8'],
-                    ['업로드 대기', '14행', '#fef3c7', '#b45309'],
-                    ['확정 전표', '92건', '#dcfce7', '#15803d']
+                    [
+                      '이번 달 거래',
+                      '128건',
+                      brandTokens.palette.primarySoft,
+                      brandTokens.palette.primary
+                    ],
+                    [
+                      '업로드 대기',
+                      '14행',
+                      alpha(brandTokens.palette.warning, 0.16),
+                      brandTokens.palette.warning
+                    ],
+                    [
+                      '확정 전표',
+                      '92건',
+                      brandTokens.palette.secondarySoft,
+                      brandTokens.palette.secondaryDark
+                    ]
                   ].map(([label, value, bgColor, textColor]) => (
                     <Grid key={label} size={{ xs: 4 }}>
                       <Box
@@ -559,8 +597,8 @@ function HeroOperationsScene() {
                         p: 1.25,
                         borderRadius: '8px',
                         border: '1px solid',
-                        borderColor: alpha('#0f172a', 0.08),
-                        bgcolor: '#ffffff'
+                        borderColor: marketingBorderColor,
+                        bgcolor: brandTokens.palette.surface
                       }}
                     >
                       <Stack direction="row" spacing={1} alignItems="center">
@@ -572,8 +610,8 @@ function HeroOperationsScene() {
                             display: 'inline-flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            bgcolor: '#eef2ff',
-                            color: '#4338ca'
+                            bgcolor: alpha(brandTokens.palette.primary, 0.1),
+                            color: brandTokens.palette.primary
                           }}
                         >
                           <ReceiptLongRoundedIcon sx={{ fontSize: 17 }} />
@@ -613,9 +651,9 @@ function WorkflowSection() {
       component="section"
       sx={{
         py: { xs: 6, md: 8 },
-        bgcolor: '#ffffff',
+        bgcolor: brandTokens.palette.surface,
         borderBottom: '1px solid',
-        borderColor: alpha('#0f172a', 0.08)
+        borderColor: marketingBorderColor
       }}
     >
       <Container maxWidth="lg">
@@ -635,8 +673,11 @@ function WorkflowSection() {
                   p: 2,
                   borderRadius: '8px',
                   border: '1px solid',
-                  borderColor: alpha('#0f172a', 0.08),
-                  bgcolor: index % 2 === 0 ? '#f8fafc' : '#f6f8fb'
+                  borderColor: marketingBorderColor,
+                  bgcolor:
+                    index % 2 === 0
+                      ? brandTokens.palette.surfaceSoft
+                      : brandTokens.palette.surfaceMuted
                 }}
               >
                 <Box
@@ -647,7 +688,7 @@ function WorkflowSection() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    bgcolor: '#0f172a',
+                    bgcolor: brandTokens.palette.primary,
                     color: 'common.white',
                     fontWeight: 900
                   }}
@@ -678,7 +719,7 @@ function FeatureSection() {
     <Box
       id="features"
       component="section"
-      sx={{ py: { xs: 6, md: 8 }, bgcolor: '#f6f8fb' }}
+      sx={{ py: { xs: 6, md: 8 }, bgcolor: brandTokens.palette.background }}
     >
       <Container maxWidth="lg">
         <SectionHeading
@@ -700,9 +741,9 @@ function FeatureSection() {
                     p: appLayout.cardPadding,
                     borderRadius: '8px',
                     border: '1px solid',
-                    borderColor: alpha('#0f172a', 0.08),
-                    bgcolor: '#ffffff',
-                    boxShadow: '0 12px 30px rgba(15, 23, 42, 0.06)'
+                    borderColor: marketingBorderColor,
+                    bgcolor: brandTokens.palette.surface,
+                    boxShadow: '0 12px 30px rgba(6, 23, 79, 0.06)'
                   }}
                 >
                   <Box
@@ -748,8 +789,8 @@ function StrengthSection() {
       component="section"
       sx={{
         py: { xs: 6, md: 8 },
-        bgcolor: '#0f172a',
-        color: 'common.white'
+        bgcolor: marketingStrengthBackground,
+        color: brandTokens.palette.primaryDark
       }}
     >
       <Container maxWidth="lg">
@@ -758,7 +799,7 @@ function StrengthSection() {
             <Stack spacing={1.5}>
               <Typography
                 variant="overline"
-                sx={{ color: alpha('#ffffff', 0.68), fontWeight: 800 }}
+                sx={{ color: brandTokens.palette.primary, fontWeight: 800 }}
               >
                 WHY PERSONAL ERP
               </Typography>
@@ -768,14 +809,15 @@ function StrengthSection() {
                   fontWeight: 900,
                   fontSize: { xs: '2rem', md: '2.65rem' },
                   lineHeight: 1.12,
-                  letterSpacing: 0
+                  letterSpacing: 0,
+                  color: brandTokens.palette.primaryDark
                 }}
               >
                 작은 사업자의 실제 운영 흐름에 맞춘 ERP
               </Typography>
               <Typography
                 variant="body1"
-                sx={{ color: alpha('#ffffff', 0.72), lineHeight: 1.8 }}
+                sx={{ color: marketingReadableMutedText, lineHeight: 1.8 }}
               >
                 화면은 가볍게, 데이터 경계는 단단하게 가져갑니다. 거래를
                 입력하는 순간부터 월 마감 이후의 보고와 전망까지 같은 기준으로
@@ -797,16 +839,23 @@ function StrengthSection() {
                       p: 2,
                       borderRadius: '8px',
                       border: '1px solid',
-                      borderColor: alpha('#ffffff', 0.14),
-                      bgcolor: alpha('#ffffff', 0.06)
+                      borderColor: marketingBorderColor,
+                      bgcolor: alpha(brandTokens.palette.surface, 0.84)
                     }}
                   >
                     <CheckCircleRoundedIcon
-                      sx={{ mt: 0.25, color: '#86efac', fontSize: 20 }}
+                      sx={{
+                        mt: 0.25,
+                        color: brandTokens.palette.secondary,
+                        fontSize: 20
+                      }}
                     />
                     <Typography
                       variant="body2"
-                      sx={{ color: alpha('#ffffff', 0.84), lineHeight: 1.65 }}
+                      sx={{
+                        color: brandTokens.palette.primaryDark,
+                        lineHeight: 1.65
+                      }}
                     >
                       {strength}
                     </Typography>
@@ -823,7 +872,10 @@ function StrengthSection() {
 
 function CallToActionSection() {
   return (
-    <Box component="section" sx={{ py: { xs: 6, md: 8 }, bgcolor: '#ffffff' }}>
+    <Box
+      component="section"
+      sx={{ py: { xs: 6, md: 8 }, bgcolor: brandTokens.palette.surface }}
+    >
       <Container maxWidth="lg">
         <Stack
           direction={{ xs: 'column', md: 'row' }}
@@ -834,8 +886,8 @@ function CallToActionSection() {
             p: { xs: 3, md: 4 },
             borderRadius: '8px',
             border: '1px solid',
-            borderColor: alpha('#0f172a', 0.08),
-            bgcolor: '#f8fafc'
+            borderColor: marketingBorderColor,
+            bgcolor: brandTokens.palette.surfaceSoft
           }}
         >
           <Stack spacing={1}>

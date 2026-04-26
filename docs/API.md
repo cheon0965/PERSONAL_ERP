@@ -290,7 +290,8 @@
 - Web `/carry-forwards` -> API `/carry-forwards`
 - Web `/carry-forwards/[periodId]` -> API `GET /carry-forwards?fromPeriodId=<id>`, `POST /carry-forwards/generate`
 - Web `/insurances` -> API `/insurance-policies`
-- Web `/liabilities` -> API `GET /liabilities`, `GET /liabilities/overview`, `POST /liabilities`, `PATCH /liabilities/:id`, `POST /liabilities/:id/archive`, `GET /liabilities/:id/repayments`, `POST /liabilities/:id/repayments`, `PATCH /liabilities/:id/repayments/:repaymentId`, `POST /liabilities/:id/repayments/:repaymentId/generate-plan-item`
+- Web `/liabilities` -> API `GET /liabilities`, `GET /liabilities/overview`, `POST /liabilities`, `PATCH /liabilities/:id`, `POST /liabilities/:id/archive`
+- Web `/liabilities/[agreementId]` -> API `GET /liabilities`, `GET /liabilities/overview`, `GET /liabilities/:id/repayments`, `POST /liabilities/:id/repayments`, `PATCH /liabilities/:id/repayments/:repaymentId`, `POST /liabilities/:id/repayments/:repaymentId/generate-plan-item`
 - Web `/vehicles` -> API `/vehicles`
 - Web `/vehicles/fleet` -> API `GET /vehicles`, `POST /vehicles`, `PATCH /vehicles/:id`
 - Web `/vehicles/fuel` -> API `GET /vehicles/fuel-logs`, `POST /vehicles/:id/fuel-logs`, `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `DELETE /vehicles/:vehicleId/fuel-logs/:fuelLogId`

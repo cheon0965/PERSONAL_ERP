@@ -17,6 +17,7 @@ import type {
 import type { GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
 import { formatWon } from '@/shared/lib/format';
 import { DataTableCard } from '@/shared/ui/data-table-card';
+import { GridActionCell, GridStackCell } from '@/shared/ui/data-grid-cell';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { resolveStatusLabel, StatusChip } from '@/shared/ui/status-chip';
 import {
@@ -177,8 +178,7 @@ export function TransactionsTableSection({
 
           return (
             <Typography variant="body2">
-              {sourceKindLabelMap[String(params.value)] ??
-                String(params.value)}
+              {sourceKindLabelMap[String(params.value)] ?? String(params.value)}
             </Typography>
           );
         }
@@ -199,6 +199,7 @@ export function TransactionsTableSection({
         field: 'actions',
         headerName: '동작',
         flex: 2.4,
+        minWidth: 360,
         sortable: false,
         filterable: false,
         renderCell: (params) => {
@@ -218,8 +219,8 @@ export function TransactionsTableSection({
 
           if (canEdit || canDelete || canConfirm) {
             return (
-              <Stack spacing={0.5} sx={{ py: 0.5 }}>
-                <Stack direction="row" spacing={1}>
+              <GridStackCell>
+                <GridActionCell>
                   {canEdit ? (
                     <Button
                       size="small"
@@ -254,13 +255,13 @@ export function TransactionsTableSection({
                       {isConfirming ? '확정 중...' : '전표 확정'}
                     </Button>
                   ) : null}
-                </Stack>
+                </GridActionCell>
                 {actionHint ? (
                   <Typography variant="caption" color="text.secondary">
                     {actionHint}
                   </Typography>
                 ) : null}
-              </Stack>
+              </GridStackCell>
             );
           }
 

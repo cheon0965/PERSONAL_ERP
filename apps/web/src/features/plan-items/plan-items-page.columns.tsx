@@ -1,8 +1,9 @@
 import Link from 'next/link';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, Typography } from '@mui/material';
 import type { JournalEntryItem, PlanItemItem } from '@personal-erp/contracts';
 import type { GridColDef } from '@mui/x-data-grid';
 import { formatDate, formatWon } from '@/shared/lib/format';
+import { GridInlineCell } from '@/shared/ui/data-grid-cell';
 import { StatusChip } from '@/shared/ui/status-chip';
 import { resolveLatestLinkedJournalEntry } from '@/features/transactions/transactions-page.shared';
 import { resolveCollectedTransactionActionHint } from '@/features/transactions/transaction-workflow';
@@ -66,8 +67,8 @@ export function buildPlanItemColumns({
     {
       field: 'executionLink',
       headerName: '실행 연결',
-      flex: 1.6,
-      minWidth: 280,
+      flex: 2,
+      minWidth: 420,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
@@ -121,13 +122,15 @@ function PlanItemLinkCell({
 
   if (item.postedJournalEntryId) {
     return (
-      <Button
-        size="small"
-        component={Link}
-        href={`/journal-entries/${item.postedJournalEntryId}`}
-      >
-        {item.postedJournalEntryNumber ?? '전표 보기'}
-      </Button>
+      <GridInlineCell>
+        <Button
+          size="small"
+          component={Link}
+          href={`/journal-entries/${item.postedJournalEntryId}`}
+        >
+          {item.postedJournalEntryNumber ?? '전표 보기'}
+        </Button>
+      </GridInlineCell>
     );
   }
 
@@ -138,80 +141,50 @@ function PlanItemLinkCell({
       item.matchedCollectedTransactionStatus === 'READY_TO_POST';
 
     return (
-      <Stack spacing={0.5} sx={{ py: 0.5, width: '100%', minWidth: 0 }}>
-        <Stack
-          direction="row"
-          spacing={1}
-          alignItems="center"
-          sx={{
-            minWidth: 0,
-            '& .MuiButton-root, & .MuiChip-root': { flexShrink: 0 }
-          }}
-        >
-          {item.matchedCollectedTransactionStatus ? (
-            <StatusChip label={item.matchedCollectedTransactionStatus} />
-          ) : null}
-          {linkedJournalEntry ? (
-            <Button
-              size="small"
-              component={Link}
-              href={`/journal-entries/${linkedJournalEntry.id}`}
-              sx={{ whiteSpace: 'nowrap' }}
-            >
-              {linkedJournalEntry.entryNumber}
-            </Button>
-          ) : null}
-        </Stack>
-        <Stack
-          direction="row"
-          spacing={1}
-          alignItems="center"
-          sx={{
-            minWidth: 0,
-            '& .MuiButton-root': { flexShrink: 0, whiteSpace: 'nowrap' }
-          }}
-        >
-          {canConfirm ? (
-            <Button
-              size="small"
-              variant="contained"
-              disabled={isConfirming}
-              onClick={() => {
-                onConfirm(item);
-              }}
-            >
-              {isConfirming ? '확정 중...' : '바로 전표 확정'}
-            </Button>
-          ) : null}
+      <GridInlineCell title={actionHint ?? undefined} sx={{ columnGap: 0.65 }}>
+        {item.matchedCollectedTransactionStatus ? (
+          <StatusChip label={item.matchedCollectedTransactionStatus} />
+        ) : null}
+        {linkedJournalEntry ? (
           <Button
             size="small"
             component={Link}
-            href={`/transactions?transactionId=${item.matchedCollectedTransactionId}`}
+            href={`/journal-entries/${linkedJournalEntry.id}`}
           >
-            {readPlanItemTransactionActionLabel(
-              item.matchedCollectedTransactionStatus
-            )}
+            {linkedJournalEntry.entryNumber}
           </Button>
-        </Stack>
-        {actionHint ? (
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            noWrap
-            title={actionHint}
-            sx={{ maxWidth: '100%' }}
-          >
-            {actionHint}
-          </Typography>
         ) : null}
-      </Stack>
+        {canConfirm ? (
+          <Button
+            size="small"
+            variant="contained"
+            disabled={isConfirming}
+            onClick={() => {
+              onConfirm(item);
+            }}
+          >
+            {isConfirming ? '확정 중...' : '전표 확정'}
+          </Button>
+        ) : null}
+        <Button
+          size="small"
+          component={Link}
+          href={`/transactions?transactionId=${item.matchedCollectedTransactionId}`}
+        >
+          {readPlanItemTransactionActionLabel(
+            item.matchedCollectedTransactionStatus
+          )}
+        </Button>
+      </GridInlineCell>
     );
   }
 
   return (
-    <Typography variant="body2" color="text.secondary">
-      아직 실제 거래 연결 없음
-    </Typography>
+    <GridInlineCell>
+      <Typography variant="body2" color="text.secondary">
+        아직 실제 거래 연결 없음
+      </Typography>
+    </GridInlineCell>
   );
 }
 
