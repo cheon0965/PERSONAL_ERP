@@ -19,9 +19,9 @@ import {
 } from 'class-validator';
 import { moneyWonApiProperty } from '../../../common/money/swagger-money';
 
-export class CreateLiabilityAgreementDto
-  implements CreateLiabilityAgreementRequest
-{
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+export class CreateLiabilityAgreementDto implements CreateLiabilityAgreementRequest {
   @ApiProperty()
   @IsString()
   @MinLength(1)
@@ -45,11 +45,13 @@ export class CreateLiabilityAgreementDto
 
   @ApiProperty()
   @IsDateString()
+  @Matches(DATE_ONLY_PATTERN)
   borrowedAt!: string;
 
   @ApiProperty({ required: false, nullable: true })
   @IsOptional()
   @IsDateString()
+  @Matches(DATE_ONLY_PATTERN)
   maturityDate?: string | null;
 
   @ApiProperty({ required: false, nullable: true })

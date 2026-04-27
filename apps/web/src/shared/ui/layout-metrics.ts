@@ -1,5 +1,5 @@
-// Route-level screens should use these shared spacing values instead of
-// introducing page-specific magic numbers.
+// 라우트 단위 화면은 페이지별 매직 넘버를 새로 두지 말고
+// 이 공통 간격 값을 사용한다.
 export const appLayout = {
   mainPaddingY: { xs: 2.5, md: 3 } as const,
   pageGap: 3,

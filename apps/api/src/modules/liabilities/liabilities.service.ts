@@ -136,6 +136,12 @@ type LiabilityAgreementWriteData = Omit<
   normalizedProductName: string;
 };
 
+/**
+ * 부채 약정, 상환 일정, 계획 항목 연결을 담당하는 서비스입니다.
+ *
+ * 부채는 단순 메모가 아니라 향후 현금 유출과 원금/이자 분개로 이어지는 운영 데이터입니다.
+ * 그래서 약정 기준정보 검증, 상환 일정 합계 검증, 계획 항목 생성, 전표 확정 이후 상태 추적을 한 서비스에서 묶습니다.
+ */
 @Injectable()
 export class LiabilitiesService {
   constructor(
@@ -163,13 +169,19 @@ export class LiabilitiesService {
             })
       },
       include: liabilityAgreementInclude,
-      orderBy: [{ status: 'asc' }, { lenderName: 'asc' }, { productName: 'asc' }]
+      orderBy: [
+        { status: 'asc' },
+        { lenderName: 'asc' },
+        { productName: 'asc' }
+      ]
     });
 
     return records.map(mapLiabilityAgreementToItem);
   }
 
-  async findOverview(user: AuthenticatedUser): Promise<LiabilityOverviewResponse> {
+  async findOverview(
+    user: AuthenticatedUser
+  ): Promise<LiabilityOverviewResponse> {
     const workspace = requireCurrentWorkspace(user);
     const [period, agreements] = await Promise.all([
       this.prisma.accountingPeriod.findFirst({
@@ -208,7 +220,8 @@ export class LiabilitiesService {
       const postedPrincipal = schedules
         .filter((schedule) => schedule.status === 'POSTED')
         .reduce(
-          (total, schedule) => total + fromPrismaMoneyWon(schedule.principalAmount),
+          (total, schedule) =>
+            total + fromPrismaMoneyWon(schedule.principalAmount),
           0
         );
       const remainingPrincipal = Math.max(
@@ -227,7 +240,8 @@ export class LiabilitiesService {
                 schedule.dueDate < period.endDate
             )
             .reduce(
-              (total, schedule) => total + fromPrismaMoneyWon(schedule.totalAmount),
+              (total, schedule) =>
+                total + fromPrismaMoneyWon(schedule.totalAmount),
               0
             )
         : 0;
@@ -238,16 +252,21 @@ export class LiabilitiesService {
         productName: agreement.productName,
         status: agreement.status,
         remainingPrincipalWon: remainingPrincipal,
-        nextDueDate: openSchedules[0]?.dueDate.toISOString().slice(0, 10) ?? null,
+        nextDueDate:
+          openSchedules[0]?.dueDate.toISOString().slice(0, 10) ?? null,
         currentPeriodDueWon: currentPeriodDue,
-        scheduledCount: schedules.filter((schedule) => schedule.status === 'SCHEDULED')
-          .length,
-        plannedCount: schedules.filter((schedule) => schedule.status === 'PLANNED')
-          .length,
-        matchedCount: schedules.filter((schedule) => schedule.status === 'MATCHED')
-          .length,
-        postedCount: schedules.filter((schedule) => schedule.status === 'POSTED')
-          .length
+        scheduledCount: schedules.filter(
+          (schedule) => schedule.status === 'SCHEDULED'
+        ).length,
+        plannedCount: schedules.filter(
+          (schedule) => schedule.status === 'PLANNED'
+        ).length,
+        matchedCount: schedules.filter(
+          (schedule) => schedule.status === 'MATCHED'
+        ).length,
+        postedCount: schedules.filter(
+          (schedule) => schedule.status === 'POSTED'
+        ).length
       };
     });
 
@@ -402,7 +421,9 @@ export class LiabilitiesService {
     );
 
     if (existing.postedJournalEntryId || existing.status === 'POSTED') {
-      throw new ConflictException('이미 전표 확정된 상환 예정은 수정할 수 없습니다.');
+      throw new ConflictException(
+        '이미 전표 확정된 상환 예정은 수정할 수 없습니다.'
+      );
     }
 
     if (existing.linkedPlanItemId) {
@@ -454,9 +475,8 @@ export class LiabilitiesService {
         workspace,
         businessDate
       );
-    const ledgerTransactionType = await this.findExpenseTransactionType(
-      workspace
-    );
+    const ledgerTransactionType =
+      await this.findExpenseTransactionType(workspace);
     const title = `${buildLiabilityAgreementTitle(repayment.agreement)} 상환`;
     const amount = fromPrismaMoneyWon(repayment.totalAmount);
     const categoryId =
@@ -464,6 +484,8 @@ export class LiabilitiesService {
       repayment.agreement.feeExpenseCategoryId ??
       null;
 
+    // 부채 상환 계획 생성은 PlanItem과 수집 거래를 한 번에 만든다.
+    // 이후 수집 거래 확정 단계에서 원금/이자/수수료가 실제 전표 라인으로 분리된다.
     const updatedRepayment = await this.prisma.$transaction(async (tx) => {
       const planItem = await tx.planItem.create({
         data: {
@@ -620,6 +642,8 @@ export class LiabilitiesService {
       throw new BadRequestException('상환일은 1일부터 31일 사이여야 합니다.');
     }
 
+    // 부채 계약의 참조값은 자금수단, 부채 계정과목, 비용 카테고리가 서로 다른 표에 걸쳐 있다.
+    // 입력 정규화 단계에서 모두 한 번에 읽고 검증해 쓰기 이후의 전표 생성 실패를 줄인다.
     const referenceState = await this.readAgreementReferenceState(workspace, {
       defaultFundingAccountId: normalizeRequiredText(
         input.defaultFundingAccountId,
@@ -705,6 +729,8 @@ export class LiabilitiesService {
       feeAmount
     );
 
+    // 상환 일정은 원금 없이 이자/수수료만 있을 수도 있지만, 전체 금액이 0이면
+    // 계획 항목과 수집 거래를 만들 근거가 없으므로 거부한다.
     if (totalAmount <= 0) {
       throw new BadRequestException(
         '상환 예정 총액은 원금, 이자, 수수료 중 하나 이상을 포함해야 합니다.'
@@ -776,6 +802,8 @@ export class LiabilitiesService {
       interestCategory,
       feeCategory
     ] = await Promise.all([
+      // 기본 출금 자금수단과 선택 참조값을 동시에 확인한다.
+      // 부채 계정과목을 지정하지 않은 경우에는 기본 부채 계정과목을 fallback으로 사용한다.
       this.prisma.account.findFirst({
         where: {
           id: input.defaultFundingAccountId,
@@ -844,7 +872,8 @@ export class LiabilitiesService {
 
     return {
       fundingAccountExists: Boolean(fundingAccount),
-      defaultFundingAccountId: fundingAccount?.id ?? input.defaultFundingAccountId,
+      defaultFundingAccountId:
+        fundingAccount?.id ?? input.defaultFundingAccountId,
       liabilityAccountSubject:
         requestedLiabilitySubject ?? defaultLiabilitySubject,
       liabilityAccountSubjectId:
@@ -870,7 +899,8 @@ export class LiabilitiesService {
     }
 
     if (
-      state.liabilityAccountSubject.subjectKind !== AccountSubjectKind.LIABILITY ||
+      state.liabilityAccountSubject.subjectKind !==
+        AccountSubjectKind.LIABILITY ||
       !state.liabilityAccountSubject.isActive
     ) {
       throw new BadRequestException(
@@ -890,7 +920,9 @@ export class LiabilitiesService {
       (state.interestExpenseCategory.kind !== CategoryKind.EXPENSE ||
         !state.interestExpenseCategory.isActive)
     ) {
-      throw new BadRequestException('이자 카테고리는 활성 지출 분류여야 합니다.');
+      throw new BadRequestException(
+        '이자 카테고리는 활성 지출 분류여야 합니다.'
+      );
     }
 
     if (state.requestedFeeExpenseCategoryId && !state.feeExpenseCategory) {
@@ -902,7 +934,9 @@ export class LiabilitiesService {
       (state.feeExpenseCategory.kind !== CategoryKind.EXPENSE ||
         !state.feeExpenseCategory.isActive)
     ) {
-      throw new BadRequestException('수수료 카테고리는 활성 지출 분류여야 합니다.');
+      throw new BadRequestException(
+        '수수료 카테고리는 활성 지출 분류여야 합니다.'
+      );
     }
   }
 
@@ -955,16 +989,27 @@ function normalizeLoanNumberLast4(value?: string | null) {
   }
 
   if (!/^\d{1,4}$/.test(normalized)) {
-    throw new BadRequestException('대출번호는 마지막 4자리 이하 숫자만 입력해 주세요.');
+    throw new BadRequestException(
+      '대출번호는 마지막 4자리 이하 숫자만 입력해 주세요.'
+    );
   }
 
   return normalized;
 }
 
 function parseDateInput(value: string, label: string) {
-  const date = new Date(`${value}T00:00:00.000Z`);
+  const normalized = typeof value === 'string' ? value.trim() : '';
 
-  if (Number.isNaN(date.getTime())) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    throw new BadRequestException(`${label} 형식이 올바르지 않습니다.`);
+  }
+
+  const date = new Date(`${normalized}T00:00:00.000Z`);
+
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.toISOString().slice(0, 10) !== normalized
+  ) {
     throw new BadRequestException(`${label} 형식이 올바르지 않습니다.`);
   }
 

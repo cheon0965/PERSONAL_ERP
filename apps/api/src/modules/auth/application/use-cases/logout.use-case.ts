@@ -31,7 +31,7 @@ export class LogoutUseCase {
         sessionId: session.id
       });
     } catch {
-      // Logout is best-effort. The cookie is still cleared by the controller.
+      // 로그아웃은 best-effort로 처리한다. 쿠키는 컨트롤러에서 계속 정리한다.
     }
   }
 }

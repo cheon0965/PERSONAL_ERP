@@ -20,7 +20,7 @@ async function safeDisconnect(prisma: PrismaService) {
   try {
     await prisma.$disconnect();
   } catch {
-    // Ignore disconnect failures during test cleanup.
+    // 테스트 정리 중 발생한 연결 해제 실패는 무시한다.
   }
 }
 

@@ -66,6 +66,13 @@ function areStringArraysEqual(left: string[], right: string[]) {
   );
 }
 
+/**
+ * 수집 거래 화면의 서버 데이터, 필터, 선택 상태, 전표 확정 액션을 묶는 페이지 훅입니다.
+ *
+ * 이 화면은 수기 입력, 계획 생성, 업로드 승격으로 생긴 거래가 모이는 운영 허브입니다.
+ * 그래서 거래 목록뿐 아니라 현재 운영월, 전표 목록, 기준정보 준비도까지 함께 읽어
+ * "지금 처리할 수 있는 거래"와 "확정 후 갱신해야 할 캐시"를 한곳에서 관리합니다.
+ */
 export function useTransactionsPage() {
   const searchParams = useSearchParams();
   const highlightedTransactionId = searchParams?.get('transactionId') ?? null;
@@ -127,6 +134,7 @@ export function useTransactionsPage() {
         `${createdEntry.entryNumber} 전표를 생성하고 수집 거래를 확정했습니다.`
       );
 
+      // 확정 성공 시 수집 거래와 전표 목록을 함께 갱신해야 같은 화면에서 즉시 POSTED 흐름이 보입니다.
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: collectedTransactionsQueryKey
@@ -148,6 +156,7 @@ export function useTransactionsPage() {
   const bulkConfirmMutation = useMutation({
     mutationFn: bulkConfirmCollectedTransactions,
     onSuccess: async (result) => {
+      // 일괄 확정 후에는 실패 항목까지 재계산되므로 선택 상태를 비워 오래된 체크 상태를 남기지 않습니다.
       setSelectedTransactionIds([]);
       if (result.failedCount > 0) {
         setFeedback({
@@ -158,6 +167,7 @@ export function useTransactionsPage() {
         notifySuccess(`${result.succeededCount}건을 전표로 일괄 확정했습니다.`);
       }
 
+      // 대시보드 요약도 전표 반영 여부에 의존하므로 거래/전표 캐시와 함께 무효화합니다.
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: collectedTransactionsQueryKey
@@ -184,6 +194,7 @@ export function useTransactionsPage() {
       setDeleteTarget(null);
       notifySuccess(`${transaction.title} 수집 거래를 삭제했습니다.`);
 
+      // 삭제 응답을 기다린 뒤 목록 캐시에서 먼저 제거해 데모/오프라인 대체 모드에서도 화면이 즉시 정리됩니다.
       queryClient.setQueryData<CollectedTransactionItem[]>(
         collectedTransactionsQueryKey,
         (current) => removeCollectedTransactionItem(current, transaction.id)
@@ -285,6 +296,7 @@ export function useTransactionsPage() {
   );
   const filteredTransactions = React.useMemo(
     () =>
+      // 최신 진행월 범위와 화면 필터를 함께 적용해 확정 가능한 후보를 유지보수자가 한곳에서 추적할 수 있게 합니다.
       filterTransactions({
         data,
         collectingPeriods,
@@ -329,6 +341,7 @@ export function useTransactionsPage() {
 
   React.useEffect(() => {
     setSelectedTransactionIds((current) => {
+      // 필터 변경이나 상태 변경으로 화면에서 사라진 거래는 일괄 확정 대상에서도 즉시 제외합니다.
       const next = current.filter((transactionId) =>
         visibleTransactions.some(
           (transaction) =>

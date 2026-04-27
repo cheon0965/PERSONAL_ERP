@@ -58,6 +58,8 @@ export class ReopenAccountingPeriodUseCase {
 
     assertAccountingPeriodCanBeReopened(period.status);
 
+    // 차기 이월이나 다음 월 오프닝 스냅샷이 이미 이어져 있으면 재오픈이 다음 달 기준을
+    // 깨뜨릴 수 있다. 먼저 후속 산출물이 없는지 확인해 월별 연결성을 보호한다.
     const { nextYear, nextMonth } = readNextAccountingPeriodBoundary(
       period.year,
       period.month
@@ -106,6 +108,8 @@ export class ReopenAccountingPeriodUseCase {
       orderBy: [{ year: 'desc' }, { month: 'desc' }]
     });
 
+    // 과거 잠금월을 임의로 재오픈하면 최신 진행월 정책이 깨진다.
+    // 따라서 현재 장부에서 가장 마지막 월일 때만 예외적으로 다시 연다.
     if (latestPeriod && latestPeriod.id !== period.id) {
       throw new ConflictException(
         `최근 운영 월 ${formatYearMonth(latestPeriod.year, latestPeriod.month)}이 이미 존재해 ${formatYearMonth(period.year, period.month)}은 재오픈할 수 없습니다. 운영 중에는 하나의 최신 진행월만 열어 둡니다.`
@@ -118,6 +122,8 @@ export class ReopenAccountingPeriodUseCase {
     }
 
     const createdStatusHistory = await this.prisma.$transaction(async (tx) => {
+      // 재오픈은 "마감 이전 상태로 되돌리는" 작업이다. 공식 보고 산출물과
+      // 마감 스냅샷을 먼저 제거한 뒤 기간 상태를 OPEN으로 돌린다.
       await tx.financialStatementSnapshot.deleteMany({
         where: {
           tenantId: workspace.tenantId,

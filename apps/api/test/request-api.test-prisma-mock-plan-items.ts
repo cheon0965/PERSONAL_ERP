@@ -137,11 +137,14 @@ export function createPlanItemsPrismaMock(
       },
       updateMany: async (args: {
         where?: {
-          id?: {
-            in?: string[];
-          };
+          id?:
+            | string
+            | {
+                in?: string[];
+              };
           tenantId?: string;
           ledgerId?: string;
+          status?: PlanItemStatus;
         };
         data: {
           status?: PlanItemStatus;
@@ -150,13 +153,23 @@ export function createPlanItemsPrismaMock(
         let updatedCount = 0;
         state.planItems.forEach((candidate) => {
           const matchesId =
-            !args.where?.id?.in || args.where.id.in.includes(candidate.id);
+            !args.where?.id ||
+            (typeof args.where.id === 'string'
+              ? candidate.id === args.where.id
+              : !args.where.id.in || args.where.id.in.includes(candidate.id));
           const matchesTenant =
             !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
           const matchesLedger =
             !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesStatus =
+            !args.where?.status || candidate.status === args.where.status;
 
-          if (!matchesId || !matchesTenant || !matchesLedger) {
+          if (
+            !matchesId ||
+            !matchesTenant ||
+            !matchesLedger ||
+            !matchesStatus
+          ) {
             return;
           }
 

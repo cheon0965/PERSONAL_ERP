@@ -32,7 +32,7 @@ import { VerifyEmailUseCase } from './application/use-cases/verify-email.use-cas
     AuthAccountSecurityService,
     WorkspaceBootstrapService,
     JwtAuthGuard,
-    // use-cases
+    // 유스케이스
     RegisterUseCase,
     VerifyEmailUseCase,
     ResendVerificationEmailUseCase,

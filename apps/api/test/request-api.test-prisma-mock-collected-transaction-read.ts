@@ -25,6 +25,11 @@ export function createCollectedTransactionReadMethods(
         ledgerId?: string;
         periodId?: string | null;
         fundingAccountId?: string;
+        status?:
+          | CollectedTransactionStatus
+          | {
+              in?: CollectedTransactionStatus[];
+            };
       };
     }) => {
       return state.collectedTransactions.filter((candidate) => {
@@ -38,12 +43,17 @@ export function createCollectedTransactionReadMethods(
         const matchesFundingAccount =
           !args.where?.fundingAccountId ||
           candidate.fundingAccountId === args.where.fundingAccountId;
+        const matchesStatus = matchesCollectedTransactionStatusFilter(
+          candidate.status,
+          args.where?.status
+        );
 
         return (
           matchesTenant &&
           matchesLedger &&
           matchesPeriod &&
-          matchesFundingAccount
+          matchesFundingAccount &&
+          matchesStatus
         );
       }).length;
     },
@@ -906,4 +916,23 @@ export function createCollectedTransactionReadMethods(
       });
     }
   };
+}
+
+function matchesCollectedTransactionStatusFilter(
+  value: CollectedTransactionStatus,
+  filter?:
+    | CollectedTransactionStatus
+    | {
+        in?: CollectedTransactionStatus[];
+      }
+) {
+  if (!filter) {
+    return true;
+  }
+
+  if (typeof filter === 'string') {
+    return value === filter;
+  }
+
+  return !filter.in || filter.in.includes(value);
 }

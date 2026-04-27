@@ -100,6 +100,12 @@ const defaultBulkCollectForm: BulkCollectFormState = {
   typeOptions: buildDefaultBulkCollectTypeOptions()
 };
 
+/**
+ * 업로드 배치 목록, 행 미리보기, 단건/일괄 수집 액션을 묶는 페이지 훅입니다.
+ *
+ * 업로드 화면은 원본 행을 바로 거래로 저장하지 않고, 현재 운영월/자금계좌/카테고리/계획 매칭 결과를 확인한 뒤
+ * 수집 거래로 승격합니다. 이 훅은 그 과정의 선택 상태와 Job polling을 한곳에 모아 화면 컴포넌트가 흐름만 표현하게 합니다.
+ */
 export function useImportsPage(
   initialSelectedBatchId: string | null = null,
   mode: 'list' | 'detail' = 'list'
@@ -163,6 +169,7 @@ export function useImportsPage(
   );
   const selectedBatch = React.useMemo(
     () =>
+      // URL에서 배치가 고정되지 않은 일반 목록 화면은 첫 배치를 기본 선택해 빈 상세 화면을 줄입니다.
       batches.find((candidate) => candidate.id === selectedBatchId) ??
       batches[0] ??
       null,
@@ -174,6 +181,7 @@ export function useImportsPage(
       (selectedBatch?.rows ?? []).map((row) => {
         const parsed = readParsedRowPreview(row);
 
+        // 원본 raw 행은 화면 표에서 바로 읽기 어렵기 때문에 파싱 결과와 현재 월 포함 여부를 함께 붙입니다.
         return {
           ...row,
           occurredOn: parsed?.occurredOn ?? '-',
@@ -246,6 +254,7 @@ export function useImportsPage(
     ],
     queryFn: () => getActiveImportBatchCollectionJob(selectedBatch?.id ?? ''),
     enabled: Boolean(selectedBatch),
+    // 다른 탭에서 시작된 작업도 감지해야 하므로 선택 배치가 있으면 느린 간격으로 활성 작업을 확인합니다.
     refetchInterval: selectedBatch ? 5000 : false
   });
   const trackedBulkCollectJobId =
@@ -263,6 +272,7 @@ export function useImportsPage(
         trackedBulkCollectJobId ?? ''
       ),
     enabled: Boolean(selectedBatch && trackedBulkCollectJobId),
+    // 진행 중 작업은 사용자가 결과를 기다리는 흐름이라 완료될 때까지 짧은 간격으로 추적합니다.
     refetchInterval: bulkCollectPollingEnabled ? 1200 : false
   });
   const bulkCollectJob =
@@ -285,6 +295,7 @@ export function useImportsPage(
       setSelectedBatchId(null);
     }
 
+    // 배치가 삭제되거나 목록이 새로 로드되면 선택값을 목록의 첫 배치로 복구합니다.
     if (!selectedBatch && batches.length > 0 && !hasPinnedSelectedBatch) {
       setSelectedBatchId(batches[0]!.id);
     }
@@ -298,6 +309,7 @@ export function useImportsPage(
 
   React.useEffect(() => {
     setSelectedRowIds((current) =>
+      // 이미 수집되었거나 오류 상태로 바뀐 행은 일괄 수집 선택에서 자동으로 제거합니다.
       current.filter((rowId) =>
         selectedBatchRows.some(
           (candidate) =>
@@ -346,6 +358,7 @@ export function useImportsPage(
     }
     setSelectedRowId(null);
     setSelectedRowIds([]);
+    // 완료된 작업 결과가 화면 전반에 영향을 주므로 배치, 수집 거래, 활성 작업 캐시를 동시에 새로고침합니다.
     void Promise.all([
       queryClient.invalidateQueries({ queryKey: importBatchesQueryKey }),
       queryClient.invalidateQueries({
@@ -719,7 +732,7 @@ export function useImportsPage(
     try {
       await createImportBatchMutation.mutateAsync(uploadForm);
     } catch {
-      // React Query onError already maps the failure into the page feedback area.
+      // React Query의 onError가 이미 실패를 페이지 피드백 영역에 반영한다.
     }
   }
 
@@ -760,7 +773,7 @@ export function useImportsPage(
         request
       });
     } catch {
-      // React Query onError already maps the failure into the page feedback area.
+      // React Query의 onError가 이미 실패를 페이지 피드백 영역에 반영한다.
     }
   }
 
@@ -820,7 +833,7 @@ export function useImportsPage(
         }
       });
     } catch {
-      // React Query onError already maps the failure into the page feedback area.
+      // React Query의 onError가 이미 실패를 페이지 피드백 영역에 반영한다.
     }
   }
 

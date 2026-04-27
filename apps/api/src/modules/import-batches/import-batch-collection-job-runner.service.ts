@@ -17,6 +17,12 @@ import { ImportedRowCollectionService } from './imported-row-collection.service'
 
 const IMPORT_COLLECTION_LOCK_TTL_MS = 15 * 60 * 1000;
 
+/**
+ * 업로드 배치의 여러 행을 백그라운드에서 수집 거래로 승격하는 Job Runner입니다.
+ *
+ * 대량 승격은 HTTP 요청 안에서 모두 처리하면 타임아웃과 부분 실패 처리가 어렵습니다. 그래서 요청은 Job만 만들고,
+ * runner가 행 단위 성공/실패/SKIPPED 상태를 기록해 사용자가 어떤 행을 다시 처리해야 하는지 알 수 있게 합니다.
+ */
 @Injectable()
 export class ImportBatchCollectionJobRunner {
   private readonly logger = new Logger(ImportBatchCollectionJobRunner.name);
@@ -33,6 +39,8 @@ export class ImportBatchCollectionJobRunner {
       return;
     }
 
+    // API 요청은 Job 생성까지만 기다리고, 실제 행 처리는 이벤트 루프 다음 턴에 넘긴다.
+    // 같은 프로세스 안 중복 실행은 runningJobIds로 막고, DB 잠금은 프로세스 간 충돌을 막는다.
     this.runningJobIds.add(jobId);
     setTimeout(() => {
       void this.run(jobId, user).finally(() => {
@@ -81,6 +89,8 @@ export class ImportBatchCollectionJobRunner {
     let failedCount = 0;
 
     try {
+      // 행 단위로 성공/실패를 기록한다. 한 행 실패가 전체 Job을 즉시 중단하지 않도록
+      // 개별 실패는 행 결과로 남기고, 마지막에 SUCCEEDED/PARTIAL/FAILED를 결정한다.
       for (const row of job.rows) {
         if (await this.isJobCancelled(job.id)) {
           await this.finishJob({
@@ -187,6 +197,8 @@ export class ImportBatchCollectionJobRunner {
     user: AuthenticatedUser;
     request: BulkCollectImportedRowsRequest;
   }): Promise<ImportBatchCollectionJobRowStatus> {
+    // 행 하나의 결과를 독립적으로 확정한다.
+    // 실패를 throw로 전파하지 않고 row 상태에 남겨 전체 Job이 부분 성공으로 끝날 수 있게 한다.
     const startedAt = new Date();
     await this.prisma.importBatchCollectionJobRow.update({
       where: {
@@ -216,6 +228,8 @@ export class ImportBatchCollectionJobRunner {
       }
     });
 
+    // runner는 오래 실행될 수 있으므로 각 행 처리 직전에 현재 행 상태를 다시 읽는다.
+    // 이미 다른 경로로 승격된 행은 실패가 아니라 SKIPPED로 남겨 재시도 판단을 쉽게 한다.
     if (!importedRow) {
       await this.markRowFinished({
         rowId: input.rowId,
@@ -317,6 +331,8 @@ export class ImportBatchCollectionJobRunner {
         heartbeatAt
       }
     });
+    // 진행률 갱신과 함께 잠금 만료 시각을 연장한다.
+    // 처리 중인 Job이 느리다는 이유만으로 다른 등록 작업이 끼어드는 것을 막기 위함이다.
     await this.prisma.importBatchCollectionLock.updateMany({
       where: {
         jobId: input.jobId
@@ -358,6 +374,7 @@ export class ImportBatchCollectionJobRunner {
         }
       });
     } else {
+      // 완료 직전에 사용자가 취소했다면 runner가 성공/실패 상태로 덮어쓰지 않게 한다.
       const updated = await this.prisma.importBatchCollectionJob.updateMany({
         where: {
           id: input.jobId,

@@ -4,7 +4,7 @@ import {
   formatPhase1BackboneSummary
 } from './phase1-backbone';
 
-// This script remains as the manual phase-1 backbone repair runner.
+// 이 스크립트는 수동 phase-1 backbone 복구 실행기로 유지한다.
 const prisma = new PrismaClient();
 
 async function main() {

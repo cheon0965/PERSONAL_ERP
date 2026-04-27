@@ -106,6 +106,8 @@ export function resolveConfirmCollectedTransactionJournalLines(input: {
   fundingAccountId: string;
   accountSubjectIds: ConfirmJournalAccountSubjectIds;
 }): ResolveConfirmJournalLinesResult {
+  // 현재 MVP에서 자동 전표화할 수 있는 정책만 여기서 라인을 만든다.
+  // 상대 계정 선택이 필요한 이체/카드대금은 화면에서 별도 보완이 필요하므로 명시적으로 제외한다.
   switch (input.postingPolicyKey) {
     case 'INCOME_BASIC':
       return {

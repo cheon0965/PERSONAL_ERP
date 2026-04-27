@@ -24,8 +24,8 @@ async function main() {
   fs.rmSync(distDir, { recursive: true, force: true });
   process.chdir(appDir);
 
-  // Run a standard production build. Debug-prerender mode is intentionally
-  // disabled to avoid triggering the legacy _error page prerender path.
+  // 표준 프로덕션 빌드를 실행한다. 레거시 _error 페이지 프리렌더 경로를
+  // 트리거하지 않도록 debug-prerender 모드는 의도적으로 끈다.
   await build(appDir, false, false, false);
 }
 

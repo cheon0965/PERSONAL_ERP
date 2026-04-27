@@ -3,7 +3,9 @@ import test from 'node:test';
 import {
   AccountingPeriodStatus,
   AuditActorType,
-  CollectedTransactionStatus
+  CollectedTransactionStatus,
+  LiabilityRepaymentScheduleStatus,
+  PlanItemStatus
 } from '@prisma/client';
 import { createRequestTestContext } from './request-api.test-support';
 
@@ -321,6 +323,188 @@ test('POST /journal-entries/:id/reverse creates a reversal journal entry and mar
           candidate.details.adjustmentJournalEntryId === 'je-2'
       )
     );
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /journal-entries/:id/reverse restores linked liability repayment planning state', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push(
+      {
+        id: 'period-liability-reverse-source',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        year: 2026,
+        month: 3,
+        startDate: new Date('2026-03-01T00:00:00.000Z'),
+        endDate: new Date('2026-04-01T00:00:00.000Z'),
+        status: AccountingPeriodStatus.LOCKED,
+        openedAt: new Date('2026-03-01T00:00:00.000Z'),
+        lockedAt: new Date('2026-03-31T15:00:00.000Z'),
+        createdAt: new Date('2026-03-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-03-31T15:00:00.000Z')
+      },
+      {
+        id: 'period-liability-reverse-open',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        year: 2026,
+        month: 4,
+        startDate: new Date('2026-04-01T00:00:00.000Z'),
+        endDate: new Date('2026-05-01T00:00:00.000Z'),
+        status: AccountingPeriodStatus.OPEN,
+        openedAt: new Date('2026-04-01T00:00:00.000Z'),
+        lockedAt: null,
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-01T00:00:00.000Z')
+      }
+    );
+
+    context.state.planItems.push({
+      id: 'plan-item-liability-reverse-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-liability-reverse-source',
+      recurringRuleId: null,
+      ledgerTransactionTypeId: 'ltt-1-expense',
+      fundingAccountId: 'acc-1',
+      categoryId: 'cat-1',
+      title: 'Loan repayment',
+      plannedAmount: 230_000,
+      plannedDate: new Date('2026-03-15T00:00:00.000Z'),
+      status: PlanItemStatus.CONFIRMED,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-15T08:05:00.000Z')
+    });
+
+    context.state.collectedTransactions.push({
+      id: 'ctx-liability-reverse-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-liability-reverse-source',
+      ledgerTransactionTypeId: 'ltt-1-expense',
+      fundingAccountId: 'acc-1',
+      categoryId: 'cat-1',
+      matchedPlanItemId: 'plan-item-liability-reverse-1',
+      importBatchId: null,
+      importedRowId: null,
+      sourceFingerprint: null,
+      title: 'Loan repayment',
+      occurredOn: new Date('2026-03-15T00:00:00.000Z'),
+      amount: 230_000,
+      status: CollectedTransactionStatus.POSTED,
+      memo: 'Loan repayment',
+      createdAt: new Date('2026-03-15T08:00:00.000Z'),
+      updatedAt: new Date('2026-03-15T08:05:00.000Z')
+    });
+
+    context.state.liabilityRepaymentSchedules.push({
+      id: 'liability-repayment-reverse-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      liabilityAgreementId: 'liability-agreement-reverse-1',
+      dueDate: new Date('2026-03-15T00:00:00.000Z'),
+      principalAmount: 200_000,
+      interestAmount: 25_000,
+      feeAmount: 5_000,
+      totalAmount: 230_000,
+      status: LiabilityRepaymentScheduleStatus.POSTED,
+      linkedPlanItemId: 'plan-item-liability-reverse-1',
+      postedJournalEntryId: 'je-liability-reverse-source-1',
+      memo: null,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-15T08:05:00.000Z')
+    });
+
+    context.state.journalEntries.push({
+      id: 'je-liability-reverse-source-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-liability-reverse-source',
+      entryNumber: '202603-0004',
+      entryDate: new Date('2026-03-15T00:00:00.000Z'),
+      sourceKind: 'COLLECTED_TRANSACTION',
+      sourceCollectedTransactionId: 'ctx-liability-reverse-1',
+      status: 'POSTED',
+      memo: 'Loan repayment',
+      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+      createdByMembershipId: 'membership-1',
+      createdAt: new Date('2026-03-15T08:05:00.000Z'),
+      updatedAt: new Date('2026-03-15T08:05:00.000Z'),
+      lines: [
+        {
+          id: 'jel-liability-reverse-source-1',
+          lineNumber: 1,
+          accountSubjectId: 'as-1-2000',
+          fundingAccountId: null,
+          debitAmount: 200_000,
+          creditAmount: 0,
+          description: 'Loan repayment principal'
+        },
+        {
+          id: 'jel-liability-reverse-source-2',
+          lineNumber: 2,
+          accountSubjectId: 'as-1-5100',
+          fundingAccountId: null,
+          debitAmount: 30_000,
+          creditAmount: 0,
+          description: 'Loan repayment interest/fee'
+        },
+        {
+          id: 'jel-liability-reverse-source-3',
+          lineNumber: 3,
+          accountSubjectId: 'as-1-1010',
+          fundingAccountId: 'acc-1',
+          debitAmount: 0,
+          creditAmount: 230_000,
+          description: 'Loan repayment'
+        }
+      ]
+    });
+
+    const response = await context.request(
+      '/journal-entries/je-liability-reverse-source-1/reverse',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          entryDate: '2026-04-03',
+          reason: 'Reverse the loan repayment entry.'
+        }
+      }
+    );
+
+    assert.equal(response.status, 201);
+    assert.equal(
+      context.state.journalEntries.find(
+        (candidate) => candidate.id === 'je-liability-reverse-source-1'
+      )?.status,
+      'REVERSED'
+    );
+    assert.equal(
+      context.state.collectedTransactions.find(
+        (candidate) => candidate.id === 'ctx-liability-reverse-1'
+      )?.status,
+      CollectedTransactionStatus.CORRECTED
+    );
+    assert.equal(
+      context.state.planItems.find(
+        (candidate) => candidate.id === 'plan-item-liability-reverse-1'
+      )?.status,
+      PlanItemStatus.MATCHED
+    );
+
+    const restoredRepayment = context.state.liabilityRepaymentSchedules.find(
+      (candidate) => candidate.id === 'liability-repayment-reverse-1'
+    );
+    assert.equal(
+      restoredRepayment?.status,
+      LiabilityRepaymentScheduleStatus.MATCHED
+    );
+    assert.equal(restoredRepayment?.postedJournalEntryId, null);
   } finally {
     await context.close();
   }

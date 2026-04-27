@@ -32,6 +32,13 @@ import {
   summarizeClosingSnapshot
 } from './closing-snapshot.policy';
 
+/**
+ * 운영 기간을 LOCKED로 전환하고 공식 마감 스냅샷을 생성하는 월마감 유스케이스입니다.
+ *
+ * 마감 스냅샷은 재무제표와 차기 이월의 기준 데이터가 되므로, 미확정 수집 거래가 없는지 확인하고
+ * 기초 잔액과 POSTED 전표만 집계합니다. 상태를 먼저 CLOSING으로 선점하는 이유는 같은 월을
+ * 두 요청이 동시에 잠그며 서로 다른 스냅샷을 만드는 상황을 막기 위해서입니다.
+ */
 @Injectable()
 export class CloseAccountingPeriodUseCase {
   constructor(
@@ -80,6 +87,8 @@ export class CloseAccountingPeriodUseCase {
 
         assertAccountingPeriodCanBeClosed(currentPeriod.status);
 
+        // 먼저 CLOSING 상태로 선점해 동일 기간을 두 사용자가 동시에 마감하는 상황을 막는다.
+        // 아래 updateMany는 현재 상태까지 조건에 넣어 낙관적 잠금 역할을 한다.
         const claimedPeriod = await tx.accountingPeriod.updateMany({
           where: {
             id: currentPeriod.id,
@@ -127,81 +136,88 @@ export class CloseAccountingPeriodUseCase {
           );
         }
 
-        const [openingBalanceSnapshot, collectedTransactions, journalLines] =
-          await Promise.all([
-            tx.openingBalanceSnapshot.findUnique({
-              where: {
-                effectivePeriodId: currentPeriod.id
-              },
-              include: {
-                lines: {
-                  include: {
-                    accountSubject: {
-                      select: {
-                        id: true,
-                        code: true,
-                        name: true,
-                        subjectKind: true
-                      }
-                    },
-                    fundingAccount: {
-                      select: {
-                        id: true,
-                        name: true
-                      }
+        const [
+          openingBalanceSnapshot,
+          pendingCollectedTransactionCount,
+          journalLines
+        ] = await Promise.all([
+          tx.openingBalanceSnapshot.findUnique({
+            where: {
+              effectivePeriodId: currentPeriod.id
+            },
+            include: {
+              lines: {
+                include: {
+                  accountSubject: {
+                    select: {
+                      id: true,
+                      code: true,
+                      name: true,
+                      subjectKind: true
+                    }
+                  },
+                  fundingAccount: {
+                    select: {
+                      id: true,
+                      name: true
                     }
                   }
                 }
               }
-            }),
-            tx.collectedTransaction.findMany({
-              where: {
-                tenantId: workspace.tenantId,
-                ledgerId: workspace.ledgerId
+            }
+          }),
+          tx.collectedTransaction.count({
+            where: {
+              tenantId: workspace.tenantId,
+              ledgerId: workspace.ledgerId,
+              periodId: currentPeriod.id,
+              status: {
+                in: [
+                  CollectedTransactionStatus.COLLECTED,
+                  CollectedTransactionStatus.REVIEWED,
+                  CollectedTransactionStatus.READY_TO_POST
+                ]
               }
-            }),
-            tx.journalLine.findMany({
-              where: {
-                journalEntry: {
-                  tenantId: workspace.tenantId,
-                  ledgerId: workspace.ledgerId,
-                  periodId: currentPeriod.id,
-                  status: JournalEntryStatus.POSTED
+            }
+          }),
+          tx.journalLine.findMany({
+            where: {
+              journalEntry: {
+                tenantId: workspace.tenantId,
+                ledgerId: workspace.ledgerId,
+                periodId: currentPeriod.id,
+                status: JournalEntryStatus.POSTED
+              }
+            },
+            include: {
+              accountSubject: {
+                select: {
+                  id: true,
+                  code: true,
+                  name: true,
+                  subjectKind: true
                 }
               },
-              include: {
-                accountSubject: {
-                  select: {
-                    id: true,
-                    code: true,
-                    name: true,
-                    subjectKind: true
-                  }
-                },
-                fundingAccount: {
-                  select: {
-                    id: true,
-                    name: true
-                  }
+              fundingAccount: {
+                select: {
+                  id: true,
+                  name: true
                 }
               }
-            })
-          ]);
+            }
+          })
+        ]);
 
-        const pendingCollectedTransactionCount = collectedTransactions.filter(
-          (candidate) =>
-            candidate.periodId === currentPeriod.id &&
-            (candidate.status === CollectedTransactionStatus.COLLECTED ||
-              candidate.status === CollectedTransactionStatus.REVIEWED ||
-              candidate.status === CollectedTransactionStatus.READY_TO_POST)
-        ).length;
-
+        // 미확정 수집 거래가 남아 있으면 공식 스냅샷을 만들 수 없다.
+        // 마감 스냅샷은 POSTED 전표만 기준으로 삼기 때문에 여기서 누락 위험을 차단한다.
         if (pendingCollectedTransactionCount > 0) {
           throw new BadRequestException(
             `미확정 수집 거래 ${pendingCollectedTransactionCount}건이 남아 있어 운영 기간을 잠글 수 없습니다.`
           );
         }
 
+        // 기초 잔액과 확정 전표 라인을 계정과목/자금수단 단위로 합산해
+        // 재무제표와 차기 이월이 공유할 공식 마감 기준을 만든다.
         const closingLineDrafts = aggregateClosingSnapshotLines({
           openingBalanceLines: openingBalanceSnapshot?.lines ?? [],
           journalLines

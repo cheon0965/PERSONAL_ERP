@@ -71,6 +71,13 @@ const LIVE_BALANCE_TRANSACTION_STATUSES = [
   CollectedTransactionStatus.LOCKED
 ] as const;
 
+/**
+ * 자금 계좌의 화면용 실시간 잔액을 계산합니다.
+ *
+ * 공식 장부 잔액은 마감/전표 기준이지만, 운영 화면에서는 아직 전표가 되지 않은 수집 거래와
+ * 업로드 원본의 거래후잔액도 함께 보여줘야 합니다. 그래서 가장 신뢰할 수 있는 anchor를 먼저 고르고,
+ * 그 이후의 POSTED 전표와 미확정 수집 거래 증감만 더해 중복 반영을 피합니다.
+ */
 export async function readWorkspaceFundingAccountLiveBalances(
   client: FundingAccountBalanceReadClient,
   scope: WorkspaceScope,
@@ -203,6 +210,8 @@ export async function readWorkspaceFundingAccountLiveBalances(
   );
   const chosenAnchorByAccountId = new Map<string, FundingBalanceAnchor>();
 
+  // 실시간 잔액은 "가장 믿을 수 있는 기준점"을 먼저 고른 뒤 그 이후의 증감만 더한다.
+  // 기준점은 마감/오프닝 스냅샷 또는 업로드 거래후잔액이며, 저장된 잔액이 있으면 보수적으로 그대로 둔다.
   for (const accountId of accountIds) {
     const storedBalanceWon = storedBalanceByAccountId.get(accountId) ?? 0;
     const snapshotAnchor = snapshotAnchorByAccountId.get(accountId) ?? null;
@@ -227,6 +236,7 @@ export async function readWorkspaceFundingAccountLiveBalances(
 
   const journalDeltaByAccountId = new Map<string, number>();
 
+  // 확정 전표는 공식 잔액 변동이다. 기준점 이전 전표는 이미 스냅샷/거래후잔액에 반영됐다고 보고 제외한다.
   for (const journalEntry of journalEntries) {
     if (journalEntry.status !== 'POSTED') {
       continue;
@@ -272,6 +282,8 @@ export async function readWorkspaceFundingAccountLiveBalances(
 
   const pendingDeltaByAccountId = new Map<string, number>();
 
+  // 아직 전표가 되지 않은 수집 거래도 운영 화면에서는 예상 잔액에 반영한다.
+  // 업로드 행에 signedAmount가 있으면 은행/카드 원본의 부호를 우선 사용한다.
   for (const transaction of collectedTransactions) {
     if (!accountIds.has(transaction.fundingAccountId)) {
       continue;
@@ -374,6 +386,8 @@ async function buildSnapshotAnchorByAccountId(
 ) {
   const anchors = new Map<string, FundingBalanceAnchor>();
 
+  // 가장 최근 스냅샷을 계좌별 기준점으로 삼는다. 모든 계좌의 기준점을 찾으면
+  // 더 오래된 기간은 볼 필요가 없어 반복을 중단한다.
   for (const period of periods) {
     if (period.status === 'LOCKED') {
       const closingSnapshot = await client.closingSnapshot.findUnique({
@@ -522,6 +536,8 @@ function chooseLiveFundingBalanceAnchor(input: {
   snapshotAnchor: FundingBalanceAnchor | null;
   storedBalanceWon: number;
 }) {
+  // 업로드 거래후잔액이 스냅샷보다 최신이면 그 값을 기준점으로 삼는다.
+  // 저장 잔액이 0이 아닌 기존 계좌는 아직 기준점 전환을 보수적으로 적용하지 않는다.
   if (
     input.importedAnchor &&
     (!input.snapshotAnchor ||
@@ -619,6 +635,8 @@ function resolvePendingCollectedTransactionDelta(
   flowKind: LedgerTransactionFlowKind,
   importedMetadata: ImportedRowBalanceMetadata | null
 ) {
+  // 업로드 원본이 제공한 signedAmount는 카드/계좌 방향을 이미 반영한 값이다.
+  // 없을 때만 거래유형 흐름으로 수입은 +, 지출은 -를 계산한다.
   if (importedMetadata?.signedAmount != null) {
     return importedMetadata.signedAmount;
   }

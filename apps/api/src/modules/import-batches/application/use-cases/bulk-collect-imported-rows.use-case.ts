@@ -101,6 +101,8 @@ export class BulkCollectImportedRowsUseCase {
       throw new NotFoundException('선택한 업로드 행 일부를 찾을 수 없습니다.');
     }
 
+    // 사용자가 행을 명시하지 않으면 아직 수집 거래로 연결되지 않은 파싱 완료 행만 대상으로 삼는다.
+    // 명시 선택한 경우에는 선택 자체를 사용자의 의도로 보고 이후 검증에서 실패 사유를 행별로 남긴다.
     const collectableCandidateRows =
       requestedRowIds == null
         ? rows.filter(
@@ -132,6 +134,8 @@ export class BulkCollectImportedRowsUseCase {
         )
       : collectableCandidateRows;
 
+    // 업로드 배치는 과거 여러 달을 한꺼번에 되살리는 도구가 아니다.
+    // 최신 진행월이 열려 있으면 그 월 범위에 들어오는 행만 일괄 등록 대상으로 제한한다.
     if (targetRows.length === 0) {
       throw new BadRequestException(
         latestCollectingPeriod
@@ -145,6 +149,8 @@ export class BulkCollectImportedRowsUseCase {
       now.getTime() + IMPORT_COLLECTION_LOCK_TTL_MS
     );
     const createdJob = await this.prisma.$transaction(async (tx) => {
+      // 오래된 잠금은 정리하고, 살아 있는 잠금이 있으면 새 Job 생성을 막는다.
+      // 이 잠금은 API 프로세스 안의 비동기 runner와 사용자 단건 등록을 동시에 보호한다.
       await tx.importBatchCollectionLock.deleteMany({
         where: {
           tenantId: workspace.tenantId,
@@ -174,6 +180,8 @@ export class BulkCollectImportedRowsUseCase {
         );
       }
 
+      // Job과 대상 행 목록을 먼저 영속화한다. 이후 runner가 실패하더라도
+      // 사용자는 Job 상세에서 어떤 행까지 처리됐는지 확인할 수 있다.
       const job = await tx.importBatchCollectionJob.create({
         data: {
           tenantId: workspace.tenantId,

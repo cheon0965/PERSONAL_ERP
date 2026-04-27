@@ -24,6 +24,8 @@ export class CollectImportedRowUseCase {
     input: CollectImportedRowRequest
   ): Promise<CollectImportedRowResponse> {
     const workspace = requireCurrentWorkspace(user);
+    // 단건 등록도 진행 중인 일괄 등록과 같은 배치/행을 건드릴 수 있으므로
+    // workspace 단위 잠금을 먼저 확인해 중복 승격을 차단한다.
     const activeLock = await this.prisma.importBatchCollectionLock.findFirst({
       where: {
         tenantId: workspace.tenantId,

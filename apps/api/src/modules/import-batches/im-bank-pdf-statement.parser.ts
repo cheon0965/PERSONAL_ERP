@@ -188,7 +188,7 @@ function readPdfStreams(buffer: Buffer): PdfStream[] {
           : rawStream
       });
     } catch {
-      // Ignore broken auxiliary streams and let the caller fail if no text remains.
+      // 깨진 보조 스트림은 무시하고, 남은 텍스트가 없으면 호출자가 실패하도록 둔다.
     }
   }
 

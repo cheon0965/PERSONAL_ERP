@@ -1,9 +1,8 @@
 version: '3.9'
 
-# Local developer-only MySQL bootstrap container.
-# The credentials below are intentionally disposable defaults so `npm run db:up`
-# works out of the box on a single developer machine. Never reuse them for any
-# shared, staging, or production environment.
+# 로컬 개발 전용 MySQL 초기화 컨테이너입니다.
+# 아래 인증 정보는 단일 개발자 PC에서 `npm run db:up`이 바로 동작하도록 둔
+# 폐기 가능한 기본값입니다. 공유, 스테이징, 운영 환경에서는 절대 재사용하지 마세요.
 
 services:
   mysql:

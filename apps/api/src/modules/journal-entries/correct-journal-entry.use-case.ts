@@ -31,6 +31,12 @@ import {
 } from './journal-entry-adjustment.policy';
 import { assertJournalEntryCanBeCorrected } from './journal-entry-transition.policy';
 
+/**
+ * 기존 전표를 덮어쓰지 않고 새 정정 전표로 대체하는 유스케이스입니다.
+ *
+ * 정정은 사용자가 새 분개 라인을 직접 제시하는 흐름이므로, 라인 정규화와 대차 검증을 먼저 끝낸 뒤
+ * 원전표를 SUPERSEDED로 선점합니다. 이렇게 해야 원본 판단, 정정 사유, 새 전표가 모두 감사 가능한 이력으로 남습니다.
+ */
 @Injectable()
 export class CorrectJournalEntryUseCase {
   constructor(
@@ -60,6 +66,8 @@ export class CorrectJournalEntryUseCase {
       throw new BadRequestException('Correction reason is required.');
     }
 
+    // 정정 전표는 사용자가 직접 라인을 입력하므로 먼저 정규화와 대차 검증을 끝낸다.
+    // 이 검증을 통과한 라인만 DB 참조 존재 여부와 원전표 상태 갱신 단계로 보낸다.
     const normalizedLines = normalizeJournalAdjustmentLines(input.lines);
 
     try {
@@ -72,9 +80,11 @@ export class CorrectJournalEntryUseCase {
       await this.accountingPeriodWriteGuard.assertJournalEntryDateAllowed(
         workspaceScope,
         input.entryDate
-      );
+    );
 
     const createdJournalEntry = await this.prisma.$transaction(async (tx) => {
+      // 원전표를 SUPERSEDED로 선점한 뒤 새 POSTED 전표를 만든다.
+      // 원본을 덮어쓰지 않기 때문에 이전 판단과 새 판단을 모두 추적할 수 있다.
       const allocatedEntryNumber =
         await this.accountingPeriodWriteGuard.allocateJournalEntryNumberInTransaction(
           tx,
@@ -101,6 +111,7 @@ export class CorrectJournalEntryUseCase {
         normalizedLines
       );
 
+      // 원전표 상태가 읽은 시점과 달라졌다면 다른 조정이 먼저 들어온 것이므로 재시도를 요구한다.
       const claimedOriginalJournalEntryCount =
         await this.journalEntryAdjustmentStore.updateStatusInWorkspace(
           tx,
@@ -130,6 +141,8 @@ export class CorrectJournalEntryUseCase {
       }
 
       if (originalJournalEntry.sourceCollectedTransaction) {
+        // 수집 거래에서 출발한 전표를 정정하면 원수집거래도 더 이상 확정 원천으로 보지 않는다.
+        // 이후 사용자는 새 수집 거래 또는 정정 전표 이력으로 차이를 추적한다.
         const claimedCollectedTransactionCount =
           await this.journalEntryAdjustmentStore.updateCollectedTransactionStatusInWorkspace(
             tx,

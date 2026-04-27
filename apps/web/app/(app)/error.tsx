@@ -10,7 +10,7 @@ export default function AppError({
   reset: () => void;
 }) {
   React.useEffect(() => {
-    // Optionally log to an error tracking service
+    // 필요하면 오류 추적 서비스로 기록한다.
     console.error('App scope error caught by boundary:', error);
   }, [error]);
 

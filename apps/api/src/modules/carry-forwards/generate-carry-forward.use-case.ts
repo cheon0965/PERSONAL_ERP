@@ -29,6 +29,12 @@ import {
   CancelCarryForwardUseCase
 } from './cancel-carry-forward.use-case';
 
+/**
+ * 잠금 완료된 운영월의 마감 잔액을 다음 운영월의 기초 잔액으로 넘기는 유스케이스입니다.
+ *
+ * 이 흐름은 월마감과 다음 월 오픈을 잇는 회계 체인의 연결부입니다. 사용자가 대상 월을 임의로 고르지
+ * 못하게 하고, 이미 잠겼거나 오프닝 스냅샷이 있는 다음 월은 보호해 과거 기준이 뒤늦게 바뀌지 않도록 합니다.
+ */
 @Injectable()
 export class GenerateCarryForwardUseCase {
   constructor(
@@ -66,12 +72,16 @@ export class GenerateCarryForwardUseCase {
       );
     }
 
+    // 이월 대상 월은 원천 기간의 바로 다음 달로 고정한다.
+    // 사용자가 임의 월을 지정하지 못하게 하여 월별 운영 체인의 순서를 보장한다.
     const {
       year: nextYear,
       month: nextMonth,
       monthLabel
     } = readNextMonth(sourcePeriod.year, sourcePeriod.month);
 
+    // 이월 가능 여부는 원천 마감 스냅샷과 다음 월 상태를 함께 봐야 판단할 수 있다.
+    // 포트에서 한 번에 읽어 정책 판단이 유스케이스 안에 모이도록 한다.
     let generationContext =
       await this.carryForwardGenerationPort.readGenerationContext(
         workspace.tenantId,
@@ -96,6 +106,8 @@ export class GenerateCarryForwardUseCase {
       );
     }
 
+    // replaceExisting은 기존 이월을 먼저 취소한 뒤 새 이월을 만드는 경로다.
+    // 같은 기간에 두 개의 활성 이월 기준이 공존하지 않도록 취소 후 컨텍스트를 다시 읽는다.
     if (existingRecord && input.replaceExisting) {
       await this.cancelCarryForwardUseCase.cancelExistingByFromPeriod(
         user,
@@ -129,6 +141,8 @@ export class GenerateCarryForwardUseCase {
       }
     }
 
+    // 다음 월이 이미 잠겼거나 오프닝 스냅샷을 갖고 있으면 이월 기준을 덮어쓸 수 없다.
+    // 이월은 다음 월 운영 시작 전 기준을 세우는 작업으로만 허용한다.
     if (existingTargetPeriod?.status === AccountingPeriodStatus.LOCKED) {
       throw new ConflictException(
         '이미 잠금된 다음 운영 기간에는 차기 이월을 생성할 수 없습니다.'
@@ -141,6 +155,8 @@ export class GenerateCarryForwardUseCase {
       );
     }
 
+    // 손익 계정은 다음 달 기초 잔액으로 넘어가지 않는다.
+    // 자산/부채/자본 계정만 이월해 다음 월 opening balance snapshot을 구성한다.
     const carryableLines = sourceClosingSnapshot.lines
       .filter((line) => isCarryForwardAccount(line.accountSubject.subjectKind))
       .map((line) => ({
