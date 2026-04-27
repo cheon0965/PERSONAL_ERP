@@ -698,6 +698,46 @@ test('POST /accounting-periods/:id/close blocks locking when unresolved collecte
       createdAt: new Date('2026-03-13T00:00:00.000Z'),
       updatedAt: new Date('2026-03-13T00:00:00.000Z')
     });
+    context.state.collectedTransactions.push({
+      id: 'ctx-close-pending-other-period',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-other',
+      ledgerTransactionTypeId: 'ltt-1-expense',
+      fundingAccountId: 'acc-1',
+      categoryId: 'cat-1',
+      matchedPlanItemId: null,
+      importBatchId: null,
+      importedRowId: null,
+      sourceFingerprint: 'close-pending-other-period',
+      title: 'Pending in another period',
+      occurredOn: new Date('2026-04-01T00:00:00.000Z'),
+      amount: 12_000,
+      status: CollectedTransactionStatus.READY_TO_POST,
+      memo: null,
+      createdAt: new Date('2026-04-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-04-01T00:00:00.000Z')
+    });
+    context.state.collectedTransactions.push({
+      id: 'ctx-close-posted-same-period',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-close-pending-1',
+      ledgerTransactionTypeId: 'ltt-1-expense',
+      fundingAccountId: 'acc-1',
+      categoryId: 'cat-1',
+      matchedPlanItemId: null,
+      importBatchId: null,
+      importedRowId: null,
+      sourceFingerprint: 'close-posted-same-period',
+      title: 'Posted in same period',
+      occurredOn: new Date('2026-03-14T00:00:00.000Z'),
+      amount: 25_000,
+      status: CollectedTransactionStatus.POSTED,
+      memo: null,
+      createdAt: new Date('2026-03-14T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-14T00:00:00.000Z')
+    });
 
     const response = await context.request(
       '/accounting-periods/period-close-pending-1/close',

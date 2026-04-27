@@ -27,6 +27,12 @@ import {
   type CreateConfirmationJournalEntryInput
 } from '../../application/ports/confirm-collected-transaction-store.port';
 
+/**
+ * 수집 거래 확정 포트를 Prisma 트랜잭션 구현으로 연결하는 어댑터입니다.
+ *
+ * 유스케이스는 "확정에 필요한 회계 상태 전이"만 알고, 이 파일은 실제 Prisma include,
+ * Decimal 변환, updateMany 기반 낙관적 잠금, 전표 라인 생성 세부사항을 책임집니다.
+ */
 const confirmationCollectedTransactionInclude = {
   period: {
     select: {
@@ -87,6 +93,7 @@ type PrismaConfirmationRecord = Prisma.CollectedTransactionGetPayload<{
 function mapPrismaToConfirmationCollectedTransaction(
   record: PrismaConfirmationRecord
 ): ConfirmationCollectedTransaction {
+  // 유스케이스는 숫자 원화와 최소 관계 정보만 필요하므로 Prisma Decimal과 깊은 관계 구조를 여기서 평평하게 만든다.
   return {
     id: record.id,
     occurredOn: record.occurredOn,
@@ -152,9 +159,7 @@ function mapPrismaToConfirmationCollectedTransaction(
 }
 
 @Injectable()
-export class PrismaConfirmCollectedTransactionStoreAdapter
-  implements ConfirmCollectedTransactionStorePort
-{
+export class PrismaConfirmCollectedTransactionStoreAdapter implements ConfirmCollectedTransactionStorePort {
   constructor(
     private readonly prisma: PrismaService,
     private readonly accountingPeriodWriteGuard: AccountingPeriodWriteGuardPort
@@ -173,9 +178,7 @@ export class PrismaConfirmCollectedTransactionStoreAdapter
       include: confirmationCollectedTransactionInclude
     });
 
-    return record
-      ? mapPrismaToConfirmationCollectedTransaction(record)
-      : null;
+    return record ? mapPrismaToConfirmationCollectedTransaction(record) : null;
   }
 
   async findActiveAccountSubjects(
@@ -199,6 +202,8 @@ export class PrismaConfirmCollectedTransactionStoreAdapter
   async runInTransaction<T>(
     fn: (ctx: ConfirmTransactionContext) => Promise<T>
   ): Promise<T> {
+    // 전표 번호 할당과 수집 거래 선점이 반드시 같은 트랜잭션에서 일어나도록
+    // 유스케이스에 Prisma TransactionClient 대신 제한된 컨텍스트만 넘긴다.
     return this.prisma.$transaction(async (tx) => {
       const ctx = new PrismaConfirmTransactionContext(
         tx,
@@ -230,9 +235,7 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
       include: confirmationCollectedTransactionInclude
     });
 
-    return record
-      ? mapPrismaToConfirmationCollectedTransaction(record)
-      : null;
+    return record ? mapPrismaToConfirmationCollectedTransaction(record) : null;
   }
 
   async allocateJournalEntryNumber(
@@ -262,6 +265,8 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
     collectedTransactionId: string;
     currentStatus: CollectedTransactionStatus;
   }): Promise<{ count: number }> {
+    // 상태 조건을 포함한 updateMany로 선점한다.
+    // count가 0이면 다른 요청이 먼저 확정/정정/삭제한 것으로 보고 상위에서 충돌 처리한다.
     const result = await this.tx.collectedTransaction.updateMany({
       where: {
         id: input.collectedTransactionId,
@@ -289,6 +294,7 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
       return;
     }
 
+    // 실패 원인을 현재 상태 기준으로 다시 검증해 "이미 처리됨"과 "기간 잠김" 같은 도메인 오류를 유지한다.
     const current = await this.tx.collectedTransaction.findFirst({
       where: {
         id: input.collectedTransactionId,
@@ -426,12 +432,12 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
   async markMatchedLiabilityRepaymentPosted(
     matchedPlanItemId: string | null | undefined,
     journalEntryId: string
-  ): Promise<void> {
+  ): Promise<number> {
     if (!matchedPlanItemId) {
-      return;
+      return 0;
     }
 
-    await this.tx.liabilityRepaymentSchedule.updateMany({
+    const result = await this.tx.liabilityRepaymentSchedule.updateMany({
       where: {
         linkedPlanItemId: matchedPlanItemId,
         postedJournalEntryId: null
@@ -441,6 +447,8 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
         postedJournalEntryId: journalEntryId
       }
     });
+
+    return result.count;
   }
 
   async findReversalTarget(

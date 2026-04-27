@@ -22,6 +22,8 @@ export function buildConfirmationJournalLines(input: {
   collectedTransaction: ConfirmationCollectedTransaction;
   accountSubjectIds: ReturnType<typeof resolveConfirmationAccountSubjectIds>;
 }) {
+  // 부채 상환은 단순 비용 전표가 아니다. 원금은 부채 감소로, 이자/수수료는 비용으로
+  // 나누어야 하므로 일반 posting policy보다 먼저 전용 라인을 만든다.
   if (input.collectedTransaction.matchedLiabilityRepaymentSchedule) {
     return buildLiabilityRepaymentJournalLines(input);
   }
@@ -77,6 +79,8 @@ function buildLiabilityRepaymentJournalLines(input: {
   );
   const lines: ConfirmJournalLineDraft[] = [];
 
+  // 원금, 이자/수수료, 출금 자금수단을 각각 별도 라인으로 쌓는다.
+  // 금액이 0인 구성요소는 라인을 만들지 않아 전표를 불필요하게 복잡하게 하지 않는다.
   if (repayment.principalAmount > 0) {
     lines.push({
       lineNumber: lines.length + 1,

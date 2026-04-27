@@ -1,8 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import type {
-  CollectedTransactionStatus,
-  JournalEntryStatus,
-  Prisma
+import {
+  LiabilityRepaymentScheduleStatus,
+  PlanItemStatus,
+  type CollectedTransactionStatus,
+  type JournalEntryStatus,
+  type Prisma
 } from '@prisma/client';
 import {
   type CreateJournalEntryAdjustmentInput,
@@ -118,6 +120,55 @@ export class PrismaJournalEntryAdjustmentStoreAdapter extends JournalEntryAdjust
     );
 
     return currentCollectedTransaction?.status ?? null;
+  }
+
+  async restoreMatchedPlanningStateAfterReversal(
+    tx: Prisma.TransactionClient,
+    workspace: JournalEntryWorkspaceScope,
+    collectedTransactionId: string,
+    journalEntryId: string
+  ): Promise<void> {
+    const collectedTransaction = await tx.collectedTransaction.findFirst({
+      where: {
+        id: collectedTransactionId,
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId
+      },
+      select: {
+        matchedPlanItemId: true
+      }
+    });
+
+    const matchedPlanItemId = collectedTransaction?.matchedPlanItemId ?? null;
+    if (!matchedPlanItemId) {
+      return;
+    }
+
+    await tx.planItem.updateMany({
+      where: {
+        id: matchedPlanItemId,
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId,
+        status: PlanItemStatus.CONFIRMED
+      },
+      data: {
+        status: PlanItemStatus.MATCHED
+      }
+    });
+
+    await tx.liabilityRepaymentSchedule.updateMany({
+      where: {
+        linkedPlanItemId: matchedPlanItemId,
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId,
+        status: LiabilityRepaymentScheduleStatus.POSTED,
+        postedJournalEntryId: journalEntryId
+      },
+      data: {
+        status: LiabilityRepaymentScheduleStatus.MATCHED,
+        postedJournalEntryId: null
+      }
+    });
   }
 
   async createAdjustmentEntry(

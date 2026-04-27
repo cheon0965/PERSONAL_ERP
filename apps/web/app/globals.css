@@ -1,4 +1,4 @@
-/* Keep the viewport width stable even when pages start or stop scrolling. */
+/* 페이지 스크롤 시작/종료 시에도 viewport 너비를 안정적으로 유지한다. */
 html {
   overflow-y: auto;
   scrollbar-gutter: stable;

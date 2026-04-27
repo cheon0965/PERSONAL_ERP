@@ -26,6 +26,12 @@ import {
 import { mapCollectedTransactionTypeToLedgerTransactionCode } from '../collected-transactions/collected-transaction-type.mapper';
 import { resolveManualCollectedTransactionStatus } from '../collected-transactions/manual-collected-transaction-status.policy';
 
+/**
+ * 차량 기준정보와 주유/정비 로그, 연결 수집 거래 저장을 담당하는 repository입니다.
+ *
+ * 차량 로그는 운영 기록인 동시에 비용 거래의 원천이 될 수 있습니다. 이 파일은 로그 저장과 수집 거래 생성을
+ * 같은 트랜잭션으로 묶고, 이미 전표가 생성된 연결 거래는 차량 화면에서 임의 수정/삭제하지 못하도록 보호합니다.
+ */
 type VehicleWorkspaceScope = {
   tenantId: string;
   ledgerId: string;
@@ -266,6 +272,8 @@ export class VehiclesRepository {
     accountingLink: VehicleLogAccountingLinkWrite | null;
   }) {
     return this.prisma.$transaction(async (tx) => {
+      // 차량 연료 기록과 선택적 수집 거래는 같은 트랜잭션에서 생성한다.
+      // 로그만 저장되고 회계 연동 거래가 빠지는 중간 상태를 남기지 않기 위함이다.
       const linkedCollectedTransactionId = input.accountingLink
         ? await this.createLinkedVehicleExpenseCollectedTransactionInTx(tx, {
             workspace: input.workspace,
@@ -326,6 +334,8 @@ export class VehiclesRepository {
       let linkedCollectedTransactionId =
         existing.linkedCollectedTransactionId ?? null;
 
+      // 기존에 연결된 미확정 수집 거래가 있고 사용자가 회계 연동을 유지하면
+      // 차량 기록 수정 내용을 같은 수집 거래에 동기화한다.
       if (linkedCollectedTransactionId && input.accountingLink) {
         await this.updateLinkedVehicleExpenseCollectedTransactionInTx(tx, {
           workspace: input.workspace,
@@ -634,6 +644,8 @@ export class VehiclesRepository {
       categoryId: input.accountingLink.categoryId
     });
 
+    // 차량 연동 거래는 차량 화면이 소유한 수집 거래다.
+    // 전표 확정 전까지만 차량 로그 변경과 함께 자동 수정/삭제할 수 있다.
     if (input.amountWon <= 0) {
       throw new BadRequestException(
         '회계 연동 거래 금액은 0보다 큰 안전한 정수여야 합니다.'
@@ -694,6 +706,8 @@ export class VehiclesRepository {
       collectedTransactionId: input.collectedTransactionId
     });
 
+    // 이미 전표가 연결된 거래는 차량 화면에서 수정하지 않는다.
+    // 회계 확정 이후의 변경은 전표 반전/정정 경로로 남겨야 감사 추적이 가능하다.
     assertCollectedTransactionCanBeUpdated({
       postingStatus: mapCollectedTransactionPostingStatus(current.status),
       postedJournalEntryId: current.postedJournalEntry?.id ?? null
@@ -756,6 +770,8 @@ export class VehiclesRepository {
   ) {
     const current = await this.findLinkedCollectedTransactionInTx(tx, input);
 
+    // 연결 수집 거래 삭제도 미확정 상태에서만 허용한다.
+    // 확정 이후에는 차량 로그 삭제가 회계 기록 삭제로 이어지지 않게 막는다.
     assertCollectedTransactionCanBeDeleted({
       postingStatus: mapCollectedTransactionPostingStatus(current.status),
       postedJournalEntryId: current.postedJournalEntry?.id ?? null

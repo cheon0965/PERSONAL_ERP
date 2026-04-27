@@ -111,7 +111,7 @@ export function useAccountAvatar(
           normalizedKey
         );
       } catch {
-        // Ignore storage failures and keep the current UI state.
+        // 저장소 오류는 무시하고 현재 UI 상태를 유지한다.
       }
     },
     [userId]

@@ -23,6 +23,12 @@ import {
 import { PlanItemGenerationPort } from './application/ports/plan-item-generation.port';
 import { PlanItemsService } from './plan-items.service';
 
+/**
+ * 반복 규칙과 부채 상환 일정을 최신 진행월의 계획 항목으로 펼치는 유스케이스입니다.
+ *
+ * 계획 항목은 실제 거래가 들어오기 전의 운영 예상치이며, 이후 수집 거래와 매칭되어 전표 확정까지 이어집니다.
+ * 그래서 이 파일은 같은 월 중복 생성 방지, 기본 거래유형 선택, 계획 기반 수집 거래의 초기 상태 결정을 함께 다룹니다.
+ */
 @Injectable()
 export class GeneratePlanItemsUseCase {
   constructor(
@@ -68,6 +74,8 @@ export class GeneratePlanItemsUseCase {
       );
     }
 
+    // 계획 생성은 반복 규칙, 기존 계획, 거래유형, 부채 상환 일정을 한 번에 읽어
+    // 같은 기간 안에서 중복 없이 계획 항목과 연결 수집 거래를 만들 준비를 한다.
     const [
       recurringRules,
       existingItems,
@@ -97,6 +105,8 @@ export class GeneratePlanItemsUseCase {
       )
     ]);
 
+    // 기본 거래유형은 flowKind별 첫 번째 활성 항목을 사용한다.
+    // 반복 규칙이 명시 거래유형을 갖지 않은 경우 카테고리 성격으로 수입/지출 기본값을 찾는다.
     const defaultTypeIdByFlow = new Map<LedgerTransactionFlowKind, string>();
     const flowKindByTransactionTypeId = new Map<
       string,
@@ -121,6 +131,8 @@ export class GeneratePlanItemsUseCase {
         )
     );
 
+    // 반복 규칙은 "규칙 ID + 예정일"을 중복 키로 삼는다.
+    // 같은 달에 생성 버튼을 여러 번 눌러도 같은 예정 거래가 중복 생성되지 않게 한다.
     const createData: Array<{
       tenantId: string;
       ledgerId: string;
@@ -196,6 +208,8 @@ export class GeneratePlanItemsUseCase {
     const liabilityExpenseTypeId = defaultTypeIdByFlow.get(
       LedgerTransactionFlowKind.EXPENSE
     );
+    // 부채 상환 일정은 반복 규칙과 별개의 원천이다.
+    // 상환 확정 시 원금/이자 분개가 필요하므로 계획 단계에서 상환 schedule ID를 함께 남긴다.
     for (const repaymentSchedule of liabilityRepaymentSchedules) {
       if (!liabilityExpenseTypeId) {
         excludedRuleCount += 1;
@@ -270,6 +284,8 @@ function resolveAutoCollectedTransactionStatus(input: {
   flowKind: LedgerTransactionFlowKind;
   categoryId?: string;
 }) {
+  // 전표 확정에 필요한 기준이 이미 충분하면 바로 READY_TO_POST로 보낸다.
+  // 카테고리가 필요한 수입/지출인데 비어 있으면 사용자가 검토할 수 있도록 REVIEWED에 둔다.
   if (
     input.flowKind === LedgerTransactionFlowKind.TRANSFER ||
     input.flowKind === LedgerTransactionFlowKind.OPENING_BALANCE ||

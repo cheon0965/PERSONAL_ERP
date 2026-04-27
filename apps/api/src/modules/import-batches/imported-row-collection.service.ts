@@ -82,6 +82,12 @@ type CollectionPeriodRecord = {
   status: AccountingPeriodStatus;
 };
 
+/**
+ * 업로드 행을 수집 거래로 승격하는 서비스입니다.
+ *
+ * 이 서비스는 단순 저장보다 많은 운영 판단을 담당합니다. 업로드 행 파싱 결과를 기준으로 대상 운영월을 찾거나 만들고,
+ * 계획 항목 매칭, 중복 후보 확인, 신규 계좌 bootstrap 기초 잔액 생성, 수집 거래 생성/흡수를 한 흐름으로 묶습니다.
+ */
 @Injectable()
 export class ImportedRowCollectionService {
   constructor(
@@ -95,6 +101,7 @@ export class ImportedRowCollectionService {
     importedRowId: string,
     input: CollectImportedRowRequest
   ): Promise<CollectImportedRowResponse> {
+    // 단건 승격의 공개 진입점입니다. 권한과 원본 행 존재 여부를 확인한 뒤 실제 저장은 트랜잭션 내부 전용 함수로 넘깁니다.
     const workspace = requireCurrentWorkspace(user);
     const workspaceScope = {
       tenantId: workspace.tenantId,
@@ -135,6 +142,8 @@ export class ImportedRowCollectionService {
     importedRowId: string,
     input: CollectImportedRowRequest
   ): Promise<CollectImportedRowPreview> {
+    // 미리보기는 저장하지 않지만 실제 collect와 같은 평가 함수를 사용한다.
+    // 사용자가 보는 자동분류/중복/계획매칭 결과와 저장 직전 판단이 최대한 같아지게 하기 위해서다.
     const workspace = requireCurrentWorkspace(user);
     const workspaceScope = {
       tenantId: workspace.tenantId,
@@ -192,6 +201,8 @@ export class ImportedRowCollectionService {
         occurredOnIso: input.occurredOnIso,
         fundingAccountId: input.fundingAccountId
       });
+    // preview와 실제 등록이 같은 판정 규칙을 쓰도록 assessment를 트랜잭션 안에서 다시 계산한다.
+    // 이렇게 해야 카테고리 보완, 계획 매칭, 중복 후보 판단이 저장 직전 상태를 기준으로 맞춰진다.
     const assessment = await this.evaluateRowCollection({
       client: input.tx,
       workspace: input.workspace,
@@ -204,6 +215,8 @@ export class ImportedRowCollectionService {
       assessment.potentialDuplicateTransactionCount,
       input.input.confirmPotentialDuplicate
     );
+    // 신규 계좌/카드 bootstrap 업로드처럼 운영월을 자동 생성하는 경우,
+    // 거래후잔액과 거래금액으로 첫 거래 직전 기초 잔액을 함께 만든다.
     await this.createOpeningBalanceFromImportedBalanceIfNeeded({
       tx: input.tx,
       workspace: input.workspace,
@@ -217,6 +230,8 @@ export class ImportedRowCollectionService {
       ? assessment.matchedPlanItem
       : null;
     const matchedPlanItemId = matchedPlanItem?.id ?? null;
+    // 이미 계획 생성 단계에서 만들어 둔 연결 수집 거래가 있으면 새 거래를 만들지 않고
+    // 업로드 행 정보를 흡수한다. 계획 기반 거래와 실제 업로드 거래가 중복되는 것을 막는다.
     const createdCollectedTransaction =
       matchedPlanItem?.existingCollectedTransactionId && matchedPlanItem
         ? await this.collectionRepository.absorbImportedRowIntoCollectedTransactionRecord(
@@ -286,6 +301,8 @@ export class ImportedRowCollectionService {
     input: CollectImportedRowRequest;
     targetPeriod: ResolvedCollectionPeriod;
   }): Promise<RowCollectionAssessment> {
+    // 업로드 행 승격의 핵심 판정 함수입니다.
+    // 여기서 결정한 기간, 거래유형, 카테고리, 계획 매칭, 중복 정보가 미리보기와 실제 저장에 공통으로 쓰입니다.
     const row = await this.collectionRepository.readCollectableImportedRow(
       input.client,
       input.workspace,
@@ -327,6 +344,8 @@ export class ImportedRowCollectionService {
       amount: normalizedRow.amount,
       title: normalizedRow.title
     });
+    // sourceFingerprint는 같은 업로드 원본/행이 다시 들어오는 경우를 잡고,
+    // potentialDuplicate는 수기 입력 또는 다른 배치에서 이미 등록된 유사 거래를 사용자에게 확인시킨다.
     const hasDuplicateSourceFingerprint =
       await this.collectionRepository.hasDuplicateSourceFingerprint(
         input.client,
@@ -484,6 +503,8 @@ export class ImportedRowCollectionService {
         fundingAccountId: input.fundingAccountId
       }));
 
+    // 업로드가 운영월을 자동 생성할 수 있는 경우는 두 가지뿐이다.
+    // 첫 시작월 초기화 또는 마감 직후 신규 계좌/카드 기초 업로드다.
     if (!canCreateInitialSetupPeriod && !canCreateNewFundingAccountPeriod) {
       throw new BadRequestException(
         `${monthLabel} 운영월은 업로드 배치에서 자동으로 추가할 수 없습니다. 운영 중에는 월 운영 화면에서 최신 진행월을 먼저 열고 해당 월 거래만 등록해 주세요.`
@@ -700,6 +721,8 @@ export class ImportedRowCollectionService {
       return false;
     }
 
+    // 신규 자금수단 bootstrap은 "아직 이 계좌/카드가 어떤 회계 흔적도 갖지 않은" 경우에만 허용한다.
+    // 이미 거래, 배치, 전표, 스냅샷이 있으면 업로드로 기초 잔액을 다시 만들면 안 된다.
     const [
       existingTransactions,
       existingImportBatches,

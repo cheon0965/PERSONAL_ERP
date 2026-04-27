@@ -69,6 +69,13 @@ export abstract class JournalEntryAdjustmentStorePort {
     collectedTransactionId: string
   ): Promise<CollectedTransactionStatus | null>;
 
+  abstract restoreMatchedPlanningStateAfterReversal(
+    tx: Prisma.TransactionClient,
+    workspace: JournalEntryWorkspaceScope,
+    collectedTransactionId: string,
+    journalEntryId: string
+  ): Promise<void>;
+
   abstract createAdjustmentEntry(
     tx: Prisma.TransactionClient,
     input: CreateJournalEntryAdjustmentInput

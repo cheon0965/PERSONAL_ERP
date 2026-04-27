@@ -11,7 +11,7 @@ export default function DashboardLoading() {
         bgcolor: 'background.default'
       }}
     >
-      {/* Topbar Skeleton */}
+      {/* 상단바 스켈레톤 */}
       <Box
         sx={{
           height: 60,
@@ -26,7 +26,7 @@ export default function DashboardLoading() {
         <Skeleton variant="circular" width={32} height={32} />
       </Box>
       <Box sx={{ display: 'flex', flexGrow: 1 }}>
-        {/* Sidebar Skeleton */}
+        {/* 사이드바 스켈레톤 */}
         <Box sx={{ width: 240, borderRight: '1px solid #e2e8f0', p: 2 }}>
           <Stack spacing={2}>
             <Skeleton variant="rectangular" height={40} />
@@ -34,7 +34,7 @@ export default function DashboardLoading() {
             <Skeleton variant="rectangular" height={40} />
           </Stack>
         </Box>
-        {/* Main Content Skeleton */}
+        {/* 본문 스켈레톤 */}
         <Box sx={{ flexGrow: 1, p: 3 }}>
           <Stack spacing={3}>
             <Skeleton variant="text" sx={{ fontSize: '2rem', width: 250 }} />

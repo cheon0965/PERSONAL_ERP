@@ -111,8 +111,8 @@ export type CarryForwardRecordItem = {
   toPeriodId: string;
   sourceClosingSnapshotId: string;
   /**
-   * Null by design while carry-forward is an opening-balance snapshot only.
-   * A future journal-posting policy may fill this with a CARRY_FORWARD entry.
+   * 차기 이월이 기초 잔액 스냅샷 전용인 동안에는 의도적으로 null입니다.
+   * 향후 전표 생성 정책이 도입되면 CARRY_FORWARD 전표로 채워질 수 있습니다.
    */
   createdJournalEntryId: string | null;
   createdAt: string;

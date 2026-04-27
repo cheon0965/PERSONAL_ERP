@@ -185,8 +185,8 @@ export async function createRequestTestContext(): Promise<RequestTestContext> {
     const securityEvents: RequestTestContext['securityEvents'] = [];
     const { AppModule } = await import('../src/app.module');
 
-    // The request tests use real controllers, the real global guard, and ValidationPipe.
-    // Prisma and JWT are replaced with an in-memory fixture store so the HTTP wiring stays fast.
+    // 요청 테스트는 실제 컨트롤러, 실제 전역 가드, ValidationPipe를 사용한다.
+    // HTTP 배선 검증을 빠르게 유지하기 위해 Prisma와 JWT는 인메모리 픽스처 저장소로 대체한다.
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule]
     })

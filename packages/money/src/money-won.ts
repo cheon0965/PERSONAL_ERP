@@ -36,6 +36,8 @@ export function parseMoneyWon(
   value: unknown,
   options?: ParseMoneyWonOptions
 ): MoneyWon | null {
+  // 외부 입력은 number와 문자열을 모두 받을 수 있지만, 최종 MoneyWon은 항상
+  // Number.MAX_SAFE_INTEGER 범위 안의 정수로만 통과시킨다.
   const resolvedOptions = {
     ...DEFAULT_PARSE_OPTIONS,
     ...options
@@ -86,6 +88,7 @@ export function assertMoneyWon(
 }
 
 export function addMoneyWon(left: number, right: number): MoneyWon {
+  // 금액 덧셈은 JS number 직접 연산 대신 BigInt를 거쳐 안전 정수 범위 초과를 감지한다.
   return coerceBigintToMoneyWonOrThrow(
     BigInt(asMoneyWon(left)) + BigInt(asMoneyWon(right))
   );
@@ -134,6 +137,8 @@ export function allocateMoneyWon(
     remainderIndex?: number;
   }
 ): MoneyWon[] {
+  // 배분은 원 단위 절사 후 남은 잔차를 한 항목에 몰아 총합이 원금과 정확히 같도록 보정한다.
+  // 세금/수수료 배분처럼 1원 오차가 누적되면 안 되는 곳에서 이 함수를 사용한다.
   if (weights.length === 0) {
     return [];
   }

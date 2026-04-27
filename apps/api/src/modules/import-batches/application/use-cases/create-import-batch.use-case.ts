@@ -36,6 +36,8 @@ export class CreateImportBatchUseCase {
       sourceKind: input.sourceKind,
       content: input.content
     });
+    // 원본 내용의 해시를 보관해 같은 파일/붙여넣기 원본을 나중에 추적할 수 있게 한다.
+    // 실제 중복 판단은 행 단위 fingerprint에서 다시 수행한다.
     const fileHash = createHash('sha256')
       .update(input.content, 'utf8')
       .digest('hex');
@@ -47,6 +49,8 @@ export class CreateImportBatchUseCase {
 
     const created = await this.prisma.$transaction(
       (tx) =>
+        // 배치 헤더와 파싱된 행은 항상 함께 저장되어야 한다.
+        // 헤더만 있고 행이 없는 중간 상태를 막기 위해 write port에 한 번에 위임한다.
         this.importBatchWritePort.createBatchWithRows(tx, {
           workspace: {
             tenantId: workspace.tenantId,

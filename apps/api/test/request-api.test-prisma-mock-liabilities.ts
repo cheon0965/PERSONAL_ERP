@@ -13,12 +13,14 @@ export function createLiabilitiesPrismaMock(
           linkedPlanItemId?: string | { in?: string[] };
           tenantId?: string;
           ledgerId?: string;
+          postedJournalEntryId?: string | null;
           status?:
             | LiabilityRepaymentScheduleStatus
             | { in?: LiabilityRepaymentScheduleStatus[] };
         };
         data: {
           status?: LiabilityRepaymentScheduleStatus;
+          postedJournalEntryId?: string | null;
         };
       }) => {
         let updatedCount = 0;
@@ -32,6 +34,9 @@ export function createLiabilitiesPrismaMock(
             !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
           const matchesLedger =
             !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesPostedJournalEntry =
+            args.where?.postedJournalEntryId === undefined ||
+            candidate.postedJournalEntryId === args.where.postedJournalEntryId;
           const matchesStatus = matchesStatusFilter(
             candidate.status,
             args.where?.status
@@ -41,6 +46,7 @@ export function createLiabilitiesPrismaMock(
             !matchesLinkedPlanItemId ||
             !matchesTenant ||
             !matchesLedger ||
+            !matchesPostedJournalEntry ||
             !matchesStatus
           ) {
             return;
@@ -48,6 +54,11 @@ export function createLiabilitiesPrismaMock(
 
           if (args.data.status) {
             candidate.status = args.data.status;
+          }
+
+          if ('postedJournalEntryId' in args.data) {
+            candidate.postedJournalEntryId =
+              args.data.postedJournalEntryId ?? null;
           }
 
           candidate.updatedAt = new Date();

@@ -5,15 +5,17 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Matches,
   Min
 } from 'class-validator';
 import { moneyWonApiProperty } from '../../../common/money/swagger-money';
 
-export class CreateLiabilityRepaymentScheduleDto
-  implements CreateLiabilityRepaymentScheduleRequest
-{
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+export class CreateLiabilityRepaymentScheduleDto implements CreateLiabilityRepaymentScheduleRequest {
   @ApiProperty()
   @IsDateString()
+  @Matches(DATE_ONLY_PATTERN)
   dueDate!: string;
 
   @ApiProperty(moneyWonApiProperty({ example: 1_000_000, minimum: 0 }))

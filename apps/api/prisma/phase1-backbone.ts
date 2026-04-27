@@ -12,8 +12,8 @@ import {
 } from '@prisma/client';
 import { ensureDefaultWorkspaceNavigation } from '../src/common/navigation/workspace-navigation-defaults';
 
-// This file keeps the phase-1 workspace/ledger backbone bootstrap alive
-// after the legacy Transaction table removal.
+// 이 파일은 레거시 Transaction 테이블 제거 이후에도
+// 1단계 워크스페이스/장부 백본 초기화를 유지한다.
 const DEFAULT_LEDGER_NAME = '기본 장부';
 
 const DEFAULT_ACCOUNT_SUBJECTS = [
