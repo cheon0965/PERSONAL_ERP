@@ -129,7 +129,6 @@ function countCollectedBatchRows(batch: ImportBatchItem) {
 }
 
 export function buildImportedRowsColumns(input: {
-  selectedRowId: string | null;
   onPrepareCollect: (row: ImportedRowTableItem) => void;
 }): GridColDef<ImportedRowTableItem>[] {
   return [
@@ -177,7 +176,6 @@ export function buildImportedRowsColumns(input: {
       renderCell: (params) => (
         <ImportedRowStatusCell
           row={params.row}
-          selectedRowId={input.selectedRowId}
           onPrepare={input.onPrepareCollect}
         />
       )

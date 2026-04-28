@@ -15,7 +15,8 @@ export const sourceKindOptions: Array<{
   { value: 'MANUAL_UPLOAD', label: '직접 붙여넣기' },
   { value: 'BANK_CSV', label: '계좌 CSV' },
   { value: 'CARD_EXCEL', label: '카드 엑셀' },
-  { value: 'IM_BANK_PDF', label: 'IM뱅크 PDF' }
+  { value: 'IM_BANK_PDF', label: 'IM뱅크 PDF' },
+  { value: 'WOORI_BANK_HTML', label: '우리은행 HTML' }
 ];
 
 export type FeedbackState = {

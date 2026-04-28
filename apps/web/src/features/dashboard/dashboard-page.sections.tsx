@@ -52,39 +52,6 @@ export function DashboardSummarySections({
 
   return (
     <>
-      <SectionCard
-        title="운영 기준선"
-        description="헤더에서 월과 기준 상태를 확인한 뒤, 아래 카드와 추이는 이 기준을 따라 읽습니다."
-      >
-        <Grid container spacing={appLayout.fieldGap}>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <DashboardInfoItem
-              label="현재 운영 기간"
-              value={summary.period.monthLabel}
-              description={readPeriodStatusLabel(summary.period.status)}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <DashboardInfoItem
-              label="판단 기준"
-              value={readBasisStatusLabel(summary.basisStatus)}
-              description="운영 중인 숫자인지 마감된 공식 숫자인지 먼저 구분합니다."
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <DashboardInfoItem
-              label="최근 공식 잠금"
-              value={summary.officialComparison?.monthLabel ?? '없음'}
-              description={
-                summary.officialComparison
-                  ? '공식 재무제표와 비교 가능한 최근 잠금 월입니다.'
-                  : '아직 비교 가능한 공식 잠금 기준이 없습니다.'
-              }
-            />
-          </Grid>
-        </Grid>
-      </SectionCard>
-
       {summary.warnings.length > 0 ? (
         <Alert severity="warning" variant="outlined">
           <Stack spacing={0.5}>
@@ -146,7 +113,7 @@ export function DashboardSummarySections({
       >
         <Grid container spacing={appLayout.fieldGap}>
           {summary.highlights.map((highlight) => (
-            <Grid key={highlight.label} size={{ xs: 12, md: 4 }}>
+            <Grid key={highlight.label} size={{ xs: 12, sm: 'grow' }}>
               <Stack
                 spacing={0.75}
                 sx={{
@@ -233,27 +200,6 @@ export function readPeriodStatusLabel(status: string) {
   }
 }
 
-function DashboardInfoItem({
-  label,
-  value,
-  description
-}: {
-  label: string;
-  value: string;
-  description: string;
-}) {
-  return (
-    <Stack spacing={0.5}>
-      <Typography variant="caption" color="text.secondary">
-        {label}
-      </Typography>
-      <Typography variant="subtitle1">{value}</Typography>
-      <Typography variant="body2" color="text.secondary">
-        {description}
-      </Typography>
-    </Stack>
-  );
-}
 
 function readHighlightToneColor(tone: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL') {
   switch (tone) {

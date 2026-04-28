@@ -3,11 +3,15 @@ import type {
   AcceptInvitationRequest,
   AcceptInvitationResponse,
   AuthenticatedWorkspaceListResponse,
+  ForgotPasswordRequest,
+  ForgotPasswordResponse,
   LoginRequest,
   LoginResponse,
   RegisterRequest,
   RegisterResponse,
   ResendVerificationRequest,
+  ResetPasswordRequest,
+  ResetPasswordResponse,
   SwitchWorkspaceRequest,
   SwitchWorkspaceResponse,
   VerifyEmailRequest,
@@ -65,6 +69,24 @@ export async function acceptInvitation(
   input: AcceptInvitationRequest
 ): Promise<AcceptInvitationResponse> {
   return requestAuthJson<AcceptInvitationResponse>('/auth/accept-invitation', {
+    method: 'POST',
+    body: input
+  });
+}
+
+export async function requestPasswordReset(
+  input: ForgotPasswordRequest
+): Promise<ForgotPasswordResponse> {
+  return requestAuthJson<ForgotPasswordResponse>('/auth/forgot-password', {
+    method: 'POST',
+    body: input
+  });
+}
+
+export async function resetPassword(
+  input: ResetPasswordRequest
+): Promise<ResetPasswordResponse> {
+  return requestAuthJson<ResetPasswordResponse>('/auth/reset-password', {
     method: 'POST',
     body: input
   });

@@ -39,6 +39,7 @@ export type CreateImportBatchFromFileRequest = {
   fileName: string;
   fundingAccountId: string;
   file: File;
+  password?: string;
 };
 
 const bulkCollectFallback: BulkCollectImportedRowsResponse = {
@@ -80,6 +81,10 @@ export function createImportBatchFromFile(
   formData.set('sourceKind', input.sourceKind);
   formData.set('fundingAccountId', input.fundingAccountId);
   formData.set('file', input.file, input.fileName);
+
+  if (input.password) {
+    formData.set('password', input.password);
+  }
 
   return postFormData<ImportBatchItem>(
     '/import-batches/files',

@@ -83,7 +83,73 @@ export const mockForecast: ForecastResponse = {
   notes: [
     '전망 수치는 확정 전표와 남은 계획 항목을 함께 읽는 운영 판단용 값입니다.',
     '잠금 전 화면이므로 공식 재무제표와는 반드시 구분해서 해석합니다.'
-  ]
+  ],
+  categoryDrivers: [
+    {
+      categoryName: '급여',
+      confirmedWon: 3_200_000,
+      remainingPlannedWon: 0,
+      flowKind: 'INCOME'
+    },
+    {
+      categoryName: '월세',
+      confirmedWon: 500_000,
+      remainingPlannedWon: 0,
+      flowKind: 'EXPENSE'
+    },
+    {
+      categoryName: '통신비',
+      confirmedWon: 65_000,
+      remainingPlannedWon: 0,
+      flowKind: 'EXPENSE'
+    },
+    {
+      categoryName: '식비',
+      confirmedWon: 400_000,
+      remainingPlannedWon: 240_000,
+      flowKind: 'EXPENSE'
+    },
+    {
+      categoryName: '교통비',
+      confirmedWon: 150_000,
+      remainingPlannedWon: 100_000,
+      flowKind: 'EXPENSE'
+    },
+    {
+      categoryName: '기타',
+      confirmedWon: 350_000,
+      remainingPlannedWon: 200_000,
+      flowKind: 'EXPENSE'
+    }
+  ],
+  periodComparison: {
+    previousMonthLabel: '2026-02',
+    incomeChangeWon: 20_000,
+    expenseChangeWon: -45_000,
+    balanceChangeWon: 350_000,
+    incomeChangePercent: 0.6,
+    expenseChangePercent: -3.0
+  },
+  nextMonthProjection: {
+    monthLabel: '2026-04',
+    isOpen: false,
+    hasPlanItems: false,
+    estimatedIncomeWon: 3_200_000,
+    estimatedExpenseWon: 1_780_000,
+    estimatedFixedCosts: [
+      { label: '급여', amountWon: 3_200_000, source: 'RECURRING_RULE' },
+      { label: '월세', amountWon: 500_000, source: 'RECURRING_RULE' },
+      { label: '통신비', amountWon: 65_000, source: 'RECURRING_RULE' },
+      {
+        label: '삼성화재 자동차보험',
+        amountWon: 85_000,
+        source: 'INSURANCE'
+      },
+      { label: '국민은행 상환', amountWon: 1_130_000, source: 'LIABILITY' }
+    ],
+    projectedBalanceWon: 3_920_000,
+    basisDescription: '반복 규칙 3건, 보험 1건, 부채 상환 1건 기반 예상입니다.'
+  }
 };
 
 export function getForecast(options?: {

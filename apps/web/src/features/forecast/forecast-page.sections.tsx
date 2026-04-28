@@ -8,12 +8,21 @@ import {
   Grid,
   MenuItem,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
   TextField,
   Typography
 } from '@mui/material';
 import { BarChart } from '@mui/x-charts/BarChart';
 import type {
   AccountingPeriodItem,
+  ForecastCategoryDriver,
+  ForecastFixedCostItem,
+  ForecastNextMonthProjection,
+  ForecastPeriodComparison,
   ForecastResponse
 } from '@personal-erp/contracts';
 import { formatWon } from '@/shared/lib/format';
@@ -143,7 +152,15 @@ export function ForecastUnavailableState() {
   );
 }
 
-export function ForecastContent({ forecast }: { forecast: ForecastResponse }) {
+export type ForecastTab = 'summary' | 'detail' | 'next';
+
+export const FORECAST_TABS: readonly { value: ForecastTab; label: string; shortLabel: string }[] = [
+  { value: 'summary', label: '요약', shortLabel: '요약' },
+  { value: 'detail', label: '상세 분석', shortLabel: '상세' },
+  { value: 'next', label: '다음 달 전망', shortLabel: '다음 달' }
+];
+
+export function ForecastContent({ forecast, activeTab }: { forecast: ForecastResponse; activeTab: ForecastTab }) {
   const trend = [...forecast.trend].reverse();
 
   return (
@@ -154,9 +171,25 @@ export function ForecastContent({ forecast }: { forecast: ForecastResponse }) {
         </Alert>
       ))}
 
+      {activeTab === 'summary' ? (
+        <ForecastSummaryTab forecast={forecast} />
+      ) : activeTab === 'detail' ? (
+        <ForecastDetailTab forecast={forecast} />
+      ) : (
+        <ForecastNextTab forecast={forecast} trend={trend} />
+      )}
+    </Stack>
+  );
+}
+
+/* ── 요약 탭 ── */
+
+function ForecastSummaryTab({ forecast }: { forecast: ForecastResponse }) {
+  return (
+    <Stack spacing={appLayout.sectionGap}>
       <SectionCard
         title="전망 핵심 수치"
-        description="먼저 지금 판단에 필요한 핵심 수치만 보고, 아래에서 계산 드라이버와 공식 비교를 이어서 확인합니다."
+        description="지금 판단에 필요한 핵심 수치를 먼저 확인합니다."
       >
         <Stack spacing={appLayout.cardGap}>
           <Grid container spacing={appLayout.fieldGap}>
@@ -203,11 +236,25 @@ export function ForecastContent({ forecast }: { forecast: ForecastResponse }) {
         </Stack>
       </SectionCard>
 
+      {forecast.periodComparison ? (
+        <ForecastPeriodComparisonSection
+          comparison={forecast.periodComparison}
+        />
+      ) : null}
+    </Stack>
+  );
+}
+
+/* ── 상세 분석 탭 ── */
+
+function ForecastDetailTab({ forecast }: { forecast: ForecastResponse }) {
+  return (
+    <Stack spacing={appLayout.sectionGap}>
       <Grid container spacing={appLayout.sectionGap}>
         <Grid size={{ xs: 12, lg: 7 }}>
           <SectionCard
             title="전망 드라이버"
-            description="전망 계산식에 실제로 들어간 확정 값과 남은 계획 값을 먼저 확인합니다."
+            description="전망 계산식에 실제로 들어간 확정 값과 남은 계획 값을 확인합니다."
           >
             <Stack spacing={1.2}>
               <ForecastDriverRow
@@ -311,6 +358,39 @@ export function ForecastContent({ forecast }: { forecast: ForecastResponse }) {
         </Grid>
       </Grid>
 
+      {forecast.categoryDrivers.length > 0 ? (
+        <ForecastCategoryDriversSection drivers={forecast.categoryDrivers} />
+      ) : null}
+    </Stack>
+  );
+}
+
+/* ── 다음 달 전망 탭 ── */
+
+function ForecastNextTab({
+  forecast,
+  trend
+}: {
+  forecast: ForecastResponse;
+  trend: ForecastResponse['trend'];
+}) {
+  return (
+    <Stack spacing={appLayout.sectionGap}>
+      {forecast.nextMonthProjection ? (
+        <ForecastNextMonthSection
+          projection={forecast.nextMonthProjection}
+        />
+      ) : (
+        <SectionCard
+          title="다음 달 전망 없음"
+          description="다음 달 전망 데이터가 아직 없습니다."
+        >
+          <Typography variant="body2" color="text.secondary">
+            현재 월 마감 후 다음 기간이 준비되면 전망이 생성됩니다.
+          </Typography>
+        </SectionCard>
+      )}
+
       <ChartCard
         title="최근 기간 추이"
         description="선택한 기간을 포함한 최근 기간의 수입, 확정 지출, 계획 지출 흐름입니다."
@@ -343,6 +423,295 @@ export function ForecastContent({ forecast }: { forecast: ForecastResponse }) {
     </Stack>
   );
 }
+
+/* ── 전월 대비 변동 ── */
+
+function ForecastPeriodComparisonSection({
+  comparison
+}: {
+  comparison: ForecastPeriodComparison;
+}) {
+  return (
+    <SectionCard
+      title="전월 대비 변동"
+      description={`${comparison.previousMonthLabel} 확정 실적 대비 현재 월의 변동을 보여줍니다.`}
+    >
+      <Grid container spacing={appLayout.fieldGap}>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <ForecastChangeCard
+            label="수입 변동"
+            changeWon={comparison.incomeChangeWon}
+            changePercent={comparison.incomeChangePercent}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <ForecastChangeCard
+            label="지출 변동"
+            changeWon={comparison.expenseChangeWon}
+            changePercent={comparison.expenseChangePercent}
+            invertColor
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <ForecastChangeCard
+            label="잔액 변동"
+            changeWon={comparison.balanceChangeWon}
+            changePercent={null}
+          />
+        </Grid>
+      </Grid>
+    </SectionCard>
+  );
+}
+
+function ForecastChangeCard({
+  label,
+  changeWon,
+  changePercent,
+  invertColor = false
+}: {
+  label: string;
+  changeWon: number;
+  changePercent: number | null;
+  invertColor?: boolean;
+}) {
+  const isPositive = changeWon > 0;
+  const isNegative = changeWon < 0;
+  const displayColor = invertColor
+    ? isPositive
+      ? 'warning.main'
+      : isNegative
+        ? 'success.main'
+        : 'text.secondary'
+    : isPositive
+      ? 'success.main'
+      : isNegative
+        ? 'error.main'
+        : 'text.secondary';
+  const arrow = isPositive ? '▲' : isNegative ? '▼' : '—';
+
+  return (
+    <Stack
+      spacing={0.5}
+      sx={{
+        p: appLayout.cardPadding,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        backgroundColor: 'background.default',
+        height: '100%'
+      }}
+    >
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="h6" sx={{ color: displayColor }}>
+        {arrow} {formatWon(Math.abs(changeWon))}
+      </Typography>
+      {changePercent != null ? (
+        <Typography variant="body2" color="text.secondary">
+          {changePercent > 0 ? '+' : ''}
+          {changePercent}%
+        </Typography>
+      ) : null}
+    </Stack>
+  );
+}
+
+/* ── 카테고리별 드라이버 ── */
+
+function ForecastCategoryDriversSection({
+  drivers
+}: {
+  drivers: ForecastCategoryDriver[];
+}) {
+  const incomeDrivers = drivers.filter((d) => d.flowKind === 'INCOME');
+  const expenseDrivers = drivers.filter((d) => d.flowKind === 'EXPENSE');
+
+  return (
+    <SectionCard
+      title="카테고리별 드라이버"
+      description="수입과 지출을 카테고리별로 나누어 확정 금액과 남은 계획을 확인합니다."
+    >
+      <Grid container spacing={appLayout.fieldGap}>
+        {incomeDrivers.length > 0 ? (
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              수입
+            </Typography>
+            <Stack spacing={0.8}>
+              {incomeDrivers.map((driver) => (
+                <ForecastDriverRow
+                  key={driver.categoryName}
+                  label={driver.categoryName}
+                  value={`확정 ${formatWon(driver.confirmedWon)}${driver.remainingPlannedWon > 0 ? ` + 계획 ${formatWon(driver.remainingPlannedWon)}` : ''}`} /* money-ops-allow */
+                />
+              ))}
+            </Stack>
+          </Grid>
+        ) : null}
+        {expenseDrivers.length > 0 ? (
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              지출
+            </Typography>
+            <Stack spacing={0.8}>
+              {expenseDrivers.map((driver) => (
+                <ForecastDriverRow
+                  key={driver.categoryName}
+                  label={driver.categoryName}
+                  value={`확정 ${formatWon(driver.confirmedWon)}${driver.remainingPlannedWon > 0 ? ` + 계획 ${formatWon(driver.remainingPlannedWon)}` : ''}`} /* money-ops-allow */
+                />
+              ))}
+            </Stack>
+          </Grid>
+        ) : null}
+      </Grid>
+    </SectionCard>
+  );
+}
+
+/* ── 다음 달 전망 ── */
+
+function ForecastNextMonthSection({
+  projection
+}: {
+  projection: ForecastNextMonthProjection;
+}) {
+  return (
+    <SectionCard
+      title={`다음 달 전망 — ${projection.monthLabel}`}
+      description={projection.basisDescription}
+    >
+      <Stack spacing={appLayout.cardGap}>
+        <Grid container spacing={appLayout.fieldGap}>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Chip
+                label={projection.isOpen ? '열림' : '미열림'}
+                color={projection.isOpen ? 'success' : 'default'}
+                size="small"
+                variant="outlined"
+              />
+              {projection.hasPlanItems ? (
+                <Chip
+                  label="계획 있음"
+                  color="info"
+                  size="small"
+                  variant="outlined"
+                />
+              ) : null}
+            </Stack>
+          </Grid>
+        </Grid>
+
+        <Grid container spacing={appLayout.fieldGap}>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <ForecastMetricCard
+              label="예상 수입"
+              value={formatWon(projection.estimatedIncomeWon)}
+              description="반복 규칙 또는 계획 기반 예상입니다."
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <ForecastMetricCard
+              label="예상 지출"
+              value={formatWon(projection.estimatedExpenseWon)}
+              description="고정 비용과 계획 기반 예상입니다."
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <ForecastMetricCard
+              label="예상 잔액"
+              value={formatWon(projection.projectedBalanceWon)}
+              description="현재 월 예상 월말 잔액에서 계산합니다."
+            />
+          </Grid>
+        </Grid>
+
+        {projection.estimatedFixedCosts.length > 0 ? (
+          <ForecastFixedCostTable costs={projection.estimatedFixedCosts} />
+        ) : null}
+
+        {!projection.isOpen ? (
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={1}
+            useFlexGap
+            flexWrap="wrap"
+          >
+            <Button component={Link} href="/periods" variant="outlined">
+              운영 월 열기
+            </Button>
+            {!projection.hasPlanItems ? (
+              <Button component={Link} href="/plan-items" variant="text">
+                계획 항목 생성
+              </Button>
+            ) : null}
+          </Stack>
+        ) : null}
+      </Stack>
+    </SectionCard>
+  );
+}
+
+function ForecastFixedCostTable({ costs }: { costs: ForecastFixedCostItem[] }) {
+  return (
+    <Table size="small">
+      <TableHead>
+        <TableRow>
+          <TableCell>항목</TableCell>
+          <TableCell align="right">금액</TableCell>
+          <TableCell>출처</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {costs.map((cost) => (
+          <TableRow key={`${cost.source}-${cost.label}`}>
+            <TableCell>{cost.label}</TableCell>
+            <TableCell align="right">{formatWon(cost.amountWon)}</TableCell>
+            <TableCell>
+              <Chip
+                label={readFixedCostSourceLabel(cost.source)}
+                size="small"
+                variant="outlined"
+                color={readFixedCostSourceColor(cost.source)}
+              />
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+function readFixedCostSourceLabel(
+  source: 'RECURRING_RULE' | 'INSURANCE' | 'LIABILITY'
+) {
+  switch (source) {
+    case 'RECURRING_RULE':
+      return '반복 규칙';
+    case 'INSURANCE':
+      return '보험';
+    case 'LIABILITY':
+      return '부채 상환';
+  }
+}
+
+function readFixedCostSourceColor(
+  source: 'RECURRING_RULE' | 'INSURANCE' | 'LIABILITY'
+) {
+  switch (source) {
+    case 'RECURRING_RULE':
+      return 'primary' as const;
+    case 'INSURANCE':
+      return 'info' as const;
+    case 'LIABILITY':
+      return 'warning' as const;
+  }
+}
+
+/* ── 공통 유틸 컴포넌트 ── */
 
 export function readBasisStatusLabel(
   basisStatus: 'LIVE_OPERATIONS' | 'OFFICIAL_LOCKED'

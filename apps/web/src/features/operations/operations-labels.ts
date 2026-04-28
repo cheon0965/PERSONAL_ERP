@@ -189,6 +189,8 @@ export function readImportSourceKindLabel(
       return '수동 업로드';
     case 'IM_BANK_PDF':
       return 'IM뱅크 PDF';
+    case 'WOORI_BANK_HTML':
+      return '우리은행 HTML';
     default:
       return sourceKind;
   }

@@ -94,10 +94,15 @@ test('GET /funding-accounts?includeInactive=true includes inactive funding accou
   }
 });
 
-test('GET /funding-accounts derives a live balance from opening data, imported balanceAfter, and later transactions', async () => {
+test('GET /funding-accounts derives a live balance from opening data and transactions when stored balance is zero', async () => {
   const context = await createRequestTestContext();
 
   try {
+    const acc1 = context.state.accounts.find((a) => a.id === 'acc-1');
+    if (acc1) {
+      acc1.balanceWon = 0;
+    }
+
     context.state.accountingPeriods.push({
       id: 'period-live-balance-1',
       tenantId: 'tenant-1',
@@ -277,7 +282,7 @@ test('GET /funding-accounts derives a live balance from opening data, imported b
         id: 'acc-1',
         name: 'Main checking',
         type: 'BANK',
-        balanceWon: 1_110_000,
+        balanceWon: 1_160_000,
         status: 'ACTIVE',
         bootstrapStatus: 'NOT_REQUIRED'
       },

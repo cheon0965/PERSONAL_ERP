@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import type { Route } from 'next';
+import Link from 'next/link';
 import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
 import PersonAddAltRoundedIcon from '@mui/icons-material/PersonAddAltRounded';
 import {
@@ -94,12 +95,9 @@ export function LoginPage() {
                 }}
               >
                 <Stack spacing={2.5}>
-                  <Box
-                    sx={{
-                      display: 'inline-flex',
-                      alignSelf: 'flex-start',
-                      lineHeight: 0
-                    }}
+                  <Link
+                    href={'/' as Route}
+                    style={{ display: 'inline-flex', alignSelf: 'flex-start', lineHeight: 0 }}
                   >
                     <BrandLogo
                       priority
@@ -112,7 +110,7 @@ export function LoginPage() {
                         }
                       }}
                     />
-                  </Box>
+                  </Link>
 
                   <Stack spacing={1.25}>
                     <Typography
@@ -241,6 +239,21 @@ export function LoginPage() {
                         helperText={form.formState.errors.password?.message}
                         {...form.register('password')}
                       />
+                      <Box sx={{ textAlign: 'right', mt: -0.5 }}>
+                        <Typography
+                          component={Link}
+                          href={'/forgot-password' as Route}
+                          variant="body2"
+                          color="primary"
+                          sx={{
+                            textDecoration: 'none',
+                            fontWeight: 600,
+                            '&:hover': { textDecoration: 'underline' }
+                          }}
+                        >
+                          비밀번호를 잊으셨나요?
+                        </Typography>
+                      </Box>
                       <Button
                         fullWidth
                         type="submit"

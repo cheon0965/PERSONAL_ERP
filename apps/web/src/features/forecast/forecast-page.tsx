@@ -7,11 +7,13 @@ import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
+import { SegmentedTabs } from '@/shared/ui/section-tabs';
 import {
   accountingPeriodsQueryKey,
   getAccountingPeriods
 } from '@/features/accounting-periods/accounting-periods.api';
 import {
+  FORECAST_TABS,
   ForecastContent,
   ForecastMissingPeriodState,
   ForecastPeriodSelectionSection,
@@ -19,6 +21,7 @@ import {
   readBasisStatusLabel,
   readPeriodStatusLabel
 } from './forecast-page.sections';
+import type { ForecastTab } from './forecast-page.sections';
 import { getForecast } from './forecast.api';
 
 export function ForecastPage() {
@@ -32,6 +35,7 @@ export function ForecastPage() {
     periods[0]?.id ??
     '';
   const [selectedPeriodId, setSelectedPeriodId] = React.useState<string>('');
+  const [activeTab, setActiveTab] = React.useState<ForecastTab>('summary');
 
   React.useEffect(() => {
     if (!selectedPeriodId && defaultPeriodId) {
@@ -134,6 +138,13 @@ export function ForecastPage() {
         secondaryActionHref="/periods"
       />
 
+      <SegmentedTabs
+        items={FORECAST_TABS}
+        value={activeTab}
+        onChange={setActiveTab}
+        ariaLabel="전망 탭 선택"
+      />
+
       {periodsQuery.error ? (
         <QueryErrorAlert
           title="운영 기간 목록을 불러오지 못했습니다."
@@ -160,7 +171,7 @@ export function ForecastPage() {
       ) : forecast == null ? (
         <ForecastUnavailableState />
       ) : (
-        <ForecastContent forecast={forecast} />
+        <ForecastContent forecast={forecast} activeTab={activeTab} />
       )}
     </Stack>
   );

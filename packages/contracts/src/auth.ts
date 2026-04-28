@@ -1,4 +1,4 @@
-﻿export type TenantStatus = 'TRIAL' | 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED';
+export type TenantStatus = 'TRIAL' | 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED';
 
 export type UserStatus = 'ACTIVE' | 'LOCKED' | 'DISABLED';
 
@@ -159,4 +159,21 @@ export type AcceptInvitationRequest = {
 
 export type AcceptInvitationResponse = {
   status: 'accepted' | 'registration_required';
+};
+
+export type ForgotPasswordRequest = {
+  email: string;
+};
+
+export type ForgotPasswordResponse = {
+  status: 'reset_email_sent';
+};
+
+export type ResetPasswordRequest = {
+  token: string;
+  newPassword: string;
+};
+
+export type ResetPasswordResponse = {
+  status: 'password_reset';
 };

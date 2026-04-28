@@ -13,12 +13,31 @@ import { PrismaService } from '../../../../common/prisma/prisma.service';
 import { resolveImportBatchFundingAccountId } from '../../import-batch-funding-account.policy';
 import { parseImBankPdfStatement } from '../../im-bank-pdf-statement.parser';
 import { mapImportBatchRecordToItem } from '../../import-batch.mapper';
+import { parseWooriBankHtmlStatement } from '../../woori-bank-html-statement.parser';
 import { ImportBatchWritePort } from '../ports/import-batch-write.port';
+
+const FILE_UPLOAD_SOURCE_KINDS: ImportSourceKind[] = [
+  'IM_BANK_PDF',
+  'WOORI_BANK_HTML'
+];
+
+const ALLOWED_CONTENT_TYPES: Record<ImportSourceKind, string[]> = {
+  IM_BANK_PDF: ['application/pdf', 'application/octet-stream'],
+  WOORI_BANK_HTML: [
+    'text/html',
+    'application/octet-stream',
+    'application/x-html'
+  ],
+  CARD_EXCEL: [],
+  BANK_CSV: [],
+  MANUAL_UPLOAD: []
+};
 
 export type CreateImportBatchFromFileInput = {
   sourceKind: ImportSourceKind;
   fileName: string;
   fundingAccountId: string;
+  password?: string;
   contentType: string | null;
   buffer: Buffer;
 };
@@ -40,35 +59,52 @@ export class CreateImportBatchFromFileUseCase {
       'import_batch.upload'
     );
 
-    if (input.sourceKind !== 'IM_BANK_PDF') {
+    if (!FILE_UPLOAD_SOURCE_KINDS.includes(input.sourceKind)) {
       throw new BadRequestException(
-        '파일 첨부 업로드는 현재 IM뱅크 PDF만 지원합니다.'
+        '파일 첨부 업로드는 현재 IM뱅크 PDF 또는 우리은행 HTML만 지원합니다.'
       );
     }
 
+    const allowedTypes = ALLOWED_CONTENT_TYPES[input.sourceKind] ?? [];
     if (
       input.contentType &&
-      !['application/pdf', 'application/octet-stream'].includes(
-        input.contentType
-      )
+      allowedTypes.length > 0 &&
+      !allowedTypes.includes(input.contentType)
     ) {
-      throw new BadRequestException('PDF 파일만 업로드할 수 있습니다.');
+      throw new BadRequestException(
+        `${input.sourceKind === 'WOORI_BANK_HTML' ? 'HTML' : 'PDF'} 파일만 업로드할 수 있습니다.`
+      );
     }
 
     const fundingAccountId = await resolveImportBatchFundingAccountId({
       client: this.prisma,
       workspace,
       fundingAccountId: input.fundingAccountId,
-      requiredMessage: 'IM뱅크 PDF 업로드에는 연결 계좌/카드를 선택해 주세요.'
+      requiredMessage:
+        input.sourceKind === 'WOORI_BANK_HTML'
+          ? '우리은행 HTML 업로드에는 연결 계좌/카드를 선택해 주세요.'
+          : 'IM뱅크 PDF 업로드에는 연결 계좌/카드를 선택해 주세요.'
     });
-    const parsedBatch = parseImBankPdfStatement({
-      buffer: input.buffer,
-      fileName: input.fileName,
-      fingerprintScope: {
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId
-      }
-    });
+
+    const fingerprintScope = {
+      tenantId: workspace.tenantId,
+      ledgerId: workspace.ledgerId
+    };
+
+    const parsedBatch =
+      input.sourceKind === 'WOORI_BANK_HTML'
+        ? parseWooriBankHtmlStatement({
+            buffer: input.buffer,
+            fileName: input.fileName,
+            password: input.password ?? '',
+            fingerprintScope
+          })
+        : parseImBankPdfStatement({
+            buffer: input.buffer,
+            fileName: input.fileName,
+            fingerprintScope
+          });
+
     const fileHash = createHash('sha256').update(input.buffer).digest('hex');
 
     const created = await this.prisma.$transaction(

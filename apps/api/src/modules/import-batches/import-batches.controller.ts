@@ -120,6 +120,7 @@ export class ImportBatchesController {
           sourceKind: dto.sourceKind,
           fileName: normalizeUploadedFileName(file.originalname),
           fundingAccountId: dto.fundingAccountId,
+          password: dto.password,
           contentType: file.mimetype ?? null,
           buffer: file.buffer
         }

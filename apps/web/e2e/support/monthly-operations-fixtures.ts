@@ -308,7 +308,10 @@ export function createForecastResponse(input: {
         ? '현재 선택한 기간에는 계획 항목 2건이 남은 계획 지출에 반영되어 있습니다.'
         : '아직 생성된 계획 항목이 없어 남은 계획 지출이 비어 있습니다.',
       carryForwardNote
-    ]
+    ],
+    categoryDrivers: [],
+    periodComparison: null,
+    nextMonthProjection: null
   };
 }
 

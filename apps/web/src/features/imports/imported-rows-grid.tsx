@@ -5,6 +5,7 @@ import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
 import type { GridRowSelectionModel } from '@mui/x-data-grid';
 import {
+  Alert,
   Box,
   Button,
   Chip,
@@ -17,6 +18,7 @@ import {
 } from '@mui/material';
 import type {
   CategoryItem,
+  ImportBatchBalanceDiscrepancy,
   ImportBatchCollectionJobItem,
   ImportBatchItem
 } from '@personal-erp/contracts';
@@ -26,6 +28,7 @@ import {
   readImportedRowParseStatusLabel,
   type ImportedRowTableItem
 } from './imports.shared';
+import { formatWon } from '@/shared/lib/format';
 import {
   bulkCollectTransactionTypes,
   type BulkCollectFormState
@@ -53,7 +56,6 @@ const bulkCollectTransactionTypeLabels: Record<
 export function ImportedRowsGrid({
   selectedBatch,
   rows,
-  selectedRowId,
   selectedRowIds,
   bulkCollectForm,
   categories,
@@ -68,7 +70,6 @@ export function ImportedRowsGrid({
 }: {
   selectedBatch: ImportBatchItem | null;
   rows: ImportedRowTableItem[];
-  selectedRowId: string | null;
   selectedRowIds: string[];
   selectedRowsCount: number;
   collectableRowCount: number;
@@ -286,6 +287,12 @@ export function ImportedRowsGrid({
       toolbar={
         selectedBatch ? (
           <Stack spacing={1.5}>
+            {selectedBatch.balanceDiscrepancy ? (
+              <BalanceDiscrepancyAlert
+                discrepancy={selectedBatch.balanceDiscrepancy}
+                fundingAccountName={selectedBatch.fundingAccountName}
+              />
+            ) : null}
             <Stack
               direction={{ xs: 'column', lg: 'row' }}
               spacing={1}
@@ -770,7 +777,6 @@ export function ImportedRowsGrid({
       }
       rows={filteredRows}
       columns={buildImportedRowsColumns({
-        selectedRowId,
         onPrepareCollect
       })}
       height={420}
@@ -964,4 +970,37 @@ function readTypePanelDescription(input: {
   return parts.length > 0
     ? parts.join(' · ')
     : '현재는 기본값을 그대로 사용합니다.';
+}
+
+function BalanceDiscrepancyAlert({
+  discrepancy,
+  fundingAccountName
+}: {
+  discrepancy: ImportBatchBalanceDiscrepancy;
+  fundingAccountName: string | null;
+}) {
+  const accountLabel = fundingAccountName ?? '자금수단';
+  const sign = discrepancy.differenceWon > 0 ? '+' : '';
+
+  return (
+    <Alert severity="warning" variant="outlined">
+      <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+        잔액 불일치 확인 필요
+      </Typography>
+      <Typography variant="body2">
+        {accountLabel}의 은행 명세 마지막 잔액은{' '}
+        <strong>{formatWon(discrepancy.importedBalanceWon)}</strong>이지만,
+        현재 ERP 장부 잔액은{' '}
+        <strong>{formatWon(discrepancy.ledgerBalanceWon)}</strong>입니다.
+        (차액: {sign}{formatWon(discrepancy.differenceWon)})
+      </Typography>
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        sx={{ mt: 0.5 }}
+      >
+        누락된 거래가 있는지 확인하고, 필요한 거래를 추가로 등록해 주세요.
+      </Typography>
+    </Alert>
+  );
 }

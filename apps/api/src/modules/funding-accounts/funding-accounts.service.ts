@@ -1,7 +1,8 @@
 import {
   BadRequestException,
   ConflictException,
-  Injectable
+  Injectable,
+  InternalServerErrorException
 } from '@nestjs/common';
 import type {
   AuthenticatedUser,
@@ -9,12 +10,24 @@ import type {
   FundingAccountItem,
   UpdateFundingAccountRequest
 } from '@personal-erp/contracts';
+import {
+  AccountingPeriodStatus,
+  AuditActorType,
+  JournalEntrySourceKind,
+  JournalEntryStatus,
+  Prisma
+} from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { normalizeCaseInsensitiveText } from '../../common/utils/normalize-unique-key.util';
+import { buildJournalEntryEntryNumber } from '../journal-entries/public';
 import { mapFundingAccountRecordToItem } from './funding-account.mapper';
 import { readWorkspaceFundingAccountLiveBalances } from './funding-account-live-balance.reader';
 import { FundingAccountsRepository } from './funding-accounts.repository';
+
+const ASSET_SUBJECT_CODE = '1010';
+const LIABILITY_SUBJECT_CODE = '2100';
+const EQUITY_SUBJECT_CODE = '3100';
 
 @Injectable()
 export class FundingAccountsService {
@@ -60,18 +73,185 @@ export class FundingAccountsService {
       normalizedName
     });
 
-    const created = await this.fundingAccountsRepository.createInWorkspace(
-      workspace.userId,
-      workspace.tenantId,
-      workspace.ledgerId,
-      {
-        name: normalizedName,
-        type: input.type
+    const initialBalanceWon = input.initialBalanceWon ?? 0;
+
+    if (initialBalanceWon <= 0) {
+      const created = await this.fundingAccountsRepository.createInWorkspace(
+        workspace.userId,
+        workspace.tenantId,
+        workspace.ledgerId,
+        {
+          name: normalizedName,
+          type: input.type
+        }
+      );
+
+      return mapFundingAccountRecordToItem(created);
+    }
+
+    // 초기 잔액이 있으면 자금수단 생성 + 기초전표 생성을 하나의 트랜잭션으로 묶는다.
+    const created = await this.prisma.$transaction(async (tx) => {
+      const account = await tx.account.create({
+        data: {
+          userId: workspace.userId,
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId,
+          name: normalizedName,
+          normalizedName: normalizeCaseInsensitiveText(normalizedName),
+          type: input.type
+        }
+      });
+
+      await this.createOpeningBalanceJournalEntry({
+        tx,
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId,
+        membershipId: workspace.membershipId,
+        fundingAccountId: account.id,
+        fundingAccountType: input.type,
+        initialBalanceWon
+      });
+
+      return account;
+    });
+
+    return mapFundingAccountRecordToItem({
+      id: created.id,
+      name: created.name,
+      type: created.type as 'BANK' | 'CASH' | 'CARD',
+      balanceWon: initialBalanceWon,
+      status: created.status as 'ACTIVE' | 'INACTIVE' | 'CLOSED',
+      bootstrapStatus: (created.bootstrapStatus ?? 'NOT_REQUIRED') as
+        | 'NOT_REQUIRED'
+        | 'PENDING'
+        | 'COMPLETED'
+    });
+  }
+
+  /**
+   * 자금수단에 대한 기초전표(OPENING_BALANCE)를 생성합니다.
+   *
+   * 회계 분개:
+   * - BANK/CASH: 차변 현금및예금(1010) / 대변 순자산(3100)
+   * - CARD: 차변 순자산(3100) / 대변 카드미지급금(2100)
+   */
+  private async createOpeningBalanceJournalEntry(input: {
+    tx: Prisma.TransactionClient;
+    tenantId: string;
+    ledgerId: string;
+    membershipId: string;
+    fundingAccountId: string;
+    fundingAccountType: 'BANK' | 'CASH' | 'CARD';
+    initialBalanceWon: number;
+  }): Promise<void> {
+    // 현재 최신 진행월이 OPEN 또는 IN_REVIEW인지 확인한다.
+    const latestPeriod = await input.tx.accountingPeriod.findFirst({
+      where: {
+        tenantId: input.tenantId,
+        ledgerId: input.ledgerId,
+        status: {
+          in: [AccountingPeriodStatus.OPEN, AccountingPeriodStatus.IN_REVIEW]
+        }
+      },
+      orderBy: [{ year: 'desc' }, { month: 'desc' }]
+    });
+
+    if (!latestPeriod) {
+      throw new BadRequestException(
+        '기초금액을 등록하려면 운영월이 열려 있어야 합니다. 월 운영을 먼저 시작한 뒤 다시 등록해 주세요.'
+      );
+    }
+
+    // 계정과목 조회
+    const accountSubjects = await input.tx.accountSubject.findMany({
+      where: {
+        tenantId: input.tenantId,
+        ledgerId: input.ledgerId,
+        code: {
+          in: [ASSET_SUBJECT_CODE, LIABILITY_SUBJECT_CODE, EQUITY_SUBJECT_CODE]
+        },
+        isActive: true
+      },
+      select: {
+        id: true,
+        code: true
       }
+    });
+
+    const subjectIdByCode = new Map(
+      accountSubjects.map((subject) => [subject.code, subject.id])
     );
 
-    return mapFundingAccountRecordToItem(created);
+    const assetSubjectId = subjectIdByCode.get(ASSET_SUBJECT_CODE);
+    const liabilitySubjectId = subjectIdByCode.get(LIABILITY_SUBJECT_CODE);
+    const equitySubjectId = subjectIdByCode.get(EQUITY_SUBJECT_CODE);
+
+    if (!assetSubjectId || !liabilitySubjectId || !equitySubjectId) {
+      throw new InternalServerErrorException(
+        '기초전표 생성에 필요한 계정과목(현금및예금, 카드미지급금, 순자산)이 준비되어 있지 않습니다.'
+      );
+    }
+
+    // 전표번호 할당
+    const allocatedPeriod = await input.tx.accountingPeriod.updateMany({
+      where: {
+        id: latestPeriod.id,
+        tenantId: input.tenantId,
+        ledgerId: input.ledgerId,
+        status: {
+          in: [AccountingPeriodStatus.OPEN, AccountingPeriodStatus.IN_REVIEW]
+        }
+      },
+      data: {
+        nextJournalEntrySequence: {
+          increment: 1
+        }
+      }
+    });
+
+    if (allocatedPeriod.count !== 1) {
+      throw new ConflictException(
+        '운영 기간 상태가 변경되어 전표 번호를 할당하지 못했습니다. 다시 시도해 주세요.'
+      );
+    }
+
+    const entryNumber = buildJournalEntryEntryNumber(
+      latestPeriod.year,
+      latestPeriod.month,
+      latestPeriod.nextJournalEntrySequence
+    );
+
+    // 회계 분개 결정
+    const journalLines = resolveOpeningBalanceJournalLines({
+      fundingAccountType: input.fundingAccountType,
+      fundingAccountId: input.fundingAccountId,
+      amount: input.initialBalanceWon,
+      assetSubjectId,
+      liabilitySubjectId,
+      equitySubjectId
+    });
+
+    await input.tx.journalEntry.create({
+      data: {
+        tenantId: input.tenantId,
+        ledgerId: input.ledgerId,
+        periodId: latestPeriod.id,
+        entryNumber,
+        entryDate: latestPeriod.startDate,
+        sourceKind: JournalEntrySourceKind.OPENING_BALANCE,
+        status: JournalEntryStatus.POSTED,
+        memo: `기초금액 등록`,
+        createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+        createdByMembershipId: input.membershipId,
+        lines: {
+          createMany: {
+            data: journalLines
+          }
+        }
+      }
+    });
   }
+
 
   async update(
     user: AuthenticatedUser,
@@ -346,4 +526,57 @@ function assertFundingAccountBootstrapTransition(
   throw new BadRequestException(
     '기초 업로드 상태는 대기 상태에서 완료 상태로만 직접 전환할 수 있습니다.'
   );
+}
+
+/**
+ * 기초전표의 회계 분개를 결정합니다.
+ *
+ * BANK/CASH: 차변 현금및예금(1010) / 대변 순자산(3100)
+ * CARD: 차변 순자산(3100) / 대변 카드미지급금(2100)
+ */
+function resolveOpeningBalanceJournalLines(input: {
+  fundingAccountType: 'BANK' | 'CASH' | 'CARD';
+  fundingAccountId: string;
+  amount: number;
+  assetSubjectId: string;
+  liabilitySubjectId: string;
+  equitySubjectId: string;
+}) {
+  if (input.fundingAccountType === 'CARD') {
+    return [
+      {
+        lineNumber: 1,
+        accountSubjectId: input.equitySubjectId,
+        debitAmount: input.amount,
+        creditAmount: 0,
+        description: '기초금액 등록'
+      },
+      {
+        lineNumber: 2,
+        accountSubjectId: input.liabilitySubjectId,
+        fundingAccountId: input.fundingAccountId,
+        debitAmount: 0,
+        creditAmount: input.amount,
+        description: '기초금액 등록'
+      }
+    ];
+  }
+
+  return [
+    {
+      lineNumber: 1,
+      accountSubjectId: input.assetSubjectId,
+      fundingAccountId: input.fundingAccountId,
+      debitAmount: input.amount,
+      creditAmount: 0,
+      description: '기초금액 등록'
+    },
+    {
+      lineNumber: 2,
+      accountSubjectId: input.equitySubjectId,
+      debitAmount: 0,
+      creditAmount: input.amount,
+      description: '기초금액 등록'
+    }
+  ];
 }

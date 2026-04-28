@@ -363,6 +363,15 @@ export const appTheme = createTheme(
               borderColor: brandTokens.palette.primaryBright,
               boxShadow: brandTokens.shadow.focus
             }
+          },
+          input: {
+            '&:-webkit-autofill, &:-webkit-autofill:hover, &:-webkit-autofill:focus':
+              {
+                WebkitBoxShadow: `0 0 0 1000px ${brandTokens.palette.surface} inset`,
+                WebkitTextFillColor: brandTokens.palette.text,
+                caretColor: brandTokens.palette.text,
+                transition: 'background-color 9999s ease-out'
+              }
           }
         }
       },

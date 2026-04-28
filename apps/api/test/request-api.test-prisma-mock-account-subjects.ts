@@ -49,6 +49,44 @@ export function createAccountSubjectsPrismaMock(
         state.accountSubjects.push(created);
         return created;
       },
+      findFirst: async (args: {
+        where?: {
+          tenantId?: string;
+          ledgerId?: string;
+          subjectKind?: 'ASSET' | 'LIABILITY' | 'EQUITY' | 'INCOME' | 'EXPENSE';
+          isActive?: boolean;
+        };
+        select?: {
+          id?: boolean;
+        };
+      }) => {
+        const item = state.accountSubjects.find((candidate) => {
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesKind =
+            !args.where?.subjectKind ||
+            candidate.subjectKind === args.where.subjectKind;
+          const matchesActive =
+            args.where?.isActive === undefined ||
+            candidate.isActive === args.where.isActive;
+
+          return matchesTenant && matchesLedger && matchesKind && matchesActive;
+        });
+
+        if (!item) {
+          return null;
+        }
+
+        if (!args.select) {
+          return item;
+        }
+
+        return {
+          ...(args.select?.id ? { id: item.id } : {})
+        };
+      },
       findMany: async (args: {
         where?: {
           tenantId?: string;

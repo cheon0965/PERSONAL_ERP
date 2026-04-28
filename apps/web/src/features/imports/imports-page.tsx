@@ -113,7 +113,6 @@ export function ImportsPage({
         <ImportedRowsGrid
           selectedBatch={page.selectedBatch}
           rows={page.selectedBatchRows}
-          selectedRowId={page.selectedRow?.id ?? null}
           selectedRowIds={page.selectedRowIds}
           selectedRowsCount={page.selectedRowsCount}
           collectableRowCount={page.collectableRowCount}

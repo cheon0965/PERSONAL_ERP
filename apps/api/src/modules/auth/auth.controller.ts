@@ -43,19 +43,23 @@ import { AuthAccountSecurityService } from './auth-account-security.service';
 import { AuthWorkspaceService } from './auth-workspace.service';
 import { AcceptInvitationUseCase } from './application/use-cases/accept-invitation.use-case';
 import { ChangePasswordUseCase } from './application/use-cases/change-password.use-case';
+import { ForgotPasswordUseCase } from './application/use-cases/forgot-password.use-case';
 import { LoginUseCase } from './application/use-cases/login.use-case';
 import { LogoutUseCase } from './application/use-cases/logout.use-case';
 import { RefreshSessionUseCase } from './application/use-cases/refresh-session.use-case';
 import { RegisterUseCase } from './application/use-cases/register.use-case';
 import { ResendVerificationEmailUseCase } from './application/use-cases/resend-verification-email.use-case';
+import { ResetPasswordUseCase } from './application/use-cases/reset-password.use-case';
 import { RevokeOtherSessionUseCase } from './application/use-cases/revoke-other-session.use-case';
 import { UpdateAccountProfileUseCase } from './application/use-cases/update-account-profile.use-case';
 import { VerifyEmailUseCase } from './application/use-cases/verify-email.use-case';
 import { LoginDto } from './dto/login.dto';
 import { AcceptInvitationDto } from './dto/accept-invitation.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { SwitchWorkspaceDto } from './dto/switch-workspace.dto';
 import { UpdateAccountProfileDto } from './dto/update-account-profile.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
@@ -87,6 +91,8 @@ export class AuthController {
     private readonly verifyEmailUseCase: VerifyEmailUseCase,
     private readonly resendVerificationEmailUseCase: ResendVerificationEmailUseCase,
     private readonly acceptInvitationUseCase: AcceptInvitationUseCase,
+    private readonly forgotPasswordUseCase: ForgotPasswordUseCase,
+    private readonly resetPasswordUseCase: ResetPasswordUseCase,
     private readonly loginUseCase: LoginUseCase,
     private readonly refreshSessionUseCase: RefreshSessionUseCase,
     private readonly logoutUseCase: LogoutUseCase,
@@ -157,6 +163,40 @@ export class AuthController {
   ) {
     this.ensureAllowedCookieOrigin(request);
     const result = await this.acceptInvitationUseCase.execute(dto, {
+      clientIp: readClientIp(request),
+      requestId: readRequestId(request)
+    });
+    response.setHeader('Cache-Control', 'no-store');
+    return result;
+  }
+
+  @Public()
+  @HttpCode(200)
+  @Post('forgot-password')
+  async forgotPassword(
+    @Body() dto: ForgotPasswordDto,
+    @Req() request: RequestWithContext,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    this.ensureAllowedCookieOrigin(request);
+    const result = await this.forgotPasswordUseCase.execute(dto, {
+      clientIp: readClientIp(request),
+      requestId: readRequestId(request)
+    });
+    response.setHeader('Cache-Control', 'no-store');
+    return result;
+  }
+
+  @Public()
+  @HttpCode(200)
+  @Post('reset-password')
+  async resetPassword(
+    @Body() dto: ResetPasswordDto,
+    @Req() request: RequestWithContext,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    this.ensureAllowedCookieOrigin(request);
+    const result = await this.resetPasswordUseCase.execute(dto, {
       clientIp: readClientIp(request),
       requestId: readRequestId(request)
     });

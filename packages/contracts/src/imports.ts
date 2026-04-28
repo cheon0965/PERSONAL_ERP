@@ -10,7 +10,8 @@ export type ImportSourceKind =
   | 'CARD_EXCEL'
   | 'BANK_CSV'
   | 'MANUAL_UPLOAD'
-  | 'IM_BANK_PDF';
+  | 'IM_BANK_PDF'
+  | 'WOORI_BANK_HTML';
 
 export type ImportBatchParseStatus =
   | 'PENDING'
@@ -39,7 +40,9 @@ export type ImportBatchCollectionJobRowStatus =
   | 'FAILED'
   | 'SKIPPED';
 
-export type ImportBatchFileUnsupportedReason = 'SCANNED_PDF_TEXT_LAYER_MISSING';
+export type ImportBatchFileUnsupportedReason =
+  | 'SCANNED_PDF_TEXT_LAYER_MISSING'
+  | 'VESTMAIL_DECRYPTION_FAILED';
 
 export type ImportedRowTargetPeriodCreationReason =
   | 'INITIAL_SETUP'
@@ -78,6 +81,15 @@ export type ImportedRowItem = {
   rawPayload: Record<string, unknown>;
 };
 
+export type ImportBatchBalanceDiscrepancy = {
+  /** 은행 명세 마지막 행의 거래후잔액 */
+  importedBalanceWon: MoneyWon;
+  /** ERP 장부 실시간 잔액 */
+  ledgerBalanceWon: MoneyWon;
+  /** 차액 (importedBalanceWon 빼기 ledgerBalanceWon) */
+  differenceWon: MoneyWon;
+};
+
 export type ImportBatchItem = {
   id: string;
   sourceKind: ImportSourceKind;
@@ -92,6 +104,7 @@ export type ImportBatchItem = {
   parsedRowCount: number;
   failedRowCount: number;
   rows: ImportedRowItem[];
+  balanceDiscrepancy?: ImportBatchBalanceDiscrepancy | null;
 };
 
 export type CreateImportBatchRequest = {
