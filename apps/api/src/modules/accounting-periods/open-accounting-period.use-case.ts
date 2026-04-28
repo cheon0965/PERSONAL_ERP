@@ -11,10 +11,7 @@ import type {
 import {
   AccountSubjectKind,
   AccountingPeriodEventType,
-  AccountingPeriodStatus,
-  AuditActorType,
-  JournalEntrySourceKind,
-  JournalEntryStatus
+  AccountingPeriodStatus
 } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import {
@@ -28,7 +25,6 @@ import { OperationalAuditPublisher } from '../../common/infrastructure/operation
 import { publishPeriodStatusHistoryAudit } from '../../common/infrastructure/operational/period-status-history-audit';
 import { parseMonthRange } from '../../common/utils/date.util';
 import { mapAccountingPeriodRecordToItem } from './accounting-period.mapper';
-import { buildJournalEntryEntryNumber } from '../journal-entries/public';
 import {
   compareYearMonth,
   normalizeMonthToken,
@@ -206,103 +202,6 @@ export class OpenAccountingPeriodUseCase {
               balanceAmount: line.balanceAmount
             }))
           });
-
-          // 기초 잔액 라인에 대한 기초전표를 생성한다.
-          // 스냅샷은 잔액 anchor, 전표는 회계 감사 추적 경로를 제공한다.
-          const equitySubject = await tx.accountSubject.findFirst({
-            where: {
-              tenantId: workspace.tenantId,
-              ledgerId: workspace.ledgerId,
-              subjectKind: AccountSubjectKind.EQUITY,
-              isActive: true
-            },
-            select: {
-              id: true
-            }
-          });
-
-          if (equitySubject) {
-            let journalSequence = 1;
-
-            for (const line of validatedOpeningBalanceLines) {
-              const entryNumber = buildJournalEntryEntryNumber(
-                year,
-                month,
-                journalSequence
-              );
-
-              const isDebitNormal =
-                line.accountSubjectKind === 'ASSET';
-
-              const journalLines = isDebitNormal
-                ? [
-                    {
-                      lineNumber: 1,
-                      accountSubjectId: line.accountSubjectId,
-                      fundingAccountId: line.fundingAccountId,
-                      debitAmount: line.balanceAmount,
-                      creditAmount: 0,
-                      description: '기초금액 등록'
-                    },
-                    {
-                      lineNumber: 2,
-                      accountSubjectId: equitySubject.id,
-                      debitAmount: 0,
-                      creditAmount: line.balanceAmount,
-                      description: '기초금액 등록'
-                    }
-                  ]
-                : [
-                    {
-                      lineNumber: 1,
-                      accountSubjectId: equitySubject.id,
-                      debitAmount: line.balanceAmount,
-                      creditAmount: 0,
-                      description: '기초금액 등록'
-                    },
-                    {
-                      lineNumber: 2,
-                      accountSubjectId: line.accountSubjectId,
-                      fundingAccountId: line.fundingAccountId,
-                      debitAmount: 0,
-                      creditAmount: line.balanceAmount,
-                      description: '기초금액 등록'
-                    }
-                  ];
-
-              await tx.journalEntry.create({
-                data: {
-                  tenantId: workspace.tenantId,
-                  ledgerId: workspace.ledgerId,
-                  periodId: createdPeriod.id,
-                  entryNumber,
-                  entryDate: start,
-                  sourceKind: JournalEntrySourceKind.OPENING_BALANCE,
-                  status: JournalEntryStatus.POSTED,
-                  memo: '기초금액 등록',
-                  createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
-                  createdByMembershipId: workspace.membershipId,
-                  lines: {
-                    createMany: {
-                      data: journalLines
-                    }
-                  }
-                }
-              });
-
-              journalSequence += 1;
-            }
-
-            // 기초전표 생성 후 전표번호 시퀀스를 갱신한다.
-            await tx.accountingPeriod.update({
-              where: {
-                id: createdPeriod.id
-              },
-              data: {
-                nextJournalEntrySequence: journalSequence
-              }
-            });
-          }
         }
 
         return {
