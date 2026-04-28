@@ -57,6 +57,7 @@ import {
 export type ImportUploadFormState = CreateImportBatchRequest & {
   fundingAccountId: string;
   file: File | null;
+  password: string;
 };
 
 const defaultUploadForm: ImportUploadFormState = {
@@ -64,7 +65,8 @@ const defaultUploadForm: ImportUploadFormState = {
   fileName: 'march-manual.csv',
   fundingAccountId: '',
   content: ['date,title,amount', '2026-03-12,Coffee beans,19800'].join('\n'),
-  file: null
+  file: null,
+  password: ''
 };
 
 const defaultCollectForm: CollectImportedRowRequest = {
@@ -382,7 +384,8 @@ export function useImportsPage(
 
   React.useEffect(() => {
     if (
-      uploadForm.sourceKind === 'IM_BANK_PDF' &&
+      (uploadForm.sourceKind === 'IM_BANK_PDF' ||
+        uploadForm.sourceKind === 'WOORI_BANK_HTML') &&
       !uploadForm.fundingAccountId &&
       uploadFundingAccounts[0]
     ) {
@@ -438,20 +441,31 @@ export function useImportsPage(
 
   const createImportBatchMutation = useMutation({
     mutationFn: (input: ImportUploadFormState) => {
-      if (input.sourceKind === 'IM_BANK_PDF') {
+      if (input.sourceKind === 'IM_BANK_PDF' || input.sourceKind === 'WOORI_BANK_HTML') {
         if (!input.file) {
-          throw new Error('IM뱅크 PDF 파일을 선택해 주세요.');
+          throw new Error(
+            input.sourceKind === 'WOORI_BANK_HTML'
+              ? '우리은행 HTML 파일을 선택해 주세요.'
+              : 'IM뱅크 PDF 파일을 선택해 주세요.'
+          );
         }
 
         if (!input.fundingAccountId.trim()) {
-          throw new Error('IM뱅크 PDF와 연결할 계좌/카드를 선택해 주세요.');
+          throw new Error(
+            input.sourceKind === 'WOORI_BANK_HTML'
+              ? '우리은행 HTML과 연결할 계좌/카드를 선택해 주세요.'
+              : 'IM뱅크 PDF와 연결할 계좌/카드를 선택해 주세요.'
+          );
         }
 
         return createImportBatchFromFile({
           sourceKind: input.sourceKind,
           fileName: input.fileName,
           fundingAccountId: input.fundingAccountId,
-          file: input.file
+          file: input.file,
+          ...(input.sourceKind === 'WOORI_BANK_HTML' && input.password
+            ? { password: input.password }
+            : {})
         });
       }
 

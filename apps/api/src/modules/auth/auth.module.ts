@@ -11,11 +11,13 @@ import { AuthWorkspaceService } from './auth-workspace.service';
 import { WorkspaceBootstrapService } from './workspace-bootstrap.service';
 import { AcceptInvitationUseCase } from './application/use-cases/accept-invitation.use-case';
 import { ChangePasswordUseCase } from './application/use-cases/change-password.use-case';
+import { ForgotPasswordUseCase } from './application/use-cases/forgot-password.use-case';
 import { LoginUseCase } from './application/use-cases/login.use-case';
 import { LogoutUseCase } from './application/use-cases/logout.use-case';
 import { RefreshSessionUseCase } from './application/use-cases/refresh-session.use-case';
 import { RegisterUseCase } from './application/use-cases/register.use-case';
 import { ResendVerificationEmailUseCase } from './application/use-cases/resend-verification-email.use-case';
+import { ResetPasswordUseCase } from './application/use-cases/reset-password.use-case';
 import { RevokeOtherSessionUseCase } from './application/use-cases/revoke-other-session.use-case';
 import { UpdateAccountProfileUseCase } from './application/use-cases/update-account-profile.use-case';
 import { VerifyEmailUseCase } from './application/use-cases/verify-email.use-case';
@@ -37,6 +39,8 @@ import { VerifyEmailUseCase } from './application/use-cases/verify-email.use-cas
     VerifyEmailUseCase,
     ResendVerificationEmailUseCase,
     AcceptInvitationUseCase,
+    ForgotPasswordUseCase,
+    ResetPasswordUseCase,
     LoginUseCase,
     RefreshSessionUseCase,
     LogoutUseCase,

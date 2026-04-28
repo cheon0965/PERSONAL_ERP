@@ -143,14 +143,24 @@ export function createJournalEntriesPrismaMock(
           createdByActorType: AuditActorType;
           createdByMembershipId: string | null;
           lines: {
-            create: Array<{
+            create?: Array<{
               lineNumber: number;
               accountSubjectId: string;
-              fundingAccountId?: string;
+              fundingAccountId?: string | null;
               debitAmount: number;
               creditAmount: number;
-              description?: string;
+              description?: string | null;
             }>;
+            createMany?: {
+              data: Array<{
+                lineNumber: number;
+                accountSubjectId: string;
+                fundingAccountId?: string | null;
+                debitAmount: number;
+                creditAmount: number;
+                description?: string | null;
+              }>;
+            };
           };
         };
         include?: JournalEntryInclude;
@@ -174,7 +184,11 @@ export function createJournalEntriesPrismaMock(
           createdByMembershipId: args.data.createdByMembershipId,
           createdAt: new Date(),
           updatedAt: new Date(),
-          lines: args.data.lines.create.map((line, index) => ({
+          lines: (
+            args.data.lines.create ??
+            args.data.lines.createMany?.data ??
+            []
+          ).map((line, index) => ({
             id: `jel-${state.journalEntries.length + 1}-${index + 1}`,
             lineNumber: line.lineNumber,
             accountSubjectId: line.accountSubjectId,

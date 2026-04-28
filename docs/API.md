@@ -81,6 +81,8 @@
 - `POST /auth/login`
 - `POST /auth/refresh`
 - `POST /auth/logout`
+- `POST /auth/forgot-password`
+- `POST /auth/reset-password`
 
 `POST /auth/register`는 `email`, `password`, `name`과 함께 필수 동의값
 `termsAccepted: true`, `privacyConsentAccepted: true`를 요구합니다. `name`은
@@ -242,6 +244,8 @@
 - Web `/register` -> API `POST /auth/register`
 - Web `/verify-email` -> API `POST /auth/verify-email`, `POST /auth/resend-verification`
 - Web `/accept-invitation` -> API `POST /auth/accept-invitation`
+- Web `/forgot-password` -> API `POST /auth/forgot-password`
+- Web `/reset-password` -> API `POST /auth/reset-password`
 - Web `/admin` -> API `/admin/users`, `/admin/tenants`, `/admin/support-context`, `/admin/operations/status`, `/admin/members`, `/admin/audit-events`
 - Web `/admin/users` -> API `GET /admin/users`, `GET /admin/users/:userId`, `PATCH /admin/users/:userId/status`, `POST /admin/users/:userId/revoke-sessions`, `PATCH /admin/users/:userId/system-admin`, `PATCH /admin/users/:userId/email-verification`
 - Web `/admin/tenants` -> API `GET /admin/tenants`, `GET /admin/tenants/:tenantId`, `PATCH /admin/tenants/:tenantId/status`

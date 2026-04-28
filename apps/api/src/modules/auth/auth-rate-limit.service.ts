@@ -11,6 +11,8 @@ const REFRESH_LIMIT = 10;
 const REGISTER_LIMIT = 5;
 const VERIFY_LIMIT = 10;
 const RESEND_LIMIT = 3;
+const FORGOT_PASSWORD_LIMIT = 3;
+const RESET_PASSWORD_LIMIT = 5;
 const WINDOW_MS = 15 * 60 * 1000;
 
 @Injectable()
@@ -100,6 +102,40 @@ export class AuthRateLimitService {
     this.recordFailure(this.buildResendVerificationKey(clientIp, email));
   }
 
+  assertForgotPasswordAllowed(
+    clientIp: string | undefined,
+    email: string
+  ): void {
+    this.assertAllowed(
+      this.buildForgotPasswordKey(clientIp, email),
+      FORGOT_PASSWORD_LIMIT,
+      '비밀번호 재설정 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.'
+    );
+  }
+
+  recordForgotPasswordAttempt(
+    clientIp: string | undefined,
+    email: string
+  ): void {
+    this.recordFailure(this.buildForgotPasswordKey(clientIp, email));
+  }
+
+  assertResetPasswordAllowed(clientIp: string | undefined): void {
+    this.assertAllowed(
+      this.buildResetPasswordKey(clientIp),
+      RESET_PASSWORD_LIMIT,
+      '비밀번호 재설정 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.'
+    );
+  }
+
+  recordFailedResetPasswordAttempt(clientIp: string | undefined): void {
+    this.recordFailure(this.buildResetPasswordKey(clientIp));
+  }
+
+  clearResetPasswordAttempts(clientIp: string | undefined): void {
+    this.buckets.delete(this.buildResetPasswordKey(clientIp));
+  }
+
   private buildLoginKey(clientIp: string | undefined, email: string): string {
     return `login:${this.normalizeClientIp(clientIp)}:${email.trim().toLowerCase()}`;
   }
@@ -124,6 +160,17 @@ export class AuthRateLimitService {
     email: string
   ): string {
     return `resend-verification:${this.normalizeClientIp(clientIp)}:${email.trim().toLowerCase()}`;
+  }
+
+  private buildForgotPasswordKey(
+    clientIp: string | undefined,
+    email: string
+  ): string {
+    return `forgot-password:${this.normalizeClientIp(clientIp)}:${email.trim().toLowerCase()}`;
+  }
+
+  private buildResetPasswordKey(clientIp: string | undefined): string {
+    return `reset-password:${this.normalizeClientIp(clientIp)}`;
   }
 
   private normalizeClientIp(clientIp: string | undefined): string {
@@ -153,3 +200,4 @@ export class AuthRateLimitService {
       : current;
   }
 }
+

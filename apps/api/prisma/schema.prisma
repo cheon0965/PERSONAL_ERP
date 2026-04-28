@@ -200,6 +200,7 @@ enum ImportSourceKind {
   BANK_CSV
   MANUAL_UPLOAD
   IM_BANK_PDF
+  WOORI_BANK_HTML
 }
 
 enum ImportBatchParseStatus {
@@ -305,6 +306,7 @@ model User {
   updatedAt               DateTime                 @updatedAt
   settings                UserSetting?
   emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens     PasswordResetToken[]
   accounts                Account[]
   categories              Category[]
   recurringRules          RecurringRule[]
@@ -319,6 +321,19 @@ model User {
 }
 
 model EmailVerificationToken {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([userId, consumedAt])
+}
+
+model PasswordResetToken {
   id         String    @id @default(cuid())
   userId     String
   tokenHash  String    @unique

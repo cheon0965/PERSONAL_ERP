@@ -24,6 +24,7 @@ export type FundingAccountItem = {
 export type CreateFundingAccountRequest = {
   name: string;
   type: AccountType;
+  initialBalanceWon?: MoneyWon;
 };
 
 export type UpdateFundingAccountRequest = {

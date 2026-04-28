@@ -8,6 +8,12 @@ export function createLiabilitiesPrismaMock(
 
   return {
     liabilityRepaymentSchedule: {
+      findMany: async () => {
+        return state.liabilityRepaymentSchedules.map((schedule) => ({
+          ...schedule,
+          agreement: { lenderName: '알 수 없음' }
+        }));
+      },
       updateMany: async (args: {
         where?: {
           linkedPlanItemId?: string | { in?: string[] };

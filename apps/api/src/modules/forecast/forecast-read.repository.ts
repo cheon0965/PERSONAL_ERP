@@ -12,6 +12,7 @@ import {
   findLatestLockedPeriod,
   selectOperationalPeriod
 } from '../reporting/reporting-period-selection';
+import { summarizeJournalLines } from '../reporting/reporting-metrics';
 
 const forecastPeriodInclude =
   Prisma.validator<Prisma.AccountingPeriodInclude>()({
@@ -69,6 +70,36 @@ export type ForecastTrendPeriodReadModel = {
   closingSnapshot: ForecastClosingSnapshotRecord | null;
 };
 
+export type ForecastCategoryJournalLineRecord = ForecastJournalLineRecord & {
+  categoryName: string | null;
+};
+
+export type ForecastCategoryPlanItemRecord = ForecastPlanItemRecord & {
+  categoryName: string | null;
+};
+
+export type ForecastRecurringRuleRecord = {
+  id: string;
+  title: string;
+  amountWon: number;
+  flowKind: 'INCOME' | 'EXPENSE' | 'TRANSFER';
+  frequency: string;
+};
+
+export type ForecastInsurancePolicyRecord = {
+  id: string;
+  provider: string;
+  productName: string;
+  monthlyPremiumWon: number;
+};
+
+export type ForecastDebtRepaymentRecord = {
+  id: string;
+  lenderName: string;
+  totalAmount: number;
+  dueDate: Date;
+};
+
 export type MonthlyForecastReadModel = {
   targetPeriod: ForecastPeriodRecord;
   basisStatus: ReportingBasisStatus;
@@ -88,7 +119,20 @@ export type MonthlyForecastReadModel = {
   > | null;
   comparisonClosingSnapshot: ForecastClosingSnapshotRecord | null;
   trend: ForecastTrendPeriodReadModel[];
+  targetCategoryJournalLines: ForecastCategoryJournalLineRecord[];
+  targetCategoryPlanItems: ForecastCategoryPlanItemRecord[];
+  activeRecurringRules: ForecastRecurringRuleRecord[];
+  activeInsurancePolicies: ForecastInsurancePolicyRecord[];
+  nextMonthDebtRepayments: ForecastDebtRepaymentRecord[];
+  nextPeriod: Pick<ForecastPeriodRecord, 'id' | 'year' | 'month' | 'status'> | null;
+  nextPeriodPlanItems: ForecastPlanItemRecord[];
+  previousPeriodMetrics: {
+    incomeWon: number;
+    expenseWon: number;
+    balanceWon: number | null;
+  } | null;
 };
+
 
 @Injectable()
 export class ForecastReadRepository {
@@ -204,7 +248,120 @@ export class ForecastReadRepository {
       })
     );
 
+    const nextYear = targetPeriod.month === 12 ? targetPeriod.year + 1 : targetPeriod.year;
+    const nextMonth = targetPeriod.month === 12 ? 1 : targetPeriod.month + 1;
+
+    const prevPeriodRecord = periods.find(
+      (period) =>
+        (targetPeriod.month === 1
+          ? period.year === targetPeriod.year - 1 && period.month === 12
+          : period.year === targetPeriod.year && period.month === targetPeriod.month - 1)
+    );
+
+    const [
+      categoryJournalLines,
+      categoryPlanItems,
+      recurringRules,
+      insurancePolicies,
+      debtRepayments,
+      nextPeriodRecord,
+      nextPeriodPlanItemsRaw
+    ] = await Promise.all([
+      this.prisma.journalLine.findMany({
+        where: {
+          journalEntry: {
+            tenantId: input.tenantId,
+            ledgerId: input.ledgerId,
+            periodId: targetPeriod.id,
+            status: 'POSTED'
+          }
+        },
+        include: {
+          accountSubject: { select: { subjectKind: true } },
+          journalEntry: {
+            select: {
+              sourceCollectedTransaction: {
+                select: { category: { select: { name: true } } }
+              }
+            }
+          }
+        }
+      }),
+      this.prisma.planItem.findMany({
+        where: {
+          tenantId: input.tenantId,
+          ledgerId: input.ledgerId,
+          periodId: targetPeriod.id
+        },
+        include: { category: { select: { name: true } } }
+      }),
+      this.prisma.recurringRule.findMany({
+        where: {
+          tenantId: input.tenantId,
+          ledgerId: input.ledgerId,
+          isActive: true,
+          startDate: { lte: new Date(`${nextYear}-${String(nextMonth).padStart(2, '0')}-28T23:59:59.999Z`) },
+          OR: [
+            { endDate: null },
+            { endDate: { gte: new Date(`${nextYear}-${String(nextMonth).padStart(2, '0')}-01T00:00:00.000Z`) } }
+          ]
+        },
+        include: { ledgerTransactionType: { select: { flowKind: true } } }
+      }),
+      this.prisma.insurancePolicy.findMany({
+        where: {
+          tenantId: input.tenantId,
+          ledgerId: input.ledgerId,
+          isActive: true,
+          monthlyPremiumWon: { gt: 0 }
+        }
+      }),
+      this.prisma.liabilityRepaymentSchedule.findMany({
+        where: {
+          tenantId: input.tenantId,
+          ledgerId: input.ledgerId,
+          dueDate: {
+            gte: new Date(`${nextYear}-${String(nextMonth).padStart(2, '0')}-01T00:00:00.000Z`),
+            lt: new Date(nextMonth === 12
+              ? `${nextYear + 1}-01-01T00:00:00.000Z`
+              : `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}-01T00:00:00.000Z`)
+          },
+          status: { in: ['SCHEDULED', 'PLANNED'] }
+        },
+        include: { agreement: { select: { lenderName: true } } }
+      }),
+      this.prisma.accountingPeriod.findFirst({
+        where: {
+          tenantId: input.tenantId,
+          ledgerId: input.ledgerId,
+          year: nextYear,
+          month: nextMonth
+        }
+      }),
+      this.prisma.planItem.findMany({
+        where: {
+          tenantId: input.tenantId,
+          ledgerId: input.ledgerId,
+          period: { year: nextYear, month: nextMonth }
+        }
+      })
+    ]);
+
     const metricsByPeriodId = new Map(periodMetrics);
+
+    const prevMetrics = prevPeriodRecord
+      ? metricsByPeriodId.get(prevPeriodRecord.id)
+      : null;
+    let previousPeriodMetrics: MonthlyForecastReadModel['previousPeriodMetrics'] = null;
+    if (prevMetrics) {
+      const prevSummary = summarizeJournalLines(prevMetrics.journalLines);
+      previousPeriodMetrics = {
+        incomeWon: prevSummary.incomeWon,
+        expenseWon: prevSummary.expenseWon,
+        balanceWon: prevMetrics.closingSnapshot?.cashBalanceWon ?? null
+      };
+    }
+
     return {
       targetPeriod,
       basisStatus:
@@ -265,7 +422,48 @@ export class ForecastReadRepository {
           return items;
         },
         []
-      )
+      ),
+      targetCategoryJournalLines: categoryJournalLines.map((line) => ({
+        ...mapForecastJournalLineRecord(line),
+        categoryName:
+          line.journalEntry?.sourceCollectedTransaction?.category?.name ?? null
+      })),
+      targetCategoryPlanItems: categoryPlanItems.map((item) => ({
+        ...mapForecastPlanItemRecord(item),
+        categoryName: item.category?.name ?? null
+      })),
+      activeRecurringRules: recurringRules.map((rule) => ({
+        id: rule.id,
+        title: rule.title,
+        amountWon: fromPrismaMoneyWon(rule.amountWon),
+        flowKind: (rule.ledgerTransactionType?.flowKind ?? 'EXPENSE') as
+          | 'INCOME'
+          | 'EXPENSE'
+          | 'TRANSFER',
+        frequency: rule.frequency
+      })),
+      activeInsurancePolicies: insurancePolicies.map((policy) => ({
+        id: policy.id,
+        provider: policy.provider,
+        productName: policy.productName,
+        monthlyPremiumWon: fromPrismaMoneyWon(policy.monthlyPremiumWon)
+      })),
+      nextMonthDebtRepayments: debtRepayments.map((repayment) => ({
+        id: repayment.id,
+        lenderName: repayment.agreement.lenderName,
+        totalAmount: fromPrismaMoneyWon(repayment.totalAmount),
+        dueDate: repayment.dueDate
+      })),
+      nextPeriod: nextPeriodRecord
+        ? {
+            id: nextPeriodRecord.id,
+            year: nextPeriodRecord.year,
+            month: nextPeriodRecord.month,
+            status: nextPeriodRecord.status
+          }
+        : null,
+      nextPeriodPlanItems: nextPeriodPlanItemsRaw.map(mapForecastPlanItemRecord),
+      previousPeriodMetrics
     };
   }
 }

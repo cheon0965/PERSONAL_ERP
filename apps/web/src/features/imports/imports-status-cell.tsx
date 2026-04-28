@@ -8,11 +8,9 @@ import type { ImportedRowTableItem } from './imports.shared';
 
 export function ImportedRowStatusCell({
   row,
-  selectedRowId,
   onPrepare
 }: {
   row: ImportedRowTableItem;
-  selectedRowId: string | null;
   onPrepare: (row: ImportedRowTableItem) => void;
 }) {
   if (row.collectionSummary) {
@@ -51,7 +49,7 @@ export function ImportedRowStatusCell({
   return (
     <Button
       size="small"
-      variant={selectedRowId === row.id ? 'contained' : 'text'}
+      variant="contained"
       onClick={() => onPrepare(row)}
     >
       거래 등록

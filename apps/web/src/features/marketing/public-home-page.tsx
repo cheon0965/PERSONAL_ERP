@@ -208,12 +208,16 @@ function LandingHeader() {
           sx={{ minHeight: 68 }}
         >
           <Box
-            component={Link}
-            href="/"
+            component="button"
+            type="button"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             sx={{
               display: 'inline-flex',
               alignItems: 'center',
-              textDecoration: 'none'
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer'
             }}
           >
             <BrandLogo priority width="clamp(156px, 18vw, 190px)" />
@@ -225,17 +229,24 @@ function LandingHeader() {
             alignItems="center"
             sx={{ display: { xs: 'none', md: 'flex' } }}
           >
-            <Button component="a" href="#workflow" color="inherit" size="small">
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => smoothScrollTo('workflow')}
+            >
               업무 흐름
             </Button>
-            <Button component="a" href="#features" color="inherit" size="small">
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => smoothScrollTo('features')}
+            >
               주요 기능
             </Button>
             <Button
-              component="a"
-              href="#strengths"
               color="inherit"
               size="small"
+              onClick={() => smoothScrollTo('strengths')}
             >
               장점
             </Button>
@@ -968,4 +979,19 @@ function SectionHeading({
       </Typography>
     </Stack>
   );
+}
+
+const HEADER_HEIGHT = 68;
+
+function smoothScrollTo(id: string) {
+  const element = document.getElementById(id);
+
+  if (!element) {
+    return;
+  }
+
+  const top =
+    element.getBoundingClientRect().top + window.scrollY - HEADER_HEIGHT;
+
+  window.scrollTo({ top, behavior: 'smooth' });
 }

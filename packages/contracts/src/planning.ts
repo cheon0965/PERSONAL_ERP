@@ -125,4 +125,40 @@ export type ForecastResponse = {
   trend: ReportingTrendPoint[];
   officialComparison: ReportingOfficialComparison | null;
   notes: string[];
+  categoryDrivers: ForecastCategoryDriver[];
+  periodComparison: ForecastPeriodComparison | null;
+  nextMonthProjection: ForecastNextMonthProjection | null;
+};
+
+export type ForecastCategoryDriver = {
+  categoryName: string;
+  confirmedWon: MoneyWon;
+  remainingPlannedWon: MoneyWon;
+  flowKind: 'INCOME' | 'EXPENSE';
+};
+
+export type ForecastPeriodComparison = {
+  previousMonthLabel: string;
+  incomeChangeWon: MoneyWon;
+  expenseChangeWon: MoneyWon;
+  balanceChangeWon: MoneyWon;
+  incomeChangePercent: number | null;
+  expenseChangePercent: number | null;
+};
+
+export type ForecastFixedCostItem = {
+  label: string;
+  amountWon: MoneyWon;
+  source: 'RECURRING_RULE' | 'INSURANCE' | 'LIABILITY';
+};
+
+export type ForecastNextMonthProjection = {
+  monthLabel: string;
+  isOpen: boolean;
+  hasPlanItems: boolean;
+  estimatedIncomeWon: MoneyWon;
+  estimatedExpenseWon: MoneyWon;
+  estimatedFixedCosts: ForecastFixedCostItem[];
+  projectedBalanceWon: MoneyWon;
+  basisDescription: string;
 };

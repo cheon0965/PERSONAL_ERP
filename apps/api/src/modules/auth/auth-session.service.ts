@@ -326,7 +326,7 @@ export class AuthSessionService {
     };
   }
 
-  private async revokeAllUserSessions(userId: string): Promise<void> {
+  async revokeAllUserSessions(userId: string): Promise<void> {
     await this.prisma.authSession.updateMany({
       where: {
         userId,

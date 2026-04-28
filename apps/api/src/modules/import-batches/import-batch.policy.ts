@@ -11,7 +11,7 @@ import {
 
 type DelimitedImportSourceKind = Exclude<
   ImportSourceKind,
-  typeof ImportSourceKind.IM_BANK_PDF
+  typeof ImportSourceKind.IM_BANK_PDF | typeof ImportSourceKind.WOORI_BANK_HTML
 >;
 
 export type ParsedImportedRowDraft = {
@@ -326,6 +326,12 @@ function assertDelimitedImportSourceKind(
   if (sourceKind === ImportSourceKind.IM_BANK_PDF) {
     throw new BadRequestException(
       'IM뱅크 PDF는 파일 첨부 업로드로 등록해 주세요.'
+    );
+  }
+
+  if (sourceKind === ImportSourceKind.WOORI_BANK_HTML) {
+    throw new BadRequestException(
+      '우리은행 HTML은 파일 첨부 업로드로 등록해 주세요.'
     );
   }
 }
