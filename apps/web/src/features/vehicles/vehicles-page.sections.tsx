@@ -1,6 +1,14 @@
 'use client';
 
-import { Button, Chip, Grid, Stack, Typography } from '@mui/material';
+import {
+  Button,
+  Chip,
+  Grid,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography
+} from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import { BarChart } from '@mui/x-charts/BarChart';
 import type {
@@ -18,12 +26,35 @@ import { formatNumber, formatWon } from '@/shared/lib/format';
 import { VehicleFuelLogForm } from './vehicle-fuel-log-form';
 import { VehicleMaintenanceForm } from './vehicle-maintenance-form';
 import { VehicleForm } from './vehicle-form';
+import {
+  fuelTypeLabelMap,
+  maintenanceCategoryLabelMap
+} from './vehicles.columns';
 import { buildVehicleOperatingSummaryView } from './vehicles.summary';
 
 type VehicleOperatingSummaryView = ReturnType<
   typeof buildVehicleOperatingSummaryView
 >;
 type VehicleOperatingSummaryItem = VehicleOperatingSummaryView['items'][number];
+
+export type VehicleFleetFilters = {
+  keyword: string;
+  manufacturer: string;
+  fuelType: string;
+};
+
+export type VehicleFuelLogFilters = {
+  keyword: string;
+  vehicleName: string;
+  linkStatus: string;
+};
+
+export type VehicleMaintenanceLogFilters = {
+  keyword: string;
+  vehicleName: string;
+  category: string;
+  linkStatus: string;
+};
 
 export function VehiclesOverviewSection({
   manufacturers,
@@ -180,14 +211,20 @@ export function VehiclesOverviewSection({
 }
 
 export function VehiclesFleetSection({
+  filters,
+  fuelTypeOptions,
   manufacturers,
   vehicles,
   vehicleColumns,
+  onFiltersChange,
   onCreateVehicle
 }: {
+  filters: VehicleFleetFilters;
+  fuelTypeOptions: string[];
   manufacturers: string[];
   vehicles: VehicleItem[];
   vehicleColumns: GridColDef<VehicleItem>[];
+  onFiltersChange: (filters: VehicleFleetFilters) => void;
   onCreateVehicle: () => void;
 }) {
   return (
@@ -195,32 +232,40 @@ export function VehiclesFleetSection({
       title="차량 기본 정보"
       description="차량 프로필은 이 탭에서만 관리하고, 연료와 정비 이력은 각각 전용 탭에서 누적합니다."
       toolbar={
-        <Stack
-          direction={{ xs: 'column', md: 'row' }}
-          spacing={1.5}
-          justifyContent="space-between"
-          alignItems={{ xs: 'flex-start', md: 'center' }}
-        >
-          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-            <Chip
-              label={`관리 차량 ${vehicles.length}대`}
-              size="small"
-              color="primary"
-              variant="outlined"
-            />
-            <Chip
-              label={
-                manufacturers.length > 0
-                  ? `제조사 ${manufacturers.join(' / ')}`
-                  : '제조사 정보 없음'
-              }
-              size="small"
-              variant="outlined"
-            />
+        <Stack spacing={1.25}>
+          <VehicleFleetFiltersControl
+            filters={filters}
+            fuelTypeOptions={fuelTypeOptions}
+            manufacturerOptions={manufacturers}
+            onFiltersChange={onFiltersChange}
+          />
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={1.5}
+            justifyContent="space-between"
+            alignItems={{ xs: 'flex-start', md: 'center' }}
+          >
+            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+              <Chip
+                label={`관리 차량 ${vehicles.length}대`}
+                size="small"
+                color="primary"
+                variant="outlined"
+              />
+              <Chip
+                label={
+                  manufacturers.length > 0
+                    ? `제조사 ${manufacturers.join(' / ')}`
+                    : '제조사 정보 없음'
+                }
+                size="small"
+                variant="outlined"
+              />
+            </Stack>
+            <Typography variant="body2" color="text.secondary">
+              각 차량 행에서 연료 기록과 정비 기록을 바로 추가할 수 있습니다.
+            </Typography>
           </Stack>
-          <Typography variant="body2" color="text.secondary">
-            각 차량 행에서 연료 기록과 정비 기록을 바로 추가할 수 있습니다.
-          </Typography>
         </Stack>
       }
       rows={vehicles}
@@ -235,18 +280,24 @@ export function VehiclesFleetSection({
 }
 
 export function VehiclesFuelSection({
+  filters,
   fuelLogRows,
   fuelTableColumns,
   latestFuelLog,
   operatingSummary,
+  vehicleOptions,
   vehicles,
+  onFiltersChange,
   onCreateFuelLog
 }: {
+  filters: VehicleFuelLogFilters;
   fuelLogRows: VehicleFuelLogItem[];
   fuelTableColumns: GridColDef<VehicleFuelLogItem>[];
   latestFuelLog: VehicleFuelLogItem | null;
   operatingSummary: VehicleOperatingSummaryView;
+  vehicleOptions: string[];
   vehicles: VehicleItem[];
+  onFiltersChange: (filters: VehicleFuelLogFilters) => void;
   onCreateFuelLog: (vehicleId?: string | null) => void;
 }) {
   return (
@@ -254,38 +305,45 @@ export function VehiclesFuelSection({
       title="주유 / 충전 기록"
       description="연료 사용과 충전 이력을 관리하고, 필요한 기록은 수집거래 연동 상태까지 함께 추적합니다."
       toolbar={
-        <Stack
-          direction={{ xs: 'column', md: 'row' }}
-          spacing={1.5}
-          justifyContent="space-between"
-          alignItems={{ xs: 'flex-start', md: 'center' }}
-        >
-          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-            <Chip
-              label={`누적 비용 ${formatWon(operatingSummary.totals.fuelExpenseWon)}`}
-              size="small"
-              color="primary"
-              variant="outlined"
-            />
-            <Chip
-              label={`기록 ${fuelLogRows.length}건`}
-              size="small"
-              variant="outlined"
-            />
-            <Chip
-              label={
-                latestFuelLog
-                  ? `최근 ${latestFuelLog.filledOn.slice(0, 10)} · ${latestFuelLog.vehicleName}`
-                  : '최근 기록 없음'
-              }
-              size="small"
-              variant="outlined"
-            />
+        <Stack spacing={1.25}>
+          <VehicleFuelFiltersControl
+            filters={filters}
+            vehicleOptions={vehicleOptions}
+            onFiltersChange={onFiltersChange}
+          />
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={1.5}
+            justifyContent="space-between"
+            alignItems={{ xs: 'flex-start', md: 'center' }}
+          >
+            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+              <Chip
+                label={`누적 비용 ${formatWon(operatingSummary.totals.fuelExpenseWon)}`}
+                size="small"
+                color="primary"
+                variant="outlined"
+              />
+              <Chip
+                label={`기록 ${fuelLogRows.length}건`}
+                size="small"
+                variant="outlined"
+              />
+              <Chip
+                label={
+                  latestFuelLog
+                    ? `최근 ${latestFuelLog.filledOn.slice(0, 10)} · ${latestFuelLog.vehicleName}`
+                    : '최근 기록 없음'
+                }
+                size="small"
+                variant="outlined"
+              />
+            </Stack>
+            <Typography variant="body2" color="text.secondary">
+              연료 기록은 이 표에서 먼저 보고, 추가와 수정은 드로어에서 이어서
+              처리합니다. 회계 연동 상태는 행 단위로 함께 표시됩니다.
+            </Typography>
           </Stack>
-          <Typography variant="body2" color="text.secondary">
-            연료 기록은 이 표에서 먼저 보고, 추가와 수정은 드로어에서 이어서
-            처리합니다. 회계 연동 상태는 행 단위로 함께 표시됩니다.
-          </Typography>
         </Stack>
       }
       rows={fuelLogRows}
@@ -307,18 +365,26 @@ export function VehiclesFuelSection({
 }
 
 export function VehiclesMaintenanceSection({
+  categoryOptions,
+  filters,
   latestMaintenanceLog,
   maintenanceLogRows,
   maintenanceTableColumns,
   operatingSummary,
+  vehicleOptions,
   vehicles,
+  onFiltersChange,
   onCreateMaintenanceLog
 }: {
+  categoryOptions: string[];
+  filters: VehicleMaintenanceLogFilters;
   latestMaintenanceLog: VehicleMaintenanceLogItem | null;
   maintenanceLogRows: VehicleMaintenanceLogItem[];
   maintenanceTableColumns: GridColDef<VehicleMaintenanceLogItem>[];
   operatingSummary: VehicleOperatingSummaryView;
+  vehicleOptions: string[];
   vehicles: VehicleItem[];
+  onFiltersChange: (filters: VehicleMaintenanceLogFilters) => void;
   onCreateMaintenanceLog: (vehicleId?: string | null) => void;
 }) {
   return (
@@ -326,38 +392,46 @@ export function VehiclesMaintenanceSection({
       title="정비 이력"
       description="정비 항목과 금액을 누적하고, 필요한 기록은 수집거래 연동 상태까지 함께 추적합니다."
       toolbar={
-        <Stack
-          direction={{ xs: 'column', md: 'row' }}
-          spacing={1.5}
-          justifyContent="space-between"
-          alignItems={{ xs: 'flex-start', md: 'center' }}
-        >
-          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-            <Chip
-              label={`누적 정비 비용 ${formatWon(operatingSummary.totals.maintenanceExpenseWon)}`}
-              size="small"
-              color="primary"
-              variant="outlined"
-            />
-            <Chip
-              label={`기록 ${maintenanceLogRows.length}건`}
-              size="small"
-              variant="outlined"
-            />
-            <Chip
-              label={
-                latestMaintenanceLog
-                  ? `최근 ${latestMaintenanceLog.performedOn.slice(0, 10)} · ${latestMaintenanceLog.vehicleName}`
-                  : '최근 기록 없음'
-              }
-              size="small"
-              variant="outlined"
-            />
+        <Stack spacing={1.25}>
+          <VehicleMaintenanceFiltersControl
+            categoryOptions={categoryOptions}
+            filters={filters}
+            vehicleOptions={vehicleOptions}
+            onFiltersChange={onFiltersChange}
+          />
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={1.5}
+            justifyContent="space-between"
+            alignItems={{ xs: 'flex-start', md: 'center' }}
+          >
+            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+              <Chip
+                label={`누적 정비 비용 ${formatWon(operatingSummary.totals.maintenanceExpenseWon)}`}
+                size="small"
+                color="primary"
+                variant="outlined"
+              />
+              <Chip
+                label={`기록 ${maintenanceLogRows.length}건`}
+                size="small"
+                variant="outlined"
+              />
+              <Chip
+                label={
+                  latestMaintenanceLog
+                    ? `최근 ${latestMaintenanceLog.performedOn.slice(0, 10)} · ${latestMaintenanceLog.vehicleName}`
+                    : '최근 기록 없음'
+                }
+                size="small"
+                variant="outlined"
+              />
+            </Stack>
+            <Typography variant="body2" color="text.secondary">
+              정비 기록은 이 표를 기준으로 확인하고, 추가와 수정은 드로어에서
+              이어서 처리합니다. 회계 연동 상태는 행 단위로 함께 표시됩니다.
+            </Typography>
           </Stack>
-          <Typography variant="body2" color="text.secondary">
-            정비 기록은 이 표를 기준으로 확인하고, 추가와 수정은 드로어에서
-            이어서 처리합니다. 회계 연동 상태는 행 단위로 함께 표시됩니다.
-          </Typography>
         </Stack>
       }
       rows={maintenanceLogRows}
@@ -375,6 +449,259 @@ export function VehiclesMaintenanceSection({
       }
       height={360}
     />
+  );
+}
+
+function VehicleFleetFiltersControl({
+  filters,
+  fuelTypeOptions,
+  manufacturerOptions,
+  onFiltersChange
+}: {
+  filters: VehicleFleetFilters;
+  fuelTypeOptions: string[];
+  manufacturerOptions: string[];
+  onFiltersChange: (filters: VehicleFleetFilters) => void;
+}) {
+  const hasActiveFilter = Object.values(filters).some((value) => value !== '');
+
+  return (
+    <Stack
+      direction={{ xs: 'column', md: 'row' }}
+      spacing={1}
+      alignItems={{ xs: 'stretch', md: 'center' }}
+    >
+      <TextField
+        label="검색어"
+        size="small"
+        value={filters.keyword}
+        onChange={(event) =>
+          onFiltersChange({ ...filters, keyword: event.target.value })
+        }
+        placeholder="차량명, 제조사"
+        sx={{ minWidth: { md: 240 }, flex: 1 }}
+      />
+      <TextField
+        select
+        label="제조사"
+        size="small"
+        value={filters.manufacturer}
+        onChange={(event) =>
+          onFiltersChange({ ...filters, manufacturer: event.target.value })
+        }
+        sx={{ minWidth: { md: 150 } }}
+      >
+        <MenuItem value="">전체</MenuItem>
+        {manufacturerOptions.map((manufacturer) => (
+          <MenuItem key={manufacturer} value={manufacturer}>
+            {manufacturer}
+          </MenuItem>
+        ))}
+      </TextField>
+      <TextField
+        select
+        label="연료"
+        size="small"
+        value={filters.fuelType}
+        onChange={(event) =>
+          onFiltersChange({ ...filters, fuelType: event.target.value })
+        }
+        sx={{ minWidth: { md: 150 } }}
+      >
+        <MenuItem value="">전체</MenuItem>
+        {fuelTypeOptions.map((fuelType) => (
+          <MenuItem key={fuelType} value={fuelType}>
+            {fuelTypeLabelMap[fuelType] ?? fuelType}
+          </MenuItem>
+        ))}
+      </TextField>
+      <Button
+        variant="outlined"
+        disabled={!hasActiveFilter}
+        sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+        onClick={() =>
+          onFiltersChange({
+            keyword: '',
+            manufacturer: '',
+            fuelType: ''
+          })
+        }
+      >
+        초기화
+      </Button>
+    </Stack>
+  );
+}
+
+function VehicleFuelFiltersControl({
+  filters,
+  vehicleOptions,
+  onFiltersChange
+}: {
+  filters: VehicleFuelLogFilters;
+  vehicleOptions: string[];
+  onFiltersChange: (filters: VehicleFuelLogFilters) => void;
+}) {
+  const hasActiveFilter = Object.values(filters).some((value) => value !== '');
+
+  return (
+    <Stack
+      direction={{ xs: 'column', md: 'row' }}
+      spacing={1}
+      alignItems={{ xs: 'stretch', md: 'center' }}
+    >
+      <TextField
+        label="검색어"
+        size="small"
+        value={filters.keyword}
+        onChange={(event) =>
+          onFiltersChange({ ...filters, keyword: event.target.value })
+        }
+        placeholder="차량, 날짜, 전표"
+        sx={{ minWidth: { md: 240 }, flex: 1 }}
+      />
+      <TextField
+        select
+        label="차량"
+        size="small"
+        value={filters.vehicleName}
+        onChange={(event) =>
+          onFiltersChange({ ...filters, vehicleName: event.target.value })
+        }
+        sx={{ minWidth: { md: 170 } }}
+      >
+        <MenuItem value="">전체</MenuItem>
+        {vehicleOptions.map((vehicleName) => (
+          <MenuItem key={vehicleName} value={vehicleName}>
+            {vehicleName}
+          </MenuItem>
+        ))}
+      </TextField>
+      <TextField
+        select
+        label="회계 연동"
+        size="small"
+        value={filters.linkStatus}
+        onChange={(event) =>
+          onFiltersChange({ ...filters, linkStatus: event.target.value })
+        }
+        sx={{ minWidth: { md: 150 } }}
+      >
+        <MenuItem value="">전체</MenuItem>
+        <MenuItem value="LINKED">연결됨</MenuItem>
+        <MenuItem value="UNLINKED">미연결</MenuItem>
+      </TextField>
+      <Button
+        variant="outlined"
+        disabled={!hasActiveFilter}
+        sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+        onClick={() =>
+          onFiltersChange({
+            keyword: '',
+            vehicleName: '',
+            linkStatus: ''
+          })
+        }
+      >
+        초기화
+      </Button>
+    </Stack>
+  );
+}
+
+function VehicleMaintenanceFiltersControl({
+  categoryOptions,
+  filters,
+  vehicleOptions,
+  onFiltersChange
+}: {
+  categoryOptions: string[];
+  filters: VehicleMaintenanceLogFilters;
+  vehicleOptions: string[];
+  onFiltersChange: (filters: VehicleMaintenanceLogFilters) => void;
+}) {
+  const hasActiveFilter = Object.values(filters).some((value) => value !== '');
+
+  return (
+    <Stack
+      direction={{ xs: 'column', md: 'row' }}
+      spacing={1}
+      alignItems={{ xs: 'stretch', md: 'center' }}
+    >
+      <TextField
+        label="검색어"
+        size="small"
+        value={filters.keyword}
+        onChange={(event) =>
+          onFiltersChange({ ...filters, keyword: event.target.value })
+        }
+        placeholder="차량, 정비내용, 업체"
+        sx={{ minWidth: { md: 240 }, flex: 1 }}
+      />
+      <TextField
+        select
+        label="차량"
+        size="small"
+        value={filters.vehicleName}
+        onChange={(event) =>
+          onFiltersChange({ ...filters, vehicleName: event.target.value })
+        }
+        sx={{ minWidth: { md: 170 } }}
+      >
+        <MenuItem value="">전체</MenuItem>
+        {vehicleOptions.map((vehicleName) => (
+          <MenuItem key={vehicleName} value={vehicleName}>
+            {vehicleName}
+          </MenuItem>
+        ))}
+      </TextField>
+      <TextField
+        select
+        label="구분"
+        size="small"
+        value={filters.category}
+        onChange={(event) =>
+          onFiltersChange({ ...filters, category: event.target.value })
+        }
+        sx={{ minWidth: { md: 150 } }}
+      >
+        <MenuItem value="">전체</MenuItem>
+        {categoryOptions.map((category) => (
+          <MenuItem key={category} value={category}>
+            {maintenanceCategoryLabelMap[category] ?? category}
+          </MenuItem>
+        ))}
+      </TextField>
+      <TextField
+        select
+        label="회계 연동"
+        size="small"
+        value={filters.linkStatus}
+        onChange={(event) =>
+          onFiltersChange({ ...filters, linkStatus: event.target.value })
+        }
+        sx={{ minWidth: { md: 150 } }}
+      >
+        <MenuItem value="">전체</MenuItem>
+        <MenuItem value="LINKED">연결됨</MenuItem>
+        <MenuItem value="UNLINKED">미연결</MenuItem>
+      </TextField>
+      <Button
+        variant="outlined"
+        disabled={!hasActiveFilter}
+        sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+        onClick={() =>
+          onFiltersChange({
+            keyword: '',
+            vehicleName: '',
+            category: '',
+            linkStatus: ''
+          })
+        }
+      >
+        초기화
+      </Button>
+    </Stack>
   );
 }
 

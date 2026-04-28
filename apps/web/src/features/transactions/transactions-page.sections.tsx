@@ -408,7 +408,11 @@ export function TransactionsTableSection({
                 운영 월 보기
               </Button>
               {activeFilterCount > 0 ? (
-                <Button size="small" onClick={onClearFilters}>
+                <Button
+                  size="small"
+                  sx={{ flexShrink: 0, minWidth: 104, whiteSpace: 'nowrap' }}
+                  onClick={onClearFilters}
+                >
                   필터 초기화
                 </Button>
               ) : null}

@@ -5,7 +5,9 @@ import {
   Alert,
   Button,
   Chip,
+  MenuItem,
   Stack,
+  TextField,
   Typography,
   type ChipProps
 } from '@mui/material';
@@ -27,11 +29,13 @@ import {
 } from './admin.api';
 import { readTenantStatusLabel } from './admin-labels';
 
-const NEXT_STATUS_OPTIONS: TenantStatus[] = [
-  'ACTIVE',
-  'SUSPENDED',
-  'ARCHIVED'
-];
+const NEXT_STATUS_OPTIONS: TenantStatus[] = ['ACTIVE', 'SUSPENDED', 'ARCHIVED'];
+
+type AdminTenantFilters = {
+  keyword: string;
+  status: string;
+  ledgerState: string;
+};
 
 export function AdminTenantsPage() {
   const queryClient = useQueryClient();
@@ -39,6 +43,11 @@ export function AdminTenantsPage() {
   const canRead = user?.isSystemAdmin === true;
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [tableFilters, setTableFilters] = useState<AdminTenantFilters>({
+    keyword: '',
+    status: '',
+    ledgerState: ''
+  });
 
   const tenantsQuery = useQuery({
     queryKey: adminTenantsQueryKey,
@@ -92,6 +101,10 @@ export function AdminTenantsPage() {
   });
 
   const rows = tenantsQuery.data ?? [];
+  const filteredRows = useMemo(
+    () => filterAdminTenants(rows, tableFilters),
+    [rows, tableFilters]
+  );
   const summary = {
     total: rows.length,
     active: rows.filter((item) => item.status === 'ACTIVE').length,
@@ -177,7 +190,13 @@ export function AdminTenantsPage() {
       <DataTableCard
         title="사업장 목록"
         description={`활성 ${summary.active}곳 · 중지 ${summary.suspended}곳`}
-        rows={rows}
+        toolbar={
+          <AdminTenantsTableToolbar
+            filters={tableFilters}
+            onFiltersChange={setTableFilters}
+          />
+        }
+        rows={filteredRows}
         columns={columns}
         height={560}
       />
@@ -211,8 +230,7 @@ export function AdminTenantsPage() {
                     selectedTenant.status === status ? 'contained' : 'outlined'
                   }
                   disabled={
-                    selectedTenant.status === status ||
-                    statusMutation.isPending
+                    selectedTenant.status === status || statusMutation.isPending
                   }
                   onClick={() =>
                     statusMutation.mutate({
@@ -243,6 +261,114 @@ export function AdminTenantsPage() {
       </FormDrawer>
     </Stack>
   );
+}
+
+function AdminTenantsTableToolbar({
+  filters,
+  onFiltersChange
+}: {
+  filters: AdminTenantFilters;
+  onFiltersChange: (filters: AdminTenantFilters) => void;
+}) {
+  const hasActiveFilter = Object.values(filters).some((value) => value !== '');
+
+  return (
+    <Stack
+      direction={{ xs: 'column', md: 'row' }}
+      spacing={1}
+      alignItems={{ xs: 'stretch', md: 'center' }}
+    >
+      <TextField
+        label="검색어"
+        size="small"
+        value={filters.keyword}
+        onChange={(event) =>
+          onFiltersChange({ ...filters, keyword: event.target.value })
+        }
+        placeholder="사업장, 슬러그, 장부"
+        sx={{ minWidth: { md: 260 }, flex: 1 }}
+      />
+      <TextField
+        select
+        label="상태"
+        size="small"
+        value={filters.status}
+        onChange={(event) =>
+          onFiltersChange({ ...filters, status: event.target.value })
+        }
+        sx={{ minWidth: { md: 150 } }}
+      >
+        <MenuItem value="">전체</MenuItem>
+        <MenuItem value="ACTIVE">활성</MenuItem>
+        <MenuItem value="TRIAL">체험</MenuItem>
+        <MenuItem value="SUSPENDED">중지</MenuItem>
+        <MenuItem value="ARCHIVED">보관</MenuItem>
+      </TextField>
+      <TextField
+        select
+        label="기본 장부"
+        size="small"
+        value={filters.ledgerState}
+        onChange={(event) =>
+          onFiltersChange({ ...filters, ledgerState: event.target.value })
+        }
+        sx={{ minWidth: { md: 150 } }}
+      >
+        <MenuItem value="">전체</MenuItem>
+        <MenuItem value="READY">있음</MenuItem>
+        <MenuItem value="MISSING">누락</MenuItem>
+      </TextField>
+      <Button
+        variant="outlined"
+        disabled={!hasActiveFilter}
+        sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+        onClick={() =>
+          onFiltersChange({
+            keyword: '',
+            status: '',
+            ledgerState: ''
+          })
+        }
+      >
+        초기화
+      </Button>
+    </Stack>
+  );
+}
+
+function filterAdminTenants(
+  tenants: AdminTenantItem[],
+  filters: AdminTenantFilters
+) {
+  const keyword = normalizeFilterText(filters.keyword);
+
+  return tenants.filter((tenant) => {
+    if (filters.status && tenant.status !== filters.status) {
+      return false;
+    }
+
+    if (filters.ledgerState === 'READY' && !tenant.defaultLedgerId) {
+      return false;
+    }
+
+    if (filters.ledgerState === 'MISSING' && tenant.defaultLedgerId) {
+      return false;
+    }
+
+    if (!keyword) {
+      return true;
+    }
+
+    return normalizeFilterText(
+      [tenant.name, tenant.slug, tenant.defaultLedgerName]
+        .filter(Boolean)
+        .join(' ')
+    ).includes(keyword);
+  });
+}
+
+function normalizeFilterText(value: string) {
+  return value.trim().toLocaleLowerCase('ko-KR');
 }
 
 function Detail({ label, value }: { label: string; value: string }) {

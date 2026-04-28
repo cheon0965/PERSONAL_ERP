@@ -28,12 +28,13 @@ import {
 import { readMembershipRoleLabel } from './admin-labels';
 import {
   type AdminEditableStatus,
+  AdminMembersFilterToolbar,
   AdminMemberEditDrawer,
   AdminMemberInviteDrawer,
   AdminMemberRemoveDialog,
   AdminMembersAccessAlert,
   AdminMembersSummarySection,
-  AdminMembersTableToolbar,
+  type AdminMembersTableFilters,
   buildAdminMembersSummary,
   createAdminMembersColumns
 } from './admin-members-page.sections';
@@ -59,6 +60,12 @@ export function AdminMembersPage() {
   const [removeTarget, setRemoveTarget] = useState<AdminMemberItem | null>(
     null
   );
+  const [tableFilters, setTableFilters] = useState<AdminMembersTableFilters>({
+    keyword: '',
+    role: '',
+    status: '',
+    tenantName: ''
+  });
 
   const membersQuery = useQuery({
     queryKey: adminMembersQueryKey,
@@ -78,6 +85,21 @@ export function AdminMembersPage() {
   const tenants = tenantsQuery.data ?? [];
   const users = usersQuery.data ?? [];
   const members = membersQuery.data ?? [];
+  const filteredMembers = useMemo(
+    () => filterAdminMembers(members, tableFilters),
+    [members, tableFilters]
+  );
+  const tenantOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          members
+            .map((member) => member.tenant?.name)
+            .filter((name): name is string => Boolean(name))
+        )
+      ).sort((left, right) => left.localeCompare(right, 'ko-KR')),
+    [members]
+  );
   const memberSummary = useMemo(
     () => buildAdminMembersSummary(members),
     [members]
@@ -297,8 +319,15 @@ export function AdminMembersPage() {
         <DataTableCard
           title="멤버 목록"
           description="역할과 상태를 먼저 검토한 뒤, 필요한 멤버만 수정합니다."
-          toolbar={<AdminMembersTableToolbar summary={memberSummary} />}
-          rows={members}
+          toolbar={
+            <AdminMembersFilterToolbar
+              filters={tableFilters}
+              summary={memberSummary}
+              tenantOptions={tenantOptions}
+              onFiltersChange={setTableFilters}
+            />
+          }
+          rows={filteredMembers}
           columns={columns}
           height={520}
         />
@@ -361,4 +390,37 @@ export function AdminMembersPage() {
       />
     </Stack>
   );
+}
+
+function filterAdminMembers(
+  members: AdminMemberItem[],
+  filters: AdminMembersTableFilters
+) {
+  const keyword = normalizeFilterText(filters.keyword);
+
+  return members.filter((member) => {
+    if (filters.role && member.role !== filters.role) {
+      return false;
+    }
+
+    if (filters.status && member.status !== filters.status) {
+      return false;
+    }
+
+    if (filters.tenantName && member.tenant?.name !== filters.tenantName) {
+      return false;
+    }
+
+    if (!keyword) {
+      return true;
+    }
+
+    return normalizeFilterText(
+      [member.name, member.email, member.tenant?.name].filter(Boolean).join(' ')
+    ).includes(keyword);
+  });
+}
+
+function normalizeFilterText(value: string) {
+  return value.trim().toLocaleLowerCase('ko-KR');
 }

@@ -4,7 +4,6 @@ import type { ReactNode } from 'react';
 import type { Route } from 'next';
 import Link from 'next/link';
 import {
-  Box,
   Button,
   Chip,
   Stack,
@@ -53,8 +52,6 @@ export function PageHeader({
   title,
   description,
   badges = [],
-  metadata = [],
-  metadataSingleRow = false,
   primaryActionLabel,
   primaryActionHref,
   primaryActionOnClick,
@@ -219,59 +216,6 @@ export function PageHeader({
           </Stack>
         ) : null}
       </Stack>
-
-      {metadata.length > 0 ? (
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: metadataSingleRow
-              ? `repeat(${metadata.length}, minmax(140px, 1fr))`
-              : {
-                  xs: 'repeat(1, minmax(0, 1fr))',
-                  sm: `repeat(${Math.min(metadata.length, 3)}, minmax(0, 1fr))`
-                },
-            overflowX: metadataSingleRow ? 'auto' : 'visible',
-            gap: appLayout.pageHeaderMetaGap
-          }}
-        >
-          {metadata.map((item) => (
-            <Box
-              key={item.label}
-              sx={{
-                minWidth: 0,
-                p: 1.25,
-                borderRadius: 3,
-                border: '1px solid',
-                borderColor: alpha(brandTokens.palette.primaryBright, 0.12),
-                backgroundColor: alpha(brandTokens.palette.surface, 0.68),
-                backdropFilter: 'blur(10px)'
-              }}
-            >
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ display: 'block', fontWeight: 700 }}
-              >
-                {item.label}
-              </Typography>
-              <Typography
-                variant="body2"
-                sx={{
-                  mt: 0.35,
-                  minWidth: 0,
-                  color: brandTokens.palette.primaryDark,
-                  fontWeight: 800,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                {item.value}
-              </Typography>
-            </Box>
-          ))}
-        </Box>
-      ) : null}
     </Stack>
   );
 }

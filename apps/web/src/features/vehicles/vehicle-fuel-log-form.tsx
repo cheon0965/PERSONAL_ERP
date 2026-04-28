@@ -50,6 +50,11 @@ import {
   vehicleOperatingSummaryQueryKey,
   vehiclesQueryKey
 } from './vehicles.api';
+import {
+  calculateFuelPricingAdjustment,
+  recordFuelPricingFieldEdit,
+  type FuelPricingField
+} from './vehicle-fuel-pricing';
 import { buildVehicleOperatingSummaryView } from './vehicles.summary';
 
 const vehicleFuelLogFormSchema = z.object({
@@ -109,6 +114,7 @@ export function VehicleFuelLogForm({
   const queryClient = useQueryClient();
   const { notifySuccess } = useAppNotification();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
+  const fuelPricingEditOrderRef = React.useRef<FuelPricingField[]>([]);
   const form = useForm<VehicleFuelLogFormInput>({
     resolver: zodResolver(vehicleFuelLogFormSchema),
     defaultValues: buildDefaultValues(vehicles, initialVehicleId)
@@ -117,6 +123,11 @@ export function VehicleFuelLogForm({
   const selectedVehicleId = form.watch('vehicleId');
   const selectedFundingAccountId = form.watch('fundingAccountId');
   const selectedCategoryId = form.watch('categoryId');
+  const [watchedLiters, watchedAmountWon, watchedUnitPriceWon] = form.watch([
+    'liters',
+    'amountWon',
+    'unitPriceWon'
+  ]);
   const linkedCollectedTransaction = initialFuelLog?.linkedCollectedTransaction;
   const isAccountingLocked =
     mode === 'edit' && linkedCollectedTransaction
@@ -219,6 +230,7 @@ export function VehicleFuelLogForm({
   });
 
   React.useEffect(() => {
+    fuelPricingEditOrderRef.current = [];
     setFeedback(null);
 
     if (mode === 'edit' && initialFuelLog) {
@@ -228,6 +240,26 @@ export function VehicleFuelLogForm({
 
     form.reset(buildDefaultValues(vehicles, initialVehicleId));
   }, [form, initialFuelLog, initialVehicleId, mode, vehicles]);
+
+  React.useEffect(() => {
+    const adjustment = calculateFuelPricingAdjustment({
+      values: {
+        liters: watchedLiters,
+        amountWon: watchedAmountWon,
+        unitPriceWon: watchedUnitPriceWon
+      },
+      editOrder: fuelPricingEditOrderRef.current
+    });
+
+    if (!adjustment) {
+      return;
+    }
+
+    form.setValue(adjustment.field, adjustment.value, {
+      shouldDirty: true,
+      shouldValidate: true
+    });
+  }, [form, watchedAmountWon, watchedLiters, watchedUnitPriceWon]);
 
   React.useEffect(() => {
     if (!accountingEnabled) {
@@ -359,6 +391,7 @@ export function VehicleFuelLogForm({
           }
 
           if (mode === 'create') {
+            fuelPricingEditOrderRef.current = [];
             form.reset({
               ...buildDefaultValues(vehicles, values.vehicleId),
               accountingEnabled: values.accountingEnabled,
@@ -486,7 +519,14 @@ export function VehicleFuelLogForm({
               error={Boolean(form.formState.errors.liters)}
               helperText={form.formState.errors.liters?.message}
               disabled={isAccountingLocked}
-              {...form.register('liters')}
+              {...form.register('liters', {
+                onChange: () => {
+                  fuelPricingEditOrderRef.current = recordFuelPricingFieldEdit(
+                    fuelPricingEditOrderRef.current,
+                    'liters'
+                  );
+                }
+              })}
             />
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
@@ -496,7 +536,14 @@ export function VehicleFuelLogForm({
               error={Boolean(form.formState.errors.amountWon)}
               helperText={form.formState.errors.amountWon?.message}
               disabled={isAccountingLocked}
-              {...form.register('amountWon')}
+              {...form.register('amountWon', {
+                onChange: () => {
+                  fuelPricingEditOrderRef.current = recordFuelPricingFieldEdit(
+                    fuelPricingEditOrderRef.current,
+                    'amountWon'
+                  );
+                }
+              })}
             />
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
@@ -506,7 +553,14 @@ export function VehicleFuelLogForm({
               error={Boolean(form.formState.errors.unitPriceWon)}
               helperText={form.formState.errors.unitPriceWon?.message}
               disabled={isAccountingLocked}
-              {...form.register('unitPriceWon')}
+              {...form.register('unitPriceWon', {
+                onChange: () => {
+                  fuelPricingEditOrderRef.current = recordFuelPricingFieldEdit(
+                    fuelPricingEditOrderRef.current,
+                    'unitPriceWon'
+                  );
+                }
+              })}
             />
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>

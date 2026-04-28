@@ -1,4 +1,4 @@
-# PERSONAL_ERP
+﻿# PERSONAL_ERP
 
 1인 사업자와 소상공인이 `기준 데이터 준비 -> 월 운영 -> 전표 확정 -> 월 마감 -> 공식 보고 -> 차기 이월 -> 다음 달 전망`까지 한 흐름으로 운영할 수 있도록 만든 워크스페이스형 월별 재무 운영 시스템입니다.
 현재 저장소는 Next.js 기반 웹, NestJS 기반 API, Prisma/MySQL, `packages/contracts`, `packages/money`를 한 워크스페이스에서 함께 운영합니다.
@@ -15,7 +15,7 @@
 | 운영 자산   | 보험 계약, 부채 계약/상환 일정, 차량 기본 정보, 차량 연료 이력, 차량 정비 이력, 차량 운영 요약, 연료/정비 이력의 선택적 수집 거래 연동                                                                                          |
 | 보고 / 판단 | 대시보드, 재무제표 스냅샷, 차기 이월, 기간 전망                                                                                                                                                                                 |
 
-현재 구현 상세는 [`docs/CURRENT_CAPABILITIES.md`](./docs/CURRENT_CAPABILITIES.md)에, 실제 화면 기준 흐름은 [`docs/SCREEN_FLOW_GUIDE.md`](./docs/SCREEN_FLOW_GUIDE.md)에 정리합니다.
+현재 구현 상세는 [`docs/CURRENT_CAPABILITIES.md`](./docs/CURRENT_CAPABILITIES.md)에, 데모 체험 흐름은 [`docs/DEMO_GUIDE.md`](./docs/DEMO_GUIDE.md)에 정리합니다.
 
 루트 `/`는 비로그인 사용자에게 제품 소개와 회원가입 안내를 보여주는 공개 메인 화면이며, 인증된 사용자는 `/dashboard`로 이동합니다.
 
@@ -195,7 +195,7 @@ PERSONAL_ERP/
 - 공유 요청/응답 형태의 1차 기준은 `packages/contracts`
 - 구현된 엔드포인트, DTO 검증, 인증 노출 상태의 1차 기준은 Swagger(`http://localhost:4000/api/docs`)
 - 기능/운영 범위 한눈에 보기: [`docs/CURRENT_CAPABILITIES.md`](./docs/CURRENT_CAPABILITIES.md)
-- 화면 기준 운영 흐름: [`docs/SCREEN_FLOW_GUIDE.md`](./docs/SCREEN_FLOW_GUIDE.md)
+- 데모 체험 흐름: [`docs/DEMO_GUIDE.md`](./docs/DEMO_GUIDE.md)
 - 사람이 빠르게 읽는 API 요약: [`docs/API.md`](./docs/API.md)
 - 실제 검증 범위와 공백: [`docs/VALIDATION_NOTES.md`](./docs/VALIDATION_NOTES.md)
 - 예외 처리와 최소 로깅 기준: [`docs/ERROR_HANDLING_AND_LOGGING.md`](./docs/ERROR_HANDLING_AND_LOGGING.md)
@@ -207,14 +207,14 @@ PERSONAL_ERP/
 - 이메일: `demo@example.com`
 - 비밀번호: `Demo1234!`
 
-업로드 배치 데모는 [`docs/SCREEN_FLOW_GUIDE.md`](./docs/SCREEN_FLOW_GUIDE.md)의 `업로드 배치 데모 루트`와 [`ENVIRONMENT_SETUP.md`](./ENVIRONMENT_SETUP.md)의 `로컬 실행 데모` 절차를 기준으로 확인합니다.
+업로드 배치 데모는 [`docs/DEMO_GUIDE.md`](./docs/DEMO_GUIDE.md)의 `업로드 배치 데모 루트`와 [`ENVIRONMENT_SETUP.md`](./ENVIRONMENT_SETUP.md)의 `로컬 실행 데모` 절차를 기준으로 확인합니다.
 
 ## 문서 안내
 
 ### 먼저 읽을 문서
 
 - [현재 구현 범위](./docs/CURRENT_CAPABILITIES.md)
-- [화면 기준 운영 흐름 가이드](./docs/SCREEN_FLOW_GUIDE.md)
+- [데모 체험 가이드](./docs/DEMO_GUIDE.md)
 - [문서 인덱스](./docs/README.md)
 - [환경변수 설정](./ENVIRONMENT_SETUP.md)
 

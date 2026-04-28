@@ -5,6 +5,11 @@ title PERSONAL ERP - Server Launcher
 
 set "MODE=dev"
 set "BUILD_FIRST=0"
+set "RUN_DB_CHECK=1"
+set "USE_LOCAL_DB=0"
+set "START_LOCAL_DB=0"
+set "SKIP_DB_UP=0"
+set "LOCAL_DATABASE_URL=mysql://erp_user:local_erp_not_for_prod@localhost:3306/personal_erp"
 set "RUN_MIGRATIONS=1"
 set "MIGRATION_SCRIPT=db:deploy"
 set "RUN_PHASE1_BACKFILL=1"
@@ -26,15 +31,30 @@ for %%A in (%*) do (
   if /i "%%~A"=="prod" set "MODE=prod"
   if /i "%%~A"=="--prod" set "MODE=prod"
   if /i "%%~A"=="--build-first" set "BUILD_FIRST=1"
+  if /i "%%~A"=="--skip-db-check" set "RUN_DB_CHECK=0"
+  if /i "%%~A"=="--local-db" set "USE_LOCAL_DB=1"
+  if /i "%%~A"=="--skip-db-up" set "SKIP_DB_UP=1"
   if /i "%%~A"=="--skip-migrate" set "RUN_MIGRATIONS=0"
   if /i "%%~A"=="--skip-backfill" set "RUN_PHASE1_BACKFILL=0"
   if /i "%%~A"=="--skip-seed" set "RUN_DEMO_SEED=0"
-  if /i "%%~A"=="--seed-demo" set "RUN_DEMO_SEED=1" & set "DEMO_SEED_SCRIPT=db:seed"
-  if /i "%%~A"=="--seed-reset" set "RUN_DEMO_SEED=1" & set "DEMO_SEED_SCRIPT=db:seed:reset"
-  if /i "%%~A"=="--migrate-dev" set "RUN_MIGRATIONS=1" & set "MIGRATION_SCRIPT=db:migrate"
-  if /i "%%~A"=="--migrate-deploy" set "RUN_MIGRATIONS=1" & set "MIGRATION_SCRIPT=db:deploy"
+  if /i "%%~A"=="--seed-demo" (
+    set "RUN_DEMO_SEED=1"
+    set "DEMO_SEED_SCRIPT=db:seed"
+  )
+  if /i "%%~A"=="--seed-reset" (
+    set "RUN_DEMO_SEED=1"
+    set "DEMO_SEED_SCRIPT=db:seed:reset"
+  )
+  if /i "%%~A"=="--migrate-dev" (
+    set "RUN_MIGRATIONS=1"
+    set "MIGRATION_SCRIPT=db:migrate"
+  )
+  if /i "%%~A"=="--migrate-deploy" (
+    set "RUN_MIGRATIONS=1"
+    set "MIGRATION_SCRIPT=db:deploy"
+  )
   if /i "%%~A"=="--help" set "SHOW_HELP=1"
-  if /i not "%%~A"=="dev" if /i not "%%~A"=="--dev" if /i not "%%~A"=="prod" if /i not "%%~A"=="--prod" if /i not "%%~A"=="--build-first" if /i not "%%~A"=="--skip-migrate" if /i not "%%~A"=="--skip-backfill" if /i not "%%~A"=="--skip-seed" if /i not "%%~A"=="--seed-demo" if /i not "%%~A"=="--seed-reset" if /i not "%%~A"=="--migrate-dev" if /i not "%%~A"=="--migrate-deploy" if /i not "%%~A"=="--help" set "ARG_ERROR=%%~A"
+  if /i not "%%~A"=="dev" if /i not "%%~A"=="--dev" if /i not "%%~A"=="prod" if /i not "%%~A"=="--prod" if /i not "%%~A"=="--build-first" if /i not "%%~A"=="--skip-db-check" if /i not "%%~A"=="--local-db" if /i not "%%~A"=="--skip-db-up" if /i not "%%~A"=="--skip-migrate" if /i not "%%~A"=="--skip-backfill" if /i not "%%~A"=="--skip-seed" if /i not "%%~A"=="--seed-demo" if /i not "%%~A"=="--seed-reset" if /i not "%%~A"=="--migrate-dev" if /i not "%%~A"=="--migrate-deploy" if /i not "%%~A"=="--help" set "ARG_ERROR=%%~A"
 )
 if defined ARG_ERROR (
   echo [ERROR] Unknown option: !ARG_ERROR!
@@ -45,6 +65,14 @@ if defined ARG_ERROR (
 if "%SHOW_HELP%"=="1" goto :help
 
 :args_done
+if "%USE_LOCAL_DB%"=="1" (
+  if "%SKIP_DB_UP%"=="0" set "START_LOCAL_DB=1"
+  set "DATABASE_URL=%LOCAL_DATABASE_URL%"
+  echo [INFO] Local DB mode enabled.
+  echo        DATABASE_URL=%LOCAL_DATABASE_URL%
+  echo.
+)
+
 if /i "%MODE%"=="prod" if "%RUN_DEMO_SEED%"=="1" if /i "%DEMO_SEED_SCRIPT%"=="db:seed" (
   echo [INFO] Prod mode detected. Automatic demo seed is disabled by default.
   echo        Use --seed-demo or --seed-reset only when you explicitly want demo data.
@@ -68,6 +96,27 @@ if not exist node_modules (
     call npm.cmd install
   )
   if errorlevel 1 goto :error
+)
+
+if "%START_LOCAL_DB%"=="1" (
+  echo [INFO] Starting local Docker MySQL: npm run db:up...
+  call npm.cmd run db:up
+  if errorlevel 1 goto :error
+  if not defined PERSONAL_ERP_DB_CHECK_RETRIES set "PERSONAL_ERP_DB_CHECK_RETRIES=30"
+  if not defined PERSONAL_ERP_DB_CHECK_RETRY_DELAY_MS set "PERSONAL_ERP_DB_CHECK_RETRY_DELAY_MS=1000"
+  echo [OK] Local Docker MySQL start requested.
+  echo.
+)
+
+if "%RUN_DB_CHECK%"=="1" (
+  echo [INFO] Checking database connectivity before startup...
+  call npm.cmd run db:check
+  if errorlevel 1 goto :error
+  echo [OK] Database connectivity check completed.
+  echo.
+) else (
+  echo [INFO] Skipping database connectivity check.
+  echo.
 )
 
 if "%RUN_MIGRATIONS%"=="1" (
@@ -145,10 +194,13 @@ if /i "%MODE%"=="dev" (
 exit /b 0
 
 :help
-echo Usage: run-server.bat [dev or --dev or prod or --prod] [--build-first] [--skip-migrate] [--skip-backfill] [--skip-seed] [--seed-demo or --seed-reset] [--migrate-dev or --migrate-deploy]
+echo Usage: run-server.bat [dev or --dev or prod or --prod] [--build-first] [--local-db] [--skip-db-up] [--skip-db-check] [--skip-migrate] [--skip-backfill] [--skip-seed] [--seed-demo or --seed-reset] [--migrate-dev or --migrate-deploy]
 echo   dev,--dev       Start in development mode (default)
 echo   prod,--prod     Start in production mode (npm run start)
 echo   --build-first   Run build.bat --skip-install before starting servers
+echo   --local-db      Use local Docker MySQL and override DATABASE_URL for this launcher run
+echo   --skip-db-up    Do not run npm run db:up even when --local-db is enabled
+echo   --skip-db-check Skip the DATABASE_URL TCP connectivity preflight
 echo   --skip-migrate  Skip database migration before startup
 echo   --skip-backfill Skip Phase 1 backbone backfill before startup
 echo   --skip-seed     Skip demo account and sample data seed before startup
@@ -158,9 +210,11 @@ echo   --migrate-dev   Use npm run db:migrate before startup
 echo   --migrate-deploy Use npm run db:deploy before startup (default)
 echo.
 echo Tip:
-echo   - For local work, use run-server.bat or dev.bat.
+echo   - For local work, use dev.bat. It enables --local-db automatically.
 echo   - For production, use run-server.bat prod or run-server.bat --prod.
+echo   - --local-db uses mysql://erp_user:local_erp_not_for_prod@localhost:3306/personal_erp for this process only.
 echo   - Database migration runs before API and Web are launched.
+echo   - DATABASE_URL host:port is checked before setup unless you pass --skip-db-check.
 echo   - Phase 1 backbone backfill runs after migration unless you pass --skip-backfill.
 echo   - In dev mode, demo data is ensured automatically unless you pass --skip-seed.
 echo   - In prod mode, demo data is skipped unless you explicitly pass --seed-demo or --seed-reset.
@@ -174,10 +228,12 @@ echo.
 echo [HINT] Check these items:
 echo   1. Required values exist in c:\secrets\personal-erp\api.env and web.env
 echo   2. Database connection is reachable and migration credentials are correct
+echo      For local Docker MySQL, use dev.bat or run-server.bat dev --local-db
 echo   3. Phase 1 backbone backfill can connect to the database
 echo   4. Demo seed can connect to the database and the demo email is valid
 echo   5. In prod mode, build outputs exist
 echo   6. In dev mode, npm run dev shows the same error in a terminal
+echo      To skip setup only after DB is already prepared: run-server.bat dev --skip-migrate --skip-backfill --skip-seed
 
 :wait_and_exit
 echo.

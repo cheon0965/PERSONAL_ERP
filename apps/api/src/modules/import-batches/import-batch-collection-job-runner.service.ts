@@ -16,6 +16,8 @@ import { buildCollectRequestForBulkRow } from './bulk-collect-imported-rows.poli
 import { ImportedRowCollectionService } from './imported-row-collection.service';
 
 const IMPORT_COLLECTION_LOCK_TTL_MS = 15 * 60 * 1000;
+const JOB_PROGRESS_FLUSH_ROW_INTERVAL = 5;
+const JOB_PROGRESS_FLUSH_INTERVAL_MS = 1_000;
 
 /**
  * 업로드 배치의 여러 행을 백그라운드에서 수집 거래로 승격하는 Job Runner입니다.
@@ -87,6 +89,7 @@ export class ImportBatchCollectionJobRunner {
     let processedRowCount = 0;
     let succeededCount = 0;
     let failedCount = 0;
+    let lastProgressFlushedAt = startedAt;
 
     try {
       // 행 단위로 성공/실패를 기록한다. 한 행 실패가 전체 Job을 즉시 중단하지 않도록
@@ -124,12 +127,22 @@ export class ImportBatchCollectionJobRunner {
           failedCount += 1;
         }
 
-        await this.updateJobProgress({
-          jobId: job.id,
-          processedRowCount,
-          succeededCount,
-          failedCount
-        });
+        const progressCheckedAt = new Date();
+        if (
+          shouldFlushJobProgress({
+            processedRowCount,
+            lastRowStatus: result,
+            lastProgressFlushedAt,
+            checkedAt: progressCheckedAt
+          })
+        ) {
+          lastProgressFlushedAt = await this.updateJobProgress({
+            jobId: job.id,
+            processedRowCount,
+            succeededCount,
+            failedCount
+          });
+        }
 
         if (await this.isJobCancelled(job.id)) {
           await this.finishJob({
@@ -318,7 +331,7 @@ export class ImportBatchCollectionJobRunner {
     processedRowCount: number;
     succeededCount: number;
     failedCount: number;
-  }) {
+  }): Promise<Date> {
     const heartbeatAt = new Date();
     await this.prisma.importBatchCollectionJob.update({
       where: {
@@ -343,6 +356,8 @@ export class ImportBatchCollectionJobRunner {
         )
       }
     });
+
+    return heartbeatAt;
   }
 
   private async finishJob(input: {
@@ -554,6 +569,26 @@ function resolveFinalJobStatus(input: {
   }
 
   return ImportBatchCollectionJobStatus.SUCCEEDED;
+}
+
+function shouldFlushJobProgress(input: {
+  processedRowCount: number;
+  lastRowStatus: ImportBatchCollectionJobRowStatus;
+  lastProgressFlushedAt: Date;
+  checkedAt: Date;
+}) {
+  if (input.lastRowStatus === ImportBatchCollectionJobRowStatus.FAILED) {
+    return true;
+  }
+
+  if (input.processedRowCount % JOB_PROGRESS_FLUSH_ROW_INTERVAL === 0) {
+    return true;
+  }
+
+  return (
+    input.checkedAt.getTime() - input.lastProgressFlushedAt.getTime() >=
+    JOB_PROGRESS_FLUSH_INTERVAL_MS
+  );
 }
 
 function isCollectedTransactionType(

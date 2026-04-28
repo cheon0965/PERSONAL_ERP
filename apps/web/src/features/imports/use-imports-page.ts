@@ -777,7 +777,7 @@ export function useImportsPage(
     }
   }
 
-  async function submitBulkCollect() {
+  async function submitBulkCollect(rowIds?: string[]) {
     if (!selectedBatch) {
       return;
     }
@@ -799,8 +799,17 @@ export function useImportsPage(
       return;
     }
 
-    const hasSelection = selectedRows.length > 0;
-    const targetRows = hasSelection ? selectedCollectableRows : collectableRows;
+    const explicitRows = rowIds
+      ? selectedBatchRows.filter((row) => rowIds.includes(row.id))
+      : null;
+    const hasSelection = explicitRows
+      ? explicitRows.length > 0
+      : selectedRows.length > 0;
+    const targetRows = explicitRows
+      ? explicitRows.filter((row) => isImportedRowCollectable(row))
+      : hasSelection
+        ? selectedCollectableRows
+        : collectableRows;
 
     if (targetRows.length === 0) {
       setFeedback({

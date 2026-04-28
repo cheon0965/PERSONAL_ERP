@@ -155,6 +155,49 @@ test('POST /import-batches/:id/rows/:rowId/collect creates a collected transacti
   }
 });
 
+test('POST /import-batches/:id/rows/:rowId/collect ignores expired bulk collection locks', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    seedCollectableImportScenario(context, {
+      batchId: 'import-batch-expired-lock-collect',
+      rowId: 'imported-row-expired-lock-collect'
+    });
+    context.state.importBatchCollectionLocks.push({
+      id: 'import-batch-collection-lock-expired-single',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      importBatchId: 'import-batch-old-bulk-job',
+      jobId: 'import-batch-collection-job-expired-single',
+      lockedByMembershipId: 'membership-2',
+      expiresAt: new Date(Date.now() - 60_000),
+      createdAt: new Date(Date.now() - 120_000),
+      updatedAt: new Date(Date.now() - 120_000)
+    });
+
+    const response = await context.request(
+      '/import-batches/import-batch-expired-lock-collect/rows/imported-row-expired-lock-collect/collect',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          type: TransactionType.EXPENSE,
+          fundingAccountId: 'acc-1'
+        }
+      }
+    );
+
+    assert.equal(response.status, 201);
+    assert.equal(context.state.importBatchCollectionLocks.length, 0);
+    assert.equal(
+      context.state.collectedTransactions.at(-1)?.importedRowId,
+      'imported-row-expired-lock-collect'
+    );
+  } finally {
+    await context.close();
+  }
+});
+
 test('POST /import-batches/:id/rows/:rowId/collect auto-creates the target operating month before saving', async () => {
   const context = await createRequestTestContext();
 

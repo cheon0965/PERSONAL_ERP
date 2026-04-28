@@ -5,7 +5,9 @@ import {
   Alert,
   Button,
   Chip,
+  MenuItem,
   Stack,
+  TextField,
   Typography,
   type ChipProps
 } from '@mui/material';
@@ -30,12 +32,25 @@ import {
 } from './admin.api';
 import { readUserStatusLabel } from './admin-labels';
 
+type AdminUserFilters = {
+  keyword: string;
+  status: string;
+  systemAdmin: string;
+  emailVerified: string;
+};
+
 export function AdminUsersPage() {
   const queryClient = useQueryClient();
   const { user } = useAuthSession();
   const canRead = user?.isSystemAdmin === true;
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [tableFilters, setTableFilters] = useState<AdminUserFilters>({
+    keyword: '',
+    status: '',
+    systemAdmin: '',
+    emailVerified: ''
+  });
 
   const usersQuery = useQuery({
     queryKey: adminUsersQueryKey,
@@ -123,14 +138,15 @@ export function AdminUsersPage() {
   });
 
   const rows = usersQuery.data ?? [];
+  const filteredRows = useMemo(
+    () => filterAdminUsers(rows, tableFilters),
+    [rows, tableFilters]
+  );
   const summary = {
     total: rows.length,
     locked: rows.filter((item) => item.status !== 'ACTIVE').length,
     admins: rows.filter((item) => item.isSystemAdmin).length,
-    activeSessions: rows.reduce(
-      (sum, item) => sum + item.activeSessionCount,
-      0
-    )
+    activeSessions: rows.reduce((sum, item) => sum + item.activeSessionCount, 0)
   };
 
   const columns = useMemo<GridColDef<AdminUserItem>[]>(
@@ -221,7 +237,13 @@ export function AdminUsersPage() {
       <DataTableCard
         title="사용자 목록"
         description={`전체 관리자 ${summary.admins}명 · 잠금/비활성 ${summary.locked}명`}
-        rows={rows}
+        toolbar={
+          <AdminUsersTableToolbar
+            filters={tableFilters}
+            onFiltersChange={setTableFilters}
+          />
+        }
+        rows={filteredRows}
         columns={columns}
         height={560}
       />
@@ -319,6 +341,131 @@ export function AdminUsersPage() {
   );
 }
 
+function AdminUsersTableToolbar({
+  filters,
+  onFiltersChange
+}: {
+  filters: AdminUserFilters;
+  onFiltersChange: (filters: AdminUserFilters) => void;
+}) {
+  const hasActiveFilter = Object.values(filters).some((value) => value !== '');
+
+  return (
+    <Stack
+      direction={{ xs: 'column', md: 'row' }}
+      spacing={1}
+      alignItems={{ xs: 'stretch', md: 'center' }}
+    >
+      <TextField
+        label="검색어"
+        size="small"
+        value={filters.keyword}
+        onChange={(event) =>
+          onFiltersChange({ ...filters, keyword: event.target.value })
+        }
+        placeholder="이메일, 이름"
+        sx={{ minWidth: { md: 240 }, flex: 1 }}
+      />
+      <TextField
+        select
+        label="상태"
+        size="small"
+        value={filters.status}
+        onChange={(event) =>
+          onFiltersChange({ ...filters, status: event.target.value })
+        }
+        sx={{ minWidth: { md: 140 } }}
+      >
+        <MenuItem value="">전체</MenuItem>
+        <MenuItem value="ACTIVE">활성</MenuItem>
+        <MenuItem value="LOCKED">잠금</MenuItem>
+        <MenuItem value="DISABLED">비활성</MenuItem>
+      </TextField>
+      <TextField
+        select
+        label="전체 관리자"
+        size="small"
+        value={filters.systemAdmin}
+        onChange={(event) =>
+          onFiltersChange({ ...filters, systemAdmin: event.target.value })
+        }
+        sx={{ minWidth: { md: 140 } }}
+      >
+        <MenuItem value="">전체</MenuItem>
+        <MenuItem value="YES">예</MenuItem>
+        <MenuItem value="NO">아니오</MenuItem>
+      </TextField>
+      <TextField
+        select
+        label="이메일 인증"
+        size="small"
+        value={filters.emailVerified}
+        onChange={(event) =>
+          onFiltersChange({ ...filters, emailVerified: event.target.value })
+        }
+        sx={{ minWidth: { md: 140 } }}
+      >
+        <MenuItem value="">전체</MenuItem>
+        <MenuItem value="YES">완료</MenuItem>
+        <MenuItem value="NO">미완료</MenuItem>
+      </TextField>
+      <Button
+        variant="outlined"
+        disabled={!hasActiveFilter}
+        sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+        onClick={() =>
+          onFiltersChange({
+            keyword: '',
+            status: '',
+            systemAdmin: '',
+            emailVerified: ''
+          })
+        }
+      >
+        초기화
+      </Button>
+    </Stack>
+  );
+}
+
+function filterAdminUsers(users: AdminUserItem[], filters: AdminUserFilters) {
+  const keyword = normalizeFilterText(filters.keyword);
+
+  return users.filter((user) => {
+    if (filters.status && user.status !== filters.status) {
+      return false;
+    }
+
+    if (filters.systemAdmin === 'YES' && !user.isSystemAdmin) {
+      return false;
+    }
+
+    if (filters.systemAdmin === 'NO' && user.isSystemAdmin) {
+      return false;
+    }
+
+    if (filters.emailVerified === 'YES' && !user.emailVerified) {
+      return false;
+    }
+
+    if (filters.emailVerified === 'NO' && user.emailVerified) {
+      return false;
+    }
+
+    if (!keyword) {
+      return true;
+    }
+
+    return normalizeFilterText([user.email, user.name].join(' ')).includes(
+      keyword
+    );
+  });
+}
+
+function normalizeFilterText(value: string) {
+  return value.trim().toLocaleLowerCase('ko-KR');
+}
+
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <Stack spacing={0.5}>
@@ -332,7 +479,9 @@ function Detail({ label, value }: { label: string; value: string }) {
   );
 }
 
-function readUserStatusColor(status: AdminUserItem['status']): ChipProps['color'] {
+function readUserStatusColor(
+  status: AdminUserItem['status']
+): ChipProps['color'] {
   switch (status) {
     case 'ACTIVE':
       return 'success';

@@ -19,6 +19,7 @@
     "db:up": "docker compose up -d mysql",
     "db:down": "docker compose down",
     "db:generate": "npm run prisma:generate --workspace @personal-erp/api",
+    "db:check": "npm run db:check --workspace @personal-erp/api",
     "db:migrate": "npm run prisma:migrate:dev --workspace @personal-erp/api",
     "db:deploy": "npm run prisma:migrate:deploy --workspace @personal-erp/api",
     "db:deploy:latest-baseline": "npm run prisma:migrate:deploy:latest-baseline --workspace @personal-erp/api",

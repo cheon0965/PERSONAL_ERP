@@ -24,7 +24,8 @@ import {
   createRecurringRulesColumns,
   RecurringRuleDrawerContent,
   RecurringRulesFeedbackAlerts,
-  RecurringRulesToolbar
+  RecurringRulesFilterToolbar,
+  type RecurringRulesTableFilters
 } from './recurring-rules-page.sections';
 
 type SubmitFeedback = {
@@ -45,10 +46,34 @@ export function RecurringRulesPage() {
     React.useState<RecurringRuleDrawerState>(null);
   const [deleteTarget, setDeleteTarget] =
     React.useState<ManagedRecurringRuleItem | null>(null);
+  const [tableFilters, setTableFilters] =
+    React.useState<RecurringRulesTableFilters>({
+      keyword: '',
+      status: '',
+      source: '',
+      frequency: '',
+      fundingAccountName: '',
+      categoryName: ''
+    });
   const { data = [], error } = useQuery({
     queryKey: recurringRulesQueryKey,
     queryFn: getRecurringRules
   });
+  const filteredData = React.useMemo(
+    () => filterRecurringRules(data, tableFilters),
+    [data, tableFilters]
+  );
+  const filterOptions = React.useMemo(
+    () => ({
+      fundingAccountNames: readUniqueSortedValues(
+        data.map((item) => item.fundingAccountName)
+      ),
+      categoryNames: readUniqueSortedValues(
+        data.map((item) => item.categoryName)
+      )
+    }),
+    [data]
+  );
   const activeRuleCount = data.filter(
     (recurringRule) => recurringRule.isActive
   ).length;
@@ -286,13 +311,17 @@ export function RecurringRulesPage() {
         title="계획 생성 규칙"
         description="각 규칙은 앞으로 생성될 계획 항목의 기준입니다. 필요하면 드로어에서 바로 수정하거나 삭제할 수 있습니다."
         toolbar={
-          <RecurringRulesToolbar
+          <RecurringRulesFilterToolbar
             totalCount={data.length}
             activeCount={activeRuleCount}
             insuranceManagedRuleCount={insuranceManagedRuleCount}
+            filters={tableFilters}
+            fundingAccountOptions={filterOptions.fundingAccountNames}
+            categoryOptions={filterOptions.categoryNames}
+            onFiltersChange={setTableFilters}
           />
         }
-        rows={data}
+        rows={filteredData}
         columns={columns}
       />
 
@@ -328,4 +357,73 @@ export function RecurringRulesPage() {
       />
     </Stack>
   );
+}
+
+function filterRecurringRules(
+  rules: ManagedRecurringRuleItem[],
+  filters: RecurringRulesTableFilters
+) {
+  const keyword = normalizeFilterText(filters.keyword);
+
+  return rules.filter((rule) => {
+    if (filters.status === 'ACTIVE' && !rule.isActive) {
+      return false;
+    }
+
+    if (filters.status === 'PAUSED' && rule.isActive) {
+      return false;
+    }
+
+    if (filters.source === 'DIRECT' && rule.linkedInsurancePolicyId) {
+      return false;
+    }
+
+    if (filters.source === 'INSURANCE' && !rule.linkedInsurancePolicyId) {
+      return false;
+    }
+
+    if (filters.frequency && rule.frequency !== filters.frequency) {
+      return false;
+    }
+
+    if (
+      filters.fundingAccountName &&
+      rule.fundingAccountName !== filters.fundingAccountName
+    ) {
+      return false;
+    }
+
+    if (filters.categoryName && rule.categoryName !== filters.categoryName) {
+      return false;
+    }
+
+    if (!keyword) {
+      return true;
+    }
+
+    const haystack = normalizeFilterText(
+      [
+        rule.title,
+        rule.frequency,
+        rule.fundingAccountName,
+        rule.categoryName,
+        rule.isActive ? '활성 ACTIVE' : '중지 PAUSED',
+        rule.linkedInsurancePolicyId
+          ? '보험 연동 INSURANCE'
+          : '직접 관리 DIRECT'
+      ].join(' ')
+    );
+
+    return haystack.includes(keyword);
+  });
+}
+
+function normalizeFilterText(value: string) {
+  return value.trim().toLocaleLowerCase('ko-KR');
+}
+
+function readUniqueSortedValues(values: Array<string | null | undefined>) {
+  return Array.from(
+    new Set(values.filter((value): value is string => Boolean(value)))
+  ).sort((left, right) => left.localeCompare(right, 'ko-KR'));
 }

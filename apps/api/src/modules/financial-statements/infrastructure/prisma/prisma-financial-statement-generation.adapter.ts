@@ -159,27 +159,29 @@ export class PrismaFinancialStatementGenerationAdapter implements FinancialState
       FinancialStatementGenerationPort['upsertStatementSnapshots']
     >[0]
   ): Promise<void> {
-    for (const [statementKind, payload] of input.payloads) {
-      await this.prisma.financialStatementSnapshot.upsert({
-        where: {
-          periodId_statementKind: {
+    await this.prisma.$transaction(async (tx) => {
+      for (const [statementKind, payload] of input.payloads) {
+        await tx.financialStatementSnapshot.upsert({
+          where: {
+            periodId_statementKind: {
+              periodId: input.periodId,
+              statementKind
+            }
+          },
+          update: {
+            currency: input.currency,
+            payload: payload as Prisma.InputJsonValue
+          },
+          create: {
+            tenantId: input.tenantId,
+            ledgerId: input.ledgerId,
             periodId: input.periodId,
-            statementKind
+            statementKind,
+            currency: input.currency,
+            payload: payload as Prisma.InputJsonValue
           }
-        },
-        update: {
-          currency: input.currency,
-          payload: payload as Prisma.InputJsonValue
-        },
-        create: {
-          tenantId: input.tenantId,
-          ledgerId: input.ledgerId,
-          periodId: input.periodId,
-          statementKind,
-          currency: input.currency,
-          payload: payload as Prisma.InputJsonValue
-        }
-      });
-    }
+        });
+      }
+    });
   }
 }

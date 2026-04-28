@@ -340,7 +340,12 @@ export function AdminLogsPage() {
                     필터 적용
                   </Button>
                   {activeFilterCount > 0 ? (
-                    <Button onClick={clearFilters}>초기화</Button>
+                    <Button
+                      sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+                      onClick={clearFilters}
+                    >
+                      초기화
+                    </Button>
                   ) : null}
                 </Stack>
               </Grid>

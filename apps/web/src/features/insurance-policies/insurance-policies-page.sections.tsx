@@ -1,6 +1,13 @@
 'use client';
 
-import { Button, Chip, Stack, Typography } from '@mui/material';
+import {
+  Button,
+  Chip,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography
+} from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import type { InsurancePolicyItem } from '@personal-erp/contracts';
 import { ConfirmActionDialog } from '@/shared/ui/confirm-action-dialog';
@@ -13,6 +20,15 @@ import { InsurancePolicyForm } from './insurance-policy-form';
 const cycleLabelMap: Record<string, string> = {
   MONTHLY: '매월',
   YEARLY: '매년'
+};
+
+export type InsurancePoliciesTableFilters = {
+  keyword: string;
+  status: string;
+  linkStatus: string;
+  cycle: string;
+  fundingAccountName: string;
+  categoryName: string;
 };
 
 export function buildInsurancePolicyColumns({
@@ -146,6 +162,166 @@ export function InsurancePoliciesToolbar({
         보험 계약은 표에서 먼저 확인하고, 생성과 수정은 드로어에서 이어서
         처리합니다.
       </Typography>
+    </Stack>
+  );
+}
+
+export function InsurancePoliciesFilterToolbar({
+  activeCount,
+  linkedCount,
+  unlinkedCount,
+  filters,
+  fundingAccountOptions,
+  categoryOptions,
+  onFiltersChange
+}: {
+  activeCount: number;
+  linkedCount: number;
+  unlinkedCount: number;
+  filters: InsurancePoliciesTableFilters;
+  fundingAccountOptions: string[];
+  categoryOptions: string[];
+  onFiltersChange: (filters: InsurancePoliciesTableFilters) => void;
+}) {
+  const hasActiveFilter = Object.values(filters).some((value) => value !== '');
+
+  return (
+    <Stack spacing={1.25}>
+      <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+        <Chip
+          label={`활성 ${activeCount}건`}
+          size="small"
+          color="success"
+          variant="filled"
+        />
+        <Chip
+          label={`연결 완료 ${linkedCount}건`}
+          size="small"
+          color={linkedCount > 0 ? 'primary' : 'default'}
+          variant="outlined"
+        />
+        <Chip
+          label={`미연결 ${unlinkedCount}건`}
+          size="small"
+          color={unlinkedCount > 0 ? 'warning' : 'default'}
+          variant="outlined"
+        />
+      </Stack>
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={1}
+        alignItems={{ xs: 'stretch', md: 'center' }}
+      >
+        <TextField
+          label="검색어"
+          size="small"
+          value={filters.keyword}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, keyword: event.target.value })
+          }
+          placeholder="보험사, 상품명, 자금수단"
+          sx={{ minWidth: { md: 260 }, flex: 1 }}
+        />
+        <TextField
+          select
+          label="상태"
+          size="small"
+          value={filters.status}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, status: event.target.value })
+          }
+          sx={{ minWidth: { md: 140 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          <MenuItem value="ACTIVE">활성</MenuItem>
+          <MenuItem value="INACTIVE">비활성</MenuItem>
+        </TextField>
+        <TextField
+          select
+          label="연결"
+          size="small"
+          value={filters.linkStatus}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, linkStatus: event.target.value })
+          }
+          sx={{ minWidth: { md: 140 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          <MenuItem value="LINKED">연결됨</MenuItem>
+          <MenuItem value="UNLINKED">미연결</MenuItem>
+        </TextField>
+        <TextField
+          select
+          label="주기"
+          size="small"
+          value={filters.cycle}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, cycle: event.target.value })
+          }
+          sx={{ minWidth: { md: 130 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          {Object.entries(cycleLabelMap).map(([value, label]) => (
+            <MenuItem key={value} value={value}>
+              {label}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          select
+          label="자금수단"
+          size="small"
+          value={filters.fundingAccountName}
+          onChange={(event) =>
+            onFiltersChange({
+              ...filters,
+              fundingAccountName: event.target.value
+            })
+          }
+          sx={{ minWidth: { md: 170 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          {fundingAccountOptions.map((fundingAccountName) => (
+            <MenuItem key={fundingAccountName} value={fundingAccountName}>
+              {fundingAccountName}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          select
+          label="카테고리"
+          size="small"
+          value={filters.categoryName}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, categoryName: event.target.value })
+          }
+          sx={{ minWidth: { md: 170 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          {categoryOptions.map((categoryName) => (
+            <MenuItem key={categoryName} value={categoryName}>
+              {categoryName}
+            </MenuItem>
+          ))}
+        </TextField>
+        <Button
+          variant="outlined"
+          disabled={!hasActiveFilter}
+          sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+          onClick={() =>
+            onFiltersChange({
+              keyword: '',
+              status: '',
+              linkStatus: '',
+              cycle: '',
+              fundingAccountName: '',
+              categoryName: ''
+            })
+          }
+        >
+          초기화
+        </Button>
+      </Stack>
     </Stack>
   );
 }

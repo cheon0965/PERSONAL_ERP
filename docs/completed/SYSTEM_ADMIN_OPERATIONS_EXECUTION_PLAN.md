@@ -1,4 +1,4 @@
-# 전체 관리자 운영 필수 기능 실행 계획
+﻿# 전체 관리자 운영 필수 기능 실행 계획
 
 완료 상태: `2026-04-19` 기준으로 전체 사용자 관리, 사업장 관리, 지원 모드, 보안 위협 로그, 운영 상태, 관련 문서/검증 반영까지 마무리되어 완료 문서로 이관합니다.
 
@@ -514,7 +514,7 @@ Prisma migration 상태는 운영 DB에 직접 위험한 명령을 실행하지 
 ### Step 6. 문서와 검증
 
 - `docs/API.md` 관리자 API 갱신
-- `docs/SCREEN_FLOW_GUIDE.md` 전체 관리자 흐름 갱신
+- `docs/DEMO_GUIDE.md` 전체 관리자 흐름 갱신
 - `docs/CURRENT_CAPABILITIES.md` 현재 기능 갱신
 - `docs/VALIDATION_NOTES.md` 검증 결과 갱신
 - `docs/OPERATIONS_CHECKLIST.md` 수동 스모크 체크 갱신

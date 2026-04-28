@@ -29,7 +29,9 @@ import {
 } from './journal-entry-adjustment-dialog';
 import {
   buildJournalEntryColumns,
-  JournalEntriesWorkspace
+  JournalEntriesWorkspace,
+  type JournalEntriesTableFilterOptions,
+  type JournalEntriesTableFilters
 } from './journal-entries-page.sections';
 import {
   getJournalEntries,
@@ -60,6 +62,14 @@ export function JournalEntriesPage({
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const [selectedAdjustment, setSelectedAdjustment] =
     React.useState<AdjustmentSelection>(null);
+  const [tableFilters, setTableFilters] =
+    React.useState<JournalEntriesTableFilters>({
+      keyword: '',
+      status: '',
+      sourceKind: '',
+      dateFrom: '',
+      dateTo: ''
+    });
   const journalEntriesQuery = useQuery({
     queryKey: journalEntriesQueryKey,
     queryFn: getJournalEntries
@@ -73,8 +83,22 @@ export function JournalEntriesPage({
     queryFn: getAccountingPeriods
   });
 
+  const rawEntries = journalEntriesQuery.data ?? [];
+  const filterOptions = React.useMemo<JournalEntriesTableFilterOptions>(
+    () => ({
+      statuses: readUniqueSortedValues(rawEntries.map((entry) => entry.status)),
+      sourceKinds: readUniqueSortedValues(
+        rawEntries.map((entry) => entry.sourceKind)
+      )
+    }),
+    [rawEntries]
+  );
+  const filteredEntries = React.useMemo(
+    () => filterJournalEntries(rawEntries, tableFilters),
+    [rawEntries, tableFilters]
+  );
   const entries = React.useMemo(() => {
-    const data = journalEntriesQuery.data ?? [];
+    const data = filteredEntries;
     if (!highlightedEntryId) {
       return data;
     }
@@ -88,7 +112,7 @@ export function JournalEntriesPage({
       highlighted,
       ...data.filter((item) => item.id !== highlightedEntryId)
     ];
-  }, [highlightedEntryId, journalEntriesQuery.data]);
+  }, [filteredEntries, highlightedEntryId]);
 
   const currentPeriod = currentPeriodQuery.data ?? null;
   const accountingPeriods = accountingPeriodsQuery.data ?? [];
@@ -232,7 +256,8 @@ export function JournalEntriesPage({
             {currentPeriod && currentPeriod.id !== adjustmentPeriod.id
               ? `현재 운영 기준 월은 ${currentPeriod.monthLabel}이고, 조정 전표 기본 입력 월은 ${adjustmentPeriod.monthLabel}입니다.`
               : `조정 전표 기본 입력 월은 ${adjustmentPeriod.monthLabel}입니다.`}{' '}
-            반전/정정 전표는 최신 전표 입력 가능월의 일자로만 생성할 수 있습니다.
+            반전/정정 전표는 최신 전표 입력 가능월의 일자로만 생성할 수
+            있습니다.
           </Alert>
         ) : (
           <Alert
@@ -256,6 +281,10 @@ export function JournalEntriesPage({
           isSplitLayout={isSplitLayout}
           selectedEntry={selectedEntry}
           journalEntryColumns={journalEntryColumns}
+          filters={tableFilters}
+          filterOptions={filterOptions}
+          totalCount={rawEntries.length}
+          onFiltersChange={setTableFilters}
           onSelectReverse={(entry) => {
             setFeedback(null);
             setSelectedAdjustment({ mode: 'reverse', entry });
@@ -292,6 +321,82 @@ function readJournalEntryTotalAmount(entry: JournalEntryItem) {
   return entry.lines.reduce((total, line) => total + line.debitAmount, 0);
 }
 
+function filterJournalEntries(
+  entries: JournalEntryItem[],
+  filters: JournalEntriesTableFilters
+) {
+  const keyword = normalizeFilterText(filters.keyword);
+
+  return entries.filter((entry) => {
+    if (filters.status && entry.status !== filters.status) {
+      return false;
+    }
+
+    if (filters.sourceKind && entry.sourceKind !== filters.sourceKind) {
+      return false;
+    }
+
+    if (!isDateWithinRange(entry.entryDate, filters.dateFrom, filters.dateTo)) {
+      return false;
+    }
+
+    if (!keyword) {
+      return true;
+    }
+
+    const lineText = entry.lines
+      .map((line) =>
+        [
+          line.accountSubjectCode,
+          line.accountSubjectName,
+          line.fundingAccountName,
+          line.description
+        ]
+          .filter(Boolean)
+          .join(' ')
+      )
+      .join(' ');
+    const haystack = normalizeFilterText(
+      [
+        entry.entryNumber,
+        entry.status,
+        entry.sourceKind,
+        entry.sourceCollectedTransactionTitle,
+        entry.memo,
+        lineText
+      ]
+        .filter(Boolean)
+        .join(' ')
+    );
+
+    return haystack.includes(keyword);
+  });
+}
+
+function isDateWithinRange(value: string, dateFrom: string, dateTo: string) {
+  const date = value.slice(0, 10);
+
+  if (dateFrom && date < dateFrom) {
+    return false;
+  }
+
+  if (dateTo && date > dateTo) {
+    return false;
+  }
+
+  return true;
+}
+
+function normalizeFilterText(value: string) {
+  return value.trim().toLocaleLowerCase('ko-KR');
+}
+
+function readUniqueSortedValues(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean))).sort((left, right) =>
+    left.localeCompare(right, 'ko-KR')
+  );
+}
+
 function buildJournalEntriesHelpContext(isDetailLayout: boolean) {
   if (isDetailLayout) {
     return {
@@ -316,13 +421,15 @@ function buildJournalEntriesHelpContext(isDetailLayout: boolean) {
           links: [
             {
               title: '전표 조회',
-              description: '다른 전표를 다시 고르거나 목록 전체 흐름을 확인합니다.',
+              description:
+                '다른 전표를 다시 고르거나 목록 전체 흐름을 확인합니다.',
               href: '/journal-entries',
               actionLabel: '전표 조회 보기'
             },
             {
               title: '수집 거래',
-              description: '전표의 원본 거래와 전표 준비 전 상태를 다시 확인합니다.',
+              description:
+                '전표의 원본 거래와 전표 준비 전 상태를 다시 확인합니다.',
               href: '/transactions',
               actionLabel: '수집 거래 보기'
             }
@@ -339,7 +446,13 @@ function buildJournalEntriesHelpContext(isDetailLayout: boolean) {
     description:
       '이 화면은 수집 거래가 전표로 확정된 뒤 공식 회계 라인을 검토하는 목록 중심 화면입니다.',
     primaryEntity: '전표',
-    relatedEntities: ['전표 라인', '수집 거래', '계정과목', '입출금 계정', '운영 월'],
+    relatedEntities: [
+      '전표 라인',
+      '수집 거래',
+      '계정과목',
+      '입출금 계정',
+      '운영 월'
+    ],
     truthSource:
       '월 운영 중 확정된 거래는 반드시 전표로 이어지고, 이후 마감과 보고는 이 전표를 기준으로 진행됩니다.',
     supplementarySections: [

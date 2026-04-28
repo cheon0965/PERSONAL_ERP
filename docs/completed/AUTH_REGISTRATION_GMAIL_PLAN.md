@@ -1,4 +1,4 @@
-# 회원가입 및 Gmail API 이메일 인증 실행 계획
+﻿# 회원가입 및 Gmail API 이메일 인증 실행 계획
 
 ## 완료 메모
 
@@ -372,7 +372,7 @@ Prisma 통합 테스트:
 - `docs/VALIDATION_NOTES.md`
 - `docs/ASVS_L2_EXECUTION_PLAN.md`
 - `docs/ASVS_L2_BASELINE_MATRIX.md`
-- `docs/SCREEN_FLOW_GUIDE.md`
+- `docs/DEMO_GUIDE.md`
 - `ENVIRONMENT_SETUP.md`
 - `README.md`
 

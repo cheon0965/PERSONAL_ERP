@@ -185,14 +185,15 @@ test('GET /dashboard/summary and /forecast/monthly use imported balanceAfter as 
       updatedAt: new Date('2026-03-27T00:30:00.000Z')
     });
 
-    const [dashboardResponse, forecastResponse] = await Promise.all([
-      context.request('/dashboard/summary', {
+    const dashboardResponse = await context.request('/dashboard/summary', {
+      headers: context.authHeaders()
+    });
+    const forecastResponse = await context.request(
+      '/forecast/monthly?periodId=period-report-open-1',
+      {
         headers: context.authHeaders()
-      }),
-      context.request('/forecast/monthly?periodId=period-report-open-1', {
-        headers: context.authHeaders()
-      })
-    ]);
+      }
+    );
 
     const dashboard = dashboardResponse.body as Record<string, unknown>;
     const forecast = forecastResponse.body as Record<string, unknown>;

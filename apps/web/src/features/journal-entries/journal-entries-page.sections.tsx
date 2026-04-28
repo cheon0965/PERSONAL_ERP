@@ -2,7 +2,15 @@
 
 import type { Route } from 'next';
 import Link from 'next/link';
-import { Box, Button, Divider, Stack, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  Divider,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography
+} from '@mui/material';
 import type {
   AccountingPeriodItem,
   JournalEntryItem
@@ -13,6 +21,19 @@ import { formatDate, formatWon } from '@/shared/lib/format';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { SectionCard } from '@/shared/ui/section-card';
 import { StatusChip } from '@/shared/ui/status-chip';
+
+export type JournalEntriesTableFilters = {
+  keyword: string;
+  status: string;
+  sourceKind: string;
+  dateFrom: string;
+  dateTo: string;
+};
+
+export type JournalEntriesTableFilterOptions = {
+  statuses: string[];
+  sourceKinds: string[];
+};
 
 export function buildJournalEntryColumns({
   selectedEntryId
@@ -111,6 +132,10 @@ export function JournalEntriesWorkspace({
   isSplitLayout,
   selectedEntry,
   journalEntryColumns,
+  filters,
+  filterOptions,
+  totalCount,
+  onFiltersChange,
   onSelectReverse,
   onSelectCorrect
 }: {
@@ -120,10 +145,14 @@ export function JournalEntriesWorkspace({
   isSplitLayout: boolean;
   selectedEntry: JournalEntryItem | null;
   journalEntryColumns: GridColDef<JournalEntryItem>[];
+  filters: JournalEntriesTableFilters;
+  filterOptions: JournalEntriesTableFilterOptions;
+  totalCount: number;
+  onFiltersChange: (filters: JournalEntriesTableFilters) => void;
   onSelectReverse: (entry: JournalEntryItem) => void;
   onSelectCorrect: (entry: JournalEntryItem) => void;
 }) {
-  if (entries.length === 0) {
+  if (totalCount === 0) {
     return (
       <SectionCard
         title="최근 전표가 없습니다"
@@ -209,6 +238,13 @@ export function JournalEntriesWorkspace({
             ? '전표 번호를 선택하면 아래에서 상세 라인, 조정 흐름, 후속 조정 작업을 확인할 수 있습니다.'
             : '목록에서 전표 번호를 선택하면 전용 상세 화면으로 이동해 라인과 조정 이력을 검토합니다.'
         }
+        toolbar={
+          <JournalEntriesTableToolbar
+            filters={filters}
+            filterOptions={filterOptions}
+            onFiltersChange={onFiltersChange}
+          />
+        }
         rows={entries}
         columns={journalEntryColumns}
         height={420}
@@ -222,6 +258,111 @@ export function JournalEntriesWorkspace({
           onCorrect={() => onSelectCorrect(selectedEntry)}
         />
       ) : null}
+    </Stack>
+  );
+}
+
+function JournalEntriesTableToolbar({
+  filters,
+  filterOptions,
+  onFiltersChange
+}: {
+  filters: JournalEntriesTableFilters;
+  filterOptions: JournalEntriesTableFilterOptions;
+  onFiltersChange: (filters: JournalEntriesTableFilters) => void;
+}) {
+  const hasActiveFilter = Object.values(filters).some((value) => value !== '');
+
+  return (
+    <Stack spacing={1.25}>
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={1}
+        alignItems={{ xs: 'stretch', md: 'center' }}
+      >
+        <TextField
+          label="검색어"
+          size="small"
+          value={filters.keyword}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, keyword: event.target.value })
+          }
+          placeholder="전표번호, 원본 거래, 계정"
+          sx={{ minWidth: { md: 260 }, flex: 1 }}
+        />
+        <TextField
+          select
+          label="상태"
+          size="small"
+          value={filters.status}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, status: event.target.value })
+          }
+          sx={{ minWidth: { md: 150 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          {filterOptions.statuses.map((status) => (
+            <MenuItem key={status} value={status}>
+              {status}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          select
+          label="출처"
+          size="small"
+          value={filters.sourceKind}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, sourceKind: event.target.value })
+          }
+          sx={{ minWidth: { md: 180 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          {filterOptions.sourceKinds.map((sourceKind) => (
+            <MenuItem key={sourceKind} value={sourceKind}>
+              {readJournalEntrySourceKindLabel(sourceKind)}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          label="시작일"
+          size="small"
+          type="date"
+          value={filters.dateFrom}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, dateFrom: event.target.value })
+          }
+          InputLabelProps={{ shrink: true }}
+          sx={{ minWidth: { md: 150 } }}
+        />
+        <TextField
+          label="종료일"
+          size="small"
+          type="date"
+          value={filters.dateTo}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, dateTo: event.target.value })
+          }
+          InputLabelProps={{ shrink: true }}
+          sx={{ minWidth: { md: 150 } }}
+        />
+        <Button
+          variant="outlined"
+          disabled={!hasActiveFilter}
+          sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+          onClick={() =>
+            onFiltersChange({
+              keyword: '',
+              status: '',
+              sourceKind: '',
+              dateFrom: '',
+              dateTo: ''
+            })
+          }
+        >
+          초기화
+        </Button>
+      </Stack>
     </Stack>
   );
 }

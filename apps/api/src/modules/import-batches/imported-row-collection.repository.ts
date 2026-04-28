@@ -24,6 +24,7 @@ import {
 } from './application/ports/imported-row-collection.port';
 import { assertImportedRowCanBeCollected } from './imported-row-collection.normalization.policy';
 import { resolveMatchedPlanItemCandidate } from './imported-row-collection-plan-item.policy';
+import { planItemMatchDateToleranceDays } from './imported-row-plan-item-match.policy';
 import {
   collectableImportedRowSelect,
   collectingPeriodSelect,
@@ -138,14 +139,23 @@ export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
   private async readDraftPlanItemCandidates(
     tx: PrismaClientLike,
     workspace: ImportedRowCollectionWorkspaceScope,
-    periodId: string
+    input: PlanItemCandidateQueryInput
   ): Promise<PlanItemCollectionCandidate[]> {
+    const dateWindow = buildPlanItemMatchDateWindow(input.occurredOn);
     const records = await tx.planItem.findMany({
       where: {
         tenantId: workspace.tenantId,
         ledgerId: workspace.ledgerId,
-        periodId,
+        periodId: input.periodId,
         status: PlanItemStatus.DRAFT,
+        plannedAmount: input.amount,
+        plannedDate: {
+          gte: dateWindow.start,
+          lt: dateWindow.end
+        },
+        fundingAccountId: input.fundingAccountId,
+        ledgerTransactionTypeId: input.ledgerTransactionTypeId,
+        ...(input.categoryId == null ? {} : { categoryId: input.categoryId }),
         matchedCollectedTransaction: {
           is: null
         }
@@ -171,15 +181,24 @@ export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
   private async readRecurringCollectedTransactionCandidates(
     tx: PrismaClientLike,
     workspace: ImportedRowCollectionWorkspaceScope,
-    periodId: string
+    input: PlanItemCandidateQueryInput
   ): Promise<PlanItemCollectionCandidate[]> {
+    const dateWindow = buildPlanItemMatchDateWindow(input.occurredOn);
     const records = await tx.collectedTransaction.findMany({
       where: {
         tenantId: workspace.tenantId,
         ledgerId: workspace.ledgerId,
-        periodId,
+        periodId: input.periodId,
         importBatchId: null,
         importedRowId: null,
+        amount: input.amount,
+        occurredOn: {
+          gte: dateWindow.start,
+          lt: dateWindow.end
+        },
+        fundingAccountId: input.fundingAccountId,
+        ledgerTransactionTypeId: input.ledgerTransactionTypeId,
+        ...(input.categoryId == null ? {} : { categoryId: input.categoryId }),
         matchedPlanItemId: {
           not: null
         },
@@ -228,11 +247,11 @@ export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
   private async readPlanItemCollectionCandidates(
     tx: PrismaClientLike,
     workspace: ImportedRowCollectionWorkspaceScope,
-    periodId: string
+    input: PlanItemCandidateQueryInput
   ): Promise<PlanItemCollectionCandidate[]> {
     const [draftCandidates, recurringCandidates] = await Promise.all([
-      this.readDraftPlanItemCandidates(tx, workspace, periodId),
-      this.readRecurringCollectedTransactionCandidates(tx, workspace, periodId)
+      this.readDraftPlanItemCandidates(tx, workspace, input),
+      this.readRecurringCollectedTransactionCandidates(tx, workspace, input)
     ]);
 
     return [...draftCandidates, ...recurringCandidates];
@@ -251,7 +270,14 @@ export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
     const candidates = await this.readPlanItemCollectionCandidates(
       tx,
       workspace,
-      periodId
+      {
+        periodId,
+        amount,
+        occurredOn,
+        fundingAccountId,
+        ledgerTransactionTypeId,
+        categoryId
+      }
     );
 
     return resolveMatchedPlanItemCandidate({
@@ -485,4 +511,27 @@ export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
 
     return category;
   }
+}
+
+type PlanItemCandidateQueryInput = {
+  periodId: string;
+  amount: number;
+  occurredOn: Date;
+  fundingAccountId: string;
+  ledgerTransactionTypeId: string;
+  categoryId: string | null;
+};
+
+function buildPlanItemMatchDateWindow(occurredOn: Date) {
+  const utcDay = Date.UTC(
+    occurredOn.getUTCFullYear(),
+    occurredOn.getUTCMonth(),
+    occurredOn.getUTCDate()
+  );
+  const dayMs = 24 * 60 * 60 * 1000;
+
+  return {
+    start: new Date(utcDay - planItemMatchDateToleranceDays * dayMs),
+    end: new Date(utcDay + (planItemMatchDateToleranceDays + 1) * dayMs)
+  };
 }

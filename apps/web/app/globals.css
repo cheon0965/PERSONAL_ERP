@@ -7,10 +7,20 @@ html {
 body {
   margin: 0;
   padding: 0;
+  /*
+   * MUI Modal scroll lock adds inline padding-right while drawers, dialogs,
+   * and popovers are open. The root element already reserves a stable
+   * scrollbar gutter, so keep the application width fixed instead.
+   */
+  padding-right: 0 !important;
   min-height: 100%;
   overflow-x: clip;
   background: var(--mui-palette-background-default);
   color: var(--mui-palette-text-primary);
+}
+
+.mui-fixed {
+  padding-right: 0 !important;
 }
 
 html,
