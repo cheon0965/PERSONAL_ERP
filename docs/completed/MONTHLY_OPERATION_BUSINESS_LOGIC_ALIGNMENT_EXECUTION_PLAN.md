@@ -1,6 +1,6 @@
-# 월별 운영 비즈니스 로직 정합성 개선 실행계획
+﻿# 월별 운영 비즈니스 로직 정합성 개선 실행계획
 
-> 보관 상태: `2026-04-23` 기준 P0-P3 구현, 전체 회귀 테스트, 문서 동기화를 완료한 뒤 `docs/completed/`로 이동했다. 현재 운영 기준은 `docs/API.md`, `docs/CURRENT_CAPABILITIES.md`, `docs/SCREEN_FLOW_GUIDE.md`, `docs/VALIDATION_NOTES.md`, `docs/domain/business-logic-draft.md`, `docs/domain/core-entity-definition.md`를 우선한다.
+> 보관 상태: `2026-04-23` 기준 P0-P3 구현, 전체 회귀 테스트, 문서 동기화를 완료한 뒤 `docs/completed/`로 이동했다. 현재 운영 기준은 `docs/API.md`, `docs/CURRENT_CAPABILITIES.md`, `docs/DEMO_GUIDE.md`, `docs/VALIDATION_NOTES.md`, `docs/domain/business-logic-draft.md`, `docs/domain/core-entity-definition.md`를 우선한다.
 
 ## 배경
 
@@ -42,7 +42,7 @@
 
 1. 현재 문서와 테스트 기준선을 먼저 확인한다.
    - `docs/API.md`
-   - `docs/SCREEN_FLOW_GUIDE.md`
+   - `docs/DEMO_GUIDE.md`
    - `docs/domain/business-logic-draft.md`
    - `apps/api/test/accounting-periods.request-api.test.ts`
    - `apps/api/test/import-batches.request-api.collect.test.ts`
@@ -341,7 +341,7 @@
 문서 갱신 대상:
 
 1. `docs/API.md`
-2. `docs/SCREEN_FLOW_GUIDE.md`
+2. `docs/DEMO_GUIDE.md`
 3. `docs/CURRENT_CAPABILITIES.md`
 4. `docs/domain/business-logic-draft.md`
 5. `docs/domain/core-entity-definition.md`

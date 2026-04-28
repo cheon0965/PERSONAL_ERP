@@ -33,6 +33,14 @@ export function createPlanItemsPrismaMock(
           ledgerId?: string;
           periodId?: string;
           status?: PlanItemStatus;
+          plannedAmount?: number;
+          plannedDate?: {
+            gte?: Date;
+            lt?: Date;
+          };
+          fundingAccountId?: string;
+          ledgerTransactionTypeId?: string;
+          categoryId?: string | null;
           matchedCollectedTransaction?: {
             is?: null;
           };
@@ -65,6 +73,27 @@ export function createPlanItemsPrismaMock(
             const matchesStatus =
               args.where?.status === undefined ||
               candidate.status === args.where.status;
+            const matchesPlannedAmount =
+              args.where?.plannedAmount === undefined ||
+              candidate.plannedAmount === args.where.plannedAmount;
+            const matchesPlannedDate =
+              args.where?.plannedDate === undefined ||
+              ((!args.where.plannedDate.gte ||
+                candidate.plannedDate.getTime() >=
+                  args.where.plannedDate.gte.getTime()) &&
+                (!args.where.plannedDate.lt ||
+                  candidate.plannedDate.getTime() <
+                    args.where.plannedDate.lt.getTime()));
+            const matchesFundingAccount =
+              !args.where?.fundingAccountId ||
+              candidate.fundingAccountId === args.where.fundingAccountId;
+            const matchesLedgerTransactionType =
+              !args.where?.ledgerTransactionTypeId ||
+              candidate.ledgerTransactionTypeId ===
+                args.where.ledgerTransactionTypeId;
+            const matchesCategory =
+              args.where?.categoryId === undefined ||
+              candidate.categoryId === args.where.categoryId;
             const matchesUnmatched =
               args.where?.matchedCollectedTransaction?.is !== null ||
               !state.collectedTransactions.some(
@@ -76,6 +105,11 @@ export function createPlanItemsPrismaMock(
               matchesLedger &&
               matchesPeriod &&
               matchesStatus &&
+              matchesPlannedAmount &&
+              matchesPlannedDate &&
+              matchesFundingAccount &&
+              matchesLedgerTransactionType &&
+              matchesCategory &&
               matchesUnmatched
             );
           })

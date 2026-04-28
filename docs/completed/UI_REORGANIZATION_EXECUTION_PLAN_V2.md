@@ -1,4 +1,4 @@
-# UI 화면 분리 실행계획
+﻿# UI 화면 분리 실행계획
 
 기준일: `2026-04-15`
 
@@ -8,7 +8,7 @@
 
 연결 문서:
 
-- `docs/SCREEN_FLOW_GUIDE.md`
+- `docs/DEMO_GUIDE.md`
 - `docs/completed/phase-1/UI_REORGANIZATION_EXECUTION_PLAN.md` (1차 실행계획)
 
 ## 문서 목적
@@ -31,13 +31,13 @@
 - 라우트 분리 대상이던 `월 운영`, `업로드 배치`, `전표 조회`, `차량 운영`, `재무제표`, `차기 이월`은 모두 현재 하위 라우트 기준으로 반영되었다.
 - 책임이 완전히 분리된 하위 화면은 탭 안에만 두지 않고, DB 메뉴 트리 `WorkspaceNavigationMenuItem` / `WorkspaceNavigationMenuRole`와 `/navigation/tree` 기준으로 사이드바 보조 메뉴에도 노출된다.
 - 공통 UI는 `PageHeader`, `SectionTabs`, `DataTableCard`, `SectionCard`, `Topbar` 기준으로 정리되었고, 긴 설명은 화면 본문보다 앞세우지 않고 `도메인 가이드`로 이동하는 방향을 따른다.
-- 현재 기준 문서인 `docs/SCREEN_FLOW_GUIDE.md`, `docs/API.md`, `docs/DESIGN_SYSTEM.md`, `docs/VALIDATION_NOTES.md`는 이 구조를 기준으로 유지한다.
+- 현재 기준 문서인 `docs/DEMO_GUIDE.md`, `docs/API.md`, `docs/DESIGN_SYSTEM.md`, `docs/VALIDATION_NOTES.md`는 이 구조를 기준으로 유지한다.
 
 ## 이번 검토에서 본 기준
 
 이번 계획은 아래 기준으로 전체 화면을 다시 살폈다.
 
-- 현재 운영 흐름: `docs/SCREEN_FLOW_GUIDE.md`
+- 현재 운영 흐름: `docs/DEMO_GUIDE.md`
 - 현재 내비게이션: DB 메뉴 트리 `WorkspaceNavigationMenuItem` / `WorkspaceNavigationMenuRole`와 `/navigation/tree`
 - 실제 화면 구현: `apps/web/src/features/*`
 - 이미 완료된 1차 UI 정리 기준: `docs/completed/UI_REORGANIZATION_EXECUTION_PLAN.md`
@@ -272,7 +272,7 @@
 
 ### Phase 5. 문서/테스트 동기화
 
-- `docs/SCREEN_FLOW_GUIDE.md`의 흐름과 새 라우트를 맞췄다.
+- `docs/DEMO_GUIDE.md`의 흐름과 새 라우트를 맞췄다.
 - DB 기본 메뉴 트리, 사이드바, 로컬 내비게이션 문구를 동기화했다.
 - `docs:check:surface` 기준으로 현재 Web/API surface와 기준 문서를 함께 유지한다.
 
@@ -302,4 +302,4 @@
 
 1. 새 복합 화면을 추가할 때는 먼저 `독립 라우트`, `SectionTabs`, `사이드바 보조 메뉴` 중 어떤 책임 분리가 맞는지부터 판단한다.
 2. `PageHeader`는 짧게 유지하고, 긴 도메인 설명은 `도메인 가이드` 또는 별도 문서로 보낸다.
-3. 메뉴 구조나 화면 경로가 바뀌면 `DB 기본 메뉴 트리`, `docs/SCREEN_FLOW_GUIDE.md`, `docs/API.md`, `docs/VALIDATION_NOTES.md`를 같은 변경에서 함께 맞춘다.
+3. 메뉴 구조나 화면 경로가 바뀌면 `DB 기본 메뉴 트리`, `docs/DEMO_GUIDE.md`, `docs/API.md`, `docs/VALIDATION_NOTES.md`를 같은 변경에서 함께 맞춘다.

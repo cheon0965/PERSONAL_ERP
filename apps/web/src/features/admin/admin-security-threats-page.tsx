@@ -347,9 +347,7 @@ export function AdminSecurityThreatsPage() {
                   fullWidth
                   label="IP 해시"
                   value={draftClientIpHash}
-                  onChange={(event) =>
-                    setDraftClientIpHash(event.target.value)
-                  }
+                  onChange={(event) => setDraftClientIpHash(event.target.value)}
                   size="small"
                 />
               </Grid>
@@ -372,7 +370,12 @@ export function AdminSecurityThreatsPage() {
                     필터 적용
                   </Button>
                   {activeFilterCount > 0 ? (
-                    <Button onClick={clearFilters}>초기화</Button>
+                    <Button
+                      sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+                      onClick={clearFilters}
+                    >
+                      초기화
+                    </Button>
                   ) : null}
                 </Stack>
               </Grid>
@@ -406,10 +409,7 @@ export function AdminSecurityThreatsPage() {
             <Detail label="사유" value={selectedEvent.reason ?? '-'} />
             <Detail label="요청번호" value={selectedEvent.requestId ?? '-'} />
             <Detail label="경로" value={selectedEvent.path ?? '-'} />
-            <Detail
-              label="IP 해시"
-              value={selectedEvent.clientIpHash ?? '-'}
-            />
+            <Detail label="IP 해시" value={selectedEvent.clientIpHash ?? '-'} />
             <Detail label="사용자 ID" value={selectedEvent.userId ?? '-'} />
             <Detail label="세션 ID" value={selectedEvent.sessionId ?? '-'} />
             <Detail label="출처" value={selectedEvent.source} />

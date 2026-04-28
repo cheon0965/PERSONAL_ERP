@@ -1,4 +1,4 @@
-# 부채 관리 화면 실행계획
+﻿# 부채 관리 화면 실행계획
 
 > 구현 상태: 2026-04-23 기준 1차 구현 범위가 코드에 반영되었다. 부채 계약/상환 일정 Prisma 모델과 contracts, `GET/POST/PATCH /liabilities` API, `/liabilities` Web 화면, 계획 항목 생성 연동, 부채 상환 전표 분리 정책, 데모 seed/fallback, 메뉴 진입점을 추가했다. 업로드 배치와의 연결은 상환 일정에서 생성된 계획 항목/수집 거래를 통해 기존 계획 매칭 흐름으로 이어진다.
 
@@ -567,7 +567,7 @@ UI 원칙:
 
 - `docs/API.md` 업데이트
 - `docs/CURRENT_CAPABILITIES.md` 업데이트
-- `docs/SCREEN_FLOW_GUIDE.md` 업데이트
+- `docs/DEMO_GUIDE.md` 업데이트
 - `docs/VALIDATION_NOTES.md` 업데이트
 - `docs/domain/core-entity-definition.md` 업데이트
 - `docs/domain/business-logic-draft.md` 업데이트
@@ -658,7 +658,7 @@ UI 원칙:
 구현이 완료되면 이 문서는 `docs/completed/`로 이동하고, 현재 기준은 아래 문서에 반영한다.
 
 - `docs/CURRENT_CAPABILITIES.md`
-- `docs/SCREEN_FLOW_GUIDE.md`
+- `docs/DEMO_GUIDE.md`
 - `docs/API.md`
 - `docs/VALIDATION_NOTES.md`
 - `docs/domain/core-entity-definition.md`

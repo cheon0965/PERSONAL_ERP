@@ -1,9 +1,9 @@
-# 현재 구현 범위
+﻿# 현재 구현 범위
 
 ## 문서 목적
 
 이 문서는 현재 저장소 기준으로 실제 구현되어 있는 화면, API 모듈, 운영 지원 기능, 검증/운영 가드를 한 번에 확인하기 위한 요약 문서입니다.
-세부 계약은 `docs/API.md`, 화면 흐름은 `docs/SCREEN_FLOW_GUIDE.md`, 도메인 정책은 `docs/domain/*` 문서를 우선합니다.
+세부 계약은 `docs/API.md`, 데모 체험 흐름은 `docs/DEMO_GUIDE.md`, 도메인 정책은 `docs/domain/*` 문서를 우선합니다.
 
 ## 한 줄 요약
 
@@ -159,7 +159,7 @@
 ## 관련 문서
 
 - [`README.md`](../README.md)
-- [`SCREEN_FLOW_GUIDE.md`](./SCREEN_FLOW_GUIDE.md)
+- [`DEMO_GUIDE.md`](./DEMO_GUIDE.md)
 - [`API.md`](./API.md)
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md)
 - [`OPERATIONS_CHECKLIST.md`](./OPERATIONS_CHECKLIST.md)

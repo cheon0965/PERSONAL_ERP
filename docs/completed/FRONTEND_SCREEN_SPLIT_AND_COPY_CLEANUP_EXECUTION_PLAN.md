@@ -1,4 +1,4 @@
-# 프론트 화면 분리 및 설명문구 정리 실행계획
+﻿# 프론트 화면 분리 및 설명문구 정리 실행계획
 
 기준일: `2026-04-16`
 
@@ -6,7 +6,7 @@
 
 적용 범위: `apps/web`, `apps/api/src/common/navigation`, `docs`
 
-> 보관 상태: `2026-04-20` 기준 프론트 화면 분리 및 설명문구 정리 실행계획을 완료 처리한 뒤 `docs/completed/`로 이동했다. 현재 운영 기준은 `docs/SCREEN_FLOW_GUIDE.md`, `docs/DESIGN_SYSTEM.md`, `docs/ARCHITECTURE.md`, `docs/CURRENT_CAPABILITIES.md`를 우선한다.
+> 보관 상태: `2026-04-20` 기준 프론트 화면 분리 및 설명문구 정리 실행계획을 완료 처리한 뒤 `docs/completed/`로 이동했다. 현재 운영 기준은 `docs/DEMO_GUIDE.md`, `docs/DESIGN_SYSTEM.md`, `docs/ARCHITECTURE.md`, `docs/CURRENT_CAPABILITIES.md`를 우선한다.
 
 ## 완료 메모
 
@@ -14,11 +14,11 @@
 
 - 기준 데이터, 내 계정/보안, 계획 항목 등 화면 책임 분리 기준을 반영 완료한 상태로 본다.
 - 공통 헤더/카드/사이드바 설명문구 정리와 메뉴 텍스트 슬림화 기준을 완료 상태로 고정한다.
-- 새 화면 구조와 현재 운영 흐름은 현재 기준 문서인 `SCREEN_FLOW_GUIDE.md`, `DESIGN_SYSTEM.md`, `ARCHITECTURE.md`, `CURRENT_CAPABILITIES.md`를 우선한다.
+- 새 화면 구조와 현재 운영 흐름은 현재 기준 문서인 `DEMO_GUIDE.md`, `DESIGN_SYSTEM.md`, `ARCHITECTURE.md`, `CURRENT_CAPABILITIES.md`를 우선한다.
 
 연결 문서:
 
-- `docs/SCREEN_FLOW_GUIDE.md`
+- `docs/DEMO_GUIDE.md`
 - `docs/DESIGN_SYSTEM.md`
 - `docs/ARCHITECTURE.md`
 - `docs/completed/UI_REORGANIZATION_EXECUTION_PLAN_V2.md`
@@ -306,7 +306,7 @@
 작업:
 
 - DB 메뉴 트리 기본값과 실제 라우트를 맞춘다.
-- `docs/SCREEN_FLOW_GUIDE.md`와 새 화면 구조를 맞춘다.
+- `docs/DEMO_GUIDE.md`와 새 화면 구조를 맞춘다.
 - 기존 경로에서 새 경로로의 이동 정책을 문서화한다.
 
 ## 검증 기준

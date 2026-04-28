@@ -22,7 +22,8 @@ import {
 import {
   buildInsurancePolicyColumns,
   InsuranceDeleteDialog,
-  InsurancePoliciesToolbar,
+  InsurancePoliciesFilterToolbar,
+  type InsurancePoliciesTableFilters,
   InsurancePolicyDrawer
 } from './insurance-policies-page.sections';
 
@@ -44,10 +45,34 @@ export function InsurancePoliciesPage() {
     React.useState<InsurancePolicyDrawerState>(null);
   const [deleteTarget, setDeleteTarget] =
     React.useState<InsurancePolicyItem | null>(null);
+  const [tableFilters, setTableFilters] =
+    React.useState<InsurancePoliciesTableFilters>({
+      keyword: '',
+      status: '',
+      linkStatus: '',
+      cycle: '',
+      fundingAccountName: '',
+      categoryName: ''
+    });
   const { data = [], error } = useQuery({
     queryKey: insurancePoliciesQueryKey,
     queryFn: () => getInsurancePolicies({ includeInactive: true })
   });
+  const filteredData = React.useMemo(
+    () => filterInsurancePolicies(data, tableFilters),
+    [data, tableFilters]
+  );
+  const filterOptions = React.useMemo(
+    () => ({
+      fundingAccountNames: readUniqueSortedValues(
+        data.map((item) => item.fundingAccountName)
+      ),
+      categoryNames: readUniqueSortedValues(
+        data.map((item) => item.categoryName)
+      )
+    }),
+    [data]
+  );
 
   const activePolicies = data.filter((policy) => policy.isActive);
   const totalPremium = sumMoneyWon(
@@ -125,19 +150,22 @@ export function InsurancePoliciesPage() {
         links: [
           {
             title: '반복 규칙',
-            description: '보험 계약 저장 시 생성된 연결 반복 규칙 상태를 함께 확인합니다.',
+            description:
+              '보험 계약 저장 시 생성된 연결 반복 규칙 상태를 함께 확인합니다.',
             href: '/recurring',
             actionLabel: '반복 규칙 보기'
           },
           {
             title: '계획 항목',
-            description: '현재 운영 월에서 보험료 계획이 실제로 생성됐는지 확인합니다.',
+            description:
+              '현재 운영 월에서 보험료 계획이 실제로 생성됐는지 확인합니다.',
             href: '/plan-items',
             actionLabel: '계획 항목 보기'
           },
           {
             title: '수집 거래',
-            description: '실제 납부 거래를 확인하고 전표 준비 상태로 이어서 검토합니다.',
+            description:
+              '실제 납부 거래를 확인하고 전표 준비 상태로 이어서 검토합니다.',
             href: '/transactions',
             actionLabel: '수집 거래 보기'
           }
@@ -258,13 +286,17 @@ export function InsurancePoliciesPage() {
         title="보험 계약 목록"
         description="보험 계약 저장 시 연결된 반복 규칙도 함께 관리합니다. 표에서 바로 수정하거나 삭제해 목록 중심으로 정리할 수 있습니다."
         toolbar={
-          <InsurancePoliciesToolbar
+          <InsurancePoliciesFilterToolbar
             activeCount={activePolicies.length}
             linkedCount={linkedPolicyCount}
             unlinkedCount={unlinkedPolicyCount}
+            filters={tableFilters}
+            fundingAccountOptions={filterOptions.fundingAccountNames}
+            categoryOptions={filterOptions.categoryNames}
+            onFiltersChange={setTableFilters}
           />
         }
-        rows={data}
+        rows={filteredData}
         columns={columns}
       />
 
@@ -282,4 +314,74 @@ export function InsurancePoliciesPage() {
       />
     </Stack>
   );
+}
+
+function filterInsurancePolicies(
+  policies: InsurancePolicyItem[],
+  filters: InsurancePoliciesTableFilters
+) {
+  const keyword = normalizeFilterText(filters.keyword);
+
+  return policies.filter((policy) => {
+    if (filters.status === 'ACTIVE' && !policy.isActive) {
+      return false;
+    }
+
+    if (filters.status === 'INACTIVE' && policy.isActive) {
+      return false;
+    }
+
+    if (filters.linkStatus === 'LINKED' && !policy.linkedRecurringRuleId) {
+      return false;
+    }
+
+    if (filters.linkStatus === 'UNLINKED' && policy.linkedRecurringRuleId) {
+      return false;
+    }
+
+    if (filters.cycle && policy.cycle !== filters.cycle) {
+      return false;
+    }
+
+    if (
+      filters.fundingAccountName &&
+      policy.fundingAccountName !== filters.fundingAccountName
+    ) {
+      return false;
+    }
+
+    if (filters.categoryName && policy.categoryName !== filters.categoryName) {
+      return false;
+    }
+
+    if (!keyword) {
+      return true;
+    }
+
+    const haystack = normalizeFilterText(
+      [
+        policy.provider,
+        policy.productName,
+        policy.cycle,
+        policy.fundingAccountName,
+        policy.categoryName,
+        policy.isActive ? '활성 ACTIVE' : '비활성 INACTIVE',
+        policy.linkedRecurringRuleId ? '연결 LINKED' : '미연결 UNLINKED'
+      ]
+        .filter(Boolean)
+        .join(' ')
+    );
+
+    return haystack.includes(keyword);
+  });
+}
+
+function normalizeFilterText(value: string) {
+  return value.trim().toLocaleLowerCase('ko-KR');
+}
+
+function readUniqueSortedValues(values: Array<string | null | undefined>) {
+  return Array.from(
+    new Set(values.filter((value): value is string => Boolean(value)))
+  ).sort((left, right) => left.localeCompare(right, 'ko-KR'));
 }

@@ -566,10 +566,16 @@ export function createCollectedTransactionReadMethods(
         importBatchId?: string | null;
         importedRowId?: string | null;
         sourceFingerprint?: string | null;
-        occurredOn?: Date;
+        occurredOn?:
+          | Date
+          | {
+              gte?: Date;
+              lt?: Date;
+            };
         amount?: number;
         ledgerTransactionTypeId?: string;
         fundingAccountId?: string;
+        categoryId?: string | null;
         matchedPlanItemId?: {
           not?: null;
         };
@@ -661,9 +667,10 @@ export function createCollectedTransactionReadMethods(
         const matchesSourceFingerprint =
           args.where?.sourceFingerprint === undefined ||
           candidate.sourceFingerprint === args.where.sourceFingerprint;
-        const matchesOccurredOn =
-          args.where?.occurredOn === undefined ||
-          candidate.occurredOn.getTime() === args.where.occurredOn.getTime();
+        const matchesOccurredOn = matchesCollectedTransactionDateFilter(
+          candidate.occurredOn,
+          args.where?.occurredOn
+        );
         const matchesAmount =
           args.where?.amount === undefined ||
           candidate.amount === args.where.amount;
@@ -674,6 +681,9 @@ export function createCollectedTransactionReadMethods(
         const matchesFundingAccount =
           args.where?.fundingAccountId === undefined ||
           candidate.fundingAccountId === args.where.fundingAccountId;
+        const matchesCategory =
+          args.where?.categoryId === undefined ||
+          candidate.categoryId === args.where.categoryId;
         const matchesMatchedPlanItem =
           args.where?.matchedPlanItemId?.not !== null ||
           candidate.matchedPlanItemId !== null;
@@ -697,6 +707,7 @@ export function createCollectedTransactionReadMethods(
           matchesAmount &&
           matchesLedgerTransactionType &&
           matchesFundingAccount &&
+          matchesCategory &&
           matchesMatchedPlanItem &&
           matchesStatus
         );
@@ -916,6 +927,29 @@ export function createCollectedTransactionReadMethods(
       });
     }
   };
+}
+
+function matchesCollectedTransactionDateFilter(
+  value: Date,
+  filter?:
+    | Date
+    | {
+        gte?: Date;
+        lt?: Date;
+      }
+) {
+  if (!filter) {
+    return true;
+  }
+
+  if (filter instanceof Date) {
+    return value.getTime() === filter.getTime();
+  }
+
+  return (
+    (!filter.gte || value.getTime() >= filter.gte.getTime()) &&
+    (!filter.lt || value.getTime() < filter.lt.getTime())
+  );
 }
 
 function matchesCollectedTransactionStatusFilter(

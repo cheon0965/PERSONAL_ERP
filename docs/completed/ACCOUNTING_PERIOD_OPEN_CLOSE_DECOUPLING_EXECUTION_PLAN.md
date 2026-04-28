@@ -1,6 +1,6 @@
-# 운영월 오픈/마감 분리 실행 정리
+﻿# 운영월 오픈/마감 분리 실행 정리
 
-> 현재 정책 대체 안내: 이 문서는 과거에 적용했던 "운영월 오픈/마감 분리" 실행 기록이다. 2026-04-22 기준 최신 정책은 하나의 최신 진행월만 열어 두고, 다음 월은 최근 월 마감 이후 여는 월별 운영 모델이다. 업로드 배치의 운영월 자동 생성도 운영 시작 전 기초데이터 적재 또는 신규 계좌/카드 기초 업로드 예외로 제한된다. 현재 구현 기준은 `docs/API.md`, `docs/SCREEN_FLOW_GUIDE.md`, `docs/domain/business-logic-draft.md`를 우선한다.
+> 현재 정책 대체 안내: 이 문서는 과거에 적용했던 "운영월 오픈/마감 분리" 실행 기록이다. 2026-04-22 기준 최신 정책은 하나의 최신 진행월만 열어 두고, 다음 월은 최근 월 마감 이후 여는 월별 운영 모델이다. 업로드 배치의 운영월 자동 생성도 운영 시작 전 기초데이터 적재 또는 신규 계좌/카드 기초 업로드 예외로 제한된다. 현재 구현 기준은 `docs/API.md`, `docs/DEMO_GUIDE.md`, `docs/domain/business-logic-draft.md`를 우선한다.
 
 ## 목표
 
@@ -63,7 +63,7 @@
 - `apps/web/src/features/accounting-periods/accounting-periods-page.sections.tsx`
 - `apps/web/src/features/accounting-periods/accounting-periods-page.lifecycle-section.tsx`
 - `docs/API.md`
-- `docs/SCREEN_FLOW_GUIDE.md`
+- `docs/DEMO_GUIDE.md`
 - 새 정책에 맞게 월 오픈/마감 분리, 재오픈 종속성 기준을 반영했다.
 
 ## 기대 효과

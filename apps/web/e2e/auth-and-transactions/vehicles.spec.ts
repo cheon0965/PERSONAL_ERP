@@ -121,6 +121,24 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
       return;
     }
 
+    if (path === '/api/auth/workspaces' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: currentUser.currentWorkspace
+            ? [
+                {
+                  ...currentUser.currentWorkspace,
+                  isCurrent: true
+                }
+              ]
+            : []
+        })
+      });
+      return;
+    }
+
     if (path === '/api/navigation/tree' && request.method() === 'GET') {
       await route.fulfill({
         status: 200,
@@ -373,7 +391,10 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
 
   await page.goto('/vehicles');
   await expect(
-    page.getByRole('heading', { name: '운영 포털 로그인' })
+    page.getByRole('heading', { name: '운영 포털', exact: true })
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '로그인', exact: true })
   ).toBeVisible();
 
   await page.getByLabel('이메일').fill('demo@example.com');
@@ -440,7 +461,7 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
   await fuelForm.getByLabel('주유 시점 주행거리 (km)').fill('58910');
   await fuelForm.getByLabel('주유량 (L)').fill('44.2');
   await fuelForm.getByLabel('주유 금액 (원)').fill(String(newFuelAmountWon));
-  await fuelForm.getByLabel('리터당 단가 (원)').fill('1729');
+  await expect(fuelForm.getByLabel('리터당 단가 (원)')).toHaveValue('1729');
   await fuelForm.getByRole('button', { name: '연료 기록 저장' }).click();
 
   await expect(
@@ -474,6 +495,7 @@ test('manages vehicles through the vehicles UI', async ({ page }) => {
   await fuelEditForm
     .getByLabel('주유 금액 (원)')
     .fill(String(updatedFuelAmountWon));
+  await expect(fuelEditForm.getByLabel('리터당 단가 (원)')).toHaveValue('1838');
   await fuelEditForm
     .getByRole('checkbox', { name: '가득 주유 / 완충 기록' })
     .uncheck();

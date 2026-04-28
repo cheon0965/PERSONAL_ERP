@@ -1,4 +1,4 @@
-# 관리자 회원관리와 로그관리 실행 계획
+﻿# 관리자 회원관리와 로그관리 실행 계획
 
 ## 완료 메모
 
@@ -457,7 +457,7 @@ E2E 후보:
 수정 후보:
 
 - `docs/API.md`
-- `docs/SCREEN_FLOW_GUIDE.md`
+- `docs/DEMO_GUIDE.md`
 - `docs/ERROR_HANDLING_AND_LOGGING.md`
 - `docs/VALIDATION_NOTES.md`
 - `docs/ASVS_L2_EXECUTION_PLAN.md`

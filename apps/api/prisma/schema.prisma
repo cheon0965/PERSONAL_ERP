@@ -793,6 +793,7 @@ model PlanItem {
 
   @@unique([periodId, recurringRuleId, plannedDate])
   @@index([periodId, status, plannedDate])
+  @@index([periodId, status, plannedAmount, fundingAccountId, ledgerTransactionTypeId, plannedDate], map: "plan_item_collect_match_idx")
   @@index([tenantId, ledgerId, plannedDate])
 }
 
@@ -928,6 +929,7 @@ model CollectedTransaction {
 
   @@index([ledgerId, status, occurredOn])
   @@index([ledgerId, sourceFingerprint])
+  @@index([periodId, amount, fundingAccountId, ledgerTransactionTypeId, status, occurredOn], map: "ctx_collect_match_idx")
 }
 
 model JournalEntry {

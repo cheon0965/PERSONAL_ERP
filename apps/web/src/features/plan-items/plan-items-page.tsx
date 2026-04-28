@@ -57,6 +57,13 @@ type PlanItemsPageProps = {
   mode?: PlanItemsPageMode;
 };
 
+type PlanItemsTableFilters = {
+  keyword: string;
+  status: string;
+  fundingAccountName: string;
+  categoryName: string;
+};
+
 export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
   const queryClient = useQueryClient();
   const { notifySuccess } = useAppNotification();
@@ -69,6 +76,14 @@ export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
     severity: 'success' | 'error';
     message: string;
   } | null>(null);
+  const [tableFilters, setTableFilters] = React.useState<PlanItemsTableFilters>(
+    {
+      keyword: '',
+      status: '',
+      fundingAccountName: '',
+      categoryName: ''
+    }
+  );
 
   const periodsQuery = useQuery({
     queryKey: accountingPeriodsQueryKey,
@@ -209,10 +224,18 @@ export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
 
     return mapping;
   }, [journalEntriesQuery.data]);
-  const tableRows = React.useMemo(() => {
-    const items =
+  const rawTableRows = React.useMemo(
+    () =>
       view?.items ??
-      (selectedPeriod ? buildPlanItemsFallbackView(selectedPeriod).items : []);
+      (selectedPeriod ? buildPlanItemsFallbackView(selectedPeriod).items : []),
+    [selectedPeriod, view?.items]
+  );
+  const filteredTableRows = React.useMemo(
+    () => filterPlanItems(rawTableRows, tableFilters),
+    [rawTableRows, tableFilters]
+  );
+  const tableRows = React.useMemo(() => {
+    const items = filteredTableRows;
     if (!highlightedPlanItemId) {
       return items;
     }
@@ -226,7 +249,19 @@ export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
       highlighted,
       ...items.filter((item) => item.id !== highlightedPlanItemId)
     ];
-  }, [highlightedPlanItemId, selectedPeriod, view?.items]);
+  }, [filteredTableRows, highlightedPlanItemId]);
+  const filterOptions = React.useMemo(
+    () => ({
+      statuses: readUniqueSortedValues(rawTableRows.map((item) => item.status)),
+      fundingAccountNames: readUniqueSortedValues(
+        rawTableRows.map((item) => item.fundingAccountName)
+      ),
+      categoryNames: readUniqueSortedValues(
+        rawTableRows.map((item) => item.categoryName)
+      )
+    }),
+    [rawTableRows]
+  );
 
   const columns = React.useMemo(
     () =>
@@ -457,6 +492,13 @@ export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
                 ))}
               </TextField>
             }
+            toolbar={
+              <PlanItemsTableToolbar
+                filters={tableFilters}
+                filterOptions={filterOptions}
+                onFiltersChange={setTableFilters}
+              />
+            }
             rows={tableRows}
             columns={columns}
             height={460}
@@ -482,6 +524,167 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
       <Typography variant="body2">{value}</Typography>
     </Stack>
   );
+}
+
+function PlanItemsTableToolbar({
+  filters,
+  filterOptions,
+  onFiltersChange
+}: {
+  filters: PlanItemsTableFilters;
+  filterOptions: {
+    statuses: string[];
+    fundingAccountNames: string[];
+    categoryNames: string[];
+  };
+  onFiltersChange: (filters: PlanItemsTableFilters) => void;
+}) {
+  const hasActiveFilter = Object.values(filters).some((value) => value !== '');
+
+  return (
+    <Stack spacing={1.25}>
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={1}
+        alignItems={{ xs: 'stretch', md: 'center' }}
+      >
+        <TextField
+          label="검색어"
+          size="small"
+          value={filters.keyword}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, keyword: event.target.value })
+          }
+          placeholder="제목, 거래유형, 연결 거래"
+          sx={{ minWidth: { md: 260 }, flex: 1 }}
+        />
+        <TextField
+          select
+          label="상태"
+          size="small"
+          value={filters.status}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, status: event.target.value })
+          }
+          sx={{ minWidth: { md: 150 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          {filterOptions.statuses.map((status) => (
+            <MenuItem key={status} value={status}>
+              {status}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          select
+          label="자금수단"
+          size="small"
+          value={filters.fundingAccountName}
+          onChange={(event) =>
+            onFiltersChange({
+              ...filters,
+              fundingAccountName: event.target.value
+            })
+          }
+          sx={{ minWidth: { md: 180 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          {filterOptions.fundingAccountNames.map((fundingAccountName) => (
+            <MenuItem key={fundingAccountName} value={fundingAccountName}>
+              {fundingAccountName}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          select
+          label="카테고리"
+          size="small"
+          value={filters.categoryName}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, categoryName: event.target.value })
+          }
+          sx={{ minWidth: { md: 180 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          {filterOptions.categoryNames.map((categoryName) => (
+            <MenuItem key={categoryName} value={categoryName}>
+              {categoryName}
+            </MenuItem>
+          ))}
+        </TextField>
+        <Button
+          variant="outlined"
+          disabled={!hasActiveFilter}
+          sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+          onClick={() =>
+            onFiltersChange({
+              keyword: '',
+              status: '',
+              fundingAccountName: '',
+              categoryName: ''
+            })
+          }
+        >
+          초기화
+        </Button>
+      </Stack>
+    </Stack>
+  );
+}
+
+function filterPlanItems(
+  items: PlanItemItem[],
+  filters: PlanItemsTableFilters
+) {
+  const keyword = normalizeFilterText(filters.keyword);
+
+  return items.filter((item) => {
+    if (filters.status && item.status !== filters.status) {
+      return false;
+    }
+
+    if (
+      filters.fundingAccountName &&
+      item.fundingAccountName !== filters.fundingAccountName
+    ) {
+      return false;
+    }
+
+    if (filters.categoryName && item.categoryName !== filters.categoryName) {
+      return false;
+    }
+
+    if (!keyword) {
+      return true;
+    }
+
+    const haystack = normalizeFilterText(
+      [
+        item.title,
+        item.status,
+        item.ledgerTransactionTypeName,
+        item.fundingAccountName,
+        item.categoryName,
+        item.matchedCollectedTransactionTitle,
+        item.matchedCollectedTransactionStatus,
+        item.postedJournalEntryNumber
+      ]
+        .filter(Boolean)
+        .join(' ')
+    );
+
+    return haystack.includes(keyword);
+  });
+}
+
+function normalizeFilterText(value: string) {
+  return value.trim().toLocaleLowerCase('ko-KR');
+}
+
+function readUniqueSortedValues(values: Array<string | null | undefined>) {
+  return Array.from(
+    new Set(values.filter((value): value is string => Boolean(value)))
+  ).sort((left, right) => left.localeCompare(right, 'ko-KR'));
 }
 
 function buildPlanItemsHelpContext(mode: PlanItemsPageMode) {

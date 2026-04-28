@@ -1,4 +1,4 @@
-# 메인 비즈니스 흐름 개선 실행계획
+﻿# 메인 비즈니스 흐름 개선 실행계획
 
 기준일: `2026-04-05`
 
@@ -168,7 +168,7 @@
   - 기준 데이터 관리/반복 규칙/대표 입력 흐름 smoke
   - build 결과물 기준 smoke
 - 문서 검증:
-  - `SCREEN_FLOW_GUIDE`, `business-logic-draft`, `API`, `VALIDATION_NOTES` 드리프트 점검
+  - `DEMO_GUIDE`, `business-logic-draft`, `API`, `VALIDATION_NOTES` 드리프트 점검
 
 ## 완료 판정
 

@@ -1,4 +1,4 @@
-# Operations Support Surfaces Execution Plan
+﻿# Operations Support Surfaces Execution Plan
 
 ## 목적
 
@@ -223,7 +223,7 @@
 
 해야 할 일:
 
-- `docs/SCREEN_FLOW_GUIDE.md`와 현재 사이드바 구조를 기준으로 메인 흐름을 다시 확인한다.
+- `docs/DEMO_GUIDE.md`와 현재 사이드바 구조를 기준으로 메인 흐름을 다시 확인한다.
 - 운영 보조 화면을 `settings`, `admin`, `operations` 세 그룹으로 고정한다.
 - 공통 contract와 route naming을 먼저 확정한다.
 - `docs/API.md`, `docs/VALIDATION_NOTES.md`에 이후 추가될 surface 범주를 반영할 준비를 한다.
@@ -525,7 +525,7 @@ Web 후보:
 ### 문서
 
 - `docs/API.md`
-- `docs/SCREEN_FLOW_GUIDE.md`
+- `docs/DEMO_GUIDE.md`
 - `docs/OPERATIONS_CHECKLIST.md`
 - `docs/ERROR_HANDLING_AND_LOGGING.md`
 - `docs/VALIDATION_NOTES.md`

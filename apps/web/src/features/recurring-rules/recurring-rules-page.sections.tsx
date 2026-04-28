@@ -6,7 +6,9 @@ import {
   Button,
   Chip,
   CircularProgress,
+  MenuItem,
   Stack,
+  TextField,
   Typography
 } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
@@ -31,6 +33,15 @@ type SubmitFeedback = {
   severity: 'success' | 'error';
   message: string;
 } | null;
+
+export type RecurringRulesTableFilters = {
+  keyword: string;
+  status: string;
+  source: string;
+  frequency: string;
+  fundingAccountName: string;
+  categoryName: string;
+};
 
 export function createRecurringRulesColumns(input: {
   onEdit: (recurringRule: ManagedRecurringRuleItem) => void;
@@ -184,6 +195,165 @@ export function RecurringRulesToolbar({
         규칙은 목록에서 먼저 확인하고, 생성과 수정은 드로어에서 이어서
         처리합니다.
       </Typography>
+    </Stack>
+  );
+}
+
+export function RecurringRulesFilterToolbar({
+  totalCount,
+  activeCount,
+  insuranceManagedRuleCount,
+  filters,
+  fundingAccountOptions,
+  categoryOptions,
+  onFiltersChange
+}: {
+  totalCount: number;
+  activeCount: number;
+  insuranceManagedRuleCount: number;
+  filters: RecurringRulesTableFilters;
+  fundingAccountOptions: string[];
+  categoryOptions: string[];
+  onFiltersChange: (filters: RecurringRulesTableFilters) => void;
+}) {
+  const hasActiveFilter = Object.values(filters).some((value) => value !== '');
+
+  return (
+    <Stack spacing={1.25}>
+      <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+        <Chip
+          label={`활성 ${activeCount}건`}
+          size="small"
+          color="success"
+          variant="filled"
+        />
+        <Chip
+          label={`보험 연동 ${insuranceManagedRuleCount}건`}
+          size="small"
+          color={insuranceManagedRuleCount > 0 ? 'primary' : 'default'}
+          variant="outlined"
+        />
+        <Chip
+          label={`직접 관리 ${totalCount - insuranceManagedRuleCount}건`}
+          size="small"
+          variant="outlined"
+        />
+      </Stack>
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={1}
+        alignItems={{ xs: 'stretch', md: 'center' }}
+      >
+        <TextField
+          label="검색어"
+          size="small"
+          value={filters.keyword}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, keyword: event.target.value })
+          }
+          placeholder="제목, 자금수단, 카테고리"
+          sx={{ minWidth: { md: 260 }, flex: 1 }}
+        />
+        <TextField
+          select
+          label="상태"
+          size="small"
+          value={filters.status}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, status: event.target.value })
+          }
+          sx={{ minWidth: { md: 140 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          <MenuItem value="ACTIVE">활성</MenuItem>
+          <MenuItem value="PAUSED">중지</MenuItem>
+        </TextField>
+        <TextField
+          select
+          label="관리 원본"
+          size="small"
+          value={filters.source}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, source: event.target.value })
+          }
+          sx={{ minWidth: { md: 150 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          <MenuItem value="DIRECT">직접 관리</MenuItem>
+          <MenuItem value="INSURANCE">보험 연동</MenuItem>
+        </TextField>
+        <TextField
+          select
+          label="주기"
+          size="small"
+          value={filters.frequency}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, frequency: event.target.value })
+          }
+          sx={{ minWidth: { md: 130 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          {Object.entries(frequencyLabelMap).map(([value, label]) => (
+            <MenuItem key={value} value={value}>
+              {label}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          select
+          label="자금수단"
+          size="small"
+          value={filters.fundingAccountName}
+          onChange={(event) =>
+            onFiltersChange({
+              ...filters,
+              fundingAccountName: event.target.value
+            })
+          }
+          sx={{ minWidth: { md: 170 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          {fundingAccountOptions.map((fundingAccountName) => (
+            <MenuItem key={fundingAccountName} value={fundingAccountName}>
+              {fundingAccountName}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          select
+          label="카테고리"
+          size="small"
+          value={filters.categoryName}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, categoryName: event.target.value })
+          }
+          sx={{ minWidth: { md: 170 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          {categoryOptions.map((categoryName) => (
+            <MenuItem key={categoryName} value={categoryName}>
+              {categoryName}
+            </MenuItem>
+          ))}
+        </TextField>
+        <Button
+          variant="outlined"
+          disabled={!hasActiveFilter}
+          sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+          onClick={() =>
+            onFiltersChange({
+              keyword: '',
+              status: '',
+              source: '',
+              frequency: '',
+              fundingAccountName: '',
+              categoryName: ''
+            })
+          }
+        >
+          초기화
+        </Button>
+      </Stack>
     </Stack>
   );
 }

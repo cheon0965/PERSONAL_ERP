@@ -41,7 +41,10 @@ import {
   VehiclesFormDrawers,
   VehiclesFuelSection,
   VehiclesMaintenanceSection,
-  VehiclesOverviewSection
+  VehiclesOverviewSection,
+  type VehicleFleetFilters,
+  type VehicleFuelLogFilters,
+  type VehicleMaintenanceLogFilters
 } from './vehicles-page.sections';
 import {
   VehiclesSectionNav,
@@ -90,6 +93,23 @@ export function VehiclesPage({
     React.useState<VehicleMaintenanceDrawerState>(null);
   const [deleteTarget, setDeleteTarget] =
     React.useState<VehicleLogDeleteTarget>(null);
+  const [fleetFilters, setFleetFilters] = React.useState<VehicleFleetFilters>({
+    keyword: '',
+    manufacturer: '',
+    fuelType: ''
+  });
+  const [fuelFilters, setFuelFilters] = React.useState<VehicleFuelLogFilters>({
+    keyword: '',
+    vehicleName: '',
+    linkStatus: ''
+  });
+  const [maintenanceFilters, setMaintenanceFilters] =
+    React.useState<VehicleMaintenanceLogFilters>({
+      keyword: '',
+      vehicleName: '',
+      category: '',
+      linkStatus: ''
+    });
   const { data: vehicles = [], error: vehiclesError } = useQuery({
     queryKey: vehiclesQueryKey,
     queryFn: getVehicles
@@ -120,23 +140,40 @@ export function VehiclesPage({
         .filter((manufacturer): manufacturer is string => Boolean(manufacturer))
     )
   );
+  const fuelTypeOptions = readUniqueSortedValues(
+    vehicles.map((vehicle) => vehicle.fuelType)
+  );
+  const vehicleNameOptions = readUniqueSortedValues(
+    vehicles.map((vehicle) => vehicle.name)
+  );
+  const maintenanceCategoryOptions = readUniqueSortedValues(
+    maintenanceLogs.map((maintenanceLog) => maintenanceLog.category)
+  );
+  const filteredVehicles = React.useMemo(
+    () => filterVehicles(vehicles, fleetFilters),
+    [fleetFilters, vehicles]
+  );
+  const filteredFuelLogs = React.useMemo(
+    () => filterVehicleFuelLogs(fuelLogs, fuelFilters),
+    [fuelFilters, fuelLogs]
+  );
+  const filteredMaintenanceLogs = React.useMemo(
+    () => filterVehicleMaintenanceLogs(maintenanceLogs, maintenanceFilters),
+    [maintenanceFilters, maintenanceLogs]
+  );
   const operatingSummaryByVehicleId = new Map(
     operatingSummary.items.map((item) => [item.vehicleId, item])
   );
   const latestFuelLog =
-    fuelLogs.length > 0
-      ? ([...fuelLogs]
-          .sort((left, right) => left.filledOn.localeCompare(right.filledOn))
-          .at(-1) ?? null)
-      : null;
+    fuelLogs.length > 0 ? readLatestFuelLog(fuelLogs) : null;
   const latestMaintenanceLog =
     maintenanceLogs.length > 0
-      ? ([...maintenanceLogs]
-          .sort((left, right) =>
-            left.performedOn.localeCompare(right.performedOn)
-          )
-          .at(-1) ?? null)
+      ? readLatestMaintenanceLog(maintenanceLogs)
       : null;
+  const latestFilteredFuelLog = readLatestFuelLog(filteredFuelLogs);
+  const latestFilteredMaintenanceLog = readLatestMaintenanceLog(
+    filteredMaintenanceLogs
+  );
   const mostExpensiveVehicle =
     operatingSummary.items.length > 0
       ? ([...operatingSummary.items].sort((left, right) =>
@@ -465,31 +502,41 @@ export function VehiclesPage({
 
       {section === 'fleet' ? (
         <VehiclesFleetSection
+          filters={fleetFilters}
+          fuelTypeOptions={fuelTypeOptions}
           manufacturers={manufacturers}
-          vehicles={vehicles}
+          vehicles={filteredVehicles}
           vehicleColumns={vehicleColumns}
+          onFiltersChange={setFleetFilters}
           onCreateVehicle={handleCreateOpen}
         />
       ) : null}
 
       {section === 'fuel' ? (
         <VehiclesFuelSection
-          fuelLogRows={fuelLogs}
+          filters={fuelFilters}
+          fuelLogRows={filteredFuelLogs}
           fuelTableColumns={fuelTableColumns}
-          latestFuelLog={latestFuelLog}
+          latestFuelLog={latestFilteredFuelLog}
           operatingSummary={operatingSummary}
+          vehicleOptions={vehicleNameOptions}
           vehicles={vehicles}
+          onFiltersChange={setFuelFilters}
           onCreateFuelLog={handleFuelCreateOpen}
         />
       ) : null}
 
       {section === 'maintenance' ? (
         <VehiclesMaintenanceSection
-          latestMaintenanceLog={latestMaintenanceLog}
-          maintenanceLogRows={maintenanceLogs}
+          categoryOptions={maintenanceCategoryOptions}
+          filters={maintenanceFilters}
+          latestMaintenanceLog={latestFilteredMaintenanceLog}
+          maintenanceLogRows={filteredMaintenanceLogs}
           maintenanceTableColumns={maintenanceTableColumns}
           operatingSummary={operatingSummary}
+          vehicleOptions={vehicleNameOptions}
           vehicles={vehicles}
+          onFiltersChange={setMaintenanceFilters}
           onCreateMaintenanceLog={handleMaintenanceCreateOpen}
         />
       ) : null}
@@ -552,6 +599,148 @@ function buildDeleteDialogDescription(target: VehicleLogDeleteTarget) {
   }
 
   return `${vehicleName}의 ${logLabel}과 연결된 미확정 수집거래를 같은 작업에서 함께 삭제합니다. 이미 전표로 확정된 기록은 삭제할 수 없고 전표 상세에서 반전 또는 정정으로 조정합니다.`;
+}
+
+function filterVehicles(vehicles: VehicleItem[], filters: VehicleFleetFilters) {
+  const keyword = normalizeFilterText(filters.keyword);
+
+  return vehicles.filter((vehicle) => {
+    if (filters.manufacturer && vehicle.manufacturer !== filters.manufacturer) {
+      return false;
+    }
+
+    if (filters.fuelType && vehicle.fuelType !== filters.fuelType) {
+      return false;
+    }
+
+    if (!keyword) {
+      return true;
+    }
+
+    const haystack = normalizeFilterText(
+      [vehicle.name, vehicle.manufacturer, vehicle.fuelType]
+        .filter(Boolean)
+        .join(' ')
+    );
+
+    return haystack.includes(keyword);
+  });
+}
+
+function filterVehicleFuelLogs(
+  logs: VehicleFuelLogItem[],
+  filters: VehicleFuelLogFilters
+) {
+  const keyword = normalizeFilterText(filters.keyword);
+
+  return logs.filter((log) => {
+    if (filters.vehicleName && log.vehicleName !== filters.vehicleName) {
+      return false;
+    }
+
+    if (filters.linkStatus === 'LINKED' && !log.linkedCollectedTransaction) {
+      return false;
+    }
+
+    if (filters.linkStatus === 'UNLINKED' && log.linkedCollectedTransaction) {
+      return false;
+    }
+
+    if (!keyword) {
+      return true;
+    }
+
+    const link = log.linkedCollectedTransaction;
+    const haystack = normalizeFilterText(
+      [
+        log.vehicleName,
+        log.filledOn,
+        String(log.odometerKm),
+        String(log.liters),
+        String(log.amountWon),
+        link?.postingStatus,
+        link?.postedJournalEntryNumber
+      ]
+        .filter(Boolean)
+        .join(' ')
+    );
+
+    return haystack.includes(keyword);
+  });
+}
+
+function filterVehicleMaintenanceLogs(
+  logs: VehicleMaintenanceLogItem[],
+  filters: VehicleMaintenanceLogFilters
+) {
+  const keyword = normalizeFilterText(filters.keyword);
+
+  return logs.filter((log) => {
+    if (filters.vehicleName && log.vehicleName !== filters.vehicleName) {
+      return false;
+    }
+
+    if (filters.category && log.category !== filters.category) {
+      return false;
+    }
+
+    if (filters.linkStatus === 'LINKED' && !log.linkedCollectedTransaction) {
+      return false;
+    }
+
+    if (filters.linkStatus === 'UNLINKED' && log.linkedCollectedTransaction) {
+      return false;
+    }
+
+    if (!keyword) {
+      return true;
+    }
+
+    const link = log.linkedCollectedTransaction;
+    const haystack = normalizeFilterText(
+      [
+        log.vehicleName,
+        log.performedOn,
+        log.category,
+        log.vendor,
+        log.description,
+        log.memo,
+        String(log.amountWon),
+        link?.postingStatus,
+        link?.postedJournalEntryNumber
+      ]
+        .filter(Boolean)
+        .join(' ')
+    );
+
+    return haystack.includes(keyword);
+  });
+}
+
+function readLatestFuelLog(logs: VehicleFuelLogItem[]) {
+  return (
+    [...logs]
+      .sort((left, right) => left.filledOn.localeCompare(right.filledOn))
+      .at(-1) ?? null
+  );
+}
+
+function readLatestMaintenanceLog(logs: VehicleMaintenanceLogItem[]) {
+  return (
+    [...logs]
+      .sort((left, right) => left.performedOn.localeCompare(right.performedOn))
+      .at(-1) ?? null
+  );
+}
+
+function normalizeFilterText(value: string) {
+  return value.trim().toLocaleLowerCase('ko-KR');
+}
+
+function readUniqueSortedValues(values: Array<string | null | undefined>) {
+  return Array.from(
+    new Set(values.filter((value): value is string => Boolean(value)))
+  ).sort((left, right) => left.localeCompare(right, 'ko-KR'));
 }
 
 function buildVehiclesHelpContext(section: VehicleWorkspaceSection) {

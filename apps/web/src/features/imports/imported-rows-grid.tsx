@@ -33,6 +33,13 @@ import {
 
 type BulkCollectTransactionType = keyof BulkCollectFormState['typeOptions'];
 
+type ImportedRowsFilters = {
+  keyword: string;
+  parseStatus: string;
+  collectionStatus: string;
+  periodScope: string;
+};
+
 const bulkCollectTransactionTypeLabels: Record<
   BulkCollectTransactionType,
   string
@@ -48,9 +55,6 @@ export function ImportedRowsGrid({
   rows,
   selectedRowId,
   selectedRowIds,
-  selectedRowsCount,
-  collectableRowCount,
-  selectedCollectableRowCount,
   bulkCollectForm,
   categories,
   bulkCollectJob,
@@ -77,10 +81,45 @@ export function ImportedRowsGrid({
   onBulkCollectFormChange: (patch: Partial<BulkCollectFormState>) => void;
   onSelectedRowIdsChange: (rowIds: string[]) => void;
   onPrepareCollect: (row: ImportedRowTableItem) => void;
-  onBulkCollect: () => void;
+  onBulkCollect: (rowIds?: string[]) => void;
   onCancelBulkCollect: () => void;
 }) {
   const [isTypeOverridesOpen, setTypeOverridesOpen] = React.useState(false);
+  const [filters, setFilters] = React.useState<ImportedRowsFilters>({
+    keyword: '',
+    parseStatus: '',
+    collectionStatus: '',
+    periodScope: ''
+  });
+  const filteredRows = React.useMemo(
+    () => filterImportedRows(rows, filters),
+    [filters, rows]
+  );
+  React.useEffect(() => {
+    const visibleRowIds = new Set(filteredRows.map((row) => row.id));
+    const nextSelectedRowIds = selectedRowIds.filter((rowId) =>
+      visibleRowIds.has(rowId)
+    );
+
+    if (nextSelectedRowIds.length !== selectedRowIds.length) {
+      onSelectedRowIdsChange(nextSelectedRowIds);
+    }
+  }, [filteredRows, onSelectedRowIdsChange, selectedRowIds]);
+  const visibleSelectedRows = React.useMemo(
+    () => filteredRows.filter((row) => selectedRowIds.includes(row.id)),
+    [filteredRows, selectedRowIds]
+  );
+  const visibleSelectedRowsCount = visibleSelectedRows.length;
+  const visibleCollectableRowCount = React.useMemo(
+    () => filteredRows.filter((row) => isImportedRowCollectable(row)).length,
+    [filteredRows]
+  );
+  const visibleSelectedCollectableRowCount = React.useMemo(
+    () =>
+      visibleSelectedRows.filter((row) => isImportedRowCollectable(row)).length,
+    [visibleSelectedRows]
+  );
+  const hasActiveFilter = Object.values(filters).some((value) => value !== '');
   const parseSummary = React.useMemo(() => {
     const counts: Record<ImportedRowTableItem['parseStatus'], number> = {
       PARSED: 0,
@@ -89,7 +128,7 @@ export function ImportedRowsGrid({
       PENDING: 0
     };
 
-    rows.forEach((row) => {
+    filteredRows.forEach((row) => {
       counts[row.parseStatus] += 1;
     });
 
@@ -103,12 +142,14 @@ export function ImportedRowsGrid({
     return order
       .map((status) => ({ status, count: counts[status] }))
       .filter((item) => item.count > 0);
-  }, [rows]);
-  const collectedCount = rows.filter((row) => row.collectionSummary).length;
-  const collectableCount = rows.filter((row) =>
+  }, [filteredRows]);
+  const collectedCount = filteredRows.filter(
+    (row) => row.collectionSummary
+  ).length;
+  const collectableCount = filteredRows.filter((row) =>
     isImportedRowCollectable(row)
   ).length;
-  const outsideCurrentPeriodCount = rows.filter(
+  const outsideCurrentPeriodCount = filteredRows.filter(
     (row) =>
       row.parseStatus === 'PARSED' &&
       !row.createdCollectedTransactionId &&
@@ -122,30 +163,32 @@ export function ImportedRowsGrid({
     [selectedRowIds]
   );
   const bulkCollectLabel =
-    selectedRowsCount > 0
-      ? `선택 행 일괄 등록 (${selectedCollectableRowCount}건)`
-      : `등록 가능 행 일괄 등록 (${collectableRowCount}건)`;
+    visibleSelectedRowsCount > 0
+      ? `선택 행 일괄 등록 (${visibleSelectedCollectableRowCount}건)`
+      : `등록 가능 행 일괄 등록 (${visibleCollectableRowCount}건)`;
   const bulkCollectDisabled =
     bulkCollectPending ||
-    (selectedRowsCount > 0
-      ? selectedCollectableRowCount === 0
-      : collectableRowCount === 0);
+    (visibleSelectedRowsCount > 0
+      ? visibleSelectedCollectableRowCount === 0
+      : visibleCollectableRowCount === 0);
   const collectableRowIdSet = React.useMemo(
     () =>
       new Set(
-        rows.filter((row) => isImportedRowCollectable(row)).map((row) => row.id)
+        filteredRows
+          .filter((row) => isImportedRowCollectable(row))
+          .map((row) => row.id)
       ),
-    [rows]
+    [filteredRows]
   );
   const targetRows = React.useMemo(
     () =>
       selectedRowIds.length > 0
-        ? rows.filter(
+        ? filteredRows.filter(
             (row) =>
               selectedRowIds.includes(row.id) && isImportedRowCollectable(row)
           )
-        : rows.filter((row) => isImportedRowCollectable(row)),
-    [rows, selectedRowIds]
+        : filteredRows.filter((row) => isImportedRowCollectable(row)),
+    [filteredRows, selectedRowIds]
   );
   const activeTypeBreakdown = React.useMemo(() => {
     const counts: Record<BulkCollectTransactionType, number> = {
@@ -244,6 +287,85 @@ export function ImportedRowsGrid({
         selectedBatch ? (
           <Stack spacing={1.5}>
             <Stack
+              direction={{ xs: 'column', lg: 'row' }}
+              spacing={1}
+              alignItems={{ xs: 'stretch', lg: 'center' }}
+            >
+              <TextField
+                label="검색어"
+                size="small"
+                value={filters.keyword}
+                onChange={(event) =>
+                  setFilters({ ...filters, keyword: event.target.value })
+                }
+                placeholder="날짜, 설명, 금액"
+                sx={{ minWidth: { lg: 240 }, flex: 1 }}
+              />
+              <TextField
+                select
+                label="읽기"
+                size="small"
+                value={filters.parseStatus}
+                onChange={(event) =>
+                  setFilters({ ...filters, parseStatus: event.target.value })
+                }
+                sx={{ minWidth: { lg: 140 } }}
+              >
+                <MenuItem value="">전체</MenuItem>
+                <MenuItem value="PARSED">읽기 완료</MenuItem>
+                <MenuItem value="FAILED">실패</MenuItem>
+                <MenuItem value="SKIPPED">건너뜀</MenuItem>
+                <MenuItem value="PENDING">대기</MenuItem>
+              </TextField>
+              <TextField
+                select
+                label="등록 상태"
+                size="small"
+                value={filters.collectionStatus}
+                onChange={(event) =>
+                  setFilters({
+                    ...filters,
+                    collectionStatus: event.target.value
+                  })
+                }
+                sx={{ minWidth: { lg: 150 } }}
+              >
+                <MenuItem value="">전체</MenuItem>
+                <MenuItem value="COLLECTABLE">등록 가능</MenuItem>
+                <MenuItem value="COLLECTED">연결 완료</MenuItem>
+                <MenuItem value="BLOCKED">등록 불가</MenuItem>
+              </TextField>
+              <TextField
+                select
+                label="운영월"
+                size="small"
+                value={filters.periodScope}
+                onChange={(event) =>
+                  setFilters({ ...filters, periodScope: event.target.value })
+                }
+                sx={{ minWidth: { lg: 140 } }}
+              >
+                <MenuItem value="">전체</MenuItem>
+                <MenuItem value="CURRENT">현재 운영월</MenuItem>
+                <MenuItem value="OUTSIDE">운영월 밖</MenuItem>
+              </TextField>
+              <Button
+                variant="outlined"
+                disabled={!hasActiveFilter}
+                sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+                onClick={() =>
+                  setFilters({
+                    keyword: '',
+                    parseStatus: '',
+                    collectionStatus: '',
+                    periodScope: ''
+                  })
+                }
+              >
+                초기화
+              </Button>
+            </Stack>
+            <Stack
               direction={{ xs: 'column', md: 'row' }}
               spacing={1.5}
               alignItems={{ xs: 'flex-start', md: 'center' }}
@@ -286,12 +408,12 @@ export function ImportedRowsGrid({
                 />
                 <Chip
                   label={
-                    selectedRowsCount > 0
-                      ? `선택 적용 ${selectedCollectableRowCount}건`
-                      : `전체 적용 ${collectableCount}건`
+                    visibleSelectedRowsCount > 0
+                      ? `선택 적용 ${visibleSelectedCollectableRowCount}건`
+                      : `표시 범위 적용 ${collectableCount}건`
                   }
                   size="small"
-                  color={selectedRowsCount > 0 ? 'warning' : 'default'}
+                  color={visibleSelectedRowsCount > 0 ? 'warning' : 'default'}
                   variant="outlined"
                 />
                 {activeTypeBreakdown.map((item) => (
@@ -333,9 +455,10 @@ export function ImportedRowsGrid({
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       {readBulkCollectScopeSummary({
-                        selectedRowsCount,
-                        selectedCollectableRowCount,
-                        collectableRowCount,
+                        selectedRowsCount: visibleSelectedRowsCount,
+                        selectedCollectableRowCount:
+                          visibleSelectedCollectableRowCount,
+                        collectableRowCount: visibleCollectableRowCount,
                         forcedType: bulkCollectForm.type,
                         activeTypeBreakdown,
                         unresolvedTargetCount
@@ -586,7 +709,9 @@ export function ImportedRowsGrid({
                 </Typography>
                 <Button
                   variant="contained"
-                  onClick={onBulkCollect}
+                  onClick={() => {
+                    onBulkCollect(targetRows.map((row) => row.id));
+                  }}
                   disabled={bulkCollectDisabled}
                 >
                   {bulkCollectLabel}
@@ -643,7 +768,7 @@ export function ImportedRowsGrid({
           </Stack>
         ) : null
       }
-      rows={rows}
+      rows={filteredRows}
       columns={buildImportedRowsColumns({
         selectedRowId,
         onPrepareCollect
@@ -657,6 +782,71 @@ export function ImportedRowsGrid({
       }
     />
   );
+}
+
+function filterImportedRows(
+  rows: ImportedRowTableItem[],
+  filters: ImportedRowsFilters
+) {
+  const keyword = normalizeFilterText(filters.keyword);
+
+  return rows.filter((row) => {
+    if (filters.parseStatus && row.parseStatus !== filters.parseStatus) {
+      return false;
+    }
+
+    if (
+      filters.collectionStatus === 'COLLECTABLE' &&
+      !isImportedRowCollectable(row)
+    ) {
+      return false;
+    }
+
+    if (
+      filters.collectionStatus === 'COLLECTED' &&
+      !row.createdCollectedTransactionId
+    ) {
+      return false;
+    }
+
+    if (
+      filters.collectionStatus === 'BLOCKED' &&
+      (isImportedRowCollectable(row) || row.createdCollectedTransactionId)
+    ) {
+      return false;
+    }
+
+    if (filters.periodScope === 'CURRENT' && !row.isCurrentPeriodRow) {
+      return false;
+    }
+
+    if (filters.periodScope === 'OUTSIDE' && row.isCurrentPeriodRow) {
+      return false;
+    }
+
+    if (!keyword) {
+      return true;
+    }
+
+    const haystack = normalizeFilterText(
+      [
+        String(row.rowNumber),
+        row.occurredOn,
+        row.title,
+        row.direction,
+        row.collectTypeHint,
+        row.parseStatus,
+        row.collectionSummary?.createdCollectedTransactionTitle,
+        row.collectionSummary?.createdCollectedTransactionStatus,
+        row.amount == null ? null : String(row.amount),
+        row.balanceAfter == null ? null : String(row.balanceAfter)
+      ]
+        .filter(Boolean)
+        .join(' ')
+    );
+
+    return haystack.includes(keyword);
+  });
 }
 
 function isImportedRowCollectable(row: ImportedRowTableItem) {
@@ -692,6 +882,10 @@ function resolveImportedRowBulkCollectType(
   }
 
   return null;
+}
+
+function normalizeFilterText(value: string) {
+  return value.trim().toLocaleLowerCase('ko-KR');
 }
 
 function readBulkCollectScopeSummary(input: {

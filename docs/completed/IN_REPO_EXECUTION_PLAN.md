@@ -1,4 +1,4 @@
-# 저장소 내부 후속 작업 실행계획
+﻿# 저장소 내부 후속 작업 실행계획
 
 > 보관 상태: `2026-04-12` 기준 저장소 내부 후속 작업을 모두 완료한 뒤 `docs/completed/`로 이동했다. 현재 운영 기준은 `docs/API.md`, `docs/VALIDATION_NOTES.md`, `docs/ACCOUNTING_MODEL_BOUNDARY.md`, `docs/DEVELOPMENT_GUIDE.md`를 우선한다.
 
@@ -29,7 +29,7 @@
 - `docs/VALIDATION_NOTES.md`
 - `docs/ACCOUNTING_MODEL_BOUNDARY.md`
 - `docs/completed/VEHICLE_OPERATIONS_MODEL_PLAN.md`
-- `docs/SCREEN_FLOW_GUIDE.md`
+- `docs/DEMO_GUIDE.md`
 - `docs/completed/ALIGNMENT_PATCH_EXECUTION_PLAN.md`
 
 ## 현재 판단 요약
@@ -132,7 +132,7 @@
 
 ### 왜 지금 필요한가
 
-- `docs/SCREEN_FLOW_GUIDE.md`의 중심 흐름은 `계획 항목 -> 업로드 배치 -> 수집 거래 -> 전표 -> 마감 -> 재무제표 -> 차기 이월`이다.
+- `docs/DEMO_GUIDE.md`의 중심 흐름은 `계획 항목 -> 업로드 배치 -> 수집 거래 -> 전표 -> 마감 -> 재무제표 -> 차기 이월`이다.
 - 현재 브라우저 테스트는 로그인, 거래, 기준 데이터, 보험, 차량, 업로드 일부를 잘 덮고 있고, `plan-items`, `forecast`, `financial-statements`, `carry-forwards`, `imports -> collected-transactions -> journal-entries`의 핵심 월 운영 흐름도 전용 spec으로 보강됐다.
 
 ### 목표

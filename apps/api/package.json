@@ -12,6 +12,7 @@
     "compile:test": "tsc -p tsconfig.test-run.json",
     "test": "npm run clean:test-dist && npm run compile:test && node --test --test-concurrency=1 --test-isolation=none .test-dist/apps/api/test/*.test.js",
     "test:prisma": "node ../../scripts/run-with-root-env.cjs node ../../scripts/run-api-prisma-integration.cjs",
+    "db:check": "node ../../scripts/run-with-root-env.cjs node ../../scripts/check-api-database.cjs",
     "prisma:generate": "node ../../scripts/run-with-root-env.cjs prisma generate",
     "prisma:migrate:dev": "node ../../scripts/run-with-root-env.cjs prisma migrate dev",
     "prisma:migrate:deploy": "node ../../scripts/run-with-root-env.cjs prisma migrate deploy",

@@ -1,4 +1,4 @@
-# UI 화면 정리 실행계획
+﻿# UI 화면 정리 실행계획
 
 기준일: `2026-04-14`
 
@@ -18,7 +18,7 @@
 
 이번 계획은 아래 기준을 함께 보고 정리했다.
 
-- 현재 화면 흐름 문서: `docs/SCREEN_FLOW_GUIDE.md`
+- 현재 화면 흐름 문서: `docs/DEMO_GUIDE.md`
 - 현재 디자인 규칙 문서: `docs/DESIGN_SYSTEM.md`
 - 공통 레이아웃/헤더: `apps/web/src/shared/layout/*`, `apps/web/src/shared/ui/*`
 - 실제 주요 화면 구현: `apps/web/src/features/*`
@@ -456,14 +456,14 @@ ERP 화면은 화려한 요약보다 `현재 대상`, `상태`, `다음 행동`,
 
 ### Phase 5. 검증과 문서 동기화
 
-- `SCREEN_FLOW_GUIDE.md` 갱신
+- `DEMO_GUIDE.md` 갱신
 - `DESIGN_SYSTEM.md` 갱신
 - 주요 화면 스모크 또는 E2E 보완
 - 변경 후 용어와 화면 순서 재점검
 
 현재 상태:
 
-- 완료. `SCREEN_FLOW_GUIDE.md`, `DESIGN_SYSTEM.md`를 현재 코드 구조 기준으로 동기화했고, 이 문서는 완료 문서로 보관한다.
+- 완료. `DEMO_GUIDE.md`, `DESIGN_SYSTEM.md`를 현재 코드 구조 기준으로 동기화했고, 이 문서는 완료 문서로 보관한다.
 
 ## 완료 기준
 

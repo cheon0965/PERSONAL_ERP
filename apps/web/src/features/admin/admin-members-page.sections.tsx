@@ -42,6 +42,13 @@ export const adminEditableStatuses = [
 
 export type AdminEditableStatus = (typeof adminEditableStatuses)[number];
 
+export type AdminMembersTableFilters = {
+  keyword: string;
+  role: string;
+  status: string;
+  tenantName: string;
+};
+
 type AdminMembersSummary = {
   activeCount: number;
   invitedCount: number;
@@ -275,6 +282,130 @@ export function AdminMembersTableToolbar({
           ? `전체 ${summary.tenantCount}개 사업장의 멤버를 함께 보고 있습니다.`
           : '역할 변경과 제거는 소유자만 실행할 수 있습니다.'}
       </Typography>
+    </Stack>
+  );
+}
+
+export function AdminMembersFilterToolbar({
+  filters,
+  summary,
+  tenantOptions,
+  onFiltersChange
+}: {
+  filters: AdminMembersTableFilters;
+  summary: AdminMembersSummary;
+  tenantOptions: string[];
+  onFiltersChange: (filters: AdminMembersTableFilters) => void;
+}) {
+  const hasActiveFilter = Object.values(filters).some((value) => value !== '');
+
+  return (
+    <Stack spacing={1.25}>
+      <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+        {summary.statusItems.map((item) => (
+          <Chip
+            key={item.status}
+            label={`${readMembershipStatusLabel(item.status)} ${item.count}명`}
+            size="small"
+            color={
+              item.status === 'ACTIVE'
+                ? 'success'
+                : item.status === 'INVITED'
+                  ? 'primary'
+                  : item.status === 'SUSPENDED'
+                    ? 'warning'
+                    : 'default'
+            }
+            variant={item.status === 'ACTIVE' ? 'filled' : 'outlined'}
+          />
+        ))}
+      </Stack>
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={1}
+        alignItems={{ xs: 'stretch', md: 'center' }}
+      >
+        <TextField
+          label="검색어"
+          size="small"
+          value={filters.keyword}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, keyword: event.target.value })
+          }
+          placeholder="이름, 이메일, 사업장"
+          sx={{ minWidth: { md: 260 }, flex: 1 }}
+        />
+        <TextField
+          select
+          label="역할"
+          size="small"
+          value={filters.role}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, role: event.target.value })
+          }
+          sx={{ minWidth: { md: 140 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          {adminMemberRoles.map((role) => (
+            <MenuItem key={role} value={role}>
+              {readMembershipRoleLabel(role)}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          select
+          label="상태"
+          size="small"
+          value={filters.status}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, status: event.target.value })
+          }
+          sx={{ minWidth: { md: 140 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          {(['ACTIVE', 'INVITED', 'SUSPENDED', 'REMOVED'] as const).map(
+            (status) => (
+              <MenuItem key={status} value={status}>
+                {readMembershipStatusLabel(status)}
+              </MenuItem>
+            )
+          )}
+        </TextField>
+        {tenantOptions.length > 0 ? (
+          <TextField
+            select
+            label="사업장"
+            size="small"
+            value={filters.tenantName}
+            onChange={(event) =>
+              onFiltersChange({ ...filters, tenantName: event.target.value })
+            }
+            sx={{ minWidth: { md: 180 } }}
+          >
+            <MenuItem value="">전체</MenuItem>
+            {tenantOptions.map((tenantName) => (
+              <MenuItem key={tenantName} value={tenantName}>
+                {tenantName}
+              </MenuItem>
+            ))}
+          </TextField>
+        ) : null}
+        <Button
+          variant="outlined"
+          disabled={!hasActiveFilter}
+          sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+          onClick={() =>
+            onFiltersChange({
+              keyword: '',
+              role: '',
+              status: '',
+              tenantName: ''
+            })
+          }
+        >
+          초기화
+        </Button>
+      </Stack>
     </Stack>
   );
 }
