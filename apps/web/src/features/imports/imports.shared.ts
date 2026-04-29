@@ -6,6 +6,7 @@ import type {
   ImportSourceKind,
   ImportedRowParseStatus
 } from '@personal-erp/contracts';
+import type { FeedbackAlertValue } from '@/shared/ui/feedback-alert';
 import { resolveStatusLabel } from '@/shared/ui/status-chip';
 
 export const sourceKindOptions: Array<{
@@ -19,10 +20,7 @@ export const sourceKindOptions: Array<{
   { value: 'WOORI_BANK_HTML', label: '우리은행 HTML' }
 ];
 
-export type FeedbackState = {
-  severity: 'success' | 'error';
-  message: string;
-} | null;
+export type FeedbackState = FeedbackAlertValue;
 
 export type ImportedRowTableItem = ImportBatchItem['rows'][number] & {
   occurredOn: string;

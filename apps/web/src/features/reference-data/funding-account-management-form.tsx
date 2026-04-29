@@ -69,10 +69,14 @@ export function FundingAccountManagementForm({
   return (
     <form
       onSubmit={form.handleSubmit(async (values) => {
-        await onSubmit({
-          name: values.name.trim(),
-          type: values.type
-        });
+        try {
+          await onSubmit({
+            name: values.name.trim(),
+            type: values.type
+          });
+        } catch {
+          // 상위 mutation onError가 드로어 피드백을 갱신한다.
+        }
       })}
     >
       <Stack spacing={appLayout.cardGap}>

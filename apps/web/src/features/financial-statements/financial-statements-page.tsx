@@ -4,19 +4,16 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  Alert,
-  Button,
-  Grid,
-  MenuItem,
-  Stack,
-  TextField,
-  Typography
-} from '@mui/material';
+import { Button, Grid, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import type { AccountingPeriodItem } from '@personal-erp/contracts';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { useAppNotification } from '@/shared/providers/notification-provider';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -54,10 +51,7 @@ export function FinancialStatementsPage({
   const router = useRouter();
   const { notifySuccess } = useAppNotification();
   const { user } = useAuthSession();
-  const [feedback, setFeedback] = React.useState<{
-    severity: 'success' | 'error';
-    message: string;
-  } | null>(null);
+  const [feedback, setFeedback] = React.useState<FeedbackAlertValue>(null);
   const periodsQuery = useQuery({
     queryKey: accountingPeriodsQueryKey,
     queryFn: getAccountingPeriods
@@ -148,13 +142,9 @@ export function FinancialStatementsPage({
         `${result.period.monthLabel} 공식 재무제표 스냅샷을 생성했습니다.`
       );
     } catch (error) {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '재무제표 스냅샷을 생성하지 못했습니다.'
-      });
+      setFeedback(
+        buildErrorFeedback(error, '재무제표 스냅샷을 생성하지 못했습니다.')
+      );
     }
   }, [mode, mutation, router, selectedPeriod]);
 
@@ -229,11 +219,7 @@ export function FinancialStatementsPage({
         selectedPeriodId={selectedPeriodId || null}
       />
 
-      {feedback?.severity === 'error' ? (
-        <Alert severity={feedback.severity} variant="outlined">
-          {feedback.message}
-        </Alert>
-      ) : null}
+      <FeedbackAlert feedback={feedback} />
 
       {periodsQuery.error ? (
         <QueryErrorAlert

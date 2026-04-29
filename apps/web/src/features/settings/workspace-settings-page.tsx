@@ -4,9 +4,14 @@ import { useEffect, useState } from 'react';
 import { Alert, Button, Grid, MenuItem, Stack, TextField } from '@mui/material';
 import type { UpdateWorkspaceSettingsRequest } from '@personal-erp/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { membershipRoleLabelMap } from '@/shared/auth/auth-labels';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -27,7 +32,7 @@ const editableStatuses = ['TRIAL', 'ACTIVE', 'SUSPENDED', 'ARCHIVED'] as const;
 export function WorkspaceSettingsPage() {
   const queryClient = useQueryClient();
   const { refreshUser, user } = useAuthSession();
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackAlertValue>(null);
   const [form, setForm] = useState<UpdateWorkspaceSettingsRequest>({
     tenantName: '',
     tenantSlug: '',
@@ -62,7 +67,10 @@ export function WorkspaceSettingsPage() {
     mutationFn: (input: UpdateWorkspaceSettingsRequest) =>
       updateWorkspaceSettings(input, workspaceQuery.data!),
     onSuccess: async () => {
-      setFeedback('사업장 설정을 저장했습니다.');
+      setFeedback({
+        severity: 'success',
+        message: '사업장 설정을 저장했습니다.'
+      });
       await queryClient.invalidateQueries({
         queryKey: workspaceSettingsQueryKey
       });
@@ -70,9 +78,7 @@ export function WorkspaceSettingsPage() {
     },
     onError: (error) => {
       setFeedback(
-        error instanceof Error
-          ? error.message
-          : '사업장 설정 저장에 실패했습니다.'
+        buildErrorFeedback(error, '사업장 설정 저장에 실패했습니다.')
       );
     }
   });
@@ -180,7 +186,7 @@ export function WorkspaceSettingsPage() {
 
       <SettingsSectionNav />
 
-      {feedback ? <Alert variant="outlined">{feedback}</Alert> : null}
+      <FeedbackAlert feedback={feedback} />
 
       {!canManage ? (
         <Alert severity="warning" variant="outlined">

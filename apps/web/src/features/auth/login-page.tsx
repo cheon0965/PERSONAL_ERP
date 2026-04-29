@@ -22,6 +22,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { readErrorUserMessage } from '@/shared/api/fetch-json';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { BrandLogo } from '@/shared/brand/brand-logo';
 import { brandTokens } from '@/shared/theme/tokens';
@@ -213,9 +214,7 @@ export function LoginPage() {
                         router.replace(nextPath as Route);
                       } catch (error) {
                         setSubmitError(
-                          error instanceof Error
-                            ? error.message
-                            : '로그인에 실패했습니다.'
+                          readErrorUserMessage(error, '로그인에 실패했습니다.')
                         );
                       }
                     })}

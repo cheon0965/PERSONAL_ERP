@@ -14,9 +14,14 @@ import {
 import type { GridColDef } from '@mui/x-data-grid';
 import type { AdminUserItem } from '@personal-erp/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { DataTableCard } from '@/shared/ui/data-table-card';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { FormDrawer } from '@/shared/ui/form-drawer';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
@@ -44,7 +49,9 @@ export function AdminUsersPage() {
   const { user } = useAuthSession();
   const canRead = user?.isSystemAdmin === true;
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackAlertValue>(null);
+  const [detailFeedback, setDetailFeedback] =
+    useState<FeedbackAlertValue>(null);
   const [tableFilters, setTableFilters] = useState<AdminUserFilters>({
     keyword: '',
     status: '',
@@ -75,33 +82,69 @@ export function AdminUsersPage() {
           input.status === 'ACTIVE' ? undefined : '전체 관리자 수동 상태 변경'
       }),
     onSuccess: async () => {
-      setFeedback('사용자 상태를 변경했습니다.');
+      setFeedback({
+        severity: 'success',
+        message: '사용자 상태를 변경했습니다.'
+      });
+      setDetailFeedback(null);
       await invalidateUsers();
+    },
+    onError: (error) => {
+      setDetailFeedback(
+        buildErrorFeedback(error, '사용자 상태를 변경하지 못했습니다.')
+      );
     }
   });
   const revokeSessionsMutation = useMutation({
     mutationFn: revokeAdminUserSessions,
     onSuccess: async (result) => {
-      setFeedback(`세션 ${result.revokedCount}개를 만료했습니다.`);
+      setFeedback({
+        severity: 'success',
+        message: `세션 ${result.revokedCount}개를 만료했습니다.`
+      });
+      setDetailFeedback(null);
       await invalidateUsers();
+    },
+    onError: (error) => {
+      setDetailFeedback(
+        buildErrorFeedback(error, '사용자 세션을 만료하지 못했습니다.')
+      );
     }
   });
   const systemAdminMutation = useMutation({
     mutationFn: (input: { userId: string; isSystemAdmin: boolean }) =>
       updateAdminUserSystemAdmin(input.userId, {
         isSystemAdmin: input.isSystemAdmin
-      }),
+    }),
     onSuccess: async () => {
-      setFeedback('전체 관리자 권한을 변경했습니다.');
+      setFeedback({
+        severity: 'success',
+        message: '전체 관리자 권한을 변경했습니다.'
+      });
+      setDetailFeedback(null);
       await invalidateUsers();
+    },
+    onError: (error) => {
+      setDetailFeedback(
+        buildErrorFeedback(error, '전체 관리자 권한을 변경하지 못했습니다.')
+      );
     }
   });
   const emailVerificationMutation = useMutation({
     mutationFn: (userId: string) =>
       updateAdminUserEmailVerification(userId, { emailVerified: true }),
     onSuccess: async () => {
-      setFeedback('이메일 인증 상태를 확인 처리했습니다.');
+      setFeedback({
+        severity: 'success',
+        message: '이메일 인증 상태를 확인 처리했습니다.'
+      });
+      setDetailFeedback(null);
       await invalidateUsers();
+    },
+    onError: (error) => {
+      setDetailFeedback(
+        buildErrorFeedback(error, '이메일 인증 상태를 변경하지 못했습니다.')
+      );
     }
   });
 
@@ -198,7 +241,14 @@ export function AdminUsersPage() {
         sortable: false,
         filterable: false,
         renderCell: (params) => (
-          <Button size="small" onClick={() => setSelectedUserId(params.row.id)}>
+          <Button
+            size="small"
+            onClick={() => {
+              setFeedback(null);
+              setDetailFeedback(null);
+              setSelectedUserId(params.row.id);
+            }}
+          >
             보기
           </Button>
         )
@@ -229,7 +279,7 @@ export function AdminUsersPage() {
           전체 사용자 관리는 전체 관리자만 사용할 수 있습니다.
         </Alert>
       ) : null}
-      {feedback ? <Alert variant="outlined">{feedback}</Alert> : null}
+      <FeedbackAlert feedback={feedback} />
       {usersQuery.error ? (
         <QueryErrorAlert
           title="전체 사용자 목록을 불러오지 못했습니다."
@@ -252,12 +302,16 @@ export function AdminUsersPage() {
 
       <FormDrawer
         open={Boolean(selectedUserId)}
-        onClose={() => setSelectedUserId(null)}
+        onClose={() => {
+          setSelectedUserId(null);
+          setDetailFeedback(null);
+        }}
         title="사용자 상세"
         description={selectedUser?.email}
       >
         {selectedUser ? (
           <Stack spacing={2}>
+            <FeedbackAlert feedback={detailFeedback} />
             <Detail label="이름" value={selectedUser.name} />
             <Detail
               label="상태"
@@ -280,29 +334,37 @@ export function AdminUsersPage() {
                 variant="outlined"
                 color={selectedUser.status === 'ACTIVE' ? 'warning' : 'success'}
                 disabled={statusMutation.isPending}
-                onClick={() =>
+                onClick={() => {
+                  setFeedback(null);
+                  setDetailFeedback(null);
                   statusMutation.mutate({
                     userId: selectedUser.id,
                     status:
                       selectedUser.status === 'ACTIVE' ? 'LOCKED' : 'ACTIVE'
-                  })
-                }
+                  });
+                }}
               >
                 {selectedUser.status === 'ACTIVE' ? '계정 잠금' : '잠금 해제'}
               </Button>
               <Button
                 variant="outlined"
                 disabled={revokeSessionsMutation.isPending}
-                onClick={() => revokeSessionsMutation.mutate(selectedUser.id)}
+                onClick={() => {
+                  setFeedback(null);
+                  setDetailFeedback(null);
+                  revokeSessionsMutation.mutate(selectedUser.id);
+                }}
               >
                 모든 세션 만료
               </Button>
               {!selectedUser.emailVerified ? (
                 <Button
                   variant="outlined"
-                  onClick={() =>
-                    emailVerificationMutation.mutate(selectedUser.id)
-                  }
+                  onClick={() => {
+                    setFeedback(null);
+                    setDetailFeedback(null);
+                    emailVerificationMutation.mutate(selectedUser.id);
+                  }}
                 >
                   이메일 인증 처리
                 </Button>
@@ -311,12 +373,14 @@ export function AdminUsersPage() {
                 variant="outlined"
                 color={selectedUser.isSystemAdmin ? 'warning' : 'primary'}
                 disabled={systemAdminMutation.isPending}
-                onClick={() =>
+                onClick={() => {
+                  setFeedback(null);
+                  setDetailFeedback(null);
                   systemAdminMutation.mutate({
                     userId: selectedUser.id,
                     isSystemAdmin: !selectedUser.isSystemAdmin
-                  })
-                }
+                  });
+                }}
               >
                 {selectedUser.isSystemAdmin
                   ? '전체 관리자 회수'
@@ -333,6 +397,11 @@ export function AdminUsersPage() {
               ))}
             </Stack>
           </Stack>
+        ) : detailQuery.error ? (
+          <QueryErrorAlert
+            title="사용자 상세를 불러오지 못했습니다."
+            error={detailQuery.error}
+          />
         ) : (
           <Typography variant="body2" color="text.secondary">
             상세 정보를 불러오는 중입니다.

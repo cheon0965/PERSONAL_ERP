@@ -22,6 +22,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { requestPasswordReset } from '@/features/auth/auth.api';
+import { readErrorUserMessage } from '@/shared/api/fetch-json';
 import { brandTokens } from '@/shared/theme/tokens';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { AuthCardHeader } from './auth-card-header';
@@ -121,9 +122,10 @@ export function ForgotPasswordPage() {
                       setSentEmail(values.email.trim());
                     } catch (error) {
                       setSubmitError(
-                        error instanceof Error
-                          ? error.message
-                          : '비밀번호 재설정 메일 요청에 실패했습니다.'
+                        readErrorUserMessage(
+                          error,
+                          '비밀번호 재설정 메일 요청에 실패했습니다.'
+                        )
                       );
                     }
                   })}

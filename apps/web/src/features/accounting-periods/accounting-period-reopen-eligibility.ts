@@ -56,9 +56,10 @@ export function buildAccountingPeriodReopenEligibility(input: {
       statusLabel: '조건 확인 실패',
       statusSeverity: 'error',
       detailLines: [
-        input.carryForwardError instanceof Error
-          ? input.carryForwardError.message
-          : '차기 이월 상태를 확인하지 못했습니다.'
+        readReopenEligibilityErrorMessage(
+          input.carryForwardError,
+          '차기 이월 상태를 확인하지 못했습니다.'
+        )
       ],
       carryForwardRecordId,
       nextPeriodId: nextPeriod?.id ?? null,
@@ -195,4 +196,44 @@ function findLatestAccountingPeriod(periods: AccountingPeriodItem[]) {
 
     return latest;
   }, null);
+}
+
+function readReopenEligibilityErrorMessage(
+  error: unknown,
+  fallbackMessage: string
+) {
+  if (
+    error &&
+    typeof error === 'object' &&
+    'userMessage' in error &&
+    typeof error.userMessage === 'string' &&
+    error.userMessage.trim()
+  ) {
+    return error.userMessage.trim();
+  }
+
+  if (error instanceof Error) {
+    const message = error.message.trim();
+    if (containsKorean(message) && !looksInternalMessage(message)) {
+      return message;
+    }
+  }
+
+  return fallbackMessage;
+}
+
+function containsKorean(message: string) {
+  return /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(message);
+}
+
+function looksInternalMessage(message: string) {
+  return (
+    message.includes('[personal-erp]') ||
+    message.includes('Prisma') ||
+    message.includes('NEXT_PUBLIC_') ||
+    message.includes('<PERSONAL_ERP_SECRET_DIR>') ||
+    /^Request failed/i.test(message) ||
+    /^Cannot /i.test(message) ||
+    /^Could not /i.test(message)
+  );
 }

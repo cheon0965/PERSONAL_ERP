@@ -431,6 +431,11 @@ export function AdminLogsPage() {
               </Button>
             ) : null}
           </Stack>
+        ) : detailQuery.error ? (
+          <QueryErrorAlert
+            title="감사 로그 상세를 불러오지 못했습니다."
+            error={detailQuery.error}
+          />
         ) : (
           <Typography variant="body2" color="text.secondary">
             상세 정보를 불러오는 중입니다.

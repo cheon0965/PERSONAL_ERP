@@ -248,6 +248,33 @@ test('fetchJsonWithConfig translates developer-oriented API messages and keeps d
   );
 });
 
+test('buildErrorFeedback separates user guidance from diagnostics', async () => {
+  const { ApiRequestError, buildErrorFeedback } =
+    await import('../src/shared/api/fetch-json');
+
+  const error = new ApiRequestError(
+    409,
+    '현재 데이터 상태와 맞지 않아 작업을 완료하지 못했습니다.',
+    { message: 'Journal entry changed during correction. Please retry.' },
+    {
+      path: '/journal-entries/entry-1/corrections',
+      requestId: 'request-correction-1',
+      errorCode: 'BUSINESS_RULE_CONFLICT',
+      technicalMessage: 'Journal entry changed during correction. Please retry.'
+    }
+  );
+  const feedback = buildErrorFeedback(error, '작업을 완료하지 못했습니다.');
+
+  assert.deepEqual(feedback, {
+    severity: 'error',
+    message: '현재 데이터 상태와 맞지 않아 작업을 완료하지 못했습니다.',
+    diagnostics:
+      'HTTP 409 · 오류 코드 BUSINESS_RULE_CONFLICT · 요청번호 request-correction-1 · 경로 /journal-entries/entry-1/corrections'
+  });
+  assert.match(error.message, /진단:/);
+  assert.doesNotMatch(feedback.message, /진단:/);
+});
+
 test('fetchJsonWithConfig translates permission policy messages and preserves the raw clue', async () => {
   const { ApiRequestError, fetchJsonWithConfig } =
     await import('../src/shared/api/fetch-json');

@@ -34,10 +34,17 @@ import {
   getFundingAccounts
 } from '@/features/reference-data/reference-data.api';
 import { canEditCollectedTransaction } from '@/features/transactions/transaction-workflow';
+import {
+  buildErrorFeedback,
+  readErrorUserMessage
+} from '@/shared/api/fetch-json';
 import { webRuntime } from '@/shared/config/env';
 import { createNonNegativeMoneyWonSchema } from '@/shared/lib/money';
 import { useAppNotification } from '@/shared/providers/notification-provider';
-import { FeedbackAlert } from '@/shared/ui/feedback-alert';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { resolveStatusLabel } from '@/shared/ui/status-chip';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import {
@@ -80,10 +87,7 @@ const vehicleFuelLogFormSchema = z.object({
 type VehicleFuelLogFormInput = z.infer<typeof vehicleFuelLogFormSchema>;
 type VehicleFuelLogFormMode = 'create' | 'edit';
 
-type SubmitFeedback = {
-  severity: 'success' | 'error';
-  message: string;
-} | null;
+type SubmitFeedback = FeedbackAlertValue;
 
 type SaveVehicleFuelLogMutationInput = {
   mode: VehicleFuelLogFormMode;
@@ -406,15 +410,14 @@ export function VehicleFuelLogForm({
               : '연료 기록을 저장했고 회계 연동 상태까지 함께 반영했습니다.'
           );
         } catch (error) {
-          setFeedback({
-            severity: 'error',
-            message:
-              error instanceof Error
-                ? error.message
-                : mode === 'edit'
-                  ? '연료 기록을 수정하지 못했습니다.'
-                  : '연료 기록을 저장하지 못했습니다.'
-          });
+          setFeedback(
+            buildErrorFeedback(
+              error,
+              mode === 'edit'
+                ? '연료 기록을 수정하지 못했습니다.'
+                : '연료 기록을 저장하지 못했습니다.'
+            )
+          );
         }
       })}
     >
@@ -457,9 +460,10 @@ export function VehicleFuelLogForm({
         ) : null}
         {referenceError ? (
           <Alert severity="error" variant="outlined">
-            {referenceError instanceof Error
-              ? referenceError.message
-              : '회계 연동 기준 데이터를 불러오지 못했습니다.'}
+            {readErrorUserMessage(
+              referenceError,
+              '회계 연동 기준 데이터를 불러오지 못했습니다.'
+            )}
           </Alert>
         ) : null}
 

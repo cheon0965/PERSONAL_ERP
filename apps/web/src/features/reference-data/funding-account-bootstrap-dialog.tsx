@@ -89,10 +89,16 @@ export function FundingAccountBootstrapDialog({
           sx={{ pt: 0.5 }}
           onSubmit={form.handleSubmit(async (values) => {
             const amountText = values.initialBalanceWon.trim();
-            await onSubmit({
-              initialBalanceWon:
-                amountText === '' ? null : parseMoneyWon(amountText, { min: 0 })
-            });
+            try {
+              await onSubmit({
+                initialBalanceWon:
+                  amountText === ''
+                    ? null
+                    : parseMoneyWon(amountText, { min: 0 })
+              });
+            } catch {
+              // 상위 mutation onError가 다이얼로그 피드백을 갱신한다.
+            }
           })}
         >
           <DialogContentText>

@@ -29,6 +29,7 @@ import { useRouter } from 'next/navigation';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { registerWithPassword } from '@/features/auth/auth.api';
+import { readErrorUserMessage } from '@/shared/api/fetch-json';
 import { BrandLogo } from '@/shared/brand/brand-logo';
 import { brandTokens } from '@/shared/theme/tokens';
 import { appLayout } from '@/shared/ui/layout-metrics';
@@ -245,9 +246,10 @@ export function RegisterPage() {
                         });
                       } catch (error) {
                         setSubmitError(
-                          error instanceof Error
-                            ? error.message
-                            : '회원가입 요청에 실패했습니다.'
+                          readErrorUserMessage(
+                            error,
+                            '회원가입 요청에 실패했습니다.'
+                          )
                         );
                       }
                     })}

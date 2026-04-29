@@ -3,11 +3,13 @@
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack } from '@mui/material';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { webRuntime } from '@/shared/config/env';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { useAppNotification } from '@/shared/providers/notification-provider';
 import { ConfirmActionDialog } from '@/shared/ui/confirm-action-dialog';
 import { DataTableCard } from '@/shared/ui/data-table-card';
+import type { FeedbackAlertValue } from '@/shared/ui/feedback-alert';
 import { FormDrawer } from '@/shared/ui/form-drawer';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
@@ -28,10 +30,7 @@ import {
   type RecurringRulesTableFilters
 } from './recurring-rules-page.sections';
 
-type SubmitFeedback = {
-  severity: 'success' | 'error';
-  message: string;
-} | null;
+type SubmitFeedback = FeedbackAlertValue;
 
 type RecurringRuleDrawerState =
   | { mode: 'create' }
@@ -114,13 +113,7 @@ export function RecurringRulesPage() {
       }
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '반복 규칙을 삭제하지 못했습니다.'
-      });
+      setFeedback(buildErrorFeedback(error, '반복 규칙을 삭제하지 못했습니다.'));
     }
   });
 

@@ -3,6 +3,7 @@ import type {
   ReopenAccountingPeriodRequest
 } from '@personal-erp/contracts';
 import { z } from 'zod';
+import type { FeedbackAlertValue } from '@/shared/ui/feedback-alert';
 import { createPositiveMoneyWonTextSchema } from '@/shared/lib/money';
 
 export const openingBalanceLineFormSchema = z.object({
@@ -33,10 +34,7 @@ export function createEmptyOpeningBalanceLine(): PeriodFormInput['openingBalance
   };
 }
 
-export type SubmitFeedback = {
-  severity: 'success' | 'error';
-  message: string;
-} | null;
+export type SubmitFeedback = FeedbackAlertValue;
 
 export type ReopenAccountingPeriodPayload = {
   period: AccountingPeriodItem;

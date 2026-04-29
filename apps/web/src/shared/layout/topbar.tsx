@@ -34,6 +34,7 @@ import {
   authWorkspacesQueryKey,
   getAccessibleWorkspaces
 } from '@/features/auth/auth.api';
+import { readErrorUserMessage } from '@/shared/api/fetch-json';
 import { useAccountAvatar } from '@/shared/auth/account-avatar';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { membershipRoleLabelMap } from '@/shared/auth/auth-labels';
@@ -479,9 +480,10 @@ export function Topbar() {
                       </Stack>
                       {workspaceSwitchMutation.error ? (
                         <Alert severity="error" variant="outlined">
-                          {workspaceSwitchMutation.error instanceof Error
-                            ? workspaceSwitchMutation.error.message
-                            : '사업장 전환에 실패했습니다.'}
+                          {readErrorUserMessage(
+                            workspaceSwitchMutation.error,
+                            '사업장 전환에 실패했습니다.'
+                          )}
                         </Alert>
                       ) : null}
                       {workspaceOptions.map((workspace) => (

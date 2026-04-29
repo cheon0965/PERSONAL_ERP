@@ -30,10 +30,12 @@ import {
   referenceDataReadinessQueryKey
 } from '@/features/reference-data/reference-data.api';
 import { ReferenceDataReadinessAlert } from '@/features/reference-data/reference-data-readiness';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { getTodayMonthInputValue } from '@/shared/lib/date-input';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { useAppNotification } from '@/shared/providers/notification-provider';
+import { FeedbackAlert } from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -372,13 +374,9 @@ export function AccountingPeriodsPage({
 
       notifySuccess(`${values.month} 운영 기간을 시작했습니다.`);
     } catch (mutationError) {
-      setFeedback({
-        severity: 'error',
-        message:
-          mutationError instanceof Error
-            ? mutationError.message
-            : '운영 기간을 시작하지 못했습니다.'
-      });
+      setFeedback(
+        buildErrorFeedback(mutationError, '운영 기간을 시작하지 못했습니다.')
+      );
     }
   });
 
@@ -393,13 +391,9 @@ export function AccountingPeriodsPage({
       const result = await closeMutation.mutateAsync(openPeriod);
       notifySuccess(`${result.period.monthLabel} 월 마감을 완료했습니다.`);
     } catch (mutationError) {
-      setFeedback({
-        severity: 'error',
-        message:
-          mutationError instanceof Error
-            ? mutationError.message
-            : '월 마감을 완료하지 못했습니다.'
-      });
+      setFeedback(
+        buildErrorFeedback(mutationError, '월 마감을 완료하지 못했습니다.')
+      );
     }
   }, [closeMutation, openPeriod]);
 
@@ -420,13 +414,9 @@ export function AccountingPeriodsPage({
       setReopenReason('');
       notifySuccess(`${result.monthLabel} 월을 재오픈했습니다.`);
     } catch (mutationError) {
-      setFeedback({
-        severity: 'error',
-        message:
-          mutationError instanceof Error
-            ? mutationError.message
-            : '월 재오픈을 완료하지 못했습니다.'
-      });
+      setFeedback(
+        buildErrorFeedback(mutationError, '월 재오픈을 완료하지 못했습니다.')
+      );
     }
   }, [reopenMutation, reopenReason, selectedReopenPeriod]);
 
@@ -522,11 +512,7 @@ export function AccountingPeriodsPage({
         context="monthly-operation"
       />
 
-      {feedback?.severity === 'error' ? (
-        <Alert severity={feedback.severity} variant="outlined">
-          {feedback.message}
-        </Alert>
-      ) : null}
+      <FeedbackAlert feedback={feedback} />
 
       {latestClosingResult ? (
         <Alert severity="success" variant="outlined">

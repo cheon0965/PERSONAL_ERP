@@ -18,9 +18,13 @@ import {
   getCategories,
   getFundingAccounts
 } from '@/features/reference-data/reference-data.api';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { webRuntime } from '@/shared/config/env';
 import { useAppNotification } from '@/shared/providers/notification-provider';
-import { FeedbackAlert } from '@/shared/ui/feedback-alert';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import {
   buildInsurancePolicyFallbackItem,
@@ -43,10 +47,7 @@ import {
 
 type InsurancePolicyFormMode = 'create' | 'edit';
 
-type SubmitFeedback = {
-  severity: 'success' | 'error';
-  message: string;
-} | null;
+type SubmitFeedback = FeedbackAlertValue;
 
 type SaveInsurancePolicyMutationInput = {
   mode: InsurancePolicyFormMode;
@@ -264,15 +265,14 @@ export function InsurancePolicyForm({
               : '보험 계약과 연결된 반복 규칙을 함께 저장했습니다.'
           );
         } catch (error) {
-          setFeedback({
-            severity: 'error',
-            message:
-              error instanceof Error
-                ? error.message
-                : mode === 'edit'
-                  ? '보험 계약을 수정하지 못했습니다.'
-                  : '보험 계약을 저장하지 못했습니다.'
-          });
+          setFeedback(
+            buildErrorFeedback(
+              error,
+              mode === 'edit'
+                ? '보험 계약을 수정하지 못했습니다.'
+                : '보험 계약을 저장하지 못했습니다.'
+            )
+          );
         }
       })}
     >

@@ -22,9 +22,13 @@ import {
   getReferenceDataReadiness,
   referenceDataReadinessQueryKey
 } from '@/features/reference-data/reference-data.api';
+import {
+  buildErrorFeedback
+} from '@/shared/api/fetch-json';
 import { webRuntime } from '@/shared/config/env';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { useAppNotification } from '@/shared/providers/notification-provider';
+import type { FeedbackAlertValue } from '@/shared/ui/feedback-alert';
 import {
   buildTransactionCompletedMessage,
   readTransactionDrawerDescription,
@@ -49,10 +53,7 @@ import {
 } from './transactions.api';
 import { canConfirmCollectedTransaction } from './transaction-workflow';
 
-type SubmitFeedback = {
-  severity: 'success' | 'error';
-  message: string;
-} | null;
+type SubmitFeedback = FeedbackAlertValue;
 
 type TransactionDrawerState =
   | { mode: 'create' }
@@ -143,13 +144,9 @@ export function useTransactionsPage() {
       ]);
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '수집 거래를 전표로 확정하지 못했습니다.'
-      });
+      setFeedback(
+        buildErrorFeedback(error, '수집 거래를 전표로 확정하지 못했습니다.')
+      );
     }
   });
 
@@ -177,13 +174,12 @@ export function useTransactionsPage() {
       ]);
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '수집 거래를 일괄 전표 확정하지 못했습니다.'
-      });
+      setFeedback(
+        buildErrorFeedback(
+          error,
+          '수집 거래를 일괄 전표 확정하지 못했습니다.'
+        )
+      );
     }
   });
 
@@ -213,13 +209,7 @@ export function useTransactionsPage() {
       }
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '수집 거래를 삭제하지 못했습니다.'
-      });
+      setFeedback(buildErrorFeedback(error, '수집 거래를 삭제하지 못했습니다.'));
     }
   });
 

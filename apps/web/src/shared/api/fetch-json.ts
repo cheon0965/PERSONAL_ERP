@@ -16,6 +16,12 @@ type ApiErrorDiagnostics = {
   technicalMessage?: string;
 };
 
+type ErrorFeedbackValue = {
+  severity: 'error';
+  message: string;
+  diagnostics?: string;
+};
+
 export async function fetchJson<T>(path: string, fallback: T): Promise<T> {
   return fetchJsonWithConfig(
     path,
@@ -359,8 +365,15 @@ export function createApiRequestErrorFromResponse(
 }
 
 export function formatErrorMessage(error: unknown, fallbackMessage: string) {
+  return readErrorUserMessage(error, fallbackMessage);
+}
+
+export function readErrorUserMessage(
+  error: unknown,
+  fallbackMessage: string
+) {
   if (error instanceof ApiRequestError) {
-    return error.message;
+    return error.userMessage;
   }
 
   if (error instanceof Error) {
@@ -368,6 +381,32 @@ export function formatErrorMessage(error: unknown, fallbackMessage: string) {
   }
 
   return fallbackMessage;
+}
+
+export function readErrorDiagnostics(error: unknown): string | null {
+  if (!(error instanceof ApiRequestError)) {
+    return null;
+  }
+
+  return [
+    `HTTP ${error.status}`,
+    error.errorCode ? `오류 코드 ${error.errorCode}` : null,
+    error.requestId ? `요청번호 ${error.requestId}` : null,
+    error.path ? `경로 ${error.path}` : null
+  ]
+    .filter((item): item is string => Boolean(item))
+    .join(' · ');
+}
+
+export function buildErrorFeedback(
+  error: unknown,
+  fallbackMessage: string
+): ErrorFeedbackValue {
+  return {
+    severity: 'error',
+    message: readErrorUserMessage(error, fallbackMessage),
+    diagnostics: readErrorDiagnostics(error) ?? undefined
+  };
 }
 
 async function readResponseBody(response: Response): Promise<unknown> {
@@ -620,6 +659,58 @@ function translateValidationMessage(message: string) {
     return `${readFieldLabel(numberMatch[1] ?? '')} 값을 확인해 주세요.`;
   }
 
+  const requiredMatch = trimmedMessage.match(/^(.+?) should not be empty$/i);
+  if (requiredMatch) {
+    return `${readFieldLabel(requiredMatch[1] ?? '')} 항목을 입력해 주세요.`;
+  }
+
+  const uuidMatch = trimmedMessage.match(/^(.+?) must be a UUID$/i);
+  if (uuidMatch) {
+    return `${readFieldLabel(uuidMatch[1] ?? '')} 항목을 다시 선택해 주세요.`;
+  }
+
+  const dateStringMatch = trimmedMessage.match(
+    /^(.+?) must be a valid ISO 8601 date string$/i
+  );
+  if (dateStringMatch) {
+    return `${readFieldLabel(dateStringMatch[1] ?? '')} 날짜 형식을 확인해 주세요.`;
+  }
+
+  const minLengthMatch = trimmedMessage.match(
+    /^(.+?) must be longer than or equal to (\d+) characters$/i
+  );
+  if (minLengthMatch) {
+    return `${readFieldLabel(minLengthMatch[1] ?? '')}은 ${minLengthMatch[2]}자 이상 입력해 주세요.`;
+  }
+
+  const maxLengthMatch = trimmedMessage.match(
+    /^(.+?) must be shorter than or equal to (\d+) characters$/i
+  );
+  if (maxLengthMatch) {
+    return `${readFieldLabel(maxLengthMatch[1] ?? '')}은 ${maxLengthMatch[2]}자 이하로 입력해 주세요.`;
+  }
+
+  const minValueMatch = trimmedMessage.match(
+    /^(.+?) must not be less than (\d+)$/i
+  );
+  if (minValueMatch) {
+    return `${readFieldLabel(minValueMatch[1] ?? '')}은 ${minValueMatch[2]} 이상이어야 합니다.`;
+  }
+
+  const maxValueMatch = trimmedMessage.match(
+    /^(.+?) must not be greater than (\d+)$/i
+  );
+  if (maxValueMatch) {
+    return `${readFieldLabel(maxValueMatch[1] ?? '')}은 ${maxValueMatch[2]} 이하이어야 합니다.`;
+  }
+
+  const patternMatch = trimmedMessage.match(
+    /^(.+?) must match .+ regular expression$/i
+  );
+  if (patternMatch) {
+    return `${readFieldLabel(patternMatch[1] ?? '')} 형식을 확인해 주세요.`;
+  }
+
   return '일부 입력값의 형식이 올바르지 않습니다.';
 }
 
@@ -727,13 +818,39 @@ const exactUserMessageMap: Record<string, string> = {
     '전표 라인 금액은 원 단위의 정수로 입력해 주세요.',
   'Journal line amounts cannot be negative.':
     '전표 라인 금액은 0원 이상으로 입력해 주세요.',
+  'Each journal line must carry either a debit or a credit amount.':
+    '전표 라인마다 차변 또는 대변 중 하나의 금액만 입력해 주세요.',
   'Journal entry amount must be greater than zero.':
     '전표 금액은 0원보다 커야 합니다.',
   'Journal entry debit and credit totals must match.':
     '전표의 차변 합계와 대변 합계가 일치해야 합니다.',
   'Correction reason is required.': '정정 사유를 입력해 주세요.',
+  'The journal adjustment is invalid.':
+    '전표 조정 내용을 확인해 주세요. 차변·대변 금액과 라인 구성을 다시 점검해 주세요.',
+  'One or more journal lines reference an unknown active account subject.':
+    '전표 라인에 사용할 수 없는 계정과목이 포함되어 있습니다. 계정과목을 다시 선택해 주세요.',
+  'One or more journal lines reference an unknown funding account.':
+    '전표 라인에 사용할 수 없는 자금수단이 포함되어 있습니다. 자금수단을 다시 선택해 주세요.',
+  'Journal entry changed during reversal. Please retry.':
+    '반전 전표 생성 중 원본 전표 상태가 변경되었습니다. 새로고침한 뒤 다시 시도해 주세요.',
+  'Journal entry changed during correction. Please retry.':
+    '정정 전표 생성 중 원본 전표 상태가 변경되었습니다. 새로고침한 뒤 다시 시도해 주세요.',
+  'Collected transaction changed during reversal. Please retry.':
+    '반전 전표 생성 중 연결된 수집 거래 상태가 변경되었습니다. 새로고침한 뒤 다시 시도해 주세요.',
+  'Collected transaction changed during correction. Please retry.':
+    '정정 전표 생성 중 연결된 수집 거래 상태가 변경되었습니다. 새로고침한 뒤 다시 시도해 주세요.',
   'This posting policy requires a second account selection.':
     '전표 확정에 필요한 상대 계정을 선택해 주세요.',
+  'This posting policy is not supported for collected transaction confirmation.':
+    '현재 거래 유형은 전표 확정을 지원하지 않습니다. 거래 유형과 전표 정책을 확인해 주세요.',
+  'Collected transaction is not linked to an accounting period.':
+    '수집 거래에 연결된 운영 기간을 확인할 수 없습니다. 거래일과 운영 기간 설정을 확인해 주세요.',
+  'Collected transaction changed during confirmation. Please retry.':
+    '전표 확정 중 수집 거래 상태가 변경되었습니다. 새로고침한 뒤 다시 시도해 주세요.',
+  'Original journal entry changed during reversal confirmation. Please retry.':
+    '반전 확정 중 원본 전표 상태가 변경되었습니다. 새로고침한 뒤 다시 시도해 주세요.',
+  'Original collected transaction changed during reversal confirmation. Please retry.':
+    '반전 확정 중 원본 수집 거래 상태가 변경되었습니다. 새로고침한 뒤 다시 시도해 주세요.',
   'Collected transaction in a locked period cannot be confirmed.':
     '잠긴 운영 기간의 수집 거래는 확정할 수 없습니다. 운영 기간 상태를 확인해 주세요.',
   'Collected transaction in current status cannot be confirmed.':

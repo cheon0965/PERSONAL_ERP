@@ -11,6 +11,7 @@ import {
   CardContent,
   Stack
 } from '@mui/material';
+import { readErrorUserMessage } from '@/shared/api/fetch-json';
 import { acceptInvitation } from './auth.api';
 import { AuthCardHeader } from './auth-card-header';
 
@@ -48,9 +49,7 @@ export function AcceptInvitationPage() {
           setState({
             status: 'error',
             message:
-              error instanceof Error
-                ? error.message
-                : '초대 수락에 실패했습니다.'
+              readErrorUserMessage(error, '초대 수락에 실패했습니다.')
           });
         }
       });

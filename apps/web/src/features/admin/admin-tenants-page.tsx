@@ -14,9 +14,14 @@ import {
 import type { GridColDef } from '@mui/x-data-grid';
 import type { AdminTenantItem, TenantStatus } from '@personal-erp/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { DataTableCard } from '@/shared/ui/data-table-card';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { FormDrawer } from '@/shared/ui/form-drawer';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
@@ -42,7 +47,9 @@ export function AdminTenantsPage() {
   const { user } = useAuthSession();
   const canRead = user?.isSystemAdmin === true;
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackAlertValue>(null);
+  const [detailFeedback, setDetailFeedback] =
+    useState<FeedbackAlertValue>(null);
   const [tableFilters, setTableFilters] = useState<AdminTenantFilters>({
     keyword: '',
     status: '',
@@ -63,8 +70,17 @@ export function AdminTenantsPage() {
     mutationFn: (input: { tenantId: string; status: TenantStatus }) =>
       updateAdminTenantStatus(input.tenantId, { status: input.status }),
     onSuccess: async () => {
-      setFeedback('사업장 상태를 변경했습니다.');
+      setFeedback({
+        severity: 'success',
+        message: '사업장 상태를 변경했습니다.'
+      });
+      setDetailFeedback(null);
       await queryClient.invalidateQueries({ queryKey: adminTenantsQueryKey });
+    },
+    onError: (error) => {
+      setDetailFeedback(
+        buildErrorFeedback(error, '사업장 상태를 변경하지 못했습니다.')
+      );
     }
   });
 
@@ -150,7 +166,11 @@ export function AdminTenantsPage() {
         renderCell: (params) => (
           <Button
             size="small"
-            onClick={() => setSelectedTenantId(params.row.id)}
+            onClick={() => {
+              setFeedback(null);
+              setDetailFeedback(null);
+              setSelectedTenantId(params.row.id);
+            }}
           >
             보기
           </Button>
@@ -182,7 +202,7 @@ export function AdminTenantsPage() {
           사업장 관리는 전체 관리자만 사용할 수 있습니다.
         </Alert>
       ) : null}
-      {feedback ? <Alert variant="outlined">{feedback}</Alert> : null}
+      <FeedbackAlert feedback={feedback} />
       {tenantsQuery.error ? (
         <QueryErrorAlert
           title="사업장 목록을 불러오지 못했습니다."
@@ -205,12 +225,16 @@ export function AdminTenantsPage() {
 
       <FormDrawer
         open={Boolean(selectedTenantId)}
-        onClose={() => setSelectedTenantId(null)}
+        onClose={() => {
+          setSelectedTenantId(null);
+          setDetailFeedback(null);
+        }}
         title="사업장 상세"
         description={selectedTenant?.name}
       >
         {selectedTenant ? (
           <Stack spacing={2}>
+            <FeedbackAlert feedback={detailFeedback} />
             <Detail label="슬러그" value={selectedTenant.slug} />
             <Detail
               label="상태"
@@ -234,12 +258,14 @@ export function AdminTenantsPage() {
                   disabled={
                     selectedTenant.status === status || statusMutation.isPending
                   }
-                  onClick={() =>
+                  onClick={() => {
+                    setFeedback(null);
+                    setDetailFeedback(null);
                     statusMutation.mutate({
                       tenantId: selectedTenant.id,
                       status
-                    })
-                  }
+                    });
+                  }}
                 >
                   {readTenantStatusLabel(status)}
                 </Button>
@@ -255,6 +281,11 @@ export function AdminTenantsPage() {
               ))}
             </Stack>
           </Stack>
+        ) : detailQuery.error ? (
+          <QueryErrorAlert
+            title="사업장 상세를 불러오지 못했습니다."
+            error={detailQuery.error}
+          />
         ) : (
           <Typography variant="body2" color="text.secondary">
             상세 정보를 불러오는 중입니다.
