@@ -27,6 +27,8 @@
 - 모든 API 응답에는 `x-request-id` 헤더가 포함됩니다.
 - 클라이언트가 `x-request-id`를 보내면 같은 값을 그대로 유지합니다.
 - 운영 추적이나 문제 재현 시 이 값을 기준으로 요청 로그를 연결합니다.
+- CORS credential 요청에서도 Web이 요청번호를 읽을 수 있도록 `x-request-id`를 노출 헤더로 공개합니다.
+- Web 공통 요청 계층은 HTTP 오류를 사용자용 메시지와 진단 정보(`errorCode`, `requestId`, 원본 기술 메시지)로 나눠 표시합니다.
 
 ## 동시성/충돌 응답 원칙
 
@@ -64,7 +66,7 @@
 ## 브라우저/API 경계 보안
 
 - CORS는 `APP_ORIGIN` 또는 `CORS_ALLOWED_ORIGINS` allowlist만 허용하고, credential 요청을 지원합니다.
-- `POST /auth/register`, `POST /auth/verify-email`, `POST /auth/resend-verification`, `POST /auth/accept-invitation`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`은 browser `Origin` 또는 `Referer`가 allowlist에 없으면 `403 Origin not allowed`를 반환합니다.
+- `POST /auth/register`, `POST /auth/verify-email`, `POST /auth/resend-verification`, `POST /auth/accept-invitation`, `POST /auth/forgot-password`, `POST /auth/reset-password`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`은 browser `Origin` 또는 `Referer`가 allowlist에 없으면 `403 Origin not allowed`를 반환합니다.
 - 주요 API 응답에는 `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`가 포함됩니다.
 - `/api/docs`를 제외한 API 응답에는 기본 `Content-Security-Policy`가 포함됩니다.
 - `APP_ORIGIN`이 HTTPS일 때는 `Strict-Transport-Security`를 함께 보냅니다.
@@ -96,11 +98,11 @@
 - 관리자 범위는 현재 workspace의 멤버 목록/초대/역할·상태 관리, DB 메뉴 트리/메뉴 권한 관리, workspace 감사 로그 조회, 권한 정책 요약까지 포함합니다. `INITIAL_ADMIN_*`로 시드된 전역 관리자는 일반 사업장 관리자와 분리되어 전체 사용자 관리, 사업장 관리, 사업장 전환/지원 문맥, 운영 상태 점검, 보안 위협 로그, 전체 멤버십 역할·상태 관리를 수행할 수 있습니다.
 - 내비게이션 범위는 현재 workspace의 DB 메뉴 트리를 현재 멤버 역할 기준으로 필터링해 반환하는 `navigation/tree`까지 포함합니다.
 - 운영 지원 범위는 체크리스트, 예외 처리함, 월 마감 대시보드, 업로드 운영 현황, 시스템 상태, 알림 센터, 수동 CSV 반출, 운영 메모까지 포함합니다.
-- 기준/참조 범위는 조회 `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `liabilities`, `vehicles`, `vehicles/operating-summary`, `vehicles/fuel-logs`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/부채 계약/차량 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `DELETE /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `DELETE /insurance-policies/:id`, `POST /liabilities`, `PATCH /liabilities/:id`, `POST /liabilities/:id/archive`, `POST /liabilities/:id/repayments`, `PATCH /liabilities/:id/repayments/:repaymentId`, `POST /liabilities/:id/repayments/:repaymentId/generate-plan-item`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/fuel-logs`, `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `DELETE /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`, `DELETE /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
+- 기준/참조 범위는 조회 `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `liabilities`, `vehicles`, `vehicles/operating-summary`, `vehicles/fuel-logs`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/부채 계약/차량 관리 `POST /funding-accounts`, `POST /funding-accounts/:id/bootstrap`, `PATCH /funding-accounts/:id`, `DELETE /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `DELETE /insurance-policies/:id`, `POST /liabilities`, `PATCH /liabilities/:id`, `POST /liabilities/:id/archive`, `POST /liabilities/:id/repayments`, `PATCH /liabilities/:id/repayments/:repaymentId`, `POST /liabilities/:id/repayments/:repaymentId/generate-plan-item`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/fuel-logs`, `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `DELETE /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`, `DELETE /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
 - 운영/원장 조회 범위는 `accounting-periods`, `collected-transactions`, `journal-entries`, `plan-items`, `financial-statements`, `carry-forwards`, `import-batches`까지 포함합니다.
-- 집계/보고 조회 범위는 `dashboard/summary`, `forecast/monthly`까지 포함합니다.
+- 집계/보고 조회 범위는 `dashboard/summary`, `funding-account-status/summary`, `forecast/monthly`까지 포함합니다.
 - 현재 쓰기/명령 범위는 `funding-accounts`, `categories`, `insurance-policies`, `liabilities`, `vehicles`, `vehicle fuel logs`, `vehicle maintenance logs`, `accounting-periods`, `collected-transactions`, `recurring-rules`, `plan-items`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`까지 확장되어 있습니다.
-- 즉, 현재 저장소의 API surface는 초기 reference-data/transactions 수준을 넘어 기준 데이터, 보험/차량 운영 기준, 반복 계획, 수집, 업로드 배치, 전표, 공식 보고, 차기 이월, 기간 전망까지 포함합니다.
+- 즉, 현재 저장소의 API surface는 초기 reference-data/transactions 수준을 넘어 기준 데이터, 보험/차량 운영 기준, 반복 계획, 수집, 업로드 배치, 전표, 공식 보고, 자금수단별 현황, 차기 이월, 기간 전망까지 포함합니다.
 
 ## 보호 엔드포인트
 
@@ -145,6 +147,7 @@
 - `GET /reference-data/readiness`
 - `GET /funding-accounts`
 - `POST /funding-accounts`
+- `POST /funding-accounts/:id/bootstrap`
 - `PATCH /funding-accounts/:id`
 - `DELETE /funding-accounts/:id`
 - `GET /categories`
@@ -237,6 +240,7 @@
 - `POST /carry-forwards/generate`
 - `POST /carry-forwards/:id/cancel`
 - `GET /dashboard/summary?periodId=<id>`
+- `GET /funding-account-status/summary?basis=COLLECTED_TRANSACTIONS|POSTED_JOURNALS&periodId=<id>&fundingAccountId=<id>`
 - `GET /forecast/monthly?periodId=<id>&month=YYYY-MM`
 
 ## Web 화면 경로와 API 모듈 대응
@@ -291,6 +295,7 @@
 - Web `/journal-entries/[entryId]` -> API `GET /journal-entries`, `POST /journal-entries/:id/reverse`, `POST /journal-entries/:id/correct`
 - Web `/financial-statements` -> API `/financial-statements`
 - Web `/financial-statements/[periodId]` -> API `GET /financial-statements?periodId=<id>`, `POST /financial-statements/generate`
+- Web `/funding-account-status` -> API `GET /funding-account-status/summary`
 - Web `/carry-forwards` -> API `/carry-forwards`
 - Web `/carry-forwards/[periodId]` -> API `GET /carry-forwards?fromPeriodId=<id>`, `POST /carry-forwards/generate`
 - Web `/insurances` -> API `/insurance-policies`
@@ -493,16 +498,26 @@
 
 - 계약: `CreateFundingAccountRequest -> FundingAccountItem`
 - 현재 작업 문맥의 Owner/Manager만 새 자금수단을 생성할 수 있습니다.
-- 현재 범위는 `name`, `type` 생성과 활성 상태 기본값(`ACTIVE`), 초기 잔액 `0원`까지로 한정합니다.
-- 새 `BANK`/`CARD` 자금수단은 `bootstrapStatus=PENDING`으로 생성되어 등록 직후 시작 잔액 초기화 후보가 됩니다. `CASH`는 `NOT_REQUIRED`로 생성됩니다.
+- 현재 범위는 `name`, `type`, 선택 `initialBalanceWon` 생성을 지원하며 활성 상태 기본값은 `ACTIVE`입니다.
+- `initialBalanceWon`이 없거나 `0`이면 새 `BANK`/`CARD` 자금수단은 `bootstrapStatus=PENDING`으로 생성되어 등록 직후 시작 잔액 초기화 후보가 됩니다. `CASH`는 `NOT_REQUIRED`로 생성됩니다.
+- `initialBalanceWon`이 `0`보다 크면 열린 운영월에 `OPENING_BALANCE` 전표를 자동 발행하고, 해당 자금수단은 `bootstrapStatus=COMPLETED`와 입력 잔액으로 생성됩니다.
 - 이름은 trim/lower 기준 normalized key로 중복을 판정하며, 동시 생성 충돌은 `409 Conflict`로 정리합니다.
+
+### `POST /funding-accounts/:id/bootstrap`
+
+- 계약: `CompleteFundingAccountBootstrapRequest -> FundingAccountItem`
+- 현재 작업 문맥의 Owner/Manager만 기초 업로드 대기 자금수단의 기초 처리를 완료할 수 있습니다.
+- 대상은 `bootstrapStatus=PENDING`인 활성 `BANK`/`CARD` 자금수단입니다.
+- `initialBalanceWon`이 `0`보다 크면 열린 운영월에 기초전표(`OPENING_BALANCE`)를 발행하고 자금수단 잔액을 해당 금액으로 설정한 뒤 `COMPLETED`로 전환합니다.
+- `initialBalanceWon`이 없거나 `0`이면 기초전표 없이 `COMPLETED`로 전환합니다.
+- 기초금액 전표는 해당 자금수단에 기존 업로드 배치, 수집 거래, 전표 라인, opening/closing snapshot line이 없을 때만 발행합니다.
 
 ### `PATCH /funding-accounts/:id`
 
 - 계약: `UpdateFundingAccountRequest -> FundingAccountItem`
 - 현재 작업 문맥의 Owner/Manager만 자금수단 이름 변경과 `ACTIVE/INACTIVE/CLOSED` 상태 전환을 수행할 수 있습니다.
 - 현재 범위에서 `CLOSED` 전환은 `INACTIVE -> CLOSED`일 때만 허용합니다.
-- `bootstrapStatus`는 `PENDING -> COMPLETED` 직접 전환만 허용합니다. 신규 계좌/카드의 시작 잔액 초기화를 업로드 없이 닫기로 결정한 경우 이 전환으로 bootstrap 상태를 닫습니다.
+- `bootstrapStatus`는 `PENDING -> COMPLETED` 직접 전환만 허용합니다. 금액 없이 닫는 호환 경로이며, 기초금액 입력과 기초전표 발행은 `POST /funding-accounts/:id/bootstrap`을 사용합니다.
 - `CLOSED` 자금수단은 기존 거래/반복 규칙 기록 보존용 읽기 전용 상태로 유지하며, 현재 범위에서는 다시 수정하거나 재활성화할 수 없습니다.
 - 현재 범위는 `type` 변경과 잔액 직접 수정을 지원하지 않습니다.
 - 이름 중복이나 상태 경합은 `409 Conflict`로 응답합니다.
@@ -835,8 +850,8 @@
 - 운영 중에는 최신 진행월 범위의 행만 수집 거래로 등록할 수 있습니다.
 - 운영월 자동 생성은 일반 거래 입력 예외가 아니라 초기화 지원입니다. 아직 운영 기간이 없는 최초 시작월 또는 최신 잠금 월 바로 다음 월에 대한 신규 활성 계좌/카드 bootstrap일 때만 허용합니다.
 - 과거월 여러 개를 업로드로 다시 열거나 최신 진행월 밖 거래를 수집하는 용도로는 사용할 수 없습니다.
-- 운영월을 자동 생성하는 업로드 행에 `parsed.balanceAfter`와 `parsed.signedAmount`가 모두 있으면 `balanceAfter - signedAmount`를 첫 거래 직전 잔액으로 계산해 해당 자금수단의 opening balance snapshot line을 함께 생성합니다. 은행/현금은 `1010 현금및예금`, 카드는 `2100 카드미지급금` 기준입니다.
-- 신규 계좌/카드 bootstrap은 해당 자금수단이 `bootstrapStatus=PENDING`이고 기존 수집거래, 다른 import batch, 전표 line, opening/closing snapshot line이 없을 때만 열립니다. 첫 수집 성공 후에는 `COMPLETED`로 전환됩니다.
+- 운영월 자동 생성이 발생한 업로드 행은 수집 거래 생성과 자금수단 `COMPLETED` 전환까지 처리합니다. 기초금액 자체를 수동으로 확정하고 기초전표를 발행하려면 `POST /funding-accounts/:id/bootstrap`을 사용합니다.
+- 신규 계좌/카드 bootstrap 수집은 해당 자금수단이 `bootstrapStatus=PENDING`이고 기존 수집거래, 다른 import batch, 전표 line, opening/closing snapshot line이 없을 때만 열립니다. 첫 수집 성공 후에는 `COMPLETED`로 전환됩니다.
 - 같은 업로드 행 재수집은 `importedRowId` 기준으로 막고, 반복 수집 거래 흡수는 조건부 claim으로 덮어쓰기를 방지합니다.
 - 일괄 등록 Job이 같은 workspace에서 실행 중이면 단건 collect도 같은 배치/다른 배치 여부에 따라 `409 Conflict`로 막습니다.
 - 중복/경합은 `409 Conflict`로 정리합니다.
@@ -902,9 +917,18 @@
 - 안전 조건: 다음 운영 기간이 `OPEN`이고, opening balance 출처가 `CARRY_FORWARD`이며, 다음 기간에 수집 거래, 업로드 배치, 전표, 재무제표 snapshot, closing snapshot이 없어야 합니다.
 - 취소 후에는 원 기간의 `POST /accounting-periods/:id/reopen` 차단 조건도 해소됩니다.
 
+### `GET /funding-account-status/summary`
+
+- 계약: response `FundingAccountOverviewResponse | null`
+- 쿼리: `basis`, `periodId`, `fundingAccountId`
+- `basis=COLLECTED_TRANSACTIONS`는 월중 운영 판단용으로 수집 거래 기준 수입/지출/이체와 미확정 거래를 포함해 봅니다.
+- `basis=POSTED_JOURNALS`는 확정 전표 기준으로 POSTED 전표 라인만 읽어 공식 숫자에 반영된 자금 흐름을 확인합니다.
+- 응답은 선택 기간, 선택 자금수단, 전체/선택 합계, 자금수단별 현황, 최근 월 추이, 카테고리별 breakdown, 거래 내역, 해석 경고를 포함합니다.
+- 자금수단 잔액은 opening/closing snapshot, 전표, 미확정 수집 거래를 조합한 현재 read model과 기간 기준 흐름을 분리해 제공합니다.
+
 ## 현재 구현 흐름
 
-### `reference-data -> accounting-periods -> insurance/liabilities/vehicles -> recurring-rules -> plan-items -> collected-transactions/imports -> journal-entries -> financial-statements -> carry-forwards -> forecast`
+### `reference-data -> accounting-periods -> insurance/liabilities/vehicles -> recurring-rules -> plan-items -> collected-transactions/imports -> journal-entries -> financial-statements -> funding-account-status -> carry-forwards -> forecast`
 
 1. `GET /reference-data/readiness`, `POST /funding-accounts`, `POST /categories`로 기준 데이터 준비 상태를 확인하고 필요한 자금수단/카테고리를 정리합니다.
 2. `POST /accounting-periods`로 운영 기간을 엽니다. 다음 월은 최근 월을 마감한 뒤 열며, 운영 중에는 하나의 최신 진행월만 열어 둡니다.
@@ -919,7 +943,8 @@
 11. 차기 이월 전 수정이 필요하면 `POST /accounting-periods/:id/reopen`로 잠금 기간을 다시 열고 재무제표/마감 snapshot을 정리합니다.
 12. `POST /carry-forwards/generate`로 다음 기간 opening balance snapshot과 carry-forward record를 생성합니다.
 13. 차기 이월 후 정정이 필요하고 다음 기간 사용 이력이 없다면 `POST /carry-forwards/:id/cancel` 또는 `POST /carry-forwards/generate`의 `replaceExisting=true`로 안전 취소/재생성을 수행합니다.
-14. `GET /forecast/monthly`로 현재 월과 다음 달 전망을 확인합니다.
+14. `GET /funding-account-status/summary`로 자금수단별 수입, 지출, 이체, 잔액 흐름을 수집 거래 기준과 확정 전표 기준으로 비교합니다.
+15. `GET /forecast/monthly`로 현재 월과 다음 달 전망을 확인합니다.
 
 ### `recurring-rules -> plan-items -> collected-transactions`
 
@@ -929,7 +954,7 @@
 4. 현재 `PlanItemsView.items[]`는 매칭된 수집 거래 ID/제목/상태와 생성된 전표 ID/번호까지 함께 실어 보냅니다.
 5. import collect 단계에서 현재 구현은 `collect-preview`와 `collect` 모두에서 미확정 계획 항목(`PlanItem`) 자동 매칭을 수행할 수 있습니다.
 6. `POST /collected-transactions/:id/confirm`가 실행되면 매칭된 `PlanItem`은 `CONFIRMED`로 갱신됩니다.
-7. `GET /dashboard/summary`와 `GET /forecast/monthly`는 위 운영/계획 데이터를 projection한 읽기 모델이며, 직접 쓰기 흐름에 참여하지 않습니다.
+7. `GET /dashboard/summary`, `GET /funding-account-status/summary`, `GET /forecast/monthly`는 위 운영/계획 데이터를 projection한 읽기 모델이며, 직접 쓰기 흐름에 참여하지 않습니다.
 
 ## 접근 범위와 데이터 최소 노출
 
@@ -945,7 +970,7 @@
 - `OWNER`, `MANAGER`: `funding_account.create`, `funding_account.update`, `category.create`, `category.update`, `insurance_policy.create`, `insurance_policy.update`, `insurance_policy.delete`, `vehicle.create`, `vehicle.update`, `accounting_period.open`, `recurring_rule.create`, `plan_item.generate`, `financial_statement.generate`, `carry_forward.generate`, `journal_entry.reverse`, `journal_entry.correct`
 - `OWNER`: `accounting_period.close`, `accounting_period.reopen`, `carry_forward.cancel`
 - `OWNER`, `MANAGER`, `EDITOR`: `collected_transaction.create`, `collected_transaction.confirm`, `import_batch.upload`, `import_batch.delete`, `operations_note.create`
-- `CollectedTransactionItem`, `RecurringRuleItem`, `JournalEntryItem`, `PlanItemsView`, `FinancialStatementsView`, `CarryForwardView`, `DashboardSummary`, `ForecastResponse`는 raw table 전체가 아니라 API view/projection shape를 응답합니다.
+- `CollectedTransactionItem`, `RecurringRuleItem`, `JournalEntryItem`, `PlanItemsView`, `FinancialStatementsView`, `CarryForwardView`, `DashboardSummary`, `FundingAccountOverviewResponse`, `ForecastResponse`는 raw table 전체가 아니라 API view/projection shape를 응답합니다.
 - 예외적으로 `ImportBatchItem.rows[].rawPayload`는 업로드 검수 목적상 현재 응답에 포함됩니다.
 - 접근통제 실패는 `404` 또는 `401/403`으로 처리하고, 보안 이벤트 로그와 함께 남깁니다.
 

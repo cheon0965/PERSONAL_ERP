@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import type {
   AuthenticatedUser,
+  CompleteFundingAccountBootstrapRequest,
   CreateFundingAccountRequest,
   FundingAccountItem,
   UpdateFundingAccountRequest
@@ -91,6 +92,11 @@ export class FundingAccountsService {
 
     // 초기 잔액이 있으면 자금수단 생성 + 기초전표 생성을 하나의 트랜잭션으로 묶는다.
     const created = await this.prisma.$transaction(async (tx) => {
+      const sortOrder = await readNextFundingAccountSortOrder(
+        tx,
+        workspace.tenantId,
+        workspace.ledgerId
+      );
       const account = await tx.account.create({
         data: {
           userId: workspace.userId,
@@ -98,7 +104,10 @@ export class FundingAccountsService {
           ledgerId: workspace.ledgerId,
           name: normalizedName,
           normalizedName: normalizeCaseInsensitiveText(normalizedName),
-          type: input.type
+          type: input.type,
+          balanceWon: initialBalanceWon,
+          bootstrapStatus: resolveBootstrapStatusAfterOpeningBalance(input.type),
+          sortOrder
         }
       });
 
@@ -115,17 +124,98 @@ export class FundingAccountsService {
       return account;
     });
 
-    return mapFundingAccountRecordToItem({
-      id: created.id,
-      name: created.name,
-      type: created.type as 'BANK' | 'CASH' | 'CARD',
-      balanceWon: initialBalanceWon,
-      status: created.status as 'ACTIVE' | 'INACTIVE' | 'CLOSED',
-      bootstrapStatus: (created.bootstrapStatus ?? 'NOT_REQUIRED') as
-        | 'NOT_REQUIRED'
-        | 'PENDING'
-        | 'COMPLETED'
+    return mapFundingAccountRecordToItem(created);
+  }
+
+  async completeBootstrap(
+    user: AuthenticatedUser,
+    fundingAccountId: string,
+    input: CompleteFundingAccountBootstrapRequest
+  ): Promise<FundingAccountItem | null> {
+    const workspace = requireCurrentWorkspace(user);
+    const initialBalanceWon = input.initialBalanceWon ?? 0;
+
+    if (initialBalanceWon < 0) {
+      throw new BadRequestException('기초금액은 0원 이상으로 입력해 주세요.');
+    }
+
+    const existing = await this.fundingAccountsRepository.findByIdInWorkspace(
+      fundingAccountId,
+      workspace.tenantId,
+      workspace.ledgerId
+    );
+
+    if (!existing) {
+      return null;
+    }
+
+    if (existing.bootstrapStatus !== 'PENDING') {
+      throw new ConflictException(
+        '기초금액 입력은 기초 업로드 대기 상태의 자금수단에서만 진행할 수 있습니다.'
+      );
+    }
+
+    if (existing.status !== 'ACTIVE') {
+      throw new ConflictException(
+        '기초금액 입력은 활성 상태의 자금수단에서만 진행할 수 있습니다.'
+      );
+    }
+
+    if (existing.type !== 'BANK' && existing.type !== 'CARD') {
+      throw new BadRequestException(
+        '기초 업로드 대기 처리는 통장 또는 카드 자금수단만 대상입니다.'
+      );
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (initialBalanceWon > 0) {
+        await this.assertNoFundingAccountAccountingHistory({
+          tx,
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId,
+          fundingAccountId: existing.id
+        });
+
+        await this.createOpeningBalanceJournalEntry({
+          tx,
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId,
+          membershipId: workspace.membershipId,
+          fundingAccountId: existing.id,
+          fundingAccountType: existing.type,
+          initialBalanceWon
+        });
+      }
+
+      const updatedCount = await tx.account.updateMany({
+        where: {
+          id: existing.id,
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId,
+          bootstrapStatus: 'PENDING'
+        },
+        data: {
+          bootstrapStatus: 'COMPLETED',
+          ...(initialBalanceWon > 0 ? { balanceWon: initialBalanceWon } : {})
+        }
+      });
+
+      if (updatedCount.count !== 1) {
+        throw new ConflictException(
+          '자금수단 기초 업로드 상태가 변경되어 완료 처리하지 못했습니다. 다시 시도해 주세요.'
+        );
+      }
+
+      return tx.account.findFirst({
+        where: {
+          id: existing.id,
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId
+        }
+      });
     });
+
+    return updated ? mapFundingAccountRecordToItem(updated) : null;
   }
 
   /**
@@ -476,6 +566,83 @@ export class FundingAccountsService {
         throw new ConflictException('같은 이름의 자금수단이 이미 있습니다.');
     }
   }
+
+  private async assertNoFundingAccountAccountingHistory(input: {
+    tx: Prisma.TransactionClient;
+    tenantId: string;
+    ledgerId: string;
+    fundingAccountId: string;
+  }) {
+    const [
+      importBatchCount,
+      collectedTransactionCount,
+      journalLineCount,
+      balanceSnapshotLineCount
+    ] = await Promise.all([
+      input.tx.importBatch.count({
+        where: {
+          tenantId: input.tenantId,
+          ledgerId: input.ledgerId,
+          fundingAccountId: input.fundingAccountId
+        }
+      }),
+      input.tx.collectedTransaction.count({
+        where: {
+          tenantId: input.tenantId,
+          ledgerId: input.ledgerId,
+          fundingAccountId: input.fundingAccountId
+        }
+      }),
+      input.tx.journalLine.count({
+        where: {
+          fundingAccountId: input.fundingAccountId,
+          journalEntry: {
+            tenantId: input.tenantId,
+            ledgerId: input.ledgerId
+          }
+        }
+      }),
+      input.tx.balanceSnapshotLine.count({
+        where: {
+          fundingAccountId: input.fundingAccountId,
+          OR: [
+            {
+              openingSnapshot: {
+                is: {
+                  tenantId: input.tenantId,
+                  ledgerId: input.ledgerId
+                }
+              }
+            },
+            {
+              closingSnapshot: {
+                is: {
+                  tenantId: input.tenantId,
+                  ledgerId: input.ledgerId
+                }
+              }
+            }
+          ]
+        }
+      })
+    ]);
+
+    const blockers = buildFundingAccountDeletionBlockers([
+      ['업로드 배치', importBatchCount],
+      ['수집 거래', collectedTransactionCount],
+      ['전표 라인', journalLineCount],
+      ['잔액 스냅샷', balanceSnapshotLineCount]
+    ]);
+
+    if (blockers.length > 0) {
+      throw new ConflictException(
+        [
+          '기초금액은 아직 거래·전표·스냅샷 이력이 없는 자금수단에만 등록할 수 있습니다.',
+          `연결된 항목: ${blockers.join(', ')}.`
+        ].join(' ')
+      );
+    }
+  }
 }
 
 function buildFundingAccountDeletionBlockers(
@@ -494,6 +661,33 @@ function normalizeFundingAccountName(name: string) {
   }
 
   return normalized;
+}
+
+async function readNextFundingAccountSortOrder(
+  client: Prisma.TransactionClient,
+  tenantId: string,
+  ledgerId: string
+) {
+  const lastAccount = await client.account.findFirst({
+    where: {
+      tenantId,
+      ledgerId
+    },
+    orderBy: {
+      sortOrder: 'desc'
+    },
+    select: {
+      sortOrder: true
+    }
+  });
+
+  return (lastAccount?.sortOrder ?? -1) + 1;
+}
+
+function resolveBootstrapStatusAfterOpeningBalance(
+  type: CreateFundingAccountRequest['type']
+) {
+  return type === 'BANK' || type === 'CARD' ? 'COMPLETED' : 'NOT_REQUIRED';
 }
 
 function assertFundingAccountStatusTransition(

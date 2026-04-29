@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   CategoryItem,
+  CompleteFundingAccountBootstrapRequest,
   CreateCategoryRequest,
   CreateFundingAccountRequest,
   FundingAccountItem,
@@ -17,6 +18,7 @@ import { useAppNotification } from '@/shared/providers/notification-provider';
 import {
   accountSubjectsQueryKey,
   categoriesManagementQueryKey,
+  completeFundingAccountBootstrap as completeFundingAccountBootstrapApi,
   createCategory,
   createFundingAccount,
   deleteFundingAccount,
@@ -34,13 +36,16 @@ import type { FundingAccountManagementSubmitInput } from './funding-account-mana
 import {
   invalidateReferenceDataQueries,
   readCategoryToggleSuccessMessage,
+  readFundingAccountBootstrapSuccessMessage,
   readFundingAccountTransitionSuccessMessage,
   type CategoryEditorState,
   type FeedbackState,
+  type FundingAccountBootstrapTarget,
   type FundingAccountDeleteTarget,
   type FundingAccountEditorState,
   type FundingAccountStatusActionTarget
 } from './reference-data.shared';
+import type { FundingAccountBootstrapSubmitInput } from './funding-account-bootstrap-dialog';
 
 type ReferenceDataManagementSection =
   | 'funding-accounts'
@@ -62,6 +67,8 @@ export function useReferenceDataPage(
     fundingAccountStatusActionTarget,
     setFundingAccountStatusActionTarget
   ] = React.useState<FundingAccountStatusActionTarget>(null);
+  const [fundingAccountBootstrapTarget, setFundingAccountBootstrapTarget] =
+    React.useState<FundingAccountBootstrapTarget>(null);
   const [fundingAccountDeleteTarget, setFundingAccountDeleteTarget] =
     React.useState<FundingAccountDeleteTarget>(null);
   const [categoryToggleTarget, setCategoryToggleTarget] =
@@ -268,6 +275,39 @@ export function useReferenceDataPage(
     }
   });
 
+  const bootstrapFundingAccountMutation = useMutation({
+    mutationFn: (input: {
+      fundingAccount: FundingAccountItem;
+      payload: CompleteFundingAccountBootstrapRequest;
+      fallback: FundingAccountItem;
+    }) =>
+      completeFundingAccountBootstrapApi(
+        input.fundingAccount.id,
+        input.payload,
+        input.fallback
+      ),
+    onSuccess: async (saved, variables) => {
+      setFundingAccountBootstrapTarget(null);
+      notifySuccess(
+        readFundingAccountBootstrapSuccessMessage(
+          saved.name,
+          variables.payload.initialBalanceWon
+        )
+      );
+
+      await invalidateReferenceDataQueries(queryClient);
+    },
+    onError: (error) => {
+      setFeedback({
+        severity: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : '기초금액을 처리하지 못했습니다.'
+      });
+    }
+  });
+
   const toggleCategoryMutation = useMutation({
     mutationFn: (category: CategoryItem) =>
       updateCategory(
@@ -327,6 +367,11 @@ export function useReferenceDataPage(
     setFundingAccountDeleteTarget(fundingAccount);
   }
 
+  function openFundingAccountBootstrap(fundingAccount: FundingAccountItem) {
+    setFeedback(null);
+    setFundingAccountBootstrapTarget(fundingAccount);
+  }
+
   function openCategoryCreate() {
     setFeedback(null);
     setCategoryEditorState({ mode: 'create' });
@@ -373,19 +418,31 @@ export function useReferenceDataPage(
     });
   }
 
-  async function completeFundingAccountBootstrap(
-    fundingAccount: FundingAccountItem
+  async function submitFundingAccountBootstrap(
+    input: FundingAccountBootstrapSubmitInput
   ) {
+    if (!fundingAccountBootstrapTarget) {
+      return;
+    }
+
     setFeedback(null);
-    await saveFundingAccountMutation.mutateAsync({
-      mode: 'edit',
-      fundingAccountId: fundingAccount.id,
-      payload: {
-        name: fundingAccount.name,
-        bootstrapStatus: 'COMPLETED'
-      },
+    const initialBalanceWon = input.initialBalanceWon ?? 0;
+    const payload: CompleteFundingAccountBootstrapRequest =
+      initialBalanceWon > 0
+        ? {
+            initialBalanceWon
+          }
+        : {};
+
+    await bootstrapFundingAccountMutation.mutateAsync({
+      fundingAccount: fundingAccountBootstrapTarget,
+      payload,
       fallback: {
-        ...fundingAccount,
+        ...fundingAccountBootstrapTarget,
+        balanceWon:
+          initialBalanceWon > 0
+            ? initialBalanceWon
+            : fundingAccountBootstrapTarget.balanceWon,
         bootstrapStatus: 'COMPLETED'
       }
     });
@@ -449,16 +506,18 @@ export function useReferenceDataPage(
     closeCategoryEditor: () => setCategoryEditorState(null),
     closeCategoryToggle: () => setCategoryToggleTarget(null),
     closeFundingAccountEditor: () => setFundingAccountEditorState(null),
+    closeFundingAccountBootstrapDialog: () =>
+      setFundingAccountBootstrapTarget(null),
     closeFundingAccountDeleteDialog: () => setFundingAccountDeleteTarget(null),
     closeFundingAccountStatusDialog: () =>
       setFundingAccountStatusActionTarget(null),
-    completeFundingAccountBootstrap,
     confirmCategoryToggle,
     confirmFundingAccountDelete,
     confirmFundingAccountTransition,
     editingCategory,
     editingFundingAccount,
     feedback,
+    fundingAccountBootstrapTarget,
     fundingAccountDeleteTarget,
     fundingAccountEditorState,
     fundingAccountStatusActionTarget,
@@ -468,15 +527,19 @@ export function useReferenceDataPage(
     openCategoryEdit,
     openCategoryToggle,
     openFundingAccountCreate,
+    openFundingAccountBootstrap,
     openFundingAccountDelete,
     openFundingAccountEdit,
     openFundingAccountTransition,
     queryErrors,
     saveCategoryPending: saveCategoryMutation.isPending,
+    completeFundingAccountBootstrapPending:
+      bootstrapFundingAccountMutation.isPending,
     deleteFundingAccountPending: deleteFundingAccountMutation.isPending,
     saveFundingAccountPending: saveFundingAccountMutation.isPending,
     submitCategory,
     submitFundingAccount,
+    submitFundingAccountBootstrap,
     ledgerLabel,
     toggleCategoryPending: toggleCategoryMutation.isPending,
     transitionFundingAccountPending: transitionFundingAccountMutation.isPending,
@@ -557,7 +620,8 @@ function buildReferenceDataHelpContext(
           {
             title: '이 탭에서 하는 일',
             items: [
-              '수입·지출 카테고리를 추가하거나 이름을 정리합니다.',
+              '수입·지출 카테고리를 추가하고 거래 입력자가 알아볼 수 있는 이름으로 정리합니다.',
+              '목록의 활성 상태를 보고 새 입력에 계속 쓸 분류와 숨길 분류를 구분합니다.',
               '더 이상 새 입력에 쓰지 않을 분류는 비활성 처리해 선택지에서 숨깁니다.',
               '기존 거래 추적을 위해 비활성 카테고리도 목록에서는 계속 관리합니다.'
             ]
@@ -581,9 +645,9 @@ function buildReferenceDataHelpContext(
           {
             title: '이 탭에서 하는 일',
             items: [
-              '전표 자동 생성이나 거래 입력에 필요한 공식 기준값이 준비되어 있는지 확인합니다.',
+              '계정과목과 거래유형 목록을 보고 전표 자동 생성에 필요한 공식 기준값이 준비되어 있는지 확인합니다.',
               '직접 편집하지 않고, 어떤 기준이 실제 화면에서 참조되는지 읽는 용도로 사용합니다.',
-              '선택지가 부족하다면 자금수단 또는 카테고리 탭을 먼저 점검합니다.'
+              '거래 입력 선택지가 부족하다면 자금수단 또는 카테고리 탭을 먼저 점검합니다.'
             ]
           },
           navigationSection
@@ -607,6 +671,7 @@ function buildReferenceDataHelpContext(
             title: '이 탭에서 하는 일',
             items: [
               '운영 통장, 카드, 현금 같은 실제 입출금 기준을 추가하거나 이름을 정리합니다.',
+              '기초 등록 대기 상태의 자금수단은 시작 금액과 계정과목을 확인해 운영 기준으로 닫습니다.',
               '더 이상 쓰지 않는 자금수단은 비활성 또는 종료 상태로 바꿔 새 입력 선택지에서 분리합니다.',
               '거래, 전표, 계획, 업로드, 이월, 차량 기본값 등에서 사용하지 않은 깨끗한 자금수단은 삭제할 수 있습니다.',
               '기존 거래와 이월 추적이 필요한 자금수단은 종료된 읽기 전용 기준으로 남길 수 있습니다.'
@@ -615,7 +680,7 @@ function buildReferenceDataHelpContext(
           navigationSection
         ],
         readModelNote:
-          '자금수단은 잔액 결과를 보여줄 수 있어도, 이 화면에서 잔액 자체를 직접 수정하지는 않습니다. 잔액 변화는 거래·전표·마감 흐름에서 만들어집니다.'
+          '자금수단은 잔액 결과를 보여줍니다. 기초 업로드 대기 상태의 시작 금액만 이 화면에서 전표와 함께 닫고, 이후 잔액 변화는 거래·전표·마감 흐름에서 만들어집니다.'
       };
   }
 }

@@ -15,7 +15,7 @@ import type {
   AccountingPeriodItem,
   JournalEntryItem
 } from '@personal-erp/contracts';
-import type { GridColDef } from '@mui/x-data-grid';
+import type { GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { formatDate, formatWon } from '@/shared/lib/format';
 import { appLayout } from '@/shared/ui/layout-metrics';
@@ -115,10 +115,16 @@ export function buildJournalEntryColumns({
         ) : (
           <Button
             size="small"
+            variant="outlined"
             component={Link}
-            href={`/journal-entries/${params.row.id}` as Route}
+            href={
+              `/journal-entries?entryId=${encodeURIComponent(
+                params.row.id
+              )}` as Route
+            }
+            sx={{ whiteSpace: 'nowrap' }}
           >
-            상세
+            선택
           </Button>
         )
     }
@@ -152,6 +158,13 @@ export function JournalEntriesWorkspace({
   onSelectReverse: (entry: JournalEntryItem) => void;
   onSelectCorrect: (entry: JournalEntryItem) => void;
 }) {
+  const rowSelectionModel = selectedEntry
+    ? ({
+        type: 'include',
+        ids: new Set([selectedEntry.id])
+      } satisfies GridRowSelectionModel)
+    : undefined;
+
   if (totalCount === 0) {
     return (
       <SectionCard
@@ -235,8 +248,8 @@ export function JournalEntriesWorkspace({
         title="전표 목록"
         description={
           isSplitLayout
-            ? '전표 번호를 선택하면 아래에서 상세 라인, 조정 흐름, 후속 조정 작업을 확인할 수 있습니다.'
-            : '목록에서 전표 번호를 선택하면 전용 상세 화면으로 이동해 라인과 조정 이력을 검토합니다.'
+            ? '동작 컬럼에서 전표를 선택하면 아래에서 상세 라인, 조정 흐름, 후속 조정 작업을 확인할 수 있습니다.'
+            : '전표번호를 누르면 전용 상세 화면으로 이동하고, 동작 컬럼의 선택 버튼으로 이 화면에서 상세 패널을 엽니다.'
         }
         toolbar={
           <JournalEntriesTableToolbar
@@ -247,6 +260,7 @@ export function JournalEntriesWorkspace({
         }
         rows={entries}
         columns={journalEntryColumns}
+        rowSelectionModel={rowSelectionModel}
         height={420}
       />
 

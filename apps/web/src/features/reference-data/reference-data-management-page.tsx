@@ -7,6 +7,7 @@ import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { CategoriesSection } from './categories-section';
 import { CategoryEditorDrawer } from './category-editor-drawer';
 import { CategoryToggleDialog } from './category-toggle-dialog';
+import { FundingAccountBootstrapDialog } from './funding-account-bootstrap-dialog';
 import { FundingAccountDeleteDialog } from './funding-account-delete-dialog';
 import { FundingAccountEditorDrawer } from './funding-account-editor-drawer';
 import { FundingAccountsSection } from './funding-accounts-section';
@@ -35,7 +36,9 @@ export function ReferenceDataManagementPage({
     (item) => item.isActive
   ).length;
   const editorOpen =
-    page.fundingAccountEditorState !== null || page.categoryEditorState !== null;
+    page.fundingAccountEditorState !== null ||
+    page.fundingAccountBootstrapTarget !== null ||
+    page.categoryEditorState !== null;
 
   return (
     <Stack spacing={appLayout.pageGap}>
@@ -93,7 +96,7 @@ export function ReferenceDataManagementPage({
             onCreate={page.openFundingAccountCreate}
             onEdit={page.openFundingAccountEdit}
             onTransition={page.openFundingAccountTransition}
-            onCompleteBootstrap={page.completeFundingAccountBootstrap}
+            onOpenBootstrap={page.openFundingAccountBootstrap}
             onDelete={page.openFundingAccountDelete}
           />
           <FundingAccountEditorDrawer
@@ -111,6 +114,13 @@ export function ReferenceDataManagementPage({
             onConfirm={() => {
               void page.confirmFundingAccountTransition();
             }}
+          />
+          <FundingAccountBootstrapDialog
+            target={page.fundingAccountBootstrapTarget}
+            feedback={page.feedback}
+            busy={page.completeFundingAccountBootstrapPending}
+            onClose={page.closeFundingAccountBootstrapDialog}
+            onSubmit={page.submitFundingAccountBootstrap}
           />
           <FundingAccountDeleteDialog
             target={page.fundingAccountDeleteTarget}

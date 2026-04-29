@@ -215,6 +215,7 @@
 
 - `FinancialStatementSnapshot`
 - `DashboardSummaryView`
+- `FundingAccountOverviewView`
 
 ---
 
@@ -1229,6 +1230,12 @@ AccountingPeriod의 상태 전이 이력을 남기는 엔티티다.
 - 공식 FinancialStatementSnapshot은 `Locked` 기간에 대해서만 확정 생성한다.
 - 결산 전 미리보기 리포트는 별도 read model로 제공할 수 있으나, 공식 스냅샷과 혼동하지 않는다.
 - 공식 재무제표 숫자는 JournalEntry/ClosingSnapshot 기준 확정 금액을 그대로 사용해야 하며, 별도 보고용 반올림으로 원장과 불일치하면 안 된다.
+
+### 자금수단별 현황 read model
+
+- `FundingAccountOverviewView`는 영속 원장이 아니라 HTTP 응답용 projection이다.
+- 운영 판단용 수집 거래 기준과 공식 확인용 확정 전표 기준을 분리해 통장/카드/현금별 수입, 지출, 이체, 잔액 흐름을 보여준다.
+- 공식 수치로 해석할 때는 `JournalEntry`, `ClosingSnapshot`, `BalanceSnapshotLine` 기준을 우선하고, 미확정 수집 거래는 별도 기준으로 표시해야 한다.
 
 ---
 

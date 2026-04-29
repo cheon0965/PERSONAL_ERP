@@ -135,11 +135,27 @@ export function DataTableCard<T extends { id: string }>({
                 '& .MuiDataGrid-cell .MuiButton-root': {
                   minHeight: 30,
                   px: 1.1,
+                  borderRadius: 999,
+                  borderWidth: 1.5,
                   whiteSpace: 'nowrap'
+                },
+                '& .MuiDataGrid-cell .MuiButton-contained': {
+                  boxShadow: 'none'
+                },
+                '& .MuiDataGrid-cell .MuiButton-text': {
+                  px: 0.75,
+                  backgroundColor: 'transparent',
+                  '&:hover': {
+                    backgroundColor: alpha(
+                      brandTokens.palette.primaryBright,
+                      0.08
+                    )
+                  }
                 },
                 '& .MuiDataGrid-cell .MuiChip-root': {
                   flexShrink: 0,
-                  maxWidth: '100%'
+                  maxWidth: '100%',
+                  cursor: 'default'
                 },
                 '& .MuiDataGrid-cell .MuiTypography-root': {
                   lineHeight: 1.45

@@ -49,38 +49,38 @@ docs/
 [ 원장 ] ---------------- 읽기 -------> [ 보고와 전망 ]
 [ 원장 ] ---------------- 읽기 -------> [ 운영 지원 ]
 [ 반복 자동화 ] ---------- 읽기 ------> [ 보고와 전망 ]
-[ 운영 자산과 보장 ] -- 수집 비용 연계 --> [ 원장 ]
-[ 운영 자산과 보장 ] ---- 읽기 -------> [ 보고와 전망 ]
+[ 운영 자산/보장/부채 ] -- 수집/상환 연계 --> [ 원장 ]
+[ 운영 자산/보장/부채 ] ---- 읽기 -------> [ 보고와 전망 ]
 ```
 
-| 컨텍스트         | 현재 모듈                                                                                                                                                                                                                                   | 역할                                                                         |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| 인증과 접근 제어 | `auth`, `common/auth`                                                                                                                                                                                                                       | 로그인, 토큰, 계정 보안, 요청 주체 인증 기준선                               |
-| 사업장 운영 관리 | `workspace-settings`, `admin`, `navigation`, `common/infrastructure/operational`                                                                                                                                                            | 사업장 설정, 멤버/권한 정책, 감사 이벤트 저장과 조회, 데이터베이스 메뉴 트리 |
-| 원장             | `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `reference-data-readiness`, `accounting-periods`, `collected-transactions`, `journal-entries`, `import-batches`, `financial-statements`, `carry-forwards` | 기준 데이터, 월 운영, 업로드 수집/전표, 공식 보고, 차기 이월 컨텍스트        |
-| 반복 자동화      | `recurring-rules`, `plan-items`                                                                                                                                                                                                             | 반복 규칙 정의와 기간별 계획 항목 생성/정합성                                |
-| 운영 자산과 보장 | `vehicles`, `insurance-policies`                                                                                                                                                                                                            | 운영비 성격의 자산/보장 도메인, 차량 연료/정비 기반 수집 거래 진입점         |
-| 보고와 전망      | `dashboard`, `forecast`                                                                                                                                                                                                                     | 읽기 기반 요약/예측 조합                                                     |
-| 운영 지원        | `operations-console`                                                                                                                                                                                                                        | 운영 체크리스트, 예외, 월 마감/업로드 현황, 시스템 상태, 알림, 반출/메모     |
-| 공용 기반과 계약 | `packages/contracts`, `packages/money`, env, Prisma, health, 공통 외부 의존성 조립                                                                                                                                                          | 계약, 금액 값 기준, 런타임 기반선                                            |
+| 컨텍스트            | 현재 모듈                                                                                                                                                                                                                                   | 역할                                                                                                            |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 인증과 접근 제어    | `auth`, `common/auth`                                                                                                                                                                                                                       | 로그인, 토큰, 계정 보안, 요청 주체 인증 기준선                                                                  |
+| 사업장 운영 관리    | `workspace-settings`, `admin`, `navigation`, `common/infrastructure/operational`                                                                                                                                                            | 사업장 설정, 멤버/권한 정책, 감사 이벤트 저장과 조회, 데이터베이스 메뉴 트리                                    |
+| 원장                | `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `reference-data-readiness`, `accounting-periods`, `collected-transactions`, `journal-entries`, `import-batches`, `financial-statements`, `carry-forwards` | 기준 데이터, 월 운영, 업로드 수집/전표, 공식 보고, 차기 이월 컨텍스트                                           |
+| 반복 자동화         | `recurring-rules`, `plan-items`                                                                                                                                                                                                             | 반복 규칙 정의와 기간별 계획 항목 생성/정합성                                                                   |
+| 운영 자산/보장/부채 | `vehicles`, `insurance-policies`, `liabilities`                                                                                                                                                                                             | 운영비 성격의 자산/보장 도메인, 차량 연료/정비 기반 수집 거래 진입점, 부채 상환 일정과 원금/이자 분리 전표 경계 |
+| 보고와 전망         | `dashboard`, `funding-account-status`, `forecast`                                                                                                                                                                                           | 읽기 기반 요약/분석/예측 조합                                                                                   |
+| 운영 지원           | `operations-console`                                                                                                                                                                                                                        | 운영 체크리스트, 예외, 월 마감/업로드 현황, 시스템 상태, 알림, 반출/메모                                        |
+| 공용 기반과 계약    | `packages/contracts`, `packages/money`, env, Prisma, health, 공통 외부 의존성 조립                                                                                                                                                          | 계약, 금액 값 기준, 런타임 기반선                                                                               |
 
 여기서 `원장(Ledger)`은 현재 코드베이스의 컨텍스트 이름입니다.  
-현재 API 모듈명은 `accounting-periods`, `collected-transactions`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`, `recurring-rules`, `plan-items` 등이고, 웹 화면/라우트는 축약 이름으로 `periods`, `transactions`, `imports`, `recurring`, `insurances` 같은 경로를 함께 사용합니다.  
+현재 API 모듈명은 `accounting-periods`, `collected-transactions`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`, `recurring-rules`, `plan-items`, `insurance-policies`, `liabilities`, `vehicles`, `operations-console`, `dashboard`, `funding-account-status`, `forecast` 등이고, 웹 화면/라우트는 축약 이름으로 `periods`, `transactions`, `imports`, `recurring`, `insurances` 같은 경로를 함께 사용합니다.  
 회계 도메인의 상세 기준은 [business-logic-draft.md](./domain/business-logic-draft.md) 와 [core-entity-definition.md](./domain/core-entity-definition.md) 를 우선하며, 최종 쓰기 모델은 `Ledger`, `AccountingPeriod`, `CollectedTransaction`, `JournalEntry` 중심으로 수렴합니다.
 
 허용되는 방향:
 
 - 웹은 HTTP + `packages/contracts`를 통해서만 API와 연결합니다.
 - `반복 자동화`는 `원장`의 참조 상태를 읽을 수 있습니다.
-- `운영 자산과 보장`은 차량 연료/정비 기록의 선택적 회계 연동을 위해 `원장`의 표준 수집 거래(`CollectedTransaction`) 쓰기 흐름을 사용합니다.
-- `보고와 전망`은 `원장`, `반복 자동화`, `운영 자산과 보장`을 읽어 조합합니다.
+- `운영 자산/보장/부채`는 차량 연료/정비 기록의 선택적 회계 연동과 부채 상환 일정의 계획/수집/전표 연결을 위해 `원장`의 표준 수집 거래(`CollectedTransaction`) 쓰기 흐름을 사용합니다.
+- `보고와 전망`은 `원장`, `반복 자동화`, `운영 자산/보장/부채`를 읽어 조합합니다.
 - `운영 지원`은 `원장`, `사업장 운영 관리`, `health` 경계를 읽어 운영자가 처리할 위험 신호와 인수인계 기록을 조합합니다.
 - `인증과 접근 제어`는 인증과 요청 주체 기준선만 제공하고, 도메인 쓰기 흐름의 `TenantMembership` / `ActorRef` 판정 자체를 소유하지 않습니다.
 - `공용 기반과 계약`은 공통 지원 계층으로만 동작합니다.
 
 금지선:
 
-- `dashboard`, `forecast`가 거래/반복규칙의 쓰기 규칙을 직접 소유하지 않습니다.
+- `dashboard`, `funding-account-status`, `forecast`가 거래/반복규칙의 쓰기 규칙을 직접 소유하지 않습니다.
 - 다른 모듈의 저장소, 어댑터, 컨트롤러를 직접 가져다 쓰는 것을 기본 규칙으로 두지 않습니다.
 - `packages/contracts`에 앱 구현 코드나 비즈니스 로직을 넣지 않습니다.
 - 메시지 브로커, 아웃박스, 게이트웨이, 서비스 분리는 별도 ADR 없이 도입하지 않습니다.
@@ -128,8 +128,8 @@ API는 다음 흐름을 기본으로 사용합니다.
 - 현재 승격 완료 모듈: `collected-transactions`, `recurring-rules`, `accounting-periods`, `import-batches`, `journal-entries`, `auth`, `admin`, `insurance-policies`, `plan-items`, `financial-statements`, `carry-forwards`, `operations-console` — `docs/completed/REFACTORING_EXECUTION_PLAN.md` 참조
 - `import-batches`는 업로드 배치/행 보존, IM뱅크 PDF 파싱, 최신 진행월 기준 단건 수집, 일괄 등록 작업/행별 결과/사업장 잠금을 같은 `원장(Ledger)` 경계 안에서 조율합니다. 업로드도 월별 열기/마감 흐름을 따르며, 운영월 자동 생성은 거래 입력 예외가 아니라 최초 시작월 또는 최신 잠금월 바로 다음 월의 신규 계좌/카드 초기화로 제한합니다.
 - `vehicles`는 연료/정비 운영 기록을 소유하되, 회계 연동을 켠 기록은 표준 `CollectedTransaction`을 생성/동기화하고 전표 확정 이후에는 차량 기록 덮어쓰기를 막습니다.
-- `collected-transactions`, `recurring-rules`, `dashboard`, `forecast`는 모듈 바깥에서 각 모듈의 `public.ts`만 공식 진입점으로 사용합니다.
-- `dashboard`, `forecast`는 `읽기 서비스 -> 읽기 저장소 -> 투영` 네이밍으로 읽기 조합 컨텍스트임을 코드에서 드러냅니다.
+- `accounting-periods`, `carry-forwards`, `collected-transactions`, `dashboard`, `financial-statements`, `forecast`, `funding-account-status`, `import-batches`, `journal-entries`, `liabilities`, `navigation`, `plan-items`, `recurring-rules`는 모듈 바깥에서 각 모듈의 `public.ts`만 공식 진입점으로 사용합니다.
+- `dashboard`, `funding-account-status`, `forecast`는 `읽기 서비스 -> 읽기 저장소/계산 -> 투영` 성격의 읽기 조합 컨텍스트임을 코드에서 드러냅니다.
 - `auth`는 10개 유스케이스 + `SupportService` 기반 "얇은 헥사고날" 구조, `admin`은 4개 유스케이스 + `CommandSupport`/`QueryService` 기반 구조를 채택했습니다.
 - 나머지 모듈은 설명 가능한 이유가 생길 때만 같은 방향으로 옮깁니다.
 - 변환기/계산기/도우미 함수는 계속 함수 또는 단순 클래스로 두고 provider/token으로 만들지 않습니다.
@@ -158,7 +158,7 @@ API는 다음 흐름을 기본으로 사용합니다.
 
 ## 6. 인증과 접근 경계
 
-- `health`, `health/ready`, `auth/register`, `auth/verify-email`, `auth/resend-verification`, `auth/accept-invitation`, `auth/login`, `auth/refresh`, `auth/logout`을 제외한 API는 기본적으로 보호됩니다.
+- `health`, `health/ready`, `auth/register`, `auth/verify-email`, `auth/resend-verification`, `auth/accept-invitation`, `auth/login`, `auth/refresh`, `auth/logout`, `auth/forgot-password`, `auth/reset-password`를 제외한 API는 기본적으로 보호됩니다.
 - 컨트롤러와 서비스는 인증된 `user.currentWorkspace`를 받고, 도메인 쓰기 흐름에서는 이를 `tenantId`, `ledgerId`, `TenantMembership`, `ActorRef` 기준으로 해석해야 합니다.
 - 현재 HTTP 표면과 요청 단위 검증은 사용자 단위 전단계가 아니라 사업장 단위 tenant/ledger 접근 판정을 기준으로 유지합니다.
 - 계좌, 카테고리, 장부, 기간, 업로드 배치, 전표 등 참조 대상은 tenant/ledger 접근 범위 안에서 검증합니다.
@@ -179,6 +179,7 @@ API는 다음 흐름을 기본으로 사용합니다.
 - 개발 환경에서 `NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=true`일 때만 허용됩니다.
 - 현재 권장 위치는 `C:\secrets\personal-erp\web.env` 입니다.
 - 대체 응답이 꺼져 있으면 웹은 쿼리 오류를 화면에 직접 표시합니다.
+- API 오류는 `userMessage`, `errorCode`, `requestId`, `technicalMessage`를 분리해 화면에는 사용자용 안내를 우선 보여주고, 운영 추적에는 요청번호와 원본 기술 메시지를 남깁니다.
 
 자세한 내용은 [FALLBACK_POLICY.md](./FALLBACK_POLICY.md) 를 참고합니다.
 
@@ -202,5 +203,6 @@ API는 다음 흐름을 기본으로 사용합니다.
 
 - 모든 API 응답에는 `x-request-id` 헤더가 들어갑니다.
 - 클라이언트가 보낸 `x-request-id`가 있으면 그대로 이어받고, 없으면 서버가 새로 만듭니다.
+- API CORS 설정은 `x-request-id`를 노출 헤더로 공개해 Web 오류 알림에서도 요청번호를 확인할 수 있게 합니다.
 - API 경계 로그는 `[module] METHOD path status duration requestId=...` 형태로 남깁니다.
 - `GET /health`는 생존 확인, `GET /health/ready`는 데이터베이스 연결을 포함한 준비 상태를 나타냅니다.

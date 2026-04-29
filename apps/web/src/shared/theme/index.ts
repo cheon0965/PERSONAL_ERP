@@ -112,7 +112,7 @@ export const appTheme = createTheme(
             borderRadius: 999,
             minHeight: 42,
             fontWeight: 800,
-            letterSpacing: '-0.01em',
+            letterSpacing: 0,
             transition:
               'background 180ms ease, background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms ease',
             '&:hover': {
@@ -237,11 +237,24 @@ export const appTheme = createTheme(
       MuiChip: {
         styleOverrides: {
           root: {
-            borderRadius: 999,
+            borderRadius: 8,
+            minHeight: 26,
             fontWeight: 800,
-            letterSpacing: '-0.01em',
+            letterSpacing: 0,
+            borderStyle: 'solid',
+            borderWidth: 1,
             '&.MuiChip-filled': {
-              boxShadow: '0 8px 18px rgba(6, 34, 111, 0.08)'
+              boxShadow: 'none'
+            },
+            '&.MuiChip-colorDefault': {
+              backgroundColor: brandTokens.palette.surfaceMuted,
+              borderColor: brandTokens.palette.border,
+              color: brandTokens.palette.textMuted
+            },
+            '&.MuiChip-filled.MuiChip-colorDefault': {
+              backgroundColor: brandTokens.palette.surfaceMuted,
+              borderColor: brandTokens.palette.borderStrong,
+              color: brandTokens.palette.textMuted
             },
             '&.MuiChip-colorPrimary': {
               backgroundColor: alpha(brandTokens.palette.primaryBright, 0.12),
@@ -249,8 +262,9 @@ export const appTheme = createTheme(
               color: brandTokens.palette.primary
             },
             '&.MuiChip-filled.MuiChip-colorPrimary': {
-              background: brandTokens.gradient.brand,
-              color: '#ffffff'
+              background: alpha(brandTokens.palette.primaryBright, 0.16),
+              borderColor: alpha(brandTokens.palette.primaryBright, 0.32),
+              color: brandTokens.palette.primary
             },
             '&.MuiChip-colorSecondary': {
               backgroundColor: alpha(brandTokens.palette.secondary, 0.14),
@@ -258,7 +272,8 @@ export const appTheme = createTheme(
               color: brandTokens.palette.secondaryDark
             },
             '&.MuiChip-filled.MuiChip-colorSecondary': {
-              backgroundColor: brandTokens.palette.secondary,
+              backgroundColor: alpha(brandTokens.palette.secondary, 0.18),
+              borderColor: alpha(brandTokens.palette.secondary, 0.38),
               color: brandTokens.palette.primaryDark
             },
             '&.MuiChip-colorSuccess': {
@@ -267,8 +282,9 @@ export const appTheme = createTheme(
               color: brandTokens.palette.success
             },
             '&.MuiChip-filled.MuiChip-colorSuccess': {
-              backgroundColor: brandTokens.palette.success,
-              color: '#ffffff'
+              backgroundColor: alpha(brandTokens.palette.success, 0.16),
+              borderColor: alpha(brandTokens.palette.success, 0.36),
+              color: brandTokens.palette.success
             },
             '&.MuiChip-colorWarning': {
               backgroundColor: alpha(brandTokens.palette.warning, 0.14),
@@ -276,8 +292,9 @@ export const appTheme = createTheme(
               color: '#9a5b00'
             },
             '&.MuiChip-filled.MuiChip-colorWarning': {
-              backgroundColor: brandTokens.palette.warning,
-              color: brandTokens.palette.primaryDark
+              backgroundColor: alpha(brandTokens.palette.warning, 0.18),
+              borderColor: alpha(brandTokens.palette.warning, 0.38),
+              color: '#9a5b00'
             },
             '&.MuiChip-colorError': {
               backgroundColor: alpha(brandTokens.palette.error, 0.12),
@@ -285,8 +302,9 @@ export const appTheme = createTheme(
               color: brandTokens.palette.error
             },
             '&.MuiChip-filled.MuiChip-colorError': {
-              backgroundColor: brandTokens.palette.error,
-              color: '#ffffff'
+              backgroundColor: alpha(brandTokens.palette.error, 0.16),
+              borderColor: alpha(brandTokens.palette.error, 0.36),
+              color: brandTokens.palette.error
             },
             '&.MuiChip-colorInfo': {
               backgroundColor: alpha(brandTokens.palette.info, 0.12),
@@ -294,8 +312,9 @@ export const appTheme = createTheme(
               color: brandTokens.palette.info
             },
             '&.MuiChip-filled.MuiChip-colorInfo': {
-              backgroundColor: brandTokens.palette.info,
-              color: '#ffffff'
+              backgroundColor: alpha(brandTokens.palette.info, 0.16),
+              borderColor: alpha(brandTokens.palette.info, 0.34),
+              color: brandTokens.palette.info
             }
           },
           label: {

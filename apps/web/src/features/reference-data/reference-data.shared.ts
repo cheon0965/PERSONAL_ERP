@@ -30,6 +30,8 @@ export type FundingAccountStatusActionTarget = {
   nextStatus: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
 } | null;
 
+export type FundingAccountBootstrapTarget = FundingAccountItem | null;
+
 export type FundingAccountDeleteTarget = FundingAccountItem | null;
 
 export async function invalidateReferenceDataQueries(queryClient: QueryClient) {
@@ -207,6 +209,19 @@ export function readFundingAccountDeleteDescription(
   }
 
   return `"${target.name}" 자금수단을 삭제할까요? 수집 거래, 전표, 계획, 반복 규칙, 보험, 업로드, 이월, 차량 기본값에서 사용한 기록이 있으면 삭제되지 않습니다. 먼저 연결된 거래내역과 관련 설정을 정리해 주세요.`;
+}
+
+export function readFundingAccountBootstrapSuccessMessage(
+  fundingAccountName: string,
+  initialBalanceWon?: number | null
+) {
+  const amount = initialBalanceWon ?? 0;
+
+  if (amount > 0) {
+    return `${fundingAccountName} 자금수단의 기초금액을 등록하고 기초전표를 발행했습니다.`;
+  }
+
+  return `${fundingAccountName} 자금수단의 기초 업로드 대기를 완료했습니다.`;
 }
 
 export function readCategoryKindLabel(kind: string) {

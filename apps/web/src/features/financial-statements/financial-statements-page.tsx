@@ -507,6 +507,29 @@ function buildFinancialStatementsHelpContext(
           '잠금된 기간이 없으면 월 운영 화면에서 먼저 월 마감을 완료합니다.',
           '전표가 이상하면 전표 조회 화면에서 반전/정정 필요 여부를 확인한 뒤 재생성합니다.',
           '다음 월 시작 기준까지 이어가려면 차기 이월 화면에서 이월 기준을 생성합니다.'
+        ],
+        links: [
+          {
+            title: '월 마감',
+            description:
+              '재무제표를 만들 잠금 월이 없거나 마감 차단 사유가 남아 있을 때 확인합니다.',
+            href: '/operations/month-end',
+            actionLabel: '월 마감 보기'
+          },
+          {
+            title: '전표 조회',
+            description:
+              '보고 숫자 이상 원인을 전표 라인과 조정 이력에서 추적합니다.',
+            href: '/journal-entries',
+            actionLabel: '전표 보기'
+          },
+          {
+            title: '차기 이월',
+            description:
+              '생성한 보고 숫자를 다음 월 시작 기준으로 넘깁니다.',
+            href: '/carry-forwards',
+            actionLabel: '차기 이월 보기'
+          }
         ]
       }
     ],

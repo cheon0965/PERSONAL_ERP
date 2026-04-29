@@ -18,10 +18,9 @@ import type {
   VerifyEmailResponse
 } from '@personal-erp/contracts';
 import {
-  ApiRequestError,
+  createApiRequestErrorFromResponse,
   fetchJson,
-  postJson,
-  UnauthorizedRequestError
+  postJson
 } from '../../shared/api/fetch-json';
 import { webEnv } from '../../shared/config/env';
 
@@ -167,15 +166,13 @@ async function requestAuthJson<TResponse>(
 
   const responseBody = await readResponseBody(response);
   if (!response.ok) {
-    const message =
-      readErrorMessage(responseBody) ??
-      `요청에 실패했습니다: ${response.status}`;
-
     if (response.status === 401) {
-      throw new UnauthorizedRequestError(message, responseBody);
+      throw createApiRequestErrorFromResponse(response, path, responseBody, {
+        unauthorized: true
+      });
     }
 
-    throw new ApiRequestError(response.status, message, responseBody);
+    throw createApiRequestErrorFromResponse(response, path, responseBody);
   }
 
   return responseBody as TResponse;
@@ -192,28 +189,4 @@ async function readResponseBody(response: Response): Promise<unknown> {
   } catch {
     return text;
   }
-}
-
-function readErrorMessage(responseBody: unknown): string | null {
-  if (typeof responseBody === 'string' && responseBody.trim()) {
-    return responseBody.trim();
-  }
-
-  if (
-    responseBody &&
-    typeof responseBody === 'object' &&
-    'message' in responseBody
-  ) {
-    const message = responseBody.message;
-
-    if (typeof message === 'string' && message.trim()) {
-      return message.trim();
-    }
-
-    if (Array.isArray(message) && message.length > 0) {
-      return message.join(', ');
-    }
-  }
-
-  return null;
 }

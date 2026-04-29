@@ -27,7 +27,7 @@
 
 현재 기준 코드:
 
-- [`apps/api/src/main.ts`](../apps/api/src/main.ts#L10)
+- [`apps/api/src/bootstrap/configure-api-app.ts`](../apps/api/src/bootstrap/configure-api-app.ts#L32)
 
 ### 2. 인증 실패는 guard/service에서 명시적으로 표현한다
 
@@ -38,7 +38,8 @@
 현재 기준 코드:
 
 - [`apps/api/src/common/auth/jwt-auth.guard.ts`](../apps/api/src/common/auth/jwt-auth.guard.ts#L34)
-- [`apps/api/src/modules/auth/auth.service.ts`](../apps/api/src/modules/auth/auth.service.ts#L16)
+- [`apps/api/src/modules/auth/application/use-cases/login.use-case.ts`](../apps/api/src/modules/auth/application/use-cases/login.use-case.ts#L1)
+- [`apps/api/src/modules/auth/auth-session.service.ts`](../apps/api/src/modules/auth/auth-session.service.ts#L1)
 
 ### 3. 도메인 규칙 실패는 controller에서 HTTP 의미로 변환한다
 
@@ -74,11 +75,15 @@
 
 - 프런트는 `fetch-json.ts`에서 `ApiRequestError`, `UnauthorizedRequestError`로 실패를 구분합니다.
 - `401`은 먼저 `POST /auth/refresh`로 한 번 복구를 시도하고, 실패하면 세션 정리와 로그인 복귀 흐름으로 이어집니다.
-- 일반 API 실패는 상태 코드와 메시지를 담은 오류로 다룹니다.
+- 일반 API 실패는 `status`, `userMessage`, `errorCode`, `requestId`, `technicalMessage`, `responseBody`를 분리한 오류로 다룹니다.
+- 화면에는 사용자가 바로 취할 수 있는 문구를 먼저 보여주고, 개발자 단서가 필요한 경우에는 오류 코드와 요청번호를 별도 진단 정보로 남깁니다.
+- API가 아직 영어 리소스명, 정책명, validator 문구를 반환하더라도 Web 공통 계층에서 사용자용 한국어 문구로 변환하고, 원문은 `technicalMessage`와 `responseBody`에 보존합니다.
 
 현재 기준 코드:
 
-- [`apps/web/src/shared/api/fetch-json.ts`](../apps/web/src/shared/api/fetch-json.ts#L62)
+- [`apps/web/src/shared/api/fetch-json.ts`](../apps/web/src/shared/api/fetch-json.ts#L156)
+- [`apps/web/src/shared/ui/query-error-alert.tsx`](../apps/web/src/shared/ui/query-error-alert.tsx#L11)
+- [`apps/web/src/features/auth/auth.api.ts`](../apps/web/src/features/auth/auth.api.ts#L168)
 
 ### 2. 인증 실패는 재시도를 줄이고 빠르게 세션 정리한다
 
@@ -103,6 +108,7 @@
 
 - 모든 API 응답에는 `x-request-id` 헤더를 붙입니다.
 - 클라이언트가 이미 `x-request-id`를 보내면 그 값을 그대로 유지합니다.
+- CORS 응답에서는 `x-request-id`를 노출 헤더로 공개해 Web이 오류 알림에 요청번호를 함께 표시할 수 있게 합니다.
 - API 경계에서는 `[module] METHOD path status duration requestId=...` 형식의 최소 요청 로그를 남깁니다.
 - 보안 이벤트는 `SecurityEvent` 로거에서 `event=... key=value ...` 형식으로 남깁니다.
 - 관리자 회원관리에서 발생한 workspace-scoped 감사 이벤트는 `WorkspaceAuditEvent`에 저장하고, `/admin/logs` 화면에서 조회합니다.
@@ -209,6 +215,7 @@
 3. HTTP 상태 코드나 UI 메시지 결정은 너무 안쪽 계층에서 하고 있지 않은가
 4. fallback이 있다면 실제 fallback 사용 사실을 로그나 UI에서 인지할 수 있는가
 5. 로그에 민감정보가 섞이지 않는가
+6. 사용자에게 보여줄 문구와 개발자가 추적할 단서가 분리되어 있는가
 
 ## 운영에서 바로 보는 포인트
 

@@ -100,9 +100,10 @@ export function AdminSupportContextPage() {
       {
         title: '확인 기준',
         items: [
+          '현재 지원 문맥이 켜져 있는지 먼저 확인하고, 필요 없으면 해제합니다.',
           '사업장과 장부를 명시적으로 선택한 뒤 운영 메뉴를 확인합니다.',
           '지원 모드에서는 다른 사용자로 가장하지 않고 전체 관리자 권한으로 동작합니다.',
-          '작업이 끝나면 지원 모드를 해제해 일반 전체 관리자 문맥으로 돌아갑니다.'
+          '운영 화면에서 점검할 항목을 처리한 뒤 작업이 끝나면 지원 모드를 해제해 일반 전체 관리자 문맥으로 돌아갑니다.'
         ]
       },
       {
@@ -113,6 +114,20 @@ export function AdminSupportContextPage() {
             href: '/admin/tenants',
             description: '지원 문맥으로 열 사업장의 상태와 기본 장부를 확인합니다.',
             actionLabel: '사업장 관리 열기'
+          },
+          {
+            title: '운영 기간',
+            href: '/periods',
+            description:
+              '선택한 사업장 문맥에서 열린 운영 월과 마감 상태를 확인합니다.',
+            actionLabel: '운영 기간 열기'
+          },
+          {
+            title: '감사 로그',
+            href: '/admin/logs',
+            description:
+              '지원 모드 설정과 이후 작업이 실제 전체 관리자 ID로 기록됐는지 확인합니다.',
+            actionLabel: '감사 로그 열기'
           }
         ]
       }

@@ -1,6 +1,7 @@
 import type {
   AccountSubjectItem,
   CategoryItem,
+  CompleteFundingAccountBootstrapRequest,
   CreateCategoryRequest,
   CreateFundingAccountRequest,
   FundingAccountItem,
@@ -83,6 +84,18 @@ export function updateFundingAccount(
 ) {
   return patchJson<FundingAccountItem, UpdateFundingAccountRequest>(
     `/funding-accounts/${fundingAccountId}`,
+    input,
+    fallback
+  );
+}
+
+export function completeFundingAccountBootstrap(
+  fundingAccountId: string,
+  input: CompleteFundingAccountBootstrapRequest,
+  fallback: FundingAccountItem
+) {
+  return postJson<FundingAccountItem, CompleteFundingAccountBootstrapRequest>(
+    `/funding-accounts/${fundingAccountId}/bootstrap`,
     input,
     fallback
   );

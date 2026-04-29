@@ -48,11 +48,15 @@
     `npm run test:prisma`가 Docker 기반 disposable MySQL을 띄워 `generate -> migrate -> minimal fixture seed -> test -> teardown`을 한 명령으로 수행하도록 정리했습니다.
 27. 보안 검증 증적과 runtime audit 예외 정리
     GitHub CI 첫 전체 통과 증적과 required check 연결, Docker 환경 `npm run test:prisma`, GitHub `prisma-integration` 통과 확인을 완료했습니다. `@nestjs/config`, `@nestjs/swagger`, `next` 패치 업데이트로 runtime audit tracked exception도 해소해 `npm run audit:runtime`은 현재 `0 vulnerabilities` 기준으로 통과합니다.
+28. 자금수단별 현황 화면 구현
+    `GET /funding-account-status/summary`와 Web `/funding-account-status`를 추가해 수집 거래 기준과 확정 전표 기준의 자금수단별 수입, 지출, 이체, 잔액 분석을 제공하도록 정리했습니다.
+29. 화면 도움말과 오류/진단 문구 정리
+    주요 업무 화면의 화면 도움말을 현재 작업 기준으로 갱신하고, Web API 오류는 사용자용 안내와 개발자 추적 단서(`errorCode`, `requestId`, 원본 기술 메시지)를 분리해 표시하도록 정리했습니다.
 
 ## 현재 MVP 범위
 
 - 비로그인 공개 홍보 메인과 로그인
-- 회원가입, 이메일 인증, 인증 메일 재발송, 필수 이용약관/개인정보 동의
+- 회원가입, 이메일 인증, 인증 메일 재발송, 비밀번호 재설정, 필수 이용약관/개인정보 동의
 - 현재 사업장 / 장부와 설정 조회
 - 기준 데이터 readiness 조회와 자금수단/카테고리 제한적 관리
 - 최신 진행월 중심 운영 기간 조회/open/close/reopen
@@ -62,8 +66,10 @@
 - 계획 항목 조회/생성(generate)과 수집 거래/전표 추적
 - 전표 조회/reverse/correct
 - 재무제표 조회/generate
+- 자금수단별 현황 조회와 기준 토글
 - 차기 이월 조회/generate
 - 보험 조회/생성/수정/삭제
+- 부채 계약/상환 일정 조회/생성/수정/보관과 현재 운영월 계획 항목 연결
 - 차량 조회/생성/수정, 연료/정비 이력 생성/수정, 연료/정비 이력의 선택적 수집 거래 연동
 - 대시보드 요약
 - 기간 운영 전망(현재 월/다음 달 예측)

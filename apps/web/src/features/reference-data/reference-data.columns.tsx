@@ -41,7 +41,7 @@ export function buildFundingAccountColumns(input: {
     fundingAccount: FundingAccountItem,
     nextStatus: 'ACTIVE' | 'INACTIVE' | 'CLOSED'
   ) => void;
-  onCompleteBootstrap: (fundingAccount: FundingAccountItem) => void;
+  onOpenBootstrap: (fundingAccount: FundingAccountItem) => void;
   onDelete: (fundingAccount: FundingAccountItem) => void;
 }): GridColDef<FundingAccountItem>[] {
   return [
@@ -156,10 +156,10 @@ export function buildFundingAccountColumns(input: {
                 size="small"
                 color="info"
                 onClick={() => {
-                  input.onCompleteBootstrap(params.row);
+                  input.onOpenBootstrap(params.row);
                 }}
               >
-                기초완료
+                기초입력
               </Button>
             ) : null}
             {params.row.status === 'INACTIVE' ? (

@@ -43,7 +43,7 @@
 - 차량 연료/정비 같은 운영 자산 기반 비용도 회계 숫자에 반영하려면 수집 거래(`CollectedTransaction`)로 연결한 뒤 기존 전표 확정 흐름을 사용한다.
 - 수집 거래와 조정 전표 입력은 최신 진행월 범위 안에서만 허용하고, 다음 월은 최근 월 마감 이후 여는 월별 운영 모델을 따른다.
 - 회계 확정, 정정, 반전, 잠금, 마감 판단은 `JournalEntry` 계열 기준으로 구현한다.
-- 보고/분석의 공식 확정 수치는 재무제표 스냅샷(`FinancialStatementSnapshot`) 또는 그 근거인 `JournalEntry`, `ClosingSnapshot` 기준으로 읽는다.
+- 보고/분석의 공식 확정 수치는 재무제표 스냅샷(`FinancialStatementSnapshot`) 또는 그 근거인 `JournalEntry`, `ClosingSnapshot` 기준으로 읽는다. 월중 자금수단별 현황은 운영 판단용 수집 거래 기준과 공식 확인용 확정 전표 기준을 명시적으로 분리한다.
 - 임시 호환이 필요해도 `Transaction` 위에 새 회계 규칙을 더 얹지 않는다.
 
 ## 4. 현재 유지 판단
@@ -87,7 +87,7 @@
 - 이 입력은 수집 거래(`CollectedTransaction`)로 들어가는가?
 - 운영 자산 화면에서 시작한 비용이라면 표준 수집 거래(`CollectedTransaction`)로 연결되는가?
 - 이 확정 회계 결과는 `JournalEntry`로 남는가?
-- 이 보고 숫자는 `JournalEntry` 또는 `FinancialStatementSnapshot` 기준인가?
+- 이 보고 숫자는 `JournalEntry` 또는 `FinancialStatementSnapshot` 기준인가? 월중 운영 판단용 숫자라면 수집 거래 기준임을 화면과 계약에서 분리해 표시하는가?
 - 이 변경이 레거시 `Transaction` 의존을 새로 늘리지는 않는가?
 
 ## 8. 현재 한 줄 결론

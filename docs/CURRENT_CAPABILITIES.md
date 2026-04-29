@@ -7,20 +7,20 @@
 
 ## 한 줄 요약
 
-`인증/설정 -> 관리자/운영 허브 -> 기준 데이터 -> 월 실행 -> 운영 자산 -> 반복 규칙/계획 -> 수집/업로드 -> 전표 -> 월 마감 -> 재무제표 -> 차기 이월 -> 기간 전망`까지 현재 코드베이스 안에서 이어집니다.
+`인증/설정 -> 관리자/운영 허브 -> 기준 데이터 -> 월 실행 -> 운영 자산 -> 반복 규칙/계획 -> 수집/업로드 -> 전표 -> 월 마감 -> 재무제표 -> 자금수단별 현황 -> 차기 이월 -> 기간 전망`까지 현재 코드베이스 안에서 이어집니다.
 
 ## 제품 기능 맵
 
-| 영역        | 현재 구현 범위                                                                                                                                                                                                                            | 대표 API 모듈                                                                                                |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| 인증/설정   | 공개 홍보 메인, 회원가입, 이메일 인증, 인증 메일 재발송, 초대 수락, 로그인, refresh/logout, 현재 사용자 조회, 접근 가능 사업장 목록, 세션 단위 사업장 전환, `현재 사업장 / 장부`, 사업장 설정, 계정 보안/프로필/비밀번호/세션/보안 이벤트 | `auth`, `health`                                                                                             |
-| 관리자/권한 | 사업장 설정, 멤버 초대/역할/상태 관리, 전체 사용자/사업장 관리, 지원 모드, 보안 위협 로그, 로그관리, 권한 정책 요약                                                                                                                       | `workspace-settings`, `admin`, `navigation`                                                                  |
-| 운영 지원   | 운영 체크리스트, 예외 처리함, 월 마감, 업로드 운영 현황, 시스템 상태, 알림 / 이벤트 센터, UTF-8 CSV 반출, 운영 메모 / 인수인계                                                                                                            | `operations-console`                                                                                         |
-| 기준 데이터 | readiness 요약, 자금수단 관리, 카테고리 관리, 계정과목/거래유형 조회                                                                                                                                                                      | `reference-data-readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types` |
-| 월 실행     | 운영 기간 open/close/reopen, 수집 거래, 업로드 배치와 일괄 등록 진행률/중단, 전표 조회/조정                                                                                                                                               | `accounting-periods`, `collected-transactions`, `import-batches`, `journal-entries`                          |
-| 계획 자동화 | 반복 규칙, 계획 항목 생성과 추적                                                                                                                                                                                                          | `recurring-rules`, `plan-items`                                                                              |
-| 운영 자산   | 보험 계약, 부채 계약/상환 일정, 차량 기본 정보, 연료 이력, 정비 이력, 차량 운영 요약, 연료/정비 이력의 선택적 수집 거래 연동                                                                                                              | `insurance-policies`, `liabilities`, `vehicles`                                                              |
-| 보고 / 판단 | 대시보드, 재무제표 스냅샷, 차기 이월, 기간 전망                                                                                                                                                                                           | `dashboard`, `financial-statements`, `carry-forwards`, `forecast`                                            |
+| 영역        | 현재 구현 범위                                                                                                                                                                                                                                             | 대표 API 모듈                                                                                                |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| 인증/설정   | 공개 홍보 메인, 회원가입, 이메일 인증, 인증 메일 재발송, 초대 수락, 로그인, 비밀번호 재설정, refresh/logout, 현재 사용자 조회, 접근 가능 사업장 목록, 세션 단위 사업장 전환, `현재 사업장 / 장부`, 사업장 설정, 계정 보안/프로필/비밀번호/세션/보안 이벤트 | `auth`, `health`                                                                                             |
+| 관리자/권한 | 사업장 설정, 멤버 초대/역할/상태 관리, 전체 사용자/사업장 관리, 지원 모드, 보안 위협 로그, 로그관리, 권한 정책 요약                                                                                                                                        | `workspace-settings`, `admin`, `navigation`                                                                  |
+| 운영 지원   | 운영 체크리스트, 예외 처리함, 월 마감, 업로드 운영 현황, 시스템 상태, 알림 / 이벤트 센터, UTF-8 CSV 반출, 운영 메모 / 인수인계                                                                                                                             | `operations-console`                                                                                         |
+| 기준 데이터 | readiness 요약, 자금수단 관리, 카테고리 관리, 계정과목/거래유형 조회                                                                                                                                                                                       | `reference-data-readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types` |
+| 월 실행     | 운영 기간 open/close/reopen, 수집 거래, 업로드 배치와 일괄 등록 진행률/중단, 전표 조회/조정                                                                                                                                                                | `accounting-periods`, `collected-transactions`, `import-batches`, `journal-entries`                          |
+| 계획 자동화 | 반복 규칙, 계획 항목 생성과 추적                                                                                                                                                                                                                           | `recurring-rules`, `plan-items`                                                                              |
+| 운영 자산   | 보험 계약, 부채 계약/상환 일정, 차량 기본 정보, 연료 이력, 정비 이력, 차량 운영 요약, 연료/정비 이력의 선택적 수집 거래 연동                                                                                                                               | `insurance-policies`, `liabilities`, `vehicles`                                                              |
+| 보고 / 판단 | 대시보드, 재무제표 스냅샷, 자금수단별 현황, 차기 이월, 기간 전망                                                                                                                                                                                           | `dashboard`, `financial-statements`, `funding-account-status`, `carry-forwards`, `forecast`                  |
 
 ## Web 화면 그룹
 
@@ -33,6 +33,8 @@
 - `/verify-email`
 - `/accept-invitation`
 - `/login`
+- `/forgot-password`
+- `/reset-password`
 
 ### 설정과 관리자
 
@@ -97,6 +99,7 @@
 - `/journal-entries/[entryId]`
 - `/financial-statements`
 - `/financial-statements/[periodId]`
+- `/funding-account-status`
 - `/carry-forwards`
 - `/carry-forwards/[periodId]`
 - `/forecast`
@@ -127,9 +130,10 @@
 - `recurring-rules`: 반복 규칙 CRUD
 - `plan-items`: 계획 항목 생성과 기간별 추적
 - `collected-transactions`: 생성, 상세 조회, 수정, 삭제, 전표 확정
-- `import-batches`: UTF-8 텍스트 업로드 파싱, 활성 계좌/카드 연결형 IM뱅크 텍스트 PDF 파일첨부 파싱, 스캔/이미지 PDF 명시 차단, 월별 open/close 정책에 맞춘 최신 진행월 기준 collect preview/단건 collect, 자동 운영월 생성 시 거래후잔액 기반 기초금액 snapshot 생성, 배치 삭제, 배치 상세 일괄 등록 Job/진행률/중단/행별 결과 조회
+- `import-batches`: UTF-8 텍스트 업로드 파싱, 활성 계좌/카드 연결형 IM뱅크 텍스트 PDF 파일첨부 파싱, 스캔/이미지 PDF 명시 차단, 월별 open/close 정책에 맞춘 최신 진행월 기준 collect preview/단건 collect, 신규 계좌/카드 bootstrap 자동 운영월 생성과 완료 전환, 배치 삭제, 배치 상세 일괄 등록 Job/진행률/중단/행별 결과 조회
 - `journal-entries`: 전표 조회, 반전 전표, 정정 전표
 - `financial-statements`: 잠금 기간 재무제표 스냅샷 생성/조회
+- `funding-account-status`: 자금수단별 수입/지출/이체/잔액 현황, 수집 거래 기준과 확정 전표 기준 비교, 최근 월 추이와 카테고리 breakdown
 - `carry-forwards`: closing snapshot 기반 opening balance snapshot 전용 차기 이월 생성/조회
 - `dashboard`, `forecast`: 현재 월 운영 요약과 월별 전망
 
@@ -141,6 +145,8 @@
 ## 운영 지원과 검증 가드
 
 - 모든 API 응답에 `x-request-id` 헤더가 포함됩니다.
+- 브라우저 API 오류는 사용자용 문구와 개발자 추적 단서(`errorCode`, `requestId`, 원본 기술 메시지)를 분리해 다룹니다.
+- 주요 업무 화면은 상단 도움말 버튼을 통해 현재 화면에서 확인할 기준, 작업 순서, 이어지는 후속 화면을 안내합니다.
 - `GET /api/health/ready`로 DB readiness를 확인합니다.
 - 운영 반출은 현재 `UTF-8 CSV` payload를 생성하고 감사 이벤트를 남깁니다.
 - `npm run docs:check`는 문서의 `npm run` 표기와 `docs/API.md`, `docs/CURRENT_CAPABILITIES.md`, `docs/OPERATIONS_CHECKLIST.md`, `docs/VALIDATION_NOTES.md`의 Web/API surface를 실제 코드와 대조합니다.

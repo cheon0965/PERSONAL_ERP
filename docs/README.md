@@ -23,7 +23,7 @@
 - `CURRENT_CAPABILITIES.md`: 현재 구현된 화면, API 모듈, 운영 지원 기능, 검증 가드 요약
 - `DEMO_GUIDE.md`: 데모 계정 기준 월 운영 한 사이클과 추천 메뉴 진행 순서
 - `ACCOUNTING_MODEL_BOUNDARY.md`: 레거시 `Transaction` 제거 이후 회계 경계와 현재 기준 원장
-- 최신 진행월 기준 월 운영 정책, 업로드 배치 bootstrap, 차량 운영비 회계 연동 기준은 `CURRENT_CAPABILITIES.md`, `DEMO_GUIDE.md`, `API.md`, `domain/business-logic-draft.md`, `domain/core-entity-definition.md`를 우선합니다.
+- 최신 진행월 기준 월 운영 정책, 업로드 배치 bootstrap, 차량 운영비 회계 연동, 자금수단별 현황 기준은 `CURRENT_CAPABILITIES.md`, `DEMO_GUIDE.md`, `API.md`, `domain/business-logic-draft.md`, `domain/core-entity-definition.md`를 우선합니다.
 
 ### 아키텍처와 도메인
 

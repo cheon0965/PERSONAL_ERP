@@ -181,6 +181,7 @@ export function createFundingAccountsPrismaMock(
           name: string;
           normalizedName?: string;
           type: 'BANK' | 'CASH' | 'CARD';
+          balanceWon?: number;
           bootstrapStatus?: 'NOT_REQUIRED' | 'PENDING' | 'COMPLETED';
           sortOrder?: number;
         };
@@ -193,7 +194,7 @@ export function createFundingAccountsPrismaMock(
           name: args.data.name,
           normalizedName: args.data.normalizedName,
           type: args.data.type,
-          balanceWon: 0,
+          balanceWon: args.data.balanceWon ?? 0,
           sortOrder: args.data.sortOrder ?? 0,
           status: 'ACTIVE' as const,
           bootstrapStatus:
@@ -213,6 +214,7 @@ export function createFundingAccountsPrismaMock(
           normalizedName?: string;
           status?: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
           bootstrapStatus?: 'NOT_REQUIRED' | 'PENDING' | 'COMPLETED';
+          balanceWon?: number;
         };
       }) => {
         const account = state.accounts.find(
@@ -235,6 +237,9 @@ export function createFundingAccountsPrismaMock(
         if (args.data.bootstrapStatus !== undefined) {
           account.bootstrapStatus = args.data.bootstrapStatus;
         }
+        if (args.data.balanceWon !== undefined) {
+          account.balanceWon = args.data.balanceWon;
+        }
 
         return account;
       },
@@ -247,6 +252,7 @@ export function createFundingAccountsPrismaMock(
         };
         data: {
           bootstrapStatus?: 'NOT_REQUIRED' | 'PENDING' | 'COMPLETED';
+          balanceWon?: number;
         };
       }) => {
         let updatedCount = 0;
@@ -275,6 +281,9 @@ export function createFundingAccountsPrismaMock(
 
           if (args.data.bootstrapStatus !== undefined) {
             account.bootstrapStatus = args.data.bootstrapStatus;
+          }
+          if (args.data.balanceWon !== undefined) {
+            account.balanceWon = args.data.balanceWon;
           }
           updatedCount += 1;
         });
