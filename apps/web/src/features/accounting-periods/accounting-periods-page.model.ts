@@ -402,6 +402,7 @@ function readAccountingPeriodsHelpCopy(section: PeriodWorkspaceSection) {
         sectionItems: [
           '열린 기간이 이미 있는지 먼저 확인하고, 없을 때만 새 운영 월을 엽니다.',
           '첫 운영 월이면 기초 잔액 라인을 1건 이상 입력해 시작 기준을 남깁니다.',
+          '자금수단별 기초 잔액 합계가 실제 통장·카드·현금 시작 기준과 맞는지 저장 전 다시 확인합니다.',
           '시작이 끝나면 계획 항목, 업로드 배치, 수집 거래 화면에서 실제 월 운영을 이어갑니다.'
         ],
         readModelNote:
@@ -425,6 +426,7 @@ function readAccountingPeriodsHelpCopy(section: PeriodWorkspaceSection) {
         sectionItems: [
           '현재 열린 월이 있으면 먼저 미확정 거래와 예외 항목이 남아 있는지 확인합니다.',
           '마감 실행 전 메모를 남겨 두면 이후 운영 메모와 감사 흐름에서 근거를 추적하기 쉽습니다.',
+          '마감이 실패하면 오류 메시지의 차단 사유를 기준으로 수집 거래, 업로드, 계획, 보고 자료를 순서대로 정리합니다.',
           '마감 후 정정이 꼭 필요할 때만 재오픈 대상 잠금 월과 사유를 남기고 다시 엽니다.'
         ],
         readModelNote:
@@ -448,6 +450,7 @@ function readAccountingPeriodsHelpCopy(section: PeriodWorkspaceSection) {
         sectionItems: [
           '잠금 월과 현재 열린 월이 어떤 순서로 이어지는지 먼저 봅니다.',
           '기초 잔액 출처와 잠금 이력을 확인해 숫자 기준선이 어디서 시작됐는지 추적합니다.',
+          '재오픈이나 다시 마감한 흔적이 있으면 사유와 최근 마감 스냅샷을 함께 비교합니다.',
           '공식 보고 검토가 필요하면 재무제표나 차기 이월 결과 화면으로 이어서 확인합니다.'
         ],
         readModelNote:
@@ -472,6 +475,7 @@ function readAccountingPeriodsHelpCopy(section: PeriodWorkspaceSection) {
         sectionItems: [
           '현재 열린 운영 월이 있는지, 잠금 월이 몇 개인지 먼저 확인합니다.',
           '기준 데이터 준비 상태와 권한 조건이 월 운영 시작 또는 마감에 충분한지 확인합니다.',
+          '상단 액션으로 새 월 시작, 마감/재오픈, 이력 검토 중 지금 필요한 작업으로 이동합니다.',
           '이후 실제 작업은 월 운영 시작, 월 마감 / 재오픈, 운영 기간 이력 탭으로 나눠 이어갑니다.'
         ],
         readModelNote:

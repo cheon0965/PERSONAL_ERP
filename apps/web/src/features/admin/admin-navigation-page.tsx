@@ -129,6 +129,7 @@ export function AdminNavigationPage() {
         title: '이 화면에서 읽는 것',
         items: [
           '그룹과 페이지 메뉴 구조를 트리로 확인합니다.',
+          '숨김 메뉴와 제한 메뉴 수를 보고 권한 정책이 의도대로 좁혀져 있는지 확인합니다.',
           '각 메뉴의 노출 여부와 허용 역할을 함께 점검합니다.'
         ]
       },
@@ -136,7 +137,35 @@ export function AdminNavigationPage() {
         title: '운영 원칙',
         items: [
           '상위 메뉴를 숨기면 하위 메뉴도 함께 노출되지 않습니다.',
-          '최소 한 개 이상의 허용 역할을 남겨야 합니다.'
+          '최소 한 개 이상의 허용 역할을 남겨야 합니다.',
+          '변경 전에는 현재 역할로 필요한 관리 화면을 잃지 않는지 권한 정책 요약을 함께 봅니다.',
+          '저장 후에는 대상 역할 계정으로 메뉴 노출과 직접 URL 접근이 모두 의도대로 동작하는지 확인합니다.'
+        ]
+      },
+      {
+        title: '이어지는 화면',
+        links: [
+          {
+            title: '권한 정책 요약',
+            description:
+              '저장된 메뉴 기준으로 역할별 화면 접근 가능 여부를 표로 확인합니다.',
+            href: '/admin/policy',
+            actionLabel: '권한 정책 열기'
+          },
+          {
+            title: '회원 관리',
+            description:
+              '메뉴 권한에 영향을 받는 멤버 역할과 상태를 함께 확인합니다.',
+            href: '/admin/members',
+            actionLabel: '회원 관리 열기'
+          },
+          {
+            title: '감사 로그',
+            description:
+              '메뉴 권한 변경 이력과 요청번호를 추적합니다.',
+            href: '/admin/logs',
+            actionLabel: '감사 로그 열기'
+          }
         ]
       }
     ]

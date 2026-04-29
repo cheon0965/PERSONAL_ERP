@@ -42,7 +42,7 @@ npm run test
    `핵심 쓰기 흐름`: `controller -> use-case -> port -> adapter`
    `읽기/조합 흐름`: `controller -> read service -> read repository -> projection`
    현재 승격 완료 모듈: `collected-transactions`, `recurring-rules`, `accounting-periods`, `import-batches`, `journal-entries`, `auth`, `admin`, `insurance-policies`, `plan-items`, `financial-statements`, `carry-forwards`
-6. `collected-transactions`, `recurring-rules`, `dashboard`, `forecast`, `accounting-periods`, `journal-entries`, `import-batches`처럼 모듈 바깥 참조가 있는 영역이면 `public.ts` 진입점도 같이 맞춥니다.
+6. `accounting-periods`, `carry-forwards`, `collected-transactions`, `dashboard`, `financial-statements`, `forecast`, `funding-account-status`, `import-batches`, `journal-entries`, `liabilities`, `navigation`, `plan-items`, `recurring-rules`처럼 모듈 바깥 참조가 있는 영역이면 `public.ts` 진입점도 같이 맞춥니다.
 7. 현재 요청이 어떤 `tenantId` / `TenantMembership` / `ActorRef` 경계에서 실행되는지 확인합니다.
    현재 HTTP surface는 `user.currentWorkspace` 기반으로 동작하더라도, 상위 도메인 기준은 Tenant/Ledger/Actor 경계라는 점을 문서와 코드에서 분리해 둡니다.
 8. 관련 테스트를 같이 추가합니다.
@@ -56,7 +56,7 @@ npm run test
 2. `features/<domain>`에 페이지, API, 폼, 훅을 둡니다.
 3. 공통 조각만 `shared`로 올립니다.
 4. feature API는 `shared/api/fetch-json.ts`를 사용해 인증/오류/fallback 정책을 같이 따릅니다.
-5. 로딩 실패와 제출 실패가 사용자에게 보이는지 확인합니다.
+5. 로딩 실패와 제출 실패는 사용자용 문구로 보이게 하고, 개발자 추적 단서는 `ApiRequestError`의 `errorCode`, `requestId`, `technicalMessage`에 남깁니다.
 6. 목록 갱신이 필요한 mutation이면 query cache 갱신 또는 invalidation을 함께 넣습니다.
 
 ## 5. 계약과 문서 동기화 절차
@@ -187,5 +187,6 @@ npm run check
 - contracts와 실제 응답 shape가 어긋나지 않았는지
 - 금액 필드가 `MoneyWon`, `Decimal(19,0)`, `HALF_UP`, safe integer, `@personal-erp/money` helper 기준을 벗어나지 않았는지
 - Swagger 노출 상태와 문서 설명이 달라지지 않았는지
+- 화면 오류 문구가 내부 함수명/영어 정책명만 노출하지 않고, 요청번호나 오류 코드 같은 추적 단서를 함께 남기는지
 - `docs/VALIDATION_NOTES.md`가 현재 검증 범위보다 뒤처지지 않았는지
 - `.secret-dir.local` 경로와 실제 SECRET 폴더 구성이 맞는지

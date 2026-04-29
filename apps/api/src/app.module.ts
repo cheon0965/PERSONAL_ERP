@@ -23,6 +23,7 @@ import { LiabilitiesModule } from './modules/liabilities/public';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { DashboardModule } from './modules/dashboard/public';
 import { ForecastModule } from './modules/forecast/public';
+import { FundingAccountStatusModule } from './modules/funding-account-status/public';
 import { ReferenceDataReadinessModule } from './modules/reference-data-readiness/reference-data-readiness.module';
 import { WorkspaceSettingsModule } from './modules/workspace-settings/workspace-settings.module';
 import { OperationsConsoleModule } from './modules/operations-console/operations-console.module';
@@ -60,6 +61,7 @@ import { NavigationModule } from './modules/navigation/public';
     LiabilitiesModule,
     VehiclesModule,
     DashboardModule,
+    FundingAccountStatusModule,
     ForecastModule
   ]
 })

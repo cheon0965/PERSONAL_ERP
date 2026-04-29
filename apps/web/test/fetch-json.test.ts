@@ -50,7 +50,8 @@ test('fetchJsonWithConfig returns fallback data when demo mode is explicitly ena
 });
 
 test('fetchJsonWithConfig does not fabricate mutation success from demo fallback', async () => {
-  const { fetchJsonWithConfig } = await import('../src/shared/api/fetch-json');
+  const { ApiRequestError, fetchJsonWithConfig } =
+    await import('../src/shared/api/fetch-json');
 
   await assert.rejects(
     () =>
@@ -70,13 +71,17 @@ test('fetchJsonWithConfig does not fabricate mutation success from demo fallback
         }
       ),
     (error: unknown) =>
-      error instanceof Error &&
-      error.message.includes('/collected-transactions')
+      error instanceof ApiRequestError &&
+      error.status === 0 &&
+      error.errorCode === 'NETWORK_REQUEST_FAILED' &&
+      error.path === '/collected-transactions' &&
+      error.technicalMessage?.includes('/collected-transactions') === true
   );
 });
 
 test('fetchJsonWithConfig throws a helpful error when demo mode is disabled', async () => {
-  const { fetchJsonWithConfig } = await import('../src/shared/api/fetch-json');
+  const { ApiRequestError, fetchJsonWithConfig } =
+    await import('../src/shared/api/fetch-json');
   await assert.rejects(
     () =>
       fetchJsonWithConfig('/collected-transactions', [], {
@@ -86,7 +91,12 @@ test('fetchJsonWithConfig throws a helpful error when demo mode is disabled', as
           throw new Error('connect ECONNREFUSED');
         }
       }),
-    /데모 폴백이 비활성화되어 있습니다/
+    (error: unknown) =>
+      error instanceof ApiRequestError &&
+      error.userMessage.includes('서버와 연결하지 못했습니다') &&
+      error.errorCode === 'NETWORK_REQUEST_FAILED' &&
+      error.technicalMessage?.includes('데모 폴백이 비활성화되어 있습니다') ===
+        true
   );
 });
 
@@ -194,10 +204,149 @@ test('fetchJsonWithConfig clears the session on 401 instead of falling back', as
       ),
     (error: unknown) =>
       error instanceof UnauthorizedRequestError &&
-      error.message === 'Invalid access token'
+      error.userMessage === '로그인이 만료되었습니다. 다시 로그인해 주세요.' &&
+      error.errorCode === 'AUTH_REQUIRED' &&
+      error.technicalMessage === 'Invalid access token'
   );
 
   assert.equal(unauthorizedCalls, 1);
+});
+
+test('fetchJsonWithConfig translates developer-oriented API messages and keeps diagnostics', async () => {
+  const { ApiRequestError, fetchJsonWithConfig } =
+    await import('../src/shared/api/fetch-json');
+
+  await assert.rejects(
+    () =>
+      fetchJsonWithConfig(
+        '/collected-transactions',
+        [],
+        {
+          apiBaseUrl: 'http://localhost:4000/api',
+          demoFallbackEnabled: false,
+          fetchImpl: async () =>
+            new Response(
+              JSON.stringify({ message: 'Funding account not found' }),
+              {
+                status: 404,
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-request-id': 'request-helpful-1'
+                }
+              }
+            )
+        },
+        { allowDemoFallback: false }
+      ),
+    (error: unknown) =>
+      error instanceof ApiRequestError &&
+      error.userMessage ===
+        '선택한 자금수단을 찾을 수 없습니다. 목록을 새로고침한 뒤 다시 선택해 주세요.' &&
+      error.errorCode === 'RESOURCE_NOT_FOUND' &&
+      error.requestId === 'request-helpful-1' &&
+      error.technicalMessage === 'Funding account not found'
+  );
+});
+
+test('fetchJsonWithConfig translates permission policy messages and preserves the raw clue', async () => {
+  const { ApiRequestError, fetchJsonWithConfig } =
+    await import('../src/shared/api/fetch-json');
+
+  await assert.rejects(
+    () =>
+      fetchJsonWithConfig(
+        '/workspace/settings',
+        { ok: false },
+        {
+          apiBaseUrl: 'http://localhost:4000/api',
+          demoFallbackEnabled: false,
+          fetchImpl: async () =>
+            new Response(
+              JSON.stringify({
+                message:
+                  'Only owners and managers can update workspace settings.',
+                requestId: 'request-policy-1'
+              }),
+              {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' }
+              }
+            )
+        },
+        { allowDemoFallback: false }
+      ),
+    (error: unknown) =>
+      error instanceof ApiRequestError &&
+      error.userMessage ===
+        '현재 권한으로는 이 작업을 진행할 수 없습니다. 필요한 역할 권한을 확인해 주세요.' &&
+      error.errorCode === 'ACCESS_DENIED' &&
+      error.requestId === 'request-policy-1' &&
+      error.technicalMessage ===
+        'Only owners and managers can update workspace settings.'
+  );
+});
+
+test('fetchJsonWithConfig translates domain resource names with natural Korean particles', async () => {
+  const { ApiRequestError, fetchJsonWithConfig } =
+    await import('../src/shared/api/fetch-json');
+
+  await assert.rejects(
+    () =>
+      fetchJsonWithConfig(
+        '/journal-entries',
+        [],
+        {
+          apiBaseUrl: 'http://localhost:4000/api',
+          demoFallbackEnabled: false,
+          fetchImpl: async () =>
+            new Response(
+              JSON.stringify({ message: 'Original journal entry not found.' }),
+              {
+                status: 404,
+                headers: { 'Content-Type': 'application/json' }
+              }
+            )
+        },
+        { allowDemoFallback: false }
+      ),
+    (error: unknown) =>
+      error instanceof ApiRequestError &&
+      error.userMessage ===
+        '선택한 원본 전표를 찾을 수 없습니다. 목록을 새로고침한 뒤 다시 선택해 주세요.'
+  );
+});
+
+test('fetchJsonWithConfig turns validator messages into user guidance', async () => {
+  const { ApiRequestError, fetchJsonWithConfig } =
+    await import('../src/shared/api/fetch-json');
+
+  await assert.rejects(
+    () =>
+      fetchJsonWithConfig(
+        '/auth/login',
+        { ok: false },
+        {
+          apiBaseUrl: 'http://localhost:4000/api',
+          demoFallbackEnabled: false,
+          fetchImpl: async () =>
+            new Response(
+              JSON.stringify({
+                message: ['email must be an email', 'password must be a string']
+              }),
+              {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' }
+              }
+            )
+        },
+        { allowDemoFallback: false }
+      ),
+    (error: unknown) =>
+      error instanceof ApiRequestError &&
+      error.userMessage ===
+        '입력값을 확인해 주세요. 이메일 형식이 올바르지 않습니다. 비밀번호 항목을 입력해 주세요.' &&
+      error.errorCode === 'REQUEST_INVALID'
+  );
 });
 
 test('fetchJsonWithConfig retries once after refreshing the access token', async () => {

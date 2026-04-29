@@ -444,6 +444,7 @@ function buildJournalEntriesHelpContext(isDetailLayout: boolean) {
       {
         title: '이 탭에서 하는 일',
         items: [
+          '검색과 기간 필터를 사용해 확인할 전표 범위를 먼저 좁힙니다.',
           '목록에서 전표 번호, 전표 일자, 원본 수집 거래를 먼저 확인합니다.',
           '선택한 전표의 상세 라인과 조정 이력을 검토합니다.',
           '필요하면 상세 화면이나 분할 화면에서 반전·정정 전표 생성까지 이어서 진행합니다.'
@@ -455,6 +456,32 @@ function buildJournalEntriesHelpContext(isDetailLayout: boolean) {
           '반전/정정 버튼은 현재 열린 운영 기간이 있어야 사용할 수 있습니다.',
           'POSTED 상태 전표만 추가 조정 대상으로 봅니다.',
           '아직 전표가 없다면 수집 거래 또는 계획 항목 화면에서 전표 준비 거래를 먼저 확정합니다.'
+        ]
+      },
+      {
+        title: '이어지는 화면',
+        links: [
+          {
+            title: '수집 거래',
+            description:
+              '전표가 아직 없는 실제 거래 후보를 보완하고 확정합니다.',
+            href: '/transactions',
+            actionLabel: '수집 거래 보기'
+          },
+          {
+            title: '재무제표 생성 / 선택',
+            description:
+              '잠금 월의 공식 보고 숫자에 전표가 어떻게 반영됐는지 확인합니다.',
+            href: '/financial-statements',
+            actionLabel: '재무제표 보기'
+          },
+          {
+            title: '월 마감',
+            description:
+              '전표 조정 후 마감 차단 사유가 남아 있는지 운영 기준으로 확인합니다.',
+            href: '/operations/month-end',
+            actionLabel: '월 마감 보기'
+          }
         ]
       }
     ],

@@ -426,6 +426,14 @@ export const defaultWorkspaceNavigationTree = [
         allowedRoles: OPERATORS
       },
       {
+        key: 'funding-account-status',
+        label: '자금수단별 현황',
+        description: '자금수단별 수입, 지출, 이체와 잔액 흐름을 확인합니다.',
+        href: '/funding-account-status',
+        iconKey: 'fundingAccounts',
+        allowedRoles: ALL_ROLES
+      },
+      {
         key: 'forecast',
         label: '기간 운영 전망',
         description: '월중 현금 흐름과 예비금 상태를 전망합니다.',

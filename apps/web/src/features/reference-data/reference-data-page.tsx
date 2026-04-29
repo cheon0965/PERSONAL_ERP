@@ -74,6 +74,32 @@ export function ReferenceDataPage() {
           '계정과목과 거래유형은 시스템 제공 항목이므로 존재 여부와 활성 상태를 확인합니다.',
           '준비 상태가 완료되면 월 운영 화면에서 운영 기간을 엽니다.'
         ]
+      },
+      {
+        title: '이어지는 화면',
+        links: [
+          {
+            title: '자금수단',
+            description:
+              '통장, 카드, 현금 계정과 기초 등록 상태를 먼저 정리합니다.',
+            href: '/reference-data/funding-accounts',
+            actionLabel: '자금수단 보기'
+          },
+          {
+            title: '카테고리',
+            description:
+              '수입·지출 분류가 거래 입력과 반복 규칙에서 바로 선택되도록 정리합니다.',
+            href: '/reference-data/categories',
+            actionLabel: '카테고리 보기'
+          },
+          {
+            title: '월 운영 시작',
+            description:
+              '기준 데이터 준비가 끝나면 운영 월을 열고 첫 월 기초 잔액을 입력합니다.',
+            href: '/periods/open',
+            actionLabel: '월 운영 시작 보기'
+          }
+        ]
       }
     ],
     readModelNote:

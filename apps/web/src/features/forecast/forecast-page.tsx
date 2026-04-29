@@ -80,6 +80,39 @@ export function ForecastPage() {
         ]
       },
       {
+        title: '이어지는 화면',
+        links: [
+          {
+            title: '계획 항목',
+            description:
+              '남은 계획 지출을 줄이거나 누락된 월 계획을 생성합니다.',
+            href: '/plan-items',
+            actionLabel: '계획 항목 보기'
+          },
+          {
+            title: '수집 거래',
+            description:
+              '전망에 반영되지 않은 실제 입출금 후보를 보완하고 전표로 확정합니다.',
+            href: '/transactions',
+            actionLabel: '수집 거래 보기'
+          },
+          {
+            title: '월 마감',
+            description:
+              '전망 확인 후 마감 가능 여부와 차단 사유를 운영 관점에서 점검합니다.',
+            href: '/operations/month-end',
+            actionLabel: '월 마감 보기'
+          },
+          {
+            title: '재무제표 생성 / 선택',
+            description:
+              '잠금된 월의 공식 보고 숫자와 전망 숫자를 비교합니다.',
+            href: '/financial-statements',
+            actionLabel: '재무제표 보기'
+          }
+        ]
+      },
+      {
         title: '참고 메모',
         description:
           '본문의 참고사항은 화면 도움말로 옮겨 관리합니다. 전망을 해석할 때 아래 메모를 함께 확인합니다.',

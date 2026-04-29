@@ -71,11 +71,13 @@
 - `SWAGGER_ENABLED=true`인 환경이라면 `GET /api/docs`가 열리는지 확인합니다.
 - `POST /auth/login`이 정상 응답하는지 확인합니다.
 - 주요 API 응답 헤더에 `x-request-id`가 포함되는지 확인합니다.
+- 브라우저 네트워크 탭에서 오류 응답의 `x-request-id`를 읽을 수 있는지 확인합니다. CORS 노출 헤더가 빠지면 Web 오류 알림의 요청번호가 비어 보입니다.
 - `POST /auth/login` 응답에 `Cache-Control: no-store`가 포함되는지 확인합니다.
 - 허용되지 않은 origin으로 cookie-auth 요청을 보냈을 때 `403 Origin not allowed`가 나는지 확인합니다.
 - 보호 엔드포인트 호출 시 Bearer 토큰 없이 `401`이 오는지 확인합니다.
 - 차단된 인증/권한 시나리오를 한 번 실행해 `auth.*`, `authorization.scope_denied`, `system.readiness_failed` 로그가 남는지 확인합니다.
 - 로그인 후 `GET /api/operations/summary`, `GET /api/operations/system-status`, `GET /api/operations/alerts`가 현재 workspace 기준으로 응답하는지 확인합니다.
+- 로그인 후 `GET /api/funding-account-status/summary`가 현재 workspace 기준 자금수단별 수입/지출/잔액 현황을 반환하는지 확인합니다.
 - 운영 반출을 허용한 계정으로 `POST /api/operations/exports`를 실행했을 때 UTF-8 CSV payload가 내려오고 `operations_export.run` 감사 이벤트가 남는지 확인합니다.
 - 운영 메모를 허용한 계정으로 `POST /api/operations/notes`를 실행했을 때 메모가 저장되고 `operations_note.create` 감사 이벤트가 남는지 확인합니다.
 - 업로드 배치 API를 확인할 때는 `POST /api/import-batches`의 UTF-8 텍스트 배치와 `POST /api/import-batches/files`의 IM뱅크 PDF multipart 배치가 모두 현재 workspace 기준으로 생성되는지 확인합니다.
@@ -110,9 +112,10 @@
 - `/imports`에서 UTF-8 텍스트 업로드와 IM뱅크 PDF 파일첨부 업로드가 열리고, `/imports/[batchId]` 작업대에서 최신 진행월 기준 collect preview, 단건 등록, 일괄 등록 진행률이 표시되는지 확인합니다.
 - `/transactions`에서 거래 Quick Add 저장 후 목록이 갱신되고, 전표 준비 거래를 확정할 수 있는지 확인합니다.
 - `/journal-entries`에서 확정 전표를 조회하고 반전/정정 전표 CTA가 유지되는지 확인합니다.
-- `/financial-statements`, `/carry-forwards`, `/forecast`에서 재무제표 생성, 차기 이월 생성, 현재 월/다음 달 전망 확인 흐름이 깨지지 않았는지 확인합니다.
+- `/financial-statements`, `/funding-account-status`, `/carry-forwards`, `/forecast`에서 재무제표 생성, 자금수단별 현황, 차기 이월 생성, 현재 월/다음 달 전망 확인 흐름이 깨지지 않았는지 확인합니다.
 - 브라우저 새로고침 후 `POST /auth/refresh` 기반 세션 복원이 되는지 확인합니다.
-- `dashboard`, `reference-data`, `periods`, `plan-items`, `transactions`, `journal-entries`, `financial-statements`, `carry-forwards`, `forecast`의 운영 안내 empty state와 CTA가 깨지지 않았는지 확인합니다.
+- 실패 경고가 내부 함수명이나 영어 정책명만 노출하지 않고, 사용자가 취할 수 있는 안내와 오류 코드/요청번호를 함께 보여주는지 확인합니다.
+- `dashboard`, `reference-data`, `periods`, `plan-items`, `transactions`, `journal-entries`, `financial-statements`, `funding-account-status`, `carry-forwards`, `forecast`의 운영 안내 empty state와 CTA가 깨지지 않았는지 확인합니다.
 
 ## DB와 시드 데이터 경계
 

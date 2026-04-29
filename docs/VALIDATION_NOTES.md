@@ -160,6 +160,8 @@
   현재 구현 기준 current workspace 범위만 반환하는지, 내부 접근 제어 필드를 노출하지 않는지 검증
 - `GET /dashboard/summary`
   다른 workspace/ledger 데이터가 집계에 섞이지 않고 raw read model을 노출하지 않는지 검증
+- `GET /funding-account-status/summary`
+  현재 구현 기준 선택 기간/자금수단 범위에서 수집 거래 기준과 확정 전표 기준의 자금수단별 수입, 지출, 이체, 잔액 현황을 반환하는 read model입니다. 전용 요청 단위 회귀 테스트는 아직 추가되지 않았고, 현재 자동 검증은 typecheck/build/lint/docs surface를 기준으로 합니다.
 - `GET /forecast/monthly`
   현재 구현 기준 current workspace 집계만 사용하고 month query를 그대로 반영하는지 검증
 - `GET /operations/summary`, `GET /operations/checklist`, `GET /operations/exceptions`, `GET /operations/month-end`, `GET /operations/import-status`, `GET /operations/system-status`, `GET /operations/alerts`, `GET/POST /operations/exports`, `GET/POST /operations/notes`
@@ -177,6 +179,7 @@
 - `/settings/workspace`, `/settings/account/profile`, `/settings/account/password`, `/settings/account/sessions`, `/settings/account/events` 설정 route와 workspace/account API helper의 보호 요청 path, Bearer token, mutation body 직렬화
 - `/operations`, `/operations/checklist`, `/operations/exceptions`, `/operations/month-end`, `/operations/imports`, `/operations/status`, `/operations/alerts`, `/operations/exports`, `/operations/notes` 운영 지원 route와 operations API helper의 보호 요청 path, Bearer token, mutation body 직렬화
 - 요청 실패 메시지 안내
+  공통 `fetch-json` 경계에서 네트워크 실패, 인증 만료, 개발자식 API 문구, 권한 정책 문구, validator 배열 메시지를 사용자용 문구로 변환하고 `errorCode`, `requestId`, `technicalMessage`를 보존하는지 검증
 - 브라우저에서 `/transactions` 보호 라우트(Collected Transactions 화면) 리다이렉트
 - 브라우저 기준 로그인 후 세션 복원
 - 실제 브라우저 상호작용으로 거래 Quick Add 성공 및 목록 갱신
@@ -186,19 +189,20 @@
 - 실제 브라우저 상호작용으로 `/insurances`에서 보험 계약 생성, 수정, 비활성화와 목록 반영이 동작하는지 검증
 - 실제 브라우저 상호작용으로 `/vehicles`에서 차량 생성, 수정, 연료 이력 생성/수정, 정비 이력 생성/수정과 목록 반영이 동작하는지 검증
 - API 요청 테스트로 차량 연료/정비 저장 시 선택적 수집거래가 생성되는지, 차량에서 생성된 연결 수집거래가 거래 화면 직접 수정/삭제 경로에서 차단되는지, 미확정 연결 수집거래가 차량 로그 삭제와 함께 정리되는지, 전표 확정 이후 차량 기록 수정/삭제가 차단되는지 검증
-- 실제 브라우저 상호작용으로 `/plan-items/generate`에서 현재 월 계획 항목과 연결 반복성 수집 거래를 생성하고, `/plan-items`에서 상태를 확인하며 `dashboard`/`forecast` 반영, `/financial-statements` 생성, `/carry-forwards` 생성과 차기 이월 basis note 반영이 동작하는지 검증
+- 실제 브라우저 상호작용으로 `/plan-items/generate`에서 현재 월 계획 항목과 연결 반복성 수집 거래를 생성하고, `/plan-items`에서 상태를 확인하며 `dashboard`/`funding-account-status`/`forecast` 반영, `/financial-statements` 생성, `/carry-forwards` 생성과 차기 이월 basis note 반영이 동작하는지 검증
 - 실제 브라우저 상호작용으로 `/imports` 업로드 배치에서 행을 기존 계획 기반 수집 거래에 흡수/매칭하거나 새 수집 거래로 등록한 뒤 `/transactions`에서 전표 확정을 실행하고 `/journal-entries`에서 생성 전표를 여는 월 운영 cross-feature 흐름을 검증
 - API 요청 테스트로 IM뱅크 PDF 업로드와 업로드 배치 일괄 등록 Job/진행률/동시 작업 잠금 경계를 검증하고, Web 단위에서는 일괄 등록 버튼/진행률 표시와 API helper path를 함께 확인
 - 루트 `ci:local:*` 스크립트와 `docs/DEVELOPMENT_GUIDE.md` 매핑표로 GitHub Actions 주요 job을 로컬에서 다시 따를 수 있는 진입점을 제공
 - `npm run test:e2e:smoke:build`로 in-process production build/start 경로에 결과물을 올린 뒤 health route 응답 기준 최소 HTTP smoke를 자동 검증
 - `npm run test:e2e:smoke:build:browser`로는 로그인/세션 복원, 운영 체크리스트 핵심 CTA, 현재 작업 기준 fallback 같은 브라우저 build smoke를 루트 래퍼 경로로 필요 시 별도로 검증
 - CI의 `e2e-smoke` 잡은 개발 서버가 아니라 build 결과물 기준 HTTP smoke를 실행
-- 실제 브라우저 상호작용으로 `dashboard`, `reference-data`, `periods`, `insurances`, `vehicles`, `recurring`, `plan-items`, `imports`, `transactions`, `journal-entries`, `financial-statements`, `carry-forwards`, `forecast`, `settings`, `admin`, `operations`의 대표 운영 체크리스트 empty state, readiness 경고, fallback CTA가 유지되는지 검증
+- 실제 브라우저 상호작용으로 `dashboard`, `funding-account-status`, `reference-data`, `periods`, `insurances`, `vehicles`, `recurring`, `plan-items`, `imports`, `transactions`, `journal-entries`, `financial-statements`, `carry-forwards`, `forecast`, `settings`, `admin`, `operations`의 대표 운영 체크리스트 empty state, readiness 경고, fallback CTA가 유지되는지 검증
 - 기준 데이터 CRUD, 반복 규칙 CRUD, 보험 계약 CRUD, 차량 기본 정보 CRUD 브라우저 검증은 현재 `npm run test:e2e` 전체 브라우저 회귀 범위에 남기고, CI smoke에서는 제외합니다.
 
 ## 현재 남아 있는 공백
 
 - 간결 헤더와 `도메인 가이드` 노출, 페이지 전환 시 도움말 문맥 정리 동작은 현재 전용 자동 테스트가 없음
+- `/funding-account-status`의 기준 토글, 자금수단 필터, 차트/거래 테이블 상호작용은 현재 전용 브라우저 E2E가 없음
 - 루트 `/` 공개 홍보 메인의 비로그인 CTA와 인증 사용자 `/dashboard` 이동은 현재 전용 자동 테스트가 없음
 - Docker가 없는 개발 PC에서는 `test:prisma`, `semgrep-ce`, `gitleaks`를 로컬에서 CI와 동일하게 재현하기 어려움
 - Windows `core.autocrlf=true` checkout에서는 `npm run check:quick`의 Prettier 단계가 CI(Ubuntu LF 기준)와 다르게 보일 수 있음

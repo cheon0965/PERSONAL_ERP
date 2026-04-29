@@ -9,6 +9,7 @@ export * from './accounting';
 export * from './transactions';
 export * from './recurring';
 export * from './planning';
+export * from './funding-account-overview';
 export * from './assets';
 export * from './imports';
 export * from './liabilities';

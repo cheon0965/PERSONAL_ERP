@@ -626,6 +626,29 @@ function buildCarryForwardsHelpContext(mode: CarryForwardsPageMode) {
           '이월 결과를 확인한 뒤 기간 전망에서 다음 월 준비 상태와 안전 여력을 확인합니다.',
           '다음 운영 월을 실제로 진행하려면 월 운영 화면에서 대상 월 상태를 확인합니다.',
           '이월 전 보고 숫자를 다시 보고 싶으면 재무제표 화면으로 돌아갑니다.'
+        ],
+        links: [
+          {
+            title: '기간 운영 전망',
+            description:
+              '다음 월 준비 상태와 안전 여력을 이월 기준과 함께 확인합니다.',
+            href: '/forecast',
+            actionLabel: '기간 운영 전망 보기'
+          },
+          {
+            title: '운영 기간',
+            description:
+              '다음 운영 월이 열려 있는지, 잠금 월과 이력 연결이 맞는지 확인합니다.',
+            href: '/periods',
+            actionLabel: '운영 기간 보기'
+          },
+          {
+            title: '재무제표 생성 / 선택',
+            description:
+              '이월 전 공식 보고 숫자를 다시 확인합니다.',
+            href: '/financial-statements',
+            actionLabel: '재무제표 보기'
+          }
         ]
       }
     ],

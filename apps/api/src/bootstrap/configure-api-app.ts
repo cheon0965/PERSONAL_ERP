@@ -6,6 +6,7 @@ import {
   applyBrowserBoundaryHeaders,
   createCorsOriginDelegate
 } from '../common/infrastructure/security/browser-boundary';
+import { REQUEST_ID_HEADER } from '../common/infrastructure/operational/request-context';
 import type { ApiEnv } from '../config/api-env';
 
 type ConfigureApiAppOptions = {
@@ -21,7 +22,8 @@ export function configureApiApp(
 ): void {
   app.enableCors({
     origin: createCorsOriginDelegate(env.CORS_ALLOWED_ORIGINS),
-    credentials: true
+    credentials: true,
+    exposedHeaders: [REQUEST_ID_HEADER]
   });
   app.setGlobalPrefix('api');
   app.use(cookieParser());
