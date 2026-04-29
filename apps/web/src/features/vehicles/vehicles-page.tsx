@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Stack } from '@mui/material';
+import { Stack } from '@mui/material';
 import type {
   VehicleFuelLogItem,
   VehicleItem,
@@ -10,10 +10,15 @@ import type {
   VehicleOperatingSummaryView
 } from '@personal-erp/contracts';
 import { subtractMoneyWon } from '@personal-erp/money';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { useAppNotification } from '@/shared/providers/notification-provider';
 import { ConfirmActionDialog } from '@/shared/ui/confirm-action-dialog';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -52,10 +57,7 @@ import {
 } from './vehicles-section-nav';
 import { buildVehicleOperatingSummaryView } from './vehicles.summary';
 
-type SubmitFeedback = {
-  severity: 'success' | 'error';
-  message: string;
-} | null;
+type SubmitFeedback = FeedbackAlertValue;
 
 type VehicleDrawerState =
   | { mode: 'create' }
@@ -304,13 +306,7 @@ export function VehiclesPage({
       });
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '차량 기록을 삭제하지 못했습니다.'
-      });
+      setFeedback(buildErrorFeedback(error, '차량 기록을 삭제하지 못했습니다.'));
     }
   });
 
@@ -466,11 +462,7 @@ export function VehiclesPage({
 
       <VehiclesSectionNav />
 
-      {feedback?.severity === 'error' ? (
-        <Alert severity={feedback.severity} variant="outlined">
-          {feedback.message}
-        </Alert>
-      ) : null}
+      <FeedbackAlert feedback={feedback} />
       {vehiclesError ? (
         <QueryErrorAlert
           title="차량 정보 조회에 실패했습니다."

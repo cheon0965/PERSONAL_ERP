@@ -2,6 +2,7 @@
 
 import type { QueryClient } from '@tanstack/react-query';
 import type { CategoryItem, FundingAccountItem } from '@personal-erp/contracts';
+import type { FeedbackAlertValue } from '@/shared/ui/feedback-alert';
 import {
   categoriesManagementQueryKey,
   categoriesQueryKey,
@@ -10,10 +11,7 @@ import {
   referenceDataReadinessQueryKey
 } from './reference-data.api';
 
-export type FeedbackState = {
-  severity: 'success' | 'error';
-  message: string;
-} | null;
+export type FeedbackState = FeedbackAlertValue;
 
 export type CategoryEditorState =
   | { mode: 'create' }

@@ -4,6 +4,7 @@ import type {
 } from '@personal-erp/contracts';
 import { z } from 'zod';
 import { sumMoneyWon } from '@personal-erp/money';
+import type { FeedbackAlertValue } from '@/shared/ui/feedback-alert';
 import { createNonNegativeMoneyWonSchema } from '@/shared/lib/money';
 
 export type JournalEntryAdjustmentMode = 'reverse' | 'correct';
@@ -28,10 +29,7 @@ export type JournalEntryAdjustmentContentProps = Pick<
   entry: JournalEntryItem;
 };
 
-export type SubmitFeedback = {
-  severity: 'success' | 'error';
-  message: string;
-} | null;
+export type SubmitFeedback = FeedbackAlertValue;
 
 export const reverseJournalEntrySchema = z.object({
   entryDate: z.string().min(1, '전표 일자를 입력해 주세요.'),

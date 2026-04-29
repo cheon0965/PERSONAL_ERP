@@ -1,15 +1,20 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Stack } from '@mui/material';
+import { Stack } from '@mui/material';
 import type {
   AdminMemberItem,
   TenantMembershipRole
 } from '@personal-erp/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { DataTableCard } from '@/shared/ui/data-table-card';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -47,7 +52,10 @@ export function AdminMembersPage() {
   const canReadMembers =
     isSystemAdmin || role === 'OWNER' || role === 'MANAGER';
   const canManageMembers = isSystemAdmin || role === 'OWNER';
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackAlertValue>(null);
+  const [inviteFeedback, setInviteFeedback] =
+    useState<FeedbackAlertValue>(null);
+  const [editFeedback, setEditFeedback] = useState<FeedbackAlertValue>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<TenantMembershipRole>('VIEWER');
@@ -120,15 +128,14 @@ export function AdminMembersPage() {
   const inviteMutation = useMutation({
     mutationFn: inviteAdminMember,
     onSuccess: async () => {
-      setFeedback('초대 메일을 보냈습니다.');
+      setFeedback({ severity: 'success', message: '초대 메일을 보냈습니다.' });
+      setInviteFeedback(null);
       setInviteOpen(false);
       setInviteEmail('');
       await invalidateMembers();
     },
     onError: (error) => {
-      setFeedback(
-        error instanceof Error ? error.message : '초대에 실패했습니다.'
-      );
+      setInviteFeedback(buildErrorFeedback(error, '초대에 실패했습니다.'));
     }
   });
 
@@ -143,14 +150,16 @@ export function AdminMembersPage() {
         input.member
       ),
     onSuccess: async () => {
-      setFeedback('멤버 역할을 변경했습니다.');
+      setFeedback({
+        severity: 'success',
+        message: '멤버 역할을 변경했습니다.'
+      });
+      setEditFeedback(null);
       setEditingMember(null);
       await invalidateMembers();
     },
     onError: (error) => {
-      setFeedback(
-        error instanceof Error ? error.message : '역할 변경에 실패했습니다.'
-      );
+      setEditFeedback(buildErrorFeedback(error, '역할 변경에 실패했습니다.'));
     }
   });
 
@@ -165,28 +174,28 @@ export function AdminMembersPage() {
         input.member
       ),
     onSuccess: async () => {
-      setFeedback('멤버 상태를 변경했습니다.');
+      setFeedback({
+        severity: 'success',
+        message: '멤버 상태를 변경했습니다.'
+      });
+      setEditFeedback(null);
       setEditingMember(null);
       await invalidateMembers();
     },
     onError: (error) => {
-      setFeedback(
-        error instanceof Error ? error.message : '상태 변경에 실패했습니다.'
-      );
+      setEditFeedback(buildErrorFeedback(error, '상태 변경에 실패했습니다.'));
     }
   });
 
   const removeMutation = useMutation({
     mutationFn: (member: AdminMemberItem) => removeAdminMember(member.id),
     onSuccess: async () => {
-      setFeedback('멤버를 제거했습니다.');
+      setFeedback({ severity: 'success', message: '멤버를 제거했습니다.' });
       setRemoveTarget(null);
       await invalidateMembers();
     },
     onError: (error) => {
-      setFeedback(
-        error instanceof Error ? error.message : '멤버 제거에 실패했습니다.'
-      );
+      setFeedback(buildErrorFeedback(error, '멤버 제거에 실패했습니다.'));
     }
   });
 
@@ -196,6 +205,8 @@ export function AdminMembersPage() {
         canManageMembers,
         showTenant: isSystemAdmin,
         onEdit: (member) => {
+          setFeedback(null);
+          setEditFeedback(null);
           setEditingMember(member);
           setNextRole(member.role);
           setNextStatus(member.status === 'INVITED' ? 'ACTIVE' : member.status);
@@ -309,14 +320,18 @@ export function AdminMembersPage() {
           }
         ]}
         primaryActionLabel="멤버 초대"
-        primaryActionOnClick={() => setInviteOpen(true)}
+        primaryActionOnClick={() => {
+          setFeedback(null);
+          setInviteFeedback(null);
+          setInviteOpen(true);
+        }}
         primaryActionDisabled={
           !canManageMembers || (isSystemAdmin && tenants.length === 0)
         }
         secondaryActionLabel="멤버 목록 보기"
         secondaryActionHref="#member-table"
       />
-      {feedback ? <Alert variant="outlined">{feedback}</Alert> : null}
+      <FeedbackAlert feedback={feedback} />
 
       <AdminMembersAccessAlert canReadMembers={canReadMembers} role={role} />
 
@@ -363,41 +378,55 @@ export function AdminMembersPage() {
 
       <AdminMemberInviteDrawer
         open={inviteOpen}
+        feedback={inviteFeedback}
         inviteEmail={inviteEmail}
         inviteRole={inviteRole}
         inviteTenantId={inviteTenantId}
         isSystemAdmin={isSystemAdmin}
         isPending={inviteMutation.isPending}
         tenants={tenants}
-        onClose={() => setInviteOpen(false)}
+        onClose={() => {
+          setInviteOpen(false);
+          setInviteFeedback(null);
+        }}
         onInviteEmailChange={setInviteEmail}
         onInviteRoleChange={setInviteRole}
         onInviteTenantChange={setInviteTenantId}
-        onSubmit={() =>
+        onSubmit={() => {
+          setFeedback(null);
+          setInviteFeedback(null);
           inviteMutation.mutate({
             email: inviteEmail,
             role: inviteRole,
             ...(isSystemAdmin ? { tenantId: inviteTenantId } : {})
-          })
-        }
+          });
+        }}
       />
 
       <AdminMemberEditDrawer
         editingMember={editingMember}
+        feedback={editFeedback}
         nextRole={nextRole}
         nextStatus={nextStatus}
         isRolePending={roleMutation.isPending}
         isStatusPending={statusMutation.isPending}
-        onClose={() => setEditingMember(null)}
+        onClose={() => {
+          setEditingMember(null);
+          setEditFeedback(null);
+        }}
         onNextRoleChange={setNextRole}
         onNextStatusChange={setNextStatus}
         onSubmitRole={() => {
           if (editingMember) {
+            setFeedback(null);
+            setEditFeedback(null);
             roleMutation.mutate({ member: editingMember, role: nextRole });
           }
         }}
         onSubmitStatus={() => {
           if (editingMember) {
+            setFeedback(null);
+            setEditFeedback(null);
             statusMutation.mutate({
               member: editingMember,
               status: nextStatus

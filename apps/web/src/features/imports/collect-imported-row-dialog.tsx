@@ -17,11 +17,13 @@ import type {
   ReferenceDataReadinessSummary
 } from '@personal-erp/contracts';
 import { ReferenceDataReadinessAlert } from '@/features/reference-data/reference-data-readiness';
+import { readErrorUserMessage } from '@/shared/api/fetch-json';
 import { formatWon } from '@/shared/lib/format';
+import { FeedbackAlert } from '@/shared/ui/feedback-alert';
 import { FormDrawer } from '@/shared/ui/form-drawer';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { CollectPreviewSummary } from './imports.summary-block';
-import type { ImportedRowTableItem } from './imports.shared';
+import type { FeedbackState, ImportedRowTableItem } from './imports.shared';
 
 type CollectPreviewState = {
   isLoading: boolean;
@@ -36,6 +38,7 @@ export function CollectImportedRowDialog({
   fundingAccounts,
   categories,
   collectForm,
+  feedback,
   collectPreview,
   submitPending,
   canSubmit,
@@ -49,6 +52,7 @@ export function CollectImportedRowDialog({
   fundingAccounts: FundingAccountItem[];
   categories: CategoryItem[];
   collectForm: CollectImportedRowRequest;
+  feedback: FeedbackState;
   collectPreview: CollectPreviewState;
   submitPending: boolean;
   canSubmit: boolean;
@@ -198,9 +202,10 @@ export function CollectImportedRowDialog({
                 </Typography>
               ) : collectPreview.error ? (
                 <Alert severity="warning" variant="outlined">
-                  {collectPreview.error instanceof Error
-                    ? collectPreview.error.message
-                    : '자동 판정 결과를 불러오지 못했습니다.'}
+                  {readErrorUserMessage(
+                    collectPreview.error,
+                    '자동 판정 결과를 불러오지 못했습니다.'
+                  )}
                 </Alert>
               ) : collectPreview.data ? (
                 <CollectPreviewSummary preview={collectPreview.data} />
@@ -212,6 +217,7 @@ export function CollectImportedRowDialog({
             </Stack>
           </Box>
 
+          <FeedbackAlert feedback={feedback} />
           <Button
             variant="contained"
             disabled={submitPending || !canSubmit}

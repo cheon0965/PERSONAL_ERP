@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import { ReferenceDataReadinessAlert } from '@/features/reference-data/reference-data-readiness';
 import { ConfirmActionDialog } from '@/shared/ui/confirm-action-dialog';
+import { FeedbackAlert } from '@/shared/ui/feedback-alert';
 import { FormDrawer } from '@/shared/ui/form-drawer';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
@@ -64,11 +65,7 @@ export function TransactionsPage() {
           상단에 먼저 배치했습니다.
         </Alert>
       ) : null}
-      {page.feedback?.severity === 'error' ? (
-        <Alert severity={page.feedback.severity} variant="outlined">
-          {page.feedback.message}
-        </Alert>
-      ) : null}
+      <FeedbackAlert feedback={page.feedback} />
       {page.currentPeriodQuery.error ? (
         <QueryErrorAlert
           title="현재 운영 기간을 확인하지 못했습니다."

@@ -26,6 +26,7 @@ import {
   referenceDataReadinessQueryKey
 } from '@/features/reference-data/reference-data.api';
 import { collectedTransactionsQueryKey } from '@/features/transactions/transactions.api';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { useAppNotification } from '@/shared/providers/notification-provider';
 import {
@@ -116,6 +117,10 @@ export function useImportsPage(
   const { notifySuccess } = useAppNotification();
   const hasPinnedSelectedBatch = initialSelectedBatchId != null;
   const [feedback, setFeedback] = React.useState<FeedbackState>(null);
+  const [uploadFeedback, setUploadFeedback] =
+    React.useState<FeedbackState>(null);
+  const [collectFeedback, setCollectFeedback] =
+    React.useState<FeedbackState>(null);
   const [selectedBatchId, setSelectedBatchId] = React.useState<string | null>(
     initialSelectedBatchId
   );
@@ -489,13 +494,9 @@ export function useImportsPage(
       await queryClient.invalidateQueries({ queryKey: importBatchesQueryKey });
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '업로드 배치를 생성하지 못했습니다.'
-      });
+      setUploadFeedback(
+        buildErrorFeedback(error, '업로드 배치를 생성하지 못했습니다.')
+      );
     }
   });
 
@@ -563,13 +564,12 @@ export function useImportsPage(
       ]);
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '업로드 행을 수집 거래로 올리지 못했습니다.'
-      });
+      setCollectFeedback(
+        buildErrorFeedback(
+          error,
+          '업로드 행을 수집 거래로 올리지 못했습니다.'
+        )
+      );
     }
   });
   const bulkCollectMutation = useMutation({
@@ -594,13 +594,9 @@ export function useImportsPage(
       });
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '업로드 행 일괄 등록에 실패했습니다.'
-      });
+      setFeedback(
+        buildErrorFeedback(error, '업로드 행 일괄 등록에 실패했습니다.')
+      );
     }
   });
   const cancelBulkCollectJobMutation = useMutation({
@@ -633,13 +629,12 @@ export function useImportsPage(
       ]);
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '업로드 행 일괄 등록 작업을 중단하지 못했습니다.'
-      });
+      setFeedback(
+        buildErrorFeedback(
+          error,
+          '업로드 행 일괄 등록 작업을 중단하지 못했습니다.'
+        )
+      );
     }
   });
   const deleteImportBatchMutation = useMutation({
@@ -653,13 +648,9 @@ export function useImportsPage(
       await queryClient.invalidateQueries({ queryKey: importBatchesQueryKey });
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '업로드 배치를 삭제하지 못했습니다.'
-      });
+      setFeedback(
+        buildErrorFeedback(error, '업로드 배치를 삭제하지 못했습니다.')
+      );
     }
   });
   const cancelImportBatchCollectionMutation = useMutation({
@@ -682,13 +673,9 @@ export function useImportsPage(
       ]);
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '업로드 배치 등록을 취소하지 못했습니다.'
-      });
+      setFeedback(
+        buildErrorFeedback(error, '업로드 배치 등록을 취소하지 못했습니다.')
+      );
     }
   });
 
@@ -712,6 +699,8 @@ export function useImportsPage(
     }
 
     setSelectedRowId(row.id);
+    setFeedback(null);
+    setCollectFeedback(null);
     setCollectForm((current) => ({
       ...current,
       type: row.collectTypeHint ?? current.type
@@ -741,12 +730,12 @@ export function useImportsPage(
   }
 
   async function submitUpload() {
-    setFeedback(null);
+    setUploadFeedback(null);
 
     try {
       await createImportBatchMutation.mutateAsync(uploadForm);
     } catch {
-      // React Query의 onError가 이미 실패를 페이지 피드백 영역에 반영한다.
+      // React Query의 onError가 이미 실패를 업로드 드로어에 반영한다.
     }
   }
 
@@ -755,7 +744,7 @@ export function useImportsPage(
       return;
     }
 
-    setFeedback(null);
+    setCollectFeedback(null);
 
     const potentialDuplicateTransactionCount =
       collectPreviewQuery.data?.autoPreparation
@@ -787,7 +776,7 @@ export function useImportsPage(
         request
       });
     } catch {
-      // React Query의 onError가 이미 실패를 페이지 피드백 영역에 반영한다.
+      // React Query의 onError가 이미 실패를 수집 거래 등록 드로어에 반영한다.
     }
   }
 
@@ -943,8 +932,15 @@ export function useImportsPage(
     cancelSelectedBatchCollection,
     cancelSelectedBatchCollectionPending:
       cancelImportBatchCollectionMutation.isPending,
-    closeCollectDrawer: () => setCollectDrawerOpen(false),
-    closeUploadDrawer: () => setUploadDrawerOpen(false),
+    closeCollectDrawer: () => {
+      setCollectDrawerOpen(false);
+      setCollectFeedback(null);
+    },
+    closeUploadDrawer: () => {
+      setUploadDrawerOpen(false);
+      setUploadFeedback(null);
+    },
+    collectFeedback,
     collectForm,
     collectPreview: {
       isLoading: collectPreviewQuery.isLoading,
@@ -966,7 +962,11 @@ export function useImportsPage(
       bulkCollectMutation.isPending || isBulkCollectJobRunning,
     isCollectDrawerOpen,
     isUploadDrawerOpen,
-    openUploadDrawer: () => setUploadDrawerOpen(true),
+    openUploadDrawer: () => {
+      setFeedback(null);
+      setUploadFeedback(null);
+      setUploadDrawerOpen(true);
+    },
     prepareCollectRow: handlePrepareCollectRow,
     referenceDataReadinessQuery,
     selectBatch: handleSelectBatch,
@@ -987,6 +987,7 @@ export function useImportsPage(
     updateCollectForm,
     updateBulkCollectForm,
     updateUploadForm,
+    uploadFeedback,
     uploadFundingAccounts,
     uploadForm
   };

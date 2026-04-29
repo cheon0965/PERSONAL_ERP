@@ -25,8 +25,10 @@ import {
   getReferenceDataReadiness,
   referenceDataReadinessQueryKey
 } from '@/features/reference-data/reference-data.api';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { webRuntime } from '@/shared/config/env';
 import { useAppNotification } from '@/shared/providers/notification-provider';
+import type { FeedbackAlertValue } from '@/shared/ui/feedback-alert';
 import { resolveStatusLabel } from '@/shared/ui/status-chip';
 import {
   buildCollectedTransactionFallbackItem,
@@ -46,10 +48,7 @@ import {
 
 export type TransactionFormMode = 'create' | 'edit';
 
-type SubmitFeedback = {
-  severity: 'success' | 'error';
-  message: string;
-} | null;
+type SubmitFeedback = FeedbackAlertValue;
 
 type SaveTransactionMutationInput = {
   mode: TransactionFormMode;
@@ -343,15 +342,14 @@ export function useTransactionForm(input: {
           : `수집 거래를 등록했고 ${resolveStatusLabel(saved.postingStatus)} 상태로 반영했습니다.`
       );
     } catch (error) {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : input.mode === 'edit'
-              ? '수집 거래를 수정하지 못했습니다.'
-              : '수집 거래를 등록하지 못했습니다.'
-      });
+      setFeedback(
+        buildErrorFeedback(
+          error,
+          input.mode === 'edit'
+            ? '수집 거래를 수정하지 못했습니다.'
+            : '수집 거래를 등록하지 못했습니다.'
+        )
+      );
     }
   }
 

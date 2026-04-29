@@ -23,6 +23,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { resendVerificationEmail, verifyEmail } from '@/features/auth/auth.api';
+import { readErrorUserMessage } from '@/shared/api/fetch-json';
 import { brandTokens } from '@/shared/theme/tokens';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { AuthCardHeader } from './auth-card-header';
@@ -70,7 +71,7 @@ export function VerifyEmailPage() {
       .catch((error) => {
         setStatus('failed');
         setMessage(
-          error instanceof Error ? error.message : '이메일 인증에 실패했습니다.'
+          readErrorUserMessage(error, '이메일 인증에 실패했습니다.')
         );
       });
   }, [token]);
@@ -171,9 +172,10 @@ export function VerifyEmailPage() {
                         );
                       } catch (error) {
                         setResendMessage(
-                          error instanceof Error
-                            ? error.message
-                            : '인증 메일 재발송에 실패했습니다.'
+                          readErrorUserMessage(
+                            error,
+                            '인증 메일 재발송에 실패했습니다.'
+                          )
                         );
                       }
                     })}

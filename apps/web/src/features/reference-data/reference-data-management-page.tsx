@@ -1,6 +1,7 @@
 'use client';
 
-import { Alert, Stack } from '@mui/material';
+import { Stack } from '@mui/material';
+import { FeedbackAlert } from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -75,11 +76,7 @@ export function ReferenceDataManagementPage({
 
       <ReferenceDataSectionNav />
 
-      {page.feedback?.severity === 'error' && !editorOpen ? (
-        <Alert severity={page.feedback.severity} variant="outlined">
-          {page.feedback.message}
-        </Alert>
-      ) : null}
+      <FeedbackAlert feedback={!editorOpen ? page.feedback : null} />
 
       {page.queryErrors.length > 0 ? (
         <QueryErrorAlert
@@ -102,7 +99,7 @@ export function ReferenceDataManagementPage({
           <FundingAccountEditorDrawer
             editorState={page.fundingAccountEditorState}
             editingFundingAccount={page.editingFundingAccount}
-            feedback={page.feedback}
+            feedback={page.fundingAccountEditorFeedback}
             busy={page.saveFundingAccountPending}
             onClose={page.closeFundingAccountEditor}
             onSubmit={page.submitFundingAccount}
@@ -117,7 +114,7 @@ export function ReferenceDataManagementPage({
           />
           <FundingAccountBootstrapDialog
             target={page.fundingAccountBootstrapTarget}
-            feedback={page.feedback}
+            feedback={page.fundingAccountBootstrapFeedback}
             busy={page.completeFundingAccountBootstrapPending}
             onClose={page.closeFundingAccountBootstrapDialog}
             onSubmit={page.submitFundingAccountBootstrap}
@@ -145,7 +142,7 @@ export function ReferenceDataManagementPage({
           <CategoryEditorDrawer
             editorState={page.categoryEditorState}
             editingCategory={page.editingCategory}
-            feedback={page.feedback}
+            feedback={page.categoryEditorFeedback}
             busy={page.saveCategoryPending}
             onClose={page.closeCategoryEditor}
             onSubmit={page.submitCategory}

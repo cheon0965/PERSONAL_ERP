@@ -19,6 +19,10 @@ import type {
 } from '@personal-erp/contracts';
 import { ConfirmActionDialog } from '@/shared/ui/confirm-action-dialog';
 import { GridActionCell } from '@/shared/ui/data-grid-cell';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { FormDrawer } from '@/shared/ui/form-drawer';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { SectionCard } from '@/shared/ui/section-card';
@@ -412,6 +416,7 @@ export function AdminMembersFilterToolbar({
 
 export function AdminMemberInviteDrawer({
   open,
+  feedback,
   inviteEmail,
   inviteRole,
   inviteTenantId,
@@ -425,6 +430,7 @@ export function AdminMemberInviteDrawer({
   onSubmit
 }: {
   open: boolean;
+  feedback: FeedbackAlertValue;
   inviteEmail: string;
   inviteRole: TenantMembershipRole;
   inviteTenantId: string;
@@ -444,6 +450,7 @@ export function AdminMemberInviteDrawer({
       title="멤버 초대"
       description="초대 링크는 이메일로 발송됩니다."
     >
+      <FeedbackAlert feedback={feedback} />
       {isSystemAdmin ? (
         <TextField
           select
@@ -490,6 +497,7 @@ export function AdminMemberInviteDrawer({
 
 export function AdminMemberEditDrawer({
   editingMember,
+  feedback,
   nextRole,
   nextStatus,
   isRolePending,
@@ -501,6 +509,7 @@ export function AdminMemberEditDrawer({
   onSubmitStatus
 }: {
   editingMember: AdminMemberItem | null;
+  feedback: FeedbackAlertValue;
   nextRole: TenantMembershipRole;
   nextStatus: AdminEditableStatus;
   isRolePending: boolean;
@@ -524,6 +533,7 @@ export function AdminMemberEditDrawer({
     >
       {editingMember ? (
         <Stack spacing={2}>
+          <FeedbackAlert feedback={feedback} />
           <Stack
             spacing={0.5}
             sx={{

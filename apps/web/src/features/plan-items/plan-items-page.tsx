@@ -17,11 +17,16 @@ import type {
   AccountingPeriodItem,
   PlanItemItem
 } from '@personal-erp/contracts';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { useAppNotification } from '@/shared/providers/notification-provider';
 import { DataTableCard } from '@/shared/ui/data-table-card';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -72,10 +77,7 @@ export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
   const periodSearchParam = searchParams?.get('periodId') ?? null;
   const { user } = useAuthSession();
   const [selectedPeriodId, setSelectedPeriodId] = React.useState('');
-  const [feedback, setFeedback] = React.useState<{
-    severity: 'success' | 'error';
-    message: string;
-  } | null>(null);
+  const [feedback, setFeedback] = React.useState<FeedbackAlertValue>(null);
   const [tableFilters, setTableFilters] = React.useState<PlanItemsTableFilters>(
     {
       keyword: '',
@@ -182,13 +184,12 @@ export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
       ]);
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '연결된 수집 거래를 전표로 확정하지 못했습니다.'
-      });
+      setFeedback(
+        buildErrorFeedback(
+          error,
+          '연결된 수집 거래를 전표로 확정하지 못했습니다.'
+        )
+      );
     }
   });
 
@@ -303,13 +304,7 @@ export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
         `${result.period.monthLabel} 계획 항목을 생성했습니다. 신규 ${result.generation.createdCount}건, 기존 유지 ${result.generation.skippedExistingCount}건, 제외 규칙 ${result.generation.excludedRuleCount}건입니다.`
       );
     } catch (error) {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '계획 항목을 생성하지 못했습니다.'
-      });
+      setFeedback(buildErrorFeedback(error, '계획 항목을 생성하지 못했습니다.'));
     }
   }, [mutation, selectedPeriod]);
 
@@ -368,11 +363,7 @@ export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
         </Alert>
       ) : null}
 
-      {feedback?.severity === 'error' ? (
-        <Alert severity={feedback.severity} variant="outlined">
-          {feedback.message}
-        </Alert>
-      ) : null}
+      <FeedbackAlert feedback={feedback} />
 
       {periodsQuery.error ? (
         <QueryErrorAlert

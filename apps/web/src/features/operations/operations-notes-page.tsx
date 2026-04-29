@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { type FormEvent, useState } from 'react';
 import type { OperationsNoteKind } from '@personal-erp/contracts';
 import {
-  Alert,
   Box,
   Button,
   Chip,
@@ -15,8 +14,10 @@ import {
   Typography
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { formatDateTime, formatNumber } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import { FeedbackAlert } from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -160,11 +161,12 @@ export function OperationsNotesPage() {
       ) : null}
 
       {createMutation.error ? (
-        <Alert severity="error">
-          {createMutation.error instanceof Error
-            ? createMutation.error.message
-            : '운영 메모를 저장하지 못했습니다.'}
-        </Alert>
+        <FeedbackAlert
+          feedback={buildErrorFeedback(
+            createMutation.error,
+            '운영 메모를 저장하지 못했습니다.'
+          )}
+        />
       ) : null}
 
       <SectionCard

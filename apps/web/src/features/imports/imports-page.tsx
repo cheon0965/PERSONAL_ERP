@@ -1,8 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { Alert, Stack, Typography } from '@mui/material';
+import { Stack, Typography } from '@mui/material';
 import { ReferenceDataReadinessAlert } from '@/features/reference-data/reference-data-readiness';
+import { FeedbackAlert } from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -77,11 +78,7 @@ export function ImportsPage({
         secondaryActionHref={isDetailMode ? '/imports' : '/transactions'}
       />
 
-      {page.feedback?.severity === 'error' ? (
-        <Alert severity={page.feedback.severity} variant="outlined">
-          {page.feedback.message}
-        </Alert>
-      ) : null}
+      <FeedbackAlert feedback={page.feedback} />
       {page.currentPeriodQuery.error ? (
         <QueryErrorAlert
           title="현재 운영 기간을 불러오지 못했습니다."
@@ -142,6 +139,7 @@ export function ImportsPage({
       <ImportUploadDialog
         open={page.isUploadDrawerOpen}
         form={page.uploadForm}
+        feedback={page.uploadFeedback}
         fundingAccounts={page.uploadFundingAccounts}
         submitPending={page.submitUploadPending}
         onClose={page.closeUploadDrawer}
@@ -156,6 +154,7 @@ export function ImportsPage({
         fundingAccounts={page.fundingAccounts}
         categories={page.categories}
         collectForm={page.collectForm}
+        feedback={page.collectFeedback}
         collectPreview={page.collectPreview}
         submitPending={page.submitCollectPending}
         canSubmit={page.canSubmitCollect}

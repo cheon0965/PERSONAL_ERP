@@ -31,9 +31,16 @@ import {
   getCategories,
   getFundingAccounts
 } from '@/features/reference-data/reference-data.api';
+import {
+  buildErrorFeedback,
+  readErrorUserMessage
+} from '@/shared/api/fetch-json';
 import { webRuntime } from '@/shared/config/env';
 import { useAppNotification } from '@/shared/providers/notification-provider';
-import { FeedbackAlert } from '@/shared/ui/feedback-alert';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import {
   buildVehicleFallbackItem,
@@ -73,10 +80,7 @@ const vehicleFormSchema = z.object({
 type VehicleFormInput = z.infer<typeof vehicleFormSchema>;
 type VehicleFormMode = 'create' | 'edit';
 
-type SubmitFeedback = {
-  severity: 'success' | 'error';
-  message: string;
-} | null;
+type SubmitFeedback = FeedbackAlertValue;
 
 type SaveVehicleMutationInput = {
   mode: VehicleFormMode;
@@ -291,15 +295,14 @@ export function VehicleForm({
               : '차량 정보를 저장했고 목록을 새로고침했습니다.'
           );
         } catch (error) {
-          setFeedback({
-            severity: 'error',
-            message:
-              error instanceof Error
-                ? error.message
-                : mode === 'edit'
-                  ? '차량 정보를 수정하지 못했습니다.'
-                  : '차량 정보를 저장하지 못했습니다.'
-          });
+          setFeedback(
+            buildErrorFeedback(
+              error,
+              mode === 'edit'
+                ? '차량 정보를 수정하지 못했습니다.'
+                : '차량 정보를 저장하지 못했습니다.'
+            )
+          );
         }
       })}
     >
@@ -310,9 +313,10 @@ export function VehicleForm({
         </Alert>
         {referenceError ? (
           <Alert severity="error" variant="outlined">
-            {referenceError instanceof Error
-              ? referenceError.message
-              : '차량 기본 회계 기준 데이터를 불러오지 못했습니다.'}
+            {readErrorUserMessage(
+              referenceError,
+              '차량 기본 회계 기준 데이터를 불러오지 못했습니다.'
+            )}
           </Alert>
         ) : null}
 

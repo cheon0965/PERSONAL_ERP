@@ -46,6 +46,7 @@ import {
   getCategories,
   getFundingAccounts
 } from '@/features/reference-data/reference-data.api';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { webRuntime } from '@/shared/config/env';
 import { formatDate, formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
@@ -295,15 +296,6 @@ export function LiabilitiesPage({
           router.push(buildLiabilityDetailHref(saved.id));
         });
       }
-    },
-    onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '부채 계약을 저장하지 못했습니다.'
-      });
     }
   });
 
@@ -326,13 +318,7 @@ export function LiabilitiesPage({
       await invalidateLiabilityQueries(queryClient);
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '부채 계약을 보관하지 못했습니다.'
-      });
+      setFeedback(buildErrorFeedback(error, '부채 계약을 보관하지 못했습니다.'));
     }
   });
 
@@ -364,15 +350,6 @@ export function LiabilitiesPage({
       notifySuccess(`${formatDate(saved.dueDate)} 상환 일정을 저장했습니다.`);
 
       await invalidateLiabilityQueries(queryClient);
-    },
-    onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '상환 일정을 저장하지 못했습니다.'
-      });
     }
   });
 
@@ -423,13 +400,9 @@ export function LiabilitiesPage({
       ]);
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '상환 계획 항목을 생성하지 못했습니다.'
-      });
+      setFeedback(
+        buildErrorFeedback(error, '상환 계획 항목을 생성하지 못했습니다.')
+      );
     }
   });
 
@@ -904,12 +877,12 @@ export function LiabilitiesPage({
         accountSubjects={accountSubjects}
         busy={saveAgreementMutation.isPending}
         onClose={() => setAgreementDrawerState(null)}
-        onSubmit={(payload, fallback) => {
+        onSubmit={async (payload, fallback) => {
           if (!agreementDrawerState) {
             return;
           }
 
-          void saveAgreementMutation.mutateAsync({
+          await saveAgreementMutation.mutateAsync({
             mode: agreementDrawerState.mode,
             agreementId:
               agreementDrawerState.mode === 'edit'
@@ -925,12 +898,12 @@ export function LiabilitiesPage({
         drawerState={repaymentDrawerState}
         busy={saveRepaymentMutation.isPending}
         onClose={() => setRepaymentDrawerState(null)}
-        onSubmit={(payload, fallback) => {
+        onSubmit={async (payload, fallback) => {
           if (!repaymentDrawerState) {
             return;
           }
 
-          void saveRepaymentMutation.mutateAsync({
+          await saveRepaymentMutation.mutateAsync({
             mode: repaymentDrawerState.mode,
             agreementId: repaymentDrawerState.agreement.id,
             repaymentId:
@@ -1287,7 +1260,7 @@ function AgreementDrawer({
   onSubmit: (
     payload: UpdateLiabilityAgreementRequest,
     fallback: LiabilityAgreementItem
-  ) => void;
+  ) => Promise<void>;
 }) {
   const editAgreement =
     drawerState?.mode === 'edit' ? drawerState.agreement : null;
@@ -1375,7 +1348,7 @@ function AgreementDrawer({
       description="상환 계획 생성에 쓰일 계약 기준과 기본 회계 연결값을 정리합니다."
     >
       <form
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
           setLocalFeedback(null);
 
@@ -1403,18 +1376,24 @@ function AgreementDrawer({
             (item) => item.id === parsed.payload.feeExpenseCategoryId
           );
 
-          onSubmit(
-            parsed.payload,
-            buildLiabilityAgreementFallbackItem(parsed.payload, {
-              id:
-                drawerState?.mode === 'edit'
-                  ? drawerState.agreement.id
-                  : undefined,
-              defaultFundingAccountName: selectedFundingAccount.name,
-              interestExpenseCategoryName: interestCategory?.name ?? null,
-              feeExpenseCategoryName: feeCategory?.name ?? null
-            })
-          );
+          try {
+            await onSubmit(
+              parsed.payload,
+              buildLiabilityAgreementFallbackItem(parsed.payload, {
+                id:
+                  drawerState?.mode === 'edit'
+                    ? drawerState.agreement.id
+                    : undefined,
+                defaultFundingAccountName: selectedFundingAccount.name,
+                interestExpenseCategoryName: interestCategory?.name ?? null,
+                feeExpenseCategoryName: feeCategory?.name ?? null
+              })
+            );
+          } catch (error) {
+            setLocalFeedback(
+              buildErrorFeedback(error, '부채 계약을 저장하지 못했습니다.')
+            );
+          }
         }}
       >
         <Stack spacing={appLayout.cardGap}>
@@ -1689,7 +1668,7 @@ function RepaymentDrawer({
   onSubmit: (
     payload: UpdateLiabilityRepaymentScheduleRequest,
     fallback: LiabilityRepaymentScheduleItem
-  ) => void;
+  ) => Promise<void>;
 }) {
   const [form, setForm] = React.useState<RepaymentFormState>(
     buildDefaultRepaymentForm()
@@ -1729,7 +1708,7 @@ function RepaymentDrawer({
       }
     >
       <form
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
           setLocalFeedback(null);
 
@@ -1743,27 +1722,33 @@ function RepaymentDrawer({
             return;
           }
 
-          onSubmit(
-            parsed.payload,
-            buildLiabilityRepaymentFallbackItem(
-              drawerState.agreement,
+          try {
+            await onSubmit(
               parsed.payload,
-              {
-                id:
-                  drawerState.mode === 'edit'
-                    ? drawerState.repayment.id
-                    : undefined,
-                linkedPlanItemId:
-                  drawerState.mode === 'edit'
-                    ? drawerState.repayment.linkedPlanItemId
-                    : null,
-                matchedCollectedTransactionId:
-                  drawerState.mode === 'edit'
-                    ? drawerState.repayment.matchedCollectedTransactionId
-                    : null
-              }
-            )
-          );
+              buildLiabilityRepaymentFallbackItem(
+                drawerState.agreement,
+                parsed.payload,
+                {
+                  id:
+                    drawerState.mode === 'edit'
+                      ? drawerState.repayment.id
+                      : undefined,
+                  linkedPlanItemId:
+                    drawerState.mode === 'edit'
+                      ? drawerState.repayment.linkedPlanItemId
+                      : null,
+                  matchedCollectedTransactionId:
+                    drawerState.mode === 'edit'
+                      ? drawerState.repayment.matchedCollectedTransactionId
+                      : null
+                }
+              )
+            );
+          } catch (error) {
+            setLocalFeedback(
+              buildErrorFeedback(error, '상환 일정을 저장하지 못했습니다.')
+            );
+          }
         }}
       >
         <Stack spacing={appLayout.cardGap}>

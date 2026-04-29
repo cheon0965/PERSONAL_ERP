@@ -20,6 +20,7 @@ import type { CorrectJournalEntryRequest } from '@personal-erp/contracts';
 import { sumMoneyWon, parseMoneyWon } from '@personal-erp/money';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { findAccountingPeriodForDate } from '@/features/accounting-periods/accounting-period-selection';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import {
   accountSubjectsQueryKey,
   fundingAccountsManagementQueryKey,
@@ -28,6 +29,7 @@ import {
   getFundingAccounts
 } from '@/features/reference-data/reference-data.api';
 import { formatWon } from '@/shared/lib/format';
+import { FeedbackAlert } from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import {
@@ -146,13 +148,7 @@ export function CorrectJournalEntryDialogContent({
       onClose();
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '정정 전표를 생성하지 못했습니다.'
-      });
+      setFeedback(buildErrorFeedback(error, '정정 전표를 생성하지 못했습니다.'));
     }
   });
 
@@ -220,11 +216,7 @@ export function CorrectJournalEntryDialogContent({
             error={referenceError}
           />
         ) : null}
-        {feedback ? (
-          <Alert severity={feedback.severity} variant="outlined">
-            {feedback.message}
-          </Alert>
-        ) : null}
+        <FeedbackAlert feedback={feedback} />
         {linesMessage ? (
           <Alert severity="error" variant="outlined">
             {linesMessage}

@@ -20,6 +20,10 @@ import {
 import { formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { useAppNotification } from '@/shared/providers/notification-provider';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -38,10 +42,7 @@ import {
   journalEntriesQueryKey
 } from './journal-entries.api';
 
-type SubmitFeedback = {
-  severity: 'success' | 'error';
-  message: string;
-} | null;
+type SubmitFeedback = FeedbackAlertValue;
 
 type AdjustmentSelection = {
   mode: JournalEntryAdjustmentMode;
@@ -212,11 +213,7 @@ export function JournalEntriesPage({
           secondaryActionDisabled={!selectedEntryCanAdjust}
         />
 
-        {feedback?.severity === 'error' ? (
-          <Alert severity={feedback.severity} variant="outlined">
-            {feedback.message}
-          </Alert>
-        ) : null}
+        <FeedbackAlert feedback={feedback} />
         {currentPeriodQuery.error ? (
           <QueryErrorAlert
             title="현재 운영 기간을 불러오지 못했습니다."

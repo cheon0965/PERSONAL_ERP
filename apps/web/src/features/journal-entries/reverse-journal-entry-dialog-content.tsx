@@ -12,6 +12,8 @@ import {
 import type { ReverseJournalEntryRequest } from '@personal-erp/contracts';
 import { useForm } from 'react-hook-form';
 import { findAccountingPeriodForDate } from '@/features/accounting-periods/accounting-period-selection';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
+import { FeedbackAlert } from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import {
   buildReverseJournalEntryFallbackItem,
@@ -61,13 +63,7 @@ export function ReverseJournalEntryDialogContent({
       onClose();
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '반전 전표를 생성하지 못했습니다.'
-      });
+      setFeedback(buildErrorFeedback(error, '반전 전표를 생성하지 못했습니다.'));
     }
   });
 
@@ -115,11 +111,7 @@ export function ReverseJournalEntryDialogContent({
             기간을 기본 기준으로 반전합니다.
           </Alert>
         )}
-        {feedback ? (
-          <Alert severity={feedback.severity} variant="outlined">
-            {feedback.message}
-          </Alert>
-        ) : null}
+        <FeedbackAlert feedback={feedback} />
 
         <Stack spacing={1}>
           <Typography variant="subtitle2">원전표 요약</Typography>

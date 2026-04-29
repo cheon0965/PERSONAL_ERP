@@ -11,6 +11,7 @@ import type {
   UpdateCategoryRequest,
   UpdateFundingAccountRequest
 } from '@personal-erp/contracts';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { membershipRoleLabelMap } from '@/shared/auth/auth-labels';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
@@ -58,7 +59,17 @@ export function useReferenceDataPage(
   const queryClient = useQueryClient();
   const { notifySuccess } = useAppNotification();
   const { user } = useAuthSession();
-  const [feedback, setFeedback] = React.useState<FeedbackState>(null);
+  const [pageFeedback, setPageFeedback] = React.useState<FeedbackState>(null);
+  const [
+    fundingAccountEditorFeedback,
+    setFundingAccountEditorFeedback
+  ] = React.useState<FeedbackState>(null);
+  const [categoryEditorFeedback, setCategoryEditorFeedback] =
+    React.useState<FeedbackState>(null);
+  const [
+    fundingAccountBootstrapFeedback,
+    setFundingAccountBootstrapFeedback
+  ] = React.useState<FeedbackState>(null);
   const [fundingAccountEditorState, setFundingAccountEditorState] =
     React.useState<FundingAccountEditorState>(null);
   const [categoryEditorState, setCategoryEditorState] =
@@ -169,13 +180,9 @@ export function useReferenceDataPage(
       await invalidateReferenceDataQueries(queryClient);
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '자금수단을 저장하지 못했습니다.'
-      });
+      setFundingAccountEditorFeedback(
+        buildErrorFeedback(error, '자금수단을 저장하지 못했습니다.')
+      );
     }
   });
 
@@ -210,13 +217,9 @@ export function useReferenceDataPage(
       await invalidateReferenceDataQueries(queryClient);
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '카테고리를 저장하지 못했습니다.'
-      });
+      setCategoryEditorFeedback(
+        buildErrorFeedback(error, '카테고리를 저장하지 못했습니다.')
+      );
     }
   });
 
@@ -245,13 +248,9 @@ export function useReferenceDataPage(
       await invalidateReferenceDataQueries(queryClient);
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '자금수단 상태를 변경하지 못했습니다.'
-      });
+      setPageFeedback(
+        buildErrorFeedback(error, '자금수단 상태를 변경하지 못했습니다.')
+      );
     }
   });
 
@@ -265,13 +264,9 @@ export function useReferenceDataPage(
       await invalidateReferenceDataQueries(queryClient);
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '자금수단을 삭제하지 못했습니다.'
-      });
+      setPageFeedback(
+        buildErrorFeedback(error, '자금수단을 삭제하지 못했습니다.')
+      );
     }
   });
 
@@ -298,13 +293,9 @@ export function useReferenceDataPage(
       await invalidateReferenceDataQueries(queryClient);
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '기초금액을 처리하지 못했습니다.'
-      });
+      setFundingAccountBootstrapFeedback(
+        buildErrorFeedback(error, '기초금액을 처리하지 못했습니다.')
+      );
     }
   });
 
@@ -328,23 +319,21 @@ export function useReferenceDataPage(
       await invalidateReferenceDataQueries(queryClient);
     },
     onError: (error) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '카테고리 상태를 변경하지 못했습니다.'
-      });
+      setPageFeedback(
+        buildErrorFeedback(error, '카테고리 상태를 변경하지 못했습니다.')
+      );
     }
   });
 
   function openFundingAccountCreate() {
-    setFeedback(null);
+    setPageFeedback(null);
+    setFundingAccountEditorFeedback(null);
     setFundingAccountEditorState({ mode: 'create' });
   }
 
   function openFundingAccountEdit(fundingAccount: FundingAccountItem) {
-    setFeedback(null);
+    setPageFeedback(null);
+    setFundingAccountEditorFeedback(null);
     setFundingAccountEditorState({
       mode: 'edit',
       fundingAccountId: fundingAccount.id
@@ -355,7 +344,7 @@ export function useReferenceDataPage(
     fundingAccount: FundingAccountItem,
     nextStatus: 'ACTIVE' | 'INACTIVE' | 'CLOSED'
   ) {
-    setFeedback(null);
+    setPageFeedback(null);
     setFundingAccountStatusActionTarget({
       fundingAccount,
       nextStatus
@@ -363,22 +352,25 @@ export function useReferenceDataPage(
   }
 
   function openFundingAccountDelete(fundingAccount: FundingAccountItem) {
-    setFeedback(null);
+    setPageFeedback(null);
     setFundingAccountDeleteTarget(fundingAccount);
   }
 
   function openFundingAccountBootstrap(fundingAccount: FundingAccountItem) {
-    setFeedback(null);
+    setPageFeedback(null);
+    setFundingAccountBootstrapFeedback(null);
     setFundingAccountBootstrapTarget(fundingAccount);
   }
 
   function openCategoryCreate() {
-    setFeedback(null);
+    setPageFeedback(null);
+    setCategoryEditorFeedback(null);
     setCategoryEditorState({ mode: 'create' });
   }
 
   function openCategoryEdit(category: CategoryItem) {
-    setFeedback(null);
+    setPageFeedback(null);
+    setCategoryEditorFeedback(null);
     setCategoryEditorState({
       mode: 'edit',
       categoryId: category.id
@@ -386,14 +378,14 @@ export function useReferenceDataPage(
   }
 
   function openCategoryToggle(category: CategoryItem) {
-    setFeedback(null);
+    setPageFeedback(null);
     setCategoryToggleTarget(category);
   }
 
   async function submitFundingAccount(
     input: FundingAccountManagementSubmitInput
   ) {
-    setFeedback(null);
+    setFundingAccountEditorFeedback(null);
     await saveFundingAccountMutation.mutateAsync({
       mode: fundingAccountEditorState?.mode ?? 'create',
       fundingAccountId: editingFundingAccount?.id,
@@ -425,7 +417,7 @@ export function useReferenceDataPage(
       return;
     }
 
-    setFeedback(null);
+    setFundingAccountBootstrapFeedback(null);
     const initialBalanceWon = input.initialBalanceWon ?? 0;
     const payload: CompleteFundingAccountBootstrapRequest =
       initialBalanceWon > 0
@@ -449,7 +441,7 @@ export function useReferenceDataPage(
   }
 
   async function submitCategory(input: CategoryManagementSubmitInput) {
-    setFeedback(null);
+    setCategoryEditorFeedback(null);
     await saveCategoryMutation.mutateAsync({
       mode: categoryEditorState?.mode ?? 'create',
       categoryId: editingCategory?.id,
@@ -473,7 +465,7 @@ export function useReferenceDataPage(
       return;
     }
 
-    setFeedback(null);
+    setPageFeedback(null);
     await transitionFundingAccountMutation.mutateAsync(
       fundingAccountStatusActionTarget
     );
@@ -484,7 +476,7 @@ export function useReferenceDataPage(
       return;
     }
 
-    setFeedback(null);
+    setPageFeedback(null);
     await deleteFundingAccountMutation.mutateAsync(fundingAccountDeleteTarget);
   }
 
@@ -493,7 +485,7 @@ export function useReferenceDataPage(
       return;
     }
 
-    setFeedback(null);
+    setPageFeedback(null);
     await toggleCategoryMutation.mutateAsync(categoryToggleTarget);
   }
 
@@ -503,11 +495,19 @@ export function useReferenceDataPage(
     categories: managedCategories,
     categoryEditorState,
     categoryToggleTarget,
-    closeCategoryEditor: () => setCategoryEditorState(null),
+    closeCategoryEditor: () => {
+      setCategoryEditorState(null);
+      setCategoryEditorFeedback(null);
+    },
     closeCategoryToggle: () => setCategoryToggleTarget(null),
-    closeFundingAccountEditor: () => setFundingAccountEditorState(null),
-    closeFundingAccountBootstrapDialog: () =>
-      setFundingAccountBootstrapTarget(null),
+    closeFundingAccountEditor: () => {
+      setFundingAccountEditorState(null);
+      setFundingAccountEditorFeedback(null);
+    },
+    closeFundingAccountBootstrapDialog: () => {
+      setFundingAccountBootstrapTarget(null);
+      setFundingAccountBootstrapFeedback(null);
+    },
     closeFundingAccountDeleteDialog: () => setFundingAccountDeleteTarget(null),
     closeFundingAccountStatusDialog: () =>
       setFundingAccountStatusActionTarget(null),
@@ -516,10 +516,13 @@ export function useReferenceDataPage(
     confirmFundingAccountTransition,
     editingCategory,
     editingFundingAccount,
-    feedback,
+    categoryEditorFeedback,
+    feedback: pageFeedback,
+    fundingAccountBootstrapFeedback,
     fundingAccountBootstrapTarget,
     fundingAccountDeleteTarget,
     fundingAccountEditorState,
+    fundingAccountEditorFeedback,
     fundingAccountStatusActionTarget,
     fundingAccounts: managedFundingAccounts,
     ledgerTransactionTypes: ledgerTransactionTypesQuery.data ?? [],

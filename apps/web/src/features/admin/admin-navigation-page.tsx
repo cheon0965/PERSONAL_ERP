@@ -18,10 +18,15 @@ import type {
   TenantMembershipRole
 } from '@personal-erp/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { resolveNavigationIcon } from '@/shared/navigation/navigation-icons';
 import { workspaceNavigationQueryKey } from '@/shared/navigation/workspace-navigation.api';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -56,7 +61,7 @@ export function AdminNavigationPage() {
   const role = user?.currentWorkspace?.membership.role ?? null;
   const canReadNavigation = role === 'OWNER' || role === 'MANAGER';
   const canUpdateNavigation = role === 'OWNER';
-  const [feedback, setFeedback] = React.useState<string | null>(null);
+  const [feedback, setFeedback] = React.useState<FeedbackAlertValue>(null);
   const [drafts, setDrafts] = React.useState<Record<string, NavigationDraft>>(
     {}
   );
@@ -74,7 +79,10 @@ export function AdminNavigationPage() {
     mutationFn: (input: { item: NavigationMenuItem; draft: NavigationDraft }) =>
       updateAdminNavigationItem(input.item.id, input.draft),
     onSuccess: async (_response, variables) => {
-      setFeedback(`${variables.item.label} 메뉴 권한을 저장했습니다.`);
+      setFeedback({
+        severity: 'success',
+        message: `${variables.item.label} 메뉴 권한을 저장했습니다.`
+      });
       setDrafts((current) => {
         const next = { ...current };
         delete next[variables.item.id];
@@ -90,9 +98,7 @@ export function AdminNavigationPage() {
     },
     onError: (error) => {
       setFeedback(
-        error instanceof Error
-          ? error.message
-          : '메뉴 권한 저장에 실패했습니다.'
+        buildErrorFeedback(error, '메뉴 권한 저장에 실패했습니다.')
       );
     }
   });
@@ -196,7 +202,7 @@ export function AdminNavigationPage() {
         primaryActionLabel="권한 정책 보기"
         primaryActionHref="/admin/policy"
       />
-      {feedback ? <Alert variant="outlined">{feedback}</Alert> : null}
+      <FeedbackAlert feedback={feedback} />
 
       {!canReadNavigation ? (
         <Alert severity="warning" variant="outlined">
@@ -269,9 +275,11 @@ export function AdminNavigationPage() {
                       : [...current.allowedRoles, candidate];
 
                     if (nextRoles.length === 0) {
-                      setFeedback(
-                        '메뉴에는 최소 1개 이상의 허용 역할이 필요합니다.'
-                      );
+                      setFeedback({
+                        severity: 'warning',
+                        message:
+                          '메뉴에는 최소 1개 이상의 허용 역할이 필요합니다.'
+                      });
                       return current;
                     }
 

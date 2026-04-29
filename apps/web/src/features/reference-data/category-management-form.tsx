@@ -63,10 +63,14 @@ export function CategoryManagementForm({
   return (
     <form
       onSubmit={form.handleSubmit(async (values) => {
-        await onSubmit({
-          name: values.name.trim(),
-          kind: values.kind
-        });
+        try {
+          await onSubmit({
+            name: values.name.trim(),
+            kind: values.kind
+          });
+        } catch {
+          // 상위 mutation onError가 드로어 피드백을 갱신한다.
+        }
       })}
     >
       <Stack spacing={appLayout.cardGap}>

@@ -14,6 +14,10 @@ import {
 import type { GridColDef } from '@mui/x-data-grid';
 import { formatDate, formatWon } from '@/shared/lib/format';
 import { GridActionCell } from '@/shared/ui/data-grid-cell';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { StatusChip } from '@/shared/ui/status-chip';
 import { RecurringRuleForm } from './recurring-rule-form';
@@ -29,10 +33,7 @@ const frequencyLabelMap: Record<string, string> = {
   YEARLY: '매년'
 };
 
-type SubmitFeedback = {
-  severity: 'success' | 'error';
-  message: string;
-} | null;
+type SubmitFeedback = FeedbackAlertValue;
 
 export type RecurringRulesTableFilters = {
   keyword: string;
@@ -137,11 +138,7 @@ export function RecurringRulesFeedbackAlerts({
 }) {
   return (
     <>
-      {feedback?.severity === 'error' ? (
-        <Alert severity={feedback.severity} variant="outlined">
-          {feedback.message}
-        </Alert>
-      ) : null}
+      <FeedbackAlert feedback={feedback} />
       {insuranceManagedRuleCount > 0 ? (
         <Alert severity="info" variant="outlined">
           보험 계약과 연결된 반복 규칙이 {insuranceManagedRuleCount}건 있습니다.

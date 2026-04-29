@@ -5,11 +5,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Stack } from '@mui/material';
 import type { InsurancePolicyItem } from '@personal-erp/contracts';
 import { sumMoneyWon } from '@personal-erp/money';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { webRuntime } from '@/shared/config/env';
 import { formatWon } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { useAppNotification } from '@/shared/providers/notification-provider';
 import { DataTableCard } from '@/shared/ui/data-table-card';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -27,10 +32,7 @@ import {
   InsurancePolicyDrawer
 } from './insurance-policies-page.sections';
 
-type SubmitFeedback = {
-  severity: 'success' | 'error';
-  message: string;
-} | null;
+type SubmitFeedback = FeedbackAlertValue;
 
 type InsurancePolicyDrawerState =
   | { mode: 'create' }
@@ -111,13 +113,9 @@ export function InsurancePoliciesPage() {
       }
     },
     onError: (mutationError) => {
-      setFeedback({
-        severity: 'error',
-        message:
-          mutationError instanceof Error
-            ? mutationError.message
-            : '보험 계약을 삭제하지 못했습니다.'
-      });
+      setFeedback(
+        buildErrorFeedback(mutationError, '보험 계약을 삭제하지 못했습니다.')
+      );
     }
   });
 
@@ -267,11 +265,7 @@ export function InsurancePoliciesPage() {
         secondaryActionHref="/recurring"
       />
 
-      {feedback?.severity === 'error' ? (
-        <Alert severity={feedback.severity} variant="outlined">
-          {feedback.message}
-        </Alert>
-      ) : null}
+      <FeedbackAlert feedback={feedback} />
       {unlinkedPolicyCount > 0 ? (
         <Alert severity="warning" variant="outlined">
           반복 규칙 연결 정보가 비어 있는 보험 계약이 {unlinkedPolicyCount}건

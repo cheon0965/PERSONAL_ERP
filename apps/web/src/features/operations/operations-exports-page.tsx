@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import type { OperationsExportResult } from '@personal-erp/contracts';
 import {
-  Alert,
   Box,
   Button,
   Chip,
@@ -12,8 +11,10 @@ import {
   Typography
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { formatDateTime, formatNumber } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import { FeedbackAlert } from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -134,11 +135,12 @@ export function OperationsExportsPage() {
       ) : null}
 
       {exportMutation.error ? (
-        <Alert severity="error">
-          {exportMutation.error instanceof Error
-            ? exportMutation.error.message
-            : 'CSV 내보내기를 실행하지 못했습니다.'}
-        </Alert>
+        <FeedbackAlert
+          feedback={buildErrorFeedback(
+            exportMutation.error,
+            'CSV 내보내기를 실행하지 못했습니다.'
+          )}
+        />
       ) : null}
 
       <SectionCard

@@ -1,14 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Alert,
-  Avatar,
-  Button,
-  Stack,
-  TextField,
-  Typography
-} from '@mui/material';
+import { Avatar, Button, Stack, TextField, Typography } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import type {
   AccountSessionItem,
@@ -16,6 +9,7 @@ import type {
 } from '@personal-erp/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { resendVerificationEmail } from '@/features/auth/auth.api';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import {
   accountAvatarOptions,
   useAccountAvatar
@@ -24,6 +18,10 @@ import { useAuthSession } from '@/shared/auth/auth-provider';
 import { formatDateTime } from '@/shared/lib/format';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { DataTableCard } from '@/shared/ui/data-table-card';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -52,7 +50,7 @@ export function AccountSettingsPage({
 }: AccountSettingsPageProps) {
   const queryClient = useQueryClient();
   const { refreshUser } = useAuthSession();
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackAlertValue>(null);
   const [profileDraft, setProfileDraft] = useState({
     email: '',
     name: ''
@@ -96,11 +94,12 @@ export function AccountSettingsPage({
     onSuccess: async (updatedProfile) => {
       const emailChanged =
         (accountQuery.data?.profile.email ?? '') !== updatedProfile.email;
-      setFeedback(
-        emailChanged
+      setFeedback({
+        severity: 'success',
+        message: emailChanged
           ? '프로필을 저장했습니다. 새 이메일은 다시 인증해야 합니다.'
           : '프로필을 저장했습니다.'
-      );
+      });
       setProfileDraft({
         email: updatedProfile.email,
         name: updatedProfile.name
@@ -111,21 +110,20 @@ export function AccountSettingsPage({
       await refreshUser();
     },
     onError: (error) => {
-      setFeedback(
-        error instanceof Error ? error.message : '이름 저장에 실패했습니다.'
-      );
+      setFeedback(buildErrorFeedback(error, '프로필 저장에 실패했습니다.'));
     }
   });
   const resendVerificationMutation = useMutation({
     mutationFn: (email: string) => resendVerificationEmail({ email }),
     onSuccess: () => {
-      setFeedback('인증 메일을 다시 보냈습니다. 받은 편지함을 확인해 주세요.');
+      setFeedback({
+        severity: 'success',
+        message: '인증 메일을 다시 보냈습니다. 받은 편지함을 확인해 주세요.'
+      });
     },
     onError: (error) => {
       setFeedback(
-        error instanceof Error
-          ? error.message
-          : '인증 메일 재전송에 실패했습니다.'
+        buildErrorFeedback(error, '인증 메일 재전송에 실패했습니다.')
       );
     }
   });
@@ -133,7 +131,10 @@ export function AccountSettingsPage({
   const passwordMutation = useMutation({
     mutationFn: () => changePassword(passwordDraft),
     onSuccess: async () => {
-      setFeedback('비밀번호를 변경했고 다른 세션을 종료했습니다.');
+      setFeedback({
+        severity: 'success',
+        message: '비밀번호를 변경했고 다른 세션을 종료했습니다.'
+      });
       setPasswordDraft({
         currentPassword: '',
         nextPassword: ''
@@ -143,24 +144,20 @@ export function AccountSettingsPage({
       });
     },
     onError: (error) => {
-      setFeedback(
-        error instanceof Error ? error.message : '비밀번호 변경에 실패했습니다.'
-      );
+      setFeedback(buildErrorFeedback(error, '비밀번호 변경에 실패했습니다.'));
     }
   });
 
   const revokeMutation = useMutation({
     mutationFn: (sessionId: string) => revokeAccountSession(sessionId),
     onSuccess: async () => {
-      setFeedback('선택한 세션을 종료했습니다.');
+      setFeedback({ severity: 'success', message: '선택한 세션을 종료했습니다.' });
       await queryClient.invalidateQueries({
         queryKey: accountSecurityQueryKey
       });
     },
     onError: (error) => {
-      setFeedback(
-        error instanceof Error ? error.message : '세션 종료에 실패했습니다.'
-      );
+      setFeedback(buildErrorFeedback(error, '세션 종료에 실패했습니다.'));
     }
   });
 
@@ -256,7 +253,7 @@ export function AccountSettingsPage({
           }
         ]}
       />
-      {feedback ? <Alert variant="outlined">{feedback}</Alert> : null}
+      <FeedbackAlert feedback={feedback} />
 
       {accountQuery.error ? (
         <QueryErrorAlert

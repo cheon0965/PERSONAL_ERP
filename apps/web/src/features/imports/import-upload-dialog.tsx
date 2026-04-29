@@ -14,8 +14,9 @@ import type {
 } from '@personal-erp/contracts';
 import { readFundingAccountTypeLabel } from '@/features/reference-data/reference-data.shared';
 import { FormDrawer } from '@/shared/ui/form-drawer';
+import { FeedbackAlert } from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
-import { sourceKindOptions } from './imports.shared';
+import { sourceKindOptions, type FeedbackState } from './imports.shared';
 import type { ImportUploadFormState } from './use-imports-page';
 
 const FILE_UPLOAD_KINDS: ImportSourceKind[] = ['IM_BANK_PDF', 'WOORI_BANK_HTML'];
@@ -23,6 +24,7 @@ const FILE_UPLOAD_KINDS: ImportSourceKind[] = ['IM_BANK_PDF', 'WOORI_BANK_HTML']
 export function ImportUploadDialog({
   open,
   form,
+  feedback,
   fundingAccounts,
   submitPending,
   onClose,
@@ -31,6 +33,7 @@ export function ImportUploadDialog({
 }: {
   open: boolean;
   form: ImportUploadFormState;
+  feedback: FeedbackState;
   fundingAccounts: FundingAccountItem[];
   submitPending: boolean;
   onClose: () => void;
@@ -162,6 +165,7 @@ export function ImportUploadDialog({
             }}
           />
         )}
+        <FeedbackAlert feedback={feedback} />
         <Button
           variant="contained"
           disabled={

@@ -4,22 +4,19 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  Alert,
-  Button,
-  Grid,
-  MenuItem,
-  Stack,
-  TextField,
-  Typography
-} from '@mui/material';
+import { Button, Grid, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import type {
   AccountingPeriodItem,
   CarryForwardView
 } from '@personal-erp/contracts';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { useAppNotification } from '@/shared/providers/notification-provider';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -60,10 +57,7 @@ export function CarryForwardsPage({
   const router = useRouter();
   const { notifySuccess } = useAppNotification();
   const { user } = useAuthSession();
-  const [feedback, setFeedback] = React.useState<{
-    severity: 'success' | 'error';
-    message: string;
-  } | null>(null);
+  const [feedback, setFeedback] = React.useState<FeedbackAlertValue>(null);
   const [confirmation, setConfirmation] = React.useState<
     'cancel' | 'regenerate' | null
   >(null);
@@ -192,13 +186,9 @@ export function CarryForwardsPage({
             : `${result.sourcePeriod.monthLabel} 마감 결과를 ${result.targetPeriod.monthLabel} 오프닝 기준으로 이월했습니다.`
         );
       } catch (error) {
-        setFeedback({
-          severity: 'error',
-          message:
-            error instanceof Error
-              ? error.message
-              : '차기 이월을 생성하지 못했습니다.'
-        });
+        setFeedback(
+          buildErrorFeedback(error, '차기 이월을 생성하지 못했습니다.')
+        );
       }
     },
     [generationMutation, mode, router, selectedPeriod]
@@ -215,13 +205,9 @@ export function CarryForwardsPage({
       const result = await cancelMutation.mutateAsync(view);
       notifySuccess(`${result.sourcePeriod.monthLabel} 차기 이월을 취소했습니다.`);
     } catch (error) {
-      setFeedback({
-        severity: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : '차기 이월을 취소하지 못했습니다.'
-      });
+      setFeedback(
+        buildErrorFeedback(error, '차기 이월을 취소하지 못했습니다.')
+      );
     }
   }, [cancelMutation, view]);
 
@@ -319,11 +305,7 @@ export function CarryForwardsPage({
 
       <CarryForwardsSectionNav selectedPeriodId={selectedPeriodId || null} />
 
-      {feedback?.severity === 'error' ? (
-        <Alert severity={feedback.severity} variant="outlined">
-          {feedback.message}
-        </Alert>
-      ) : null}
+      <FeedbackAlert feedback={feedback} />
 
       {periodsQuery.error ? (
         <QueryErrorAlert

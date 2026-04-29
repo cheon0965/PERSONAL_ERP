@@ -11,8 +11,13 @@ import {
   Typography
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import {
+  FeedbackAlert,
+  type FeedbackAlertValue
+} from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
@@ -33,7 +38,7 @@ export function AdminSupportContextPage() {
   const canUse = user?.isSystemAdmin === true;
   const [tenantId, setTenantId] = useState('');
   const [ledgerId, setLedgerId] = useState('');
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackAlertValue>(null);
 
   const tenantsQuery = useQuery({
     queryKey: adminTenantsQueryKey,
@@ -68,23 +73,29 @@ export function AdminSupportContextPage() {
         ...(ledgerId ? { ledgerId } : {})
       }),
     onSuccess: async () => {
-      setFeedback('지원 모드를 시작했습니다.');
+      setFeedback({ severity: 'success', message: '지원 모드를 시작했습니다.' });
       await queryClient.invalidateQueries({
         queryKey: adminSupportContextQueryKey
       });
       await refreshUser();
+    },
+    onError: (error) => {
+      setFeedback(buildErrorFeedback(error, '지원 모드를 시작하지 못했습니다.'));
     }
   });
   const clearMutation = useMutation({
     mutationFn: clearAdminSupportContext,
     onSuccess: async () => {
-      setFeedback('지원 모드를 해제했습니다.');
+      setFeedback({ severity: 'success', message: '지원 모드를 해제했습니다.' });
       setTenantId('');
       setLedgerId('');
       await queryClient.invalidateQueries({
         queryKey: adminSupportContextQueryKey
       });
       await refreshUser();
+    },
+    onError: (error) => {
+      setFeedback(buildErrorFeedback(error, '지원 모드를 해제하지 못했습니다.'));
     }
   });
 
@@ -158,7 +169,7 @@ export function AdminSupportContextPage() {
           지원 모드는 전체 관리자만 사용할 수 있습니다.
         </Alert>
       ) : null}
-      {feedback ? <Alert variant="outlined">{feedback}</Alert> : null}
+      <FeedbackAlert feedback={feedback} />
       {supportContextQuery.error ? (
         <QueryErrorAlert
           title="지원 문맥을 불러오지 못했습니다."
