@@ -26,8 +26,14 @@ export function GridInlineCell({
         columnGap: 0.75,
         rowGap: 0.5,
         overflow: 'hidden',
-        '& .MuiButton-root, & .MuiChip-root': {
+        '& .MuiButton-root': {
           flexShrink: 0,
+          borderRadius: 999,
+          whiteSpace: 'nowrap'
+        },
+        '& .MuiChip-root': {
+          flexShrink: 0,
+          cursor: 'default',
           whiteSpace: 'nowrap'
         },
         ...sx
@@ -75,8 +81,14 @@ export function GridStackCell({
         minHeight: '100%',
         py: 0.5,
         overflow: 'hidden',
-        '& .MuiButton-root, & .MuiChip-root': {
+        '& .MuiButton-root': {
           flexShrink: 0,
+          borderRadius: 999,
+          whiteSpace: 'nowrap'
+        },
+        '& .MuiChip-root': {
+          flexShrink: 0,
+          cursor: 'default',
           whiteSpace: 'nowrap'
         },
         ...sx

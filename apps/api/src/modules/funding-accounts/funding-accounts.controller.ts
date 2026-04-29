@@ -28,6 +28,7 @@ import {
   logWorkspaceActionSucceeded
 } from '../../common/infrastructure/operational/workspace-action.audit';
 import { FundingAccountsService } from './funding-accounts.service';
+import { CompleteFundingAccountBootstrapDto } from './dto/complete-funding-account-bootstrap.dto';
 import { CreateFundingAccountDto } from './dto/create-funding-account.dto';
 import { UpdateFundingAccountDto } from './dto/update-funding-account.dto';
 
@@ -110,6 +111,60 @@ export class FundingAccountsController {
       );
 
       const updated = await this.fundingAccountsService.update(
+        user,
+        fundingAccountId,
+        dto
+      );
+
+      if (!updated) {
+        throw new NotFoundException('Funding account not found');
+      }
+
+      logWorkspaceActionSucceeded(this.securityEvents, {
+        action: 'funding_account.update',
+        request,
+        workspace,
+        details: {
+          fundingAccountId: updated.id
+        }
+      });
+
+      return updated;
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        logWorkspaceActionDenied(this.securityEvents, {
+          action: 'funding_account.update',
+          request,
+          workspace,
+          details: {
+            fundingAccountId,
+            requiredRoles: readAllowedWorkspaceRoles(
+              'funding_account.update'
+            ).join(',')
+          }
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  @Post(':id/bootstrap')
+  async completeBootstrap(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') fundingAccountId: string,
+    @Body() dto: CompleteFundingAccountBootstrapDto
+  ) {
+    const workspace = requireCurrentWorkspace(user);
+
+    try {
+      assertWorkspaceActionAllowed(
+        workspace.membershipRole,
+        'funding_account.update'
+      );
+
+      const updated = await this.fundingAccountsService.completeBootstrap(
         user,
         fundingAccountId,
         dto

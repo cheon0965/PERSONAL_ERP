@@ -127,7 +127,7 @@
 - `recurring-rules`: 반복 규칙 CRUD
 - `plan-items`: 계획 항목 생성과 기간별 추적
 - `collected-transactions`: 생성, 상세 조회, 수정, 삭제, 전표 확정
-- `import-batches`: UTF-8 텍스트 업로드 파싱, 활성 계좌/카드 연결형 IM뱅크 텍스트 PDF 파일첨부 파싱, 스캔/이미지 PDF 명시 차단, 월별 open/close 정책에 맞춘 최신 진행월 기준 collect preview/단건 collect, 자동 운영월 생성 시 거래후잔액 기반 기초금액 snapshot 생성, 배치 삭제, 배치 상세 일괄 등록 Job/진행률/중단/행별 결과 조회
+- `import-batches`: UTF-8 텍스트 업로드 파싱, 활성 계좌/카드 연결형 IM뱅크 텍스트 PDF 파일첨부 파싱, 스캔/이미지 PDF 명시 차단, 월별 open/close 정책에 맞춘 최신 진행월 기준 collect preview/단건 collect, 신규 계좌/카드 bootstrap 자동 운영월 생성과 완료 전환, 배치 삭제, 배치 상세 일괄 등록 Job/진행률/중단/행별 결과 조회
 - `journal-entries`: 전표 조회, 반전 전표, 정정 전표
 - `financial-statements`: 잠금 기간 재무제표 스냅샷 생성/조회
 - `carry-forwards`: closing snapshot 기반 opening balance snapshot 전용 차기 이월 생성/조회

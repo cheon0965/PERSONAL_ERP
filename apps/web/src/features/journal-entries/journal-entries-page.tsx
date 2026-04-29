@@ -97,22 +97,7 @@ export function JournalEntriesPage({
     () => filterJournalEntries(rawEntries, tableFilters),
     [rawEntries, tableFilters]
   );
-  const entries = React.useMemo(() => {
-    const data = filteredEntries;
-    if (!highlightedEntryId) {
-      return data;
-    }
-
-    const highlighted = data.find((item) => item.id === highlightedEntryId);
-    if (!highlighted) {
-      return data;
-    }
-
-    return [
-      highlighted,
-      ...data.filter((item) => item.id !== highlightedEntryId)
-    ];
-  }, [filteredEntries, highlightedEntryId]);
+  const entries = filteredEntries;
 
   const currentPeriod = currentPeriodQuery.data ?? null;
   const accountingPeriods = accountingPeriodsQuery.data ?? [];
@@ -131,7 +116,7 @@ export function JournalEntriesPage({
     }
 
     if (!highlightedEntryId) {
-      return entries[0] ?? null;
+      return layout === 'list' ? null : (entries[0] ?? null);
     }
 
     const highlightedEntry =
@@ -154,7 +139,7 @@ export function JournalEntriesPage({
     : '전표 조회';
   const pageDescription = isDetailLayout
     ? '선택한 전표의 라인, 조정 흐름, 후속 조정 작업을 한 화면에서 집중해서 검토합니다.'
-    : '전표 목록에서 대상을 고른 뒤 상세 라인과 조정 이력을 검토하는 공식 회계 확인 화면입니다.';
+    : '전표 목록에서 선택 버튼으로 대상을 고른 뒤 상세 라인과 조정 이력을 검토하는 공식 회계 확인 화면입니다.';
 
   const journalEntryColumns = React.useMemo(
     () =>
@@ -185,7 +170,7 @@ export function JournalEntriesPage({
                     selectedEntry.status === 'POSTED' ? 'success' : 'default'
                 }
               : {
-                  label: '전표 없음',
+                  label: entries.length > 0 ? '전표 선택 전' : '전표 없음',
                   color: 'default'
                 }
           ]}
@@ -310,7 +295,7 @@ export function JournalEntriesPage({
               : `${createdEntry.entryNumber} 정정 전표를 생성했습니다.`
           );
           setSelectedAdjustment(null);
-          router.replace(`/journal-entries/${createdEntry.id}` as Route);
+          router.push(`/journal-entries/${createdEntry.id}` as Route);
         }}
       />
     </>

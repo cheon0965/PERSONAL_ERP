@@ -111,8 +111,8 @@
   Owner/Manager 전용 차량 정비 이력 생성, 수정, 선택적 수집거래 생성, workspace 범위 접근통제를 검증
 - `GET /reference-data/readiness`
   현재 workspace 기준 기준 데이터 readiness, ownership 구분, 부족 항목 요약을 검증
-- `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `DELETE /funding-accounts/:id`
-  Owner/Manager 전용 자금수단 생성, 신규 은행/카드 `bootstrapStatus=PENDING`, 시작 잔액 초기화 완료 직접 전환, 이름 변경, 비활성화/재활성화, 비활성 자금수단 종료, 미사용 자금수단 삭제, 거래내역이 있는 자금수단 삭제 차단과 workspace 범위 접근통제를 검증
+- `POST /funding-accounts`, `POST /funding-accounts/:id/bootstrap`, `PATCH /funding-accounts/:id`, `DELETE /funding-accounts/:id`
+  Owner/Manager 전용 자금수단 생성, 신규 은행/카드 `bootstrapStatus=PENDING`, 기초금액 입력 기반 기초전표 발행과 bootstrap 완료, 금액 없는 완료 전환, 이름 변경, 비활성화/재활성화, 비활성 자금수단 종료, 미사용 자금수단 삭제, 거래내역이 있는 자금수단 삭제 차단과 workspace 범위 접근통제를 검증
 - `POST /categories`, `PATCH /categories/:id`
   Owner/Manager 전용 카테고리 생성, 이름 변경, 비활성화/재활성화와 workspace 범위 접근통제를 검증
 - `GET /accounting-periods`, `GET /accounting-periods/current`, `POST /accounting-periods`, `POST /accounting-periods/:id/close`, `POST /accounting-periods/:id/reopen`
@@ -133,7 +133,7 @@
 - `POST /import-batches/files`
   IM뱅크 PDF 업로드의 활성 계좌/카드 연결 필수 조건, PDF magic bytes/확장자/content-type/10MB 제한, 텍스트 레이어 없는 스캔 PDF 명시 차단, 원본 PDF 미저장과 행 단위 payload 저장을 검증
 - `POST /import-batches/:id/rows/:rowId/collect`
-  최신 진행월 범위 수집, 운영 중 임의 과거월/신규 운영월 생성 차단, 자동 운영월 생성 시 거래후잔액 기반 기초금액 snapshot 생성, 신규 계좌/카드 bootstrap의 회계 이력 가드와 완료 전환, 반복 수집 거래 흡수 claim, 이미 다른 업로드 행과 연결된 대상의 `409 Conflict`, 같은 업로드 행 재수집 방지를 검증
+  최신 진행월 범위 수집, 운영 중 임의 과거월/신규 운영월 생성 차단, 신규 계좌/카드 bootstrap 자동 운영월 생성과 완료 전환, 신규 계좌/카드 bootstrap의 회계 이력 가드, 반복 수집 거래 흡수 claim, 이미 다른 업로드 행과 연결된 대상의 `409 Conflict`, 같은 업로드 행 재수집 방지를 검증
 - `POST /import-batches/:id/rows/collect`, `GET /import-batches/:id/collection-jobs/active`, `GET /import-batches/:id/collection-jobs/:jobId`, `POST /import-batches/:id/collection-jobs/:jobId/cancel`
   선택 행 또는 등록 가능 행 전체의 일괄 등록 Job 생성, 입출금 방향 기반 수입/지출/취소 유형 추론, 거래유형별 카테고리/메모 적용, 운영월 자동 생성 사유별 결과 메시지, 진행률/행별 결과 조회, 일괄 등록 Job 중단 요청, 같은 workspace 내 동시 일괄 등록 잠금과 단건 등록 충돌 보호를 검증
 - 계획 항목 generate use case

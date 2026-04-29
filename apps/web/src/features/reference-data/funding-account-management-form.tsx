@@ -78,7 +78,7 @@ export function FundingAccountManagementForm({
       <Stack spacing={appLayout.cardGap}>
         <Alert severity="info" variant="outlined">
           {mode === 'create'
-            ? '새 자금수단은 활성 상태로 생성되며 시작 잔액은 0원으로 둡니다. 실제 잔액 흐름은 운영 거래와 전표에서 쌓이도록 유지합니다.'
+            ? '새 통장/카드는 기초 업로드 대기 상태로 생성됩니다. 목록의 기초입력 버튼에서 시작 금액을 등록하거나 금액 없이 완료할 수 있습니다.'
             : '현재 범위에서는 자금수단 이름만 여기서 수정합니다. 활성/비활성/종료 전환은 목록의 상태 관리 버튼으로 처리하고, 유형과 잔액은 기존 기록 의미를 보존하기 위해 직접 바꾸지 않습니다.'}
         </Alert>
 

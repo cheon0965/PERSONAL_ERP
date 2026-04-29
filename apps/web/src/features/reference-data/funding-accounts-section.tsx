@@ -13,7 +13,7 @@ export function FundingAccountsSection({
   onCreate,
   onEdit,
   onTransition,
-  onCompleteBootstrap,
+  onOpenBootstrap,
   onDelete
 }: {
   rows: FundingAccountItem[];
@@ -24,7 +24,7 @@ export function FundingAccountsSection({
     fundingAccount: FundingAccountItem,
     nextStatus: 'ACTIVE' | 'INACTIVE' | 'CLOSED'
   ) => void;
-  onCompleteBootstrap: (fundingAccount: FundingAccountItem) => void;
+  onOpenBootstrap: (fundingAccount: FundingAccountItem) => void;
   onDelete: (fundingAccount: FundingAccountItem) => void;
 }) {
   const columns = React.useMemo(
@@ -33,10 +33,10 @@ export function FundingAccountsSection({
         canManageReferenceData,
         onEdit,
         onTransition,
-        onCompleteBootstrap,
+        onOpenBootstrap,
         onDelete
       }),
-    [canManageReferenceData, onCompleteBootstrap, onDelete, onEdit, onTransition]
+    [canManageReferenceData, onDelete, onEdit, onOpenBootstrap, onTransition]
   );
   const statusSummary = React.useMemo(() => {
     const counts: Record<FundingAccountItem['status'], number> = {
@@ -63,7 +63,7 @@ export function FundingAccountsSection({
   return (
     <DataTableCard
       title="자금수단"
-      description="거래 입력과 반복 규칙에서 사용하는 입출금 계정 목록입니다."
+      description="거래 입력과 반복 규칙에서 사용하는 입출금 계정 목록입니다. 기초 업로드 대기 계정은 관리 버튼에서 시작 금액을 닫습니다."
       actions={
         canManageReferenceData ? (
           <Button variant="contained" size="small" onClick={onCreate}>

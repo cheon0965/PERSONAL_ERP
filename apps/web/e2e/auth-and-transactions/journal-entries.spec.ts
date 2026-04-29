@@ -205,6 +205,24 @@ test('@smoke manages journal entry reversal and correction through the journal e
       return;
     }
 
+    if (path === '/api/auth/workspaces' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: currentUser.currentWorkspace
+            ? [
+                {
+                  ...currentUser.currentWorkspace,
+                  isCurrent: true
+                }
+              ]
+            : []
+        })
+      });
+      return;
+    }
+
     if (path === '/api/navigation/tree' && request.method() === 'GET') {
       await route.fulfill({
         status: 200,
@@ -441,9 +459,7 @@ test('@smoke manages journal entry reversal and correction through the journal e
   });
 
   await page.goto('/journal-entries');
-  await expect(
-    page.getByRole('heading', { name: '운영 포털 로그인' })
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: '운영 포털' })).toBeVisible();
 
   await page.getByLabel('이메일').fill('demo@example.com');
   await page.getByLabel('비밀번호').fill('Demo1234!');
@@ -451,9 +467,24 @@ test('@smoke manages journal entry reversal and correction through the journal e
 
   await expect(page).toHaveURL(/\/journal-entries$/);
   await expect(page.getByRole('heading', { name: '전표 조회' })).toBeVisible();
+  await expect(page.getByText('전표 선택 전')).toBeVisible();
   await expect(
     page.getByText(/조정 전표 기본 입력 월은 2026-05입니다/)
   ).toBeVisible();
+  await page.getByRole('link', { name: '선택' }).first().click();
+  await expect(page).toHaveURL(/\/journal-entries\?entryId=je-income-1$/);
+  await expect(page.getByText('선택됨')).toBeVisible();
+  await expect(page.getByText('202605-0001 전표 상세')).toBeVisible();
+  await page.getByRole('link', { name: '선택' }).first().click();
+  await expect(page).toHaveURL(/\/journal-entries\?entryId=je-expense-1$/);
+  await expect(page.getByText('202605-0002 전표 상세')).toBeVisible();
+  const journalEntriesGrid = page.getByRole('grid');
+  await expect(journalEntriesGrid.getByRole('row').nth(1)).toContainText(
+    '202605-0001'
+  );
+  await expect(journalEntriesGrid.getByRole('row').nth(2)).toContainText(
+    '202605-0002'
+  );
 
   await page.goto('/journal-entries/je-income-1');
   await expect(page).toHaveURL(/\/journal-entries\/je-income-1$/);

@@ -96,7 +96,7 @@
 - 관리자 범위는 현재 workspace의 멤버 목록/초대/역할·상태 관리, DB 메뉴 트리/메뉴 권한 관리, workspace 감사 로그 조회, 권한 정책 요약까지 포함합니다. `INITIAL_ADMIN_*`로 시드된 전역 관리자는 일반 사업장 관리자와 분리되어 전체 사용자 관리, 사업장 관리, 사업장 전환/지원 문맥, 운영 상태 점검, 보안 위협 로그, 전체 멤버십 역할·상태 관리를 수행할 수 있습니다.
 - 내비게이션 범위는 현재 workspace의 DB 메뉴 트리를 현재 멤버 역할 기준으로 필터링해 반환하는 `navigation/tree`까지 포함합니다.
 - 운영 지원 범위는 체크리스트, 예외 처리함, 월 마감 대시보드, 업로드 운영 현황, 시스템 상태, 알림 센터, 수동 CSV 반출, 운영 메모까지 포함합니다.
-- 기준/참조 범위는 조회 `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `liabilities`, `vehicles`, `vehicles/operating-summary`, `vehicles/fuel-logs`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/부채 계약/차량 관리 `POST /funding-accounts`, `PATCH /funding-accounts/:id`, `DELETE /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `DELETE /insurance-policies/:id`, `POST /liabilities`, `PATCH /liabilities/:id`, `POST /liabilities/:id/archive`, `POST /liabilities/:id/repayments`, `PATCH /liabilities/:id/repayments/:repaymentId`, `POST /liabilities/:id/repayments/:repaymentId/generate-plan-item`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/fuel-logs`, `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `DELETE /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`, `DELETE /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
+- 기준/참조 범위는 조회 `reference-data/readiness`, `funding-accounts`, `categories`, `account-subjects`, `ledger-transaction-types`, `insurance-policies`, `liabilities`, `vehicles`, `vehicles/operating-summary`, `vehicles/fuel-logs`, `vehicles/maintenance-logs`와 자금수단/카테고리/보험 계약/부채 계약/차량 관리 `POST /funding-accounts`, `POST /funding-accounts/:id/bootstrap`, `PATCH /funding-accounts/:id`, `DELETE /funding-accounts/:id`, `POST /categories`, `PATCH /categories/:id`, `POST /insurance-policies`, `PATCH /insurance-policies/:id`, `DELETE /insurance-policies/:id`, `POST /liabilities`, `PATCH /liabilities/:id`, `POST /liabilities/:id/archive`, `POST /liabilities/:id/repayments`, `PATCH /liabilities/:id/repayments/:repaymentId`, `POST /liabilities/:id/repayments/:repaymentId/generate-plan-item`, `POST /vehicles`, `PATCH /vehicles/:id`, `POST /vehicles/:id/fuel-logs`, `PATCH /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `DELETE /vehicles/:vehicleId/fuel-logs/:fuelLogId`, `POST /vehicles/:id/maintenance-logs`, `PATCH /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`, `DELETE /vehicles/:vehicleId/maintenance-logs/:maintenanceLogId`까지 포함합니다.
 - 운영/원장 조회 범위는 `accounting-periods`, `collected-transactions`, `journal-entries`, `plan-items`, `financial-statements`, `carry-forwards`, `import-batches`까지 포함합니다.
 - 집계/보고 조회 범위는 `dashboard/summary`, `forecast/monthly`까지 포함합니다.
 - 현재 쓰기/명령 범위는 `funding-accounts`, `categories`, `insurance-policies`, `liabilities`, `vehicles`, `vehicle fuel logs`, `vehicle maintenance logs`, `accounting-periods`, `collected-transactions`, `recurring-rules`, `plan-items`, `import-batches`, `journal-entries`, `financial-statements`, `carry-forwards`까지 확장되어 있습니다.
@@ -145,6 +145,7 @@
 - `GET /reference-data/readiness`
 - `GET /funding-accounts`
 - `POST /funding-accounts`
+- `POST /funding-accounts/:id/bootstrap`
 - `PATCH /funding-accounts/:id`
 - `DELETE /funding-accounts/:id`
 - `GET /categories`
@@ -493,16 +494,26 @@
 
 - 계약: `CreateFundingAccountRequest -> FundingAccountItem`
 - 현재 작업 문맥의 Owner/Manager만 새 자금수단을 생성할 수 있습니다.
-- 현재 범위는 `name`, `type` 생성과 활성 상태 기본값(`ACTIVE`), 초기 잔액 `0원`까지로 한정합니다.
-- 새 `BANK`/`CARD` 자금수단은 `bootstrapStatus=PENDING`으로 생성되어 등록 직후 시작 잔액 초기화 후보가 됩니다. `CASH`는 `NOT_REQUIRED`로 생성됩니다.
+- 현재 범위는 `name`, `type`, 선택 `initialBalanceWon` 생성을 지원하며 활성 상태 기본값은 `ACTIVE`입니다.
+- `initialBalanceWon`이 없거나 `0`이면 새 `BANK`/`CARD` 자금수단은 `bootstrapStatus=PENDING`으로 생성되어 등록 직후 시작 잔액 초기화 후보가 됩니다. `CASH`는 `NOT_REQUIRED`로 생성됩니다.
+- `initialBalanceWon`이 `0`보다 크면 열린 운영월에 `OPENING_BALANCE` 전표를 자동 발행하고, 해당 자금수단은 `bootstrapStatus=COMPLETED`와 입력 잔액으로 생성됩니다.
 - 이름은 trim/lower 기준 normalized key로 중복을 판정하며, 동시 생성 충돌은 `409 Conflict`로 정리합니다.
+
+### `POST /funding-accounts/:id/bootstrap`
+
+- 계약: `CompleteFundingAccountBootstrapRequest -> FundingAccountItem`
+- 현재 작업 문맥의 Owner/Manager만 기초 업로드 대기 자금수단의 기초 처리를 완료할 수 있습니다.
+- 대상은 `bootstrapStatus=PENDING`인 활성 `BANK`/`CARD` 자금수단입니다.
+- `initialBalanceWon`이 `0`보다 크면 열린 운영월에 기초전표(`OPENING_BALANCE`)를 발행하고 자금수단 잔액을 해당 금액으로 설정한 뒤 `COMPLETED`로 전환합니다.
+- `initialBalanceWon`이 없거나 `0`이면 기초전표 없이 `COMPLETED`로 전환합니다.
+- 기초금액 전표는 해당 자금수단에 기존 업로드 배치, 수집 거래, 전표 라인, opening/closing snapshot line이 없을 때만 발행합니다.
 
 ### `PATCH /funding-accounts/:id`
 
 - 계약: `UpdateFundingAccountRequest -> FundingAccountItem`
 - 현재 작업 문맥의 Owner/Manager만 자금수단 이름 변경과 `ACTIVE/INACTIVE/CLOSED` 상태 전환을 수행할 수 있습니다.
 - 현재 범위에서 `CLOSED` 전환은 `INACTIVE -> CLOSED`일 때만 허용합니다.
-- `bootstrapStatus`는 `PENDING -> COMPLETED` 직접 전환만 허용합니다. 신규 계좌/카드의 시작 잔액 초기화를 업로드 없이 닫기로 결정한 경우 이 전환으로 bootstrap 상태를 닫습니다.
+- `bootstrapStatus`는 `PENDING -> COMPLETED` 직접 전환만 허용합니다. 금액 없이 닫는 호환 경로이며, 기초금액 입력과 기초전표 발행은 `POST /funding-accounts/:id/bootstrap`을 사용합니다.
 - `CLOSED` 자금수단은 기존 거래/반복 규칙 기록 보존용 읽기 전용 상태로 유지하며, 현재 범위에서는 다시 수정하거나 재활성화할 수 없습니다.
 - 현재 범위는 `type` 변경과 잔액 직접 수정을 지원하지 않습니다.
 - 이름 중복이나 상태 경합은 `409 Conflict`로 응답합니다.
@@ -835,8 +846,8 @@
 - 운영 중에는 최신 진행월 범위의 행만 수집 거래로 등록할 수 있습니다.
 - 운영월 자동 생성은 일반 거래 입력 예외가 아니라 초기화 지원입니다. 아직 운영 기간이 없는 최초 시작월 또는 최신 잠금 월 바로 다음 월에 대한 신규 활성 계좌/카드 bootstrap일 때만 허용합니다.
 - 과거월 여러 개를 업로드로 다시 열거나 최신 진행월 밖 거래를 수집하는 용도로는 사용할 수 없습니다.
-- 운영월을 자동 생성하는 업로드 행에 `parsed.balanceAfter`와 `parsed.signedAmount`가 모두 있으면 `balanceAfter - signedAmount`를 첫 거래 직전 잔액으로 계산해 해당 자금수단의 opening balance snapshot line을 함께 생성합니다. 은행/현금은 `1010 현금및예금`, 카드는 `2100 카드미지급금` 기준입니다.
-- 신규 계좌/카드 bootstrap은 해당 자금수단이 `bootstrapStatus=PENDING`이고 기존 수집거래, 다른 import batch, 전표 line, opening/closing snapshot line이 없을 때만 열립니다. 첫 수집 성공 후에는 `COMPLETED`로 전환됩니다.
+- 운영월 자동 생성이 발생한 업로드 행은 수집 거래 생성과 자금수단 `COMPLETED` 전환까지 처리합니다. 기초금액 자체를 수동으로 확정하고 기초전표를 발행하려면 `POST /funding-accounts/:id/bootstrap`을 사용합니다.
+- 신규 계좌/카드 bootstrap 수집은 해당 자금수단이 `bootstrapStatus=PENDING`이고 기존 수집거래, 다른 import batch, 전표 line, opening/closing snapshot line이 없을 때만 열립니다. 첫 수집 성공 후에는 `COMPLETED`로 전환됩니다.
 - 같은 업로드 행 재수집은 `importedRowId` 기준으로 막고, 반복 수집 거래 흡수는 조건부 claim으로 덮어쓰기를 방지합니다.
 - 일괄 등록 Job이 같은 workspace에서 실행 중이면 단건 collect도 같은 배치/다른 배치 여부에 따라 `409 Conflict`로 막습니다.
 - 중복/경합은 `409 Conflict`로 정리합니다.

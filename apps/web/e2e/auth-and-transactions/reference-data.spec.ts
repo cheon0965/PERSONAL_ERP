@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type {
   CategoryItem,
+  CompleteFundingAccountBootstrapRequest,
   CreateCategoryRequest,
   CreateFundingAccountRequest,
   FundingAccountItem,
@@ -94,6 +95,24 @@ test('manages funding accounts and categories across split reference data screen
       return;
     }
 
+    if (path === '/api/auth/workspaces' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: currentUser.currentWorkspace
+            ? [
+                {
+                  ...currentUser.currentWorkspace,
+                  isCurrent: true
+                }
+              ]
+            : []
+        })
+      });
+      return;
+    }
+
     if (
       path === '/api/reference-data/readiness' &&
       request.method() === 'GET'
@@ -148,6 +167,49 @@ test('manages funding accounts and categories across split reference data screen
         status: 201,
         contentType: 'application/json',
         body: JSON.stringify(created)
+      });
+      return;
+    }
+
+    if (
+      path.startsWith('/api/funding-accounts/') &&
+      path.endsWith('/bootstrap') &&
+      request.method() === 'POST'
+    ) {
+      const fundingAccountId = path.split('/').at(-2);
+      const payload =
+        request.postDataJSON() as CompleteFundingAccountBootstrapRequest;
+      const initialBalanceWon = payload.initialBalanceWon ?? 0;
+      fundingAccounts = fundingAccounts.map((fundingAccount) =>
+        fundingAccount.id === fundingAccountId
+          ? {
+              ...fundingAccount,
+              balanceWon:
+                initialBalanceWon > 0
+                  ? initialBalanceWon
+                  : fundingAccount.balanceWon,
+              bootstrapStatus: 'COMPLETED'
+            }
+          : fundingAccount
+      );
+      const updated =
+        fundingAccounts.find(
+          (fundingAccount) => fundingAccount.id === fundingAccountId
+        ) ?? null;
+
+      if (!updated) {
+        await route.fulfill({
+          status: 404,
+          contentType: 'application/json',
+          body: JSON.stringify({ message: 'Funding account not found' })
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify(updated)
       });
       return;
     }
@@ -334,6 +396,31 @@ test('manages funding accounts and categories across split reference data screen
   const newFundingAccountRow = page.getByRole('row', {
     name: new RegExp(newFundingAccountName)
   });
+  await newFundingAccountRow.getByRole('button', { name: '기초입력' }).click();
+  await expect(
+    page.getByRole('heading', {
+      name: `${newFundingAccountName} 기초금액 입력`
+    })
+  ).toBeVisible();
+  await page
+    .getByRole('dialog')
+    .getByRole('textbox', { name: '기초금액' })
+    .fill('123000');
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: '기초 처리 완료' })
+    .click();
+
+  await expect(
+    page.getByText(
+      `${newFundingAccountName} 자금수단의 기초금액을 등록하고 기초전표를 발행했습니다.`
+    )
+  ).toBeVisible();
+  await expect(
+    newFundingAccountRow.getByText('기초 업로드 완료', { exact: true })
+  ).toBeVisible();
+  await expect(newFundingAccountRow.getByText('₩123,000')).toBeVisible();
+
   await newFundingAccountRow.getByRole('button', { name: '수정' }).click();
   await page.getByLabel('자금수단 이름').fill(renamedFundingAccountName);
   await page

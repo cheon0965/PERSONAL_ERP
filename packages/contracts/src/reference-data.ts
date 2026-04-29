@@ -27,6 +27,10 @@ export type CreateFundingAccountRequest = {
   initialBalanceWon?: MoneyWon;
 };
 
+export type CompleteFundingAccountBootstrapRequest = {
+  initialBalanceWon?: MoneyWon | null;
+};
+
 export type UpdateFundingAccountRequest = {
   name: string;
   status?: FundingAccountStatus;
