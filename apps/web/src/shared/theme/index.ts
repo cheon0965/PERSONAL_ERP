@@ -88,6 +88,7 @@ export const appTheme = createTheme(
         styleOverrides: {
           root: {
             borderRadius: brandTokens.radius.lg,
+            minWidth: 0,
             boxShadow: brandTokens.shadow.card,
             border: `1px solid ${alpha(brandTokens.palette.primary, 0.1)}`,
             background: brandTokens.gradient.card,
@@ -98,6 +99,7 @@ export const appTheme = createTheme(
       MuiPaper: {
         styleOverrides: {
           root: {
+            minWidth: 0,
             borderRadius: brandTokens.radius.lg,
             backgroundImage: 'none'
           }
@@ -110,6 +112,7 @@ export const appTheme = createTheme(
         styleOverrides: {
           root: {
             borderRadius: 999,
+            maxWidth: '100%',
             minHeight: 42,
             fontWeight: 800,
             letterSpacing: 0,
@@ -238,6 +241,7 @@ export const appTheme = createTheme(
         styleOverrides: {
           root: {
             borderRadius: 8,
+            maxWidth: '100%',
             minHeight: 26,
             fontWeight: 800,
             letterSpacing: 0,
@@ -318,7 +322,10 @@ export const appTheme = createTheme(
             }
           },
           label: {
-            paddingInline: 10
+            minWidth: 0,
+            paddingInline: 10,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
           }
         }
       },

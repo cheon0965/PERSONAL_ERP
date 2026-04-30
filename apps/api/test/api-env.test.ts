@@ -2,10 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { parseApiEnv } from '../src/config/api-env';
 
-const primarySigningText = ['test', 'access', 'signing', 'key'].join('-');
-const secondarySigningText = ['test', 'refresh', 'signing', 'key', '2'].join(
-  '-'
-);
+const primarySigningText = 'TeW6AOOAazbxXapqMRAgtzntQl3feiFJ6f_W721gRLc';
+const secondarySigningText = 'dFu-IUZHIFuvFJkOcFv0Gls_shj0aLmaLGMJzM6mxAk';
 const primaryEnvName = ['JWT', 'ACCESS', 'SECRET'].join('_');
 const secondaryEnvName = ['JWT', 'REFRESH', 'SECRET'].join('_');
 const databaseEnvName = ['DATABASE', 'URL'].join('_');
@@ -62,4 +60,37 @@ test('parseApiEnv keeps the initial admin password optional for normal API boot'
   assert.equal(env.INITIAL_ADMIN_EMAIL, null);
   assert.equal(env.INITIAL_ADMIN_NAME, null);
   assert.equal(env.INITIAL_ADMIN_PASSWORD, null);
+});
+
+test('parseApiEnv rejects short JWT secrets', () => {
+  assert.throws(
+    () =>
+      parseApiEnv({
+        ...createBaseEnv(),
+        [primaryEnvName]: 'short-secret'
+      }),
+    /JWT_ACCESS_SECRET/
+  );
+});
+
+test('parseApiEnv rejects JWT secret placeholders', () => {
+  assert.throws(
+    () =>
+      parseApiEnv({
+        ...createBaseEnv(),
+        [primaryEnvName]: 'replace-with-32-byte-base64url-random-secret'
+      }),
+    /placeholder/
+  );
+});
+
+test('parseApiEnv rejects reused JWT secrets', () => {
+  assert.throws(
+    () =>
+      parseApiEnv({
+        ...createBaseEnv(),
+        [secondaryEnvName]: primarySigningText
+      }),
+    /must be different/
+  );
 });

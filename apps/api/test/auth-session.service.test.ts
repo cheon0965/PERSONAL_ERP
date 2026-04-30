@@ -3,10 +3,8 @@ import test from 'node:test';
 import { resetApiEnvCache } from '../src/config/api-env';
 import { AuthSessionService } from '../src/modules/auth/auth-session.service';
 
-const primarySigningText = ['test', 'access', 'signing', 'key'].join('-');
-const secondarySigningText = ['test', 'refresh', 'signing', 'key', '2'].join(
-  '-'
-);
+const primarySigningText = 'TeW6AOOAazbxXapqMRAgtzntQl3feiFJ6f_W721gRLc';
+const secondarySigningText = 'dFu-IUZHIFuvFJkOcFv0Gls_shj0aLmaLGMJzM6mxAk';
 const apiEnvNames = {
   primary: ['JWT', 'ACCESS', 'SECRET'].join('_'),
   secondary: ['JWT', 'REFRESH', 'SECRET'].join('_'),

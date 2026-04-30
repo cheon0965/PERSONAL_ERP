@@ -25,6 +25,11 @@ export type ApiEnv = {
 };
 
 const JWT_DURATION_PATTERN = /^\d+(ms|s|m|h|d|w|y)?$/;
+const BASE64URL_SECRET_PATTERN = /^[A-Za-z0-9_-]+$/;
+const BASE64_SECRET_PATTERN = /^[A-Za-z0-9+/]+={0,2}$/;
+const JWT_SECRET_PLACEHOLDER_PATTERN =
+  /^(replace[-_]?with|change[-_]?me|changeme|example|sample|test)/i;
+const MIN_JWT_SECRET_BYTES = 32;
 
 let cachedApiEnv: ApiEnv | undefined;
 
@@ -174,6 +179,55 @@ function readJwtDuration(source: EnvSource, key: string): string {
   return value;
 }
 
+function readJwtSecret(source: EnvSource, key: string): string {
+  const value = readString(source, key, {
+    minLength: 43
+  });
+
+  if (JWT_SECRET_PLACEHOLDER_PATTERN.test(value)) {
+    throw new Error(
+      `[api env] ${key} must be generated random bytes, not an example placeholder. Generate one with randomBytes(32).toString('base64url').`
+    );
+  }
+
+  const decodedLength = readBase64SecretByteLength(value);
+
+  if (decodedLength < MIN_JWT_SECRET_BYTES) {
+    throw new Error(
+      `[api env] ${key} must decode to at least ${MIN_JWT_SECRET_BYTES} random bytes. Generate one with randomBytes(32).toString('base64url').`
+    );
+  }
+
+  if (new Set(value).size < 8) {
+    throw new Error(
+      `[api env] ${key} must not be a repeated or low-variation secret.`
+    );
+  }
+
+  return value;
+}
+
+function readBase64SecretByteLength(value: string): number {
+  if (BASE64URL_SECRET_PATTERN.test(value)) {
+    return Buffer.from(
+      padBase64(value.replace(/-/g, '+').replace(/_/g, '/')),
+      'base64'
+    ).length;
+  }
+
+  if (BASE64_SECRET_PATTERN.test(value)) {
+    return Buffer.from(padBase64(value), 'base64').length;
+  }
+
+  throw new Error(
+    '[api env] JWT secrets must be base64url or base64 encoded random bytes.'
+  );
+}
+
+function padBase64(value: string): string {
+  return value.padEnd(value.length + ((4 - (value.length % 4)) % 4), '=');
+}
+
 function readJwtDurationWithFallback(
   source: EnvSource,
   key: string,
@@ -227,17 +281,22 @@ function readRequiredGmailString(
 export function parseApiEnv(source: EnvSource): ApiEnv {
   const appOrigin = readUrl(source, 'APP_ORIGIN');
   const mailProvider = readMailProvider(source);
+  const jwtAccessSecret = readJwtSecret(source, 'JWT_ACCESS_SECRET');
+  const jwtRefreshSecret = readJwtSecret(source, 'JWT_REFRESH_SECRET');
+
+  if (jwtAccessSecret === jwtRefreshSecret) {
+    throw new Error(
+      '[api env] JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different.'
+    );
+  }
+
   return {
     PORT: readPort(source),
     APP_ORIGIN: appOrigin,
     CORS_ALLOWED_ORIGINS: readAllowedOrigins(source, appOrigin),
     SWAGGER_ENABLED: readBoolean(source, 'SWAGGER_ENABLED', false),
-    JWT_ACCESS_SECRET: readString(source, 'JWT_ACCESS_SECRET', {
-      minLength: 16
-    }),
-    JWT_REFRESH_SECRET: readString(source, 'JWT_REFRESH_SECRET', {
-      minLength: 16
-    }),
+    JWT_ACCESS_SECRET: jwtAccessSecret,
+    JWT_REFRESH_SECRET: jwtRefreshSecret,
     ACCESS_TOKEN_TTL: readJwtDuration(source, 'ACCESS_TOKEN_TTL'),
     REFRESH_TOKEN_TTL: readJwtDuration(source, 'REFRESH_TOKEN_TTL'),
     EMAIL_VERIFICATION_TTL: readJwtDurationWithFallback(

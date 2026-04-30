@@ -4,6 +4,7 @@ import * as React from 'react';
 import type { Route } from 'next';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
 import KeyboardArrowRightRoundedIcon from '@mui/icons-material/KeyboardArrowRightRounded';
 import RadioButtonUncheckedRoundedIcon from '@mui/icons-material/RadioButtonUncheckedRounded';
@@ -38,7 +39,15 @@ const drawerWidth = 304;
 const EMPTY_NAVIGATION_ITEMS: NavigationMenuItem[] = [];
 const SYSTEM_ADMIN_MENU_ROLES: NavigationMenuItem['allowedRoles'] = ['OWNER'];
 
-export function SidebarNav() {
+type SidebarNavProps = {
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+};
+
+export function SidebarNav({
+  mobileOpen = false,
+  onMobileClose
+}: SidebarNavProps) {
   const pathname = usePathname() ?? '';
   const { user } = useAuthSession();
   const isSystemAdmin = user?.isSystemAdmin === true;
@@ -82,7 +91,8 @@ export function SidebarNav() {
 
     previousPathnameRef.current = pathname;
     setManuallyClosedKeys(new Set());
-  }, [pathname]);
+    onMobileClose?.();
+  }, [onMobileClose, pathname]);
 
   React.useEffect(() => {
     setOpenKeys((current) => {
@@ -140,37 +150,24 @@ export function SidebarNav() {
     });
   };
 
-  return (
-    <Drawer
-      variant="permanent"
-      sx={{
-        width: drawerWidth,
-        flexShrink: 0,
-        display: { xs: 'none', lg: 'block' },
-        '& .MuiDrawer-paper': {
-          width: drawerWidth,
-          boxSizing: 'border-box',
-          borderTopLeftRadius: 0,
-          borderTopRightRadius: 0,
-          borderBottomLeftRadius: 24,
-          borderBottomRightRadius: 24,
-          borderRight: '1px solid',
-          borderColor: alpha(brandTokens.palette.primaryBright, 0.12),
-          backgroundColor: brandTokens.palette.surface,
-          overflowY: 'auto',
-          boxShadow: '14px 0 36px rgba(6, 34, 111, 0.06)'
-        }
-      }}
-      open
-    >
-      <Toolbar sx={{ minHeight: { xs: 60, md: 64 }, p: 0 }}>
+  const drawerContent = (
+    <>
+      <Toolbar
+        sx={{
+          minHeight: { xs: 60, md: 64 },
+          p: 0,
+          justifyContent: 'space-between'
+        }}
+      >
         <Box
           component={Link}
           href={'/dashboard' as Route}
+          onClick={onMobileClose}
           sx={{
             display: 'flex',
             alignItems: 'center',
             width: '100%',
+            minWidth: 0,
             minHeight: { xs: 60, md: 64 },
             pl: 1.5,
             pr: 1.25,
@@ -180,6 +177,18 @@ export function SidebarNav() {
         >
           <BrandLogo priority sx={{ width: { xs: 180, md: 192 } }} />
         </Box>
+        <IconButton
+          aria-label="메뉴 닫기"
+          size="small"
+          onClick={onMobileClose}
+          sx={{
+            display: { xs: 'inline-flex', lg: 'none' },
+            mr: 1,
+            flexShrink: 0
+          }}
+        >
+          <CloseRoundedIcon fontSize="small" />
+        </IconButton>
       </Toolbar>
       <Divider />
       <Box sx={{ px: 1.5, py: 2 }}>
@@ -248,6 +257,7 @@ export function SidebarNav() {
               openKeys={openKeys}
               selectedKey={selectedKey}
               onToggle={toggleOpen}
+              onNavigate={onMobileClose}
             />
           ))}
         </List>
@@ -330,13 +340,62 @@ export function SidebarNav() {
               openKeys={openKeys}
               selectedKey={selectedKey}
               onToggle={toggleOpen}
+              onNavigate={onMobileClose}
             />
           ))}
         </List>
       </Box>
-    </Drawer>
+    </>
+  );
+
+  return (
+    <>
+      <Drawer
+        variant="permanent"
+        sx={{
+          width: drawerWidth,
+          flexShrink: 0,
+          display: { xs: 'none', lg: 'block' },
+          '& .MuiDrawer-paper': sidebarPaperSx
+        }}
+        open
+      >
+        {drawerContent}
+      </Drawer>
+      <Drawer
+        variant="temporary"
+        open={mobileOpen}
+        onClose={onMobileClose}
+        ModalProps={{ keepMounted: true }}
+        sx={{
+          display: { xs: 'block', lg: 'none' },
+          '& .MuiDrawer-paper': {
+            ...sidebarPaperSx,
+            width: { xs: 'min(88vw, 304px)', md: 336 },
+            borderBottomLeftRadius: 0,
+            boxShadow: '18px 0 42px rgba(6, 34, 111, 0.18)'
+          }
+        }}
+      >
+        {drawerContent}
+      </Drawer>
+    </>
   );
 }
+
+const sidebarPaperSx = {
+  width: drawerWidth,
+  boxSizing: 'border-box',
+  borderTopLeftRadius: 0,
+  borderTopRightRadius: 0,
+  borderBottomLeftRadius: 24,
+  borderBottomRightRadius: 24,
+  borderRight: '1px solid',
+  borderColor: alpha(brandTokens.palette.primaryBright, 0.12),
+  backgroundColor: brandTokens.palette.surface,
+  overflowY: 'auto',
+  boxShadow: '14px 0 36px rgba(6, 34, 111, 0.06)'
+} as const;
 
 export const sidebarWidth = drawerWidth;
 
@@ -563,12 +622,14 @@ function NavigationNode({
   item,
   openKeys,
   selectedKey,
-  onToggle
+  onToggle,
+  onNavigate
 }: {
   item: NavigationMenuItem;
   openKeys: Set<string>;
   selectedKey: string | null;
   onToggle: (key: string) => void;
+  onNavigate?: () => void;
 }) {
   const hasChildren = item.children.length > 0;
   const isOpen = openKeys.has(item.key);
@@ -608,6 +669,7 @@ function NavigationNode({
           isRoot={isRoot}
           icon={Icon}
           onToggle={onToggle}
+          onNavigate={onNavigate}
         />
         {hasChildren ? (
           <IconButton
@@ -643,6 +705,7 @@ function NavigationNode({
                 openKeys={openKeys}
                 selectedKey={selectedKey}
                 onToggle={onToggle}
+                onNavigate={onNavigate}
               />
             ))}
           </Box>
@@ -657,18 +720,20 @@ function NodeButton({
   selected,
   isRoot,
   icon: Icon,
-  onToggle
+  onToggle,
+  onNavigate
 }: {
   item: NavigationMenuItem;
   selected: boolean;
   isRoot: boolean;
   icon: React.ElementType | null;
   onToggle: (key: string) => void;
+  onNavigate?: () => void;
 }) {
   const button = (
     <ListItemButton
       selected={selected}
-      onClick={item.href ? undefined : () => onToggle(item.key)}
+      onClick={item.href ? onNavigate : () => onToggle(item.key)}
       sx={{
         position: 'relative',
         flex: 1,

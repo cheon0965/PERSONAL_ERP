@@ -20,6 +20,7 @@
 - DB 스키마 변경이 포함되면 migration 파일이 함께 있는지 확인합니다.
 - `NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=false`인지 확인합니다.
 - `APP_ORIGIN`과 `NEXT_PUBLIC_API_BASE_URL` 조합이 실제 도메인과 맞는지 확인합니다.
+- Docker 배포에서는 `docker-compose.prod.yml`과 비공개 `.deploy/compose.env`를 사용하고, 상세 절차는 [`DOCKER_DEPLOYMENT.md`](./DOCKER_DEPLOYMENT.md)를 우선합니다.
 - API와 Web이 사용할 포트, 방화벽, reverse proxy 경로를 미리 정합니다.
 
 ## 필수 env / secret 점검
@@ -52,6 +53,8 @@
 
 ## 현재 저장소 기준 배포 순서
 
+### 일반 프로세스 배포
+
 1. SECRET 경로와 실제 `api.env`, `web.env` 값을 다시 확인합니다.
 2. `npm install`로 의존성을 맞춥니다.
 3. `npm run check:quick`를 실행합니다.
@@ -61,6 +64,15 @@
 7. Web을 `npm run start --workspace @personal-erp/web`로 실행합니다.
 8. reverse proxy나 포트 포워딩을 실제 주소와 맞춥니다.
 9. 아래 수동 스모크 체크를 완료합니다.
+
+### Docker Compose 배포
+
+1. `env-examples/deploy.compose.env.example`를 `.deploy/compose.env`로 복사하고 실제 secret으로 교체합니다.
+2. `docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml config`로 구성을 확인합니다.
+3. `build-docker-images.bat`로 `migrate`, `api`, `web` 이미지를 빌드합니다. tar 파일이 필요하면 `build-docker-images.bat --tag <tag> --save`를 사용합니다.
+4. `docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml up -d`로 MySQL, migration, API, Web을 기동합니다.
+5. `docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml ps`에서 `api`, `web`, `mysql` health 상태와 `migrate` 완료 상태를 확인합니다.
+6. HTTPS reverse proxy 연결 후 아래 수동 스모크 체크를 완료합니다.
 
 ## 수동 스모크 체크
 
@@ -152,7 +164,7 @@
 
 - 이 저장소는 PM2, NSSM, IIS, systemd 같은 프로세스 관리자 설정을 포함하지 않습니다.
 - reverse proxy, TLS 종료, 서비스 재시작 정책은 운영 환경에서 별도로 정해야 합니다.
-- 현재 refresh token 쿠키는 `APP_ORIGIN`이 HTTPS일 때만 `secure: true`가 되므로, 운영 환경에서는 반드시 HTTPS origin과 함께 점검해야 합니다.
+- 현재 refresh token 쿠키는 `__Host-refreshToken`과 `Secure`로 고정되므로, 운영 환경에서는 반드시 HTTPS origin과 함께 점검해야 합니다.
 - 운영 환경에서는 `CORS_ALLOWED_ORIGINS`를 필요한 origin만 포함하도록 최소화하고, `SWAGGER_ENABLED=false` 여부를 같이 결정합니다.
 - 현재 보안 이벤트는 애플리케이션 로그에 남기며, 외부 감사 저장소나 중앙 로그 수집기는 아직 연결하지 않았습니다.
 - 업로드 배치 일괄 등록은 Job/행별 결과와 workspace 잠금을 DB에 남기지만, 현재 실행 루프는 API 프로세스 안에서 동작합니다. 운영 재시작 직후에는 진행 중 Job/잠금 상태를 `/operations/imports`와 배치 작업대에서 확인하고, 장기적으로는 외부 worker/outbox 도입 여부를 별도 결정해야 합니다.

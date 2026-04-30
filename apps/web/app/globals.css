@@ -14,6 +14,7 @@ body {
    */
   padding-right: 0 !important;
   min-height: 100%;
+  min-width: 0;
   overflow-x: clip;
   background: var(--mui-palette-background-default);
   color: var(--mui-palette-text-primary);
@@ -30,6 +31,13 @@ body {
 
 * {
   box-sizing: border-box;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
 }
 
 a {

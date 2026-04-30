@@ -112,11 +112,79 @@ for (const [key, value] of Object.entries(resolvedPublicEnv)) {
   }
 }
 
+function readOrigin(value) {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+}
+
+const apiOrigin = readOrigin(resolvedPublicEnv.NEXT_PUBLIC_API_BASE_URL);
+const webConnectSources = [
+  "'self'",
+  ...(apiOrigin ? [apiOrigin] : []),
+  'http://localhost:4000',
+  'http://127.0.0.1:4000'
+];
+
+const webContentSecurityPolicy = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  `connect-src ${Array.from(new Set(webConnectSources)).join(' ')}`,
+  "object-src 'none'",
+  "base-uri 'none'",
+  "form-action 'self'",
+  "frame-ancestors 'none'"
+].join('; ');
+
+const webSecurityHeaders = [
+  {
+    key: 'Content-Security-Policy',
+    value: webContentSecurityPolicy
+  },
+  {
+    key: 'Strict-Transport-Security',
+    value: 'max-age=31536000; includeSubDomains'
+  },
+  {
+    key: 'X-Content-Type-Options',
+    value: 'nosniff'
+  },
+  {
+    key: 'Referrer-Policy',
+    value: 'no-referrer'
+  },
+  {
+    key: 'Permissions-Policy',
+    value: 'camera=(), geolocation=(), microphone=()'
+  },
+  {
+    key: 'X-Frame-Options',
+    value: 'DENY'
+  }
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
   env: resolvedPublicEnv,
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: webSecurityHeaders
+      }
+    ];
+  },
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,

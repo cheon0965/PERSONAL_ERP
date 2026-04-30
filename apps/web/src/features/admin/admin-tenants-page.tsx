@@ -26,6 +26,7 @@ import { FormDrawer } from '@/shared/ui/form-drawer';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
+import { ResponsiveFilterPanel } from '@/shared/ui/responsive-filter-panel';
 import {
   adminTenantsQueryKey,
   getAdminTenant,
@@ -304,68 +305,82 @@ function AdminTenantsTableToolbar({
   onFiltersChange: (filters: AdminTenantFilters) => void;
 }) {
   const hasActiveFilter = Object.values(filters).some((value) => value !== '');
+  const activeFilterLabels = [
+    filters.keyword.trim() ? `검색: ${filters.keyword.trim()}` : null,
+    filters.status ? `상태: ${readTenantStatusLabel(filters.status)}` : null,
+    filters.ledgerState
+      ? `기본 장부: ${filters.ledgerState === 'READY' ? '있음' : '누락'}`
+      : null
+  ].filter((label): label is string => Boolean(label));
+  const clearFilters = () =>
+    onFiltersChange({
+      keyword: '',
+      status: '',
+      ledgerState: ''
+    });
 
   return (
-    <Stack
-      direction={{ xs: 'column', md: 'row' }}
-      spacing={1}
-      alignItems={{ xs: 'stretch', md: 'center' }}
+    <ResponsiveFilterPanel
+      title="사업장 조회조건"
+      activeFilterCount={activeFilterLabels.length}
+      activeFilterLabels={activeFilterLabels}
+      onClear={clearFilters}
     >
-      <TextField
-        label="검색어"
-        size="small"
-        value={filters.keyword}
-        onChange={(event) =>
-          onFiltersChange({ ...filters, keyword: event.target.value })
-        }
-        placeholder="사업장, 슬러그, 장부"
-        sx={{ minWidth: { md: 260 }, flex: 1 }}
-      />
-      <TextField
-        select
-        label="상태"
-        size="small"
-        value={filters.status}
-        onChange={(event) =>
-          onFiltersChange({ ...filters, status: event.target.value })
-        }
-        sx={{ minWidth: { md: 150 } }}
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={1}
+        alignItems={{ xs: 'stretch', md: 'center' }}
       >
-        <MenuItem value="">전체</MenuItem>
-        <MenuItem value="ACTIVE">활성</MenuItem>
-        <MenuItem value="TRIAL">체험</MenuItem>
-        <MenuItem value="SUSPENDED">중지</MenuItem>
-        <MenuItem value="ARCHIVED">보관</MenuItem>
-      </TextField>
-      <TextField
-        select
-        label="기본 장부"
-        size="small"
-        value={filters.ledgerState}
-        onChange={(event) =>
-          onFiltersChange({ ...filters, ledgerState: event.target.value })
-        }
-        sx={{ minWidth: { md: 150 } }}
-      >
-        <MenuItem value="">전체</MenuItem>
-        <MenuItem value="READY">있음</MenuItem>
-        <MenuItem value="MISSING">누락</MenuItem>
-      </TextField>
-      <Button
-        variant="outlined"
-        disabled={!hasActiveFilter}
-        sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
-        onClick={() =>
-          onFiltersChange({
-            keyword: '',
-            status: '',
-            ledgerState: ''
-          })
-        }
-      >
-        초기화
-      </Button>
-    </Stack>
+        <TextField
+          label="검색어"
+          size="small"
+          value={filters.keyword}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, keyword: event.target.value })
+          }
+          placeholder="사업장, 슬러그, 장부"
+          sx={{ minWidth: { md: 260 }, flex: 1 }}
+        />
+        <TextField
+          select
+          label="상태"
+          size="small"
+          value={filters.status}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, status: event.target.value })
+          }
+          sx={{ minWidth: { md: 150 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          <MenuItem value="ACTIVE">활성</MenuItem>
+          <MenuItem value="TRIAL">체험</MenuItem>
+          <MenuItem value="SUSPENDED">중지</MenuItem>
+          <MenuItem value="ARCHIVED">보관</MenuItem>
+        </TextField>
+        <TextField
+          select
+          label="기본 장부"
+          size="small"
+          value={filters.ledgerState}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, ledgerState: event.target.value })
+          }
+          sx={{ minWidth: { md: 150 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          <MenuItem value="READY">있음</MenuItem>
+          <MenuItem value="MISSING">누락</MenuItem>
+        </TextField>
+        <Button
+          variant="outlined"
+          disabled={!hasActiveFilter}
+          sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+          onClick={clearFilters}
+        >
+          초기화
+        </Button>
+      </Stack>
+    </ResponsiveFilterPanel>
   );
 }
 

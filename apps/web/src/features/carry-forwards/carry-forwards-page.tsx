@@ -4,7 +4,14 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Grid, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import {
+  Button,
+  Grid,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography
+} from '@mui/material';
 import type {
   AccountingPeriodItem,
   CarryForwardView
@@ -20,6 +27,7 @@ import {
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
+import { ResponsiveFilterPanel } from '@/shared/ui/responsive-filter-panel';
 import { SectionCard } from '@/shared/ui/section-card';
 import { ConfirmActionDialog } from '@/shared/ui/confirm-action-dialog';
 import {
@@ -329,61 +337,74 @@ export function CarryForwardsPage({
             : '잠금된 운영 기간을 고른 뒤, 생성과 결과 확인을 같은 흐름 안에서 분리해 진행합니다.'
         }
       >
-        <Grid container spacing={appLayout.fieldGap} alignItems="flex-start">
-          <Grid size={{ xs: 12, md: 5 }}>
-            <TextField
-              select
-              fullWidth
-              label="잠금된 운영 기간"
-              value={selectedPeriodId}
-              onChange={(event) => {
-                setSelectedPeriodIdState(event.target.value);
-                setFeedback(null);
-                if (mode === 'detail') {
-                  router.push(buildCarryForwardsDetailHref(event.target.value));
+        <ResponsiveFilterPanel
+          title="이월 기간 조회조건"
+          description="잠금된 운영 기간을 선택해 차기 이월 생성과 결과 확인 기준을 바꿉니다."
+          activeFilterCount={selectedPeriod ? 1 : 0}
+          activeFilterLabels={
+            selectedPeriod
+              ? [`기간: ${selectedPeriod.monthLabel}`]
+              : ['잠금 기간 미선택']
+          }
+        >
+          <Grid container spacing={appLayout.fieldGap} alignItems="flex-start">
+            <Grid size={{ xs: 12, md: 5 }}>
+              <TextField
+                select
+                fullWidth
+                label="잠금된 운영 기간"
+                value={selectedPeriodId}
+                onChange={(event) => {
+                  setSelectedPeriodIdState(event.target.value);
+                  setFeedback(null);
+                  if (mode === 'detail') {
+                    router.push(
+                      buildCarryForwardsDetailHref(event.target.value)
+                    );
+                  }
+                }}
+                helperText={
+                  lockedPeriods.length > 0
+                    ? '잠금된 기간만 차기 이월의 기준이 되며, 결과 화면으로 바로 이동할 수 있습니다.'
+                    : '아직 잠금된 운영 기간이 없습니다.'
                 }
-              }}
-              helperText={
-                lockedPeriods.length > 0
-                  ? '잠금된 기간만 차기 이월의 기준이 되며, 결과 화면으로 바로 이동할 수 있습니다.'
-                  : '아직 잠금된 운영 기간이 없습니다.'
-              }
-              disabled={lockedPeriods.length === 0}
-            >
-              {lockedPeriods.map((period) => (
-                <MenuItem key={period.id} value={period.id}>
-                  {period.monthLabel}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-          <Grid size={{ xs: 12, md: 7 }}>
-            <Stack spacing={1.25}>
-              <Typography variant="body2" color="text.secondary">
-                {selectedPeriod
-                  ? `${selectedPeriod.monthLabel} 기간은 ${readPeriodStatusLabel(selectedPeriod.status)} 상태입니다. 차기 이월은 잠금된 월의 자산·부채·자본 잔액만 다음 월 오프닝 기준으로 넘깁니다.`
-                  : '잠금된 기간이 준비되면 여기서 차기 이월 상태를 확인하고 결과 화면으로 이동할 수 있습니다.'}
-              </Typography>
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={1}
-                useFlexGap
-                flexWrap="wrap"
+                disabled={lockedPeriods.length === 0}
               >
-                <Button
-                  component={Link}
-                  href="/financial-statements"
-                  variant="outlined"
+                {lockedPeriods.map((period) => (
+                  <MenuItem key={period.id} value={period.id}>
+                    {period.monthLabel}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, md: 7 }}>
+              <Stack spacing={1.25}>
+                <Typography variant="body2" color="text.secondary">
+                  {selectedPeriod
+                    ? `${selectedPeriod.monthLabel} 기간은 ${readPeriodStatusLabel(selectedPeriod.status)} 상태입니다. 차기 이월은 잠금된 월의 자산·부채·자본 잔액만 다음 월 오프닝 기준으로 넘깁니다.`
+                    : '잠금된 기간이 준비되면 여기서 차기 이월 상태를 확인하고 결과 화면으로 이동할 수 있습니다.'}
+                </Typography>
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={1}
+                  useFlexGap
+                  flexWrap="wrap"
                 >
-                  재무제표 보기
-                </Button>
-                <Button component={Link} href="/forecast" variant="text">
-                  기간 전망 보기
-                </Button>
+                  <Button
+                    component={Link}
+                    href="/financial-statements"
+                    variant="outlined"
+                  >
+                    재무제표 보기
+                  </Button>
+                  <Button component={Link} href="/forecast" variant="text">
+                    기간 전망 보기
+                  </Button>
+                </Stack>
               </Stack>
-            </Stack>
+            </Grid>
           </Grid>
-        </Grid>
+        </ResponsiveFilterPanel>
       </SectionCard>
 
       {selectedPeriodMissing ? (

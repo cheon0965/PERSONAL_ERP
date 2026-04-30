@@ -102,9 +102,14 @@ export function FundingAccountStatusControls({
               aria-label="자금수단 현황 기준 선택"
               sx={{
                 '& .MuiToggleButton-root': {
+                  flex: '1 1 0',
+                  minWidth: 0,
                   minHeight: 40,
+                  px: { xs: 0.75, sm: 1.5 },
                   textTransform: 'none',
                   fontWeight: 800,
+                  lineHeight: 1.25,
+                  whiteSpace: 'normal',
                   wordBreak: 'keep-all'
                 }
               }}
@@ -335,6 +340,7 @@ function FundingAccountCardsSection({
                 sx={{
                   width: '100%',
                   height: '100%',
+                  minWidth: 0,
                   p: appLayout.cardPadding,
                   borderRadius: 2,
                   border: '1px solid',
@@ -359,13 +365,18 @@ function FundingAccountCardsSection({
               >
                 <Stack spacing={1.5}>
                   <Stack
-                    direction="row"
+                    direction={{ xs: 'column', sm: 'row' }}
                     justifyContent="space-between"
-                    alignItems="flex-start"
+                    alignItems={{ xs: 'stretch', sm: 'flex-start' }}
                     spacing={1}
+                    sx={{ minWidth: 0 }}
                   >
                     <Stack spacing={0.65} sx={{ minWidth: 0 }}>
-                      <Typography variant="subtitle1" fontWeight={800}>
+                      <Typography
+                        variant="subtitle1"
+                        fontWeight={800}
+                        sx={{ overflowWrap: 'anywhere' }}
+                      >
                         {account.name}
                       </Typography>
                       <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
@@ -393,7 +404,12 @@ function FundingAccountCardsSection({
                       </Stack>
                     </Stack>
                     {selected ? (
-                      <Chip label="선택됨" color="primary" size="small" />
+                      <Chip
+                        label="선택됨"
+                        color="primary"
+                        size="small"
+                        sx={{ alignSelf: { xs: 'flex-start', sm: 'auto' } }}
+                      />
                     ) : null}
                   </Stack>
 
@@ -474,14 +490,22 @@ function FundingAccountFlowChart({
     <ChartCard
       title="자금수단별 수입 / 지출 / 순흐름"
       description="선택 범위의 자금수단별 월중 돈의 방향을 비교합니다."
+      chartMinWidth={
+        chartAccounts.length > 2
+          ? Math.max(560, chartAccounts.length * 132)
+          : 0
+      }
       chart={
         chartAccounts.length > 0 ? (
           <BarChart
             height={330}
+            margin={{ left: 86, right: 24, bottom: 74 }}
             xAxis={[
               {
                 scaleType: 'band',
-                data: chartAccounts.map((account) => account.name)
+                data: chartAccounts.map((account) =>
+                  readCompactChartLabel(account.name)
+                )
               }
             ]}
             series={[
@@ -516,11 +540,13 @@ function FundingAccountTrendChart({
     <ChartCard
       title="최근 월 추이"
       description="최근 기간의 수입, 지출, 순흐름과 공식 잠금 여부를 함께 읽습니다."
+      chartMinWidth={summary.trend.length > 3 ? 560 : 0}
       chart={
         summary.trend.length > 0 ? (
           <Stack spacing={1.5}>
             <BarChart
               height={300}
+              margin={{ left: 86, right: 24, bottom: 58 }}
               xAxis={[
                 {
                   scaleType: 'band',
@@ -571,18 +597,23 @@ function FundingAccountCategoryChart({
     <ChartCard
       title="카테고리별 수입 / 지출 비중"
       description="선택 범위에서 금액 영향이 큰 카테고리를 빠르게 확인합니다."
+      chartMinWidth={categories.length > 2 ? 680 : 0}
       chart={
         categories.length > 0 ? (
           <Grid container spacing={appLayout.fieldGap} alignItems="center">
             <Grid size={{ xs: 12, lg: 7 }}>
               <BarChart
                 height={320}
+                margin={{ left: 86, right: 24, bottom: 86 }}
                 xAxis={[
                   {
                     scaleType: 'band',
                     data: categories.map(
                       (item) =>
-                        `${readFlowKindLabel(item.flowKind)} · ${item.categoryName}`
+                        readCompactChartLabel(
+                          `${readFlowKindLabel(item.flowKind)} · ${item.categoryName}`,
+                          14
+                        )
                     )
                   }
                 ]}
@@ -782,13 +813,18 @@ function MetricMini({ label, value }: { label: string; value: string }) {
         borderRadius: 1.5,
         border: '1px solid',
         borderColor: 'divider',
-        backgroundColor: 'background.paper'
+        backgroundColor: 'background.paper',
+        minWidth: 0
       }}
     >
       <Typography variant="caption" color="text.secondary">
         {label}
       </Typography>
-      <Typography variant="body2" fontWeight={800}>
+      <Typography
+        variant="body2"
+        fontWeight={800}
+        sx={{ overflowWrap: 'anywhere' }}
+      >
         {value}
       </Typography>
     </Stack>
@@ -808,20 +844,21 @@ function FundingAccountDriverRow({
 }) {
   return (
     <Stack
-      direction="row"
+      direction={{ xs: 'column', sm: 'row' }}
       justifyContent="space-between"
-      alignItems="center"
+      alignItems={{ xs: 'stretch', sm: 'center' }}
       spacing={2}
       sx={{
         py: 0.75,
         borderBottom: '1px solid',
-        borderColor: 'divider'
+        borderColor: 'divider',
+        minWidth: 0
       }}
     >
       <Typography
         variant="body2"
         color="text.secondary"
-        sx={{ fontWeight: emphasize ? 800 : 500 }}
+        sx={{ fontWeight: emphasize ? 800 : 500, overflowWrap: 'anywhere' }}
       >
         {label}
       </Typography>
@@ -830,7 +867,8 @@ function FundingAccountDriverRow({
         sx={{
           fontWeight: emphasize ? 900 : 800,
           color: valueColor ?? 'text.primary',
-          textAlign: 'right'
+          textAlign: { xs: 'left', sm: 'right' },
+          overflowWrap: 'anywhere'
         }}
       >
         {value}
@@ -857,6 +895,14 @@ function EmptyChartMessage({ label }: { label: string }) {
       </Typography>
     </Box>
   );
+}
+
+function readCompactChartLabel(label: string, maxLength = 12) {
+  if (label.length <= maxLength) {
+    return label;
+  }
+
+  return `${label.slice(0, maxLength)}...`;
 }
 
 export function readFundingAccountOverviewBasisLabel(

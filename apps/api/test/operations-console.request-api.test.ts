@@ -148,6 +148,38 @@ test('GET/POST /operations/* endpoints expose monitoring, exports, and notes', a
   }
 });
 
+test('POST /operations/exports escapes spreadsheet formula cells in CSV output', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    seedOperationsConsoleState(context);
+    const exportedTransaction = context.state.collectedTransactions.find(
+      (candidate) => candidate.id === 'ctx-operations-review-1'
+    );
+    assert.ok(exportedTransaction);
+    exportedTransaction.title = '=HYPERLINK("http://example.test","x")';
+    exportedTransaction.memo = '+SUM(1,1)';
+
+    const exportResult = await context.request('/operations/exports', {
+      method: 'POST',
+      headers: context.authHeaders(),
+      body: {
+        scope: 'COLLECTED_TRANSACTIONS',
+        periodId: 'period-operations-open-1'
+      }
+    });
+    const payload = String(
+      (exportResult.body as Record<string, unknown>).payload
+    );
+
+    assert.equal(exportResult.status, 201);
+    assert.match(payload, /"'=HYPERLINK/);
+    assert.match(payload, /"'\+SUM\(1,1\)"/);
+  } finally {
+    await context.close();
+  }
+});
+
 function seedOperationsConsoleState(
   context: Awaited<ReturnType<typeof createRequestTestContext>>
 ) {

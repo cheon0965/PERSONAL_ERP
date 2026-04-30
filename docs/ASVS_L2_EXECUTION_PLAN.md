@@ -39,13 +39,20 @@
 ### 현재 보안 기반과 남은 갭
 
 - Web은 이제 access token을 메모리 런타임 상태에만 유지합니다.
-- refresh token 쿠키는 `APP_ORIGIN`이 HTTPS일 때 `secure: true`로 설정됩니다.
+- refresh token 쿠키는 `__Host-refreshToken`, `Secure`, `HttpOnly`, `SameSite=Strict`, path `/` 기준으로 발급되고, 전환 기간 동안 legacy `refreshToken`도 읽고 삭제합니다.
 - refresh token 회전, 서버측 폐기, 재사용 감지, 로그아웃 엔드포인트가 도입되었습니다.
 - 로그인/refresh 엔드포인트에 rate limiting 기반 anti-automation 방어가 들어갔습니다.
-- 브라우저/API 경계에는 CORS allowlist, 보안 헤더, `Cache-Control: no-store`, browser origin allowlist 방어가 들어갔지만 운영 HTTPS/HSTS와 Swagger 노출 토글은 실제 배포 기준으로 다시 점검해야 합니다.
+- 브라우저/API 경계에는 CORS allowlist, API/Web 보안 헤더, CSP, HSTS, `Cache-Control: no-store`, browser origin allowlist 방어가 들어갔지만 운영 HTTPS와 Swagger 노출 토글은 실제 배포 기준으로 다시 점검해야 합니다.
 - cookie 기반 인증 흐름은 allowlist 기반 origin 검증으로 1차 보호되지만, 범용 state-changing 폼이 늘어나면 별도 CSRF 전략을 다시 평가해야 합니다.
 - 보안 이벤트 로깅은 request-id 기준으로 남기기 시작했지만, 외부 감사 저장소나 장기 보관 정책은 아직 없습니다.
 - CI에는 `validate`, `e2e-smoke`, `security-regression`, `prisma-integration`, `audit-runtime`, `semgrep-ce`, `gitleaks`가 들어갔고, GitHub 첫 통과 증적과 required check 연결, disposable DB 기반 `prisma-integration` 통과까지 확인했습니다.
+
+### 2026-04-30 보강 반영
+
+- `WOORI_BANK_HTML` 파일첨부 업로드는 dynamic JavaScript 실행 위험 때문에 서버에서 400으로 차단하고 Web 신규 선택지에서도 숨겼습니다.
+- 운영 CSV 반출은 spreadsheet formula 시작 문자열을 방어합니다.
+- 회원가입, 비밀번호 변경, 비밀번호 재설정은 common/context-derived password를 차단합니다.
+- JWT access/refresh secret은 32 bytes 이상 base64/base64url random secret, 서로 다른 값, placeholder 금지 조건을 env parse 단계에서 검증합니다.
 
 ## 범위 구분
 
@@ -61,7 +68,6 @@
 
 ### 지금은 N/A 또는 보류
 
-- 비밀번호 재설정
 - MFA/2FA
 - 외부 파일 storage/다운로드 보안
 - 외부 결제/SMS 연동

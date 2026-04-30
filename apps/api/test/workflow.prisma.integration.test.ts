@@ -71,7 +71,7 @@ async function cleanupRegisteredIntegrationUser(
 test('Real API/DB integration covers register -> verify-email -> login -> auth/me', async (t) => {
   let context: RealApiPrismaIntegrationContext | null = null;
   const email = `prisma-register-${randomUUID()}@example.com`;
-  const password = 'Register1234!';
+  const password = 'Saffron73!Vault';
 
   try {
     context = await createRealApiPrismaIntegrationContext(t);

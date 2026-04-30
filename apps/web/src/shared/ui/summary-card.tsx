@@ -79,6 +79,7 @@ export function SummaryCard({
         position: 'relative',
         height: '100%',
         display: 'flex',
+        minWidth: 0,
         overflow: 'hidden',
         borderColor: alpha(toneStyle.accent, 0.16),
         background: `radial-gradient(circle at 100% 0%, ${toneStyle.glowColor}, transparent 34%), ${brandTokens.gradient.card}`,
@@ -106,18 +107,21 @@ export function SummaryCard({
         }
       }}
     >
-      <CardContent sx={{ p: appLayout.cardPadding, flex: 1, width: '100%' }}>
+      <CardContent
+        sx={{ p: appLayout.cardPadding, flex: 1, width: '100%', minWidth: 0 }}
+      >
         <Stack
           spacing={appLayout.cardGap}
-          sx={{ height: '100%', justifyContent: 'space-between' }}
+          sx={{ height: '100%', justifyContent: 'space-between', minWidth: 0 }}
         >
           <Stack
             direction="row"
             alignItems="flex-start"
             justifyContent="space-between"
             spacing={appLayout.fieldGap}
+            sx={{ minWidth: 0 }}
           >
-            <Stack spacing={1}>
+            <Stack spacing={1} sx={{ minWidth: 0 }}>
               <Box
                 sx={{
                   display: 'inline-flex',
@@ -134,7 +138,11 @@ export function SummaryCard({
                   {eyebrow ?? '핵심 지표'}
                 </Typography>
               </Box>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ overflowWrap: 'anywhere' }}
+              >
                 {title}
               </Typography>
             </Stack>
@@ -161,7 +169,10 @@ export function SummaryCard({
             variant="h4"
             sx={{
               fontWeight: 800,
-              letterSpacing: '-0.02em'
+              letterSpacing: 0,
+              fontSize: { xs: '1.35rem', sm: '1.55rem', md: '1.75rem' },
+              lineHeight: 1.2,
+              overflowWrap: 'anywhere'
             }}
           >
             {value}

@@ -232,6 +232,7 @@ PERSONAL_ERP/
 - [개발 가이드](./docs/DEVELOPMENT_GUIDE.md)
 - [API 개요](./docs/API.md)
 - [배포/운영 체크리스트](./docs/OPERATIONS_CHECKLIST.md)
+- [Docker 배포 가이드](./docs/DOCKER_DEPLOYMENT.md)
 - [검증 메모](./docs/VALIDATION_NOTES.md)
 - [기여 가이드](./CONTRIBUTING.md)
 

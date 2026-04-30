@@ -2,8 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   type CreateVehicleMaintenanceLogRequest,
-  type VehicleMaintenanceCategory,
-  vehicleMaintenanceCategoryValues
+  type VehicleMaintenanceCategory
 } from '@personal-erp/contracts/assets';
 import {
   IsDateString,
@@ -15,6 +14,7 @@ import {
   ValidateNested
 } from 'class-validator';
 import { moneyWonApiProperty } from '../../../common/money/swagger-money';
+import { vehicleMaintenanceCategoryValues } from '../vehicle-maintenance-category.constants';
 import { VehicleLogAccountingLinkDto } from './vehicle-log-accounting-link.dto';
 
 export class CreateVehicleMaintenanceLogDto implements CreateVehicleMaintenanceLogRequest {

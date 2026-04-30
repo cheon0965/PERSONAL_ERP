@@ -20,6 +20,12 @@ export const sourceKindOptions: Array<{
   { value: 'WOORI_BANK_HTML', label: '우리은행 HTML' }
 ];
 
+export const selectableSourceKindOptions = sourceKindOptions.filter(
+  (option) => option.value !== 'WOORI_BANK_HTML'
+);
+
+export const fileUploadSourceKinds: ImportSourceKind[] = ['IM_BANK_PDF'];
+
 export type FeedbackState = FeedbackAlertValue;
 
 export type ImportedRowTableItem = ImportBatchItem['rows'][number] & {

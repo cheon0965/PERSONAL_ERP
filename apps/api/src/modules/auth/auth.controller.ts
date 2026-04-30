@@ -64,21 +64,39 @@ import { SwitchWorkspaceDto } from './dto/switch-workspace.dto';
 import { UpdateAccountProfileDto } from './dto/update-account-profile.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 
-const REFRESH_COOKIE_NAME = 'refreshToken';
-const REFRESH_COOKIE_PATH = '/api/auth';
-
-function useSecureRefreshCookies(): boolean {
-  return new URL(getApiEnv().APP_ORIGIN).protocol === 'https:';
-}
+const REFRESH_COOKIE_NAME = '__Host-refreshToken';
+const LEGACY_REFRESH_COOKIE_NAME = 'refreshToken';
+const REFRESH_COOKIE_PATH = '/';
+const LEGACY_REFRESH_COOKIE_PATH = '/api/auth';
 
 function getRefreshCookieOptions() {
   return {
     httpOnly: true as const,
     sameSite: 'strict' as const,
-    secure: useSecureRefreshCookies(),
+    secure: true as const,
     path: REFRESH_COOKIE_PATH,
     maxAge: getRefreshTokenMaxAgeMs()
   };
+}
+
+function getLegacyRefreshCookieOptions() {
+  return {
+    httpOnly: true as const,
+    sameSite: 'strict' as const,
+    secure: true as const,
+    path: LEGACY_REFRESH_COOKIE_PATH,
+    maxAge: getRefreshTokenMaxAgeMs()
+  };
+}
+
+function getRefreshCookieClearOptions() {
+  const { maxAge: _maxAge, ...options } = getRefreshCookieOptions();
+  return options;
+}
+
+function getLegacyRefreshCookieClearOptions() {
+  const { maxAge: _maxAge, ...options } = getLegacyRefreshCookieOptions();
+  return options;
 }
 
 @ApiTags('auth')
@@ -261,7 +279,11 @@ export class AuthController {
       requestId: readRequestId(request)
     });
     response.setHeader('Cache-Control', 'no-store');
-    response.clearCookie(REFRESH_COOKIE_NAME, getRefreshCookieOptions());
+    response.clearCookie(REFRESH_COOKIE_NAME, getRefreshCookieClearOptions());
+    response.clearCookie(
+      LEGACY_REFRESH_COOKIE_NAME,
+      getLegacyRefreshCookieClearOptions()
+    );
     return { status: 'logged_out' as const };
   }
 
@@ -504,7 +526,12 @@ export class AuthController {
 function readOptionalRefreshTokenCookie(request: Request): string | undefined {
   const refreshToken =
     request.cookies?.[REFRESH_COOKIE_NAME] ??
-    readCookieValueFromHeader(request.headers.cookie, REFRESH_COOKIE_NAME);
+    readCookieValueFromHeader(request.headers.cookie, REFRESH_COOKIE_NAME) ??
+    request.cookies?.[LEGACY_REFRESH_COOKIE_NAME] ??
+    readCookieValueFromHeader(
+      request.headers.cookie,
+      LEGACY_REFRESH_COOKIE_NAME
+    );
 
   return typeof refreshToken === 'string' && refreshToken.trim()
     ? refreshToken

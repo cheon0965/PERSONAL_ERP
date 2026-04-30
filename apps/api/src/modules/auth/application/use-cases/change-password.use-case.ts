@@ -16,6 +16,7 @@ import { SecurityEventLogger } from '../../../../common/infrastructure/operation
 import { WorkspaceAuditEventsService } from '../../../../common/infrastructure/operational/workspace-audit-events.service';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
 import { AuthSessionService } from '../../auth-session.service';
+import { PasswordPolicyService } from '../../password-policy.service';
 
 @Injectable()
 export class ChangePasswordUseCase {
@@ -23,7 +24,8 @@ export class ChangePasswordUseCase {
     private readonly prisma: PrismaService,
     private readonly authSessions: AuthSessionService,
     private readonly auditEvents: WorkspaceAuditEventsService,
-    private readonly securityEvents: SecurityEventLogger
+    private readonly securityEvents: SecurityEventLogger,
+    private readonly passwordPolicy: PasswordPolicyService
   ) {}
 
   async execute(
@@ -37,6 +39,8 @@ export class ChangePasswordUseCase {
       where: { id: user.id },
       select: {
         id: true,
+        email: true,
+        name: true,
         passwordHash: true
       }
     });
@@ -68,6 +72,11 @@ export class ChangePasswordUseCase {
         '새 비밀번호는 현재 비밀번호와 달라야 합니다.'
       );
     }
+
+    this.passwordPolicy.assertAcceptable(input.nextPassword, {
+      email: currentUser.email,
+      name: currentUser.name
+    });
 
     await this.prisma.user.update({
       where: { id: user.id },

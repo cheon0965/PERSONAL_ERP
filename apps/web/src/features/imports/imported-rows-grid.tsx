@@ -23,6 +23,7 @@ import type {
   ImportBatchItem
 } from '@personal-erp/contracts';
 import { DataTableCard } from '@/shared/ui/data-table-card';
+import { ResponsiveFilterPanel } from '@/shared/ui/responsive-filter-panel';
 import { buildImportedRowsColumns } from './imports.columns';
 import {
   readImportedRowParseStatusLabel,
@@ -121,6 +122,27 @@ export function ImportedRowsGrid({
     [visibleSelectedRows]
   );
   const hasActiveFilter = Object.values(filters).some((value) => value !== '');
+  const activeFilterLabels = [
+    filters.keyword.trim() ? `검색: ${filters.keyword.trim()}` : null,
+    filters.parseStatus
+      ? `읽기: ${readImportedRowParseStatusLabel(
+          filters.parseStatus as ImportedRowTableItem['parseStatus']
+        )}`
+      : null,
+    filters.collectionStatus
+      ? `등록: ${readCollectionStatusFilterLabel(filters.collectionStatus)}`
+      : null,
+    filters.periodScope
+      ? `운영월: ${filters.periodScope === 'CURRENT' ? '현재 운영월' : '운영월 밖'}`
+      : null
+  ].filter((label): label is string => Boolean(label));
+  const clearFilters = () =>
+    setFilters({
+      keyword: '',
+      parseStatus: '',
+      collectionStatus: '',
+      periodScope: ''
+    });
   const parseSummary = React.useMemo(() => {
     const counts: Record<ImportedRowTableItem['parseStatus'], number> = {
       PARSED: 0,
@@ -293,85 +315,85 @@ export function ImportedRowsGrid({
                 fundingAccountName={selectedBatch.fundingAccountName}
               />
             ) : null}
-            <Stack
-              direction={{ xs: 'column', lg: 'row' }}
-              spacing={1}
-              alignItems={{ xs: 'stretch', lg: 'center' }}
+            <ResponsiveFilterPanel
+              title="업로드 행 조회조건"
+              activeFilterCount={activeFilterLabels.length}
+              activeFilterLabels={activeFilterLabels}
+              onClear={clearFilters}
             >
-              <TextField
-                label="검색어"
-                size="small"
-                value={filters.keyword}
-                onChange={(event) =>
-                  setFilters({ ...filters, keyword: event.target.value })
-                }
-                placeholder="날짜, 설명, 금액"
-                sx={{ minWidth: { lg: 240 }, flex: 1 }}
-              />
-              <TextField
-                select
-                label="읽기"
-                size="small"
-                value={filters.parseStatus}
-                onChange={(event) =>
-                  setFilters({ ...filters, parseStatus: event.target.value })
-                }
-                sx={{ minWidth: { lg: 140 } }}
+              <Stack
+                direction={{ xs: 'column', lg: 'row' }}
+                spacing={1}
+                alignItems={{ xs: 'stretch', lg: 'center' }}
               >
-                <MenuItem value="">전체</MenuItem>
-                <MenuItem value="PARSED">읽기 완료</MenuItem>
-                <MenuItem value="FAILED">실패</MenuItem>
-                <MenuItem value="SKIPPED">건너뜀</MenuItem>
-                <MenuItem value="PENDING">대기</MenuItem>
-              </TextField>
-              <TextField
-                select
-                label="등록 상태"
-                size="small"
-                value={filters.collectionStatus}
-                onChange={(event) =>
-                  setFilters({
-                    ...filters,
-                    collectionStatus: event.target.value
-                  })
-                }
-                sx={{ minWidth: { lg: 150 } }}
-              >
-                <MenuItem value="">전체</MenuItem>
-                <MenuItem value="COLLECTABLE">등록 가능</MenuItem>
-                <MenuItem value="COLLECTED">연결 완료</MenuItem>
-                <MenuItem value="BLOCKED">등록 불가</MenuItem>
-              </TextField>
-              <TextField
-                select
-                label="운영월"
-                size="small"
-                value={filters.periodScope}
-                onChange={(event) =>
-                  setFilters({ ...filters, periodScope: event.target.value })
-                }
-                sx={{ minWidth: { lg: 140 } }}
-              >
-                <MenuItem value="">전체</MenuItem>
-                <MenuItem value="CURRENT">현재 운영월</MenuItem>
-                <MenuItem value="OUTSIDE">운영월 밖</MenuItem>
-              </TextField>
-              <Button
-                variant="outlined"
-                disabled={!hasActiveFilter}
-                sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
-                onClick={() =>
-                  setFilters({
-                    keyword: '',
-                    parseStatus: '',
-                    collectionStatus: '',
-                    periodScope: ''
-                  })
-                }
-              >
-                초기화
-              </Button>
-            </Stack>
+                <TextField
+                  label="검색어"
+                  size="small"
+                  value={filters.keyword}
+                  onChange={(event) =>
+                    setFilters({ ...filters, keyword: event.target.value })
+                  }
+                  placeholder="날짜, 설명, 금액"
+                  sx={{ minWidth: { lg: 240 }, flex: 1 }}
+                />
+                <TextField
+                  select
+                  label="읽기"
+                  size="small"
+                  value={filters.parseStatus}
+                  onChange={(event) =>
+                    setFilters({ ...filters, parseStatus: event.target.value })
+                  }
+                  sx={{ minWidth: { lg: 140 } }}
+                >
+                  <MenuItem value="">전체</MenuItem>
+                  <MenuItem value="PARSED">읽기 완료</MenuItem>
+                  <MenuItem value="FAILED">실패</MenuItem>
+                  <MenuItem value="SKIPPED">건너뜀</MenuItem>
+                  <MenuItem value="PENDING">대기</MenuItem>
+                </TextField>
+                <TextField
+                  select
+                  label="등록 상태"
+                  size="small"
+                  value={filters.collectionStatus}
+                  onChange={(event) =>
+                    setFilters({
+                      ...filters,
+                      collectionStatus: event.target.value
+                    })
+                  }
+                  sx={{ minWidth: { lg: 150 } }}
+                >
+                  <MenuItem value="">전체</MenuItem>
+                  <MenuItem value="COLLECTABLE">등록 가능</MenuItem>
+                  <MenuItem value="COLLECTED">연결 완료</MenuItem>
+                  <MenuItem value="BLOCKED">등록 불가</MenuItem>
+                </TextField>
+                <TextField
+                  select
+                  label="운영월"
+                  size="small"
+                  value={filters.periodScope}
+                  onChange={(event) =>
+                    setFilters({ ...filters, periodScope: event.target.value })
+                  }
+                  sx={{ minWidth: { lg: 140 } }}
+                >
+                  <MenuItem value="">전체</MenuItem>
+                  <MenuItem value="CURRENT">현재 운영월</MenuItem>
+                  <MenuItem value="OUTSIDE">운영월 밖</MenuItem>
+                </TextField>
+                <Button
+                  variant="outlined"
+                  disabled={!hasActiveFilter}
+                  sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+                  onClick={clearFilters}
+                >
+                  초기화
+                </Button>
+              </Stack>
+            </ResponsiveFilterPanel>
             <Stack
               direction={{ xs: 'column', md: 'row' }}
               spacing={1.5}
@@ -861,6 +883,19 @@ function isImportedRowCollectable(row: ImportedRowTableItem) {
     !row.createdCollectedTransactionId &&
     row.isCurrentPeriodRow
   );
+}
+
+function readCollectionStatusFilterLabel(value: string) {
+  switch (value) {
+    case 'COLLECTABLE':
+      return '등록 가능';
+    case 'COLLECTED':
+      return '연결 완료';
+    case 'BLOCKED':
+      return '등록 불가';
+    default:
+      return value;
+  }
 }
 
 function resolveImportedRowBulkCollectType(

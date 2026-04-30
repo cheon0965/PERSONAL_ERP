@@ -256,7 +256,21 @@ function readDateObject(value: Date | string | null | undefined): Date | null {
 }
 
 function escapeCsvCell(cell: CsvCell): string {
-  const value = cell instanceof Date ? cell.toISOString() : String(cell ?? '');
+  const value =
+    cell instanceof Date
+      ? cell.toISOString()
+      : typeof cell === 'string'
+        ? guardCsvFormulaCell(cell)
+        : String(cell ?? '');
   const escaped = value.replaceAll('"', '""');
   return /[",\r\n]/.test(escaped) ? `"${escaped}"` : escaped;
+}
+
+function guardCsvFormulaCell(value: string): string {
+  const withoutBom = value.replace(/^\ufeff/, '');
+  if (/^[\t\r\n]/.test(withoutBom) || /^[\s]*[=+\-@]/.test(withoutBom)) {
+    return `'${value}`;
+  }
+
+  return value;
 }

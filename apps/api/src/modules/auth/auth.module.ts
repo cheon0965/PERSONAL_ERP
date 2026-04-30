@@ -8,6 +8,7 @@ import { AuthRateLimitService } from './auth-rate-limit.service';
 import { AuthController } from './auth.controller';
 import { AuthSessionService } from './auth-session.service';
 import { AuthWorkspaceService } from './auth-workspace.service';
+import { PasswordPolicyService } from './password-policy.service';
 import { WorkspaceBootstrapService } from './workspace-bootstrap.service';
 import { AcceptInvitationUseCase } from './application/use-cases/accept-invitation.use-case';
 import { ChangePasswordUseCase } from './application/use-cases/change-password.use-case';
@@ -32,6 +33,7 @@ import { VerifyEmailUseCase } from './application/use-cases/verify-email.use-cas
     AuthSessionService,
     AuthWorkspaceService,
     AuthAccountSecurityService,
+    PasswordPolicyService,
     WorkspaceBootstrapService,
     JwtAuthGuard,
     // 유스케이스

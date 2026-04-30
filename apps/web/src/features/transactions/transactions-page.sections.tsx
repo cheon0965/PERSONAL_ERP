@@ -1,8 +1,11 @@
 import Link from 'next/link';
 import * as React from 'react';
 import {
+  Box,
   Button,
+  Checkbox,
   Chip,
+  Divider,
   Grid,
   MenuItem,
   Stack,
@@ -16,9 +19,13 @@ import type {
 } from '@personal-erp/contracts';
 import type { GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
 import { formatWon } from '@/shared/lib/format';
-import { DataTableCard } from '@/shared/ui/data-table-card';
+import {
+  DataTableCard,
+  type DataTableMobileCardContext
+} from '@/shared/ui/data-table-card';
 import { GridActionCell, GridStackCell } from '@/shared/ui/data-grid-cell';
 import { appLayout } from '@/shared/ui/layout-metrics';
+import { ResponsiveFilterPanel } from '@/shared/ui/responsive-filter-panel';
 import { resolveStatusLabel, StatusChip } from '@/shared/ui/status-chip';
 import {
   resolveLatestLinkedJournalEntry,
@@ -124,6 +131,107 @@ export function TransactionsTableSection({
   const periodRangeDescription = writablePeriod
     ? `${writablePeriod.startDate.slice(0, 10)} ~ ${writablePeriod.endDate.slice(0, 10)}`
     : null;
+  const activeFilterLabels = [
+    keyword.trim() ? `검색: ${keyword.trim()}` : null,
+    fundingAccountName ? `자금수단: ${fundingAccountName}` : null,
+    categoryName ? `카테고리: ${categoryName}` : null,
+    postingStatus ? `상태: ${resolveStatusLabel(postingStatus)}` : null
+  ].filter((label): label is string => Boolean(label));
+  const renderTransactionActions = React.useCallback(
+    (row: CollectedTransactionItem) => {
+      const linkedJournalEntry = resolveLatestLinkedJournalEntry(
+        journalEntriesById,
+        row.postedJournalEntryId
+      );
+      const isConfirming =
+        confirmPending && confirmingTransactionId === row.id;
+      const canEdit = canEditCollectedTransaction(row);
+      const canDelete = canDeleteCollectedTransaction(row);
+      const canConfirm = canConfirmCollectedTransaction(row);
+      const actionHint = resolveCollectedTransactionActionHint(
+        row.postingStatus
+      );
+
+      if (canEdit || canDelete || canConfirm) {
+        return (
+          <GridStackCell>
+            <GridActionCell>
+              {canEdit ? (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => {
+                    onEdit(row);
+                  }}
+                >
+                  수정
+                </Button>
+              ) : null}
+              {canDelete ? (
+                <Button
+                  size="small"
+                  color="error"
+                  onClick={() => {
+                    onDelete(row);
+                  }}
+                >
+                  삭제
+                </Button>
+              ) : null}
+              {canConfirm ? (
+                <Button
+                  size="small"
+                  variant="contained"
+                  disabled={isConfirming}
+                  onClick={() => {
+                    onConfirm(row);
+                  }}
+                >
+                  {isConfirming ? '확정 중...' : '전표 확정'}
+                </Button>
+              ) : null}
+            </GridActionCell>
+            {actionHint ? (
+              <Typography variant="caption" color="text.secondary">
+                {actionHint}
+              </Typography>
+            ) : null}
+          </GridStackCell>
+        );
+      }
+
+      if (linkedJournalEntry) {
+        return (
+          <Button
+            size="small"
+            component={Link}
+            href={`/journal-entries/${linkedJournalEntry.id}`}
+          >
+            {linkedJournalEntry.entryNumber}
+          </Button>
+        );
+      }
+
+      if (row.postedJournalEntryId) {
+        return (
+          <Button
+            size="small"
+            component={Link}
+            href={`/journal-entries/${row.postedJournalEntryId}`}
+          >
+            {row.postedJournalEntryNumber ?? '전표 보기'}
+          </Button>
+        );
+      }
+
+      return (
+        <Typography variant="body2" color="text.secondary">
+          -
+        </Typography>
+      );
+    },
+    [confirmPending, confirmingTransactionId, journalEntriesById, onConfirm, onDelete, onEdit]
+  );
   const columns = React.useMemo<GridColDef<CollectedTransactionItem>[]>(
     () => [
       { field: 'businessDate', headerName: '거래일', flex: 0.8 },
@@ -202,109 +310,10 @@ export function TransactionsTableSection({
         minWidth: 360,
         sortable: false,
         filterable: false,
-        renderCell: (params) => {
-          const row = params.row;
-          const linkedJournalEntry = resolveLatestLinkedJournalEntry(
-            journalEntriesById,
-            row.postedJournalEntryId
-          );
-          const isConfirming =
-            confirmPending && confirmingTransactionId === row.id;
-          const canEdit = canEditCollectedTransaction(row);
-          const canDelete = canDeleteCollectedTransaction(row);
-          const canConfirm = canConfirmCollectedTransaction(row);
-          const actionHint = resolveCollectedTransactionActionHint(
-            row.postingStatus
-          );
-
-          if (canEdit || canDelete || canConfirm) {
-            return (
-              <GridStackCell>
-                <GridActionCell>
-                  {canEdit ? (
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      onClick={() => {
-                        onEdit(row);
-                      }}
-                    >
-                      수정
-                    </Button>
-                  ) : null}
-                  {canDelete ? (
-                    <Button
-                      size="small"
-                      color="error"
-                      onClick={() => {
-                        onDelete(row);
-                      }}
-                    >
-                      삭제
-                    </Button>
-                  ) : null}
-                  {canConfirm ? (
-                    <Button
-                      size="small"
-                      variant="contained"
-                      disabled={isConfirming}
-                      onClick={() => {
-                        onConfirm(row);
-                      }}
-                    >
-                      {isConfirming ? '확정 중...' : '전표 확정'}
-                    </Button>
-                  ) : null}
-                </GridActionCell>
-                {actionHint ? (
-                  <Typography variant="caption" color="text.secondary">
-                    {actionHint}
-                  </Typography>
-                ) : null}
-              </GridStackCell>
-            );
-          }
-
-          if (linkedJournalEntry) {
-            return (
-              <Button
-                size="small"
-                component={Link}
-                href={`/journal-entries/${linkedJournalEntry.id}`}
-              >
-                {linkedJournalEntry.entryNumber}
-              </Button>
-            );
-          }
-
-          if (row.postedJournalEntryId) {
-            return (
-              <Button
-                size="small"
-                component={Link}
-                href={`/journal-entries/${row.postedJournalEntryId}`}
-              >
-                {row.postedJournalEntryNumber ?? '전표 보기'}
-              </Button>
-            );
-          }
-
-          return (
-            <Typography variant="body2" color="text.secondary">
-              -
-            </Typography>
-          );
-        }
+        renderCell: (params) => renderTransactionActions(params.row)
       }
     ],
-    [
-      confirmPending,
-      confirmingTransactionId,
-      journalEntriesById,
-      onConfirm,
-      onDelete,
-      onEdit
-    ]
+    [renderTransactionActions]
   );
 
   function handleRowSelectionModelChange(model: GridRowSelectionModel) {
@@ -429,84 +438,193 @@ export function TransactionsTableSection({
             </Stack>
           </Stack>
 
-          <Grid container spacing={appLayout.fieldGap}>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <TextField
-                fullWidth
-                label="검색어"
-                size="small"
-                value={keyword}
-                onChange={(event) => {
-                  onKeywordChange(event.target.value);
-                }}
-              />
+          <ResponsiveFilterPanel
+            title="거래 조회조건"
+            description="검색어, 자금수단, 카테고리, 전표 반영 상태로 거래 목록을 좁힙니다."
+            activeFilterCount={activeFilterCount}
+            activeFilterLabels={activeFilterLabels}
+            onClear={onClearFilters}
+          >
+            <Grid container spacing={appLayout.fieldGap}>
+              <Grid size={{ xs: 12, md: 3 }}>
+                <TextField
+                  fullWidth
+                  label="검색어"
+                  size="small"
+                  value={keyword}
+                  onChange={(event) => {
+                    onKeywordChange(event.target.value);
+                  }}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 3 }}>
+                <TextField
+                  select
+                  fullWidth
+                  label="자금수단"
+                  size="small"
+                  value={fundingAccountName}
+                  onChange={(event) => {
+                    onFundingAccountChange(event.target.value);
+                  }}
+                >
+                  <MenuItem value="">전체</MenuItem>
+                  {fundingAccountOptions.map((option) => (
+                    <MenuItem key={option} value={option}>
+                      {option}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid size={{ xs: 12, md: 3 }}>
+                <TextField
+                  select
+                  fullWidth
+                  label="카테고리"
+                  size="small"
+                  value={categoryName}
+                  onChange={(event) => {
+                    onCategoryChange(event.target.value);
+                  }}
+                >
+                  <MenuItem value="">전체</MenuItem>
+                  {categoryOptions.map((option) => (
+                    <MenuItem key={option} value={option}>
+                      {option}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid size={{ xs: 12, md: 3 }}>
+                <TextField
+                  select
+                  fullWidth
+                  label="상태"
+                  size="small"
+                  value={postingStatus}
+                  onChange={(event) => {
+                    onPostingStatusChange(event.target.value);
+                  }}
+                >
+                  <MenuItem value="">전체</MenuItem>
+                  {collectedTransactionStatusFilterOptions.map((option) => (
+                    <MenuItem key={option} value={option}>
+                      {resolveStatusLabel(option)}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
             </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <TextField
-                select
-                fullWidth
-                label="자금수단"
-                size="small"
-                value={fundingAccountName}
-                onChange={(event) => {
-                  onFundingAccountChange(event.target.value);
-                }}
-              >
-                <MenuItem value="">전체</MenuItem>
-                {fundingAccountOptions.map((option) => (
-                  <MenuItem key={option} value={option}>
-                    {option}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <TextField
-                select
-                fullWidth
-                label="카테고리"
-                size="small"
-                value={categoryName}
-                onChange={(event) => {
-                  onCategoryChange(event.target.value);
-                }}
-              >
-                <MenuItem value="">전체</MenuItem>
-                {categoryOptions.map((option) => (
-                  <MenuItem key={option} value={option}>
-                    {option}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <TextField
-                select
-                fullWidth
-                label="상태"
-                size="small"
-                value={postingStatus}
-                onChange={(event) => {
-                  onPostingStatusChange(event.target.value);
-                }}
-              >
-                <MenuItem value="">전체</MenuItem>
-                {collectedTransactionStatusFilterOptions.map((option) => (
-                  <MenuItem key={option} value={option}>
-                    {resolveStatusLabel(option)}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
-          </Grid>
+          </ResponsiveFilterPanel>
         </Stack>
       }
       rows={hasCollectingPeriod ? rows : []}
       columns={columns}
+      mobileCard={(row, context) => (
+        <TransactionMobileCard
+          row={row}
+          context={context}
+          actions={renderTransactionActions(row)}
+        />
+      )}
+      mobileEmptyLabel="표시할 수집 거래가 없습니다."
       checkboxSelection
       rowSelectionModel={rowSelectionModel}
       onRowSelectionModelChange={handleRowSelectionModelChange}
       isRowSelectable={(params) => canConfirmCollectedTransaction(params.row)}
     />
+  );
+}
+
+function TransactionMobileCard({
+  row,
+  context,
+  actions
+}: {
+  row: CollectedTransactionItem;
+  context: DataTableMobileCardContext;
+  actions: React.ReactNode;
+}) {
+  return (
+    <Box
+      component="article"
+      sx={{
+        p: 1.5,
+        borderRadius: 2,
+        border: '1px solid',
+        borderColor: context.selected ? 'primary.main' : 'divider',
+        bgcolor: context.selected ? 'action.selected' : 'background.paper',
+        minWidth: 0
+      }}
+    >
+      <Stack spacing={1.25}>
+        <Stack direction="row" spacing={1} alignItems="flex-start">
+          {context.selectable ? (
+            <Checkbox
+              checked={context.selected}
+              onChange={context.toggleSelected}
+              size="small"
+              sx={{ mt: -0.75, ml: -1, flexShrink: 0 }}
+              inputProps={{ 'aria-label': `${row.title} 선택` }}
+            />
+          ) : null}
+          <Stack spacing={0.6} sx={{ minWidth: 0, flex: 1 }}>
+            <Typography variant="subtitle2" fontWeight={800}>
+              {row.title}
+            </Typography>
+            <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
+              <StatusChip label={row.postingStatus} />
+              <Chip
+                label={sourceKindLabelMap[row.sourceKind] ?? row.sourceKind}
+                size="small"
+                variant="outlined"
+              />
+            </Stack>
+          </Stack>
+          <Typography
+            variant="subtitle2"
+            fontWeight={900}
+            sx={{ flexShrink: 0, textAlign: 'right' }}
+          >
+            {formatWon(row.amountWon)}
+          </Typography>
+        </Stack>
+
+        <Divider flexItem />
+
+        <Grid container spacing={1}>
+          <Grid size={{ xs: 6 }}>
+            <MobileField label="거래일" value={row.businessDate} />
+          </Grid>
+          <Grid size={{ xs: 6 }}>
+            <MobileField label="자금수단" value={row.fundingAccountName} />
+          </Grid>
+          <Grid size={{ xs: 6 }}>
+            <MobileField label="카테고리" value={row.categoryName ?? '미분류'} />
+          </Grid>
+          <Grid size={{ xs: 6 }}>
+            <MobileField
+              label="원계획"
+              value={row.matchedPlanItemTitle ?? '-'}
+            />
+          </Grid>
+        </Grid>
+
+        <Box sx={{ minWidth: 0 }}>{actions}</Box>
+      </Stack>
+    </Box>
+  );
+}
+
+function MobileField({ label, value }: { label: string; value: string }) {
+  return (
+    <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body2" fontWeight={700} sx={{ overflowWrap: 'anywhere' }}>
+        {value}
+      </Typography>
+    </Stack>
   );
 }

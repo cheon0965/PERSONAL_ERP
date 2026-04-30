@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, CardContent, Stack, Typography } from '@mui/material';
+import { Box, Card, CardContent, Stack, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { brandTokens } from '@/shared/theme/tokens';
 import { appLayout } from './layout-metrics';
@@ -9,15 +9,22 @@ type ChartCardProps = {
   title: string;
   description?: string;
   chart: React.ReactNode;
+  chartMinWidth?: number | string;
 };
 
-export function ChartCard({ title, description, chart }: ChartCardProps) {
+export function ChartCard({
+  title,
+  description,
+  chart,
+  chartMinWidth = 0
+}: ChartCardProps) {
   return (
     <Card
       sx={{
         position: 'relative',
         height: '100%',
         display: 'flex',
+        minWidth: 0,
         overflow: 'hidden',
         '&::before': {
           content: '""',
@@ -31,10 +38,14 @@ export function ChartCard({ title, description, chart }: ChartCardProps) {
         }
       }}
     >
-      <CardContent sx={{ p: appLayout.cardPadding, flex: 1, width: '100%' }}>
-        <Stack spacing={appLayout.cardGap} sx={{ height: '100%' }}>
-          <div>
-            <Typography variant="h6">{title}</Typography>
+      <CardContent
+        sx={{ p: appLayout.cardPadding, flex: 1, width: '100%', minWidth: 0 }}
+      >
+        <Stack spacing={appLayout.cardGap} sx={{ height: '100%', minWidth: 0 }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="h6" sx={{ overflowWrap: 'anywhere' }}>
+              {title}
+            </Typography>
             {description ? (
               <Typography
                 variant="caption"
@@ -46,14 +57,25 @@ export function ChartCard({ title, description, chart }: ChartCardProps) {
                   overflow: 'hidden',
                   WebkitBoxOrient: 'vertical',
                   WebkitLineClamp: 2,
-                  display: '-webkit-box'
+                  display: '-webkit-box',
+                  overflowWrap: 'anywhere'
                 }}
               >
                 {description}
               </Typography>
             ) : null}
-          </div>
-          <div>{chart}</div>
+          </Box>
+          <Box
+            sx={{
+              width: '100%',
+              minWidth: 0,
+              overflowX: 'auto',
+              overflowY: 'hidden',
+              pb: 0.5
+            }}
+          >
+            <Box sx={{ width: '100%', minWidth: chartMinWidth }}>{chart}</Box>
+          </Box>
         </Stack>
       </CardContent>
     </Card>

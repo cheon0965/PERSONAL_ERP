@@ -51,6 +51,9 @@ export function SectionTabs({
       aria-label={ariaLabel}
       sx={{
         p: 0.6,
+        maxWidth: '100%',
+        overflowX: { xs: 'auto', md: 'visible' },
+        overflowY: 'hidden',
         borderRadius: 3.25,
         border: '1px solid',
         borderColor: alpha(brandTokens.palette.primaryBright, 0.14),
@@ -65,6 +68,7 @@ export function SectionTabs({
         sx={{
           display: 'grid',
           gridTemplateColumns: resolveTabGridColumns(items.length),
+          minWidth: resolveTabGridMinWidth(items.length),
           gap: 0.65
         }}
       >
@@ -99,6 +103,9 @@ export function SegmentedTabs<TValue extends string>({
       aria-label={ariaLabel}
       sx={{
         p: 0.6,
+        maxWidth: '100%',
+        overflowX: { xs: 'auto', md: 'visible' },
+        overflowY: 'hidden',
         borderRadius: 3.25,
         border: '1px solid',
         borderColor: alpha(brandTokens.palette.primaryBright, 0.14),
@@ -112,6 +119,7 @@ export function SegmentedTabs<TValue extends string>({
         sx={{
           display: 'grid',
           gridTemplateColumns: resolveTabGridColumns(items.length),
+          minWidth: resolveTabGridMinWidth(items.length),
           gap: 0.65
         }}
       >
@@ -225,12 +233,18 @@ function TabButtonContent({
 }
 
 function resolveTabGridColumns(itemCount: number) {
-  const mobileColumns = itemCount <= 1 ? '1fr' : 'repeat(2, minmax(0, 1fr))';
   const minimumWidth = itemCount > 6 ? 112 : itemCount > 4 ? 124 : 140;
 
   return {
-    xs: mobileColumns,
-    sm: `repeat(auto-fit, minmax(${minimumWidth}px, 1fr))`
+    xs: `repeat(${Math.max(itemCount, 1)}, minmax(120px, 1fr))`,
+    md: `repeat(auto-fit, minmax(${minimumWidth}px, 1fr))`
+  } as const;
+}
+
+function resolveTabGridMinWidth(itemCount: number) {
+  return {
+    xs: itemCount > 2 ? itemCount * 120 : '100%',
+    md: 0
   } as const;
 }
 

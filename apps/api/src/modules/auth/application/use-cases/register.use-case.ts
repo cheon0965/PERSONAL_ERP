@@ -10,6 +10,7 @@ import { PrismaService } from '../../../../common/prisma/prisma.service';
 import { getApiEnv } from '../../../../config/api-env';
 import { AuthRateLimitService } from '../../auth-rate-limit.service';
 import { normalizeDisplayName, normalizeEmail } from '../../auth.normalization';
+import { PasswordPolicyService } from '../../password-policy.service';
 import { WorkspaceBootstrapService } from '../../workspace-bootstrap.service';
 import type { AuthRequestContext } from '../../auth.types';
 import { RegisterDto } from '../../dto/register.dto';
@@ -24,6 +25,7 @@ export class RegisterUseCase {
     private readonly clock: ClockPort,
     private readonly rateLimit: AuthRateLimitService,
     private readonly securityEvents: SecurityEventLogger,
+    private readonly passwordPolicy: PasswordPolicyService,
     private readonly workspaceBootstrap: WorkspaceBootstrapService
   ) {}
 
@@ -36,6 +38,7 @@ export class RegisterUseCase {
 
     this.assertRegisterAttemptAllowed(context, email);
     this.rateLimit.recordRegisterAttempt(context.clientIp, email);
+    this.passwordPolicy.assertAcceptable(dto.password, { email, name });
 
     const passwordHash = await argon2.hash(dto.password);
     const existingUser = await this.prisma.user.findUnique({

@@ -1,0 +1,134 @@
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-personal_erp}
+      MYSQL_USER: ${MYSQL_USER:?set MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD}
+      TZ: ${TZ:-Asia/Seoul}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    volumes:
+      - personal_erp_mysql_data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'mysqladmin ping -h localhost -u "$$MYSQL_USER" -p"$$MYSQL_PASSWORD" --silent'
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    security_opt:
+      - no-new-privileges:true
+
+  migrate:
+    image: ${MIGRATE_IMAGE_NAME:-personal-erp-migrate}:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrate
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:?set NEXT_PUBLIC_API_BASE_URL}
+        NEXT_PUBLIC_ENABLE_DEMO_FALLBACK: ${NEXT_PUBLIC_ENABLE_DEMO_FALLBACK:-false}
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: 'no'
+    security_opt:
+      - no-new-privileges:true
+
+  api:
+    image: ${API_IMAGE_NAME:-personal-erp-api}:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:?set NEXT_PUBLIC_API_BASE_URL}
+        NEXT_PUBLIC_ENABLE_DEMO_FALLBACK: ${NEXT_PUBLIC_ENABLE_DEMO_FALLBACK:-false}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      APP_ORIGIN: ${APP_ORIGIN:?set APP_ORIGIN}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?set CORS_ALLOWED_ORIGINS}
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set JWT_REFRESH_SECRET}
+      ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-15m}
+      REFRESH_TOKEN_TTL: ${REFRESH_TOKEN_TTL:-7d}
+      EMAIL_VERIFICATION_TTL: ${EMAIL_VERIFICATION_TTL:-30m}
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+      DEMO_EMAIL: ${DEMO_EMAIL:-demo@example.com}
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
+      INITIAL_ADMIN_NAME: ${INITIAL_ADMIN_NAME:-}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-}
+      MAIL_PROVIDER: ${MAIL_PROVIDER:-console}
+      MAIL_FROM_EMAIL: ${MAIL_FROM_EMAIL:-no-reply@example.com}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-PERSONAL_ERP}
+      GMAIL_CLIENT_ID: ${GMAIL_CLIENT_ID:-}
+      GMAIL_CLIENT_SECRET: ${GMAIL_CLIENT_SECRET:-}
+      GMAIL_REFRESH_TOKEN: ${GMAIL_REFRESH_TOKEN:-}
+      GMAIL_SENDER_EMAIL: ${GMAIL_SENDER_EMAIL:-}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - '${API_BIND_ADDRESS:-127.0.0.1}:${API_PUBLISHED_PORT:-4000}:4000'
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "const http=require(''node:http'');const req=http.get(''http://127.0.0.1:4000/api/health'',res=>process.exit(res.statusCode===200?0:1));req.on(''error'',()=>process.exit(1));req.setTimeout(5000,()=>{req.destroy();process.exit(1);});"'
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+
+  web:
+    image: ${WEB_IMAGE_NAME:-personal-erp-web}:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:?set NEXT_PUBLIC_API_BASE_URL}
+        NEXT_PUBLIC_ENABLE_DEMO_FALLBACK: ${NEXT_PUBLIC_ENABLE_DEMO_FALLBACK:-false}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:?set NEXT_PUBLIC_API_BASE_URL}
+      NEXT_PUBLIC_ENABLE_DEMO_FALLBACK: ${NEXT_PUBLIC_ENABLE_DEMO_FALLBACK:-false}
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - '${WEB_BIND_ADDRESS:-127.0.0.1}:${WEB_PUBLISHED_PORT:-3000}:3000'
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "const http=require(''node:http'');const req=http.get(''http://127.0.0.1:3000'',res=>process.exit(res.statusCode<500?0:1));req.on(''error'',()=>process.exit(1));req.setTimeout(5000,()=>{req.destroy();process.exit(1);});"'
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  personal_erp_mysql_data:
