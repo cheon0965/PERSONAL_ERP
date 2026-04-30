@@ -19,20 +19,10 @@ import {
 
 const integrationPassword = 'Integration1234!';
 const integrationPasswordHashPromise = argon2.hash(integrationPassword);
-const integrationPrimarySigningText = [
-  'prisma',
-  'integration',
-  'access',
-  'signing',
-  'key'
-].join('-');
-const integrationSecondarySigningText = [
-  'prisma',
-  'integration',
-  'refresh',
-  'signing',
-  'key'
-].join('-');
+const integrationPrimarySigningText =
+  '0pqqY6xrY4TvS9uVvXx7gQwKj5Y7rYyQy9oYfOsgWPM';
+const integrationSecondarySigningText =
+  '1bMmvIWfyNrJ1BVLcG4F8sCq5unB7L7kdJzK39YPAIc';
 const apiEnvNames = {
   primary: ['JWT', 'ACCESS', 'SECRET'].join('_'),
   secondary: ['JWT', 'REFRESH', 'SECRET'].join('_'),
