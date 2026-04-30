@@ -1,13 +1,23 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import {
   DataGrid,
   type DataGridProps,
   type GridColDef,
+  type GridRowId,
+  type GridRowParams,
   type GridRowSelectionModel
 } from '@mui/x-data-grid';
-import { Card, CardContent, Stack, Typography } from '@mui/material';
+import {
+  Box,
+  Card,
+  CardContent,
+  Checkbox,
+  Divider,
+  Stack,
+  Typography
+} from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { brandTokens } from '@/shared/theme/tokens';
 import { appLayout } from './layout-metrics';
@@ -26,6 +36,15 @@ type DataTableCardProps<T extends { id: string }> = {
   rowSelectionModel?: GridRowSelectionModel;
   onRowSelectionModelChange?: DataGridProps<T>['onRowSelectionModelChange'];
   isRowSelectable?: DataGridProps<T>['isRowSelectable'];
+  mobileCard?: (row: T, context: DataTableMobileCardContext) => ReactNode;
+  mobileEmptyLabel?: string;
+  disableMobileCards?: boolean;
+};
+
+export type DataTableMobileCardContext = {
+  selected: boolean;
+  selectable: boolean;
+  toggleSelected: () => void;
 };
 
 export function DataTableCard<T extends { id: string }>({
@@ -41,9 +60,231 @@ export function DataTableCard<T extends { id: string }>({
   checkboxSelection = false,
   rowSelectionModel,
   onRowSelectionModelChange,
-  isRowSelectable
+  isRowSelectable,
+  mobileCard,
+  mobileEmptyLabel = '표시할 항목이 없습니다.',
+  disableMobileCards = false
 }: DataTableCardProps<T>) {
   const resolvedRowHeight = rowHeight ?? 64;
+  const responsiveColumns = useMemo(
+    () =>
+      columns.map((column) =>
+        column.minWidth != null || column.width != null
+          ? column
+          : { ...column, minWidth: 120 }
+      ),
+    [columns]
+  );
+  const usesMobileCards = !disableMobileCards;
+  const selectedRowIds = useMemo(() => {
+    if (!rowSelectionModel || rowSelectionModel.type !== 'include') {
+      return new Set<GridRowId>();
+    }
+
+    return rowSelectionModel.ids;
+  }, [rowSelectionModel]);
+
+  function handleMobileSelectionToggle(row: T, selectable: boolean) {
+    if (!selectable || !rowSelectionModel || !onRowSelectionModelChange) {
+      return;
+    }
+
+    const nextSelectedIds = new Set(
+      rowSelectionModel.type === 'include' ? rowSelectionModel.ids : []
+    );
+
+    if (nextSelectedIds.has(row.id)) {
+      nextSelectedIds.delete(row.id);
+    } else {
+      nextSelectedIds.add(row.id);
+    }
+
+    onRowSelectionModelChange(
+      {
+        type: 'include',
+        ids: nextSelectedIds
+      },
+      {} as Parameters<
+        NonNullable<DataGridProps<T>['onRowSelectionModelChange']>
+      >[1]
+    );
+  }
+
+  function readMobileRowSelectable(row: T) {
+    if (!checkboxSelection) {
+      return false;
+    }
+
+    if (!isRowSelectable) {
+      return true;
+    }
+
+    return Boolean(
+      isRowSelectable({
+        id: row.id,
+        row,
+        columns: responsiveColumns
+      } as GridRowParams<T>)
+    );
+  }
+
+  function renderDefaultMobileCard(
+    row: T,
+    context: DataTableMobileCardContext
+  ) {
+    const actionColumn = responsiveColumns.find(isMobileActionColumn);
+    const contentColumns = responsiveColumns.filter(
+      (column) => !isMobileActionColumn(column) && column.field !== 'id'
+    );
+    const primaryColumn =
+      contentColumns.find((column) =>
+        preferredMobilePrimaryFields.has(column.field)
+      ) ?? contentColumns[0];
+    const amountColumn = contentColumns.find(
+      (column) =>
+        column !== primaryColumn &&
+        mobileAmountFieldPattern.test(`${column.field} ${column.headerName}`)
+    );
+    const detailColumns = contentColumns
+      .filter((column) => column !== primaryColumn && column !== amountColumn)
+      .slice(0, 6);
+    const actionContent = actionColumn
+      ? renderMobileColumnValue(row, actionColumn)
+      : null;
+
+    return (
+      <Box
+        component="article"
+        sx={{
+          p: 1.5,
+          borderRadius: 2,
+          border: '1px solid',
+          borderColor: context.selected ? 'primary.main' : 'divider',
+          bgcolor: context.selected ? 'action.selected' : 'background.paper',
+          minWidth: 0
+        }}
+      >
+        <Stack spacing={1.25}>
+          <Stack direction="row" spacing={1} alignItems="flex-start">
+            {context.selectable ? (
+              <Checkbox
+                checked={context.selected}
+                onChange={context.toggleSelected}
+                size="small"
+                sx={{ mt: -0.75, ml: -1, flexShrink: 0 }}
+                inputProps={{
+                  'aria-label': `${resolveMobileTextValue(
+                    row,
+                    primaryColumn
+                  )} 선택`
+                }}
+              />
+            ) : null}
+            <Stack spacing={0.5} sx={{ minWidth: 0, flex: 1 }}>
+              {primaryColumn ? (
+                <>
+                  <Typography variant="caption" color="text.secondary">
+                    {resolveMobileColumnLabel(primaryColumn)}
+                  </Typography>
+                  <Box
+                    sx={{
+                      minWidth: 0,
+                      fontSize: (theme) => theme.typography.subtitle2.fontSize,
+                      fontWeight: 800,
+                      overflowWrap: 'anywhere',
+                      '& .MuiTypography-root': {
+                        fontWeight: 800
+                      }
+                    }}
+                  >
+                    {renderMobileColumnValue(row, primaryColumn)}
+                  </Box>
+                </>
+              ) : (
+                <Typography variant="subtitle2" fontWeight={800}>
+                  {row.id}
+                </Typography>
+              )}
+            </Stack>
+            {amountColumn ? (
+              <Box
+                sx={{
+                  flexShrink: 0,
+                  maxWidth: '46%',
+                  textAlign: 'right',
+                  fontSize: (theme) => theme.typography.subtitle2.fontSize,
+                  fontWeight: 900,
+                  overflowWrap: 'anywhere'
+                }}
+              >
+                {renderMobileColumnValue(row, amountColumn)}
+              </Box>
+            ) : null}
+          </Stack>
+
+          {detailColumns.length > 0 ? (
+            <>
+              <Divider flexItem />
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))' },
+                  gap: 1
+                }}
+              >
+                {detailColumns.map((column) => (
+                  <Stack key={column.field} spacing={0.25} sx={{ minWidth: 0 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      {resolveMobileColumnLabel(column)}
+                    </Typography>
+                    <Box
+                      sx={{
+                        minWidth: 0,
+                        fontSize: (theme) => theme.typography.body2.fontSize,
+                        fontWeight: 700,
+                        overflowWrap: 'anywhere',
+                        '& .MuiButton-root': {
+                          minWidth: 0,
+                          px: 0,
+                          justifyContent: 'flex-start',
+                          textAlign: 'left'
+                        },
+                        '& .MuiChip-root': {
+                          maxWidth: '100%'
+                        }
+                      }}
+                    >
+                      {renderMobileColumnValue(row, column)}
+                    </Box>
+                  </Stack>
+                ))}
+              </Box>
+            </>
+          ) : null}
+
+          {actionContent ? (
+            <>
+              <Divider flexItem />
+              <Box
+                sx={{
+                  minWidth: 0,
+                  '& .MuiStack-root': {
+                    minWidth: 0
+                  },
+                  '& .MuiButton-root': {
+                    minWidth: 0,
+                    whiteSpace: 'nowrap'
+                  }
+                }}
+              >
+                {actionContent}
+              </Box>
+            </>
+          ) : null}
+        </Stack>
+      </Box>
+    );
+  }
 
   return (
     <Card
@@ -51,6 +292,7 @@ export function DataTableCard<T extends { id: string }>({
         position: 'relative',
         height: '100%',
         display: 'flex',
+        minWidth: 0,
         overflow: 'hidden',
         '&::before': {
           content: '""',
@@ -64,16 +306,21 @@ export function DataTableCard<T extends { id: string }>({
         }
       }}
     >
-      <CardContent sx={{ p: appLayout.cardPadding, flex: 1, width: '100%' }}>
-        <Stack spacing={appLayout.cardGap} sx={{ height: '100%' }}>
+      <CardContent
+        sx={{ p: appLayout.cardPadding, flex: 1, width: '100%', minWidth: 0 }}
+      >
+        <Stack spacing={appLayout.cardGap} sx={{ height: '100%', minWidth: 0 }}>
           <Stack
             direction={{ xs: 'column', sm: 'row' }}
             spacing={1}
             justifyContent="space-between"
             alignItems={{ xs: 'flex-start', sm: 'center' }}
+            sx={{ minWidth: 0 }}
           >
-            <div>
-              <Typography variant="h6">{title}</Typography>
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Typography variant="h6" sx={{ overflowWrap: 'anywhere' }}>
+                {title}
+              </Typography>
               {description ? (
                 <Typography
                   variant="caption"
@@ -85,27 +332,51 @@ export function DataTableCard<T extends { id: string }>({
                     overflow: 'hidden',
                     WebkitBoxOrient: 'vertical',
                     WebkitLineClamp: 2,
-                    display: '-webkit-box'
+                    display: '-webkit-box',
+                    overflowWrap: 'anywhere'
                   }}
                 >
                   {description}
                 </Typography>
               ) : null}
-            </div>
-            {actions ? <div>{actions}</div> : null}
+            </Box>
+            {actions ? (
+              <Box
+                sx={{
+                  width: { xs: '100%', sm: 'auto' },
+                  maxWidth: '100%',
+                  minWidth: 0,
+                  flexShrink: 0,
+                  '& .MuiStack-root': {
+                    minWidth: 0
+                  },
+                  '& .MuiButton-root': {
+                    minWidth: 0,
+                    maxWidth: '100%',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }
+                }}
+              >
+                {actions}
+              </Box>
+            ) : null}
           </Stack>
-          {toolbar ? <div>{toolbar}</div> : null}
-          <div
-            style={{
+          {toolbar ? <Box sx={{ minWidth: 0 }}>{toolbar}</Box> : null}
+          <Box
+            sx={{
               width: '100%',
+              minWidth: 0,
               height,
-              borderRadius: 16,
-              overflow: 'hidden'
+              borderRadius: 2,
+              overflow: 'hidden',
+              display: usesMobileCards ? { xs: 'none', md: 'block' } : 'block'
             }}
           >
             <DataGrid
               rows={rows}
-              columns={columns}
+              columns={responsiveColumns}
               rowHeight={resolvedRowHeight}
               getRowHeight={getRowHeight}
               pageSizeOptions={[5, 10, 20]}
@@ -123,14 +394,27 @@ export function DataTableCard<T extends { id: string }>({
               onRowSelectionModelChange={onRowSelectionModelChange}
               isRowSelectable={isRowSelectable}
               sx={{
+                minWidth: 0,
+                '& .MuiDataGrid-main': {
+                  minWidth: 0
+                },
+                '& .MuiDataGrid-columnHeaderTitle': {
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                },
                 '& .MuiDataGrid-cell': {
                   display: 'flex',
                   alignItems: 'center',
                   py: 0.75,
-                  lineHeight: 1.45
+                  lineHeight: 1.45,
+                  minWidth: 0
                 },
                 '& .MuiDataGrid-cell > *': {
                   maxWidth: '100%'
+                },
+                '& .MuiDataGrid-cellContent': {
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
                 },
                 '& .MuiDataGrid-cell .MuiButton-root': {
                   minHeight: 30,
@@ -159,12 +443,214 @@ export function DataTableCard<T extends { id: string }>({
                 },
                 '& .MuiDataGrid-cell .MuiTypography-root': {
                   lineHeight: 1.45
+                },
+                '& .MuiDataGrid-footerContainer': {
+                  minWidth: 0,
+                  overflow: 'hidden'
+                },
+                '& .MuiTablePagination-toolbar': {
+                  flexWrap: 'wrap',
+                  minHeight: 'auto',
+                  rowGap: 0.5,
+                  py: 0.5,
+                  pl: { xs: 0.5, sm: 2 },
+                  pr: { xs: 0.5, sm: 2 }
+                },
+                '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows':
+                  {
+                    my: 0.5
+                  },
+                '& .MuiTablePagination-spacer': {
+                  display: { xs: 'none', sm: 'block' }
                 }
               }}
             />
-          </div>
+          </Box>
+          {usesMobileCards ? (
+            <Box sx={{ display: { xs: 'block', md: 'none' }, minWidth: 0 }}>
+              {rows.length > 0 ? (
+                <Stack spacing={1.25}>
+                  {rows.map((row) => {
+                    const selectable = readMobileRowSelectable(row);
+
+                    return (
+                      <Box key={row.id} sx={{ minWidth: 0 }}>
+                        {(mobileCard ?? renderDefaultMobileCard)(row, {
+                          selected: selectedRowIds.has(row.id),
+                          selectable,
+                          toggleSelected: () => {
+                            handleMobileSelectionToggle(row, selectable);
+                          }
+                        })}
+                      </Box>
+                    );
+                  })}
+                </Stack>
+              ) : (
+                <Box
+                  sx={{
+                    minHeight: 160,
+                    display: 'grid',
+                    placeItems: 'center',
+                    borderRadius: 2,
+                    border: '1px dashed',
+                    borderColor: 'divider',
+                    bgcolor: 'background.default',
+                    px: 2,
+                    textAlign: 'center'
+                  }}
+                >
+                  <Typography variant="body2" color="text.secondary">
+                    {mobileEmptyLabel}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          ) : null}
         </Stack>
       </CardContent>
     </Card>
   );
+}
+
+const preferredMobilePrimaryFields = new Set([
+  'title',
+  'name',
+  'displayName',
+  'productName',
+  'provider',
+  'vehicleName',
+  'entryNumber',
+  'businessDate',
+  'monthLabel',
+  'email',
+  'tenantName'
+]);
+
+const mobileAmountFieldPattern =
+  /(amount|total|balance|premium|cost|expense|won|금액|보험료|비용|잔액|합계)/i;
+
+function isMobileActionColumn<T extends { id: string }>(
+  column: GridColDef<T>
+) {
+  const field = column.field.toLowerCase();
+  const headerName = String(column.headerName ?? '').toLowerCase();
+
+  return (
+    field === 'actions' ||
+    field.endsWith('actions') ||
+    headerName === '동작' ||
+    headerName.includes('action')
+  );
+}
+
+function resolveMobileColumnLabel<T extends { id: string }>(
+  column: GridColDef<T>
+) {
+  return column.headerName ?? column.field;
+}
+
+function renderMobileColumnValue<T extends { id: string }>(
+  row: T,
+  column: GridColDef<T>
+) {
+  const rawValue = readMobileColumnValue(row, column);
+  const formattedValue = formatMobileColumnValue(row, column, rawValue);
+
+  if (column.renderCell) {
+    const renderCell = column.renderCell as (
+      params: Parameters<NonNullable<GridColDef<T>['renderCell']>>[0]
+    ) => ReactNode;
+
+    return normalizeMobileNode(
+      renderCell({
+        id: row.id,
+        field: column.field,
+        row,
+        value: rawValue,
+        formattedValue,
+        colDef: column
+      } as Parameters<NonNullable<GridColDef<T>['renderCell']>>[0])
+    );
+  }
+
+  return normalizeMobileNode(formattedValue);
+}
+
+function resolveMobileTextValue<T extends { id: string }>(
+  row: T,
+  column: GridColDef<T> | undefined
+) {
+  if (!column) {
+    return row.id;
+  }
+
+  const value = formatMobileColumnValue(
+    row,
+    column,
+    readMobileColumnValue(row, column)
+  );
+
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return String(value);
+  }
+
+  return row.id;
+}
+
+function readMobileColumnValue<T extends { id: string }>(
+  row: T,
+  column: GridColDef<T>
+) {
+  const rawValue = (row as Record<string, unknown>)[column.field];
+
+  if (!column.valueGetter) {
+    return rawValue;
+  }
+
+  const valueGetter = column.valueGetter as (
+    value: unknown,
+    row: T,
+    column: GridColDef<T>
+  ) => unknown;
+
+  return valueGetter(rawValue, row, column);
+}
+
+function formatMobileColumnValue<T extends { id: string }>(
+  row: T,
+  column: GridColDef<T>,
+  value: unknown
+) {
+  if (!column.valueFormatter) {
+    return value;
+  }
+
+  const valueFormatter = column.valueFormatter as (
+    value: unknown,
+    row: T,
+    column: GridColDef<T>
+  ) => ReactNode;
+
+  return valueFormatter(value, row, column);
+}
+
+function normalizeMobileNode(value: unknown): ReactNode {
+  if (value === null || value === undefined || value === '') {
+    return '-';
+  }
+
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return String(value);
+  }
+
+  return value as ReactNode;
 }

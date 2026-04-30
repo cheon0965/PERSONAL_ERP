@@ -20,6 +20,7 @@ import { ChartCard } from '@/shared/ui/chart-card';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { FormDrawer } from '@/shared/ui/form-drawer';
 import { appLayout } from '@/shared/ui/layout-metrics';
+import { ResponsiveFilterPanel } from '@/shared/ui/responsive-filter-panel';
 import { SectionCard } from '@/shared/ui/section-card';
 import { SummaryCard } from '@/shared/ui/summary-card';
 import { formatNumber, formatWon } from '@/shared/lib/format';
@@ -464,72 +465,86 @@ function VehicleFleetFiltersControl({
   onFiltersChange: (filters: VehicleFleetFilters) => void;
 }) {
   const hasActiveFilter = Object.values(filters).some((value) => value !== '');
+  const activeFilterLabels = [
+    filters.keyword.trim() ? `검색: ${filters.keyword.trim()}` : null,
+    filters.manufacturer ? `제조사: ${filters.manufacturer}` : null,
+    filters.fuelType
+      ? `연료: ${fuelTypeLabelMap[filters.fuelType] ?? filters.fuelType}`
+      : null
+  ].filter((label): label is string => Boolean(label));
+  const clearFilters = () =>
+    onFiltersChange({
+      keyword: '',
+      manufacturer: '',
+      fuelType: ''
+    });
 
   return (
-    <Stack
-      direction={{ xs: 'column', md: 'row' }}
-      spacing={1}
-      alignItems={{ xs: 'stretch', md: 'center' }}
+    <ResponsiveFilterPanel
+      title="차량 조회조건"
+      activeFilterCount={activeFilterLabels.length}
+      activeFilterLabels={activeFilterLabels}
+      onClear={clearFilters}
     >
-      <TextField
-        label="검색어"
-        size="small"
-        value={filters.keyword}
-        onChange={(event) =>
-          onFiltersChange({ ...filters, keyword: event.target.value })
-        }
-        placeholder="차량명, 제조사"
-        sx={{ minWidth: { md: 240 }, flex: 1 }}
-      />
-      <TextField
-        select
-        label="제조사"
-        size="small"
-        value={filters.manufacturer}
-        onChange={(event) =>
-          onFiltersChange({ ...filters, manufacturer: event.target.value })
-        }
-        sx={{ minWidth: { md: 150 } }}
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={1}
+        alignItems={{ xs: 'stretch', md: 'center' }}
       >
-        <MenuItem value="">전체</MenuItem>
-        {manufacturerOptions.map((manufacturer) => (
-          <MenuItem key={manufacturer} value={manufacturer}>
-            {manufacturer}
-          </MenuItem>
-        ))}
-      </TextField>
-      <TextField
-        select
-        label="연료"
-        size="small"
-        value={filters.fuelType}
-        onChange={(event) =>
-          onFiltersChange({ ...filters, fuelType: event.target.value })
-        }
-        sx={{ minWidth: { md: 150 } }}
-      >
-        <MenuItem value="">전체</MenuItem>
-        {fuelTypeOptions.map((fuelType) => (
-          <MenuItem key={fuelType} value={fuelType}>
-            {fuelTypeLabelMap[fuelType] ?? fuelType}
-          </MenuItem>
-        ))}
-      </TextField>
-      <Button
-        variant="outlined"
-        disabled={!hasActiveFilter}
-        sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
-        onClick={() =>
-          onFiltersChange({
-            keyword: '',
-            manufacturer: '',
-            fuelType: ''
-          })
-        }
-      >
-        초기화
-      </Button>
-    </Stack>
+        <TextField
+          label="검색어"
+          size="small"
+          value={filters.keyword}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, keyword: event.target.value })
+          }
+          placeholder="차량명, 제조사"
+          sx={{ minWidth: { md: 240 }, flex: 1 }}
+        />
+        <TextField
+          select
+          label="제조사"
+          size="small"
+          value={filters.manufacturer}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, manufacturer: event.target.value })
+          }
+          sx={{ minWidth: { md: 150 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          {manufacturerOptions.map((manufacturer) => (
+            <MenuItem key={manufacturer} value={manufacturer}>
+              {manufacturer}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          select
+          label="연료"
+          size="small"
+          value={filters.fuelType}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, fuelType: event.target.value })
+          }
+          sx={{ minWidth: { md: 150 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          {fuelTypeOptions.map((fuelType) => (
+            <MenuItem key={fuelType} value={fuelType}>
+              {fuelTypeLabelMap[fuelType] ?? fuelType}
+            </MenuItem>
+          ))}
+        </TextField>
+        <Button
+          variant="outlined"
+          disabled={!hasActiveFilter}
+          sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+          onClick={clearFilters}
+        >
+          초기화
+        </Button>
+      </Stack>
+    </ResponsiveFilterPanel>
   );
 }
 
@@ -543,69 +558,83 @@ function VehicleFuelFiltersControl({
   onFiltersChange: (filters: VehicleFuelLogFilters) => void;
 }) {
   const hasActiveFilter = Object.values(filters).some((value) => value !== '');
+  const activeFilterLabels = [
+    filters.keyword.trim() ? `검색: ${filters.keyword.trim()}` : null,
+    filters.vehicleName ? `차량: ${filters.vehicleName}` : null,
+    filters.linkStatus
+      ? `회계: ${filters.linkStatus === 'LINKED' ? '연결됨' : '미연결'}`
+      : null
+  ].filter((label): label is string => Boolean(label));
+  const clearFilters = () =>
+    onFiltersChange({
+      keyword: '',
+      vehicleName: '',
+      linkStatus: ''
+    });
 
   return (
-    <Stack
-      direction={{ xs: 'column', md: 'row' }}
-      spacing={1}
-      alignItems={{ xs: 'stretch', md: 'center' }}
+    <ResponsiveFilterPanel
+      title="연료 기록 조회조건"
+      activeFilterCount={activeFilterLabels.length}
+      activeFilterLabels={activeFilterLabels}
+      onClear={clearFilters}
     >
-      <TextField
-        label="검색어"
-        size="small"
-        value={filters.keyword}
-        onChange={(event) =>
-          onFiltersChange({ ...filters, keyword: event.target.value })
-        }
-        placeholder="차량, 날짜, 전표"
-        sx={{ minWidth: { md: 240 }, flex: 1 }}
-      />
-      <TextField
-        select
-        label="차량"
-        size="small"
-        value={filters.vehicleName}
-        onChange={(event) =>
-          onFiltersChange({ ...filters, vehicleName: event.target.value })
-        }
-        sx={{ minWidth: { md: 170 } }}
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={1}
+        alignItems={{ xs: 'stretch', md: 'center' }}
       >
-        <MenuItem value="">전체</MenuItem>
-        {vehicleOptions.map((vehicleName) => (
-          <MenuItem key={vehicleName} value={vehicleName}>
-            {vehicleName}
-          </MenuItem>
-        ))}
-      </TextField>
-      <TextField
-        select
-        label="회계 연동"
-        size="small"
-        value={filters.linkStatus}
-        onChange={(event) =>
-          onFiltersChange({ ...filters, linkStatus: event.target.value })
-        }
-        sx={{ minWidth: { md: 150 } }}
-      >
-        <MenuItem value="">전체</MenuItem>
-        <MenuItem value="LINKED">연결됨</MenuItem>
-        <MenuItem value="UNLINKED">미연결</MenuItem>
-      </TextField>
-      <Button
-        variant="outlined"
-        disabled={!hasActiveFilter}
-        sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
-        onClick={() =>
-          onFiltersChange({
-            keyword: '',
-            vehicleName: '',
-            linkStatus: ''
-          })
-        }
-      >
-        초기화
-      </Button>
-    </Stack>
+        <TextField
+          label="검색어"
+          size="small"
+          value={filters.keyword}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, keyword: event.target.value })
+          }
+          placeholder="차량, 날짜, 전표"
+          sx={{ minWidth: { md: 240 }, flex: 1 }}
+        />
+        <TextField
+          select
+          label="차량"
+          size="small"
+          value={filters.vehicleName}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, vehicleName: event.target.value })
+          }
+          sx={{ minWidth: { md: 170 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          {vehicleOptions.map((vehicleName) => (
+            <MenuItem key={vehicleName} value={vehicleName}>
+              {vehicleName}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          select
+          label="회계 연동"
+          size="small"
+          value={filters.linkStatus}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, linkStatus: event.target.value })
+          }
+          sx={{ minWidth: { md: 150 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          <MenuItem value="LINKED">연결됨</MenuItem>
+          <MenuItem value="UNLINKED">미연결</MenuItem>
+        </TextField>
+        <Button
+          variant="outlined"
+          disabled={!hasActiveFilter}
+          sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+          onClick={clearFilters}
+        >
+          초기화
+        </Button>
+      </Stack>
+    </ResponsiveFilterPanel>
   );
 }
 
@@ -621,87 +650,104 @@ function VehicleMaintenanceFiltersControl({
   onFiltersChange: (filters: VehicleMaintenanceLogFilters) => void;
 }) {
   const hasActiveFilter = Object.values(filters).some((value) => value !== '');
+  const activeFilterLabels = [
+    filters.keyword.trim() ? `검색: ${filters.keyword.trim()}` : null,
+    filters.vehicleName ? `차량: ${filters.vehicleName}` : null,
+    filters.category
+      ? `구분: ${maintenanceCategoryLabelMap[filters.category] ?? filters.category}`
+      : null,
+    filters.linkStatus
+      ? `회계: ${filters.linkStatus === 'LINKED' ? '연결됨' : '미연결'}`
+      : null
+  ].filter((label): label is string => Boolean(label));
+  const clearFilters = () =>
+    onFiltersChange({
+      keyword: '',
+      vehicleName: '',
+      category: '',
+      linkStatus: ''
+    });
 
   return (
-    <Stack
-      direction={{ xs: 'column', md: 'row' }}
-      spacing={1}
-      alignItems={{ xs: 'stretch', md: 'center' }}
+    <ResponsiveFilterPanel
+      title="정비 이력 조회조건"
+      activeFilterCount={activeFilterLabels.length}
+      activeFilterLabels={activeFilterLabels}
+      onClear={clearFilters}
     >
-      <TextField
-        label="검색어"
-        size="small"
-        value={filters.keyword}
-        onChange={(event) =>
-          onFiltersChange({ ...filters, keyword: event.target.value })
-        }
-        placeholder="차량, 정비내용, 업체"
-        sx={{ minWidth: { md: 240 }, flex: 1 }}
-      />
-      <TextField
-        select
-        label="차량"
-        size="small"
-        value={filters.vehicleName}
-        onChange={(event) =>
-          onFiltersChange({ ...filters, vehicleName: event.target.value })
-        }
-        sx={{ minWidth: { md: 170 } }}
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={1}
+        alignItems={{ xs: 'stretch', md: 'center' }}
       >
-        <MenuItem value="">전체</MenuItem>
-        {vehicleOptions.map((vehicleName) => (
-          <MenuItem key={vehicleName} value={vehicleName}>
-            {vehicleName}
-          </MenuItem>
-        ))}
-      </TextField>
-      <TextField
-        select
-        label="구분"
-        size="small"
-        value={filters.category}
-        onChange={(event) =>
-          onFiltersChange({ ...filters, category: event.target.value })
-        }
-        sx={{ minWidth: { md: 150 } }}
-      >
-        <MenuItem value="">전체</MenuItem>
-        {categoryOptions.map((category) => (
-          <MenuItem key={category} value={category}>
-            {maintenanceCategoryLabelMap[category] ?? category}
-          </MenuItem>
-        ))}
-      </TextField>
-      <TextField
-        select
-        label="회계 연동"
-        size="small"
-        value={filters.linkStatus}
-        onChange={(event) =>
-          onFiltersChange({ ...filters, linkStatus: event.target.value })
-        }
-        sx={{ minWidth: { md: 150 } }}
-      >
-        <MenuItem value="">전체</MenuItem>
-        <MenuItem value="LINKED">연결됨</MenuItem>
-        <MenuItem value="UNLINKED">미연결</MenuItem>
-      </TextField>
-      <Button
-        variant="outlined"
-        disabled={!hasActiveFilter}
-        sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
-        onClick={() =>
-          onFiltersChange({
-            keyword: '',
-            vehicleName: '',
-            category: '',
-            linkStatus: ''
-          })
-        }
-      >
-        초기화
-      </Button>
-    </Stack>
+        <TextField
+          label="검색어"
+          size="small"
+          value={filters.keyword}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, keyword: event.target.value })
+          }
+          placeholder="차량, 정비내용, 업체"
+          sx={{ minWidth: { md: 240 }, flex: 1 }}
+        />
+        <TextField
+          select
+          label="차량"
+          size="small"
+          value={filters.vehicleName}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, vehicleName: event.target.value })
+          }
+          sx={{ minWidth: { md: 170 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          {vehicleOptions.map((vehicleName) => (
+            <MenuItem key={vehicleName} value={vehicleName}>
+              {vehicleName}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          select
+          label="구분"
+          size="small"
+          value={filters.category}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, category: event.target.value })
+          }
+          sx={{ minWidth: { md: 150 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          {categoryOptions.map((category) => (
+            <MenuItem key={category} value={category}>
+              {maintenanceCategoryLabelMap[category] ?? category}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          select
+          label="회계 연동"
+          size="small"
+          value={filters.linkStatus}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, linkStatus: event.target.value })
+          }
+          sx={{ minWidth: { md: 150 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          <MenuItem value="LINKED">연결됨</MenuItem>
+          <MenuItem value="UNLINKED">미연결</MenuItem>
+        </TextField>
+        <Button
+          variant="outlined"
+          disabled={!hasActiveFilter}
+          sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+          onClick={clearFilters}
+        >
+          초기화
+        </Button>
+      </Stack>
+    </ResponsiveFilterPanel>
   );
 }
 

@@ -22,6 +22,7 @@ export function SectionCard({
         position: 'relative',
         height: '100%',
         display: 'flex',
+        minWidth: 0,
         overflow: 'hidden',
         '&::before': {
           content: '""',
@@ -35,10 +36,14 @@ export function SectionCard({
         }
       }}
     >
-      <CardContent sx={{ p: appLayout.cardPadding, flex: 1, width: '100%' }}>
-        <Stack spacing={appLayout.cardGap} sx={{ height: '100%' }}>
-          <Box>
-            <Typography variant="h6">{title}</Typography>
+      <CardContent
+        sx={{ p: appLayout.cardPadding, flex: 1, width: '100%', minWidth: 0 }}
+      >
+        <Stack spacing={appLayout.cardGap} sx={{ height: '100%', minWidth: 0 }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="h6" sx={{ overflowWrap: 'anywhere' }}>
+              {title}
+            </Typography>
             {description ? (
               <Typography
                 variant="caption"
@@ -50,7 +55,8 @@ export function SectionCard({
                   overflow: 'hidden',
                   WebkitBoxOrient: 'vertical',
                   WebkitLineClamp: 2,
-                  display: '-webkit-box'
+                  display: '-webkit-box',
+                  overflowWrap: 'anywhere'
                 }}
               >
                 {description}

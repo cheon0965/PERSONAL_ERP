@@ -25,6 +25,7 @@ import {
 } from '@/shared/ui/feedback-alert';
 import { FormDrawer } from '@/shared/ui/form-drawer';
 import { appLayout } from '@/shared/ui/layout-metrics';
+import { ResponsiveFilterPanel } from '@/shared/ui/responsive-filter-panel';
 import { SectionCard } from '@/shared/ui/section-card';
 import {
   readMembershipRoleLabel,
@@ -302,6 +303,21 @@ export function AdminMembersFilterToolbar({
   onFiltersChange: (filters: AdminMembersTableFilters) => void;
 }) {
   const hasActiveFilter = Object.values(filters).some((value) => value !== '');
+  const activeFilterLabels = [
+    filters.keyword.trim() ? `검색: ${filters.keyword.trim()}` : null,
+    filters.role ? `역할: ${readMembershipRoleLabel(filters.role)}` : null,
+    filters.status
+      ? `상태: ${readMembershipStatusLabel(filters.status)}`
+      : null,
+    filters.tenantName ? `사업장: ${filters.tenantName}` : null
+  ].filter((label): label is string => Boolean(label));
+  const clearFilters = () =>
+    onFiltersChange({
+      keyword: '',
+      role: '',
+      status: '',
+      tenantName: ''
+    });
 
   return (
     <Stack spacing={1.25}>
@@ -324,92 +340,92 @@ export function AdminMembersFilterToolbar({
           />
         ))}
       </Stack>
-      <Stack
-        direction={{ xs: 'column', md: 'row' }}
-        spacing={1}
-        alignItems={{ xs: 'stretch', md: 'center' }}
+      <ResponsiveFilterPanel
+        title="멤버 조회조건"
+        activeFilterCount={activeFilterLabels.length}
+        activeFilterLabels={activeFilterLabels}
+        onClear={clearFilters}
       >
-        <TextField
-          label="검색어"
-          size="small"
-          value={filters.keyword}
-          onChange={(event) =>
-            onFiltersChange({ ...filters, keyword: event.target.value })
-          }
-          placeholder="이름, 이메일, 사업장"
-          sx={{ minWidth: { md: 260 }, flex: 1 }}
-        />
-        <TextField
-          select
-          label="역할"
-          size="small"
-          value={filters.role}
-          onChange={(event) =>
-            onFiltersChange({ ...filters, role: event.target.value })
-          }
-          sx={{ minWidth: { md: 140 } }}
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={1}
+          alignItems={{ xs: 'stretch', md: 'center' }}
         >
-          <MenuItem value="">전체</MenuItem>
-          {adminMemberRoles.map((role) => (
-            <MenuItem key={role} value={role}>
-              {readMembershipRoleLabel(role)}
-            </MenuItem>
-          ))}
-        </TextField>
-        <TextField
-          select
-          label="상태"
-          size="small"
-          value={filters.status}
-          onChange={(event) =>
-            onFiltersChange({ ...filters, status: event.target.value })
-          }
-          sx={{ minWidth: { md: 140 } }}
-        >
-          <MenuItem value="">전체</MenuItem>
-          {(['ACTIVE', 'INVITED', 'SUSPENDED', 'REMOVED'] as const).map(
-            (status) => (
-              <MenuItem key={status} value={status}>
-                {readMembershipStatusLabel(status)}
-              </MenuItem>
-            )
-          )}
-        </TextField>
-        {tenantOptions.length > 0 ? (
+          <TextField
+            label="검색어"
+            size="small"
+            value={filters.keyword}
+            onChange={(event) =>
+              onFiltersChange({ ...filters, keyword: event.target.value })
+            }
+            placeholder="이름, 이메일, 사업장"
+            sx={{ minWidth: { md: 260 }, flex: 1 }}
+          />
           <TextField
             select
-            label="사업장"
+            label="역할"
             size="small"
-            value={filters.tenantName}
+            value={filters.role}
             onChange={(event) =>
-              onFiltersChange({ ...filters, tenantName: event.target.value })
+              onFiltersChange({ ...filters, role: event.target.value })
             }
-            sx={{ minWidth: { md: 180 } }}
+            sx={{ minWidth: { md: 140 } }}
           >
             <MenuItem value="">전체</MenuItem>
-            {tenantOptions.map((tenantName) => (
-              <MenuItem key={tenantName} value={tenantName}>
-                {tenantName}
+            {adminMemberRoles.map((role) => (
+              <MenuItem key={role} value={role}>
+                {readMembershipRoleLabel(role)}
               </MenuItem>
             ))}
           </TextField>
-        ) : null}
-        <Button
-          variant="outlined"
-          disabled={!hasActiveFilter}
-          sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
-          onClick={() =>
-            onFiltersChange({
-              keyword: '',
-              role: '',
-              status: '',
-              tenantName: ''
-            })
-          }
-        >
-          초기화
-        </Button>
-      </Stack>
+          <TextField
+            select
+            label="상태"
+            size="small"
+            value={filters.status}
+            onChange={(event) =>
+              onFiltersChange({ ...filters, status: event.target.value })
+            }
+            sx={{ minWidth: { md: 140 } }}
+          >
+            <MenuItem value="">전체</MenuItem>
+            {(['ACTIVE', 'INVITED', 'SUSPENDED', 'REMOVED'] as const).map(
+              (status) => (
+                <MenuItem key={status} value={status}>
+                  {readMembershipStatusLabel(status)}
+                </MenuItem>
+              )
+            )}
+          </TextField>
+          {tenantOptions.length > 0 ? (
+            <TextField
+              select
+              label="사업장"
+              size="small"
+              value={filters.tenantName}
+              onChange={(event) =>
+                onFiltersChange({ ...filters, tenantName: event.target.value })
+              }
+              sx={{ minWidth: { md: 180 } }}
+            >
+              <MenuItem value="">전체</MenuItem>
+              {tenantOptions.map((tenantName) => (
+                <MenuItem key={tenantName} value={tenantName}>
+                  {tenantName}
+                </MenuItem>
+              ))}
+            </TextField>
+          ) : null}
+          <Button
+            variant="outlined"
+            disabled={!hasActiveFilter}
+            sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+            onClick={clearFilters}
+          >
+            초기화
+          </Button>
+        </Stack>
+      </ResponsiveFilterPanel>
     </Stack>
   );
 }

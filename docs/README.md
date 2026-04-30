@@ -38,6 +38,7 @@
 - `API.md`: 구현된 엔드포인트와 인증/쓰기 흐름 요약
 - `DEVELOPMENT_GUIDE.md`: 구현 순서와 문서 동기화 절차
 - `OPERATIONS_CHECKLIST.md`: 배포, 수동 스모크 체크, 운영 장애 대응 절차
+- `DOCKER_DEPLOYMENT.md`: Docker Compose 기반 API/Web/MySQL 배포 절차
 - `ERROR_HANDLING_AND_LOGGING.md`: 예외 처리와 최소 로깅 기준
 - `VALIDATION_NOTES.md`: 실제 검증 범위와 남은 공백
 - `PROJECT_PLAN.md`: 중기 제품 로드맵

@@ -14,6 +14,7 @@ import type {
   ImportBatchItem
 } from '@personal-erp/contracts';
 import { DataTableCard } from '@/shared/ui/data-table-card';
+import { ResponsiveFilterPanel } from '@/shared/ui/responsive-filter-panel';
 import { buildImportBatchColumns } from './imports.columns';
 import {
   readImportBatchParseStatusLabel,
@@ -74,6 +75,26 @@ export function ImportBatchesGrid({
       .filter((item) => item.count > 0);
   }, [filteredBatches]);
   const hasActiveFilter = Object.values(filters).some((value) => value !== '');
+  const activeFilterLabels = [
+    filters.keyword.trim() ? `검색: ${filters.keyword.trim()}` : null,
+    filters.parseStatus
+      ? `읽기: ${readImportBatchParseStatusLabel(
+          filters.parseStatus as ImportBatchItem['parseStatus']
+        )}`
+      : null,
+    filters.sourceKind
+      ? `원본: ${
+          sourceKindOptions.find((option) => option.value === filters.sourceKind)
+            ?.label ?? filters.sourceKind
+        }`
+      : null
+  ].filter((label): label is string => Boolean(label));
+  const clearFilters = () =>
+    setFilters({
+      keyword: '',
+      parseStatus: '',
+      sourceKind: ''
+    });
 
   return (
     <DataTableCard
@@ -87,69 +108,70 @@ export function ImportBatchesGrid({
           alignItems={{ xs: 'flex-start', md: 'center' }}
         >
           <Stack spacing={1.25} sx={{ width: '100%' }}>
-            <Stack
-              direction={{ xs: 'column', md: 'row' }}
-              spacing={1}
-              alignItems={{ xs: 'stretch', md: 'center' }}
+            <ResponsiveFilterPanel
+              title="업로드 배치 조회조건"
+              activeFilterCount={activeFilterLabels.length}
+              activeFilterLabels={activeFilterLabels}
+              onClear={clearFilters}
             >
-              <TextField
-                label="검색어"
-                size="small"
-                value={filters.keyword}
-                onChange={(event) =>
-                  setFilters({ ...filters, keyword: event.target.value })
-                }
-                placeholder="파일명, 원본, 계좌/카드"
-                sx={{ minWidth: { md: 260 }, flex: 1 }}
-              />
-              <TextField
-                select
-                label="읽기 상태"
-                size="small"
-                value={filters.parseStatus}
-                onChange={(event) =>
-                  setFilters({ ...filters, parseStatus: event.target.value })
-                }
-                sx={{ minWidth: { md: 150 } }}
+              <Stack
+                direction={{ xs: 'column', md: 'row' }}
+                spacing={1}
+                alignItems={{ xs: 'stretch', md: 'center' }}
               >
-                <MenuItem value="">전체</MenuItem>
-                <MenuItem value="COMPLETED">완료</MenuItem>
-                <MenuItem value="PARTIAL">부분 성공</MenuItem>
-                <MenuItem value="FAILED">실패</MenuItem>
-                <MenuItem value="PENDING">대기</MenuItem>
-              </TextField>
-              <TextField
-                select
-                label="원본 종류"
-                size="small"
-                value={filters.sourceKind}
-                onChange={(event) =>
-                  setFilters({ ...filters, sourceKind: event.target.value })
-                }
-                sx={{ minWidth: { md: 170 } }}
-              >
-                <MenuItem value="">전체</MenuItem>
-                {sourceKindOptions.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <Button
-                variant="outlined"
-                disabled={!hasActiveFilter}
-                sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
-                onClick={() =>
-                  setFilters({
-                    keyword: '',
-                    parseStatus: '',
-                    sourceKind: ''
-                  })
-                }
-              >
-                초기화
-              </Button>
-            </Stack>
+                <TextField
+                  label="검색어"
+                  size="small"
+                  value={filters.keyword}
+                  onChange={(event) =>
+                    setFilters({ ...filters, keyword: event.target.value })
+                  }
+                  placeholder="파일명, 원본, 계좌/카드"
+                  sx={{ minWidth: { md: 260 }, flex: 1 }}
+                />
+                <TextField
+                  select
+                  label="읽기 상태"
+                  size="small"
+                  value={filters.parseStatus}
+                  onChange={(event) =>
+                    setFilters({ ...filters, parseStatus: event.target.value })
+                  }
+                  sx={{ minWidth: { md: 150 } }}
+                >
+                  <MenuItem value="">전체</MenuItem>
+                  <MenuItem value="COMPLETED">완료</MenuItem>
+                  <MenuItem value="PARTIAL">부분 성공</MenuItem>
+                  <MenuItem value="FAILED">실패</MenuItem>
+                  <MenuItem value="PENDING">대기</MenuItem>
+                </TextField>
+                <TextField
+                  select
+                  label="원본 종류"
+                  size="small"
+                  value={filters.sourceKind}
+                  onChange={(event) =>
+                    setFilters({ ...filters, sourceKind: event.target.value })
+                  }
+                  sx={{ minWidth: { md: 170 } }}
+                >
+                  <MenuItem value="">전체</MenuItem>
+                  {sourceKindOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <Button
+                  variant="outlined"
+                  disabled={!hasActiveFilter}
+                  sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+                  onClick={clearFilters}
+                >
+                  초기화
+                </Button>
+              </Stack>
+            </ResponsiveFilterPanel>
             <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
               <Chip
                 label={`전체 ${batches.length}건`}

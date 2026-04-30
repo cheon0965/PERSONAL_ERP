@@ -30,6 +30,7 @@ import {
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
+import { ResponsiveFilterPanel } from '@/shared/ui/responsive-filter-panel';
 import { SectionCard } from '@/shared/ui/section-card';
 import {
   accountingPeriodsQueryKey,
@@ -531,94 +532,109 @@ function PlanItemsTableToolbar({
   onFiltersChange: (filters: PlanItemsTableFilters) => void;
 }) {
   const hasActiveFilter = Object.values(filters).some((value) => value !== '');
+  const activeFilterLabels = [
+    filters.keyword.trim() ? `검색: ${filters.keyword.trim()}` : null,
+    filters.status ? `상태: ${filters.status}` : null,
+    filters.fundingAccountName
+      ? `자금수단: ${filters.fundingAccountName}`
+      : null,
+    filters.categoryName ? `카테고리: ${filters.categoryName}` : null
+  ].filter((label): label is string => Boolean(label));
+  const clearFilters = () =>
+    onFiltersChange({
+      keyword: '',
+      status: '',
+      fundingAccountName: '',
+      categoryName: ''
+    });
 
   return (
     <Stack spacing={1.25}>
-      <Stack
-        direction={{ xs: 'column', md: 'row' }}
-        spacing={1}
-        alignItems={{ xs: 'stretch', md: 'center' }}
+      <ResponsiveFilterPanel
+        title="계획 항목 조회조건"
+        activeFilterCount={activeFilterLabels.length}
+        activeFilterLabels={activeFilterLabels}
+        onClear={clearFilters}
       >
-        <TextField
-          label="검색어"
-          size="small"
-          value={filters.keyword}
-          onChange={(event) =>
-            onFiltersChange({ ...filters, keyword: event.target.value })
-          }
-          placeholder="제목, 거래유형, 연결 거래"
-          sx={{ minWidth: { md: 260 }, flex: 1 }}
-        />
-        <TextField
-          select
-          label="상태"
-          size="small"
-          value={filters.status}
-          onChange={(event) =>
-            onFiltersChange({ ...filters, status: event.target.value })
-          }
-          sx={{ minWidth: { md: 150 } }}
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={1}
+          alignItems={{ xs: 'stretch', md: 'center' }}
         >
-          <MenuItem value="">전체</MenuItem>
-          {filterOptions.statuses.map((status) => (
-            <MenuItem key={status} value={status}>
-              {status}
-            </MenuItem>
-          ))}
-        </TextField>
-        <TextField
-          select
-          label="자금수단"
-          size="small"
-          value={filters.fundingAccountName}
-          onChange={(event) =>
-            onFiltersChange({
-              ...filters,
-              fundingAccountName: event.target.value
-            })
-          }
-          sx={{ minWidth: { md: 180 } }}
-        >
-          <MenuItem value="">전체</MenuItem>
-          {filterOptions.fundingAccountNames.map((fundingAccountName) => (
-            <MenuItem key={fundingAccountName} value={fundingAccountName}>
-              {fundingAccountName}
-            </MenuItem>
-          ))}
-        </TextField>
-        <TextField
-          select
-          label="카테고리"
-          size="small"
-          value={filters.categoryName}
-          onChange={(event) =>
-            onFiltersChange({ ...filters, categoryName: event.target.value })
-          }
-          sx={{ minWidth: { md: 180 } }}
-        >
-          <MenuItem value="">전체</MenuItem>
-          {filterOptions.categoryNames.map((categoryName) => (
-            <MenuItem key={categoryName} value={categoryName}>
-              {categoryName}
-            </MenuItem>
-          ))}
-        </TextField>
-        <Button
-          variant="outlined"
-          disabled={!hasActiveFilter}
-          sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
-          onClick={() =>
-            onFiltersChange({
-              keyword: '',
-              status: '',
-              fundingAccountName: '',
-              categoryName: ''
-            })
-          }
-        >
-          초기화
-        </Button>
-      </Stack>
+          <TextField
+            label="검색어"
+            size="small"
+            value={filters.keyword}
+            onChange={(event) =>
+              onFiltersChange({ ...filters, keyword: event.target.value })
+            }
+            placeholder="제목, 거래유형, 연결 거래"
+            sx={{ minWidth: { md: 260 }, flex: 1 }}
+          />
+          <TextField
+            select
+            label="상태"
+            size="small"
+            value={filters.status}
+            onChange={(event) =>
+              onFiltersChange({ ...filters, status: event.target.value })
+            }
+            sx={{ minWidth: { md: 150 } }}
+          >
+            <MenuItem value="">전체</MenuItem>
+            {filterOptions.statuses.map((status) => (
+              <MenuItem key={status} value={status}>
+                {status}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label="자금수단"
+            size="small"
+            value={filters.fundingAccountName}
+            onChange={(event) =>
+              onFiltersChange({
+                ...filters,
+                fundingAccountName: event.target.value
+              })
+            }
+            sx={{ minWidth: { md: 180 } }}
+          >
+            <MenuItem value="">전체</MenuItem>
+            {filterOptions.fundingAccountNames.map((fundingAccountName) => (
+              <MenuItem key={fundingAccountName} value={fundingAccountName}>
+                {fundingAccountName}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label="카테고리"
+            size="small"
+            value={filters.categoryName}
+            onChange={(event) =>
+              onFiltersChange({ ...filters, categoryName: event.target.value })
+            }
+            sx={{ minWidth: { md: 180 } }}
+          >
+            <MenuItem value="">전체</MenuItem>
+            {filterOptions.categoryNames.map((categoryName) => (
+              <MenuItem key={categoryName} value={categoryName}>
+                {categoryName}
+              </MenuItem>
+            ))}
+          </TextField>
+          <Button
+            variant="outlined"
+            disabled={!hasActiveFilter}
+            sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+            onClick={clearFilters}
+          >
+            초기화
+          </Button>
+        </Stack>
+      </ResponsiveFilterPanel>
     </Stack>
   );
 }

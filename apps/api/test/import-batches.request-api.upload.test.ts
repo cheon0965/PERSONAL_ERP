@@ -249,6 +249,69 @@ test('POST /import-batches/files creates an import batch from an IM bank PDF att
   }
 });
 
+test('POST /import-batches/files rejects Woori bank HTML uploads while the parser is security-disabled', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const formData = new FormData();
+    formData.set('sourceKind', ImportSourceKind.WOORI_BANK_HTML);
+    formData.set('fundingAccountId', 'acc-1');
+    formData.set('password', '123456');
+    formData.set(
+      'file',
+      new Blob([new TextEncoder().encode('<html><body></body></html>')], {
+        type: 'text/html'
+      }),
+      'woori-statement.html'
+    );
+
+    const response = await context.requestFormData('/import-batches/files', {
+      headers: context.authHeaders(),
+      body: formData
+    });
+
+    assert.equal(response.status, 400);
+    assert.match(
+      JSON.stringify(response.body),
+      /우리은행 HTML 업로드가 비활성화/
+    );
+    assert.equal(context.state.importBatches.length, 0);
+    assert.equal(context.state.importedRows.length, 0);
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /import-batches/files rejects non-numeric Woori bank HTML passwords at validation', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const formData = new FormData();
+    formData.set('sourceKind', ImportSourceKind.WOORI_BANK_HTML);
+    formData.set('fundingAccountId', 'acc-1');
+    formData.set('password', 'abcdef');
+    formData.set(
+      'file',
+      new Blob([new TextEncoder().encode('<html><body></body></html>')], {
+        type: 'text/html'
+      }),
+      'woori-statement.html'
+    );
+
+    const response = await context.requestFormData('/import-batches/files', {
+      headers: context.authHeaders(),
+      body: formData
+    });
+
+    assert.equal(response.status, 400);
+    assert.match(JSON.stringify(response.body), /비밀번호는 숫자 6자리/);
+    assert.equal(context.state.importBatches.length, 0);
+    assert.equal(context.state.importedRows.length, 0);
+  } finally {
+    await context.close();
+  }
+});
+
 test('POST /import-batches/files marks balance-reversal withdrawal rows as 승인취소', async () => {
   const context = await createRequestTestContext();
 

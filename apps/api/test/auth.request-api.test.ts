@@ -6,6 +6,9 @@ import {
   readSetCookieHeader
 } from './request-api.test-support';
 
+const REFRESH_COOKIE_NAME = '__Host-refreshToken';
+const LEGACY_REFRESH_COOKIE_NAME = 'refreshToken';
+
 function buildRegisterRequest(input: {
   email: string;
   password: string;
@@ -61,10 +64,11 @@ test('POST /auth/login returns access token and a refresh cookie for valid crede
         }
       }
     });
-    assert.match(readSetCookieHeader(response.headers), /refreshToken=/);
+    assert.match(readSetCookieHeader(response.headers), /__Host-refreshToken=/);
+    assert.match(readSetCookieHeader(response.headers), /Secure/i);
     assert.match(readSetCookieHeader(response.headers), /HttpOnly/i);
     assert.match(readSetCookieHeader(response.headers), /SameSite=Strict/i);
-    assert.match(readSetCookieHeader(response.headers), /Path=\/api\/auth/i);
+    assert.match(readSetCookieHeader(response.headers), /Path=\//i);
     assert.equal(response.headers.get('cache-control'), 'no-store');
     assert.equal(response.headers.get('pragma'), 'no-cache');
     assert.ok(
@@ -93,7 +97,7 @@ test('POST /auth/refresh rotates the refresh session and returns a new access to
     });
     const originalRefreshToken = readCookieValue(
       loginResponse.headers,
-      'refreshToken'
+      REFRESH_COOKIE_NAME
     );
 
     assert.ok(originalRefreshToken);
@@ -101,13 +105,13 @@ test('POST /auth/refresh rotates the refresh session and returns a new access to
     const response = await context.request('/auth/refresh', {
       method: 'POST',
       headers: {
-        cookie: `refreshToken=${originalRefreshToken}`
+        cookie: `${REFRESH_COOKIE_NAME}=${originalRefreshToken}`
       }
     });
 
     const rotatedRefreshToken = readCookieValue(
       response.headers,
-      'refreshToken'
+      REFRESH_COOKIE_NAME
     );
     assert.equal(response.status, 200);
     assert.ok(rotatedRefreshToken);
@@ -135,6 +139,45 @@ test('POST /auth/refresh rotates the refresh session and returns a new access to
           candidate.details.userId === 'user-1'
       )
     );
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /auth/refresh accepts the legacy refresh cookie name during migration', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const loginResponse = await context.request('/auth/login', {
+      method: 'POST',
+      body: {
+        email: 'demo@example.com',
+        password: 'Demo1234!'
+      }
+    });
+    const originalRefreshToken = readCookieValue(
+      loginResponse.headers,
+      REFRESH_COOKIE_NAME
+    );
+    assert.ok(originalRefreshToken);
+
+    const response = await context.request('/auth/refresh', {
+      method: 'POST',
+      headers: {
+        cookie: `${LEGACY_REFRESH_COOKIE_NAME}=${originalRefreshToken}`
+      }
+    });
+
+    const rotatedRefreshToken = readCookieValue(
+      response.headers,
+      REFRESH_COOKIE_NAME
+    );
+    assert.equal(response.status, 200);
+    assert.ok(rotatedRefreshToken);
+    assert.notEqual(rotatedRefreshToken, originalRefreshToken);
+    assert.match(readSetCookieHeader(response.headers), /__Host-refreshToken=/);
+    assert.match(readSetCookieHeader(response.headers), /Secure/i);
+    assert.match(readSetCookieHeader(response.headers), /Path=\//i);
   } finally {
     await context.close();
   }
@@ -179,13 +222,16 @@ test('POST /auth/logout revokes the current refresh session and clears the cooki
         password: 'Demo1234!'
       }
     });
-    const refreshToken = readCookieValue(loginResponse.headers, 'refreshToken');
+    const refreshToken = readCookieValue(
+      loginResponse.headers,
+      REFRESH_COOKIE_NAME
+    );
     assert.ok(refreshToken);
 
     const logoutResponse = await context.request('/auth/logout', {
       method: 'POST',
       headers: {
-        cookie: `refreshToken=${refreshToken}`
+        cookie: `${REFRESH_COOKIE_NAME}=${refreshToken}`
       }
     });
 
@@ -194,12 +240,16 @@ test('POST /auth/logout revokes the current refresh session and clears the cooki
       (logoutResponse.body as { status: string }).status,
       'logged_out'
     );
+    assert.match(
+      readSetCookieHeader(logoutResponse.headers),
+      /__Host-refreshToken=/
+    );
     assert.match(readSetCookieHeader(logoutResponse.headers), /refreshToken=/);
 
     const refreshResponse = await context.request('/auth/refresh', {
       method: 'POST',
       headers: {
-        cookie: `refreshToken=${refreshToken}`
+        cookie: `${REFRESH_COOKIE_NAME}=${refreshToken}`
       }
     });
 
@@ -230,14 +280,14 @@ test('POST /auth/refresh revokes all active sessions when a rotated refresh toke
     });
     const originalRefreshToken = readCookieValue(
       loginResponse.headers,
-      'refreshToken'
+      REFRESH_COOKIE_NAME
     );
     assert.ok(originalRefreshToken);
 
     const rotatedResponse = await context.request('/auth/refresh', {
       method: 'POST',
       headers: {
-        cookie: `refreshToken=${originalRefreshToken}`
+        cookie: `${REFRESH_COOKIE_NAME}=${originalRefreshToken}`
       }
     });
     assert.equal(rotatedResponse.status, 200);
@@ -245,7 +295,7 @@ test('POST /auth/refresh revokes all active sessions when a rotated refresh toke
     const reuseResponse = await context.request('/auth/refresh', {
       method: 'POST',
       headers: {
-        cookie: `refreshToken=${originalRefreshToken}`
+        cookie: `${REFRESH_COOKIE_NAME}=${originalRefreshToken}`
       }
     });
 
@@ -510,7 +560,7 @@ test('POST /auth/register sends verification email and verified users can login'
       status: 'verification_sent'
     });
     assert.equal(
-      readCookieValue(registerResponse.headers, 'refreshToken'),
+      readCookieValue(registerResponse.headers, REFRESH_COOKIE_NAME),
       null
     );
     assert.equal(context.state.sentEmails.length, 1);
@@ -610,9 +660,10 @@ test('POST /auth/register sends verification email and verified users can login'
       /^test-access-token:[^:]+:user-3$/
     );
     assert.equal(
-      readCookieValue(loginAfterVerification.headers, 'refreshToken')?.includes(
-        'user-3'
-      ),
+      readCookieValue(
+        loginAfterVerification.headers,
+        REFRESH_COOKIE_NAME
+      )?.includes('user-3'),
       true
     );
     assert.ok(
@@ -670,6 +721,49 @@ test('POST /auth/register requires mandatory terms and privacy consent', async (
     const message = (response.body as { message: string[] }).message;
     assert.ok(message.includes('이용약관에 동의해 주세요.'));
     assert.ok(message.includes('개인정보 수집·이용에 동의해 주세요.'));
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /auth/register rejects common passwords', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/auth/register', {
+      method: 'POST',
+      body: buildRegisterRequest({
+        email: 'weak-password@example.com',
+        password: 'password123',
+        name: 'Weak Password User'
+      })
+    });
+
+    assert.equal(response.status, 400);
+    assert.match(JSON.stringify(response.body), /흔한 비밀번호/);
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /auth/register allows long passphrases', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/auth/register', {
+      method: 'POST',
+      body: buildRegisterRequest({
+        email: 'long-passphrase@example.com',
+        password:
+          'correct-horse-battery-staple-2026-monthly-ledger-safety-passphrase',
+        name: 'Strong Account User'
+      })
+    });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body, {
+      status: 'verification_sent'
+    });
   } finally {
     await context.close();
   }
@@ -1348,6 +1442,29 @@ test('POST /auth/change-password revokes other sessions and applies the new pass
       }
     });
     assert.equal(newPasswordResponse.status, 200);
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /auth/change-password rejects passwords derived from service context', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/auth/change-password', {
+      method: 'POST',
+      headers: context.authHeaders(),
+      body: {
+        currentPassword: 'Demo1234!',
+        nextPassword: 'personal-erp-2026!'
+      }
+    });
+
+    assert.equal(response.status, 400);
+    assert.match(
+      JSON.stringify(response.body),
+      /서비스명과 너무 비슷한 비밀번호/
+    );
   } finally {
     await context.close();
   }

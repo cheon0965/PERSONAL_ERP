@@ -73,6 +73,7 @@ export function PageHeader({
       gap={appLayout.pageHeaderGap}
       sx={{
         position: 'relative',
+        minWidth: 0,
         overflow: 'hidden',
         px: appLayout.pageHeaderPadding,
         py: appLayout.pageHeaderPadding,
@@ -99,16 +100,19 @@ export function PageHeader({
       }}
     >
       <Stack
-        direction={{ xs: 'column', lg: 'row' }}
+        direction={{ xs: 'column', md: 'row' }}
         justifyContent="space-between"
-        alignItems={{ xs: 'flex-start', lg: 'flex-start' }}
+        alignItems={{ xs: 'flex-start', md: 'flex-start' }}
         gap={appLayout.pageHeaderGap}
+        sx={{ minWidth: 0 }}
       >
         <Stack
           gap={0.75}
           sx={{
             minWidth: 0,
-            maxWidth: appLayout.pageHeaderContentMaxWidth
+            maxWidth: appLayout.pageHeaderContentMaxWidth,
+            width: '100%',
+            flex: 1
           }}
         >
           {eyebrow ? (
@@ -139,8 +143,9 @@ export function PageHeader({
                 fontWeight: 800,
                 fontSize: { xs: '1.35rem', md: '1.55rem' },
                 lineHeight: 1.15,
-                letterSpacing: '-0.03em',
-                color: brandTokens.palette.text
+                letterSpacing: 0,
+                color: brandTokens.palette.text,
+                overflowWrap: 'anywhere'
               }}
             >
               {title}
@@ -178,7 +183,8 @@ export function PageHeader({
               sx={{
                 mt: appLayout.pageHeaderDescriptionOffset,
                 maxWidth: 760,
-                lineHeight: 1.75
+                lineHeight: 1.75,
+                overflowWrap: 'anywhere'
               }}
             >
               {description}
@@ -188,13 +194,16 @@ export function PageHeader({
 
         {hasActions ? (
           <Stack
-            direction="row"
+            direction={{ xs: 'column', sm: 'row' }}
             spacing={appLayout.pageHeaderActionGap}
             useFlexGap
-            flexWrap="wrap"
+            flexWrap={{ xs: 'nowrap', sm: 'wrap' }}
+            alignItems={{ xs: 'stretch', sm: 'flex-start' }}
+            justifyContent={{ xs: 'stretch', sm: 'flex-end' }}
             sx={{
-              width: { xs: '100%', lg: 'auto' },
-              alignSelf: { xs: 'stretch', lg: 'flex-start' }
+              width: { xs: '100%', md: 'auto' },
+              alignSelf: { xs: 'stretch', md: 'flex-start' },
+              minWidth: 0
             }}
           >
             {renderActionButton({
@@ -286,6 +295,10 @@ function renderActionButton({
 }
 
 const buttonSurfaceSx = {
+  flex: { xs: '0 0 auto', sm: '0 0 auto' },
+  width: { xs: '100%', sm: 'auto' },
+  minWidth: 0,
+  maxWidth: '100%',
   borderRadius: 999,
   minHeight: 36,
   px: 1.65,
@@ -293,5 +306,8 @@ const buttonSurfaceSx = {
   fontWeight: 800,
   fontSize: '0.875rem',
   whiteSpace: 'nowrap',
+  lineHeight: 1.25,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
   boxShadow: 'none'
 } as const;

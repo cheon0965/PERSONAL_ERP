@@ -55,15 +55,17 @@ export function parseWooriBankHtmlStatement(
   const rawHtml = input.buffer.toString('utf8');
   const isEncrypted = isVestMailEncrypted(rawHtml);
 
-  if (isEncrypted && (!input.password || input.password.length !== 6)) {
+  if (isEncrypted && !/^\d{6}$/.test(input.password)) {
     throw new BadRequestException(
       '우리은행 보안메일은 복호화를 위해 주민등록번호 앞자리 6자리를 입력해야 합니다.'
     );
   }
 
-  const decryptedHtml = isEncrypted
-    ? decryptVestMail(rawHtml, input.password)
-    : rawHtml;
+  if (isEncrypted) {
+    throwDecryptionDisabled();
+  }
+
+  const decryptedHtml = rawHtml;
 
   const header = parseWooriHeader(decryptedHtml, input.fingerprintScope);
   const tableRows = parseWooriTransactionTable(decryptedHtml);
@@ -128,193 +130,12 @@ function isVestMailEncrypted(html: string): boolean {
   );
 }
 
-/**
- * VestMail 보안메일 복호화.
- *
- * 원본 HTML에 내장된 SEED 암호 JavaScript를 Node.js vm 샌드박스에서
- * 실행하여 복호화합니다. SEED 알고리즘을 직접 재구현하는 대신
- * 원본 코드를 그대로 활용하므로 VestMail 업데이트에도 안정적입니다.
- */
-function decryptVestMail(html: string, password: string): string {
-  // 1. s[] 배열 추출
-  const sArrayData = extractEncryptedData(html);
-  if (sArrayData.length === 0) {
-    throw new BadRequestException(
-      '우리은행 보안메일 HTML에서 암호화 데이터를 찾을 수 없습니다.'
-    );
-  }
-
-  // 2. 암호화 라이브러리 코드 추출 (x.y SEED 구현)
-  const cryptoCode = extractCryptoCode(html);
-  if (!cryptoCode) {
-    throw new BadRequestException(
-      '우리은행 보안메일 HTML에서 암호화 코드를 찾을 수 없습니다.'
-    );
-  }
-
-  // 3. vm 샌드박스에서 복호화 실행
-  try {
-    const decrypted = runDecryptionInSandbox(
-      cryptoCode,
-      sArrayData,
-      password
-    );
-
-    if (!decrypted) {
-      throwDecryptionFailed();
-    }
-
-    return decrypted;
-  } catch (error) {
-    if (error instanceof BadRequestException) {
-      throw error;
-    }
-    // 실제 에러를 로깅하여 원인을 파악할 수 있게 합니다.
-    console.error(
-      '[WooriBankParser] VestMail 복호화 중 예외 발생:',
-      error instanceof Error ? error.message : error,
-      error instanceof Error ? error.stack : ''
-    );
-    throwDecryptionFailed();
-  }
-}
-
-function throwDecryptionFailed(): never {
+function throwDecryptionDisabled(): never {
   throw new BadRequestException({
     code: VESTMAIL_DECRYPTION_FAILED,
     message:
-      '비밀번호가 올바르지 않거나 복호화에 실패했습니다. 주민등록번호 앞자리 6자리를 다시 확인해 주세요.'
+      '현재 보안 점검으로 우리은행 보안메일 HTML 복호화가 비활성화되었습니다.'
   });
-}
-
-function extractEncryptedData(html: string): string[] {
-  const results: string[] = [];
-  const pattern = /s\[(\d+)\]\s*=\s*"([^"]+)"/g;
-
-  for (const match of html.matchAll(pattern)) {
-    const index = Number(match[1]);
-    const value = match[2] ?? '';
-    results[index] = value;
-  }
-
-  return results.filter((v) => v != null && v.length > 0);
-}
-
-function extractCryptoCode(html: string): string | null {
-  // SEED 암호 및 SHA-256 코드가 포함된 스크립트 블록을 추출합니다.
-  // 패턴: "undefined"!=typeof x&&x.b|| 로 시작하는 블록
-  const scriptPattern =
-    /<SCRIPT[^>]*>([\s\S]*?)<\/SCRIPT>/gi;
-  const codeBlocks: string[] = [];
-
-  for (const match of html.matchAll(scriptPattern)) {
-    const content = match[1] ?? '';
-    // SEED 구현 및 SHA-256이 포함된 블록
-    if (
-      content.includes('x.b') &&
-      (content.includes('.y=') || content.includes('x.y'))
-    ) {
-      codeBlocks.push(content);
-    }
-  }
-
-  return codeBlocks.length > 0 ? codeBlocks.join(';\n') : null;
-}
-
-/**
- * VestMail 암호화 코드를 실행하여 복호화합니다.
- *
- * vm.createContext 대신 Function 생성자를 사용합니다.
- * vm 샌드박스는 별도의 전역 컨텍스트를 만들어 Array, String 등 내장 타입이
- * 호스트와 다른 인스턴스가 됩니다. VestMail의 SEED 구현은 `b.constructor == String`
- * 같은 패턴으로 타입을 체크하는데, vm에서는 이 비교가 실패하여 복호화가 깨집니다.
- * Function 생성자는 호스트의 전역 타입을 공유하므로 이 문제가 해결됩니다.
- */
-function runDecryptionInSandbox(
-  cryptoCode: string,
-  sArrayData: string[],
-  password: string
-): string {
-  const mockWindow = { opera: undefined } as Record<string, unknown>;
-  const mockNavigator = {
-    platform: 'Win32',
-    userAgent:
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    appVersion: '5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    vendor: 'Google Inc.'
-  };
-  const mockDocument = { getElementById: () => null };
-
-  // VestMail 코드 패치: window.x를 전역 x로 연결
-  const patchedCryptoCode =
-    'var x; ' +
-    cryptoCode.replace(
-      /k=window\.x=\{\}/,
-      'k=window.x={}; x=window.x'
-    );
-
-  // s[] 데이터 설정
-  const sArraySetup = sArrayData
-    .map((data, i) => `s[${i}] = "${data}";`)
-    .join('\n');
-
-  // 단일 Function으로 라이브러리 로드 + 복호화 실행
-  const fullScript = `
-    ${patchedCryptoCode}
-    ;
-    var s = new Array();
-    ${sArraySetup}
-
-    var F = x.s2("${password}", {d: true});
-    var z = x.s2(F, {d: true});
-    F = F.slice(0, 16);
-    z = z.slice(0, 16);
-
-    var I = [];
-    var success = true;
-    for (var i = 0; i < s.length; i++) {
-      var k = x.b.l(s[i]);
-      var result = x.y.m(k, z, {c: new x.c.l(x.o.V), g: F});
-      if (result == null) {
-        success = false;
-        break;
-      }
-      I[i] = result;
-    }
-
-    if (success) {
-      var combined = [];
-      for (var j = 0; j < I.length; j++) {
-        combined = combined.concat(I[j]);
-      }
-      return x.j.q.z(combined);
-    }
-    return null;
-  `;
-  const runner = new Function(
-    'window',
-    'navigator',
-    'document',
-    'atob',
-    'btoa',
-    fullScript
-  ) as (
-    w: Record<string, unknown>,
-    n: typeof mockNavigator,
-    d: typeof mockDocument,
-    a: typeof atob,
-    b: typeof btoa
-  ) => string | null;
-
-  const result = runner(
-    mockWindow,
-    mockNavigator,
-    mockDocument,
-    atob,
-    btoa
-  );
-
-  return result ?? '';
 }
 
 // ─── HTML table parsing ──────────────────────────────────────────

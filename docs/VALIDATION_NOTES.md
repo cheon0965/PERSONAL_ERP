@@ -41,6 +41,22 @@
 - `npm run audit:runtime:full`은 allowlist 적용 없이 현재 runtime advisory 전체를 다시 확인할 때 사용하는 follow-up 명령입니다.
 - 현재 기본 `npm run test`에서는 Prisma 통합 테스트가 안내 문구와 함께 skip됩니다.
 
+## 2026-04-30 ASVS L2 보강 검증
+
+이번 ASVS 보강 작업의 파일 읽기, 생성, 수정은 UTF-8 기준으로 수행했습니다.
+
+- `npm run docs:check`: 통과
+- `npm run test:security:api`: 통과, tests 315, pass 309, skipped 6
+- `npm run test:web`: 통과, tests 31, pass 31
+- `npm run audit:runtime`: 통과, high 0, critical 0, total 3, allowlist 0
+- `npm run build`: 통과
+- 변경 파일 대상 `npx prettier --check ...`: 통과
+
+비고:
+
+- API 테스트 중 `Opening balance snapshot create failed` Nest error log는 rollback 경계를 검증하는 기존 의도적 실패 fixture에서 발생하며, 테스트 exit code는 0입니다.
+- Docker 기반 `semgrep-ce`, `gitleaks` 로컬 재현은 이번 턴에서 실행하지 않았고, CI 보안 잡 결과를 기본 증적으로 봅니다.
+
 ## CI 게이트
 
 - `validate`

@@ -26,6 +26,7 @@ import { FormDrawer } from '@/shared/ui/form-drawer';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
+import { ResponsiveFilterPanel } from '@/shared/ui/responsive-filter-panel';
 import {
   adminUsersQueryKey,
   getAdminUser,
@@ -420,82 +421,99 @@ function AdminUsersTableToolbar({
   onFiltersChange: (filters: AdminUserFilters) => void;
 }) {
   const hasActiveFilter = Object.values(filters).some((value) => value !== '');
+  const activeFilterLabels = [
+    filters.keyword.trim() ? `검색: ${filters.keyword.trim()}` : null,
+    filters.status ? `상태: ${readUserStatusLabel(filters.status)}` : null,
+    filters.systemAdmin
+      ? `전체 관리자: ${filters.systemAdmin === 'YES' ? '예' : '아니오'}`
+      : null,
+    filters.emailVerified
+      ? `이메일 인증: ${filters.emailVerified === 'YES' ? '완료' : '미완료'}`
+      : null
+  ].filter((label): label is string => Boolean(label));
+  const clearFilters = () =>
+    onFiltersChange({
+      keyword: '',
+      status: '',
+      systemAdmin: '',
+      emailVerified: ''
+    });
 
   return (
-    <Stack
-      direction={{ xs: 'column', md: 'row' }}
-      spacing={1}
-      alignItems={{ xs: 'stretch', md: 'center' }}
+    <ResponsiveFilterPanel
+      title="사용자 조회조건"
+      activeFilterCount={activeFilterLabels.length}
+      activeFilterLabels={activeFilterLabels}
+      onClear={clearFilters}
     >
-      <TextField
-        label="검색어"
-        size="small"
-        value={filters.keyword}
-        onChange={(event) =>
-          onFiltersChange({ ...filters, keyword: event.target.value })
-        }
-        placeholder="이메일, 이름"
-        sx={{ minWidth: { md: 240 }, flex: 1 }}
-      />
-      <TextField
-        select
-        label="상태"
-        size="small"
-        value={filters.status}
-        onChange={(event) =>
-          onFiltersChange({ ...filters, status: event.target.value })
-        }
-        sx={{ minWidth: { md: 140 } }}
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={1}
+        alignItems={{ xs: 'stretch', md: 'center' }}
       >
-        <MenuItem value="">전체</MenuItem>
-        <MenuItem value="ACTIVE">활성</MenuItem>
-        <MenuItem value="LOCKED">잠금</MenuItem>
-        <MenuItem value="DISABLED">비활성</MenuItem>
-      </TextField>
-      <TextField
-        select
-        label="전체 관리자"
-        size="small"
-        value={filters.systemAdmin}
-        onChange={(event) =>
-          onFiltersChange({ ...filters, systemAdmin: event.target.value })
-        }
-        sx={{ minWidth: { md: 140 } }}
-      >
-        <MenuItem value="">전체</MenuItem>
-        <MenuItem value="YES">예</MenuItem>
-        <MenuItem value="NO">아니오</MenuItem>
-      </TextField>
-      <TextField
-        select
-        label="이메일 인증"
-        size="small"
-        value={filters.emailVerified}
-        onChange={(event) =>
-          onFiltersChange({ ...filters, emailVerified: event.target.value })
-        }
-        sx={{ minWidth: { md: 140 } }}
-      >
-        <MenuItem value="">전체</MenuItem>
-        <MenuItem value="YES">완료</MenuItem>
-        <MenuItem value="NO">미완료</MenuItem>
-      </TextField>
-      <Button
-        variant="outlined"
-        disabled={!hasActiveFilter}
-        sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
-        onClick={() =>
-          onFiltersChange({
-            keyword: '',
-            status: '',
-            systemAdmin: '',
-            emailVerified: ''
-          })
-        }
-      >
-        초기화
-      </Button>
-    </Stack>
+        <TextField
+          label="검색어"
+          size="small"
+          value={filters.keyword}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, keyword: event.target.value })
+          }
+          placeholder="이메일, 이름"
+          sx={{ minWidth: { md: 240 }, flex: 1 }}
+        />
+        <TextField
+          select
+          label="상태"
+          size="small"
+          value={filters.status}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, status: event.target.value })
+          }
+          sx={{ minWidth: { md: 140 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          <MenuItem value="ACTIVE">활성</MenuItem>
+          <MenuItem value="LOCKED">잠금</MenuItem>
+          <MenuItem value="DISABLED">비활성</MenuItem>
+        </TextField>
+        <TextField
+          select
+          label="전체 관리자"
+          size="small"
+          value={filters.systemAdmin}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, systemAdmin: event.target.value })
+          }
+          sx={{ minWidth: { md: 140 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          <MenuItem value="YES">예</MenuItem>
+          <MenuItem value="NO">아니오</MenuItem>
+        </TextField>
+        <TextField
+          select
+          label="이메일 인증"
+          size="small"
+          value={filters.emailVerified}
+          onChange={(event) =>
+            onFiltersChange({ ...filters, emailVerified: event.target.value })
+          }
+          sx={{ minWidth: { md: 140 } }}
+        >
+          <MenuItem value="">전체</MenuItem>
+          <MenuItem value="YES">완료</MenuItem>
+          <MenuItem value="NO">미완료</MenuItem>
+        </TextField>
+        <Button
+          variant="outlined"
+          disabled={!hasActiveFilter}
+          sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+          onClick={clearFilters}
+        >
+          초기화
+        </Button>
+      </Stack>
+    </ResponsiveFilterPanel>
   );
 }
 

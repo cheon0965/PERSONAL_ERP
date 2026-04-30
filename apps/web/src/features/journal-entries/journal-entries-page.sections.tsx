@@ -19,6 +19,7 @@ import type { GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { formatDate, formatWon } from '@/shared/lib/format';
 import { appLayout } from '@/shared/ui/layout-metrics';
+import { ResponsiveFilterPanel } from '@/shared/ui/responsive-filter-panel';
 import { SectionCard } from '@/shared/ui/section-card';
 import { StatusChip } from '@/shared/ui/status-chip';
 
@@ -286,97 +287,113 @@ function JournalEntriesTableToolbar({
   onFiltersChange: (filters: JournalEntriesTableFilters) => void;
 }) {
   const hasActiveFilter = Object.values(filters).some((value) => value !== '');
+  const activeFilterLabels = [
+    filters.keyword.trim() ? `검색: ${filters.keyword.trim()}` : null,
+    filters.status ? `상태: ${filters.status}` : null,
+    filters.sourceKind
+      ? `출처: ${readJournalEntrySourceKindLabel(filters.sourceKind)}`
+      : null,
+    filters.dateFrom ? `시작일: ${filters.dateFrom}` : null,
+    filters.dateTo ? `종료일: ${filters.dateTo}` : null
+  ].filter((label): label is string => Boolean(label));
+  const clearFilters = () =>
+    onFiltersChange({
+      keyword: '',
+      status: '',
+      sourceKind: '',
+      dateFrom: '',
+      dateTo: ''
+    });
 
   return (
     <Stack spacing={1.25}>
-      <Stack
-        direction={{ xs: 'column', md: 'row' }}
-        spacing={1}
-        alignItems={{ xs: 'stretch', md: 'center' }}
+      <ResponsiveFilterPanel
+        title="전표 조회조건"
+        activeFilterCount={activeFilterLabels.length}
+        activeFilterLabels={activeFilterLabels}
+        onClear={clearFilters}
       >
-        <TextField
-          label="검색어"
-          size="small"
-          value={filters.keyword}
-          onChange={(event) =>
-            onFiltersChange({ ...filters, keyword: event.target.value })
-          }
-          placeholder="전표번호, 원본 거래, 계정"
-          sx={{ minWidth: { md: 260 }, flex: 1 }}
-        />
-        <TextField
-          select
-          label="상태"
-          size="small"
-          value={filters.status}
-          onChange={(event) =>
-            onFiltersChange({ ...filters, status: event.target.value })
-          }
-          sx={{ minWidth: { md: 150 } }}
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={1}
+          alignItems={{ xs: 'stretch', md: 'center' }}
         >
-          <MenuItem value="">전체</MenuItem>
-          {filterOptions.statuses.map((status) => (
-            <MenuItem key={status} value={status}>
-              {status}
-            </MenuItem>
-          ))}
-        </TextField>
-        <TextField
-          select
-          label="출처"
-          size="small"
-          value={filters.sourceKind}
-          onChange={(event) =>
-            onFiltersChange({ ...filters, sourceKind: event.target.value })
-          }
-          sx={{ minWidth: { md: 180 } }}
-        >
-          <MenuItem value="">전체</MenuItem>
-          {filterOptions.sourceKinds.map((sourceKind) => (
-            <MenuItem key={sourceKind} value={sourceKind}>
-              {readJournalEntrySourceKindLabel(sourceKind)}
-            </MenuItem>
-          ))}
-        </TextField>
-        <TextField
-          label="시작일"
-          size="small"
-          type="date"
-          value={filters.dateFrom}
-          onChange={(event) =>
-            onFiltersChange({ ...filters, dateFrom: event.target.value })
-          }
-          InputLabelProps={{ shrink: true }}
-          sx={{ minWidth: { md: 150 } }}
-        />
-        <TextField
-          label="종료일"
-          size="small"
-          type="date"
-          value={filters.dateTo}
-          onChange={(event) =>
-            onFiltersChange({ ...filters, dateTo: event.target.value })
-          }
-          InputLabelProps={{ shrink: true }}
-          sx={{ minWidth: { md: 150 } }}
-        />
-        <Button
-          variant="outlined"
-          disabled={!hasActiveFilter}
-          sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
-          onClick={() =>
-            onFiltersChange({
-              keyword: '',
-              status: '',
-              sourceKind: '',
-              dateFrom: '',
-              dateTo: ''
-            })
-          }
-        >
-          초기화
-        </Button>
-      </Stack>
+          <TextField
+            label="검색어"
+            size="small"
+            value={filters.keyword}
+            onChange={(event) =>
+              onFiltersChange({ ...filters, keyword: event.target.value })
+            }
+            placeholder="전표번호, 원본 거래, 계정"
+            sx={{ minWidth: { md: 260 }, flex: 1 }}
+          />
+          <TextField
+            select
+            label="상태"
+            size="small"
+            value={filters.status}
+            onChange={(event) =>
+              onFiltersChange({ ...filters, status: event.target.value })
+            }
+            sx={{ minWidth: { md: 150 } }}
+          >
+            <MenuItem value="">전체</MenuItem>
+            {filterOptions.statuses.map((status) => (
+              <MenuItem key={status} value={status}>
+                {status}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label="출처"
+            size="small"
+            value={filters.sourceKind}
+            onChange={(event) =>
+              onFiltersChange({ ...filters, sourceKind: event.target.value })
+            }
+            sx={{ minWidth: { md: 180 } }}
+          >
+            <MenuItem value="">전체</MenuItem>
+            {filterOptions.sourceKinds.map((sourceKind) => (
+              <MenuItem key={sourceKind} value={sourceKind}>
+                {readJournalEntrySourceKindLabel(sourceKind)}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            label="시작일"
+            size="small"
+            type="date"
+            value={filters.dateFrom}
+            onChange={(event) =>
+              onFiltersChange({ ...filters, dateFrom: event.target.value })
+            }
+            InputLabelProps={{ shrink: true }}
+            sx={{ minWidth: { md: 150 } }}
+          />
+          <TextField
+            label="종료일"
+            size="small"
+            type="date"
+            value={filters.dateTo}
+            onChange={(event) =>
+              onFiltersChange({ ...filters, dateTo: event.target.value })
+            }
+            InputLabelProps={{ shrink: true }}
+            sx={{ minWidth: { md: 150 } }}
+          />
+          <Button
+            variant="outlined"
+            disabled={!hasActiveFilter}
+            sx={{ flexShrink: 0, minWidth: 88, whiteSpace: 'nowrap' }}
+            onClick={clearFilters}
+          >
+            초기화
+          </Button>
+        </Stack>
+      </ResponsiveFilterPanel>
     </Stack>
   );
 }

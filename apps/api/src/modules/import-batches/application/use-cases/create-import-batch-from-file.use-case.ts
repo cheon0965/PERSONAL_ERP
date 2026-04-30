@@ -13,7 +13,6 @@ import { PrismaService } from '../../../../common/prisma/prisma.service';
 import { resolveImportBatchFundingAccountId } from '../../import-batch-funding-account.policy';
 import { parseImBankPdfStatement } from '../../im-bank-pdf-statement.parser';
 import { mapImportBatchRecordToItem } from '../../import-batch.mapper';
-import { parseWooriBankHtmlStatement } from '../../woori-bank-html-statement.parser';
 import { ImportBatchWritePort } from '../ports/import-batch-write.port';
 
 const FILE_UPLOAD_SOURCE_KINDS: ImportSourceKind[] = [
@@ -65,25 +64,26 @@ export class CreateImportBatchFromFileUseCase {
       );
     }
 
+    if (input.sourceKind === 'WOORI_BANK_HTML') {
+      throw new BadRequestException(
+        '현재 보안 점검으로 우리은행 HTML 업로드가 비활성화되었습니다. IM뱅크 PDF 또는 수동 업로드를 사용해 주세요.'
+      );
+    }
+
     const allowedTypes = ALLOWED_CONTENT_TYPES[input.sourceKind] ?? [];
     if (
       input.contentType &&
       allowedTypes.length > 0 &&
       !allowedTypes.includes(input.contentType)
     ) {
-      throw new BadRequestException(
-        `${input.sourceKind === 'WOORI_BANK_HTML' ? 'HTML' : 'PDF'} 파일만 업로드할 수 있습니다.`
-      );
+      throw new BadRequestException('PDF 파일만 업로드할 수 있습니다.');
     }
 
     const fundingAccountId = await resolveImportBatchFundingAccountId({
       client: this.prisma,
       workspace,
       fundingAccountId: input.fundingAccountId,
-      requiredMessage:
-        input.sourceKind === 'WOORI_BANK_HTML'
-          ? '우리은행 HTML 업로드에는 연결 계좌/카드를 선택해 주세요.'
-          : 'IM뱅크 PDF 업로드에는 연결 계좌/카드를 선택해 주세요.'
+      requiredMessage: 'IM뱅크 PDF 업로드에는 연결 계좌/카드를 선택해 주세요.'
     });
 
     const fingerprintScope = {
@@ -91,19 +91,11 @@ export class CreateImportBatchFromFileUseCase {
       ledgerId: workspace.ledgerId
     };
 
-    const parsedBatch =
-      input.sourceKind === 'WOORI_BANK_HTML'
-        ? parseWooriBankHtmlStatement({
-            buffer: input.buffer,
-            fileName: input.fileName,
-            password: input.password ?? '',
-            fingerprintScope
-          })
-        : parseImBankPdfStatement({
-            buffer: input.buffer,
-            fileName: input.fileName,
-            fingerprintScope
-          });
+    const parsedBatch = parseImBankPdfStatement({
+      buffer: input.buffer,
+      fileName: input.fileName,
+      fingerprintScope
+    });
 
     const fileHash = createHash('sha256').update(input.buffer).digest('hex');
 

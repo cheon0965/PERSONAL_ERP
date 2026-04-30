@@ -7,6 +7,7 @@ import HelpOutlineRoundedIcon from '@mui/icons-material/HelpOutlineRounded';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
 import LockRoundedIcon from '@mui/icons-material/LockRounded';
 import ManageAccountsRoundedIcon from '@mui/icons-material/ManageAccountsRounded';
+import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import SecurityRoundedIcon from '@mui/icons-material/SecurityRounded';
 import SwapHorizRoundedIcon from '@mui/icons-material/SwapHorizRounded';
@@ -42,7 +43,11 @@ import { useDomainHelpStore } from '../providers/domain-help-provider';
 import { brandTokens } from '../theme/tokens';
 import { sidebarWidth } from './sidebar-nav';
 
-export function Topbar() {
+type TopbarProps = {
+  onOpenNavigation: () => void;
+};
+
+export function Topbar({ onOpenNavigation }: TopbarProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { logout, switchWorkspace, user } = useAuthSession();
@@ -101,22 +106,44 @@ export function Topbar() {
         <Toolbar
           sx={{
             minHeight: { xs: 60, md: 64 },
-            gap: 1.5,
+            gap: { xs: 1, sm: 1.5 },
+            rowGap: 0.75,
+            flexWrap: 'nowrap',
             justifyContent: 'space-between',
-            alignItems: 'center'
+            alignItems: 'center',
+            py: { xs: 0.75, sm: 0 },
+            minWidth: 0
           }}
         >
+          <Tooltip title="메뉴 열기">
+            <IconButton
+              size="small"
+              color="primary"
+              aria-label="메뉴 열기"
+              onClick={onOpenNavigation}
+              sx={{
+                ...topbarIconButtonSx,
+                display: { xs: 'inline-flex', lg: 'none' },
+                flexShrink: 0
+              }}
+            >
+              <MenuRoundedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+
           <Stack
             spacing={0.25}
             sx={{
               minWidth: 0,
-              flex: 1
+              flex: 1,
+              flexBasis: 0
             }}
           >
             <Typography
               variant="caption"
               color="text.secondary"
               sx={{
+                display: { xs: 'none', sm: 'block' },
                 fontWeight: 700,
                 letterSpacing: '0.05em',
                 textTransform: 'uppercase'
@@ -129,7 +156,8 @@ export function Topbar() {
               spacing={0.75}
               alignItems="center"
               useFlexGap
-              flexWrap="wrap"
+              flexWrap="nowrap"
+              sx={{ minWidth: 0 }}
             >
               <Typography
                 variant="body2"
@@ -154,6 +182,7 @@ export function Topbar() {
                   size="small"
                   variant="outlined"
                   sx={{
+                    display: { xs: 'none', sm: 'inline-flex' },
                     height: 22,
                     borderRadius: 999,
                     '& .MuiChip-label': {
@@ -171,8 +200,8 @@ export function Topbar() {
             alignItems="center"
             spacing={0.75}
             useFlexGap
-            flexWrap="wrap"
-            sx={{ justifyContent: 'flex-end' }}
+            flexWrap="nowrap"
+            sx={{ justifyContent: 'flex-end', minWidth: 0, flexShrink: 0 }}
           >
             <Button
               size="small"
@@ -208,7 +237,7 @@ export function Topbar() {
               alignItems="center"
               spacing={0.5}
               sx={{
-                pl: 1,
+                pl: { xs: 0.5, sm: 1 },
                 borderLeft: '1px solid',
                 borderColor: alpha(brandTokens.palette.primaryBright, 0.12)
               }}
@@ -250,7 +279,7 @@ export function Topbar() {
                     sx={{
                       minWidth: 0,
                       maxWidth: 220,
-                      display: { xs: 'none', sm: 'flex' },
+                      display: { xs: 'none', md: 'flex' },
                       textAlign: 'left'
                     }}
                   >
@@ -261,7 +290,7 @@ export function Topbar() {
                       variant="caption"
                       color="text.secondary"
                       noWrap
-                      sx={{ display: { xs: 'none', md: 'block' } }}
+                      sx={{ display: { xs: 'none', lg: 'block' } }}
                     >
                       {user?.email ?? '로그인되지 않음'}
                     </Typography>
@@ -617,7 +646,8 @@ function ContextDetailRow({ label, value }: { label: string; value: string }) {
 
 const topbarButtonSx = {
   minHeight: 34,
-  px: 1.25,
+  minWidth: 34,
+  px: { xs: 1, md: 1.25 },
   borderRadius: 999,
   textTransform: 'none',
   fontWeight: 700,

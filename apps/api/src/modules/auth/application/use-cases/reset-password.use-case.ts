@@ -7,6 +7,7 @@ import { AuthRateLimitService } from '../../auth-rate-limit.service';
 import { AuthSessionService } from '../../auth-session.service';
 import type { AuthRequestContext } from '../../auth.types';
 import { ResetPasswordDto } from '../../dto/reset-password.dto';
+import { PasswordPolicyService } from '../../password-policy.service';
 import { hashPasswordResetToken } from './forgot-password.use-case';
 
 const RESET_PASSWORD_RESPONSE = { status: 'password_reset' as const };
@@ -18,7 +19,8 @@ export class ResetPasswordUseCase {
     private readonly clock: ClockPort,
     private readonly rateLimit: AuthRateLimitService,
     private readonly authSessions: AuthSessionService,
-    private readonly securityEvents: SecurityEventLogger
+    private readonly securityEvents: SecurityEventLogger,
+    private readonly passwordPolicy: PasswordPolicyService
   ) {}
 
   async execute(
@@ -55,6 +57,11 @@ export class ResetPasswordUseCase {
             '비밀번호 재설정 링크가 만료되었습니다. 다시 요청해 주세요.'
           );
         }
+
+        this.passwordPolicy.assertAcceptable(dto.newPassword, {
+          email: token.user.email,
+          name: token.user.name
+        });
 
         // 토큰 사용 처리
         await tx.passwordResetToken.update({

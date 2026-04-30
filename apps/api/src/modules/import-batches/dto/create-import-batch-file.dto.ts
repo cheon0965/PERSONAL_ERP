@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ImportSourceKind } from '@prisma/client';
 import {
   IsEnum,
+  Matches,
   IsOptional,
   IsString,
   MaxLength,
@@ -34,6 +35,9 @@ export class CreateImportBatchFileRequestDto {
   @IsString()
   @MinLength(6)
   @MaxLength(6)
+  @Matches(/^\d{6}$/, {
+    message: '우리은행 보안메일 비밀번호는 숫자 6자리여야 합니다.'
+  })
   password?: string;
 }
 

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Page, Route } from '@playwright/test';
 import type { CollectedTransactionItem } from '@personal-erp/contracts';
 import {
   buildE2EAccountingPeriod,
@@ -20,6 +20,9 @@ type LayoutSnapshot = {
   isScrollable: boolean;
   mainLeft: number;
 };
+
+const e2eRootApiRoutePattern =
+  /\/(auth|navigation|accounting-periods|funding-accounts|categories|reference-data|journal-entries|collected-transactions)(\/|$)/;
 
 test('keeps the app horizontally stable while common overlays are open', async ({
   page
@@ -76,10 +79,10 @@ test('keeps the app horizontally stable while common overlays are open', async (
     pageErrors.push(error.stack ?? error.message);
   });
 
-  await page.route(e2eApiRoutePattern, async (route) => {
+  const handleApiRoute = async (route: Route) => {
     const request = route.request();
     const url = new URL(request.url());
-    const path = url.pathname;
+    const path = normalizeE2EApiPath(url.pathname);
 
     if (path === '/api/auth/refresh' && request.method() === 'POST') {
       await route.fulfill({
@@ -189,7 +192,10 @@ test('keeps the app horizontally stable while common overlays are open', async (
         message: `Unhandled E2E route: ${requestSignature}`
       })
     });
-  });
+  };
+
+  await page.route(e2eApiRoutePattern, handleApiRoute);
+  await page.route(e2eRootApiRoutePattern, handleApiRoute);
 
   await page.setViewportSize({ width: 1280, height: 420 });
   await page.goto('/transactions');
@@ -204,7 +210,7 @@ test('keeps the app horizontally stable while common overlays are open', async (
     .toBe(true);
 
   const beforePopover = await readLayoutSnapshot(page);
-  await page.locator('header button').first().click();
+  await page.getByRole('button', { name: '기준' }).click();
   await expect(page.locator('.MuiPopover-root')).toBeVisible();
   expectStableLayout(beforePopover, await readLayoutSnapshot(page));
   await page.keyboard.press('Escape');
@@ -221,6 +227,42 @@ test('keeps the app horizontally stable while common overlays are open', async (
   await page.locator('.MuiDataGrid-row button').nth(1).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   expectStableLayout(beforeDialog, await readLayoutSnapshot(page));
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+
+  await page.setViewportSize({ width: 1024, height: 720 });
+  await expectNoDocumentHorizontalOverflow(page);
+  await expect(page.getByRole('button', { name: '메뉴 열기' })).toBeVisible();
+  const beforeTabletNavigation = await readLayoutSnapshot(page);
+  await page.getByRole('button', { name: '메뉴 열기' }).click();
+  await expect(page.getByRole('button', { name: '메뉴 닫기' })).toBeVisible();
+  await expect
+    .poll(async () => {
+      const drawerBox = await page
+        .locator('.MuiDrawer-paper')
+        .filter({ has: page.getByRole('button', { name: '메뉴 닫기' }) })
+        .boundingBox();
+
+      return Math.round(drawerBox?.width ?? 0);
+    })
+    .toBeGreaterThanOrEqual(330);
+  expectStableLayout(beforeTabletNavigation, await readLayoutSnapshot(page));
+  await page.getByRole('button', { name: '메뉴 닫기' }).click();
+  await expect(page.getByRole('button', { name: '메뉴 닫기' })).toHaveCount(0);
+
+  await page.setViewportSize({ width: 768, height: 720 });
+  await expectNoDocumentHorizontalOverflow(page);
+  await expect(page.getByRole('button', { name: '메뉴 열기' })).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 720 });
+  await expect(page.getByRole('button', { name: '메뉴 열기' })).toBeVisible();
+  const beforeMobileNavigation = await readLayoutSnapshot(page);
+  await page.getByRole('button', { name: '메뉴 열기' }).click();
+  await expect(page.getByRole('button', { name: '메뉴 닫기' })).toBeVisible();
+  await expect(page.getByText('표시할 메뉴가 없습니다.').last()).toBeVisible();
+  expectStableLayout(beforeMobileNavigation, await readLayoutSnapshot(page));
+  await page.getByRole('button', { name: '메뉴 닫기' }).click();
+  await expect(page.getByRole('button', { name: '메뉴 닫기' })).toHaveCount(0);
 
   expectNoUnhandledApiRequests(unhandledApiRequests);
   expectNoPageErrors(pageErrors);
@@ -238,6 +280,22 @@ async function readLayoutSnapshot(page: Page): Promise<LayoutSnapshot> {
       mainLeft: mainBox?.left ?? 0
     };
   });
+}
+
+function normalizeE2EApiPath(pathname: string) {
+  return pathname.startsWith('/api/') ? pathname : `/api${pathname}`;
+}
+
+async function expectNoDocumentHorizontalOverflow(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth
+      )
+    )
+    .toBeLessThanOrEqual(1);
 }
 
 function expectStableLayout(

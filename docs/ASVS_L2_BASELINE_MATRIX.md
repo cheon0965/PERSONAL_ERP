@@ -23,24 +23,27 @@
 
 ### 인증
 
-- 현재 상태: 비밀번호 기반 로그인, Bearer 보호 엔드포인트, generic login failure, login/refresh rate limit
+- 현재 상태: 비밀번호 기반 로그인, common/context-derived password 차단, Bearer 보호 엔드포인트, generic login failure, login/refresh rate limit
 - 근거 파일:
-  `apps/api/src/modules/auth/auth.service.ts`
+  `apps/api/src/modules/auth/password-policy.service.ts`
+  `apps/api/src/modules/auth/application/use-cases/register.use-case.ts`
+  `apps/api/src/modules/auth/application/use-cases/change-password.use-case.ts`
+  `apps/api/src/modules/auth/application/use-cases/reset-password.use-case.ts`
   `apps/api/src/common/auth/jwt-auth.guard.ts`
   `apps/api/test/*.request-api.test.ts`
 - 판정: `부분 적용`
-- 다음 단계: 운영 계정 회복/MFA 기능이 생기면 재판정
+- 다음 단계: breached password check와 MFA 기능이 생기면 재판정
 
 ### 세션 관리
 
-- 현재 상태: 서버측 refresh 세션, refresh cookie 발급, rotation/revoke/reuse detection, Web 세션 복원
+- 현재 상태: 서버측 refresh 세션, `__Host-refreshToken` secure cookie 발급, legacy refresh cookie 전환 읽기/삭제, rotation/revoke/reuse detection, Web 세션 복원
 - 근거 파일:
   `apps/api/src/modules/auth/auth.controller.ts`
-  `apps/api/src/modules/auth/auth.service.ts`
   `apps/web/src/shared/auth/auth-session-store.ts`
   `apps/web/src/shared/auth/auth-provider.tsx`
+  `apps/api/test/auth.request-api.test.ts`
 - 판정: `부분 적용`
-- 다음 단계: 운영 HTTPS에서 secure cookie 정책 재확인
+- 다음 단계: 운영 HTTPS 배포에서 cookie 속성과 session revoke/reuse event 증적 재확인
 
 ### 접근통제
 
@@ -79,11 +82,13 @@
 
 ### 브라우저/API 경계
 
-- 현재 상태: CORS allowlist, security headers, `no-store`, browser origin allowlist 적용
+- 현재 상태: CORS allowlist, API/Web security headers, CSP, HSTS, `no-store`, browser origin allowlist 적용
 - 근거 파일:
   `apps/api/src/bootstrap/configure-api-app.ts`
   `apps/api/src/common/infrastructure/security/browser-boundary.ts`
   `apps/api/test/*.request-api.test.ts`
+  `apps/web/next.config.mjs`
+  `apps/web/test/security-headers.test.ts`
   `apps/web/src/shared/api/fetch-json.ts`
 - 판정: `적용`
 - 다음 단계: 운영 HTTPS/HSTS와 Swagger 토글 리허설
@@ -111,9 +116,10 @@
 
 ### 설정/비밀관리
 
-- 현재 상태: env parse/validate, example 파일, secret-dir 문서화
+- 현재 상태: env parse/validate, JWT secret 32 bytes 이상 base64/base64url random 검증, access/refresh secret 분리 검증, placeholder 차단, example 파일, secret-dir 문서화
 - 근거 파일:
   `apps/api/src/config/api-env.ts`
+  `apps/api/test/api-env.test.ts`
   `env-examples/secret-dir.local.example`
   `env-examples/api.env.example`
   `env-examples/web.env.example`
@@ -135,10 +141,10 @@
 
 ### 회원가입/비밀번호 재설정
 
-- 현재 상태: 회원가입과 이메일 인증은 구현됨. 비밀번호 재설정은 아직 없음
+- 현재 상태: 회원가입, 이메일 인증, 비밀번호 재설정이 구현됨. 주요 비밀번호 설정 경로에 common/context-derived password 차단 정책이 적용됨
 - 근거 파일: `apps/api/src/modules/auth/*`, `apps/web/src/features/auth/*`, `docs/API.md`
 - 판정: `부분 적용`
-- 다음 단계: 비밀번호 재설정 도입 시 토큰 저장/재발송 제한/메일 발송 실패 복구 흐름 추가 검토
+- 다음 단계: breached password check, 메일 발송 실패 복구, 재설정 abuse 관측 증적 보강
 
 ### MFA/2FA
 
@@ -149,7 +155,7 @@
 
 ### 파일 업로드 보안
 
-- 현재 상태: `ImportBatch` 생성 시 UTF-8 텍스트 본문 업로드 API와 활성 계좌/카드 연결이 필요한 IM뱅크 PDF 전용 `multipart/form-data` 파일첨부 업로드 API가 존재함. PDF magic bytes, 확장자, content-type, 10MB 제한을 확인하고 원본 PDF 파일 storage는 아직 없음
+- 현재 상태: `ImportBatch` 생성 시 UTF-8 텍스트 본문 업로드 API와 활성 계좌/카드 연결이 필요한 IM뱅크 PDF 전용 `multipart/form-data` 파일첨부 업로드 API가 존재함. PDF magic bytes, 확장자, content-type, 10MB 제한을 확인하고 원본 PDF 파일 storage는 아직 없음. 우리은행 보안메일 HTML은 dynamic JavaScript 실행 위험 때문에 서버와 Web 신규 업로드 화면에서 fail-closed 처리됨
 - 근거 파일: `apps/api/src/modules/import-batches/*`, `apps/web/src/features/imports/*`
 - 판정: `부분 적용`
 - 다음 단계: 파일 storage 도입 시 백신/콘텐츠 검증, 보존 기간, 다운로드 권한, 개인정보 마스킹 정책 추가
