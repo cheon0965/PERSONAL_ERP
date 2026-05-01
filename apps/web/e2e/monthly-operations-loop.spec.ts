@@ -303,9 +303,7 @@ async function installMonthlyOperationsRoutes(page: Page) {
 
 async function loginFrom(page: Page, path: string) {
   await page.goto(path);
-  await expect(
-    page.getByRole('heading', { name: '운영 포털 로그인' })
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: '로그인' })).toBeVisible();
 
   await page.getByLabel('이메일').fill('demo@example.com');
   await page.getByLabel('비밀번호').fill('Demo1234!');

@@ -13,6 +13,7 @@ import {
   mergeRecurringRulesForE2E
 } from '../support/auth-transactions-fixtures';
 import {
+  buildE2EAuthWorkspacesResponse,
   e2eApiRoutePattern,
   expectNoPageErrors,
   expectNoUnhandledApiRequests
@@ -84,6 +85,15 @@ test('manages recurring rules through the recurring rules UI', async ({
         body: JSON.stringify({
           status: 'logged_out'
         })
+      });
+      return;
+    }
+
+    if (path === '/api/auth/workspaces' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(buildE2EAuthWorkspacesResponse(currentUser))
       });
       return;
     }
@@ -240,9 +250,7 @@ test('manages recurring rules through the recurring rules UI', async ({
   });
 
   await page.goto('/recurring');
-  await expect(
-    page.getByRole('heading', { name: '운영 포털 로그인' })
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: '로그인' })).toBeVisible();
 
   await page.getByLabel('이메일').fill('demo@example.com');
   await page.getByLabel('비밀번호').fill('Demo1234!');

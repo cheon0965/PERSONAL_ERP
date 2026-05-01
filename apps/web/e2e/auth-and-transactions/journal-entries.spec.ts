@@ -473,7 +473,7 @@ test('@smoke manages journal entry reversal and correction through the journal e
   ).toBeVisible();
   await page.getByRole('link', { name: '선택' }).first().click();
   await expect(page).toHaveURL(/\/journal-entries\?entryId=je-income-1$/);
-  await expect(page.getByText('선택됨')).toBeVisible();
+  await expect(page.getByRole('gridcell', { name: '선택됨' })).toBeVisible();
   await expect(page.getByText('202605-0001 전표 상세')).toBeVisible();
   await page.getByRole('link', { name: '선택' }).first().click();
   await expect(page).toHaveURL(/\/journal-entries\?entryId=je-expense-1$/);

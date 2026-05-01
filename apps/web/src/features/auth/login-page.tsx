@@ -20,7 +20,7 @@ import {
 import { alpha } from '@mui/material/styles';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { readErrorUserMessage } from '@/shared/api/fetch-json';
 import { useAuthSession } from '@/shared/auth/auth-provider';
@@ -60,7 +60,7 @@ export function LoginPage() {
     }
   }, [nextPath, router, status]);
 
-  const isBusy = form.formState.isSubmitting || status === 'loading';
+  const isSubmitting = form.formState.isSubmitting;
 
   return (
     <Box
@@ -98,7 +98,11 @@ export function LoginPage() {
                 <Stack spacing={2.5}>
                   <Link
                     href={'/' as Route}
-                    style={{ display: 'inline-flex', alignSelf: 'flex-start', lineHeight: 0 }}
+                    style={{
+                      display: 'inline-flex',
+                      alignSelf: 'flex-start',
+                      lineHeight: 0
+                    }}
                   >
                     <BrandLogo
                       priority
@@ -220,23 +224,35 @@ export function LoginPage() {
                     })}
                   >
                     <Stack spacing={appLayout.fieldGap}>
-                      <TextField
-                        fullWidth
-                        label="이메일"
-                        type="email"
-                        autoComplete="email"
-                        error={Boolean(form.formState.errors.email)}
-                        helperText={form.formState.errors.email?.message}
-                        {...form.register('email')}
+                      <Controller
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            fullWidth
+                            label="이메일"
+                            type="email"
+                            autoComplete="email"
+                            error={Boolean(form.formState.errors.email)}
+                            helperText={form.formState.errors.email?.message}
+                          />
+                        )}
                       />
-                      <TextField
-                        fullWidth
-                        label="비밀번호"
-                        type="password"
-                        autoComplete="current-password"
-                        error={Boolean(form.formState.errors.password)}
-                        helperText={form.formState.errors.password?.message}
-                        {...form.register('password')}
+                      <Controller
+                        control={form.control}
+                        name="password"
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            fullWidth
+                            label="비밀번호"
+                            type="password"
+                            autoComplete="current-password"
+                            error={Boolean(form.formState.errors.password)}
+                            helperText={form.formState.errors.password?.message}
+                          />
+                        )}
                       />
                       <Box sx={{ textAlign: 'right', mt: -0.5 }}>
                         <Typography
@@ -259,10 +275,10 @@ export function LoginPage() {
                         variant="contained"
                         size="large"
                         startIcon={<LoginRoundedIcon />}
-                        disabled={isBusy}
+                        disabled={isSubmitting}
                         sx={{ py: 1.2 }}
                       >
-                        {isBusy ? '확인 중...' : '로그인'}
+                        {isSubmitting ? '확인 중...' : '로그인'}
                       </Button>
                       <Button
                         fullWidth
