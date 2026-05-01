@@ -1,8 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import type { AuthenticatedUser, LoginRequest } from '@personal-erp/contracts';
+import type {
+  AuthenticatedUser,
+  CreateWorkspaceRequest,
+  LoginRequest
+} from '@personal-erp/contracts';
 import {
+  deleteWorkspace as deleteWorkspaceRequest,
+  createWorkspace as createWorkspaceRequest,
   getCurrentUser,
   loginWithPassword,
   logoutSession,
@@ -26,6 +32,10 @@ type AuthSessionContextValue = {
   login: (input: LoginRequest) => Promise<AuthenticatedUser>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<AuthenticatedUser | null>;
+  createWorkspace: (
+    input: CreateWorkspaceRequest
+  ) => Promise<AuthenticatedUser>;
+  deleteWorkspace: (tenantId: string) => Promise<AuthenticatedUser>;
   switchWorkspace: (
     tenantId: string,
     ledgerId?: string
@@ -176,6 +186,31 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     []
   );
 
+  const createWorkspace = React.useCallback(
+    async (input: CreateWorkspaceRequest) => {
+      const result = await createWorkspaceRequest(input);
+
+      React.startTransition(() => {
+        setUser(result.user);
+        setStatus('authenticated');
+      });
+
+      return result.user;
+    },
+    []
+  );
+
+  const deleteWorkspace = React.useCallback(async (tenantId: string) => {
+    const result = await deleteWorkspaceRequest(tenantId);
+
+    React.startTransition(() => {
+      setUser(result.user);
+      setStatus('authenticated');
+    });
+
+    return result.user;
+  }, []);
+
   const value = React.useMemo<AuthSessionContextValue>(
     () => ({
       status,
@@ -183,9 +218,20 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       login,
       logout,
       refreshUser,
+      createWorkspace,
+      deleteWorkspace,
       switchWorkspace
     }),
-    [login, logout, refreshUser, status, switchWorkspace, user]
+    [
+      createWorkspace,
+      deleteWorkspace,
+      login,
+      logout,
+      refreshUser,
+      status,
+      switchWorkspace,
+      user
+    ]
   );
 
   return (

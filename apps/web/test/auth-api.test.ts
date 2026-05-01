@@ -123,3 +123,115 @@ test('auth API helpers call the registration and verification endpoints', async 
     globalThis.fetch = originalFetch;
   }
 });
+
+test('auth API helper calls the protected workspace creation and deletion endpoints', async () => {
+  const capturedRequests: Array<{
+    url: string;
+    method: string | undefined;
+    authorization: string | null;
+    credentials: RequestCredentials | undefined;
+    cache: RequestCache | undefined;
+    contentType: string | null;
+    body: unknown;
+  }> = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    const headers = new Headers(init?.headers);
+    const rawBody = typeof init?.body === 'string' ? init.body : null;
+    capturedRequests.push({
+      url: String(input),
+      method: init?.method,
+      authorization: headers.get('Authorization'),
+      credentials: init?.credentials,
+      cache: init?.cache,
+      contentType: headers.get('Content-Type'),
+      body: rawBody ? (JSON.parse(rawBody) as unknown) : null
+    });
+
+    return new Response(
+      JSON.stringify({
+        user: {
+          id: 'user-1',
+          email: 'owner@example.com',
+          name: 'Owner User',
+          currentWorkspace: null
+        },
+        workspaces: []
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+  };
+
+  try {
+    const { setStoredAccessToken, clearStoredAccessToken } =
+      await import('../src/shared/auth/auth-session-store');
+    const { createWorkspace, deleteWorkspace } =
+      await import('../src/features/auth/auth.api');
+
+    setStoredAccessToken('token-workspace');
+
+    assert.deepEqual(
+      await createWorkspace({
+        tenantName: 'Second Workspace',
+        tenantSlug: 'second-workspace',
+        ledgerName: 'Second Ledger',
+        baseCurrency: 'KRW',
+        timezone: 'Asia/Seoul',
+        openedFromYearMonth: '2026-05'
+      }),
+      {
+        user: {
+          id: 'user-1',
+          email: 'owner@example.com',
+          name: 'Owner User',
+          currentWorkspace: null
+        },
+        workspaces: []
+      }
+    );
+    assert.deepEqual(await deleteWorkspace('tenant-delete'), {
+      user: {
+        id: 'user-1',
+        email: 'owner@example.com',
+        name: 'Owner User',
+        currentWorkspace: null
+      },
+      workspaces: []
+    });
+
+    assert.deepEqual(capturedRequests, [
+      {
+        url: 'http://localhost:4000/api/auth/workspaces',
+        method: 'POST',
+        authorization: 'Bearer token-workspace',
+        credentials: 'include',
+        cache: 'no-store',
+        contentType: 'application/json',
+        body: {
+          tenantName: 'Second Workspace',
+          tenantSlug: 'second-workspace',
+          ledgerName: 'Second Ledger',
+          baseCurrency: 'KRW',
+          timezone: 'Asia/Seoul',
+          openedFromYearMonth: '2026-05'
+        }
+      },
+      {
+        url: 'http://localhost:4000/api/auth/workspaces/tenant-delete',
+        method: 'DELETE',
+        authorization: 'Bearer token-workspace',
+        credentials: 'include',
+        cache: 'no-store',
+        contentType: null,
+        body: null
+      }
+    ]);
+
+    clearStoredAccessToken();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

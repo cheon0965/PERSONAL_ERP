@@ -61,7 +61,7 @@
 7. Web은 access token을 메모리 런타임 상태에만 유지합니다.
 8. 새로고침이나 `401` 이후 복구가 필요하면 `POST /auth/refresh`로 새 access token을 받습니다.
 9. 현재 사용자 확인은 `GET /auth/me`를 사용합니다.
-10. 한 사용자가 여러 사업장에 속하면 `GET /auth/workspaces`로 접근 가능한 사업장을 확인하고, `POST /auth/current-workspace`로 현재 세션의 작업 문맥을 전환합니다.
+10. 한 사용자가 여러 사업장에 속하면 `GET /auth/workspaces`로 접근 가능한 사업장을 확인하고, `POST /auth/workspaces`, `DELETE /auth/workspaces/:tenantId`, `POST /auth/current-workspace`로 사업장 생성/삭제와 현재 세션 작업 문맥 전환을 처리합니다.
 
 ## 브라우저/API 경계 보안
 
@@ -112,6 +112,8 @@
 
 - `GET /auth/me`
 - `GET /auth/workspaces`
+- `POST /auth/workspaces`
+- `DELETE /auth/workspaces/:tenantId`
 - `POST /auth/current-workspace`
 - `GET /auth/account-security`
 - `PATCH /auth/account-profile`
@@ -260,7 +262,7 @@
 - Web `/admin/logs` -> API `GET /admin/audit-events`, `GET /admin/audit-events/:auditEventId`
 - Web `/admin/security-threats` -> API `GET /admin/security-threats`
 - Web `/admin/policy` -> API `GET /admin/policy`
-- Web `/settings/workspace` -> API `GET /settings/workspace`, `PATCH /settings/workspace`
+- Web `/settings/workspace` -> API `GET /settings/workspace`, `PATCH /settings/workspace`, `GET /auth/workspaces`, `POST /auth/workspaces`, `DELETE /auth/workspaces/:tenantId`
 - Web `/settings/account` -> API `GET /auth/account-security`
 - Web `/settings/account/profile` -> API `GET /auth/account-security`, `PATCH /auth/account-profile`
 - Web `/settings/account/password` -> API `GET /auth/account-security`, `POST /auth/change-password`
@@ -410,6 +412,20 @@
 - 계약: response `AuthenticatedWorkspaceListResponse`
 - 현재 사용자가 `ACTIVE` 멤버십으로 접근할 수 있는 사업장과 기본 장부, 멤버 역할, 현재 선택 여부를 반환합니다.
 - 응답은 현재 로그인 세션의 `currentWorkspace`와 비교한 `isCurrent` 값을 포함합니다.
+
+### `POST /auth/workspaces`
+
+- 계약: `CreateWorkspaceRequest -> CreateWorkspaceResponse`
+- 현재 사용자가 추가 사업장과 기본 장부를 만들고, 생성된 사업장을 세션의 작업 문맥으로 즉시 선택합니다.
+- 생성 사용자는 새 사업장의 `OWNER` 멤버가 되며 기본 계정과목, 거래 유형, 메뉴 트리가 함께 준비됩니다.
+- `tenantSlug`는 전역 unique 값이며 중복이면 `409 Conflict`를 반환합니다.
+
+### `DELETE /auth/workspaces/:tenantId`
+
+- 계약: response `DeleteWorkspaceResponse`
+- 삭제 대상 사업장의 `ACTIVE` `OWNER` 멤버십이 있는 사용자만 실행할 수 있습니다.
+- 사용자의 마지막 활성 사업장은 삭제할 수 없으며, 대상 사업장에 다른 활성 멤버가 남아 있으면 `409 Conflict`를 반환합니다.
+- 현재 선택 중인 사업장을 삭제하면 세션의 작업 문맥은 남아 있는 접근 가능 사업장으로 자동 전환됩니다.
 
 ### `POST /auth/current-workspace`
 

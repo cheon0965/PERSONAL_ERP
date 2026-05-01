@@ -125,6 +125,15 @@ type WorkspaceBootstrapUser = {
   createdAt: Date;
 };
 
+export type CreateWorkspaceBootstrapInput = {
+  tenantName: string;
+  tenantSlug: string;
+  ledgerName: string;
+  baseCurrency: string;
+  timezone: string;
+  openedFromYearMonth?: string;
+};
+
 @Injectable()
 export class WorkspaceBootstrapService {
   async ensureForUser(
@@ -141,6 +150,59 @@ export class WorkspaceBootstrapService {
     await this.ensureBaseMasters(prisma, tenantId, ledgerId);
     await ensureDefaultWorkspaceNavigation(prisma, tenantId);
     return { tenantId, ledgerId, membershipId };
+  }
+
+  async createAdditionalWorkspaceForUser(
+    prisma: WorkspaceBootstrapPrisma,
+    userId: string,
+    input: CreateWorkspaceBootstrapInput
+  ): Promise<{
+    tenantId: string;
+    ledgerId: string;
+    membershipId: string;
+  }> {
+    const user = await this.getUserOrThrow(prisma, userId);
+    const tenant = await prisma.tenant.create({
+      data: {
+        slug: normalizeWorkspaceSlug(input.tenantSlug),
+        name: normalizeWorkspaceName(input.tenantName),
+        status: TenantStatus.ACTIVE
+      }
+    });
+    const ledger = await prisma.ledger.create({
+      data: {
+        tenantId: tenant.id,
+        name: normalizeLedgerName(input.ledgerName),
+        baseCurrency: normalizeCurrency(input.baseCurrency),
+        timezone: normalizeTimezone(input.timezone),
+        status: LedgerStatus.ACTIVE,
+        openedFromYearMonth:
+          input.openedFromYearMonth?.trim() || formatYearMonth(user.createdAt)
+      }
+    });
+    const membership = await prisma.tenantMembership.create({
+      data: {
+        tenantId: tenant.id,
+        userId: user.id,
+        role: TenantMembershipRole.OWNER,
+        status: TenantMembershipStatus.ACTIVE
+      }
+    });
+
+    await prisma.tenant.update({
+      where: { id: tenant.id },
+      data: {
+        defaultLedgerId: ledger.id
+      }
+    });
+    await this.ensureBaseMasters(prisma, tenant.id, ledger.id);
+    await ensureDefaultWorkspaceNavigation(prisma, tenant.id);
+
+    return {
+      tenantId: tenant.id,
+      ledgerId: ledger.id,
+      membershipId: membership.id
+    };
   }
 
   private async getUserOrThrow(
@@ -349,6 +411,26 @@ function buildTenantSlug(user: WorkspaceBootstrapUser): string {
 function buildTenantName(user: WorkspaceBootstrapUser): string {
   const base = user.name.trim() || user.email.split('@')[0] || '사업';
   return `${base} 워크스페이스`.slice(0, 191);
+}
+
+function normalizeWorkspaceName(value: string): string {
+  return value.trim().replace(/\s+/g, ' ');
+}
+
+function normalizeWorkspaceSlug(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function normalizeLedgerName(value: string): string {
+  return value.trim().replace(/\s+/g, ' ');
+}
+
+function normalizeCurrency(value: string): string {
+  return value.trim().toUpperCase();
+}
+
+function normalizeTimezone(value: string): string {
+  return value.trim();
 }
 
 function formatYearMonth(date: Date): string {

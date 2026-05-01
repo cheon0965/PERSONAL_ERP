@@ -1,11 +1,14 @@
 'use client';
 
-import { Grid, Stack, Typography } from '@mui/material';
+import { useState } from 'react';
+import { Button, Grid, Stack, Typography } from '@mui/material';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { SectionCard } from '@/shared/ui/section-card';
+import { CreateWorkspaceDialog } from '@/features/settings/create-workspace-dialog';
+import { DeleteWorkspaceDialog } from '@/features/settings/delete-workspace-dialog';
 import { SettingsSectionNav } from '@/features/settings/settings-section-nav';
 
 const sessionStatusLabelMap: Record<string, string> = {
@@ -44,6 +47,8 @@ const ledgerStatusLabelMap: Record<string, string> = {
 export default function SettingsPage() {
   const { status, user } = useAuthSession();
   const currentWorkspace = user?.currentWorkspace ?? null;
+  const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
+  const [deleteWorkspaceOpen, setDeleteWorkspaceOpen] = useState(false);
 
   useDomainHelp({
     title: '현재 이용 기준 안내',
@@ -72,19 +77,22 @@ export default function SettingsPage() {
         links: [
           {
             title: '기준 데이터 준비 상태',
-            description: '운영 준비가 충분한지 먼저 점검하고 자금수단과 카테고리를 이어서 확인합니다.',
+            description:
+              '운영 준비가 충분한지 먼저 점검하고 자금수단과 카테고리를 이어서 확인합니다.',
             href: '/reference-data',
             actionLabel: '기준 데이터 보기'
           },
           {
             title: '운영 기간',
-            description: '현재 사업장과 장부 기준이 맞다면 월 운영 시작과 마감 상태를 확인합니다.',
+            description:
+              '현재 사업장과 장부 기준이 맞다면 월 운영 시작과 마감 상태를 확인합니다.',
             href: '/periods',
             actionLabel: '운영 기간 보기'
           },
           {
             title: '사업장 설정',
-            description: '사업장 이름, 슬러그, 장부 연결 같은 기준값을 직접 수정합니다.',
+            description:
+              '사업장 이름, 슬러그, 장부 연결 같은 기준값을 직접 수정합니다.',
             href: '/settings/workspace',
             actionLabel: '사업장 설정 보기'
           },
@@ -141,8 +149,8 @@ export default function SettingsPage() {
           }
         ]}
         metadataSingleRow
-        primaryActionLabel="기준 데이터 보기"
-        primaryActionHref="/reference-data"
+        primaryActionLabel="사업장 추가"
+        primaryActionOnClick={() => setCreateWorkspaceOpen(true)}
         secondaryActionLabel="사업장 설정"
         secondaryActionHref="/settings/workspace"
       />
@@ -240,7 +248,35 @@ export default function SettingsPage() {
             />
           </Grid>
         </Grid>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={1}
+          sx={{ mt: appLayout.cardGap }}
+        >
+          <Button
+            variant="outlined"
+            onClick={() => setCreateWorkspaceOpen(true)}
+          >
+            사업장 추가
+          </Button>
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={() => setDeleteWorkspaceOpen(true)}
+          >
+            사업장 삭제
+          </Button>
+        </Stack>
       </SectionCard>
+
+      <CreateWorkspaceDialog
+        open={createWorkspaceOpen}
+        onClose={() => setCreateWorkspaceOpen(false)}
+      />
+      <DeleteWorkspaceDialog
+        open={deleteWorkspaceOpen}
+        onClose={() => setDeleteWorkspaceOpen(false)}
+      />
     </Stack>
   );
 }

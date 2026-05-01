@@ -9,7 +9,7 @@ export function createAuthPrismaMock(
     where:
       | {
           id?: string;
-          userId?: string;
+          userId?: string | { not?: string };
           tenantId?: string;
           status?: 'ACTIVE' | 'INVITED' | 'SUSPENDED' | 'REMOVED';
           role?: 'OWNER' | 'MANAGER' | 'EDITOR' | 'VIEWER';
@@ -17,7 +17,11 @@ export function createAuthPrismaMock(
       | undefined
   ) => {
     const matchesId = !where?.id || candidate.id === where.id;
-    const matchesUser = !where?.userId || candidate.userId === where.userId;
+    const matchesUser =
+      !where?.userId ||
+      (typeof where.userId === 'string'
+        ? candidate.userId === where.userId
+        : !where.userId.not || candidate.userId !== where.userId.not);
     const matchesTenant =
       !where?.tenantId || candidate.tenantId === where.tenantId;
     const matchesStatus = !where?.status || candidate.status === where.status;
@@ -799,6 +803,7 @@ export function createAuthPrismaMock(
       count: async (args: {
         where?: {
           tenantId?: string;
+          userId?: string | { not?: string };
           role?: 'OWNER' | 'MANAGER' | 'EDITOR' | 'VIEWER';
           status?: 'ACTIVE' | 'INVITED' | 'SUSPENDED' | 'REMOVED';
           id?: { not?: string };
@@ -811,6 +816,7 @@ export function createAuthPrismaMock(
             matchesId &&
             matchesMembershipWhere(candidate, {
               tenantId: args.where?.tenantId,
+              userId: args.where?.userId,
               role: args.where?.role,
               status: args.where?.status
             })
@@ -1176,6 +1182,24 @@ export function createAuthPrismaMock(
           (candidate) =>
             !args?.where?.status || candidate.status === args.where.status
         ).length;
+      },
+      delete: async (args: { where: { id: string } }) => {
+        const tenant = findTenant(args.where.id);
+        if (!tenant) {
+          throw new Error('Tenant not found');
+        }
+
+        state.tenants = state.tenants.filter(
+          (candidate) => candidate.id !== args.where.id
+        );
+        state.memberships = state.memberships.filter(
+          (candidate) => candidate.tenantId !== args.where.id
+        );
+        state.ledgers = state.ledgers.filter(
+          (candidate) => candidate.tenantId !== args.where.id
+        );
+
+        return tenant;
       }
     },
     ledger: {
