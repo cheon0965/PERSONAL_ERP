@@ -9,6 +9,7 @@ import type {
   ReferenceDataReadinessSummary
 } from '@personal-erp/contracts';
 import {
+  buildE2EAuthWorkspacesResponse,
   e2eApiRoutePattern,
   expectNoPageErrors,
   expectNoUnhandledApiRequests
@@ -277,6 +278,15 @@ test('@smoke protects the transactions route, restores the session, and saves a 
       return;
     }
 
+    if (path === '/api/auth/workspaces' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(buildE2EAuthWorkspacesResponse(currentUser))
+      });
+      return;
+    }
+
     if (path === '/api/navigation/tree' && request.method() === 'GET') {
       await route.fulfill({
         status: 200,
@@ -425,9 +435,7 @@ test('@smoke protects the transactions route, restores the session, and saves a 
   await page.goto('/transactions');
 
   try {
-    await expect(
-      page.getByRole('heading', { name: '운영 포털 로그인' })
-    ).toBeVisible();
+    await expect(page.getByRole('heading', { name: '로그인' })).toBeVisible();
   } catch (error) {
     throw new Error(
       [`Navigation to /login failed.`, ...pageErrors, String(error)].join(
@@ -436,9 +444,7 @@ test('@smoke protects the transactions route, restores the session, and saves a 
     );
   }
 
-  await expect(
-    page.getByRole('heading', { name: '운영 포털 로그인' })
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: '로그인' })).toBeVisible();
 
   await page.getByLabel('이메일').fill('demo@example.com');
   await page.getByLabel('비밀번호').fill('Demo1234!');

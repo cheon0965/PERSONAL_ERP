@@ -15,6 +15,7 @@ import {
 } from '../support/auth-transactions-fixtures';
 import {
   buildE2EAccountingPeriod,
+  buildE2EAuthWorkspacesResponse,
   e2eApiRoutePattern,
   expectNoPageErrors,
   expectNoUnhandledApiRequests
@@ -89,6 +90,15 @@ test('@smoke manages the accounting period lifecycle through open, close, and re
         body: JSON.stringify({
           status: 'logged_out'
         })
+      });
+      return;
+    }
+
+    if (path === '/api/auth/workspaces' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(buildE2EAuthWorkspacesResponse(currentUser))
       });
       return;
     }
@@ -344,9 +354,7 @@ test('@smoke manages the accounting period lifecycle through open, close, and re
   });
 
   await page.goto('/periods');
-  await expect(
-    page.getByRole('heading', { name: '운영 포털 로그인' })
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: '로그인' })).toBeVisible();
 
   await page.getByLabel('이메일').fill('demo@example.com');
   await page.getByLabel('비밀번호').fill('Demo1234!');

@@ -21,6 +21,8 @@ import {
   updateWorkspaceSettings,
   workspaceSettingsQueryKey
 } from './settings.api';
+import { CreateWorkspaceDialog } from './create-workspace-dialog';
+import { DeleteWorkspaceDialog } from './delete-workspace-dialog';
 import {
   readLedgerStatusLabel,
   readTenantStatusLabel
@@ -33,6 +35,8 @@ export function WorkspaceSettingsPage() {
   const queryClient = useQueryClient();
   const { refreshUser, user } = useAuthSession();
   const [feedback, setFeedback] = useState<FeedbackAlertValue>(null);
+  const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
+  const [deleteWorkspaceOpen, setDeleteWorkspaceOpen] = useState(false);
   const [form, setForm] = useState<UpdateWorkspaceSettingsRequest>({
     tenantName: '',
     tenantSlug: '',
@@ -180,8 +184,8 @@ export function WorkspaceSettingsPage() {
         primaryActionDisabled={
           !canManage || mutation.isPending || !workspaceQuery.data
         }
-        secondaryActionLabel="운영 월 보기"
-        secondaryActionHref="/periods"
+        secondaryActionLabel="사업장 추가"
+        secondaryActionOnClick={() => setCreateWorkspaceOpen(true)}
       />
 
       <SettingsSectionNav />
@@ -195,8 +199,7 @@ export function WorkspaceSettingsPage() {
             ? (membershipRoleLabelMap[user.currentWorkspace.membership.role] ??
               user.currentWorkspace.membership.role)
             : '-'}{' '}
-          입니다.
-          사업장 설정 수정은 소유자 또는 관리자만 수행할 수 있습니다.
+          입니다. 사업장 설정 수정은 소유자 또는 관리자만 수행할 수 있습니다.
         </Alert>
       ) : null}
 
@@ -317,9 +320,45 @@ export function WorkspaceSettingsPage() {
             >
               {mutation.isPending ? '저장 중...' : '설정 저장'}
             </Button>
+            <Button
+              variant="outlined"
+              sx={{ ml: 1 }}
+              onClick={() => setCreateWorkspaceOpen(true)}
+            >
+              사업장 추가
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              sx={{ ml: 1 }}
+              onClick={() => setDeleteWorkspaceOpen(true)}
+            >
+              사업장 삭제
+            </Button>
           </div>
         </Stack>
       </SectionCard>
+
+      <CreateWorkspaceDialog
+        open={createWorkspaceOpen}
+        onClose={() => setCreateWorkspaceOpen(false)}
+        onCreated={() =>
+          setFeedback({
+            severity: 'success',
+            message: '새 사업장을 만들고 현재 작업 기준으로 전환했습니다.'
+          })
+        }
+      />
+      <DeleteWorkspaceDialog
+        open={deleteWorkspaceOpen}
+        onClose={() => setDeleteWorkspaceOpen(false)}
+        onDeleted={() =>
+          setFeedback({
+            severity: 'success',
+            message: '사업장을 삭제하고 남은 사업장으로 전환했습니다.'
+          })
+        }
+      />
     </Stack>
   );
 }

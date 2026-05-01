@@ -1,5 +1,9 @@
 import { expect } from '@playwright/test';
-import type { AccountingPeriodItem } from '@personal-erp/contracts';
+import type {
+  AccountingPeriodItem,
+  AuthenticatedUser,
+  AuthenticatedWorkspaceListResponse
+} from '@personal-erp/contracts';
 
 export const e2eApiRoutePattern = '**/api/**';
 
@@ -9,6 +13,21 @@ export function expectNoPageErrors(pageErrors: string[]) {
 
 export function expectNoUnhandledApiRequests(unhandledApiRequests: string[]) {
   expect(unhandledApiRequests, unhandledApiRequests.join('\n\n')).toEqual([]);
+}
+
+export function buildE2EAuthWorkspacesResponse(
+  currentUser: AuthenticatedUser
+): AuthenticatedWorkspaceListResponse {
+  return {
+    items: currentUser.currentWorkspace
+      ? [
+          {
+            ...currentUser.currentWorkspace,
+            isCurrent: true
+          }
+        ]
+      : []
+  };
 }
 
 export function buildE2EAccountingPeriod(input: {

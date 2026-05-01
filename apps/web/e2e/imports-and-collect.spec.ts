@@ -693,9 +693,7 @@ test('@smoke uploads an import batch, collects it into a transaction, confirms i
 
   await page.goto('/imports');
 
-  await expect(
-    page.getByRole('heading', { name: '운영 포털 로그인' })
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: '로그인' })).toBeVisible();
   await page.getByLabel('이메일').fill('demo@example.com');
   await page.getByLabel('비밀번호').fill('Demo1234!');
   await page.getByRole('button', { name: '로그인' }).click();

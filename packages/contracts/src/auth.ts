@@ -53,6 +53,15 @@ export type AuthenticatedWorkspaceListResponse = {
   items: AuthenticatedWorkspaceOption[];
 };
 
+export type CreateWorkspaceRequest = {
+  tenantName: string;
+  tenantSlug: string;
+  ledgerName: string;
+  baseCurrency: string;
+  timezone: string;
+  openedFromYearMonth?: string;
+};
+
 export type SwitchWorkspaceRequest = {
   tenantId: string;
   ledgerId?: string;
@@ -62,6 +71,10 @@ export type SwitchWorkspaceResponse = {
   user: AuthenticatedUser;
   workspaces: AuthenticatedWorkspaceOption[];
 };
+
+export type CreateWorkspaceResponse = SwitchWorkspaceResponse;
+
+export type DeleteWorkspaceResponse = SwitchWorkspaceResponse;
 
 export type AccountProfileItem = {
   id: string;

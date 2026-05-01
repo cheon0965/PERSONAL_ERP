@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { createE2ECurrentUserWithoutWorkspace } from '../support/auth-transactions-fixtures';
 import {
+  buildE2EAuthWorkspacesResponse,
   e2eApiRoutePattern,
   expectNoPageErrors,
   expectNoUnhandledApiRequests
@@ -70,6 +71,15 @@ test('@smoke shows safe context fallback when no workspace is connected', async 
       return;
     }
 
+    if (path === '/api/auth/workspaces' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(buildE2EAuthWorkspacesResponse(currentUser))
+      });
+      return;
+    }
+
     if (path === '/api/navigation/tree' && request.method() === 'GET') {
       await route.fulfill({
         status: 200,
@@ -103,9 +113,7 @@ test('@smoke shows safe context fallback when no workspace is connected', async 
   });
 
   await page.goto('/dashboard');
-  await expect(
-    page.getByRole('heading', { name: '운영 포털 로그인' })
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: '로그인' })).toBeVisible();
 
   await page.getByLabel('이메일').fill('demo@example.com');
   await page.getByLabel('비밀번호').fill('Demo1234!');

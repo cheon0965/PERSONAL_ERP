@@ -56,6 +56,7 @@ import { VerifyEmailUseCase } from './application/use-cases/verify-email.use-cas
 import { LoginDto } from './dto/login.dto';
 import { AcceptInvitationDto } from './dto/accept-invitation.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
@@ -299,6 +300,46 @@ export class AuthController {
   @Header('Cache-Control', 'no-store')
   getWorkspaces(@CurrentUser() user: AuthenticatedUser) {
     return this.authWorkspaceService.listWorkspaces(user);
+  }
+
+  @Post('workspaces')
+  @ApiBearerAuth()
+  @Header('Cache-Control', 'no-store')
+  async createWorkspace(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentSessionId() currentSessionId: string | undefined,
+    @Body() dto: CreateWorkspaceDto
+  ) {
+    return this.authWorkspaceService.createWorkspace(
+      user,
+      currentSessionId,
+      dto,
+      {
+        clientIp: readClientIp(request),
+        requestId: readRequestId(request)
+      }
+    );
+  }
+
+  @Delete('workspaces/:tenantId')
+  @ApiBearerAuth()
+  @Header('Cache-Control', 'no-store')
+  async deleteWorkspace(
+    @Req() request: RequestWithContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentSessionId() currentSessionId: string | undefined,
+    @Param('tenantId') tenantId: string
+  ) {
+    return this.authWorkspaceService.deleteWorkspace(
+      user,
+      currentSessionId,
+      tenantId,
+      {
+        clientIp: readClientIp(request),
+        requestId: readRequestId(request)
+      }
+    );
   }
 
   @Post('current-workspace')

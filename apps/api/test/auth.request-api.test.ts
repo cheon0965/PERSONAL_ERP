@@ -5,6 +5,7 @@ import {
   readCookieValue,
   readSetCookieHeader
 } from './request-api.test-support';
+import type { RequestTestState } from './request-api.test-types';
 
 const REFRESH_COOKIE_NAME = '__Host-refreshToken';
 const LEGACY_REFRESH_COOKIE_NAME = 'refreshToken';
@@ -19,6 +20,54 @@ function buildRegisterRequest(input: {
     termsAccepted: true,
     privacyConsentAccepted: true
   };
+}
+
+function addWorkspaceFixture(
+  state: RequestTestState,
+  input: {
+    tenantId?: string;
+    tenantSlug?: string;
+    tenantName?: string;
+    ledgerId?: string;
+    ledgerName?: string;
+    membershipId?: string;
+    userId?: string;
+    role?: 'OWNER' | 'MANAGER' | 'EDITOR' | 'VIEWER';
+    joinedAt?: Date;
+  } = {}
+) {
+  const tenantId = input.tenantId ?? 'tenant-delete';
+  const ledgerId = input.ledgerId ?? 'ledger-delete';
+  const membershipId = input.membershipId ?? 'membership-delete';
+
+  state.tenants.push({
+    id: tenantId,
+    slug: input.tenantSlug ?? tenantId,
+    name: input.tenantName ?? 'Delete Workspace',
+    status: 'ACTIVE',
+    defaultLedgerId: ledgerId
+  });
+  state.ledgers.push({
+    id: ledgerId,
+    tenantId,
+    name: input.ledgerName ?? 'Delete Ledger',
+    baseCurrency: 'KRW',
+    timezone: 'Asia/Seoul',
+    status: 'ACTIVE',
+    createdAt: input.joinedAt ?? new Date('2026-03-15T00:00:00.000Z')
+  });
+  state.memberships.push({
+    id: membershipId,
+    tenantId,
+    userId: input.userId ?? 'user-1',
+    role: input.role ?? 'OWNER',
+    status: 'ACTIVE',
+    joinedAt: input.joinedAt ?? new Date('2026-03-15T00:00:00.000Z'),
+    invitedByMembershipId: null,
+    lastAccessAt: null
+  });
+
+  return { tenantId, ledgerId, membershipId };
 }
 
 test('POST /auth/login returns access token and a refresh cookie for valid credentials', async () => {
@@ -1225,6 +1274,264 @@ test('GET /auth/workspaces returns active workspace memberships with current mar
       ]
     });
     assert.equal(response.headers.get('cache-control'), 'no-store');
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /auth/workspaces creates an additional owner workspace and switches the session', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/auth/workspaces', {
+      method: 'POST',
+      headers: context.authHeaders(),
+      body: {
+        tenantName: 'Second Workspace',
+        tenantSlug: 'second-workspace',
+        ledgerName: 'Second Ledger',
+        baseCurrency: 'KRW',
+        timezone: 'Asia/Seoul',
+        openedFromYearMonth: '2026-05'
+      }
+    });
+
+    assert.equal(response.status, 201);
+
+    const createdTenant = context.state.tenants.find(
+      (candidate) => candidate.slug === 'second-workspace'
+    );
+    assert.ok(createdTenant);
+
+    const createdLedger = context.state.ledgers.find(
+      (candidate) => candidate.tenantId === createdTenant.id
+    );
+    assert.ok(createdLedger);
+    assert.equal(createdLedger.name, 'Second Ledger');
+    assert.equal(createdTenant.defaultLedgerId, createdLedger.id);
+
+    const createdMembership = context.state.memberships.find(
+      (candidate) =>
+        candidate.tenantId === createdTenant.id && candidate.userId === 'user-1'
+    );
+    assert.ok(createdMembership);
+    assert.equal(createdMembership.role, 'OWNER');
+    assert.equal(createdMembership.status, 'ACTIVE');
+
+    assert.equal(
+      context.state.authSessions.find(
+        (candidate) => candidate.id === 'session-user-1'
+      )?.currentTenantId,
+      createdTenant.id
+    );
+    assert.equal(
+      context.state.authSessions.find(
+        (candidate) => candidate.id === 'session-user-1'
+      )?.currentLedgerId,
+      createdLedger.id
+    );
+
+    assert.equal(
+      (
+        response.body as {
+          user: { currentWorkspace: { tenant: { slug: string } } };
+        }
+      ).user.currentWorkspace.tenant.slug,
+      'second-workspace'
+    );
+    assert.equal(
+      (
+        response.body as {
+          workspaces: Array<{ tenant: { slug: string }; isCurrent: boolean }>;
+        }
+      ).workspaces.find(
+        (workspace) => workspace.tenant.slug === 'second-workspace'
+      )?.isCurrent,
+      true
+    );
+    assert.ok(
+      context.securityEvents.some(
+        (candidate) =>
+          candidate.level === 'log' &&
+          candidate.event === 'auth.workspace_created' &&
+          candidate.details.tenantId === createdTenant.id
+      )
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('DELETE /auth/workspaces/:tenantId removes an owner workspace and switches away when current', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const workspace = addWorkspaceFixture(context.state, {
+      tenantSlug: 'delete-workspace',
+      tenantName: 'Delete Workspace'
+    });
+    const session = context.state.authSessions.find(
+      (candidate) => candidate.id === 'session-user-1'
+    );
+    assert.ok(session);
+    session.currentTenantId = workspace.tenantId;
+    session.currentLedgerId = workspace.ledgerId;
+
+    const response = await context.request(
+      `/auth/workspaces/${workspace.tenantId}`,
+      {
+        method: 'DELETE',
+        headers: context.authHeaders()
+      }
+    );
+
+    assert.equal(response.status, 200);
+    assert.equal(
+      context.state.tenants.some(
+        (candidate) => candidate.id === workspace.tenantId
+      ),
+      false
+    );
+    assert.equal(
+      context.state.ledgers.some(
+        (candidate) => candidate.id === workspace.ledgerId
+      ),
+      false
+    );
+    assert.equal(
+      context.state.memberships.some(
+        (candidate) => candidate.id === workspace.membershipId
+      ),
+      false
+    );
+    assert.equal(
+      context.state.authSessions.find(
+        (candidate) => candidate.id === 'session-user-1'
+      )?.currentTenantId,
+      'tenant-1'
+    );
+    assert.equal(
+      context.state.authSessions.find(
+        (candidate) => candidate.id === 'session-user-1'
+      )?.currentLedgerId,
+      'ledger-1'
+    );
+    assert.equal(
+      (
+        response.body as {
+          user: { currentWorkspace: { tenant: { id: string } } };
+        }
+      ).user.currentWorkspace.tenant.id,
+      'tenant-1'
+    );
+    assert.equal(
+      (
+        response.body as {
+          workspaces: Array<{ tenant: { id: string }; isCurrent: boolean }>;
+        }
+      ).workspaces.find((item) => item.tenant.id === 'tenant-1')?.isCurrent,
+      true
+    );
+    assert.ok(
+      context.securityEvents.some(
+        (candidate) =>
+          candidate.level === 'log' &&
+          candidate.event === 'auth.workspace_deleted' &&
+          candidate.details.tenantId === workspace.tenantId
+      )
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('DELETE /auth/workspaces/:tenantId rejects the last active workspace for the user', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/auth/workspaces/tenant-1', {
+      method: 'DELETE',
+      headers: context.authHeaders()
+    });
+
+    assert.equal(response.status, 400);
+    assert.equal(
+      context.state.tenants.some((candidate) => candidate.id === 'tenant-1'),
+      true
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('DELETE /auth/workspaces/:tenantId rejects non-owner membership', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const workspace = addWorkspaceFixture(context.state, {
+      tenantId: 'tenant-delete-viewer',
+      tenantSlug: 'delete-viewer',
+      ledgerId: 'ledger-delete-viewer',
+      membershipId: 'membership-delete-viewer',
+      role: 'VIEWER'
+    });
+
+    const response = await context.request(
+      `/auth/workspaces/${workspace.tenantId}`,
+      {
+        method: 'DELETE',
+        headers: context.authHeaders()
+      }
+    );
+
+    assert.equal(response.status, 403);
+    assert.equal(
+      context.state.tenants.some(
+        (candidate) => candidate.id === workspace.tenantId
+      ),
+      true
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('DELETE /auth/workspaces/:tenantId rejects deletion while other active members remain', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const workspace = addWorkspaceFixture(context.state, {
+      tenantId: 'tenant-delete-shared',
+      tenantSlug: 'delete-shared',
+      ledgerId: 'ledger-delete-shared',
+      membershipId: 'membership-delete-shared'
+    });
+    context.state.memberships.push({
+      id: 'membership-delete-shared-other',
+      tenantId: workspace.tenantId,
+      userId: 'user-2',
+      role: 'VIEWER',
+      status: 'ACTIVE',
+      joinedAt: new Date('2026-03-16T00:00:00.000Z'),
+      invitedByMembershipId: workspace.membershipId,
+      lastAccessAt: null
+    });
+
+    const response = await context.request(
+      `/auth/workspaces/${workspace.tenantId}`,
+      {
+        method: 'DELETE',
+        headers: context.authHeaders()
+      }
+    );
+
+    assert.equal(response.status, 409);
+    assert.equal(
+      context.state.tenants.some(
+        (candidate) => candidate.id === workspace.tenantId
+      ),
+      true
+    );
   } finally {
     await context.close();
   }

@@ -125,16 +125,23 @@ function readOrigin(value) {
 }
 
 const apiOrigin = readOrigin(resolvedPublicEnv.NEXT_PUBLIC_API_BASE_URL);
+const isProduction = process.env.NODE_ENV === 'production';
 const webConnectSources = [
   "'self'",
   ...(apiOrigin ? [apiOrigin] : []),
   'http://localhost:4000',
-  'http://127.0.0.1:4000'
+  'http://127.0.0.1:4000',
+  ...(!isProduction ? ['ws://localhost:3000', 'ws://127.0.0.1:3000'] : [])
+];
+const webScriptSources = [
+  "'self'",
+  "'unsafe-inline'",
+  ...(!isProduction ? ["'unsafe-eval'"] : [])
 ];
 
 const webContentSecurityPolicy = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  `script-src ${webScriptSources.join(' ')}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",

@@ -3,6 +3,9 @@ import type {
   AcceptInvitationRequest,
   AcceptInvitationResponse,
   AuthenticatedWorkspaceListResponse,
+  CreateWorkspaceRequest,
+  CreateWorkspaceResponse,
+  DeleteWorkspaceResponse,
   ForgotPasswordRequest,
   ForgotPasswordResponse,
   LoginRequest,
@@ -19,6 +22,7 @@ import type {
 } from '@personal-erp/contracts';
 import {
   createApiRequestErrorFromResponse,
+  deleteJson,
   fetchJson,
   postJson
 } from '../../shared/api/fetch-json';
@@ -103,6 +107,34 @@ export async function getCurrentUser(
 export function getAccessibleWorkspaces() {
   return fetchJson<AuthenticatedWorkspaceListResponse>('/auth/workspaces', {
     items: []
+  });
+}
+
+export function createWorkspace(input: CreateWorkspaceRequest) {
+  return postJson<CreateWorkspaceResponse, CreateWorkspaceRequest>(
+    '/auth/workspaces',
+    input,
+    {
+      user: {
+        id: '',
+        email: '',
+        name: '',
+        currentWorkspace: null
+      },
+      workspaces: []
+    }
+  );
+}
+
+export function deleteWorkspace(tenantId: string) {
+  return deleteJson<DeleteWorkspaceResponse>(`/auth/workspaces/${tenantId}`, {
+    user: {
+      id: '',
+      email: '',
+      name: '',
+      currentWorkspace: null
+    },
+    workspaces: []
   });
 }
 
