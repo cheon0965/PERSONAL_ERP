@@ -59,6 +59,16 @@
 - 추가 포맷 확인:
   - `npm run format:check -- --end-of-line auto`: 통과
 
+## 2026-05-02 보완사항 반영 점검
+
+이번 보완 작업의 파일 조회, 생성, 수정은 UTF-8 기준으로 수행했습니다.
+
+- 업로드 배치 일괄 등록의 만료 잠금 리컨실러를 추가해 `PENDING/RUNNING` Job이 오래된 lock 뒤에 남는 경우 자동으로 `FAILED/PARTIAL/SUCCEEDED` 종결 상태로 정리되게 했습니다.
+- 비밀번호 재설정 만료시간을 `PASSWORD_RESET_TTL`로 분리했고, 미설정 시 `EMAIL_VERIFICATION_TTL`을 따릅니다. 메일 문구도 실제 TTL에서 계산한 문구를 사용합니다.
+- 인증 rate limit은 여전히 프로세스 메모리 adapter지만, 만료 bucket sweep과 최대 bucket cap을 추가했고 운영 체크리스트에 reverse proxy/WAF/API gateway rate limit 병행 원칙을 명시했습니다.
+- Dependabot 설정을 추가해 npm runtime/security update와 GitHub Actions update가 주기적으로 PR로 올라오게 했습니다.
+- `npm run audit:runtime`은 high/critical gate 기준 통과하지만, `npm run audit:runtime:full`은 2026-05-02 기준 `next@15.5.15 -> postcss@8.4.31` 경유 moderate advisory가 남습니다. `npm audit fix --force`는 `next@9.3.3`으로 낮추는 위험한 제안이므로 적용하지 않고 upstream compatible patch를 추적합니다.
+
 ## 2026-04-30 ASVS L2 보강 검증
 
 이번 ASVS 보강 작업의 파일 읽기, 생성, 수정은 UTF-8 기준으로 수행했습니다.

@@ -186,6 +186,7 @@ API는 아래 값을 필수로 사용합니다.
 - `ACCESS_TOKEN_TTL`
 - `REFRESH_TOKEN_TTL`
 - `EMAIL_VERIFICATION_TTL`
+- `PASSWORD_RESET_TTL`
 
 권장 원칙:
 
@@ -199,6 +200,7 @@ API는 아래 값을 필수로 사용합니다.
 ACCESS_TOKEN_TTL=15m
 REFRESH_TOKEN_TTL=7d
 EMAIL_VERIFICATION_TTL=30m
+PASSWORD_RESET_TTL=30m
 ```
 
 참고:
@@ -336,6 +338,7 @@ JWT_REFRESH_SECRET=replace-with-another-long-random-string
 ACCESS_TOKEN_TTL=15m
 REFRESH_TOKEN_TTL=7d
 EMAIL_VERIFICATION_TTL=30m
+PASSWORD_RESET_TTL=30m
 DATABASE_URL=mysql://erp_user:local_erp_not_for_prod@localhost:3306/personal_erp
 DEMO_EMAIL=demo@example.com
 DEMO_RESET_SCHEDULE_ENABLED=true
@@ -384,6 +387,7 @@ JWT_REFRESH_SECRET=replace-with-production-refresh-secret
 ACCESS_TOKEN_TTL=15m
 REFRESH_TOKEN_TTL=7d
 EMAIL_VERIFICATION_TTL=30m
+PASSWORD_RESET_TTL=30m
 DATABASE_URL=mysql://erp_user:replace-with-production-password@db.example.com:3306/personal_erp
 DEMO_EMAIL=demo@example.com
 DEMO_RESET_SCHEDULE_ENABLED=true

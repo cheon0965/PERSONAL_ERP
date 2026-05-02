@@ -24,14 +24,15 @@ import {
   importBatchCollectionJobSelect,
   mapImportBatchCollectionJobToItem
 } from '../../import-batch-collection-job.mapper';
+import { IMPORT_COLLECTION_LOCK_TTL_MS } from '../../import-batch-collection-job.constants';
+import { ImportBatchCollectionJobMaintenanceService } from '../../import-batch-collection-job-maintenance.service';
 import { ImportBatchCollectionJobRunner } from '../../import-batch-collection-job-runner.service';
-
-const IMPORT_COLLECTION_LOCK_TTL_MS = 15 * 60 * 1000;
 
 @Injectable()
 export class BulkCollectImportedRowsUseCase {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly jobMaintenance: ImportBatchCollectionJobMaintenanceService,
     private readonly jobRunner: ImportBatchCollectionJobRunner
   ) {}
 
@@ -145,6 +146,10 @@ export class BulkCollectImportedRowsUseCase {
     }
 
     const now = new Date();
+    await this.jobMaintenance.reconcileExpiredCollectionJobs(now, {
+      tenantId: workspace.tenantId,
+      ledgerId: workspace.ledgerId
+    });
     const lockExpiresAt = new Date(
       now.getTime() + IMPORT_COLLECTION_LOCK_TTL_MS
     );

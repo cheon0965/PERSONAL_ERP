@@ -14,13 +14,17 @@ import {
   importBatchCollectionJobSelect,
   mapImportBatchCollectionJobToItem
 } from '../../import-batch-collection-job.mapper';
+import { ImportBatchCollectionJobMaintenanceService } from '../../import-batch-collection-job-maintenance.service';
 
 const collectionJobCancelMessage =
   '사용자가 업로드 배치 일괄 등록 작업을 중단했습니다.';
 
 @Injectable()
 export class CancelImportBatchCollectionJobUseCase {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jobMaintenance: ImportBatchCollectionJobMaintenanceService
+  ) {}
 
   async execute(
     user: AuthenticatedUser,
@@ -32,6 +36,11 @@ export class CancelImportBatchCollectionJobUseCase {
       workspace.membershipRole,
       'import_batch.cancel'
     );
+    await this.jobMaintenance.reconcileExpiredCollectionJobs(new Date(), {
+      tenantId: workspace.tenantId,
+      ledgerId: workspace.ledgerId,
+      importBatchId
+    });
 
     const job = await this.prisma.importBatchCollectionJob.findFirst({
       where: {

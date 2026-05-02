@@ -15,6 +15,7 @@ import { PreviewImportedRowCollectionUseCase } from './application/use-cases/pre
 import { ImportBatchQueryService } from './import-batch-query.service';
 import { ImportBatchesController } from './import-batches.controller';
 import { PrismaImportBatchWriteAdapter } from './infrastructure/prisma/prisma-import-batch-write.adapter';
+import { ImportBatchCollectionJobMaintenanceService } from './import-batch-collection-job-maintenance.service';
 import { ImportBatchCollectionJobRunner } from './import-batch-collection-job-runner.service';
 import { ImportedRowCollectionRepository } from './imported-row-collection.repository';
 import { ImportedRowCollectionService } from './imported-row-collection.service';
@@ -44,6 +45,7 @@ import { ImportedRowCollectionService } from './imported-row-collection.service'
     CancelImportBatchCollectionJobUseCase,
     GetImportBatchCollectionJobUseCase,
     GetActiveImportBatchCollectionJobUseCase,
+    ImportBatchCollectionJobMaintenanceService,
     ImportBatchCollectionJobRunner,
     DeleteImportBatchUseCase
   ],

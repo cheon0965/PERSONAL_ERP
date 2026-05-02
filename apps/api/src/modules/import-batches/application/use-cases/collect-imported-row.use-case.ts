@@ -8,12 +8,14 @@ import type {
 import { requireCurrentWorkspace } from '../../../../common/auth/required-workspace.util';
 // eslint-disable-next-line no-restricted-imports
 import { PrismaService } from '../../../../common/prisma/prisma.service';
+import { ImportBatchCollectionJobMaintenanceService } from '../../import-batch-collection-job-maintenance.service';
 import { ImportedRowCollectionService } from '../../imported-row-collection.service';
 
 @Injectable()
 export class CollectImportedRowUseCase {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly jobMaintenance: ImportBatchCollectionJobMaintenanceService,
     private readonly importedRowCollectionService: ImportedRowCollectionService
   ) {}
 
@@ -27,6 +29,10 @@ export class CollectImportedRowUseCase {
     // 단건 등록도 진행 중인 일괄 등록과 같은 배치/행을 건드릴 수 있으므로
     // 작업공간 단위 잠금을 먼저 확인해 중복 승격을 차단한다.
     const now = new Date();
+    await this.jobMaintenance.reconcileExpiredCollectionJobs(now, {
+      tenantId: workspace.tenantId,
+      ledgerId: workspace.ledgerId
+    });
     await this.prisma.importBatchCollectionLock.deleteMany({
       where: {
         tenantId: workspace.tenantId,

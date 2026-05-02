@@ -68,6 +68,27 @@ test('parseApiEnv enables demo reset schedule by default', () => {
   assert.equal(env.DEMO_RESET_SCHEDULE_ENABLED, true);
 });
 
+test('parseApiEnv lets PASSWORD_RESET_TTL follow EMAIL_VERIFICATION_TTL by default', () => {
+  const env = parseApiEnv({
+    ...createBaseEnv(),
+    EMAIL_VERIFICATION_TTL: '45m'
+  });
+
+  assert.equal(env.EMAIL_VERIFICATION_TTL, '45m');
+  assert.equal(env.PASSWORD_RESET_TTL, '45m');
+});
+
+test('parseApiEnv accepts a dedicated PASSWORD_RESET_TTL override', () => {
+  const env = parseApiEnv({
+    ...createBaseEnv(),
+    EMAIL_VERIFICATION_TTL: '45m',
+    PASSWORD_RESET_TTL: '20m'
+  });
+
+  assert.equal(env.EMAIL_VERIFICATION_TTL, '45m');
+  assert.equal(env.PASSWORD_RESET_TTL, '20m');
+});
+
 test('parseApiEnv accepts explicit DEMO_RESET_SCHEDULE_ENABLED=false', () => {
   const env = parseApiEnv({
     ...createBaseEnv(),

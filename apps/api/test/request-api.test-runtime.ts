@@ -45,6 +45,7 @@ function setJwtEnv() {
     ACCESS_TOKEN_TTL: process.env.ACCESS_TOKEN_TTL,
     REFRESH_TOKEN_TTL: process.env.REFRESH_TOKEN_TTL,
     EMAIL_VERIFICATION_TTL: process.env.EMAIL_VERIFICATION_TTL,
+    PASSWORD_RESET_TTL: process.env.PASSWORD_RESET_TTL,
     [apiEnvNames.database]: process.env[apiEnvNames.database],
     DEMO_EMAIL: process.env.DEMO_EMAIL,
     MAIL_PROVIDER: process.env.MAIL_PROVIDER,
@@ -66,6 +67,7 @@ function setJwtEnv() {
   process.env.ACCESS_TOKEN_TTL = '15m';
   process.env.REFRESH_TOKEN_TTL = '7d';
   process.env.EMAIL_VERIFICATION_TTL = '30m';
+  process.env.PASSWORD_RESET_TTL = '30m';
   process.env[apiEnvNames.database] = testDatabaseUrl;
   process.env.DEMO_EMAIL = 'demo@example.com';
   process.env.MAIL_PROVIDER = 'console';
@@ -87,6 +89,7 @@ function setJwtEnv() {
     restoreEnvVar('ACCESS_TOKEN_TTL', previous.ACCESS_TOKEN_TTL);
     restoreEnvVar('REFRESH_TOKEN_TTL', previous.REFRESH_TOKEN_TTL);
     restoreEnvVar('EMAIL_VERIFICATION_TTL', previous.EMAIL_VERIFICATION_TTL);
+    restoreEnvVar('PASSWORD_RESET_TTL', previous.PASSWORD_RESET_TTL);
     restoreEnvVar(apiEnvNames.database, previous[apiEnvNames.database]);
     restoreEnvVar('DEMO_EMAIL', previous.DEMO_EMAIL);
     restoreEnvVar('MAIL_PROVIDER', previous.MAIL_PROVIDER);

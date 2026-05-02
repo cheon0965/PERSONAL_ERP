@@ -36,6 +36,7 @@
 - `ACCESS_TOKEN_TTL`
 - `REFRESH_TOKEN_TTL`
 - `EMAIL_VERIFICATION_TTL`
+- `PASSWORD_RESET_TTL`
 - `DATABASE_URL`
 - `DEMO_EMAIL`
 - `DEMO_RESET_SCHEDULE_ENABLED`
@@ -170,10 +171,11 @@
 
 - 이 저장소는 PM2, NSSM, IIS, systemd 같은 프로세스 관리자 설정을 포함하지 않습니다.
 - reverse proxy, TLS 종료, 서비스 재시작 정책은 운영 환경에서 별도로 정해야 합니다.
+- 인증 rate limit은 애플리케이션 내부에서 우선 차단하지만 저장소는 프로세스 메모리입니다. 다중 API 인스턴스나 공개 운영에서는 reverse proxy, WAF, API gateway의 IP 기반 rate limit을 함께 적용합니다.
 - 현재 refresh token 쿠키는 `__Host-refreshToken`과 `Secure`로 고정되므로, 운영 환경에서는 반드시 HTTPS origin과 함께 점검해야 합니다.
 - 운영 환경에서는 `CORS_ALLOWED_ORIGINS`를 필요한 origin만 포함하도록 최소화하고, `SWAGGER_ENABLED=false` 여부를 같이 결정합니다.
 - 현재 보안 이벤트는 애플리케이션 로그에 남기며, 외부 감사 저장소나 중앙 로그 수집기는 아직 연결하지 않았습니다.
-- 업로드 배치 일괄 등록은 Job/행별 결과와 workspace 잠금을 DB에 남기지만, 현재 실행 루프는 API 프로세스 안에서 동작합니다. 운영 재시작 직후에는 진행 중 Job/잠금 상태를 `/operations/imports`와 배치 작업대에서 확인하고, 장기적으로는 외부 worker/outbox 도입 여부를 별도 결정해야 합니다.
+- 업로드 배치 일괄 등록은 Job/행별 결과와 workspace 잠금을 DB에 남기고, 만료된 잠금의 `PENDING/RUNNING` Job은 스케줄러와 조회/명령 진입점에서 자동 종료합니다. 다만 실행 루프 자체는 API 프로세스 안에서 동작하므로, 장기적으로는 외부 worker/outbox 도입 여부를 별도 결정해야 합니다.
 
 ## 함께 보면 좋은 문서
 

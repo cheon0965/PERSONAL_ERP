@@ -10,6 +10,7 @@ export type ApiEnv = {
   ACCESS_TOKEN_TTL: string;
   REFRESH_TOKEN_TTL: string;
   EMAIL_VERIFICATION_TTL: string;
+  PASSWORD_RESET_TTL: string;
   DATABASE_URL: string;
   DEMO_EMAIL: string;
   DEMO_RESET_SCHEDULE_ENABLED: boolean;
@@ -325,6 +326,12 @@ export function parseApiEnv(source: EnvSource): ApiEnv {
     );
   }
 
+  const emailVerificationTtl = readJwtDurationWithFallback(
+    source,
+    'EMAIL_VERIFICATION_TTL',
+    '30m'
+  );
+
   return {
     PORT: readPort(source),
     APP_ORIGIN: appOrigin,
@@ -334,10 +341,11 @@ export function parseApiEnv(source: EnvSource): ApiEnv {
     JWT_REFRESH_SECRET: jwtRefreshSecret,
     ACCESS_TOKEN_TTL: readJwtDuration(source, 'ACCESS_TOKEN_TTL'),
     REFRESH_TOKEN_TTL: readJwtDuration(source, 'REFRESH_TOKEN_TTL'),
-    EMAIL_VERIFICATION_TTL: readJwtDurationWithFallback(
+    EMAIL_VERIFICATION_TTL: emailVerificationTtl,
+    PASSWORD_RESET_TTL: readJwtDurationWithFallback(
       source,
-      'EMAIL_VERIFICATION_TTL',
-      '30m'
+      'PASSWORD_RESET_TTL',
+      emailVerificationTtl
     ),
     DATABASE_URL: readUrl(source, 'DATABASE_URL'),
     DEMO_EMAIL: readString(source, 'DEMO_EMAIL', {
