@@ -16,10 +16,15 @@ const build = require('next/dist/build').default;
 const repoRoot = path.resolve(__dirname, '..');
 const appDir = path.join(repoRoot, 'apps', 'web');
 const distDir = path.join(appDir, '.next');
+const smokeApiBaseUrl = 'http://127.0.0.1:3100/api';
 
 async function main() {
   process.env.NODE_ENV = process.env.NODE_ENV || 'production';
   process.env.NEXT_RUNTIME = 'nodejs';
+  // This in-process build is only used by web smoke checks. Standard production
+  // builds still run through `next build` and keep the app's env validation strict.
+  process.env.NEXT_PUBLIC_API_BASE_URL =
+    process.env.NEXT_PUBLIC_API_BASE_URL || smokeApiBaseUrl;
 
   fs.rmSync(distDir, { recursive: true, force: true });
   process.chdir(appDir);
