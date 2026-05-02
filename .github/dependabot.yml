@@ -9,6 +9,10 @@ updates:
       timezone: Asia/Seoul
     open-pull-requests-limit: 5
     groups:
+      prisma:
+        patterns:
+          - prisma
+          - '@prisma/*'
       runtime-security:
         applies-to: security-updates
         patterns:
@@ -20,6 +24,12 @@ updates:
         dependency-type: development
     ignore:
       - dependency-name: next
+        update-types:
+          - version-update:semver-major
+      - dependency-name: prisma
+        update-types:
+          - version-update:semver-major
+      - dependency-name: '@prisma/client'
         update-types:
           - version-update:semver-major
 
