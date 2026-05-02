@@ -47,11 +47,7 @@ export function ImportedRowStatusCell({
   }
 
   return (
-    <Button
-      size="small"
-      variant="contained"
-      onClick={() => onPrepare(row)}
-    >
+    <Button size="small" variant="contained" onClick={() => onPrepare(row)}>
       거래 등록
     </Button>
   );

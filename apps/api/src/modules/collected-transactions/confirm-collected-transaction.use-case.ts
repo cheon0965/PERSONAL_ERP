@@ -17,13 +17,13 @@ import { requireCurrentWorkspace } from '../../common/auth/required-workspace.ut
 import { readWorkspaceCreatedByActorRef } from '../../common/auth/workspace-actor-ref.util';
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
 import { readParsedImportedRowPayload } from '../import-batches/import-batch.policy';
-import { mapJournalEntryRecordToItem } from '../journal-entries/public';
+import { mapJournalEntryRecordToItem } from '../journal-entries/journal-entry-item.mapper';
 import {
   assertBalancedJournalAdjustmentLines,
   buildReversalJournalLines
 } from '../journal-entries/journal-entry-adjustment.policy';
 import { assertJournalEntryCanBeReversed } from '../journal-entries/journal-entry-transition.policy';
-import { assertCollectedTransactionCanBeCorrected } from './public';
+import { assertCollectedTransactionCanBeCorrected } from './collected-transaction-transition.policy';
 import {
   ConfirmCollectedTransactionStorePort,
   type ConfirmationCollectedTransaction,
@@ -83,22 +83,6 @@ export class ConfirmCollectedTransactionUseCase {
       periodStatus: period.status,
       postedJournalEntryId: collectedTransaction.postedJournalEntry?.id ?? null
     });
-
-    // 업로드에서 들어온 승인취소 행은 일반 수입/지출 전표가 아니라
-    // 원전표를 반전하는 특수 흐름이므로 기본 계정과목 매핑을 건너뛴다.
-    const supportsImportedReversal =
-      isImportedReversalTransaction(collectedTransaction);
-    const accountSubjectIds = supportsImportedReversal
-      ? null
-      : resolveConfirmationAccountSubjectIds(
-          await this.confirmStore.findActiveAccountSubjects(
-            {
-              tenantId: workspace.tenantId,
-              ledgerId: workspace.ledgerId
-            },
-            REQUIRED_CONFIRM_ACCOUNT_SUBJECT_CODES
-          )
-        );
 
     const journalEntry = await this.confirmStore.runInTransaction(
       async (ctx) => {
@@ -168,9 +152,19 @@ export class ConfirmCollectedTransactionUseCase {
           });
         }
 
+        const accountSubjectIds = resolveConfirmationAccountSubjectIds(
+          await ctx.findActiveAccountSubjects(
+            {
+              tenantId: workspace.tenantId,
+              ledgerId: workspace.ledgerId
+            },
+            REQUIRED_CONFIRM_ACCOUNT_SUBJECT_CODES
+          )
+        );
+
         const journalLines = buildConfirmationJournalLines({
           collectedTransaction: latestCollectedTransaction,
-          accountSubjectIds: accountSubjectIds!
+          accountSubjectIds
         });
 
         // 수집 거래 확정의 공식 산출물은 POSTED 전표다.

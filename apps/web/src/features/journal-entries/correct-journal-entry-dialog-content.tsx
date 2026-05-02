@@ -148,7 +148,9 @@ export function CorrectJournalEntryDialogContent({
       onClose();
     },
     onError: (error) => {
-      setFeedback(buildErrorFeedback(error, '정정 전표를 생성하지 못했습니다.'));
+      setFeedback(
+        buildErrorFeedback(error, '정정 전표를 생성하지 못했습니다.')
+      );
     }
   });
 

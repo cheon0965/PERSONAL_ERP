@@ -87,8 +87,7 @@ export class PrismaAccountingPeriodGatewayAdapter
       allowedStatuses: [...readCollectingAccountingPeriodStatuses()],
       missingPeriodMessage:
         '현재 Ledger에 열린 운영 기간이 없어 수집 거래를 등록할 수 없습니다.',
-      outOfRangeMessage:
-        '수집 거래 일자는 최신 진행월 범위 안에 있어야 합니다.'
+      outOfRangeMessage: '수집 거래 일자는 최신 진행월 범위 안에 있어야 합니다.'
     });
   }
 

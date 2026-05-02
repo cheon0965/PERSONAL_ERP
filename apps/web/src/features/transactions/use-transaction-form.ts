@@ -272,8 +272,7 @@ export function useTransactionForm(input: {
     if (!findAccountingPeriodForDate(collectingPeriods, values.businessDate)) {
       setFeedback({
         severity: 'error',
-        message:
-          '거래 일자는 최신 진행월 범위 안에 있어야 합니다.'
+        message: '거래 일자는 최신 진행월 범위 안에 있어야 합니다.'
       });
       return;
     }

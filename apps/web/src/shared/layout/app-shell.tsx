@@ -9,8 +9,7 @@ import { SidebarNav, sidebarWidth } from './sidebar-nav';
 import { Topbar } from './topbar';
 
 export function AppShell({ children }: React.PropsWithChildren) {
-  const [mobileNavigationOpen, setMobileNavigationOpen] =
-    React.useState(false);
+  const [mobileNavigationOpen, setMobileNavigationOpen] = React.useState(false);
   const openMobileNavigation = React.useCallback(() => {
     setMobileNavigationOpen(true);
   }, []);

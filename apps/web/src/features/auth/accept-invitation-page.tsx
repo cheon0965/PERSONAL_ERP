@@ -3,14 +3,7 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Stack
-} from '@mui/material';
+import { Alert, Box, Button, Card, CardContent, Stack } from '@mui/material';
 import { readErrorUserMessage } from '@/shared/api/fetch-json';
 import { acceptInvitation } from './auth.api';
 import { AuthCardHeader } from './auth-card-header';
@@ -48,8 +41,7 @@ export function AcceptInvitationPage() {
         if (!ignore) {
           setState({
             status: 'error',
-            message:
-              readErrorUserMessage(error, '초대 수락에 실패했습니다.')
+            message: readErrorUserMessage(error, '초대 수락에 실패했습니다.')
           });
         }
       });
@@ -103,7 +95,8 @@ function InvitationStateMessage({ state }: { state: AcceptInvitationState }) {
     case 'accepted':
       return (
         <Alert severity="success">
-          초대를 수락했습니다. 로그인하면 연결된 사업장 정보를 사용할 수 있습니다.
+          초대를 수락했습니다. 로그인하면 연결된 사업장 정보를 사용할 수
+          있습니다.
         </Alert>
       );
     case 'registration_required':

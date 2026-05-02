@@ -86,8 +86,7 @@ export function useAccountAvatar(
   const selectedAvatar =
     accountAvatarOptions.find((option) => option.key === avatarKey) ??
     accountAvatarOptions[0];
-  const fallbackInitial =
-    fallbackName?.trim().slice(0, 1).toUpperCase() ?? 'U';
+  const fallbackInitial = fallbackName?.trim().slice(0, 1).toUpperCase() ?? 'U';
 
   const setAvatarKey = React.useCallback(
     (nextAvatarKey: string) => {

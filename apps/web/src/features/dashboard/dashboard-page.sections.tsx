@@ -200,7 +200,6 @@ export function readPeriodStatusLabel(status: string) {
   }
 }
 
-
 function readHighlightToneColor(tone: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL') {
   switch (tone) {
     case 'POSITIVE':

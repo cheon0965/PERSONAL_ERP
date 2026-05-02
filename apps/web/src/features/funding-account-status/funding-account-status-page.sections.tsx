@@ -218,7 +218,9 @@ export function FundingAccountStatusContent({
   onSelectFundingAccount: (fundingAccountId: string) => void;
 }) {
   const scopedAccounts = selectedFundingAccountId
-    ? summary.accounts.filter((account) => account.id === selectedFundingAccountId)
+    ? summary.accounts.filter(
+        (account) => account.id === selectedFundingAccountId
+      )
     : summary.accounts;
 
   return (
@@ -245,9 +247,7 @@ export function FundingAccountStatusContent({
           <FundingAccountTrendChart summary={summary} />
         </Grid>
         <Grid size={{ xs: 12 }}>
-          <FundingAccountCategoryChart
-            categories={summary.categoryBreakdown}
-          />
+          <FundingAccountCategoryChart categories={summary.categoryBreakdown} />
         </Grid>
       </Grid>
 
@@ -353,7 +353,8 @@ function FundingAccountCardsSection({
                   color: 'text.primary',
                   textAlign: 'left',
                   cursor: 'pointer',
-                  transition: 'border-color 160ms ease, background-color 160ms ease',
+                  transition:
+                    'border-color 160ms ease, background-color 160ms ease',
                   '&:hover': {
                     borderColor: brandTokens.palette.primaryBright,
                     backgroundColor: alpha(
@@ -379,7 +380,12 @@ function FundingAccountCardsSection({
                       >
                         {account.name}
                       </Typography>
-                      <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
+                      <Stack
+                        direction="row"
+                        spacing={0.75}
+                        useFlexGap
+                        flexWrap="wrap"
+                      >
                         <Chip
                           label={readFundingAccountTypeLabel(account.type)}
                           size="small"
@@ -415,16 +421,28 @@ function FundingAccountCardsSection({
 
                   <Grid container spacing={1.1}>
                     <Grid size={{ xs: 6 }}>
-                      <MetricMini label="월초" value={formatWon(account.openingBalanceWon)} />
+                      <MetricMini
+                        label="월초"
+                        value={formatWon(account.openingBalanceWon)}
+                      />
                     </Grid>
                     <Grid size={{ xs: 6 }}>
-                      <MetricMini label="현재" value={formatWon(account.liveBalanceWon)} />
+                      <MetricMini
+                        label="현재"
+                        value={formatWon(account.liveBalanceWon)}
+                      />
                     </Grid>
                     <Grid size={{ xs: 6 }}>
-                      <MetricMini label="수입" value={formatWon(account.incomeWon)} />
+                      <MetricMini
+                        label="수입"
+                        value={formatWon(account.incomeWon)}
+                      />
                     </Grid>
                     <Grid size={{ xs: 6 }}>
-                      <MetricMini label="지출" value={formatWon(account.expenseWon)} />
+                      <MetricMini
+                        label="지출"
+                        value={formatWon(account.expenseWon)}
+                      />
                     </Grid>
                   </Grid>
 
@@ -449,7 +467,12 @@ function FundingAccountCardsSection({
                     />
                   </Stack>
 
-                  <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
+                  <Stack
+                    direction="row"
+                    spacing={0.75}
+                    useFlexGap
+                    flexWrap="wrap"
+                  >
                     <Chip
                       label={`거래 ${account.transactionCount}건`}
                       size="small"
@@ -458,7 +481,9 @@ function FundingAccountCardsSection({
                     <Chip
                       label={`미확정 ${account.pendingTransactionCount}건`}
                       color={
-                        account.pendingTransactionCount > 0 ? 'warning' : 'default'
+                        account.pendingTransactionCount > 0
+                          ? 'warning'
+                          : 'default'
                       }
                       size="small"
                       variant="outlined"
@@ -491,9 +516,7 @@ function FundingAccountFlowChart({
       title="자금수단별 수입 / 지출 / 순흐름"
       description="선택 범위의 자금수단별 월중 돈의 방향을 비교합니다."
       chartMinWidth={
-        chartAccounts.length > 2
-          ? Math.max(560, chartAccounts.length * 132)
-          : 0
+        chartAccounts.length > 2 ? Math.max(560, chartAccounts.length * 132) : 0
       }
       chart={
         chartAccounts.length > 0 ? (
@@ -608,12 +631,11 @@ function FundingAccountCategoryChart({
                 xAxis={[
                   {
                     scaleType: 'band',
-                    data: categories.map(
-                      (item) =>
-                        readCompactChartLabel(
-                          `${readFlowKindLabel(item.flowKind)} · ${item.categoryName}`,
-                          14
-                        )
+                    data: categories.map((item) =>
+                      readCompactChartLabel(
+                        `${readFlowKindLabel(item.flowKind)} · ${item.categoryName}`,
+                        14
+                      )
                     )
                   }
                 ]}
@@ -783,7 +805,9 @@ function FundingAccountTransactionsTable({
           />
           <Chip
             label={`미확정 ${summary.totals.pendingTransactionCount}건`}
-            color={summary.totals.pendingTransactionCount > 0 ? 'warning' : 'default'}
+            color={
+              summary.totals.pendingTransactionCount > 0 ? 'warning' : 'default'
+            }
             size="small"
             variant="outlined"
           />
@@ -908,9 +932,7 @@ function readCompactChartLabel(label: string, maxLength = 12) {
 export function readFundingAccountOverviewBasisLabel(
   basis: FundingAccountOverviewBasis
 ) {
-  return basis === 'POSTED_JOURNALS'
-    ? '확정 전표 기준'
-    : '수집 거래 기준';
+  return basis === 'POSTED_JOURNALS' ? '확정 전표 기준' : '수집 거래 기준';
 }
 
 export function readPeriodStatusLabel(status: string) {

@@ -70,9 +70,7 @@ export function VerifyEmailPage() {
       })
       .catch((error) => {
         setStatus('failed');
-        setMessage(
-          readErrorUserMessage(error, '이메일 인증에 실패했습니다.')
-        );
+        setMessage(readErrorUserMessage(error, '이메일 인증에 실패했습니다.'));
       });
   }, [token]);
 

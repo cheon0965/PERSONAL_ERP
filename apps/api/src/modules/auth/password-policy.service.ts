@@ -47,9 +47,7 @@ export class PasswordPolicyService {
     const normalized = normalizePassword(password);
 
     if (COMMON_PASSWORDS.has(normalized)) {
-      throw new BadRequestException(
-        '너무 흔한 비밀번호는 사용할 수 없습니다.'
-      );
+      throw new BadRequestException('너무 흔한 비밀번호는 사용할 수 없습니다.');
     }
 
     const contextTerms = buildContextTerms(context);
@@ -89,7 +87,10 @@ function buildContextTerms(context: PasswordPolicyContext): string[] {
 }
 
 function addTerm(terms: Set<string>, rawTerm: string | null | undefined): void {
-  const term = rawTerm?.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+  const term = rawTerm
+    ?.trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '');
   if (term && term.length >= 8) {
     terms.add(term);
   }

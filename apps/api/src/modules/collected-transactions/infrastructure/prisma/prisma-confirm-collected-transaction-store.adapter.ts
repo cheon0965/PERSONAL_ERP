@@ -12,7 +12,8 @@ import {
 } from '../../../../common/money/prisma-money';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
 import { AccountingPeriodWriteGuardPort } from '../../../accounting-periods/public';
-import type { JournalEntryRecord } from '../../../journal-entries/public';
+import type { JournalEntryRecord } from '../../../journal-entries/journal-entry-item.mapper';
+import { journalEntryItemInclude } from '../../../journal-entries/journal-entry.record';
 import {
   assertConfirmationAllowed,
   assertConfirmationTransactionFound,
@@ -181,24 +182,6 @@ export class PrismaConfirmCollectedTransactionStoreAdapter implements ConfirmCol
     return record ? mapPrismaToConfirmationCollectedTransaction(record) : null;
   }
 
-  async findActiveAccountSubjects(
-    scope: ConfirmationWorkspaceScope,
-    codes: readonly string[]
-  ): Promise<Array<{ id: string; code: string }>> {
-    return this.prisma.accountSubject.findMany({
-      where: {
-        tenantId: scope.tenantId,
-        ledgerId: scope.ledgerId,
-        code: { in: [...codes] },
-        isActive: true
-      },
-      select: {
-        id: true,
-        code: true
-      }
-    });
-  }
-
   async runInTransaction<T>(
     fn: (ctx: ConfirmTransactionContext) => Promise<T>
   ): Promise<T> {
@@ -236,6 +219,24 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
     });
 
     return record ? mapPrismaToConfirmationCollectedTransaction(record) : null;
+  }
+
+  async findActiveAccountSubjects(
+    scope: ConfirmationWorkspaceScope,
+    codes: readonly string[]
+  ): Promise<Array<{ id: string; code: string }>> {
+    return this.tx.accountSubject.findMany({
+      where: {
+        tenantId: scope.tenantId,
+        ledgerId: scope.ledgerId,
+        code: { in: [...codes] },
+        isActive: true
+      },
+      select: {
+        id: true,
+        code: true
+      }
+    });
   }
 
   async allocateJournalEntryNumber(
@@ -334,7 +335,7 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
   async createJournalEntry(
     input: CreateConfirmationJournalEntryInput
   ): Promise<JournalEntryRecord> {
-    const created = await this.tx.journalEntry.create({
+    return this.tx.journalEntry.create({
       data: {
         tenantId: input.tenantId,
         ledgerId: input.ledgerId,
@@ -354,62 +355,8 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
           create: input.lines
         }
       },
-      include: {
-        sourceCollectedTransaction: {
-          select: {
-            id: true,
-            title: true
-          }
-        },
-        reversesJournalEntry: {
-          select: {
-            id: true,
-            entryNumber: true
-          }
-        },
-        reversedByJournalEntry: {
-          select: {
-            id: true,
-            entryNumber: true
-          }
-        },
-        correctsJournalEntry: {
-          select: {
-            id: true,
-            entryNumber: true
-          }
-        },
-        correctionEntries: {
-          select: {
-            id: true,
-            entryNumber: true
-          },
-          orderBy: {
-            createdAt: 'asc' as const
-          }
-        },
-        lines: {
-          include: {
-            accountSubject: {
-              select: {
-                code: true,
-                name: true
-              }
-            },
-            fundingAccount: {
-              select: {
-                name: true
-              }
-            }
-          },
-          orderBy: {
-            lineNumber: 'asc' as const
-          }
-        }
-      }
+      include: journalEntryItemInclude
     });
-
-    return created as unknown as JournalEntryRecord;
   }
 
   async markMatchedPlanItemConfirmed(
