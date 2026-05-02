@@ -53,7 +53,10 @@ export function resolvePreferredAccountingPeriod(
   currentPeriod: AccountingPeriodItem | null,
   periods: AccountingPeriodItem[]
 ) {
-  if (currentPeriod && periods.some((period) => period.id === currentPeriod.id)) {
+  if (
+    currentPeriod &&
+    periods.some((period) => period.id === currentPeriod.id)
+  ) {
     return currentPeriod;
   }
 
@@ -65,8 +68,9 @@ export function findAccountingPeriodForDate(
   businessDate: string
 ) {
   return (
-    periods.find((period) => isDateWithinAccountingPeriod(businessDate, period)) ??
-    null
+    periods.find((period) =>
+      isDateWithinAccountingPeriod(businessDate, period)
+    ) ?? null
   );
 }
 

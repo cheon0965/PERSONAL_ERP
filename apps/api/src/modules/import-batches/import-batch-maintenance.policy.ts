@@ -1,7 +1,4 @@
-import {
-  ImportBatchParseStatus,
-  ImportedRowParseStatus
-} from '@prisma/client';
+import { ImportBatchParseStatus, ImportedRowParseStatus } from '@prisma/client';
 
 export function resolveImportBatchParseStatusFromRows(
   statuses: ImportedRowParseStatus[]

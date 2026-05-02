@@ -19,7 +19,7 @@ import { readWorkspaceCreatedByActorRef } from '../../common/auth/workspace-acto
 import { assertWorkspaceActionAllowed } from '../../common/auth/workspace-action.policy';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AccountingPeriodWriteGuardPort } from '../accounting-periods/public';
-import { assertCollectedTransactionCanBeCorrected } from '../collected-transactions/public';
+import { assertCollectedTransactionCanBeCorrected } from '../collected-transactions/collected-transaction-transition.policy';
 import { JournalEntryAdjustmentStorePort } from './application/ports/journal-entry-adjustment-store.port';
 import { mapJournalEntryRecordToItem } from './journal-entry-item.mapper';
 import {

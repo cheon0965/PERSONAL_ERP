@@ -36,7 +36,8 @@ export default function GlobalError({
             <p
               style={{ margin: '1rem 0 0', lineHeight: 1.6, color: '#52606d' }}
             >
-              페이지를 준비하는 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.
+              페이지를 준비하는 중 문제가 발생했습니다. 잠시 후 다시 시도해
+              주세요.
             </p>
             {diagnostics ? (
               <details

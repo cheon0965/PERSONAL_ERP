@@ -588,8 +588,6 @@ export class ImportedRowCollectionService {
     }
   }
 
-
-
   private async isNewFundingAccountBootstrapCandidate(input: {
     client: PrismaClientLike;
     workspace: ImportedRowCollectionWorkspaceScope;
@@ -767,5 +765,3 @@ function isImmediatelyAfter(
 
   return right.year === nextYear && right.month === nextMonth;
 }
-
-

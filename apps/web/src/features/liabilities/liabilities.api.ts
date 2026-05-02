@@ -13,8 +13,9 @@ import { fetchJson, patchJson, postJson } from '@/shared/api/fetch-json';
 
 export const liabilitiesQueryKey = ['liabilities'] as const;
 export const liabilitiesOverviewQueryKey = ['liabilities', 'overview'] as const;
-export const liabilityRepaymentsQueryKey = (liabilityAgreementId: string | null) =>
-  ['liabilities', liabilityAgreementId, 'repayments'] as const;
+export const liabilityRepaymentsQueryKey = (
+  liabilityAgreementId: string | null
+) => ['liabilities', liabilityAgreementId, 'repayments'] as const;
 
 export const mockLiabilityAgreements: LiabilityAgreementItem[] = [
   {

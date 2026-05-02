@@ -849,7 +849,8 @@ function mapSystemUserToItem(
     sessionCount: user.authSessions.length,
     activeSessionCount: user.authSessions.filter(
       (session) =>
-        session.revokedAt === null && session.expiresAt.getTime() > now.getTime()
+        session.revokedAt === null &&
+        session.expiresAt.getTime() > now.getTime()
     ).length,
     membershipCount: user.memberships.length,
     activeMembershipCount: user.memberships.filter(

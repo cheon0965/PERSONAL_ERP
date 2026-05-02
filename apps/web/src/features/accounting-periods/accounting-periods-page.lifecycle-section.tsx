@@ -1,5 +1,12 @@
 import * as React from 'react';
-import { Alert, Button, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import {
+  Alert,
+  Button,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography
+} from '@mui/material';
 import type { AccountingPeriodItem } from '@personal-erp/contracts';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { SectionCard } from '@/shared/ui/section-card';
@@ -290,7 +297,9 @@ function ReopenAccountingPeriodSection({
               ? '잠금 월별 재오픈 가능 여부는 최신 월 여부, 차기 이월, 다음 월 오프닝 스냅샷 존재 여부로 다시 검증됩니다.'
               : '현재 선택 가능한 잠금 월이 없습니다.'
           }
-          disabled={!hasWorkspace || lockedPeriods.length === 0 || reopenPending}
+          disabled={
+            !hasWorkspace || lockedPeriods.length === 0 || reopenPending
+          }
         >
           {lockedPeriods.length === 0 ? (
             <MenuItem value="" disabled>
@@ -323,7 +332,10 @@ function ReopenAccountingPeriodSection({
           >
             <Stack spacing={0.5}>
               {selectedReopenEligibility.detailLines.map((line, index) => (
-                <Typography key={`${selectedReopenEligibility.periodId}-${index}`} variant="body2">
+                <Typography
+                  key={`${selectedReopenEligibility.periodId}-${index}`}
+                  variant="body2"
+                >
                   {line}
                 </Typography>
               ))}
@@ -382,11 +394,7 @@ function pickDefaultPeriodOperationTab(input: {
   availableTabs?: readonly PeriodOperationTab[];
   defaultTab?: PeriodOperationTab;
 }): PeriodOperationTab {
-  const availableTabs = input.availableTabs ?? [
-    'open',
-    'close',
-    'reopen'
-  ];
+  const availableTabs = input.availableTabs ?? ['open', 'close', 'reopen'];
   const canUseDefaultTab =
     input.defaultTab &&
     availableTabs.includes(input.defaultTab) &&

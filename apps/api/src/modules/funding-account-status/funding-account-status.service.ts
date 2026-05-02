@@ -9,7 +9,11 @@ import type {
   FundingAccountOverviewTransactionItem,
   FundingAccountOverviewTrendPoint
 } from '@personal-erp/contracts';
-import { addMoneyWon, subtractMoneyWon, sumMoneyWon } from '@personal-erp/money';
+import {
+  addMoneyWon,
+  subtractMoneyWon,
+  sumMoneyWon
+} from '@personal-erp/money';
 import {
   AccountingPeriodStatus,
   CollectedTransactionStatus,
@@ -201,7 +205,9 @@ export class FundingAccountStatusService {
     }
 
     const accounts = liveFundingAccounts as LiveFundingAccountRecord[];
-    const accountById = new Map(accounts.map((account) => [account.id, account]));
+    const accountById = new Map(
+      accounts.map((account) => [account.id, account])
+    );
     const selectedFundingAccountId =
       input?.fundingAccountId && accountById.has(input.fundingAccountId)
         ? input.fundingAccountId
@@ -283,7 +289,9 @@ export class FundingAccountStatusService {
       buildAccountItem(account, metricsByAccountId.get(account.id))
     );
     const scopedAccountItems = selectedFundingAccountId
-      ? accountItems.filter((account) => account.id === selectedFundingAccountId)
+      ? accountItems.filter(
+          (account) => account.id === selectedFundingAccountId
+        )
       : accountItems;
     const totals = buildTotals(scopedAccountItems);
     const trend = await this.buildTrend({
@@ -444,7 +452,10 @@ export class FundingAccountStatusService {
         const metrics = createEmptyMetrics(0);
 
         if (input.basis === 'COLLECTED_TRANSACTIONS') {
-          const transactions = await this.readCollectedTransactions(input, period.id);
+          const transactions = await this.readCollectedTransactions(
+            input,
+            period.id
+          );
           for (const transaction of transactions) {
             if (
               input.selectedFundingAccountId &&
@@ -455,23 +466,31 @@ export class FundingAccountStatusService {
             applyCollectedTransactionFlow(metrics, transaction);
           }
         } else {
-          const journalEntries = await this.readJournalEntries(input, period.id);
+          const journalEntries = await this.readJournalEntries(
+            input,
+            period.id
+          );
           for (const journalEntry of journalEntries) {
-            applyJournalEntryFlow(metrics, journalEntry, input.subjectKindById, {
-              selectedFundingAccountId: input.selectedFundingAccountId
-            });
+            applyJournalEntryFlow(
+              metrics,
+              journalEntry,
+              input.subjectKindById,
+              {
+                selectedFundingAccountId: input.selectedFundingAccountId
+              }
+            );
           }
         }
 
-        const closingBalanceByAccountId = await this.readClosingBalanceByAccountId(
-          period.id
-        );
+        const closingBalanceByAccountId =
+          await this.readClosingBalanceByAccountId(period.id);
         const closingBalanceWon =
           closingBalanceByAccountId.size === 0
             ? null
             : input.selectedFundingAccountId
-              ? (closingBalanceByAccountId.get(input.selectedFundingAccountId) ??
-                null)
+              ? (closingBalanceByAccountId.get(
+                  input.selectedFundingAccountId
+                ) ?? null)
               : sumMoneyWon([...closingBalanceByAccountId.values()]);
         const netFlowWon = calculateNetFlow(metrics);
 
@@ -506,9 +525,7 @@ function buildInitialMetricsByAccountId(
     accounts.map((account) => [
       account.id,
       createEmptyMetrics(
-        fromPrismaMoneyWon(
-          openingBalanceByAccountId.get(account.id) ?? 0
-        ),
+        fromPrismaMoneyWon(openingBalanceByAccountId.get(account.id) ?? 0),
         account.balanceWon
       )
     ])
@@ -635,7 +652,10 @@ function applyJournalEntryMetrics(
   journalEntry: JournalEntryRecord,
   subjectKindById: Map<string, AccountSubjectKind | undefined>
 ) {
-  if (journalEntry.status !== 'POSTED' || isSnapshotJournalEntry(journalEntry)) {
+  if (
+    journalEntry.status !== 'POSTED' ||
+    isSnapshotJournalEntry(journalEntry)
+  ) {
     return;
   }
 
@@ -671,7 +691,10 @@ function applyJournalEntryFlow(
     selectedFundingAccountId?: string | null;
   }
 ) {
-  if (journalEntry.status !== 'POSTED' || isSnapshotJournalEntry(journalEntry)) {
+  if (
+    journalEntry.status !== 'POSTED' ||
+    isSnapshotJournalEntry(journalEntry)
+  ) {
     return;
   }
 
@@ -769,7 +792,10 @@ function applyClassifiedFlow(
       metrics.expenseWon = addMoneyWon(metrics.expenseWon, flow.amountWon);
       break;
     case 'TRANSFER':
-      metrics.transferInWon = addMoneyWon(metrics.transferInWon, flow.amountWon);
+      metrics.transferInWon = addMoneyWon(
+        metrics.transferInWon,
+        flow.amountWon
+      );
       break;
     case 'ADJUSTMENT':
     default:
@@ -846,10 +872,12 @@ function finalizeAccountClosingBalances(input: {
   }
 }
 
-function calculateNetFlow(metrics: Pick<
-  AccountMetrics,
-  'incomeWon' | 'expenseWon' | 'transferInWon' | 'transferOutWon'
->) {
+function calculateNetFlow(
+  metrics: Pick<
+    AccountMetrics,
+    'incomeWon' | 'expenseWon' | 'transferInWon' | 'transferOutWon'
+  >
+) {
   return subtractMoneyWon(
     addMoneyWon(metrics.incomeWon, metrics.transferInWon),
     addMoneyWon(metrics.expenseWon, metrics.transferOutWon)
@@ -923,7 +951,9 @@ function buildTotals(
     transferOutWon: sumMoneyWon(
       scopedAccounts.map((account) => account.transferOutWon)
     ),
-    netFlowWon: sumMoneyWon(scopedAccounts.map((account) => account.netFlowWon)),
+    netFlowWon: sumMoneyWon(
+      scopedAccounts.map((account) => account.netFlowWon)
+    ),
     remainingPlannedIncomeWon: sumMoneyWon(
       scopedAccounts.map((account) => account.remainingPlannedIncomeWon)
     ),
@@ -980,12 +1010,18 @@ function buildTransactionRows(input: {
   }
 
   const collectedById = new Map(
-    input.collectedTransactions.map((transaction) => [transaction.id, transaction])
+    input.collectedTransactions.map((transaction) => [
+      transaction.id,
+      transaction
+    ])
   );
   const rows: FundingAccountOverviewTransactionItem[] = [];
 
   for (const journalEntry of input.journalEntries) {
-    if (journalEntry.status !== 'POSTED' || isSnapshotJournalEntry(journalEntry)) {
+    if (
+      journalEntry.status !== 'POSTED' ||
+      isSnapshotJournalEntry(journalEntry)
+    ) {
       continue;
     }
 

@@ -223,8 +223,7 @@ export class GeneratePlanItemsUseCase {
         recurringRuleId: null,
         liabilityRepaymentScheduleId: repaymentSchedule.id,
         ledgerTransactionTypeId: liabilityExpenseTypeId,
-        fundingAccountId:
-          repaymentSchedule.agreement.defaultFundingAccountId,
+        fundingAccountId: repaymentSchedule.agreement.defaultFundingAccountId,
         categoryId:
           repaymentSchedule.agreement.interestExpenseCategoryId ??
           repaymentSchedule.agreement.feeExpenseCategoryId ??

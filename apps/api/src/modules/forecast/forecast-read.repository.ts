@@ -124,7 +124,10 @@ export type MonthlyForecastReadModel = {
   activeRecurringRules: ForecastRecurringRuleRecord[];
   activeInsurancePolicies: ForecastInsurancePolicyRecord[];
   nextMonthDebtRepayments: ForecastDebtRepaymentRecord[];
-  nextPeriod: Pick<ForecastPeriodRecord, 'id' | 'year' | 'month' | 'status'> | null;
+  nextPeriod: Pick<
+    ForecastPeriodRecord,
+    'id' | 'year' | 'month' | 'status'
+  > | null;
   nextPeriodPlanItems: ForecastPlanItemRecord[];
   previousPeriodMetrics: {
     incomeWon: number;
@@ -132,7 +135,6 @@ export type MonthlyForecastReadModel = {
     balanceWon: number | null;
   } | null;
 };
-
 
 @Injectable()
 export class ForecastReadRepository {
@@ -146,8 +148,7 @@ export class ForecastReadRepository {
     monthLabel?: string;
   }): Promise<MonthlyForecastReadModel | null> {
     const [user, periods, currentFundingBalanceWon, ledgerTransactionTypes] =
-      await Promise.all(
-      [
+      await Promise.all([
         this.prisma.user.findUniqueOrThrow({
           where: { id: input.userId },
           select: {
@@ -248,14 +249,15 @@ export class ForecastReadRepository {
       })
     );
 
-    const nextYear = targetPeriod.month === 12 ? targetPeriod.year + 1 : targetPeriod.year;
+    const nextYear =
+      targetPeriod.month === 12 ? targetPeriod.year + 1 : targetPeriod.year;
     const nextMonth = targetPeriod.month === 12 ? 1 : targetPeriod.month + 1;
 
-    const prevPeriodRecord = periods.find(
-      (period) =>
-        (targetPeriod.month === 1
-          ? period.year === targetPeriod.year - 1 && period.month === 12
-          : period.year === targetPeriod.year && period.month === targetPeriod.month - 1)
+    const prevPeriodRecord = periods.find((period) =>
+      targetPeriod.month === 1
+        ? period.year === targetPeriod.year - 1 && period.month === 12
+        : period.year === targetPeriod.year &&
+          period.month === targetPeriod.month - 1
     );
 
     const [
@@ -300,10 +302,20 @@ export class ForecastReadRepository {
           tenantId: input.tenantId,
           ledgerId: input.ledgerId,
           isActive: true,
-          startDate: { lte: new Date(`${nextYear}-${String(nextMonth).padStart(2, '0')}-28T23:59:59.999Z`) },
+          startDate: {
+            lte: new Date(
+              `${nextYear}-${String(nextMonth).padStart(2, '0')}-28T23:59:59.999Z`
+            )
+          },
           OR: [
             { endDate: null },
-            { endDate: { gte: new Date(`${nextYear}-${String(nextMonth).padStart(2, '0')}-01T00:00:00.000Z`) } }
+            {
+              endDate: {
+                gte: new Date(
+                  `${nextYear}-${String(nextMonth).padStart(2, '0')}-01T00:00:00.000Z`
+                )
+              }
+            }
           ]
         },
         include: { ledgerTransactionType: { select: { flowKind: true } } }
@@ -321,10 +333,14 @@ export class ForecastReadRepository {
           tenantId: input.tenantId,
           ledgerId: input.ledgerId,
           dueDate: {
-            gte: new Date(`${nextYear}-${String(nextMonth).padStart(2, '0')}-01T00:00:00.000Z`),
-            lt: new Date(nextMonth === 12
-              ? `${nextYear + 1}-01-01T00:00:00.000Z`
-              : `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}-01T00:00:00.000Z`)
+            gte: new Date(
+              `${nextYear}-${String(nextMonth).padStart(2, '0')}-01T00:00:00.000Z`
+            ),
+            lt: new Date(
+              nextMonth === 12
+                ? `${nextYear + 1}-01-01T00:00:00.000Z`
+                : `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}-01T00:00:00.000Z`
+            )
           },
           status: { in: ['SCHEDULED', 'PLANNED'] }
         },
@@ -352,7 +368,8 @@ export class ForecastReadRepository {
     const prevMetrics = prevPeriodRecord
       ? metricsByPeriodId.get(prevPeriodRecord.id)
       : null;
-    let previousPeriodMetrics: MonthlyForecastReadModel['previousPeriodMetrics'] = null;
+    let previousPeriodMetrics: MonthlyForecastReadModel['previousPeriodMetrics'] =
+      null;
     if (prevMetrics) {
       const prevSummary = summarizeJournalLines(prevMetrics.journalLines);
       previousPeriodMetrics = {
@@ -462,7 +479,9 @@ export class ForecastReadRepository {
             status: nextPeriodRecord.status
           }
         : null,
-      nextPeriodPlanItems: nextPeriodPlanItemsRaw.map(mapForecastPlanItemRecord),
+      nextPeriodPlanItems: nextPeriodPlanItemsRaw.map(
+        mapForecastPlanItemRecord
+      ),
       previousPeriodMetrics
     };
   }

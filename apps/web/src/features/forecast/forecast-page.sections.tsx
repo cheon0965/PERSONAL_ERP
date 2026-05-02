@@ -154,13 +154,23 @@ export function ForecastUnavailableState() {
 
 export type ForecastTab = 'summary' | 'detail' | 'next';
 
-export const FORECAST_TABS: readonly { value: ForecastTab; label: string; shortLabel: string }[] = [
+export const FORECAST_TABS: readonly {
+  value: ForecastTab;
+  label: string;
+  shortLabel: string;
+}[] = [
   { value: 'summary', label: '요약', shortLabel: '요약' },
   { value: 'detail', label: '상세 분석', shortLabel: '상세' },
   { value: 'next', label: '다음 달 전망', shortLabel: '다음 달' }
 ];
 
-export function ForecastContent({ forecast, activeTab }: { forecast: ForecastResponse; activeTab: ForecastTab }) {
+export function ForecastContent({
+  forecast,
+  activeTab
+}: {
+  forecast: ForecastResponse;
+  activeTab: ForecastTab;
+}) {
   const trend = [...forecast.trend].reverse();
 
   return (
@@ -377,9 +387,7 @@ function ForecastNextTab({
   return (
     <Stack spacing={appLayout.sectionGap}>
       {forecast.nextMonthProjection ? (
-        <ForecastNextMonthSection
-          projection={forecast.nextMonthProjection}
-        />
+        <ForecastNextMonthSection projection={forecast.nextMonthProjection} />
       ) : (
         <SectionCard
           title="다음 달 전망 없음"

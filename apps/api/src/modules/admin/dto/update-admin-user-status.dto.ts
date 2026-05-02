@@ -7,9 +7,7 @@ import { IsIn, IsOptional, IsString } from 'class-validator';
 
 const USER_STATUSES = ['ACTIVE', 'LOCKED', 'DISABLED'] as const;
 
-export class UpdateAdminUserStatusDto
-  implements UpdateAdminUserStatusRequest
-{
+export class UpdateAdminUserStatusDto implements UpdateAdminUserStatusRequest {
   @ApiProperty({ enum: USER_STATUSES })
   @IsIn(USER_STATUSES)
   status!: UserStatus;

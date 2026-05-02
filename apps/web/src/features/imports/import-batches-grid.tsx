@@ -84,8 +84,9 @@ export function ImportBatchesGrid({
       : null,
     filters.sourceKind
       ? `원본: ${
-          sourceKindOptions.find((option) => option.value === filters.sourceKind)
-            ?.label ?? filters.sourceKind
+          sourceKindOptions.find(
+            (option) => option.value === filters.sourceKind
+          )?.label ?? filters.sourceKind
         }`
       : null
   ].filter((label): label is string => Boolean(label));

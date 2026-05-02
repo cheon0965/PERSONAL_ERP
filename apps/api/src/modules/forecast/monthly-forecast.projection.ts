@@ -293,9 +293,7 @@ function buildPeriodComparison(
       ? readModel.targetPeriod.year - 1
       : readModel.targetPeriod.year;
   const prevMonth =
-    readModel.targetPeriod.month === 1
-      ? 12
-      : readModel.targetPeriod.month - 1;
+    readModel.targetPeriod.month === 1 ? 12 : readModel.targetPeriod.month - 1;
 
   const incomeChange = subtractMoneyWon(
     currentConfirmed.incomeWon,
@@ -335,9 +333,7 @@ function buildNextMonthProjection(
       ? readModel.targetPeriod.year + 1
       : readModel.targetPeriod.year;
   const nextMonth =
-    readModel.targetPeriod.month === 12
-      ? 1
-      : readModel.targetPeriod.month + 1;
+    readModel.targetPeriod.month === 12 ? 1 : readModel.targetPeriod.month + 1;
   const monthLabel = `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
 
   const isOpen = readModel.nextPeriod != null;
@@ -408,14 +404,10 @@ function buildNextMonthProjection(
     basisParts.push(`계획 항목 ${readModel.nextPeriodPlanItems.length}건`);
   } else {
     if (readModel.activeRecurringRules.length > 0) {
-      basisParts.push(
-        `반복 규칙 ${readModel.activeRecurringRules.length}건`
-      );
+      basisParts.push(`반복 규칙 ${readModel.activeRecurringRules.length}건`);
     }
     if (readModel.activeInsurancePolicies.length > 0) {
-      basisParts.push(
-        `보험 ${readModel.activeInsurancePolicies.length}건`
-      );
+      basisParts.push(`보험 ${readModel.activeInsurancePolicies.length}건`);
     }
     if (readModel.nextMonthDebtRepayments.length > 0) {
       basisParts.push(

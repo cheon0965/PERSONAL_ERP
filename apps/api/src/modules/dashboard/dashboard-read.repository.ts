@@ -101,8 +101,7 @@ export class DashboardReadRepository {
     periodId?: string;
   }): Promise<DashboardSummaryReadModel | null> {
     const [user, periods, currentFundingBalanceWon, ledgerTransactionTypes] =
-      await Promise.all(
-      [
+      await Promise.all([
         this.prisma.user.findUniqueOrThrow({
           where: { id: input.userId },
           select: {

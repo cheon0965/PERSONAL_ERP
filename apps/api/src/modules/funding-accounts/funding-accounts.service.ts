@@ -21,7 +21,7 @@ import {
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { normalizeCaseInsensitiveText } from '../../common/utils/normalize-unique-key.util';
-import { buildJournalEntryEntryNumber } from '../journal-entries/public';
+import { buildJournalEntryEntryNumber } from '../journal-entries/journal-entry-adjustment.policy';
 import { mapFundingAccountRecordToItem } from './funding-account.mapper';
 import { readWorkspaceFundingAccountLiveBalances } from './funding-account-live-balance.reader';
 import { FundingAccountsRepository } from './funding-accounts.repository';
@@ -106,7 +106,9 @@ export class FundingAccountsService {
           normalizedName: normalizeCaseInsensitiveText(normalizedName),
           type: input.type,
           balanceWon: initialBalanceWon,
-          bootstrapStatus: resolveBootstrapStatusAfterOpeningBalance(input.type),
+          bootstrapStatus: resolveBootstrapStatusAfterOpeningBalance(
+            input.type
+          ),
           sortOrder
         }
       });
@@ -341,7 +343,6 @@ export class FundingAccountsService {
       }
     });
   }
-
 
   async update(
     user: AuthenticatedUser,

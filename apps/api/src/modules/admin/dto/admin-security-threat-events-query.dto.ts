@@ -25,9 +25,7 @@ const SECURITY_THREAT_CATEGORIES = [
   'SYSTEM'
 ] as const;
 
-export class AdminSecurityThreatEventsQueryDto
-  implements AdminSecurityThreatEventQuery
-{
+export class AdminSecurityThreatEventsQueryDto implements AdminSecurityThreatEventQuery {
   @ApiProperty({ required: false, enum: SECURITY_THREAT_SEVERITIES })
   @IsOptional()
   @IsIn(SECURITY_THREAT_SEVERITIES)

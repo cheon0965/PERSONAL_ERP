@@ -3,7 +3,7 @@ import {
   InternalServerErrorException
 } from '@nestjs/common';
 import type { PostingPolicyKey } from '@prisma/client';
-import { buildJournalEntryEntryNumber } from '../journal-entries/public';
+import { buildJournalEntryEntryNumber } from '../journal-entries/journal-entry-adjustment.policy';
 
 const ASSET_SUBJECT_CODE = '1010';
 const LIABILITY_SUBJECT_CODE = '2100';

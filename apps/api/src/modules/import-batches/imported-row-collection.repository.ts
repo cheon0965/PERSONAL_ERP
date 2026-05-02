@@ -14,7 +14,7 @@ import {
 } from '@prisma/client';
 import { fromPrismaMoneyWon } from '../../common/money/prisma-money';
 import { readCollectingAccountingPeriodStatuses } from '../accounting-periods/public';
-import { mapCollectedTransactionTypeToLedgerTransactionCode } from '../collected-transactions/public';
+import { mapCollectedTransactionTypeToLedgerTransactionCode } from '../collected-transactions/collected-transaction-type.mapper';
 import {
   type AbsorbImportedRowIntoCollectedTransactionRecordInput,
   type CreateCollectedTransactionRecordInput,

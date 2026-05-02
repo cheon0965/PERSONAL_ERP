@@ -93,7 +93,10 @@ export function AccountingPeriodsHistoryWorkspace({
   periodStatusSummary: PeriodStatusSummary;
   lockedPeriodCount: number;
   periods: AccountingPeriodItem[];
-  reopenEligibilityByPeriodId: Record<string, AccountingPeriodReopenEligibility>;
+  reopenEligibilityByPeriodId: Record<
+    string,
+    AccountingPeriodReopenEligibility
+  >;
 }) {
   const periodColumns = React.useMemo(
     () =>

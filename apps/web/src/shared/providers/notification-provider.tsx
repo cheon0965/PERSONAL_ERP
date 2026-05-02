@@ -32,12 +32,9 @@ const AppNotificationContext =
 
 let nextNotificationId = 1;
 
-export function NotificationProvider({
-  children
-}: React.PropsWithChildren) {
-  const [notification, setNotification] = React.useState<NotificationState>(
-    null
-  );
+export function NotificationProvider({ children }: React.PropsWithChildren) {
+  const [notification, setNotification] =
+    React.useState<NotificationState>(null);
   const [open, setOpen] = React.useState(false);
 
   const notify = React.useCallback((input: AppNotificationInput) => {

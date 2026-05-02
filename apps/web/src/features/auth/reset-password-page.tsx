@@ -163,9 +163,7 @@ export function ResetPasswordPage() {
                     fullWidth
                     variant="contained"
                     size="large"
-                    onClick={() =>
-                      router.push('/login' as Route)
-                    }
+                    onClick={() => router.push('/login' as Route)}
                     sx={{ py: 1.2 }}
                   >
                     로그인하러 가기
@@ -251,16 +249,14 @@ export function ResetPasswordPage() {
                     color="text.secondary"
                     sx={{ lineHeight: 1.7 }}
                   >
-                    비밀번호 재설정 링크가 올바르지 않거나 만료되었습니다.
-                    다시 요청해 주세요.
+                    비밀번호 재설정 링크가 올바르지 않거나 만료되었습니다. 다시
+                    요청해 주세요.
                   </Typography>
                   <Button
                     fullWidth
                     variant="contained"
                     size="large"
-                    onClick={() =>
-                      router.push('/forgot-password' as Route)
-                    }
+                    onClick={() => router.push('/forgot-password' as Route)}
                     sx={{ py: 1.2 }}
                   >
                     비밀번호 찾기로 이동
@@ -281,9 +277,7 @@ export function ResetPasswordPage() {
                     fullWidth
                     variant="contained"
                     size="large"
-                    onClick={() =>
-                      router.push('/forgot-password' as Route)
-                    }
+                    onClick={() => router.push('/forgot-password' as Route)}
                     sx={{ py: 1.2 }}
                   >
                     비밀번호 찾기로 이동

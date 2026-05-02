@@ -28,23 +28,19 @@ export class BulkConfirmCollectedTransactionsUseCase {
     );
 
     const requestedIds = normalizeTransactionIds(input.transactionIds);
-    const requestedIdSet = requestedIds ? new Set(requestedIds) : null;
     const readyTransactions = await this.prisma.collectedTransaction.findMany({
       where: {
         tenantId: workspace.tenantId,
         ledgerId: workspace.ledgerId,
-        status: CollectedTransactionStatus.READY_TO_POST
+        status: CollectedTransactionStatus.READY_TO_POST,
+        ...(requestedIds ? { id: { in: requestedIds } } : {})
       },
       select: {
         id: true
       },
       orderBy: [{ occurredOn: 'asc' }, { createdAt: 'asc' }]
     });
-    const targetTransactions = requestedIdSet
-      ? readyTransactions.filter((transaction) =>
-          requestedIdSet.has(transaction.id)
-        )
-      : readyTransactions;
+    const targetTransactions = readyTransactions;
 
     if (!requestedIds && targetTransactions.length === 0) {
       throw new BadRequestException(

@@ -69,8 +69,8 @@ export function TransactionFormFields({
               (hasMultipleCollectingPeriods
                 ? '최신 진행월 범위 안에서만 선택할 수 있습니다.'
                 : currentPeriod
-                ? `${currentPeriod.monthLabel} 최신 진행월 범위 안에서만 선택할 수 있습니다.`
-                : '현재 열린 운영 기간이 없습니다.')
+                  ? `${currentPeriod.monthLabel} 최신 진행월 범위 안에서만 선택할 수 있습니다.`
+                  : '현재 열린 운영 기간이 없습니다.')
             }
             {...form.register('businessDate')}
           />
