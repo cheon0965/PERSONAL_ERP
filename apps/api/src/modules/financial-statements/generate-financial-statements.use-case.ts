@@ -22,7 +22,7 @@ import { FinancialStatementsService } from './financial-statements.service';
  * 잠금된 운영월의 마감 데이터를 공식 재무제표 스냅샷으로 고정하는 유스케이스입니다.
  *
  * 재무제표는 사용자가 보는 리포트이면서 이후 비교/감사 기준이 되므로, 실시간 거래가 아니라
- * LOCKED 기간의 closing snapshot과 POSTED 전표만 원천으로 삼습니다.
+ * `LOCKED` 기간의 마감 스냅샷과 `POSTED` 전표만 원천으로 삼습니다.
  */
 @Injectable()
 export class GenerateFinancialStatementsUseCase {

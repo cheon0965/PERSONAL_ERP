@@ -184,7 +184,7 @@ export function useImportsPage(
   );
   const selectedBatch = React.useMemo(
     () =>
-      // URL에서 배치가 고정되지 않은 일반 목록 화면은 첫 배치를 기본 선택해 빈 상세 화면을 줄입니다.
+      // 배치가 URL에서 고정되지 않은 일반 목록 화면은 첫 배치를 기본 선택해 빈 상세 화면을 줄입니다.
       batches.find((candidate) => candidate.id === selectedBatchId) ??
       batches[0] ??
       null,
@@ -814,7 +814,7 @@ export function useImportsPage(
     try {
       await createImportBatchMutation.mutateAsync(uploadForm);
     } catch {
-      // React Query의 onError가 이미 실패를 업로드 드로어에 반영한다.
+      // 실패 처리는 React Query의 onError가 이미 업로드 드로어에 반영한다.
     }
   }
 
@@ -855,7 +855,7 @@ export function useImportsPage(
         request
       });
     } catch {
-      // React Query의 onError가 이미 실패를 수집 거래 등록 드로어에 반영한다.
+      // 실패 처리는 React Query의 onError가 이미 수집 거래 등록 드로어에 반영한다.
     }
   }
 
@@ -919,7 +919,7 @@ export function useImportsPage(
         }
       });
     } catch {
-      // React Query의 onError가 이미 실패를 페이지 피드백 영역에 반영한다.
+      // 실패 처리는 React Query의 onError가 이미 페이지 피드백 영역에 반영한다.
     }
   }
 

@@ -119,7 +119,7 @@ export type CreateConfirmationJournalEntryInput = {
 };
 
 /**
- * runInTransaction 내부에서만 사용하는 작업 컨텍스트입니다.
+ * `runInTransaction` 내부에서만 사용하는 작업 컨텍스트입니다.
  *
  * 전표 번호와 수집 거래 상태는 동시에 수정될 수 있는 자원이므로,
  * 유스케이스가 트랜잭션 안에서 최신 상태를 다시 읽고 기대 상태 조건으로 갱신하도록

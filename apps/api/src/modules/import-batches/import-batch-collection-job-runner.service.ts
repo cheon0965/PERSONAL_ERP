@@ -23,7 +23,7 @@ const JOB_PROGRESS_FLUSH_INTERVAL_MS = 1_000;
  * 업로드 배치의 여러 행을 백그라운드에서 수집 거래로 승격하는 Job Runner입니다.
  *
  * 대량 승격은 HTTP 요청 안에서 모두 처리하면 타임아웃과 부분 실패 처리가 어렵습니다. 그래서 요청은 Job만 만들고,
- * runner가 행 단위 성공/실패/SKIPPED 상태를 기록해 사용자가 어떤 행을 다시 처리해야 하는지 알 수 있게 합니다.
+ * 실행기가 행 단위 성공/실패/`SKIPPED` 상태를 기록해 사용자가 어떤 행을 다시 처리해야 하는지 알 수 있게 합니다.
  */
 @Injectable()
 export class ImportBatchCollectionJobRunner {
@@ -41,7 +41,7 @@ export class ImportBatchCollectionJobRunner {
       return;
     }
 
-    // API 요청은 Job 생성까지만 기다리고, 실제 행 처리는 이벤트 루프 다음 턴에 넘긴다.
+    // 요청 API는 작업 생성까지만 기다리고, 실제 행 처리는 이벤트 루프 다음 턴에 넘긴다.
     // 같은 프로세스 안 중복 실행은 runningJobIds로 막고, DB 잠금은 프로세스 간 충돌을 막는다.
     this.runningJobIds.add(jobId);
     setTimeout(() => {
@@ -241,7 +241,7 @@ export class ImportBatchCollectionJobRunner {
       }
     });
 
-    // runner는 오래 실행될 수 있으므로 각 행 처리 직전에 현재 행 상태를 다시 읽는다.
+    // 실행기는 오래 실행될 수 있으므로 각 행 처리 직전에 현재 행 상태를 다시 읽는다.
     // 이미 다른 경로로 승격된 행은 실패가 아니라 SKIPPED로 남겨 재시도 판단을 쉽게 한다.
     if (!importedRow) {
       await this.markRowFinished({

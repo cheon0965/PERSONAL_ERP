@@ -38,7 +38,7 @@ export function createPdfStandardSecurityDecryptor(
   buffer: Buffer,
   options: PdfStandardSecurityOptions
 ): PdfObjectDecryptor | null {
-  // KB국민은행 원본처럼 브라우저 실행 없이 처리 가능한 구형 Standard Security만 허용한다.
+  // 국민은행 원본처럼 브라우저 실행 없이 처리 가능한 구형 표준 보안 방식만 허용한다.
   // 지원 밖 암호화는 외부 도구 호출로 우회하지 않고 사용자에게 원본 재업로드를 안내한다.
   const pdf = buffer.toString('latin1');
   const encryptObjectNumber = readEncryptObjectNumber(pdf);
@@ -92,7 +92,7 @@ export function createPdfStandardSecurityDecryptor(
       generationNumber: number,
       data: Buffer
     ): Buffer {
-      // PDF 암호화 키는 파일 단위지만 실제 스트림은 object/generation 번호별 파생 키로 풀어야 한다.
+      // 암호화 키는 PDF 파일 단위지만 실제 스트림은 object/generation 번호별 파생 키로 풀어야 한다.
       const objectKey = buildObjectKey(fileKey, objectNumber, generationNumber);
       try {
         return rc4(objectKey, data);

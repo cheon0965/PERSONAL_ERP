@@ -106,7 +106,7 @@ export class GenerateCarryForwardUseCase {
       );
     }
 
-    // replaceExisting은 기존 이월을 먼저 취소한 뒤 새 이월을 만드는 경로다.
+    // `replaceExisting`은 기존 이월을 먼저 취소한 뒤 새 이월을 만드는 경로다.
     // 같은 기간에 두 개의 활성 이월 기준이 공존하지 않도록 취소 후 컨텍스트를 다시 읽는다.
     if (existingRecord && input.replaceExisting) {
       await this.cancelCarryForwardUseCase.cancelExistingByFromPeriod(

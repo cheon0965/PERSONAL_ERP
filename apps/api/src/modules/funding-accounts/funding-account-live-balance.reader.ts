@@ -60,7 +60,7 @@ const LIVE_BALANCE_TRANSACTION_STATUSES = [
  *
  * 잔액의 유일한 출처는 오프닝/마감 스냅샷과 POSTED 전표 증감입니다.
  * 가장 최근 스냅샷을 anchor로 삼고, 그 이후의 전표와 미확정 수집 거래 증감을 더합니다.
- * OPENING_BALANCE sourceKind 전표는 스냅샷에 이미 반영된 금액이므로 delta에서 제외합니다.
+ * `sourceKind`가 `OPENING_BALANCE`인 전표는 스냅샷에 이미 반영된 금액이므로 증감액에서 제외합니다.
  */
 export async function readWorkspaceFundingAccountLiveBalances(
   client: FundingAccountBalanceReadClient,
@@ -182,7 +182,7 @@ export async function readWorkspaceFundingAccountLiveBalances(
   const journalDeltaByAccountId = new Map<string, number>();
 
   // 확정 전표는 공식 잔액 변동이다. 기준점 이전 전표는 이미 스냅샷에 반영됐다고 보고 제외한다.
-  // OPENING_BALANCE sourceKind 전표는 스냅샷에 이미 반영된 금액이므로 이중 반영을 막는다.
+  // `sourceKind`가 `OPENING_BALANCE`인 전표는 스냅샷에 이미 반영된 금액이므로 이중 반영을 막는다.
   for (const journalEntry of journalEntries) {
     if (journalEntry.status !== 'POSTED') {
       continue;
@@ -195,7 +195,7 @@ export async function readWorkspaceFundingAccountLiveBalances(
 
       const anchor = chosenAnchorByAccountId.get(line.fundingAccountId);
 
-      // OPENING_BALANCE 전표는 스냅샷 anchor가 있을 때 이미 스냅샷에 반영된 금액이므로 제외한다.
+      // `OPENING_BALANCE` 전표는 스냅샷 기준점이 있을 때 이미 스냅샷에 반영된 금액이므로 제외한다.
       if (
         anchor &&
         journalEntry.sourceKind === JournalEntrySourceKind.OPENING_BALANCE
@@ -234,7 +234,7 @@ export async function readWorkspaceFundingAccountLiveBalances(
   const pendingDeltaByAccountId = new Map<string, number>();
 
   // 아직 전표가 되지 않은 수집 거래도 운영 화면에서는 예상 잔액에 반영한다.
-  // flowKind 기준으로 수입은 +, 지출은 -를 계산한다.
+  // `flowKind` 기준으로 수입은 +, 지출은 -를 계산한다.
   for (const transaction of collectedTransactions) {
     if (!accountIds.has(transaction.fundingAccountId)) {
       continue;

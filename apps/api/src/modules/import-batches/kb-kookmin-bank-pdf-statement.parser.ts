@@ -66,7 +66,7 @@ export function parseKbKookminBankPdfStatement(
 ): ParsedImportBatchDraft {
   assertPdfUpload(input.buffer, input.fileName);
 
-  // KB PDF는 표 구조가 HTML처럼 남지 않으므로 좌표가 붙은 텍스트를 먼저 복원한 뒤 행과 금액 열을 재구성한다.
+  // 국민은행 PDF는 표 구조가 HTML처럼 남지 않으므로 좌표가 붙은 텍스트를 먼저 복원한 뒤 행과 금액 열을 재구성한다.
   const positionedTexts = readTextLayerPdfPositionedTexts({
     buffer: input.buffer,
     password: input.password,

@@ -180,7 +180,7 @@ export class BulkCollectImportedRowsUseCase {
         );
       }
 
-      // Job과 대상 행 목록을 먼저 영속화한다. 이후 runner가 실패하더라도
+      // 작업과 대상 행 목록을 먼저 영속화한다. 이후 실행기가 실패하더라도
       // 사용자는 Job 상세에서 어떤 행까지 처리됐는지 확인할 수 있다.
       const job = await tx.importBatchCollectionJob.create({
         data: {

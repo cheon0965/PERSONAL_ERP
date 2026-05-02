@@ -179,7 +179,7 @@ function readAllowedOrigins(
       ? rawValue.split(',')
       : [fallbackOrigin];
 
-  // CORS 비교는 URL 문자열 전체가 아니라 origin 단위로만 수행한다.
+  // 허용 출처 비교는 URL 문자열 전체가 아니라 origin 단위로만 수행한다.
   // 경로/쿼리 차이 때문에 같은 출처가 중복 등록되거나 우회되는 일을 막는다.
   const normalizedOrigins = rawOrigins.map((candidate) => {
     const trimmed = candidate.trim();

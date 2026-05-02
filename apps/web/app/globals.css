@@ -8,9 +8,9 @@ body {
   margin: 0;
   padding: 0;
   /*
-   * MUI Modal scroll lock adds inline padding-right while drawers, dialogs,
-   * and popovers are open. The root element already reserves a stable
-   * scrollbar gutter, so keep the application width fixed instead.
+   * 드로어, 다이얼로그, 팝오버가 열리면 MUI Modal 스크롤 잠금이
+   * 인라인 padding-right를 추가한다. 루트 요소가 이미 안정적인 스크롤바
+   * 여백을 확보하므로 애플리케이션 너비를 고정한다.
    */
   padding-right: 0 !important;
   min-height: 100%;

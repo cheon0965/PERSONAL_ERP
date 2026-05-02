@@ -28,7 +28,7 @@ export class LogRetentionService {
     timeZone: 'Asia/Seoul'
   })
   async pruneExpiredLogsAtKoreanDawn(): Promise<void> {
-    // API 인스턴스가 여러 개 떠도 로그 보존 정리는 한 번만 수행되어야 한다.
+    // 여러 API 인스턴스가 떠도 로그 보존 정리는 한 번만 수행되어야 한다.
     // 프로세스 내부 플래그와 MySQL named lock을 함께 사용해 중복 삭제 작업을 막는다.
     const env = getApiEnv();
 

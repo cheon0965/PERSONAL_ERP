@@ -758,7 +758,7 @@ function sanitizeClientErrorMessage(message: string, fallbackMessage: string) {
     return fallbackMessage;
   }
 
-  // API가 개발자용 단서를 포함하더라도 화면에는 먼저 행동 가능한 사용자 문장을 보여준다.
+  // 개발자용 단서를 API가 포함하더라도 화면에는 먼저 행동 가능한 사용자 문장을 보여준다.
   // 원본 단서는 diagnostics에 남겨 접힌 상세 영역에서 확인하게 한다.
   const translated = translateKnownApiMessage(trimmedMessage);
   if (translated) {

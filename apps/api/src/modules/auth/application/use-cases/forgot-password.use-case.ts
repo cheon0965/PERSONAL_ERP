@@ -159,7 +159,7 @@ function buildPasswordResetEmail(input: {
     <tr>
       <td align="center">
         <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,0.06);">
-          <!-- Header -->
+          <!-- 헤더 -->
           <tr>
             <td style="background:linear-gradient(135deg, #1a237e 0%, #283593 50%, #3949ab 100%); padding:36px 40px; text-align:center;">
               <h1 style="margin:0; color:#ffffff; font-size:22px; font-weight:800; letter-spacing:-0.02em;">
@@ -170,7 +170,7 @@ function buildPasswordResetEmail(input: {
               </p>
             </td>
           </tr>
-          <!-- Body -->
+          <!-- 본문 -->
           <tr>
             <td style="padding:36px 40px 20px;">
               <p style="margin:0 0 6px; color:#1a237e; font-size:17px; font-weight:700;">
@@ -182,7 +182,7 @@ function buildPasswordResetEmail(input: {
               </p>
             </td>
           </tr>
-          <!-- CTA Button -->
+          <!-- 주요 동작 버튼 -->
           <tr>
             <td style="padding:12px 40px 28px;" align="center">
               <table role="presentation" cellpadding="0" cellspacing="0">
@@ -198,13 +198,13 @@ function buildPasswordResetEmail(input: {
               </table>
             </td>
           </tr>
-          <!-- Divider -->
+          <!-- 구분선 -->
           <tr>
             <td style="padding:0 40px;">
               <hr style="border:none; border-top:1px solid #e8eaf0; margin:0;" />
             </td>
           </tr>
-          <!-- Info -->
+          <!-- 안내 -->
           <tr>
             <td style="padding:20px 40px 12px;">
               <p style="margin:0; color:#888; font-size:12px; line-height:1.7;">
@@ -214,7 +214,7 @@ function buildPasswordResetEmail(input: {
               </p>
             </td>
           </tr>
-          <!-- Fallback URL -->
+          <!-- 대체 URL -->
           <tr>
             <td style="padding:8px 40px 28px;">
               <p style="margin:0; color:#aaa; font-size:11px; line-height:1.6; word-break:break-all;">
@@ -223,7 +223,7 @@ function buildPasswordResetEmail(input: {
               </p>
             </td>
           </tr>
-          <!-- Footer -->
+          <!-- 푸터 -->
           <tr>
             <td style="background-color:#f8f9fb; padding:20px 40px; text-align:center; border-top:1px solid #e8eaf0;">
               <p style="margin:0; color:#aaa; font-size:11px;">

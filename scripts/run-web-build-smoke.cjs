@@ -13,8 +13,8 @@ const buildTimeoutMs = 5 * 60 * 1000;
 const readinessTimeoutMs = 90 * 1000;
 const smokeEnv = {
   ...process.env,
-  // CI smoke builds do not always provide deploy-time public env values.
-  // Keep app validation strict, but provide a local API base for this isolated build/start check.
+  // 스모크 빌드가 CI에서 돌 때는 배포용 공개 환경변수가 없을 수 있다.
+  // 앱 검증은 엄격하게 유지하되, 이 독립 빌드/시작 확인에만 로컬 API 기준값을 제공한다.
   NEXT_PUBLIC_API_BASE_URL:
     process.env.NEXT_PUBLIC_API_BASE_URL ?? `${baseUrl}/api`
 };

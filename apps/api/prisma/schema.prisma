@@ -760,8 +760,8 @@ model AccountSubject {
   @@index([tenantId, ledgerId, sortOrder])
 }
 
-// Physical DB model for the domain TransactionType. The existing enum TransactionType
-// stays in place to avoid breaking the current API code during the first backbone round.
+// 도메인 TransactionType을 물리 DB 모델로 다루기 위한 구조입니다. 1차 백본 단계에서
+// 기존 API 코드가 깨지지 않도록 기존 enum TransactionType은 그대로 둡니다.
 model LedgerTransactionType {
   id                    String                    @id @default(cuid())
   tenantId              String

@@ -167,7 +167,7 @@ function parseWooriHeader(
 }
 
 function parseWooriTransactionTable(html: string): WooriParsedRow[] {
-  // thead에 '거래일시' 컬럼이 있는 table의 tbody 행들을 추출
+  // '거래일시' 컬럼이 있는 thead table의 tbody 행들을 추출
   const tablePattern =
     /<table[^>]*>[\s\S]*?거래일시[\s\S]*?<tbody>([\s\S]*?)<\/tbody>/i;
   const tableMatch = html.match(tablePattern);
@@ -214,7 +214,7 @@ function extractTableCells(rowHtml: string): string[] {
   const cells: string[] = [];
 
   for (const cellMatch of rowHtml.matchAll(cellPattern)) {
-    // HTML 태그 제거 후 텍스트만 추출
+    // 태그 제거 후 HTML 텍스트만 추출
     const text = (cellMatch[1] ?? '')
       .replace(/<[^>]*>/g, '')
       .replace(/&nbsp;/g, ' ')

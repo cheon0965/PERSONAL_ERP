@@ -201,8 +201,8 @@ export default [
       'no-restricted-imports': ['error', apiModuleBoundaryRestrictions]
     }
   },
-  // auth/admin use-cases use NestJS + Prisma directly (thin Hexagonal pattern)
-  // without full port/adapter separation — exempt from framework-free restriction.
+  // 인증/관리자 유스케이스는 NestJS와 Prisma를 직접 쓰는 얇은 헥사고날 형태라
+  // 전체 포트/어댑터 분리 규칙에서는 제외한다.
   {
     files: [
       'apps/api/src/modules/auth/application/**/*.ts',
