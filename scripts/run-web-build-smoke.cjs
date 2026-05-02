@@ -11,12 +11,19 @@ const baseUrl = `http://${host}:${port}`;
 const readinessUrl = `${baseUrl}/api/health`;
 const buildTimeoutMs = 5 * 60 * 1000;
 const readinessTimeoutMs = 90 * 1000;
+const smokeEnv = {
+  ...process.env,
+  // CI smoke builds do not always provide deploy-time public env values.
+  // Keep app validation strict, but provide a local API base for this isolated build/start check.
+  NEXT_PUBLIC_API_BASE_URL:
+    process.env.NEXT_PUBLIC_API_BASE_URL ?? `${baseUrl}/api`
+};
 
 function runProcess(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd: repoRoot,
-      env: process.env,
+      env: smokeEnv,
       stdio: 'inherit',
       shell: false,
       ...options
@@ -69,7 +76,7 @@ async function terminateProcessTree(child) {
         ['/pid', String(child.pid), '/T', '/F'],
         {
           cwd: repoRoot,
-          env: process.env,
+          env: smokeEnv,
           stdio: 'ignore',
           shell: false
         }
@@ -145,7 +152,7 @@ async function main() {
     ],
     {
       cwd: webAppRoot,
-      env: process.env,
+      env: smokeEnv,
       stdio: 'inherit',
       shell: false
     }
