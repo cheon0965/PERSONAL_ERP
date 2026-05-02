@@ -26,7 +26,7 @@
     "prisma:seed:reset": "npm run prisma:generate && node ../../scripts/run-with-root-env.cjs tsx prisma/seed.ts --reset"
   },
   "dependencies": {
-    "@nestjs/common": "^11.0.11",
+    "@nestjs/common": "^11.1.19",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.11",
     "@nestjs/jwt": "^11.0.0",
