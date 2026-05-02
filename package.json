@@ -74,10 +74,10 @@
     "prepare": "npm run build:money && node ./scripts/setup-hooks.cjs"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.2",
+    "@playwright/test": "^1.59.1",
     "concurrently": "^9.1.2",
     "playwright": "^1.58.2",
-    "prettier": "^3.5.3"
+    "prettier": "^3.8.3"
   },
   "overrides": {
     "@prisma/config": {
