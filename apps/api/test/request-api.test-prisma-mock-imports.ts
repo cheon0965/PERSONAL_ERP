@@ -31,6 +31,37 @@ export function createImportsPrismaMock(
 
     return !whereId.not || candidateId !== whereId.not;
   };
+  const matchesCollectionJobId = (
+    candidateId: string,
+    whereId?: string | { in?: string[] }
+  ) => {
+    if (!whereId) {
+      return true;
+    }
+
+    if (typeof whereId === 'string') {
+      return candidateId === whereId;
+    }
+
+    return !whereId.in || whereId.in.includes(candidateId);
+  };
+  const matchesCollectionJobStatus = (
+    candidateStatus: ImportBatchCollectionJobStatus,
+    whereStatus?: {
+      in?: ImportBatchCollectionJobStatus[];
+      not?: ImportBatchCollectionJobStatus;
+    }
+  ) => {
+    if (!whereStatus) {
+      return true;
+    }
+
+    if (whereStatus.in && !whereStatus.in.includes(candidateStatus)) {
+      return false;
+    }
+
+    return !whereStatus.not || candidateStatus !== whereStatus.not;
+  };
   const sortCollectionJobRows = (
     items: typeof state.importBatchCollectionJobRows
   ) => [...items].sort((left, right) => left.rowNumber - right.rowNumber);
@@ -67,6 +98,7 @@ export function createImportsPrismaMock(
       include?: {
         rows?: {
           orderBy?: { rowNumber?: 'asc' | 'desc' };
+          select?: Record<string, unknown>;
         };
       };
     }
@@ -513,6 +545,51 @@ export function createImportsPrismaMock(
         const candidate = items[0];
         return candidate ? projectCollectionJob(candidate, args) : null;
       },
+      findMany: async (args: {
+        where?: {
+          id?: string | { in?: string[] };
+          tenantId?: string;
+          ledgerId?: string;
+          importBatchId?: string;
+          status?: {
+            in?: ImportBatchCollectionJobStatus[];
+          };
+        };
+        include?: {
+          rows?: {
+            select?: Record<string, unknown>;
+          };
+        };
+      }) =>
+        state.importBatchCollectionJobs
+          .filter((candidate) => {
+            const matchesId = matchesCollectionJobId(
+              candidate.id,
+              args.where?.id
+            );
+            const matchesTenant =
+              !args.where?.tenantId ||
+              candidate.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId;
+            const matchesBatch =
+              !args.where?.importBatchId ||
+              candidate.importBatchId === args.where.importBatchId;
+            const matchesStatus = matchesCollectionJobStatus(
+              candidate.status,
+              args.where?.status
+            );
+
+            return (
+              matchesId &&
+              matchesTenant &&
+              matchesLedger &&
+              matchesBatch &&
+              matchesStatus
+            );
+          })
+          .map((candidate) => projectCollectionJob(candidate, args)),
       update: async (args: {
         where: { id: string };
         data: Partial<{
@@ -538,8 +615,9 @@ export function createImportsPrismaMock(
       },
       updateMany: async (args: {
         where?: {
-          id?: string;
+          id?: string | { in?: string[] };
           status?: {
+            in?: ImportBatchCollectionJobStatus[];
             not?: ImportBatchCollectionJobStatus;
           };
         };
@@ -556,10 +634,14 @@ export function createImportsPrismaMock(
       }) => {
         let count = 0;
         state.importBatchCollectionJobs.forEach((candidate) => {
-          const matchesId = !args.where?.id || candidate.id === args.where.id;
-          const matchesStatus =
-            !args.where?.status?.not ||
-            candidate.status !== args.where.status.not;
+          const matchesId = matchesCollectionJobId(
+            candidate.id,
+            args.where?.id
+          );
+          const matchesStatus = matchesCollectionJobStatus(
+            candidate.status,
+            args.where?.status
+          );
 
           if (!matchesId || !matchesStatus) {
             return;
@@ -612,6 +694,34 @@ export function createImportsPrismaMock(
       }
     },
     importBatchCollectionJobRow: {
+      updateMany: async (args: {
+        where?: {
+          id?: {
+            in?: string[];
+          };
+        };
+        data: Partial<{
+          status: ImportBatchCollectionJobRowStatus;
+          collectedTransactionId: string | null;
+          message: string | null;
+          startedAt: Date;
+          finishedAt: Date;
+        }>;
+      }) => {
+        let count = 0;
+        state.importBatchCollectionJobRows.forEach((candidate) => {
+          const matchesId =
+            !args.where?.id?.in || args.where.id.in.includes(candidate.id);
+          if (!matchesId) {
+            return;
+          }
+
+          Object.assign(candidate, args.data, { updatedAt: new Date() });
+          count += 1;
+        });
+
+        return { count };
+      },
       update: async (args: {
         where: { id: string };
         data: Partial<{
@@ -634,6 +744,45 @@ export function createImportsPrismaMock(
       }
     },
     importBatchCollectionLock: {
+      findMany: async (args: {
+        where?: {
+          tenantId?: string;
+          ledgerId?: string;
+          importBatchId?: string;
+          expiresAt?: {
+            lt?: Date;
+          };
+        };
+        select?: {
+          jobId?: boolean;
+        };
+      }) =>
+        state.importBatchCollectionLocks
+          .filter((candidate) => {
+            const matchesTenant =
+              !args.where?.tenantId ||
+              candidate.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId;
+            const matchesBatch =
+              !args.where?.importBatchId ||
+              candidate.importBatchId === args.where.importBatchId;
+            const matchesExpires =
+              !args.where?.expiresAt?.lt ||
+              candidate.expiresAt.getTime() < args.where.expiresAt.lt.getTime();
+
+            return (
+              matchesTenant && matchesLedger && matchesBatch && matchesExpires
+            );
+          })
+          .map((candidate) =>
+            args.select
+              ? {
+                  ...(args.select.jobId ? { jobId: candidate.jobId } : {})
+                }
+              : candidate
+          ),
       findFirst: async (args: {
         where?: {
           tenantId?: string;

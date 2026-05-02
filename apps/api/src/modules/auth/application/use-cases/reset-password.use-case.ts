@@ -77,7 +77,7 @@ export class ResetPasswordUseCase {
         });
 
         // 모든 세션 만료 처리
-        await this.authSessions.revokeAllUserSessions(token.userId);
+        await this.authSessions.revokeAllUserSessions(token.userId, tx);
 
         this.securityEvents.log('auth.password_reset_completed', {
           requestId: context.requestId,

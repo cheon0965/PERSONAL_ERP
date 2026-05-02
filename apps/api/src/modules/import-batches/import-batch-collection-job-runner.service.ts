@@ -13,9 +13,9 @@ import {
 import { OperationalAuditPublisher } from '../../common/infrastructure/operational/operational-audit-publisher.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { buildCollectRequestForBulkRow } from './bulk-collect-imported-rows.policy';
+import { IMPORT_COLLECTION_LOCK_TTL_MS } from './import-batch-collection-job.constants';
 import { ImportedRowCollectionService } from './imported-row-collection.service';
 
-const IMPORT_COLLECTION_LOCK_TTL_MS = 15 * 60 * 1000;
 const JOB_PROGRESS_FLUSH_ROW_INTERVAL = 5;
 const JOB_PROGRESS_FLUSH_INTERVAL_MS = 1_000;
 

@@ -15,6 +15,7 @@ import { requireCurrentWorkspace } from '../../../../common/auth/required-worksp
 import { assertWorkspaceActionAllowed } from '../../../../common/auth/workspace-action.policy';
 // eslint-disable-next-line no-restricted-imports
 import { PrismaService } from '../../../../common/prisma/prisma.service';
+import { ImportBatchCollectionJobMaintenanceService } from '../../import-batch-collection-job-maintenance.service';
 
 const CANCELLABLE_COLLECTED_TRANSACTION_STATUSES = [
   CollectedTransactionStatus.COLLECTED,
@@ -24,7 +25,10 @@ const CANCELLABLE_COLLECTED_TRANSACTION_STATUSES = [
 
 @Injectable()
 export class CancelImportBatchCollectionUseCase {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jobMaintenance: ImportBatchCollectionJobMaintenanceService
+  ) {}
 
   async execute(
     user: AuthenticatedUser,
@@ -50,6 +54,11 @@ export class CancelImportBatchCollectionUseCase {
     if (!batch) {
       return null;
     }
+    await this.jobMaintenance.reconcileExpiredCollectionJobs(new Date(), {
+      tenantId: workspace.tenantId,
+      ledgerId: workspace.ledgerId,
+      importBatchId
+    });
 
     const activeCollectionJob =
       await this.prisma.importBatchCollectionJob.findFirst({

@@ -14,10 +14,14 @@ import {
   importBatchCollectionJobSelect,
   mapImportBatchCollectionJobToItem
 } from '../../import-batch-collection-job.mapper';
+import { ImportBatchCollectionJobMaintenanceService } from '../../import-batch-collection-job-maintenance.service';
 
 @Injectable()
 export class GetActiveImportBatchCollectionJobUseCase {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jobMaintenance: ImportBatchCollectionJobMaintenanceService
+  ) {}
 
   async execute(
     user: AuthenticatedUser,
@@ -28,6 +32,11 @@ export class GetActiveImportBatchCollectionJobUseCase {
       workspace.membershipRole,
       'collected_transaction.create'
     );
+    await this.jobMaintenance.reconcileExpiredCollectionJobs(new Date(), {
+      tenantId: workspace.tenantId,
+      ledgerId: workspace.ledgerId,
+      importBatchId
+    });
 
     const job = await this.prisma.importBatchCollectionJob.findFirst({
       where: {

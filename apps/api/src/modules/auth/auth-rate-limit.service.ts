@@ -14,10 +14,14 @@ const RESEND_LIMIT = 3;
 const FORGOT_PASSWORD_LIMIT = 3;
 const RESET_PASSWORD_LIMIT = 5;
 const WINDOW_MS = 15 * 60 * 1000;
+const SWEEP_INTERVAL_MS = 60 * 1000;
+const MAX_BUCKETS = 10_000;
+const TARGET_BUCKETS_AFTER_CAP = 9_000;
 
 @Injectable()
 export class AuthRateLimitService {
   private readonly buckets = new Map<string, AuthAttemptBucket>();
+  private lastSweepAt = 0;
 
   constructor(private readonly clock: ClockPort) {}
 
@@ -178,7 +182,9 @@ export class AuthRateLimitService {
   }
 
   private assertAllowed(key: string, limit: number, message: string): void {
-    const bucket = this.readBucket(key);
+    const now = this.clock.now().getTime();
+    this.sweepExpiredBuckets(now);
+    const bucket = this.readBucket(key, now);
 
     if (bucket.count >= limit) {
       throw new HttpException(message, HttpStatus.TOO_MANY_REQUESTS);
@@ -186,18 +192,45 @@ export class AuthRateLimitService {
   }
 
   private recordFailure(key: string): void {
-    const bucket = this.readBucket(key);
+    const now = this.clock.now().getTime();
+    this.sweepExpiredBuckets(now);
+    const bucket = this.readBucket(key, now);
     bucket.count += 1;
     this.buckets.set(key, bucket);
+    this.enforceBucketCap();
   }
 
-  private readBucket(key: string): AuthAttemptBucket {
-    const now = this.clock.now().getTime();
+  private readBucket(key: string, now: number): AuthAttemptBucket {
     const current = this.buckets.get(key);
 
     return !current || current.resetAt <= now
       ? { count: 0, resetAt: now + WINDOW_MS }
       : current;
   }
-}
 
+  private sweepExpiredBuckets(now: number): void {
+    if (now - this.lastSweepAt < SWEEP_INTERVAL_MS) {
+      return;
+    }
+
+    this.lastSweepAt = now;
+    for (const [key, bucket] of this.buckets) {
+      if (bucket.resetAt <= now) {
+        this.buckets.delete(key);
+      }
+    }
+  }
+
+  private enforceBucketCap(): void {
+    if (this.buckets.size <= MAX_BUCKETS) {
+      return;
+    }
+
+    for (const key of this.buckets.keys()) {
+      this.buckets.delete(key);
+      if (this.buckets.size <= TARGET_BUCKETS_AFTER_CAP) {
+        return;
+      }
+    }
+  }
+}

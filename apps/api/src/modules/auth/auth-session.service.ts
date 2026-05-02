@@ -29,6 +29,8 @@ type AccessTokenPayload = {
   type: 'access';
 };
 
+type AuthSessionWriteClient = Pick<PrismaService, 'authSession'>;
+
 type RefreshTokenPayload = {
   sub: string;
   sid: string;
@@ -326,8 +328,11 @@ export class AuthSessionService {
     };
   }
 
-  async revokeAllUserSessions(userId: string): Promise<void> {
-    await this.prisma.authSession.updateMany({
+  async revokeAllUserSessions(
+    userId: string,
+    client: AuthSessionWriteClient = this.prisma
+  ): Promise<void> {
+    await client.authSession.updateMany({
       where: {
         userId,
         revokedAt: null

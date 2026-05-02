@@ -48,7 +48,8 @@ export class ForgotPasswordUseCase {
 
     const rawToken = createPasswordResetToken();
     const now = this.clock.now();
-    const expiresAt = new Date(now.getTime() + getPasswordResetTtlMs());
+    const ttlMs = getPasswordResetTtlMs();
+    const expiresAt = new Date(now.getTime() + ttlMs);
 
     // 기존 미사용 토큰 무효화
     await this.prisma.passwordResetToken.updateMany({
@@ -69,7 +70,8 @@ export class ForgotPasswordUseCase {
         buildPasswordResetEmail({
           to: user.email,
           name: user.name,
-          resetUrl: buildPasswordResetUrl(rawToken)
+          resetUrl: buildPasswordResetUrl(rawToken),
+          ttlLabel: formatPasswordResetTtlLabel(ttlMs)
         })
       );
       this.securityEvents.log('auth.password_reset_email_sent', {
@@ -118,10 +120,7 @@ export function hashPasswordResetToken(token: string): string {
 }
 
 export function getPasswordResetTtlMs(): number {
-  return parseJwtDurationToMs(
-    getApiEnv().EMAIL_VERIFICATION_TTL,
-    30 * 60 * 1000
-  );
+  return parseJwtDurationToMs(getApiEnv().PASSWORD_RESET_TTL, 30 * 60 * 1000);
 }
 
 export function buildPasswordResetUrl(token: string): string {
@@ -134,6 +133,7 @@ function buildPasswordResetEmail(input: {
   to: string;
   name: string;
   resetUrl: string;
+  ttlLabel: string;
 }) {
   const text = [
     `${input.name}님, PERSONAL_ERP 비밀번호 재설정을 요청하셨습니다.`,
@@ -141,7 +141,7 @@ function buildPasswordResetEmail(input: {
     `비밀번호 재설정 링크: ${input.resetUrl}`,
     '',
     '본인이 요청하지 않았다면 이 메일을 무시해 주세요.',
-    '링크는 30분 후에 만료됩니다.'
+    `링크는 ${input.ttlLabel} 후에 만료됩니다.`
   ].join('\n');
 
   const escapedResetUrl = escapeHtml(input.resetUrl);
@@ -208,7 +208,7 @@ function buildPasswordResetEmail(input: {
           <tr>
             <td style="padding:20px 40px 12px;">
               <p style="margin:0; color:#888; font-size:12px; line-height:1.7;">
-                ⏱ 이 링크는 <strong>30분</strong> 후에 만료됩니다.<br/>
+                ⏱ 이 링크는 <strong>${escapeHtml(input.ttlLabel)}</strong> 후에 만료됩니다.<br/>
                 🔒 본인이 요청하지 않았다면 이 메일을 무시해 주세요.<br/>
                 계정 보안에 문제가 없다면 별도 조치는 필요하지 않습니다.
               </p>
@@ -253,6 +253,27 @@ function escapeHtml(value: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+export function formatPasswordResetTtlLabel(ttlMs: number): string {
+  const dayMs = 24 * 60 * 60 * 1000;
+  const hourMs = 60 * 60 * 1000;
+  const minuteMs = 60 * 1000;
+  const secondMs = 1000;
+
+  if (ttlMs >= dayMs && ttlMs % dayMs === 0) {
+    return `${ttlMs / dayMs}일`;
+  }
+
+  if (ttlMs >= hourMs && ttlMs % hourMs === 0) {
+    return `${ttlMs / hourMs}시간`;
+  }
+
+  if (ttlMs >= minuteMs) {
+    return `${Math.ceil(ttlMs / minuteMs)}분`;
+  }
+
+  return `${Math.max(1, Math.ceil(ttlMs / secondMs))}초`;
 }
 
 function isTooManyRequestsError(error: unknown): error is Error {
