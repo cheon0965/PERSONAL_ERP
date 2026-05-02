@@ -153,7 +153,7 @@
 - 운영 반출은 현재 `UTF-8 CSV` payload를 생성하고 감사 이벤트를 남깁니다.
 - `npm run docs:check`는 문서의 `npm run` 표기와 `docs/API.md`, `docs/CURRENT_CAPABILITIES.md`, `docs/OPERATIONS_CHECKLIST.md`, `docs/VALIDATION_NOTES.md`의 Web/API surface를 실제 코드와 대조합니다.
 - `npm run check:quick`는 문서 점검, 금액 가드, lint, typecheck를 함께 수행합니다.
-- `npm run test:e2e:smoke:build`, `npm run test:e2e`, `npm run test:prisma`가 대표 사용자 흐름과 실DB 경계를 나눠서 검증합니다.
+- `npm run test:e2e:smoke:build:browser`, `npm run test:e2e`, `npm run test:prisma`가 대표 사용자 흐름과 실DB 경계를 나눠서 검증합니다.
 - demo fallback은 기본적으로 꺼져 있으며, 개발 환경에서만 명시적으로 켤 수 있습니다.
 
 ## 현재 범위 밖으로 남겨 둔 것

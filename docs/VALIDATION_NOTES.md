@@ -26,16 +26,16 @@
 
 ## 대표 심화 검증
 
-- `npm run test:e2e:smoke:build`
+- `npm run test:e2e:smoke:build:browser`
 - `npm run test:e2e`
 - `npm run test:prisma`
 - `npm run audit:runtime:full`
 
 설명:
 
-- `npm run test:e2e:smoke:build`는 CI와 동일하게 in-process `Next.js` production build/start 경로를 올린 뒤 health route 기준 최소 HTTP smoke로 build 결과물과 서버 기동을 확인합니다.
-- `npm run test:e2e:smoke:build:browser`는 루트 래퍼 명령이며, 내부적으로 Web workspace의 browser build smoke를 호출합니다.
-- 이 명령은 필요할 때 로그인/세션 복원/운영 체크리스트/현재 작업 기준 fallback까지 포함한 브라우저 build smoke를 별도로 다시 확인합니다.
+- `npm run test:e2e:smoke:build:browser`는 CI와 동일한 루트 래퍼 명령이며, 내부적으로 Web workspace의 browser build smoke를 호출합니다.
+- 이 명령은 로그인/세션 복원/운영 체크리스트/현재 작업 기준 fallback까지 포함한 브라우저 build smoke를 다시 확인합니다.
+- `npm run test:e2e:smoke:build`는 브라우저 없는 in-process `Next.js` production build/start 경로와 health route 기준 최소 HTTP smoke를 별도로 확인할 때 사용합니다.
 - `npm run test:e2e`는 기준 데이터 CRUD, 반복 규칙 CRUD까지 포함한 전체 브라우저 대표 흐름 검증입니다.
 - `npm run test:prisma`는 기본 루프와 분리된 실DB Prisma/HTTP 통합 검증이며, Docker 기반 disposable MySQL을 띄운 뒤 `prisma generate -> prisma migrate deploy -> minimal fixture seed -> UUID 범위 fixture/test -> teardown`을 한 명령으로 수행합니다. 현재는 수집 거래 저장소 경계 1개와 실제 API/DB 월 운영 workflow 4개를 포함합니다. workflow는 `운영기간 open -> 업로드 배치 -> 수집 -> 전표 확정 -> close`, `반복규칙 -> plan item 생성 -> import collect 자동 매칭 -> confirm -> 재무제표 생성`, `close -> 재무제표 생성 -> reopen -> 전표 reverse/correct`, `carry-forward 생성 이후 source period reopen 409 보호` 시나리오를 검증합니다.
 - `npm run audit:runtime:full`은 allowlist 적용 없이 현재 runtime advisory 전체를 다시 확인할 때 사용하는 follow-up 명령입니다.
@@ -66,7 +66,7 @@
 - 업로드 배치 일괄 등록의 만료 잠금 리컨실러를 추가해 `PENDING/RUNNING` Job이 오래된 lock 뒤에 남는 경우 자동으로 `FAILED/PARTIAL/SUCCEEDED` 종결 상태로 정리되게 했습니다.
 - 비밀번호 재설정 만료시간을 `PASSWORD_RESET_TTL`로 분리했고, 미설정 시 `EMAIL_VERIFICATION_TTL`을 따릅니다. 메일 문구도 실제 TTL에서 계산한 문구를 사용합니다.
 - 인증 rate limit은 여전히 프로세스 메모리 adapter지만, 만료 bucket sweep과 최대 bucket cap을 추가했고 운영 체크리스트에 reverse proxy/WAF/API gateway rate limit 병행 원칙을 명시했습니다.
-- Dependabot 설정을 추가해 npm runtime/security update와 GitHub Actions update가 주기적으로 PR로 올라오게 했습니다.
+- Dependabot 예약 업데이트 설정은 만들지 않습니다. GitHub가 주기적으로 업데이트 PR용 브랜치를 만들지 않게 하고, 의존성 점검은 `npm run audit:runtime`, `npm run audit:runtime:full`, 필요 시 수동 업데이트로 관리합니다.
 - `npm run audit:runtime`은 high/critical gate 기준 통과하지만, `npm run audit:runtime:full`은 2026-05-02 기준 `next@15.5.15 -> postcss@8.4.31` 경유 moderate advisory가 남습니다. `npm audit fix --force`는 `next@9.3.3`으로 낮추는 위험한 제안이므로 적용하지 않고 upstream compatible patch를 추적합니다.
 
 ## 2026-04-30 ASVS L2 보강 검증
@@ -90,7 +90,7 @@
 - `validate`
   `npm run check:quick`와 `npm run test`를 조합해 포맷, 문서 명령 정합성, 문서 Web/API surface 정합성, lint, typecheck, 기본 테스트를 확인합니다.
 - `e2e-smoke`
-  `npm run test:e2e:smoke:build`로 CI와 같은 in-process production build/start 기준 HTTP smoke를 다시 확인합니다.
+  `npm run test:e2e:smoke:build:browser`로 CI와 같은 production build/start 기준 브라우저 smoke를 다시 확인합니다.
 
 - `security-regression`
   `npm run test:security:api`로 인증/세션, 브라우저/API 경계 회귀를 CI에서 다시 확인합니다.
@@ -205,7 +205,7 @@
 - `GET /dashboard/summary`
   다른 workspace/ledger 데이터가 집계에 섞이지 않고 raw read model을 노출하지 않는지 검증
 - `GET /funding-account-status/summary`
-  현재 구현 기준 선택 기간/자금수단 범위에서 수집 거래 기준과 확정 전표 기준의 자금수단별 수입, 지출, 이체, 잔액 현황을 반환하는 read model입니다. 전용 요청 단위 회귀 테스트는 아직 추가되지 않았고, 현재 자동 검증은 typecheck/build/lint/docs surface를 기준으로 합니다.
+  현재 구현 기준 선택 기간/자금수단 범위에서 수집 거래 기준과 확정 전표 기준의 자금수단별 수입, 지출, 이체, 잔액 현황을 반환하는 read model입니다. 전용 요청 단위 회귀 테스트로 기간과 자금수단 필터, current workspace 범위, 거래 목록, 경고 메시지, 자금수단별 합계가 함께 검증됩니다.
 - `GET /forecast/monthly`
   현재 구현 기준 current workspace 집계만 사용하고 month query를 그대로 반영하는지 검증
 - `GET /operations/summary`, `GET /operations/checklist`, `GET /operations/exceptions`, `GET /operations/month-end`, `GET /operations/import-status`, `GET /operations/system-status`, `GET /operations/alerts`, `GET/POST /operations/exports`, `GET/POST /operations/notes`
@@ -237,9 +237,9 @@
 - 실제 브라우저 상호작용으로 `/imports` 업로드 배치에서 행을 기존 계획 기반 수집 거래에 흡수/매칭하거나 새 수집 거래로 등록한 뒤 `/transactions`에서 전표 확정을 실행하고 `/journal-entries`에서 생성 전표를 여는 월 운영 cross-feature 흐름을 검증
 - API 요청 테스트로 IM뱅크 PDF 업로드와 업로드 배치 일괄 등록 Job/진행률/동시 작업 잠금 경계를 검증하고, Web 단위에서는 일괄 등록 버튼/진행률 표시와 API helper path를 함께 확인
 - 루트 `ci:local:*` 스크립트와 `docs/DEVELOPMENT_GUIDE.md` 매핑표로 GitHub Actions 주요 job을 로컬에서 다시 따를 수 있는 진입점을 제공
-- `npm run test:e2e:smoke:build`로 in-process production build/start 경로에 결과물을 올린 뒤 health route 응답 기준 최소 HTTP smoke를 자동 검증
-- `npm run test:e2e:smoke:build:browser`로는 로그인/세션 복원, 운영 체크리스트 핵심 CTA, 현재 작업 기준 fallback 같은 브라우저 build smoke를 루트 래퍼 경로로 필요 시 별도로 검증
-- CI의 `e2e-smoke` 잡은 개발 서버가 아니라 build 결과물 기준 HTTP smoke를 실행
+- `npm run test:e2e:smoke:build:browser`로 로그인/세션 복원, 운영 체크리스트 핵심 CTA, 현재 작업 기준 fallback 같은 브라우저 build smoke를 루트 래퍼 경로로 검증
+- `npm run test:e2e:smoke:build`는 브라우저 없는 in-process production build/start 경로와 health route 기준 최소 HTTP smoke가 필요할 때 별도로 검증
+- CI의 `e2e-smoke` 잡은 개발 서버가 아니라 build 결과물 기준 브라우저 smoke를 실행
 - 실제 브라우저 상호작용으로 `dashboard`, `funding-account-status`, `reference-data`, `periods`, `insurances`, `vehicles`, `recurring`, `plan-items`, `imports`, `transactions`, `journal-entries`, `financial-statements`, `carry-forwards`, `forecast`, `settings`, `admin`, `operations`의 대표 운영 체크리스트 empty state, readiness 경고, fallback CTA가 유지되는지 검증
 - 기준 데이터 CRUD, 반복 규칙 CRUD, 보험 계약 CRUD, 차량 기본 정보 CRUD 브라우저 검증은 현재 `npm run test:e2e` 전체 브라우저 회귀 범위에 남기고, CI smoke에서는 제외합니다.
 
@@ -257,7 +257,7 @@
 - 차량 연료/정비 이력 분리, `GET /vehicles/operating-summary` projection 추가, 차량 `Vehicle` 물리 필드/응답/계약에서 `monthlyExpenseWon` 제거, 차량 연료/정비 이력의 선택적 수집거래 연동과 확정 후 수정 차단, 레거시 `Transaction` 물리 제거와 active reference guard, 메인 월 운영 루프의 `reference-data -> accounting-periods -> insurance/vehicles -> recurring-rules -> plan-items -> collected-transactions/imports -> journal-entries -> financial-statements -> carry-forwards -> forecast` 브라우저 시나리오, `imports -> collected-transactions -> journal-entries` cross-feature 브라우저 시나리오, Next.js ESLint plugin explicit registration까지는 반영됨
 - 이전에 저장소 안 우선순위로 선별했던 작업은 모두 닫혔음
 - `.github/workflows/ci.yml`의 `prisma-integration` job은 disposable MySQL 기반 `npm run test:prisma`로 고정되었으며, Docker 환경 로컬 실행과 GitHub workflow 통과 확인까지 완료됨
-- `npm run audit:runtime`는 현재 `high` 기준으로 gate를 걸고 있으며, 2026-04-22 기준 `npm run audit:runtime:full` 결과는 `0 vulnerabilities`입니다. 현재 `security/runtime-audit-allowlist.json`은 비어 있습니다.
+- `npm run audit:runtime`는 현재 `high` 기준으로 gate를 걸고 있으며, `security/runtime-audit-allowlist.json`은 비어 있습니다. 2026-04-22에는 `npm run audit:runtime:full`이 `0 vulnerabilities`였지만, 2026-05-02 현재는 `next@15.5.15 -> postcss@8.4.31` 경유 moderate advisory가 남아 위 최신 보완사항 기록을 우선합니다.
 
 ## 2026-04-22 CI/Prisma 증적 확인
 
@@ -296,7 +296,7 @@
   `npm run audit:runtime`를 `high` 게이트 + 만료형 allowlist 검증 스크립트로 전환했습니다.
   예외 파일은 `security/runtime-audit-allowlist.json`으로 고정했습니다.
 - 결과:
-  현재 runtime audit full 결과는 `0 vulnerabilities`이고, allowlist entry도 `0`건입니다.
+  당시 runtime audit full 결과는 `0 vulnerabilities`였고, allowlist entry도 `0`건입니다. 이후의 현재 판정은 위 최신 날짜별 보완사항 기록을 우선합니다.
 - 결론:
   지금 시점에는 active exception 없이 `high` 게이트를 바로 유지하는 것이 합리적이며, 이후 unavoidable advisory가 생기면 만료일과 사유가 있는 allowlist로만 예외를 허용합니다.
 

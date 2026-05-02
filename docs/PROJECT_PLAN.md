@@ -47,7 +47,7 @@
 26. Prisma 실DB 통합검증 재현성 고정
     `npm run test:prisma`가 Docker 기반 disposable MySQL을 띄워 `generate -> migrate -> minimal fixture seed -> test -> teardown`을 한 명령으로 수행하도록 정리했습니다.
 27. 보안 검증 증적과 runtime audit 예외 정리
-    GitHub CI 첫 전체 통과 증적과 required check 연결, Docker 환경 `npm run test:prisma`, GitHub `prisma-integration` 통과 확인을 완료했습니다. `@nestjs/config`, `@nestjs/swagger`, `next` 패치 업데이트로 runtime audit tracked exception도 해소해 `npm run audit:runtime`은 현재 `0 vulnerabilities` 기준으로 통과합니다.
+    GitHub CI 첫 전체 통과 증적과 required check 연결, Docker 환경 `npm run test:prisma`, GitHub `prisma-integration` 통과 확인을 완료했습니다. `@nestjs/config`, `@nestjs/swagger`, `next` 패치 업데이트로 당시 runtime audit tracked exception을 해소했습니다. 현재 런타임 감사 판정은 `docs/VALIDATION_NOTES.md`의 최신 날짜별 기록을 우선합니다.
 28. 자금수단별 현황 화면 구현
     `GET /funding-account-status/summary`와 Web `/funding-account-status`를 추가해 수집 거래 기준과 확정 전표 기준의 자금수단별 수입, 지출, 이체, 잔액 분석을 제공하도록 정리했습니다.
 29. 화면 도움말과 오류/진단 문구 정리

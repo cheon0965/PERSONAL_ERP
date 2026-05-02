@@ -16,7 +16,7 @@
 - 대상 브랜치가 기준 커밋과 일치하는지 확인합니다.
 - `npm run check:quick`가 통과하는지 확인합니다.
 - 배포 직전 기준으로 `npm run build`가 통과하는지 확인합니다.
-- Web 라우트, 인증 복원, Next.js build 경로를 건드렸다면 `npm run test:e2e:smoke:build`도 통과하는지 확인합니다.
+- Web 라우트, 인증 복원, Next.js build 경로를 건드렸다면 `npm run test:e2e:smoke:build:browser`도 통과하는지 확인합니다.
 - DB 스키마 변경이 포함되면 migration 파일이 함께 있는지 확인합니다.
 - `NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=false`인지 확인합니다.
 - `APP_ORIGIN`과 `NEXT_PUBLIC_API_BASE_URL` 조합이 실제 도메인과 맞는지 확인합니다.

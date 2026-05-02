@@ -164,6 +164,8 @@ export class FundingAccountStatusService {
     }
   ): Promise<FundingAccountOverviewResponse | null> {
     const workspace = requireCurrentWorkspace(user);
+    // 수집 거래 기준은 월중 운영 판단용이고, 확정 전표 기준은 마감/공식 확인용이다.
+    // 같은 화면에서 쓰지만 잔액과 거래 행의 출처가 다르므로 초기에 기준을 고정한다.
     const basis = normalizeBasis(input?.basis);
 
     const [periods, liveFundingAccounts, ledgerTransactionTypes] =
@@ -260,6 +262,8 @@ export class FundingAccountStatusService {
         applyCollectedTransactionMetrics(metricsByAccountId, transaction);
       }
     } else {
+      // 확정 전표 기준에서도 수집 거래 상태 카운터는 경고/미확정 안내에 필요하다.
+      // 금액 흐름은 POSTED 전표 라인에서만 계산해 운영용 추정치와 공식 수치를 섞지 않는다.
       applyCollectedTransactionCounters(
         metricsByAccountId,
         targetCollectedTransactions
@@ -745,6 +749,8 @@ function classifyJournalFundingLine(
     return null;
   }
 
+  // 자금수단이 붙은 전표 라인의 차/대 방향을 화면의 현금흐름 의미로 번역한다.
+  // 자산 증가는 유입, 자산 감소는 유출이며 부채/기타 계정은 상환·대체 흐름으로 분리한다.
   if (subjectKind === 'ASSET') {
     return debitAmount > creditAmount
       ? {
@@ -863,6 +869,8 @@ function finalizeAccountClosingBalances(input: {
       calculateNetFlow(metrics)
     );
 
+    // 잠금된 기간의 확정 전표 기준에서는 마감 스냅샷이 공식 잔액이다.
+    // 그 외에는 현재 기준의 flow를 더한 계산 잔액으로 화면을 채운다.
     metrics.basisClosingBalanceWon =
       input.basis === 'POSTED_JOURNALS' &&
       input.targetPeriod.status === AccountingPeriodStatus.LOCKED &&
@@ -1086,6 +1094,8 @@ function buildCategoryBreakdown(input: {
 }): FundingAccountOverviewCategoryItem[] {
   const grouped = new Map<string, FundingAccountOverviewCategoryItem>();
 
+  // 카테고리는 수집 거래가 소유하고 전표 라인에는 직접 저장하지 않는다.
+  // 확정 전표 기준에서는 전표로 연결된 수집 거래만 남겨 공식 기준과 범위를 맞춘다.
   for (const transaction of input.transactions) {
     if (
       input.selectedFundingAccountId &&

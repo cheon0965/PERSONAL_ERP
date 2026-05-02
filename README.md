@@ -158,7 +158,7 @@ npm run check:quick
 npm run test
 npm run docs:check
 npm run money:check
-npm run test:e2e:smoke:build
+npm run test:e2e:smoke:build:browser
 npm run test:e2e
 npm run test:prisma
 npm run audit:runtime

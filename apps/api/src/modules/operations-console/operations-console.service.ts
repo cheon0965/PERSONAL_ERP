@@ -181,6 +181,8 @@ export class OperationsConsoleService {
   ) {}
 
   async getHubSummary(user: AuthenticatedUser): Promise<OperationsHubSummary> {
+    // 허브 요약은 같은 snapshot에서 체크리스트/예외/마감/업로드 상태를 파생한다.
+    // 엔드포인트별 조회 시점이 갈라지면 운영자가 보는 카운트가 서로 어긋날 수 있다.
     const snapshot = await this.buildSnapshot(user);
     const checklist = this.buildChecklist(snapshot);
     const exceptions = this.buildExceptions(snapshot);
@@ -811,6 +813,8 @@ export class OperationsConsoleService {
       });
     }
 
+    // 예외 목록과 감사 이벤트가 같은 원인을 동시에 가리킬 수 있어 사용자 알림은 한 번만 노출한다.
+    // 상세 추적은 requestId/sourceAuditEventId를 유지해 관리자 로그에서 이어서 확인한다.
     const dedupedAlerts = dedupeAlerts(alerts).sort((left, right) =>
       right.createdAt.localeCompare(left.createdAt)
     );
@@ -1161,6 +1165,7 @@ function readDateObject(value: Date | string | null | undefined): Date | null {
 }
 
 function _toCsv(rows: CsvRow[]): string {
+  // 운영 반출 CSV는 Excel에서 한글이 깨지지 않도록 UTF-8 BOM을 붙이고 CRLF로 고정한다.
   return `\ufeff${rows.map((row) => row.map(escapeCsvCell).join(',')).join('\r\n')}\r\n`;
 }
 
@@ -1177,6 +1182,7 @@ function escapeCsvCell(cell: CsvCell): string {
 
 function guardCsvFormulaCell(value: string): string {
   const withoutBom = value.replace(/^\ufeff/, '');
+  // CSV를 스프레드시트에서 열 때 수식으로 실행될 수 있는 셀은 텍스트로 강제한다.
   if (/^[\t\r\n]/.test(withoutBom) || /^[\s]*[=+\-@]/.test(withoutBom)) {
     return `'${value}`;
   }
