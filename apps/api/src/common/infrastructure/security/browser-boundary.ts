@@ -35,6 +35,8 @@ export function applyBrowserBoundaryHeaders(
   response.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
   response.setHeader('Cross-Origin-Resource-Policy', 'same-site');
 
+  // Swagger UI는 자체 스크립트와 스타일을 사용하므로 API 기본 CSP와 분리한다.
+  // 일반 API 응답은 브라우저에서 렌더링될 필요가 없어서 가장 좁은 정책을 적용한다.
   if (!isSwaggerPath(path)) {
     response.setHeader('Content-Security-Policy', API_CONTENT_SECURITY_POLICY);
   }
@@ -70,6 +72,8 @@ export function assertAllowedBrowserOrigin(
 }
 
 function shouldSendNoStoreHeaders(request: Request, path: string): boolean {
+  // 인증 엔드포인트와 bearer 기반 보호 응답은 브라우저/프록시 캐시에 남기지 않는다.
+  // 공개 health/docs 같은 비민감 응답은 불필요한 캐시 제약을 피한다.
   return (
     request.method.toUpperCase() !== 'OPTIONS' &&
     (path.startsWith('/api/auth/') ||

@@ -89,7 +89,7 @@
 - 불가피한 런타임 보안 권고 예외를 추가할 때는 `security/runtime-audit-allowlist.json`에 `id`, `package`, `severity`, `trackedAt`, `expiresOn`, `reason`을 함께 남기고, 해소되면 바로 제거합니다.
 - 남아 있는 런타임 보안 권고 상세를 다시 볼 때는 `npm run audit:runtime:full`을 사용합니다.
 - 브라우저 흐름을 건드리면 `npm run test:e2e`를 추가로 봅니다.
-- Next.js build 결과물, 공용 라우팅, 인증 복원, 운영 체크리스트 스모크 검증에 영향을 줄 수 있다면 `npm run test:e2e:smoke:build`를 추가로 봅니다.
+- Next.js build 결과물, 공용 라우팅, 인증 복원, 운영 체크리스트 스모크 검증에 영향을 줄 수 있다면 `npm run test:e2e:smoke:build:browser`를 추가로 봅니다.
 - Prisma/MySQL 경계를 건드리면 `npm run test:prisma`를 대표 심화 검증으로 사용합니다.
 - 인증, 소유권 검증, 월말 계산 로직을 건드리면 관련 테스트를 같이 수정합니다.
 - 금액 필드나 금액 집계/반올림/배분을 건드리면 `@personal-erp/money` 도우미 함수와 `npm run money:check` 기준을 함께 확인합니다.

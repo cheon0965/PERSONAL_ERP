@@ -190,7 +190,7 @@
 
 - 접근통제는 현재 범위에서 `부분 적용`이 아니라 `적용`으로 본다.
 - 근거는 `GET /collected-transactions`, `GET /recurring-rules`, `GET /dashboard/summary`, `GET /forecast/monthly`에 대한 요청 단위 API 테스트에서 current workspace 범위만 반환하고 내부 접근 제어 필드를 노출하지 않음을 검증한 점이다.
-- 신규 자금수단별 현황 read model인 `GET /funding-account-status/summary`는 같은 projection 원칙으로 문서화되어 있으며, 전용 요청 단위 회귀는 `docs/VALIDATION_NOTES.md`에서 남은 공백으로 추적한다.
+- 신규 자금수단별 현황 read model인 `GET /funding-account-status/summary`도 같은 projection 원칙으로 동작하며, 전용 요청 단위 회귀 테스트에서 기간/자금수단 필터, current workspace 범위, 합계, 거래 목록, 경고 메시지를 검증한다.
 - 데이터 보호는 여전히 `부분 적용`으로 두되, 현재 범위에서는 브라우저 저장소 토큰 제거, `no-store`, 최소 응답 shape, 집계 전용 read 응답까지는 반영된 상태로 본다.
 
 ## 관련 문서

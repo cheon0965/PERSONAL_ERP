@@ -231,6 +231,8 @@ export async function fetchJsonWithConfig<T>(
       throw error;
     }
 
+    // 데모 폴백은 조회성 요청에만 기본 허용한다.
+    // mutation 실패를 성공처럼 꾸미면 실제 운영 데이터와 화면 상태가 갈라질 수 있다.
     const allowDemoFallback =
       options.allowDemoFallback ??
       (options.method == null || options.method === 'GET');
@@ -315,6 +317,8 @@ async function sendRequest<T>(
 
   const responseBody = await readResponseBody(response);
 
+  // access token 만료는 한 번만 refresh 후 재시도한다.
+  // refresh 재사용이나 서버 거부가 발생하면 세션 정리 흐름으로 넘겨 무한 재시도를 막는다.
   if (response.status === 401 && options.requireAuth && allowRefresh) {
     const refreshedToken = await config.refreshAccessToken?.();
     if (refreshedToken) {
@@ -363,6 +367,8 @@ export function createApiRequestErrorFromResponse(
   const validationMessages = readErrorMessages(responseBody);
   const requestId = readRequestId(response, responseBody);
   const errorCode = readErrorCode(response.status, responseBody);
+  // 화면에는 사용자가 취할 행동을 먼저 보여주고, 원본 서버 메시지는 diagnostics에 보존한다.
+  // 운영 중에는 사용자가 requestId를 전달하고 개발자가 접힌 진단 정보로 원인을 추적한다.
   const userMessage = buildApiErrorMessage(responseBody, {
     status: response.status,
     path,

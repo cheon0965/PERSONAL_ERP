@@ -433,7 +433,7 @@ npm run start --workspace @personal-erp/web
 - `DATABASE_URL` 접속 정보 확인
 - `NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=false` 확인
 - `npm run build` 성공 확인
-- Web 라우트, 인증 복원, Next.js build 경로를 건드렸다면 `npm run test:e2e:smoke:build` 확인
+- Web 라우트, 인증 복원, Next.js build 경로를 건드렸다면 `npm run test:e2e:smoke:build:browser` 확인
 - 필요 시 `npm run db:deploy` 준비
 
 ### 배포 후

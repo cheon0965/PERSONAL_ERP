@@ -320,7 +320,7 @@ P4 완료 반영:
 
 - `GET /collected-transactions`, `GET /recurring-rules`가 current workspace 범위만 반환하고 내부 접근 제어 필드를 노출하지 않음을 요청 단위 API 테스트로 검증했습니다.
 - `GET /dashboard/summary`, `GET /forecast/monthly`가 current workspace 데이터만 집계하고 raw read model이나 내부 설정 객체를 노출하지 않음을 요청 단위 API 테스트로 검증했습니다.
-- `GET /funding-account-status/summary`는 같은 current workspace 기반 projection 원칙으로 문서화되어 있으며, 전용 요청 단위 회귀는 `docs/VALIDATION_NOTES.md`의 남은 공백으로 추적합니다.
+- `GET /funding-account-status/summary`도 같은 current workspace 기반 projection 원칙으로 동작하며, 전용 요청 단위 회귀 테스트에서 기간/자금수단 필터, 합계, 거래 목록, 경고 메시지를 함께 검증합니다.
 - `docs/API.md`에 workspace 범위, 최소 응답 shape, 집계 전용 read endpoint 원칙을 명시했습니다.
 - `docs/VALIDATION_NOTES.md`에 P5 증적 테스트 범위를 반영했습니다.
 
@@ -362,6 +362,12 @@ P4 완료 반영:
 - 결과적으로 `lodash 4.18.1`, `path-to-regexp 8.4.2`, `next 15.5.15`가 적용되어 `npm run audit:runtime`은 `found 0 vulnerabilities`로 통과합니다.
 - 같은 날짜 기준으로 `npm run audit:runtime:full`도 `0 vulnerabilities`를 확인했고, `npm run audit:runtime` gate는 `high` 임계값 + 만료형 allowlist 검증으로 상향했습니다.
 - 현재 `security/runtime-audit-allowlist.json`은 빈 상태이며, 이후 unavoidable advisory가 생기면 만료일과 사유가 있는 entry만 허용합니다.
+
+2026-05-02 업데이트:
+
+- `npm run audit:runtime`은 high/critical gate 기준으로 계속 통과합니다.
+- `npm run audit:runtime:full`은 `next@15.5.15 -> postcss@8.4.31` 경유 moderate advisory를 보고합니다.
+- `npm audit fix --force`는 `next@9.3.3`으로 낮추는 위험한 제안이므로 적용하지 않고, upstream compatible patch를 추적합니다.
 
 ## 테스트/증적 전략
 
