@@ -2,7 +2,8 @@ import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({
   title: '페이지를 찾을 수 없습니다',
-  description: '요청한 PERSONAL ERP 페이지가 없거나 더 이상 제공되지 않는 경우 안내하는 화면입니다.'
+  description:
+    '요청한 PERSONAL ERP 페이지가 없거나 더 이상 제공되지 않는 경우 안내하는 화면입니다.'
 });
 
 export default function NotFound() {

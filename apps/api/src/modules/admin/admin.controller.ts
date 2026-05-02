@@ -108,10 +108,15 @@ export class AdminController {
   ) {
     this.systemService.assertSystemAdmin(user);
     const tenant = await this.systemService.updateTenantStatus(tenantId, dto);
-    this.logSystemAdminAction('admin_system.tenant_status.update', request, user, {
-      tenantId,
-      status: dto.status
-    });
+    this.logSystemAdminAction(
+      'admin_system.tenant_status.update',
+      request,
+      user,
+      {
+        tenantId,
+        status: dto.status
+      }
+    );
     return tenant;
   }
 
@@ -151,10 +156,15 @@ export class AdminController {
   ) {
     this.systemService.assertSystemAdmin(user);
     const detail = await this.systemService.updateUserStatus(user, userId, dto);
-    this.logSystemAdminAction('admin_system.user_status.update', request, user, {
-      targetUserId: userId,
-      status: dto.status
-    });
+    this.logSystemAdminAction(
+      'admin_system.user_status.update',
+      request,
+      user,
+      {
+        targetUserId: userId,
+        status: dto.status
+      }
+    );
     return detail;
   }
 
@@ -171,10 +181,15 @@ export class AdminController {
       userId,
       currentSessionId
     );
-    this.logSystemAdminAction('admin_system.user_sessions.revoke', request, user, {
-      targetUserId: userId,
-      revokedCount: response.revokedCount
-    });
+    this.logSystemAdminAction(
+      'admin_system.user_sessions.revoke',
+      request,
+      user,
+      {
+        targetUserId: userId,
+        revokedCount: response.revokedCount
+      }
+    );
     return response;
   }
 
@@ -191,10 +206,15 @@ export class AdminController {
       userId,
       dto
     );
-    this.logSystemAdminAction('admin_system.user_system_admin.update', request, user, {
-      targetUserId: userId,
-      isSystemAdmin: dto.isSystemAdmin
-    });
+    this.logSystemAdminAction(
+      'admin_system.user_system_admin.update',
+      request,
+      user,
+      {
+        targetUserId: userId,
+        isSystemAdmin: dto.isSystemAdmin
+      }
+    );
     return detail;
   }
 

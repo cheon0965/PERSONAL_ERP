@@ -38,11 +38,7 @@ export function NavigationAccessBoundary({
   if (isSystemAdmin && !hasWorkspaceContext) {
     return (
       <Stack spacing={appLayout.pageGap}>
-        <Alert
-          severity="info"
-          variant="outlined"
-          icon={<BlockRoundedIcon />}
-        >
+        <Alert severity="info" variant="outlined" icon={<BlockRoundedIcon />}>
           <Typography variant="subtitle1" fontWeight={700}>
             현재 사업장 문맥이 없어 업무 화면을 열 수 없습니다.
           </Typography>

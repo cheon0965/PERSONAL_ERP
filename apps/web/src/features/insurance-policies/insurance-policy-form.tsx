@@ -277,9 +277,7 @@ export function InsurancePolicyForm({
       })}
     >
       <Stack spacing={appLayout.cardGap}>
-        <InsurancePolicyReferenceAlerts
-          referenceError={referenceError}
-        />
+        <InsurancePolicyReferenceAlerts referenceError={referenceError} />
 
         <InsurancePolicyFieldGrid
           form={form}

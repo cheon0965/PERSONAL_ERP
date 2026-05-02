@@ -1,4 +1,8 @@
-import { addMoneyWon, subtractMoneyWon, sumMoneyWon } from '@personal-erp/money';
+import {
+  addMoneyWon,
+  subtractMoneyWon,
+  sumMoneyWon
+} from '@personal-erp/money';
 import {
   CollectedTransactionStatus,
   JournalEntrySourceKind,
@@ -86,69 +90,68 @@ export async function readWorkspaceFundingAccountLiveBalances(
 
   const accountIds = new Set(accounts.map((account) => account.id));
   const storedBalanceByAccountId = new Map(
-    accounts.map((account) => [account.id, fromPrismaMoneyWon(account.balanceWon)])
+    accounts.map((account) => [
+      account.id,
+      fromPrismaMoneyWon(account.balanceWon)
+    ])
   );
 
-  const [
-    periods,
-    accountSubjects,
-    collectedTransactions,
-    journalEntries
-  ] = await Promise.all([
-    client.accountingPeriod.findMany({
-      where: {
-        tenantId: scope.tenantId,
-        ledgerId: scope.ledgerId
-      },
-      orderBy: [{ year: 'desc' }, { month: 'desc' }]
-    }),
-    client.accountSubject.findMany({
-      where: {
-        tenantId: scope.tenantId,
-        ledgerId: scope.ledgerId
-      },
-      select: {
-        id: true,
-        subjectKind: true
-      }
-    }),
-    client.collectedTransaction.findMany({
-      where: {
-        tenantId: scope.tenantId,
-        ledgerId: scope.ledgerId,
-        status: {
-          in: [...LIVE_BALANCE_TRANSACTION_STATUSES]
+  const [periods, accountSubjects, collectedTransactions, journalEntries] =
+    await Promise.all([
+      client.accountingPeriod.findMany({
+        where: {
+          tenantId: scope.tenantId,
+          ledgerId: scope.ledgerId
+        },
+        orderBy: [{ year: 'desc' }, { month: 'desc' }]
+      }),
+      client.accountSubject.findMany({
+        where: {
+          tenantId: scope.tenantId,
+          ledgerId: scope.ledgerId
+        },
+        select: {
+          id: true,
+          subjectKind: true
         }
-      },
-      select: {
-        id: true,
-        fundingAccountId: true,
-        occurredOn: true,
-        amount: true,
-        status: true,
-        ledgerTransactionType: {
-          select: {
-            flowKind: true
+      }),
+      client.collectedTransaction.findMany({
+        where: {
+          tenantId: scope.tenantId,
+          ledgerId: scope.ledgerId,
+          status: {
+            in: [...LIVE_BALANCE_TRANSACTION_STATUSES]
           }
         },
-        postedJournalEntry: {
-          select: {
-            id: true
+        select: {
+          id: true,
+          fundingAccountId: true,
+          occurredOn: true,
+          amount: true,
+          status: true,
+          ledgerTransactionType: {
+            select: {
+              flowKind: true
+            }
+          },
+          postedJournalEntry: {
+            select: {
+              id: true
+            }
           }
         }
-      }
-    }),
-    client.journalEntry.findMany({
-      where: {
-        tenantId: scope.tenantId,
-        ledgerId: scope.ledgerId
-      },
-      include: {
-        lines: true
-      },
-      orderBy: [{ entryDate: 'asc' }, { createdAt: 'asc' }]
-    })
-  ]);
+      }),
+      client.journalEntry.findMany({
+        where: {
+          tenantId: scope.tenantId,
+          ledgerId: scope.ledgerId
+        },
+        include: {
+          lines: true
+        },
+        orderBy: [{ entryDate: 'asc' }, { createdAt: 'asc' }]
+      })
+    ]);
 
   const accountSubjectKindById = new Map(
     accountSubjects.map((subject) => [subject.id, subject.subjectKind])
@@ -226,7 +229,10 @@ export async function readWorkspaceFundingAccountLiveBalances(
 
       journalDeltaByAccountId.set(
         line.fundingAccountId,
-        addMoneyWon(journalDeltaByAccountId.get(line.fundingAccountId) ?? 0, delta)
+        addMoneyWon(
+          journalDeltaByAccountId.get(line.fundingAccountId) ?? 0,
+          delta
+        )
       );
     }
   }
@@ -307,9 +313,13 @@ export async function readWorkspaceCurrentFundingBalanceWon(
   client: FundingAccountBalanceReadClient,
   scope: WorkspaceScope
 ) {
-  const accounts = await readWorkspaceFundingAccountLiveBalances(client, scope, {
-    includeInactive: true
-  });
+  const accounts = await readWorkspaceFundingAccountLiveBalances(
+    client,
+    scope,
+    {
+      includeInactive: true
+    }
+  );
 
   return sumMoneyWon(accounts.map((account) => account.balanceWon));
 }

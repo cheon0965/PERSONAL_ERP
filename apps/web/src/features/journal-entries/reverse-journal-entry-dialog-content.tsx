@@ -63,7 +63,9 @@ export function ReverseJournalEntryDialogContent({
       onClose();
     },
     onError: (error) => {
-      setFeedback(buildErrorFeedback(error, '반전 전표를 생성하지 못했습니다.'));
+      setFeedback(
+        buildErrorFeedback(error, '반전 전표를 생성하지 못했습니다.')
+      );
     }
   });
 

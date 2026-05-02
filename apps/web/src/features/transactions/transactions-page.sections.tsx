@@ -143,8 +143,7 @@ export function TransactionsTableSection({
         journalEntriesById,
         row.postedJournalEntryId
       );
-      const isConfirming =
-        confirmPending && confirmingTransactionId === row.id;
+      const isConfirming = confirmPending && confirmingTransactionId === row.id;
       const canEdit = canEditCollectedTransaction(row);
       const canDelete = canDeleteCollectedTransaction(row);
       const canConfirm = canConfirmCollectedTransaction(row);
@@ -230,7 +229,14 @@ export function TransactionsTableSection({
         </Typography>
       );
     },
-    [confirmPending, confirmingTransactionId, journalEntriesById, onConfirm, onDelete, onEdit]
+    [
+      confirmPending,
+      confirmingTransactionId,
+      journalEntriesById,
+      onConfirm,
+      onDelete,
+      onEdit
+    ]
   );
   const columns = React.useMemo<GridColDef<CollectedTransactionItem>[]>(
     () => [
@@ -600,7 +606,10 @@ function TransactionMobileCard({
             <MobileField label="자금수단" value={row.fundingAccountName} />
           </Grid>
           <Grid size={{ xs: 6 }}>
-            <MobileField label="카테고리" value={row.categoryName ?? '미분류'} />
+            <MobileField
+              label="카테고리"
+              value={row.categoryName ?? '미분류'}
+            />
           </Grid>
           <Grid size={{ xs: 6 }}>
             <MobileField
@@ -622,7 +631,11 @@ function MobileField({ label, value }: { label: string; value: string }) {
       <Typography variant="caption" color="text.secondary">
         {label}
       </Typography>
-      <Typography variant="body2" fontWeight={700} sx={{ overflowWrap: 'anywhere' }}>
+      <Typography
+        variant="body2"
+        fontWeight={700}
+        sx={{ overflowWrap: 'anywhere' }}
+      >
         {value}
       </Typography>
     </Stack>

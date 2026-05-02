@@ -2,9 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import type { BulkConfirmCollectedTransactionsRequest } from '@personal-erp/contracts';
 import { ArrayMinSize, IsArray, IsOptional, IsString } from 'class-validator';
 
-export class BulkConfirmCollectedTransactionsRequestDto
-  implements BulkConfirmCollectedTransactionsRequest
-{
+export class BulkConfirmCollectedTransactionsRequestDto implements BulkConfirmCollectedTransactionsRequest {
   @ApiProperty({
     type: [String],
     required: false,

@@ -14,10 +14,7 @@ import { SecurityEventLogger } from '../../../../common/infrastructure/operation
 import { WorkspaceAuditEventsService } from '../../../../common/infrastructure/operational/workspace-audit-events.service';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
 import { mapAccountProfileItem } from '../../auth-account-security.mapper';
-import {
-  normalizeDisplayName,
-  normalizeEmail
-} from '../../auth.normalization';
+import { normalizeDisplayName, normalizeEmail } from '../../auth.normalization';
 
 @Injectable()
 export class UpdateAccountProfileUseCase {

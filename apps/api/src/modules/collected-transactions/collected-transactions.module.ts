@@ -79,9 +79,8 @@ import { CollectedTransactionsController } from './collected-transactions.contro
     },
     {
       provide: ConfirmCollectedTransactionUseCase,
-      useFactory: (
-        confirmStore: ConfirmCollectedTransactionStorePort
-      ) => new ConfirmCollectedTransactionUseCase(confirmStore),
+      useFactory: (confirmStore: ConfirmCollectedTransactionStorePort) =>
+        new ConfirmCollectedTransactionUseCase(confirmStore),
       inject: [ConfirmCollectedTransactionStorePort]
     },
     {

@@ -2,10 +2,7 @@
 
 import * as React from 'react';
 import { Alert, AlertTitle, Stack, Typography } from '@mui/material';
-import {
-  readErrorDiagnostics,
-  readErrorUserMessage
-} from '../api/fetch-json';
+import { readErrorDiagnostics, readErrorUserMessage } from '../api/fetch-json';
 import {
   ErrorDiagnosticsDisclosure,
   useScrollErrorAlertIntoView

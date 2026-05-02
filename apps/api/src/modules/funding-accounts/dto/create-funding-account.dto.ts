@@ -13,7 +13,8 @@ export class CreateFundingAccountDto implements CreateFundingAccountRequest {
   type!: AccountType;
 
   @ApiPropertyOptional({
-    description: '운영 중 등록하는 자금수단의 기초금액 (원). 기초전표가 자동 생성됩니다.'
+    description:
+      '운영 중 등록하는 자금수단의 기초금액 (원). 기초전표가 자동 생성됩니다.'
   })
   @IsOptional()
   @IsInt()

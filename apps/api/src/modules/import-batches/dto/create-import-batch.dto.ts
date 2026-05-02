@@ -22,8 +22,7 @@ export class CreateImportBatchRequestDto implements CreateImportBatchRequest {
 
   @ApiProperty({
     required: false,
-    description:
-      '업로드 배치와 연결할 활성 계좌/카드 자금수단 ID입니다.'
+    description: '업로드 배치와 연결할 활성 계좌/카드 자금수단 ID입니다.'
   })
   @IsOptional()
   @IsString()

@@ -140,19 +140,23 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     return {
-      user: await this.authenticatedWorkspaceResolver.buildAuthenticatedUser({
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        ...(user.isSystemAdmin ? { isSystemAdmin: true } : {})
-      }, {
-        tenantId: session.supportTenantId,
-        ledgerId: session.supportLedgerId,
-        startedAt: session.supportStartedAt
-      }, {
-        tenantId: session.currentTenantId,
-        ledgerId: session.currentLedgerId
-      }),
+      user: await this.authenticatedWorkspaceResolver.buildAuthenticatedUser(
+        {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          ...(user.isSystemAdmin ? { isSystemAdmin: true } : {})
+        },
+        {
+          tenantId: session.supportTenantId,
+          ledgerId: session.supportLedgerId,
+          startedAt: session.supportStartedAt
+        },
+        {
+          tenantId: session.currentTenantId,
+          ledgerId: session.currentLedgerId
+        }
+      ),
       sessionId: session.id
     };
   }

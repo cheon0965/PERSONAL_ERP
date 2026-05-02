@@ -80,7 +80,11 @@ export class ImportBatchQueryService {
     tenantId: string;
     ledgerId: string;
     fundingAccountId: string;
-    rows: Array<{ rawPayload: unknown; parseStatus: string; rowNumber: number }>;
+    rows: Array<{
+      rawPayload: unknown;
+      parseStatus: string;
+      rowNumber: number;
+    }>;
   }): Promise<ImportBatchBalanceDiscrepancy | null> {
     // 파싱된 행을 역순으로 탐색하여 마지막 balanceAfter를 찾는다.
     const parsedRows = input.rows
@@ -123,7 +127,10 @@ export class ImportBatchQueryService {
     }
 
     const ledgerBalanceWon = targetAccount.balanceWon;
-    const differenceWon = subtractMoneyWon(importedBalanceWon, ledgerBalanceWon);
+    const differenceWon = subtractMoneyWon(
+      importedBalanceWon,
+      ledgerBalanceWon
+    );
 
     // 차이가 없으면 경고 불필요
     if (differenceWon === 0) {

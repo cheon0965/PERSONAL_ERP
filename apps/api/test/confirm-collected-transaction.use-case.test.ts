@@ -139,6 +139,12 @@ function createConfirmStore(input: {
     }),
     claimForConfirmation: async () => ({ count: 1 }),
     assertClaimSucceeded: async () => undefined,
+    findActiveAccountSubjects: async () => [
+      { id: 'sub-asset', code: '1010' },
+      { id: 'sub-liability', code: '2100' },
+      { id: 'sub-income', code: '4100' },
+      { id: 'sub-expense', code: '5100' }
+    ],
     createJournalEntry: async (entry: CreateConfirmationJournalEntryInput) => ({
       id: 'je-1',
       entryNumber: entry.entryNumber,
@@ -179,12 +185,6 @@ function createConfirmStore(input: {
 
   return {
     findForConfirmation: async () => input.collectedTransaction,
-    findActiveAccountSubjects: async () => [
-      { id: 'sub-asset', code: '1010' },
-      { id: 'sub-liability', code: '2100' },
-      { id: 'sub-income', code: '4100' },
-      { id: 'sub-expense', code: '5100' }
-    ],
     runInTransaction: async <T>(
       fn: (context: typeof ctx) => Promise<T>
     ): Promise<T> => fn(ctx)

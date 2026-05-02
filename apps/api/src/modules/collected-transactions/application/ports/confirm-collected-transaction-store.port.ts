@@ -8,7 +8,7 @@ import type {
   PostingPolicyKey,
   Prisma
 } from '@prisma/client';
-import type { JournalEntryRecord } from '../../../journal-entries/public';
+import type { JournalEntryRecord } from '../../../journal-entries/journal-entry-item.mapper';
 
 /**
  * 수집 거래 확정 유스케이스가 DB 구현 세부사항에 묶이지 않도록 만든 저장소 포트입니다.
@@ -170,6 +170,14 @@ export abstract class ConfirmTransactionContext {
   ): Promise<JournalEntryRecord>;
 
   /**
+   * 일반 수입/지출/이체 확정에 필요한 기본 계정과목을 확정 트랜잭션 안에서 조회합니다.
+   */
+  abstract findActiveAccountSubjects(
+    scope: ConfirmationWorkspaceScope,
+    codes: readonly string[]
+  ): Promise<Array<{ id: string; code: string }>>;
+
+  /**
    * 계획 항목에서 넘어온 수집 거래라면 계획도 함께 확정해 화면 간 상태가 어긋나지 않게 합니다.
    */
   abstract markMatchedPlanItemConfirmed(
@@ -231,14 +239,6 @@ export abstract class ConfirmCollectedTransactionStorePort {
     scope: ConfirmationWorkspaceScope,
     collectedTransactionId: string
   ): Promise<ConfirmationCollectedTransaction | null>;
-
-  /**
-   * 일반 수입/지출/이체 확정에 필요한 기본 계정과목을 코드 기준으로 조회합니다.
-   */
-  abstract findActiveAccountSubjects(
-    scope: ConfirmationWorkspaceScope,
-    codes: readonly string[]
-  ): Promise<Array<{ id: string; code: string }>>;
 
   /**
    * 확정 흐름 전체를 한 DB 트랜잭션으로 감싸 유스케이스의 상태 전이를 원자적으로 보장합니다.
