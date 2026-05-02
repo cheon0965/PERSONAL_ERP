@@ -191,6 +191,10 @@ export function readImportSourceKindLabel(
       return 'IM뱅크 PDF';
     case 'WOORI_BANK_HTML':
       return '우리은행 HTML';
+    case 'WOORI_CARD_HTML':
+      return '우리카드 HTML';
+    case 'KB_KOOKMIN_BANK_PDF':
+      return 'KB국민은행 PDF';
     default:
       return sourceKind;
   }

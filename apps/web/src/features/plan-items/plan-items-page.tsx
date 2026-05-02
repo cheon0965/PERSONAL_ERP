@@ -305,7 +305,9 @@ export function PlanItemsPage({ mode = 'list' }: PlanItemsPageProps) {
         `${result.period.monthLabel} 계획 항목을 생성했습니다. 신규 ${result.generation.createdCount}건, 기존 유지 ${result.generation.skippedExistingCount}건, 제외 규칙 ${result.generation.excludedRuleCount}건입니다.`
       );
     } catch (error) {
-      setFeedback(buildErrorFeedback(error, '계획 항목을 생성하지 못했습니다.'));
+      setFeedback(
+        buildErrorFeedback(error, '계획 항목을 생성하지 못했습니다.')
+      );
     }
   }, [mutation, selectedPeriod]);
 
@@ -706,7 +708,7 @@ function buildPlanItemsHelpContext(mode: PlanItemsPageMode) {
         '계획 항목은 반복 규칙에서 파생된 계획 기준이며, 실제 회계 확정은 이후 수집 거래와 전표에서 이뤄집니다.',
       supplementarySections: [
         {
-          title: '이 탭에서 하는 일',
+          title: '이 화면에서 진행할 일',
           items: [
             '대상 운영 월이 잠기지 않았는지 확인한 뒤 계획 생성을 실행합니다.',
             '생성 전에 반복 규칙과 보험 계약이 최신인지 확인해 누락된 월 계획을 줄입니다.',
@@ -715,7 +717,7 @@ function buildPlanItemsHelpContext(mode: PlanItemsPageMode) {
           ]
         },
         {
-          title: '막히면 확인',
+          title: '문제가 있을 때 확인',
           items: [
             '생성 대상 월이 보이지 않으면 월 운영 화면에서 운영 기간 상태를 먼저 확인합니다.',
             '생성된 항목이 예상보다 적으면 반복 규칙의 시작일, 종료일, 활성 상태를 확인합니다.',
@@ -756,7 +758,7 @@ function buildPlanItemsHelpContext(mode: PlanItemsPageMode) {
       '계획 항목은 반복 규칙에서 파생된 계획 기준이며, 회계 확정은 연결된 수집 거래와 전표에서 이뤄집니다.',
     supplementarySections: [
       {
-        title: '이 탭에서 하는 일',
+        title: '이 화면에서 진행할 일',
         items: [
           '운영 월 필터와 상태 요약을 먼저 보고 이번 달 처리 대상 규모를 확인합니다.',
           '운영 월별 계획 항목을 보며 초안, 연결, 확정 상태가 어디까지 왔는지 확인합니다.',
@@ -766,7 +768,7 @@ function buildPlanItemsHelpContext(mode: PlanItemsPageMode) {
         ]
       },
       {
-        title: '막히면 확인',
+        title: '문제가 있을 때 확인',
         items: [
           '계획 항목이 비어 있으면 계획 생성 화면에서 대상 월 생성을 먼저 실행합니다.',
           '반복 규칙을 수정했는데 계획이 바뀌지 않았다면 대상 월에 대해 다시 생성을 실행합니다.',

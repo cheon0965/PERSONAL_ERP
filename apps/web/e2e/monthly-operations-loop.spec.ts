@@ -99,6 +99,24 @@ async function installMonthlyOperationsRoutes(page: Page) {
       return;
     }
 
+    if (path === '/api/auth/workspaces' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: currentUser.currentWorkspace
+            ? [
+                {
+                  ...currentUser.currentWorkspace,
+                  isCurrent: true
+                }
+              ]
+            : []
+        })
+      });
+      return;
+    }
+
     if (path === '/api/navigation/tree' && request.method() === 'GET') {
       await route.fulfill({
         status: 200,
@@ -323,9 +341,7 @@ test('@smoke generates plan items and reflects them in the live dashboard and fo
     page.getByRole('heading', { name: '월 운영 대시보드' })
   ).toBeVisible();
   await expect(page.getByText('2026-05 운영 월')).toBeVisible();
-  await expect(
-    page.getByRole('heading', { name: '운영 판단 기준' })
-  ).toBeVisible();
+  await expect(page.getByText('운영 판단 기준')).toBeVisible();
   await expect(
     page.getByText(
       '아직 생성된 계획 항목이 없어 남은 계획 지출이 0원 기준으로 보입니다.'
@@ -417,6 +433,7 @@ test('@smoke generates official statements and carry-forwards for the locked mon
   await expect(page.getByText('진행 중').first()).toBeVisible();
 
   await page.goto('/forecast');
+  await page.getByRole('tab', { name: '상세 분석' }).click();
   await expect(page.getByText('공식 비교 대상: 2026-04')).toBeVisible();
   await expect(page.getByText('현재 기준: 운영 전망 기준')).toBeVisible();
 

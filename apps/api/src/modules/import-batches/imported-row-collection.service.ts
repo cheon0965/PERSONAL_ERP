@@ -198,7 +198,7 @@ export class ImportedRowCollectionService {
         occurredOnIso: input.occurredOnIso,
         fundingAccountId: input.fundingAccountId
       });
-    // preview와 실제 등록이 같은 판정 규칙을 쓰도록 assessment를 트랜잭션 안에서 다시 계산한다.
+    // 미리보기와 실제 등록이 같은 판정 규칙을 쓰도록 평가 결과를 트랜잭션 안에서 다시 계산한다.
     // 이렇게 해야 카테고리 보완, 계획 매칭, 중복 후보 판단이 저장 직전 상태를 기준으로 맞춰진다.
     const assessment = await this.evaluateRowCollection({
       client: input.tx,
@@ -332,8 +332,8 @@ export class ImportedRowCollectionService {
       amount: normalizedRow.amount,
       title: normalizedRow.title
     });
-    // sourceFingerprint는 같은 업로드 원본/행이 다시 들어오는 경우를 잡고,
-    // potentialDuplicate는 수기 입력 또는 다른 배치에서 이미 등록된 유사 거래를 사용자에게 확인시킨다.
+    // 원본 지문은 같은 업로드 원본/행이 다시 들어오는 경우를 잡고,
+    // 잠재 중복 후보는 수기 입력 또는 다른 배치에서 이미 등록된 유사 거래를 사용자에게 확인시킨다.
     const hasDuplicateSourceFingerprint =
       await this.collectionRepository.hasDuplicateSourceFingerprint(
         input.client,

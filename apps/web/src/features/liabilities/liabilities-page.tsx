@@ -318,7 +318,9 @@ export function LiabilitiesPage({
       await invalidateLiabilityQueries(queryClient);
     },
     onError: (error) => {
-      setFeedback(buildErrorFeedback(error, '부채 계약을 보관하지 못했습니다.'));
+      setFeedback(
+        buildErrorFeedback(error, '부채 계약을 보관하지 못했습니다.')
+      );
     }
   });
 
@@ -2216,7 +2218,7 @@ function buildLiabilitiesHelpContext(mode: LiabilitiesPageMode) {
         '부채 계약은 상환 기준 데이터이고, 실제 회계 반영은 상환 일정에서 만든 계획 항목과 전표 확정 시점에 이뤄집니다.',
       supplementarySections: [
         {
-          title: '이 탭에서 하는 일',
+          title: '이 화면에서 진행할 일',
           items: [
             '선택한 계약의 대출 조건과 자금수단, 계정과목 연결을 먼저 확인합니다.',
             '상환 일정 표에서 계획, 연결, 확정 상태를 보고 이번 달 처리할 회차를 찾습니다.',
@@ -2264,7 +2266,7 @@ function buildLiabilitiesHelpContext(mode: LiabilitiesPageMode) {
       '부채 계약은 상환 기준 데이터이고, 실제 회계 반영은 상환 일정에서 만든 계획 항목과 전표 확정 시점에 이뤄집니다.',
     supplementarySections: [
       {
-        title: '바로 쓰는 순서',
+        title: '작업 진행 순서',
         items: [
           '대출 기관, 상품명, 원금, 납부 자금수단을 입력해 부채 계약을 등록합니다.',
           '목록에서 잔액, 상환 상태, 다음 예정일을 확인해 상세로 들어갈 계약을 고릅니다.',

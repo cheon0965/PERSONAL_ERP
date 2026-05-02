@@ -151,7 +151,10 @@ export function AccountSettingsPage({
   const revokeMutation = useMutation({
     mutationFn: (sessionId: string) => revokeAccountSession(sessionId),
     onSuccess: async () => {
-      setFeedback({ severity: 'success', message: '선택한 세션을 종료했습니다.' });
+      setFeedback({
+        severity: 'success',
+        message: '선택한 세션을 종료했습니다.'
+      });
       await queryClient.invalidateQueries({
         queryKey: accountSecurityQueryKey
       });
@@ -270,7 +273,9 @@ export function AccountSettingsPage({
               spacing={2}
               alignItems={{ xs: 'flex-start', md: 'center' }}
             >
-              <Avatar sx={{ width: 64, height: 64, fontSize: '1.5rem', ...avatarSx }}>
+              <Avatar
+                sx={{ width: 64, height: 64, fontSize: '1.5rem', ...avatarSx }}
+              >
                 {avatarContent}
               </Avatar>
               <Stack spacing={1}>
@@ -279,13 +284,17 @@ export function AccountSettingsPage({
                   {accountAvatarOptions.map((option) => (
                     <Button
                       key={option.key}
-                      variant={avatarKey === option.key ? 'contained' : 'outlined'}
+                      variant={
+                        avatarKey === option.key ? 'contained' : 'outlined'
+                      }
                       color={avatarKey === option.key ? 'primary' : 'inherit'}
                       size="small"
                       onClick={() => setAvatarKey(option.key)}
                       sx={{ textTransform: 'none' }}
                     >
-                      {option.glyph ? `${option.glyph} ${option.label}` : option.label}
+                      {option.glyph
+                        ? `${option.glyph} ${option.label}`
+                        : option.label}
                     </Button>
                   ))}
                 </Stack>
@@ -340,14 +349,17 @@ export function AccountSettingsPage({
                 <Button
                   variant="outlined"
                   disabled={resendVerificationMutation.isPending}
-                  onClick={() => resendVerificationMutation.mutate(profile.email)}
+                  onClick={() =>
+                    resendVerificationMutation.mutate(profile.email)
+                  }
                 >
                   {resendVerificationMutation.isPending
                     ? '인증 메일 전송 중...'
                     : '인증 메일 다시 보내기'}
                 </Button>
                 <Typography variant="caption" color="text.secondary">
-                  이메일을 바꾼 뒤에는 다시 인증해야 다음 로그인에서도 정상 사용됩니다.
+                  이메일을 바꾼 뒤에는 다시 인증해야 다음 로그인에서도 정상
+                  사용됩니다.
                 </Typography>
               </Stack>
             ) : null}
@@ -503,12 +515,12 @@ function buildAccountSettingsHelp(
         description:
           '이 화면은 현재 계정의 비밀번호를 바꾸고 다른 세션을 정리하는 보안 작업 화면입니다.',
         primaryEntity: '비밀번호 변경',
-        relatedEntities: ['AuthSession', 'SecurityEvent'],
+        relatedEntities: ['로그인 세션', '보안 이벤트'],
         truthSource:
           '비밀번호 변경 결과와 세션 종료는 인증 서비스의 실제 보안 상태를 기준으로 반영됩니다.',
         supplementarySections: [
           {
-            title: '이 화면에서 하는 일',
+            title: '이 화면에서 확인할 일',
             items: [
               '현재 비밀번호와 새 비밀번호를 입력해 보안 자격 증명을 갱신합니다.',
               '비밀번호를 바꾸면 다른 세션이 함께 정리될 수 있으니 필요한 작업을 먼저 마무리합니다.',
@@ -529,7 +541,7 @@ function buildAccountSettingsHelp(
         description:
           '이 화면은 현재 계정으로 열려 있는 로그인 세션을 확인하고 불필요한 연결을 종료하는 화면입니다.',
         primaryEntity: '로그인 세션',
-        relatedEntities: ['User', 'RefreshSession', 'SecurityEvent'],
+        relatedEntities: ['사용자 계정', '로그인 세션', '보안 이벤트'],
         truthSource:
           '세션 목록은 인증 서비스가 발급한 실제 연결 상태를 기준으로 표시됩니다.',
         supplementarySections: [
@@ -547,7 +559,7 @@ function buildAccountSettingsHelp(
             ]
           },
           {
-            title: '이 화면에서 하는 일',
+            title: '이 화면에서 확인할 일',
             items: [
               '현재 세션과 다른 세션을 구분해 보고, 낯선 연결이 있는지 확인합니다.',
               '불필요하거나 의심스러운 세션은 종료 버튼으로 정리합니다.',
@@ -568,7 +580,7 @@ function buildAccountSettingsHelp(
         description:
           '이 화면은 최근 계정 보안 이력과 인증 관련 이벤트를 시간순으로 확인하는 화면입니다.',
         primaryEntity: '보안 이벤트',
-        relatedEntities: ['User', 'AuthSession'],
+        relatedEntities: ['사용자 계정', '로그인 세션'],
         truthSource:
           '보안 이벤트는 인증 서비스가 남긴 실제 활동 이력을 기준으로 표시됩니다.',
         supplementarySections: [
@@ -586,7 +598,7 @@ function buildAccountSettingsHelp(
             ]
           },
           {
-            title: '이 화면에서 하는 일',
+            title: '이 화면에서 확인할 일',
             items: [
               '비밀번호 변경, 세션 종료 같은 최근 보안 이벤트가 예상대로 기록됐는지 확인합니다.',
               '예상하지 못한 활동 흔적이 보이면 세션 종료 또는 비밀번호 변경으로 바로 대응합니다.',
@@ -608,7 +620,7 @@ function buildAccountSettingsHelp(
         description:
           '이 화면은 내 계정 이메일, 표시 이름, 프로필 아이콘, 이메일 인증 상태를 확인하고 수정하는 화면입니다.',
         primaryEntity: '계정 기본 정보',
-        relatedEntities: ['AuthSession', 'SecurityEvent'],
+        relatedEntities: ['로그인 세션', '보안 이벤트'],
         truthSource:
           '현재 계정 정보와 인증 상태는 로그인 사용자 기준의 실제 계정 데이터를 따릅니다.',
         supplementarySections: [
@@ -626,7 +638,7 @@ function buildAccountSettingsHelp(
             ]
           },
           {
-            title: '이 화면에서 하는 일',
+            title: '이 화면에서 확인할 일',
             items: [
               '로그인 이메일과 표시 이름을 현재 사용 기준에 맞게 수정합니다.',
               '프로필 아이콘을 골라 상단 사용자 영역에서도 바로 구분되게 맞춥니다.',

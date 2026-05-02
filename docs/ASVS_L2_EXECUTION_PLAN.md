@@ -49,7 +49,7 @@
 
 ### 2026-04-30 보강 반영
 
-- `WOORI_BANK_HTML` 파일첨부 업로드는 dynamic JavaScript 실행 위험 때문에 서버에서 400으로 차단하고 Web 신규 선택지에서도 숨겼습니다.
+- `WOORI_BANK_HTML`/`WOORI_CARD_HTML` 파일첨부 업로드는 저장 HTML과 암호화 VestMail 원본을 지원합니다. 암호화 원본은 업로드된 dynamic JavaScript를 실행하지 않고 서버 내 SEED/CBC 구현으로만 복호화하며, 비밀번호와 원본 파일은 저장하지 않습니다.
 - 운영 CSV 반출은 spreadsheet formula 시작 문자열을 방어합니다.
 - 회원가입, 비밀번호 변경, 비밀번호 재설정은 common/context-derived password를 차단합니다.
 - JWT access/refresh secret은 32 bytes 이상 base64/base64url random secret, 서로 다른 값, placeholder 금지 조건을 env parse 단계에서 검증합니다.

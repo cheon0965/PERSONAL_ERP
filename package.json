@@ -62,7 +62,7 @@
     "check": "npm run check:quick && npm run build && npm run test",
     "ci": "npm run check",
     "ci:local:validate": "npm run db:generate && npm run check:quick && npm run test",
-    "ci:local:e2e-smoke": "npm run test:e2e:smoke:build",
+    "ci:local:e2e-smoke": "npm run test:e2e:smoke:build:browser",
     "ci:local:security": "npm run db:generate && npm run test:security:api",
     "ci:local:prisma": "npm run db:generate && npm run test:prisma",
     "ci:local:audit": "npm run audit:runtime",

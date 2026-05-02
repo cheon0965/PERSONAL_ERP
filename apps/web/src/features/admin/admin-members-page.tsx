@@ -217,7 +217,7 @@ export function AdminMembersPage() {
   );
 
   useDomainHelp({
-    title: '회원 관리 가이드',
+    title: '회원 관리 화면 도움말',
     description: isSystemAdmin
       ? '회원 관리는 모든 사업장의 멤버를 읽고, 필요한 멤버만 역할·상태를 조정하는 화면입니다.'
       : '회원 관리는 현재 사업장 멤버를 읽고, 필요할 때만 초대·역할·상태를 조정하는 화면입니다.',
@@ -227,7 +227,7 @@ export function AdminMembersPage() {
       '실제 권한은 멤버 역할과 상태로 결정되며, 변경 이력은 감사 이벤트로 함께 남습니다.',
     supplementarySections: [
       {
-        title: '기본 순서',
+        title: '작업 진행 순서',
         items: [
           '먼저 멤버 목록에서 역할, 상태, 초대 여부를 확인합니다.',
           '새 사용자를 추가할 때는 멤버 초대로 이메일과 역할을 지정합니다.',

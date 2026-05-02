@@ -57,8 +57,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run smoke E2E
-        run: npm run test:e2e:smoke:build
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run browser smoke E2E
+        run: npm run test:e2e:smoke:build:browser
 
       - name: Upload Playwright artifacts
         if: failure()
@@ -140,8 +143,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Keep generated outputs and migration history out of the scan, but keep
-      # application auth/fetch boundaries inside the Semgrep scope.
+      # 생성물과 마이그레이션 이력은 스캔에서 제외하되,
+      # 애플리케이션 인증/요청 경계는 Semgrep 범위에 포함한다.
       - name: Run Semgrep CE scan
         run: >-
           docker run --rm

@@ -725,8 +725,8 @@ function assertFundingAccountBootstrapTransition(
 /**
  * 기초전표의 회계 분개를 결정합니다.
  *
- * BANK/CASH: 차변 현금및예금(1010) / 대변 순자산(3100)
- * CARD: 차변 순자산(3100) / 대변 카드미지급금(2100)
+ * 계좌 유형 `BANK`/`CASH`: 차변 현금및예금(1010) / 대변 순자산(3100)
+ * 계좌 유형 `CARD`: 차변 순자산(3100) / 대변 카드미지급금(2100)
  */
 function resolveOpeningBalanceJournalLines(input: {
   fundingAccountType: 'BANK' | 'CASH' | 'CARD';

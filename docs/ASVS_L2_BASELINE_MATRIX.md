@@ -155,7 +155,7 @@
 
 ### 파일 업로드 보안
 
-- 현재 상태: `ImportBatch` 생성 시 UTF-8 텍스트 본문 업로드 API와 활성 계좌/카드 연결이 필요한 IM뱅크 PDF 전용 `multipart/form-data` 파일첨부 업로드 API가 존재함. PDF magic bytes, 확장자, content-type, 10MB 제한을 확인하고 원본 PDF 파일 storage는 아직 없음. 우리은행 보안메일 HTML은 dynamic JavaScript 실행 위험 때문에 서버와 Web 신규 업로드 화면에서 fail-closed 처리됨
+- 현재 상태: `ImportBatch` 생성 시 UTF-8 텍스트 본문 업로드 API와 활성 계좌/카드 연결이 필요한 IM뱅크 PDF·우리은행/우리카드 HTML `multipart/form-data` 파일첨부 업로드 API가 존재함. PDF magic bytes, 확장자, content-type, 10MB 제한을 확인하고 원본 PDF 파일 storage는 아직 없음. 우리은행/우리카드 HTML은 저장 HTML과 암호화 VestMail 원본을 파싱하되 업로드된 dynamic JavaScript는 실행하지 않고 서버 내 SEED/CBC 구현으로만 복호화함
 - 근거 파일: `apps/api/src/modules/import-batches/*`, `apps/web/src/features/imports/*`
 - 판정: `부분 적용`
 - 다음 단계: 파일 storage 도입 시 백신/콘텐츠 검증, 보존 기간, 다운로드 권한, 개인정보 마스킹 정책 추가

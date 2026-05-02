@@ -4,7 +4,14 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Grid, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import {
+  Button,
+  Grid,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography
+} from '@mui/material';
 import type { AccountingPeriodItem } from '@personal-erp/contracts';
 import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
@@ -429,7 +436,7 @@ function buildFinancialStatementsHelpContext(
         '공식 재무제표는 잠금된 기간의 마감 결과와 전표를 근거로 생성되며, 기초 잔액은 차기 이월 또는 초기 설정을 따릅니다.',
       supplementarySections: [
         {
-          title: '이 탭에서 하는 일',
+          title: '이 화면에서 진행할 일',
           items: [
             '보고 대상 기간과 직전 잠금 기간이 맞는지 먼저 확인합니다.',
             '재무상태표, 손익보고서, 현금흐름, 순자산 변동표의 요약과 전기 대비 변동을 검토합니다.',
@@ -441,19 +448,22 @@ function buildFinancialStatementsHelpContext(
           links: [
             {
               title: '재무제표 생성 / 선택',
-              description: '다른 잠금 기간을 고르거나 공식 스냅샷을 다시 생성합니다.',
+              description:
+                '다른 잠금 기간을 고르거나 공식 스냅샷을 다시 생성합니다.',
               href: '/financial-statements',
               actionLabel: '생성 / 선택 보기'
             },
             {
               title: '차기 이월',
-              description: '보고 숫자가 다음 월 시작 기준으로 어떻게 이어지는지 확인합니다.',
+              description:
+                '보고 숫자가 다음 월 시작 기준으로 어떻게 이어지는지 확인합니다.',
               href: '/carry-forwards',
               actionLabel: '차기 이월 보기'
             },
             {
               title: '전표 조회',
-              description: '이상한 숫자가 보이면 전표 기준으로 원인을 추적합니다.',
+              description:
+                '이상한 숫자가 보이면 전표 기준으로 원인을 추적합니다.',
               href: '/journal-entries',
               actionLabel: '전표 보기'
             }
@@ -480,7 +490,7 @@ function buildFinancialStatementsHelpContext(
       '공식 재무제표는 잠금된 기간의 마감 결과와 전표를 근거로 생성되며, 기초 잔액은 차기 이월 또는 초기 설정을 따릅니다.',
     supplementarySections: [
       {
-        title: '이 탭에서 하는 일',
+        title: '이 화면에서 진행할 일',
         items: [
           '잠금된 운영 기간을 고르고 공식 재무제표 생성 여부를 확인합니다.',
           '필요하면 공식 재무제표 생성을 실행한 뒤 보고서 보기 화면으로 이동합니다.',
@@ -488,7 +498,7 @@ function buildFinancialStatementsHelpContext(
         ]
       },
       {
-        title: '막히면 확인',
+        title: '문제가 있을 때 확인',
         items: [
           '잠금된 기간이 없으면 월 운영 화면에서 먼저 월 마감을 완료합니다.',
           '전표가 이상하면 전표 조회 화면에서 반전/정정 필요 여부를 확인한 뒤 재생성합니다.',
@@ -511,8 +521,7 @@ function buildFinancialStatementsHelpContext(
           },
           {
             title: '차기 이월',
-            description:
-              '생성한 보고 숫자를 다음 월 시작 기준으로 넘깁니다.',
+            description: '생성한 보고 숫자를 다음 월 시작 기준으로 넘깁니다.',
             href: '/carry-forwards',
             actionLabel: '차기 이월 보기'
           }

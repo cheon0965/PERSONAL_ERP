@@ -48,8 +48,12 @@ import {
 } from './imports.api';
 import {
   buildCollectSuccessMessage,
+  filterFundingAccountsForImportSource,
+  fileUploadSourceKinds,
   isImportedRowOccurredOnInPeriod,
   normalizeOptionalValue,
+  readImportSourceFundingAccountType,
+  readImportSourceFundingAccountTypeLabel,
   readParsedRowPreview,
   type FeedbackState,
   type ImportedRowTableItem
@@ -63,9 +67,11 @@ export type ImportUploadFormState = CreateImportBatchRequest & {
 
 const defaultUploadForm: ImportUploadFormState = {
   sourceKind: 'MANUAL_UPLOAD',
-  fileName: 'march-manual.csv',
+  fileName: 'demo-manual-2026-04.csv',
   fundingAccountId: '',
-  content: ['date,title,amount', '2026-03-12,Coffee beans,19800'].join('\n'),
+  content: ['date,title,amount', '2026-04-06,원재료 샘플 구매,19800'].join(
+    '\n'
+  ),
   file: null,
   password: ''
 };
@@ -90,16 +96,10 @@ type BulkCollectTypeOptionFormState = {
 };
 
 export type BulkCollectFormState = {
-  type: '' | CollectedTransactionType;
-  categoryId: string;
-  memo: string;
   typeOptions: Record<CollectedTransactionType, BulkCollectTypeOptionFormState>;
 };
 
 const defaultBulkCollectForm: BulkCollectFormState = {
-  type: '',
-  categoryId: '',
-  memo: '',
   typeOptions: buildDefaultBulkCollectTypeOptions()
 };
 
@@ -163,12 +163,20 @@ export function useImportsPage(
     queryFn: getReferenceDataReadiness
   });
 
-  const uploadFundingAccounts = React.useMemo(
+  const importBatchFundingAccounts = React.useMemo(
     () =>
       (fundingAccountsQuery.data ?? []).filter((fundingAccount) =>
         isImportBatchFundingAccount(fundingAccount)
       ),
     [fundingAccountsQuery.data]
+  );
+  const uploadFundingAccounts = React.useMemo(
+    () =>
+      filterFundingAccountsForImportSource(
+        importBatchFundingAccounts,
+        uploadForm.sourceKind
+      ),
+    [importBatchFundingAccounts, uploadForm.sourceKind]
   );
   const batches = React.useMemo(
     () => importBatchesQuery.data ?? [],
@@ -176,7 +184,7 @@ export function useImportsPage(
   );
   const selectedBatch = React.useMemo(
     () =>
-      // URL에서 배치가 고정되지 않은 일반 목록 화면은 첫 배치를 기본 선택해 빈 상세 화면을 줄입니다.
+      // 배치가 URL에서 고정되지 않은 일반 목록 화면은 첫 배치를 기본 선택해 빈 상세 화면을 줄입니다.
       batches.find((candidate) => candidate.id === selectedBatchId) ??
       batches[0] ??
       null,
@@ -388,17 +396,34 @@ export function useImportsPage(
   ]);
 
   React.useEffect(() => {
-    if (
-      (uploadForm.sourceKind === 'IM_BANK_PDF' ||
-        uploadForm.sourceKind === 'WOORI_BANK_HTML') &&
-      !uploadForm.fundingAccountId &&
-      uploadFundingAccounts[0]
-    ) {
-      setUploadForm((current) => ({
-        ...current,
-        fundingAccountId: uploadFundingAccounts[0]!.id
-      }));
+    if (!fileUploadSourceKinds.includes(uploadForm.sourceKind)) {
+      return;
     }
+
+    // 업로드 원본을 카드/은행으로 바꾸면 이전 선택 계좌가 더 이상 유효하지 않을 수 있다.
+    // 화면 단계에서 먼저 맞는 타입으로 보정해 서버 검증 오류를 줄인다.
+    const currentAccountIsAllowed = uploadFundingAccounts.some(
+      (fundingAccount) => fundingAccount.id === uploadForm.fundingAccountId
+    );
+
+    if (currentAccountIsAllowed) {
+      return;
+    }
+
+    setUploadForm((current) => {
+      if (!fileUploadSourceKinds.includes(current.sourceKind)) {
+        return current;
+      }
+
+      const nextFundingAccountId = uploadFundingAccounts[0]?.id ?? '';
+
+      return current.fundingAccountId === nextFundingAccountId
+        ? current
+        : {
+            ...current,
+            fundingAccountId: nextFundingAccountId
+          };
+    });
   }, [
     uploadForm.fundingAccountId,
     uploadForm.sourceKind,
@@ -446,20 +471,53 @@ export function useImportsPage(
 
   const createImportBatchMutation = useMutation({
     mutationFn: (input: ImportUploadFormState) => {
-      if (input.sourceKind === 'IM_BANK_PDF' || input.sourceKind === 'WOORI_BANK_HTML') {
+      if (fileUploadSourceKinds.includes(input.sourceKind)) {
         if (!input.file) {
           throw new Error(
-            input.sourceKind === 'WOORI_BANK_HTML'
-              ? '우리은행 HTML 파일을 선택해 주세요.'
-              : 'IM뱅크 PDF 파일을 선택해 주세요.'
+            input.sourceKind === 'WOORI_CARD_HTML'
+              ? '우리카드 HTML 파일을 선택해 주세요.'
+              : input.sourceKind === 'WOORI_BANK_HTML'
+                ? '우리은행 HTML 파일을 선택해 주세요.'
+                : input.sourceKind === 'KB_KOOKMIN_BANK_PDF'
+                  ? 'KB국민은행 PDF 파일을 선택해 주세요.'
+                  : 'IM뱅크 PDF 파일을 선택해 주세요.'
           );
         }
 
         if (!input.fundingAccountId.trim()) {
+          const accountTypeLabel = readImportSourceFundingAccountTypeLabel(
+            input.sourceKind
+          );
+
           throw new Error(
-            input.sourceKind === 'WOORI_BANK_HTML'
-              ? '우리은행 HTML과 연결할 계좌/카드를 선택해 주세요.'
-              : 'IM뱅크 PDF와 연결할 계좌/카드를 선택해 주세요.'
+            input.sourceKind === 'WOORI_CARD_HTML'
+              ? `우리카드 HTML과 연결할 ${accountTypeLabel}를 선택해 주세요.`
+              : input.sourceKind === 'WOORI_BANK_HTML'
+                ? `우리은행 HTML과 연결할 ${accountTypeLabel}를 선택해 주세요.`
+                : input.sourceKind === 'KB_KOOKMIN_BANK_PDF'
+                  ? `KB국민은행 PDF와 연결할 ${accountTypeLabel}를 선택해 주세요.`
+                  : `IM뱅크 PDF와 연결할 ${accountTypeLabel}를 선택해 주세요.`
+          );
+        }
+
+        // 파일 업로드는 클라이언트에서 한 번, 서버에서 다시 한 번 계좌/카드 타입을 검증한다.
+        // 오래된 화면 상태로 잘못된 자금수단이 넘어가는 경우를 여기서 먼저 잡는다.
+        const requiredAccountType = readImportSourceFundingAccountType(
+          input.sourceKind
+        );
+        const selectedUploadFundingAccount = importBatchFundingAccounts.find(
+          (fundingAccount) => fundingAccount.id === input.fundingAccountId
+        );
+
+        if (
+          requiredAccountType &&
+          selectedUploadFundingAccount &&
+          selectedUploadFundingAccount.type !== requiredAccountType
+        ) {
+          throw new Error(
+            requiredAccountType === 'CARD'
+              ? '카드 내역 업로드에는 카드 자금수단만 연결할 수 있습니다.'
+              : '은행 계좌 내역 업로드에는 은행 계좌 자금수단만 연결할 수 있습니다.'
           );
         }
 
@@ -468,7 +526,10 @@ export function useImportsPage(
           fileName: input.fileName,
           fundingAccountId: input.fundingAccountId,
           file: input.file,
-          ...(input.sourceKind === 'WOORI_BANK_HTML' && input.password
+          ...((input.sourceKind === 'WOORI_BANK_HTML' ||
+            input.sourceKind === 'WOORI_CARD_HTML' ||
+            input.sourceKind === 'KB_KOOKMIN_BANK_PDF') &&
+          input.password
             ? { password: input.password }
             : {})
         });
@@ -565,10 +626,7 @@ export function useImportsPage(
     },
     onError: (error) => {
       setCollectFeedback(
-        buildErrorFeedback(
-          error,
-          '업로드 행을 수집 거래로 올리지 못했습니다.'
-        )
+        buildErrorFeedback(error, '업로드 행을 수집 거래로 올리지 못했습니다.')
       );
     }
   });
@@ -709,10 +767,31 @@ export function useImportsPage(
   }
 
   function updateUploadForm(patch: Partial<ImportUploadFormState>) {
-    setUploadForm((current) => ({
-      ...current,
-      ...patch
-    }));
+    setUploadForm((current) => {
+      const next = {
+        ...current,
+        ...patch
+      };
+
+      if (!patch.sourceKind) {
+        return next;
+      }
+
+      const nextFundingAccounts = filterFundingAccountsForImportSource(
+        importBatchFundingAccounts,
+        next.sourceKind
+      );
+      const currentAccountIsAllowed = nextFundingAccounts.some(
+        (fundingAccount) => fundingAccount.id === next.fundingAccountId
+      );
+
+      return {
+        ...next,
+        fundingAccountId: currentAccountIsAllowed
+          ? next.fundingAccountId
+          : (nextFundingAccounts[0]?.id ?? '')
+      };
+    });
   }
 
   function updateCollectForm(patch: Partial<CollectImportedRowRequest>) {
@@ -735,7 +814,7 @@ export function useImportsPage(
     try {
       await createImportBatchMutation.mutateAsync(uploadForm);
     } catch {
-      // React Query의 onError가 이미 실패를 업로드 드로어에 반영한다.
+      // 실패 처리는 React Query의 onError가 이미 업로드 드로어에 반영한다.
     }
   }
 
@@ -776,7 +855,7 @@ export function useImportsPage(
         request
       });
     } catch {
-      // React Query의 onError가 이미 실패를 수집 거래 등록 드로어에 반영한다.
+      // 실패 처리는 React Query의 onError가 이미 수집 거래 등록 드로어에 반영한다.
     }
   }
 
@@ -827,8 +906,6 @@ export function useImportsPage(
     setFeedback(null);
 
     try {
-      const categoryId = normalizeOptionalValue(bulkCollectForm.categoryId);
-      const memo = normalizeOptionalValue(bulkCollectForm.memo);
       const typeOptions = buildBulkCollectTypeOptionsPayload(
         bulkCollectForm.typeOptions
       );
@@ -837,15 +914,12 @@ export function useImportsPage(
         importBatchId: selectedBatch.id,
         request: {
           rowIds: targetRows.map((row) => row.id),
-          ...(bulkCollectForm.type ? { type: bulkCollectForm.type } : {}),
           fundingAccountId: bulkFundingAccountId,
-          ...(categoryId ? { categoryId } : {}),
-          ...(memo ? { memo } : {}),
           ...(typeOptions.length > 0 ? { typeOptions } : {})
         }
       });
     } catch {
-      // React Query의 onError가 이미 실패를 페이지 피드백 영역에 반영한다.
+      // 실패 처리는 React Query의 onError가 이미 페이지 피드백 영역에 반영한다.
     }
   }
 
@@ -881,7 +955,7 @@ export function useImportsPage(
     }
 
     const confirmed = window.confirm(
-      `${selectedBatch.fileName} 배치를 삭제할까요? 연결된 수집 거래가 있는 배치는 삭제되지 않습니다.`
+      `${selectedBatch.fileName} 배치를 삭제할까요? 연결된 수집 거래가 있는 배치는 삭제되지 않으며, 삭제 후 업로드 배치 목록으로 돌아갑니다.`
     );
 
     if (!confirmed) {
@@ -1084,27 +1158,35 @@ function buildImportsHelpContext(
     return {
       title: '업로드 배치 작업대 도움말',
       description:
-        '이 화면은 선택한 업로드 배치의 행을 검토하고, 필요한 항목만 수집 거래로 등록하는 전용 작업대입니다.',
+        '이 화면은 선택한 업로드 배치의 행을 검토하고, 단건 또는 일괄 등록으로 필요한 항목만 수집 거래로 올리는 전용 작업대입니다.',
       primaryEntity: '업로드 행 등록 작업대',
-      relatedEntities: ['업로드 배치', '수집 거래', '자금수단', '카테고리'],
+      relatedEntities: [
+        '업로드 배치',
+        '수집 거래',
+        '자금수단',
+        '거래유형별 세부 적용'
+      ],
       truthSource:
         '업로드 행은 거래 후보 검토 단계이며, 실제 회계 확정은 수집 거래 확정 뒤 전표에서 이루어집니다.',
       supplementarySections: [
-      {
-        title: '이 탭에서 하는 일',
-        items: [
-          '상단 배치 상태와 등록률을 보고 아직 처리할 행이 남았는지 먼저 확인합니다.',
-          '행 목록에서 실패, 미수집, 중복 의심 행을 좁혀 등록 가능한 행을 찾습니다.',
-          '수집 거래 등록 화면에서 거래 성격, 자금수단, 카테고리와 자동 판정 결과를 확인합니다.',
-          '등록 후에는 수집 거래 화면으로 넘어가 전표 준비 상태와 확정 여부를 이어서 검토합니다.'
-        ]
-      },
         {
-          title: '막히면 확인',
+          title: '이 화면에서 진행할 일',
+          items: [
+            '상단 배치 상태와 등록률을 보고 아직 처리할 행이 남았는지 먼저 확인합니다.',
+            '행 목록에서 실패, 미수집, 중복 의심 행을 좁혀 등록 가능한 행을 찾습니다.',
+            '단건은 거래 등록으로 자동 판정 결과를 확인한 뒤 카테고리와 메모를 보완합니다.',
+            '여러 행은 자동 판정된 수입, 지출, 이체, 승인취소별로 필요한 카테고리와 메모만 세부 적용합니다.',
+            '현재 배치가 더 필요 없으면 상단의 현재 배치 삭제로 배치를 지우고 업로드 배치 목록으로 돌아갑니다.',
+            '등록 후에는 수집 거래 화면으로 넘어가 전표 준비 상태와 확정 여부를 이어서 검토합니다.'
+          ]
+        },
+        {
+          title: '문제가 있을 때 확인',
           items: [
             '운영 중에는 최신 진행월 범위의 업로드 행만 수집 거래로 등록합니다.',
             '운영월 자동 생성은 운영 시작 전 초기 입력 또는 마감 후 신규 계좌/카드 기초 입력에만 제한됩니다.',
             '잠금된 마감월 데이터나 최신 진행월 밖의 거래는 저장되지 않으며, 해당 사유를 바로 안내합니다.',
+            '일괄 등록에서 거래유형이 자동 판정되지 않는 행은 단건 검토로 먼저 거래 성격을 확인합니다.',
             '자금수단이나 카테고리 선택지가 부족하면 기준 데이터 관리 화면에서 먼저 보완합니다.',
             '거래일·금액·입출금 유형이 같은 기존 거래가 있으면 한 번 더 확인한 뒤 등록합니다.'
           ]
@@ -1145,24 +1227,25 @@ function buildImportsHelpContext(
   return {
     title: '업로드 배치 도움말',
     description:
-      '이 화면은 파일이나 붙여넣기 원본을 업로드 배치로 보관하고, 검토할 배치를 골라 작업대로 이어가는 시작 화면입니다.',
+      '이 화면은 UTF-8 본문, 은행 PDF/HTML 파일, 붙여넣기 원본을 업로드 배치로 보관하고 검토할 배치를 골라 작업대로 이어가는 시작 화면입니다.',
     primaryEntity: '업로드 배치',
     relatedEntities: ['업로드 행', '수집 거래', '계획 항목', '운영 월'],
     truthSource:
       '업로드 배치는 파일을 읽고 거래 후보를 고르는 단계이며, 실제 회계 확정은 전표에서 이루어집니다.',
     supplementarySections: [
       {
-        title: '이 탭에서 하는 일',
+        title: '이 화면에서 진행할 일',
         items: [
-          '업로드 배치 등록을 열고 원본 종류, 자금수단, 파일명, CSV 또는 붙여넣기 내용을 입력합니다.',
+          '업로드 배치 등록을 열고 원본 종류, 자금수단, 파일명, UTF-8 본문 또는 은행 파일을 입력합니다.',
+          '우리은행/우리카드 암호화 VestMail 원본은 보안메일 비밀번호 숫자 6자리를 함께 입력하고, 저장 HTML은 비밀번호를 비워 둡니다.',
           '업로드 배치 목록에서 상태, 행 수, 등록률을 보고 검토할 배치를 선택합니다.',
           '배치를 고른 뒤 작업대로 이동해 업로드 행 검토와 수집 거래 등록을 이어서 진행합니다.'
         ]
       },
       {
-        title: '막히면 확인',
+        title: '문제가 있을 때 확인',
         items: [
-          '파일이 읽히지 않으면 원본 종류와 파일 형식이 맞는지 먼저 확인합니다.',
+          '파일이 읽히지 않으면 원본 종류, 파일 형식, UTF-8 텍스트 여부를 먼저 확인합니다.',
           '등록률이 낮으면 작업대에서 실패 사유와 중복 의심 행을 먼저 확인합니다.',
           '자금수단이 맞지 않으면 새 배치를 만들기 전에 기준 데이터의 자금수단 상태를 정리합니다.'
         ]

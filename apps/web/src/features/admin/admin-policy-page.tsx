@@ -76,7 +76,7 @@ export function AdminPolicyPage() {
   );
 
   useDomainHelp({
-    title: '권한 정책 가이드',
+    title: '권한 정책 화면 도움말',
     description:
       '권한 정책 화면은 현재 메뉴 트리를 기준으로 화면별 허용 역할과 노출 상태를 읽는 확인용 표입니다.',
     primaryEntity: '메뉴 권한',
@@ -85,7 +85,7 @@ export function AdminPolicyPage() {
       '정책 요약은 저장된 메뉴 트리와 허용 역할을 읽어 만든 현재 상태 요약입니다.',
     supplementarySections: [
       {
-        title: '주로 확인하는 항목',
+        title: '먼저 확인할 항목',
         items: [
           '상단에서 현재 역할 기준 접근 가능한 화면 수를 먼저 확인합니다.',
           '표에서 화면 경로별 허용 역할과 메뉴 노출 상태를 함께 봅니다.',

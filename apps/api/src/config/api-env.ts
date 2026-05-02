@@ -12,6 +12,10 @@ export type ApiEnv = {
   EMAIL_VERIFICATION_TTL: string;
   DATABASE_URL: string;
   DEMO_EMAIL: string;
+  DEMO_RESET_SCHEDULE_ENABLED: boolean;
+  LOG_RETENTION_SCHEDULE_ENABLED: boolean;
+  WORKSPACE_AUDIT_LOG_RETENTION_DAYS: number;
+  SECURITY_THREAT_LOG_RETENTION_DAYS: number;
   INITIAL_ADMIN_EMAIL: string | null;
   INITIAL_ADMIN_NAME: string | null;
   INITIAL_ADMIN_PASSWORD: string | null;
@@ -136,6 +140,35 @@ function readBoolean(
   throw new Error(`[api env] ${key} must be either true or false.`);
 }
 
+function readIntegerInRange(
+  source: EnvSource,
+  key: string,
+  fallback: number,
+  options: {
+    min: number;
+    max: number;
+  }
+): number {
+  const rawValue = source[key];
+  const value =
+    typeof rawValue === 'string' && rawValue.trim()
+      ? rawValue.trim()
+      : String(fallback);
+  const parsed = Number(value);
+
+  if (
+    !Number.isInteger(parsed) ||
+    parsed < options.min ||
+    parsed > options.max
+  ) {
+    throw new Error(
+      `[api env] ${key} must be an integer between ${options.min} and ${options.max}.`
+    );
+  }
+
+  return parsed;
+}
+
 function readAllowedOrigins(
   source: EnvSource,
   fallbackOrigin: string
@@ -146,6 +179,8 @@ function readAllowedOrigins(
       ? rawValue.split(',')
       : [fallbackOrigin];
 
+  // 허용 출처 비교는 URL 문자열 전체가 아니라 origin 단위로만 수행한다.
+  // 경로/쿼리 차이 때문에 같은 출처가 중복 등록되거나 우회되는 일을 막는다.
   const normalizedOrigins = rawOrigins.map((candidate) => {
     const trimmed = candidate.trim();
 
@@ -308,6 +343,28 @@ export function parseApiEnv(source: EnvSource): ApiEnv {
     DEMO_EMAIL: readString(source, 'DEMO_EMAIL', {
       fallback: 'demo@example.com'
     }),
+    DEMO_RESET_SCHEDULE_ENABLED: readBoolean(
+      source,
+      'DEMO_RESET_SCHEDULE_ENABLED',
+      true
+    ),
+    LOG_RETENTION_SCHEDULE_ENABLED: readBoolean(
+      source,
+      'LOG_RETENTION_SCHEDULE_ENABLED',
+      true
+    ),
+    WORKSPACE_AUDIT_LOG_RETENTION_DAYS: readIntegerInRange(
+      source,
+      'WORKSPACE_AUDIT_LOG_RETENTION_DAYS',
+      180,
+      { min: 30, max: 3650 }
+    ),
+    SECURITY_THREAT_LOG_RETENTION_DAYS: readIntegerInRange(
+      source,
+      'SECURITY_THREAT_LOG_RETENTION_DAYS',
+      365,
+      { min: 30, max: 3650 }
+    ),
     INITIAL_ADMIN_EMAIL: readOptionalString(source, 'INITIAL_ADMIN_EMAIL', {
       maxLength: 191
     }),
@@ -366,6 +423,14 @@ export function validateApiEnv(
     INITIAL_ADMIN_EMAIL: env.INITIAL_ADMIN_EMAIL ?? '',
     INITIAL_ADMIN_NAME: env.INITIAL_ADMIN_NAME ?? '',
     INITIAL_ADMIN_PASSWORD: env.INITIAL_ADMIN_PASSWORD ?? '',
+    DEMO_RESET_SCHEDULE_ENABLED: String(env.DEMO_RESET_SCHEDULE_ENABLED),
+    LOG_RETENTION_SCHEDULE_ENABLED: String(env.LOG_RETENTION_SCHEDULE_ENABLED),
+    WORKSPACE_AUDIT_LOG_RETENTION_DAYS: String(
+      env.WORKSPACE_AUDIT_LOG_RETENTION_DAYS
+    ),
+    SECURITY_THREAT_LOG_RETENTION_DAYS: String(
+      env.SECURITY_THREAT_LOG_RETENTION_DAYS
+    ),
     GMAIL_CLIENT_ID: env.GMAIL_CLIENT_ID ?? '',
     GMAIL_CLIENT_SECRET: env.GMAIL_CLIENT_SECRET ?? '',
     GMAIL_REFRESH_TOKEN: env.GMAIL_REFRESH_TOKEN ?? '',

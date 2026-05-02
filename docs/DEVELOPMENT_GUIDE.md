@@ -56,8 +56,10 @@ npm run test
 2. `features/<domain>`에 페이지, API, 폼, 훅을 둡니다.
 3. 공통 조각만 `shared`로 올립니다.
 4. feature API는 `shared/api/fetch-json.ts`를 사용해 인증/오류/fallback 정책을 같이 따릅니다.
-5. 로딩 실패와 제출 실패는 사용자용 문구로 보이게 하고, 개발자 추적 단서는 `ApiRequestError`의 `errorCode`, `requestId`, `technicalMessage`에 남깁니다.
-6. 목록 갱신이 필요한 mutation이면 query cache 갱신 또는 invalidation을 함께 넣습니다.
+5. 로딩 실패와 제출 실패는 사용자용 문구로 보이게 하고, 개발자 추적 단서는 `ApiRequestError`의 `errorCode`, HTTP 상태, 요청 메서드/경로, `requestId`, `technicalMessage`, 원본 응답 본문에 남깁니다.
+6. 사용자에게 노출되는 오류 Alert는 상단으로 이동하고, 개발자 진단 정보는 기본 접힘 상태를 유지합니다.
+7. 표 중심 화면은 가능하면 `DataTableCard`를 사용합니다. 데스크톱 DataGrid와 모바일 카드 목록, 모바일 5/10/20개 페이지네이션을 한 경계에서 유지하기 위함입니다.
+8. 목록 갱신이 필요한 mutation이면 query cache 갱신 또는 invalidation을 함께 넣습니다.
 
 ## 5. 계약과 문서 동기화 절차
 
@@ -187,6 +189,7 @@ npm run check
 - contracts와 실제 응답 shape가 어긋나지 않았는지
 - 금액 필드가 `MoneyWon`, `Decimal(19,0)`, `HALF_UP`, safe integer, `@personal-erp/money` helper 기준을 벗어나지 않았는지
 - Swagger 노출 상태와 문서 설명이 달라지지 않았는지
-- 화면 오류 문구가 내부 함수명/영어 정책명만 노출하지 않고, 요청번호나 오류 코드 같은 추적 단서를 함께 남기는지
+- 화면 오류 문구가 내부 함수명/영어 정책명만 노출하지 않고, 사용자용 안내와 접힌 개발자 진단 정보(`errorCode`, HTTP 상태, 요청 경로, 요청번호, validator 원본 항목)를 분리하는지
+- 모바일 카드형 목록이 5/10/20개 단위 페이지네이션을 유지하는지
 - `docs/VALIDATION_NOTES.md`가 현재 검증 범위보다 뒤처지지 않았는지
 - `.secret-dir.local` 경로와 실제 SECRET 폴더 구성이 맞는지

@@ -9,6 +9,7 @@ import { GmailApiEmailSenderAdapter } from './email/gmail-api-email-sender.adapt
 import { NoopOperationalAuditSinkAdapter } from './operational/noop-operational-audit-sink.adapter';
 import { OperationalAuditPublisher } from './operational/operational-audit-publisher.service';
 import { OperationalAuditSinkPort } from './operational/operational-audit-sink.port';
+import { LogRetentionService } from './operational/log-retention.service';
 import { RequestContextInterceptor } from './operational/request-context.interceptor';
 import { SecurityEventLogger } from './operational/security-event.logger';
 import { WorkspaceAuditEventsService } from './operational/workspace-audit-events.service';
@@ -19,6 +20,7 @@ import { SystemClockAdapter } from './time/system-clock.adapter';
   imports: [PrismaModule],
   providers: [
     RequestContextInterceptor,
+    LogRetentionService,
     SecurityEventLogger,
     WorkspaceAuditEventsService,
     OperationalAuditPublisher,

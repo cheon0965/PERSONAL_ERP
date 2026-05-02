@@ -28,6 +28,7 @@ import { ReferenceDataReadinessModule } from './modules/reference-data-readiness
 import { WorkspaceSettingsModule } from './modules/workspace-settings/workspace-settings.module';
 import { OperationsConsoleModule } from './modules/operations-console/operations-console.module';
 import { NavigationModule } from './modules/navigation/public';
+import { DemoMaintenanceModule } from './modules/demo-maintenance/demo-maintenance.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { NavigationModule } from './modules/navigation/public';
     }),
     ScheduleModule.forRoot(),
     ExternalDependenciesModule,
+    DemoMaintenanceModule,
     HealthModule,
     AuthModule,
     NavigationModule,

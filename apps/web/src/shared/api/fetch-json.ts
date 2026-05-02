@@ -8,12 +8,18 @@ import { webEnv, webRuntime } from '../config/env';
 const API_BASE_URL = webEnv.NEXT_PUBLIC_API_BASE_URL;
 const browserFetch: typeof fetch = (input, init) => fetch(input, init);
 const REQUEST_ID_HEADER = 'x-request-id';
+const DIAGNOSTIC_RESPONSE_BODY_LIMIT = 2000;
 
 type ApiErrorDiagnostics = {
+  method?: string;
   path?: string;
   requestId?: string;
   errorCode?: string;
+  statusText?: string;
+  serverError?: string;
+  validationMessages?: string[];
   technicalMessage?: string;
+  timestamp?: string;
 };
 
 type ErrorFeedbackValue = {
@@ -161,10 +167,15 @@ type FetchJsonOptions = {
 
 export class ApiRequestError extends Error {
   public readonly userMessage: string;
+  public readonly method?: string;
   public readonly path?: string;
   public readonly requestId?: string;
   public readonly errorCode?: string;
+  public readonly statusText?: string;
+  public readonly serverError?: string;
+  public readonly validationMessages?: string[];
   public readonly technicalMessage?: string;
+  public readonly timestamp?: string;
 
   constructor(
     public readonly status: number,
@@ -175,10 +186,15 @@ export class ApiRequestError extends Error {
     super(formatApiErrorMessage(message, diagnostics));
     this.name = 'ApiRequestError';
     this.userMessage = message;
+    this.method = diagnostics.method;
     this.path = diagnostics.path;
     this.requestId = diagnostics.requestId;
     this.errorCode = diagnostics.errorCode;
+    this.statusText = diagnostics.statusText;
+    this.serverError = diagnostics.serverError;
+    this.validationMessages = diagnostics.validationMessages;
     this.technicalMessage = diagnostics.technicalMessage;
+    this.timestamp = diagnostics.timestamp;
   }
 }
 
@@ -237,9 +253,11 @@ export async function fetchJsonWithConfig<T>(
       '서버와 연결하지 못했습니다. 잠시 후 다시 시도하거나 관리자에게 문의해 주세요.',
       null,
       {
+        method: readRequestMethod(options),
         path,
         errorCode: 'NETWORK_REQUEST_FAILED',
-        technicalMessage: buildRequestFailureMessage(path, error)
+        technicalMessage: buildRequestFailureMessage(path, error),
+        timestamp: new Date().toISOString()
       }
     );
   }
@@ -262,6 +280,7 @@ async function sendRequest<T>(
         '로그인이 필요합니다. 다시 로그인해 주세요.',
         null,
         {
+          method: readRequestMethod(options),
           path,
           technicalMessage: `[personal-erp] ${path} 호출 전에 로그인이 필요합니다.`
         }
@@ -284,8 +303,9 @@ async function sendRequest<T>(
     body = options.formData;
   }
 
+  const method = readRequestMethod(options);
   const response = await config.fetchImpl(`${config.apiBaseUrl}${path}`, {
-    method: options.method ?? 'GET',
+    method,
     next: { revalidate: 0 },
     cache: 'no-store',
     credentials: 'include',
@@ -305,12 +325,15 @@ async function sendRequest<T>(
   if (response.status === 401) {
     config.onUnauthorized?.();
     throw createApiRequestErrorFromResponse(response, path, responseBody, {
-      unauthorized: true
+      unauthorized: true,
+      method
     });
   }
 
   if (!response.ok) {
-    throw createApiRequestErrorFromResponse(response, path, responseBody);
+    throw createApiRequestErrorFromResponse(response, path, responseBody, {
+      method
+    });
   }
 
   return responseBody as T;
@@ -334,9 +357,10 @@ export function createApiRequestErrorFromResponse(
   response: Response,
   path: string,
   responseBody: unknown,
-  options: { unauthorized?: boolean } = {}
+  options: { unauthorized?: boolean; method?: string } = {}
 ) {
   const rawMessage = readErrorMessage(responseBody);
+  const validationMessages = readErrorMessages(responseBody);
   const requestId = readRequestId(response, responseBody);
   const errorCode = readErrorCode(response.status, responseBody);
   const userMessage = buildApiErrorMessage(responseBody, {
@@ -346,10 +370,19 @@ export function createApiRequestErrorFromResponse(
     unauthorized: options.unauthorized === true
   });
   const diagnostics = {
+    method: options.method,
     path,
     requestId,
     errorCode,
-    technicalMessage: rawMessage ?? response.statusText
+    statusText: response.statusText,
+    serverError: readResponseError(responseBody),
+    validationMessages: validationMessages ?? undefined,
+    technicalMessage: buildTechnicalMessage(
+      response,
+      rawMessage,
+      validationMessages
+    ),
+    timestamp: readResponseTimestamp(responseBody) ?? new Date().toISOString()
   };
 
   if (options.unauthorized || response.status === 401) {
@@ -368,10 +401,7 @@ export function formatErrorMessage(error: unknown, fallbackMessage: string) {
   return readErrorUserMessage(error, fallbackMessage);
 }
 
-export function readErrorUserMessage(
-  error: unknown,
-  fallbackMessage: string
-) {
+export function readErrorUserMessage(error: unknown, fallbackMessage: string) {
   if (error instanceof ApiRequestError) {
     return error.userMessage;
   }
@@ -388,14 +418,30 @@ export function readErrorDiagnostics(error: unknown): string | null {
     return null;
   }
 
+  const validationDiagnostics = (error.validationMessages ?? []).map(
+    (message, index) =>
+      formatDiagnosticLine(
+        `검증 항목 ${index + 1}`,
+        formatValidationDiagnosticMessage(message)
+      )
+  );
+  const responseBody = formatDiagnosticValue(error.responseBody);
+
   return [
-    `HTTP ${error.status}`,
-    error.errorCode ? `오류 코드 ${error.errorCode}` : null,
-    error.requestId ? `요청번호 ${error.requestId}` : null,
-    error.path ? `경로 ${error.path}` : null
+    formatDiagnosticLine('오류 코드', error.errorCode),
+    formatDiagnosticLine('HTTP 상태', formatDiagnosticHttpStatus(error)),
+    formatDiagnosticLine('요청 메서드', error.method),
+    formatDiagnosticLine('요청 경로', error.path),
+    formatDiagnosticLine('요청번호', error.requestId),
+    formatDiagnosticLine('서버 오류 항목', error.serverError),
+    formatDiagnosticLine('사용자 표시 메시지', error.userMessage),
+    ...validationDiagnostics,
+    formatDiagnosticLine('기술 메시지', error.technicalMessage),
+    formatDiagnosticLine('응답 시각', error.timestamp),
+    responseBody ? formatDiagnosticLine('원본 응답 본문', responseBody) : null
   ]
     .filter((item): item is string => Boolean(item))
-    .join(' · ');
+    .join('\n');
 }
 
 export function buildErrorFeedback(
@@ -404,7 +450,7 @@ export function buildErrorFeedback(
 ): ErrorFeedbackValue {
   return {
     severity: 'error',
-    message: readErrorUserMessage(error, fallbackMessage),
+    message: buildFeedbackUserMessage(error, fallbackMessage),
     diagnostics: readErrorDiagnostics(error) ?? undefined
   };
 }
@@ -498,6 +544,32 @@ function readErrorMessages(responseBody: unknown): string[] | null {
   return null;
 }
 
+function readResponseError(responseBody: unknown): string | undefined {
+  if (
+    responseBody &&
+    typeof responseBody === 'object' &&
+    'error' in responseBody &&
+    typeof responseBody.error === 'string'
+  ) {
+    return responseBody.error.trim() || undefined;
+  }
+
+  return undefined;
+}
+
+function readResponseTimestamp(responseBody: unknown): string | undefined {
+  if (
+    responseBody &&
+    typeof responseBody === 'object' &&
+    'timestamp' in responseBody &&
+    typeof responseBody.timestamp === 'string'
+  ) {
+    return responseBody.timestamp.trim() || undefined;
+  }
+
+  return undefined;
+}
+
 function readRequestId(response: Response, responseBody: unknown) {
   const headerRequestId = response.headers.get(REQUEST_ID_HEADER)?.trim();
   if (headerRequestId) {
@@ -567,17 +639,117 @@ function formatApiErrorMessage(
     : message;
 }
 
+function buildTechnicalMessage(
+  response: Response,
+  rawMessage: string | null,
+  validationMessages: string[] | null
+) {
+  if (validationMessages && validationMessages.length > 0) {
+    return validationMessages.join(' | ');
+  }
+
+  return rawMessage ?? response.statusText ?? `HTTP ${response.status}`;
+}
+
+function readRequestMethod(options: FetchJsonOptions) {
+  return options.method ?? 'GET';
+}
+
+function buildFeedbackUserMessage(error: unknown, fallbackMessage: string) {
+  const userMessage = readErrorUserMessage(error, fallbackMessage);
+  const actionMessage = fallbackMessage.trim();
+
+  if (
+    !(error instanceof ApiRequestError) ||
+    !actionMessage ||
+    userMessage === actionMessage ||
+    isGenericActionMessage(actionMessage)
+  ) {
+    return userMessage;
+  }
+
+  return `${actionMessage} ${userMessage}`;
+}
+
+function isGenericActionMessage(message: string) {
+  return (
+    message === '작업을 완료하지 못했습니다.' ||
+    message === '요청을 완료하지 못했습니다.' ||
+    message === '데이터를 불러오지 못했습니다.'
+  );
+}
+
+function formatDiagnosticLine(label: string, value: string | undefined | null) {
+  if (!value) {
+    return null;
+  }
+
+  return `${label}: ${value}`;
+}
+
+function formatDiagnosticHttpStatus(error: ApiRequestError) {
+  if (error.status === 0) {
+    return '네트워크 요청 실패';
+  }
+
+  return [String(error.status), error.statusText].filter(Boolean).join(' ');
+}
+
+function formatValidationDiagnosticMessage(message: string) {
+  const field = readValidationFieldName(message);
+  const fieldLabel = field ? readFieldLabel(field) : null;
+
+  if (!field || !fieldLabel) {
+    return message;
+  }
+
+  return `${fieldLabel} (${field}) - ${message}`;
+}
+
+function readValidationFieldName(message: string) {
+  const match = message.match(
+    /^(.+?) (?:must|should|is|has|cannot|can only|can not)\b/i
+  );
+  return match?.[1]?.trim();
+}
+
+function formatDiagnosticValue(value: unknown) {
+  if (value == null) {
+    return null;
+  }
+
+  const raw =
+    typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+
+  if (!raw) {
+    return null;
+  }
+
+  return raw.length > DIAGNOSTIC_RESPONSE_BODY_LIMIT
+    ? `${raw.slice(0, DIAGNOSTIC_RESPONSE_BODY_LIMIT)}...`
+    : raw;
+}
+
 function buildValidationMessage(messages: string[] | null) {
   const translatedMessages = (messages ?? [])
     .map(translateValidationMessage)
     .filter(Boolean)
     .slice(0, 3);
+  const hiddenMessageCount = Math.max(
+    (messages?.length ?? 0) - translatedMessages.length,
+    0
+  );
 
   if (translatedMessages.length === 0) {
     return '입력값을 확인해 주세요.';
   }
 
-  return `입력값을 확인해 주세요. ${translatedMessages.join(' ')}`;
+  const suffix =
+    hiddenMessageCount > 0
+      ? ` 외 ${hiddenMessageCount}개 항목도 함께 확인해 주세요.`
+      : '';
+
+  return `입력값을 확인해 주세요. ${translatedMessages.join(' ')}${suffix}`;
 }
 
 function sanitizeClientErrorMessage(message: string, fallbackMessage: string) {
@@ -586,6 +758,8 @@ function sanitizeClientErrorMessage(message: string, fallbackMessage: string) {
     return fallbackMessage;
   }
 
+  // 개발자용 단서를 API가 포함하더라도 화면에는 먼저 행동 가능한 사용자 문장을 보여준다.
+  // 원본 단서는 diagnostics에 남겨 접힌 상세 영역에서 확인하게 한다.
   const translated = translateKnownApiMessage(trimmedMessage);
   if (translated) {
     return translated;
@@ -664,6 +838,11 @@ function translateValidationMessage(message: string) {
     return `${readFieldLabel(requiredMatch[1] ?? '')} 항목을 입력해 주세요.`;
   }
 
+  const booleanTrueMatch = trimmedMessage.match(/^(.+?) must be true$/i);
+  if (booleanTrueMatch) {
+    return `${readFieldLabel(booleanTrueMatch[1] ?? '')} 항목을 확인해 주세요.`;
+  }
+
   const uuidMatch = trimmedMessage.match(/^(.+?) must be a UUID$/i);
   if (uuidMatch) {
     return `${readFieldLabel(uuidMatch[1] ?? '')} 항목을 다시 선택해 주세요.`;
@@ -717,11 +896,11 @@ function translateValidationMessage(message: string) {
 function readStatusFallbackMessage(status: number) {
   switch (status) {
     case 400:
-      return '입력값이나 요청 조건을 확인해 주세요.';
+      return '입력값이나 요청 조건이 올바르지 않습니다. 표시된 항목을 확인해 주세요.';
     case 401:
       return '로그인이 필요합니다. 다시 로그인해 주세요.';
     case 403:
-      return '현재 권한으로는 이 작업을 진행할 수 없습니다.';
+      return '현재 계정 권한으로는 이 작업을 진행할 수 없습니다. 필요한 역할 권한을 확인해 주세요.';
     case 404:
       return '요청한 데이터를 찾을 수 없습니다. 목록을 새로고침한 뒤 다시 시도해 주세요.';
     case 409:
@@ -730,7 +909,7 @@ function readStatusFallbackMessage(status: number) {
       return '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.';
     default:
       return status >= 500
-        ? '서버에서 작업을 완료하지 못했습니다. 잠시 후 다시 시도하거나 관리자에게 문의해 주세요.'
+        ? '서버에서 작업을 완료하지 못했습니다. 잠시 후 다시 시도하거나 요청번호를 관리자에게 전달해 주세요.'
         : '요청을 완료하지 못했습니다. 입력값과 화면 상태를 확인해 주세요.';
   }
 }

@@ -73,20 +73,28 @@ export function AdminSupportContextPage() {
         ...(ledgerId ? { ledgerId } : {})
       }),
     onSuccess: async () => {
-      setFeedback({ severity: 'success', message: '지원 모드를 시작했습니다.' });
+      setFeedback({
+        severity: 'success',
+        message: '지원 모드를 시작했습니다.'
+      });
       await queryClient.invalidateQueries({
         queryKey: adminSupportContextQueryKey
       });
       await refreshUser();
     },
     onError: (error) => {
-      setFeedback(buildErrorFeedback(error, '지원 모드를 시작하지 못했습니다.'));
+      setFeedback(
+        buildErrorFeedback(error, '지원 모드를 시작하지 못했습니다.')
+      );
     }
   });
   const clearMutation = useMutation({
     mutationFn: clearAdminSupportContext,
     onSuccess: async () => {
-      setFeedback({ severity: 'success', message: '지원 모드를 해제했습니다.' });
+      setFeedback({
+        severity: 'success',
+        message: '지원 모드를 해제했습니다.'
+      });
       setTenantId('');
       setLedgerId('');
       await queryClient.invalidateQueries({
@@ -95,12 +103,14 @@ export function AdminSupportContextPage() {
       await refreshUser();
     },
     onError: (error) => {
-      setFeedback(buildErrorFeedback(error, '지원 모드를 해제하지 못했습니다.'));
+      setFeedback(
+        buildErrorFeedback(error, '지원 모드를 해제하지 못했습니다.')
+      );
     }
   });
 
   useDomainHelp({
-    title: '사업장 전환 / 지원 모드 가이드',
+    title: '사업장 전환 / 지원 모드 화면 도움말',
     description:
       '지원 모드는 전체 관리자가 다른 사용자로 가장하지 않고, SYSTEM_ADMIN 권한으로 특정 사업장과 장부 문맥을 선택해 운영 화면을 확인하는 기능입니다.',
     primaryEntity: '지원 문맥',
@@ -109,7 +119,7 @@ export function AdminSupportContextPage() {
       '지원 모드는 현재 로그인 세션에만 저장되며, 모든 작업은 실제 전체 관리자 사용자 ID로 기록됩니다.',
     supplementarySections: [
       {
-        title: '확인 기준',
+        title: '먼저 확인할 기준',
         items: [
           '현재 지원 문맥이 켜져 있는지 먼저 확인하고, 필요 없으면 해제합니다.',
           '사업장과 장부를 명시적으로 선택한 뒤 운영 메뉴를 확인합니다.',
@@ -118,12 +128,13 @@ export function AdminSupportContextPage() {
         ]
       },
       {
-        title: '후속 안내',
+        title: '다음 작업',
         links: [
           {
             title: '사업장 관리',
             href: '/admin/tenants',
-            description: '지원 문맥으로 열 사업장의 상태와 기본 장부를 확인합니다.',
+            description:
+              '지원 문맥으로 열 사업장의 상태와 기본 장부를 확인합니다.',
             actionLabel: '사업장 관리 열기'
           },
           {
@@ -183,7 +194,10 @@ export function AdminSupportContextPage() {
       >
         <Grid container spacing={appLayout.fieldGap}>
           <Grid size={{ xs: 12, md: 4 }}>
-            <Info label="상태" value={supportContext?.enabled ? '사용 중' : '꺼짐'} />
+            <Info
+              label="상태"
+              value={supportContext?.enabled ? '사용 중' : '꺼짐'}
+            />
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
             <Info label="사업장" value={supportContext?.tenant?.name ?? '-'} />

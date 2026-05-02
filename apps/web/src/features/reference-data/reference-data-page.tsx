@@ -35,7 +35,7 @@ export function ReferenceDataPage() {
     : '-';
 
   useDomainHelp({
-    title: '기준 데이터 준비 상태 사용 가이드',
+    title: '기준 데이터 준비 상태 화면 도움말',
     description:
       '이 화면은 월 운영을 시작하기 전에 자금수단, 카테고리, 계정과목, 거래유형이 운영 가능한 상태인지 한 번에 점검하는 곳입니다. 막히는 화면이 있으면 먼저 부족한 준비 항목을 확인합니다.',
     primaryEntity: '기준 데이터 준비 상태',
@@ -65,7 +65,7 @@ export function ReferenceDataPage() {
         ]
       },
       {
-        title: '바로 쓰는 순서',
+        title: '작업 진행 순서',
         description:
           '준비 상태 탭에서는 부족한 기준을 먼저 찾고, 필요한 경우 관리 탭으로 넘어가 보완합니다.',
         items: [

@@ -28,7 +28,7 @@ export function OperationsAlertsPage() {
   const alerts = alertsQuery.data;
 
   useDomainHelp({
-    title: '운영 알림 가이드',
+    title: '운영 알림 화면 도움말',
     description:
       '운영 알림은 월 마감, 업로드, 보안 관련 경고를 우선순위대로 모아 보는 화면입니다.',
     primaryEntity: '운영 알림',
@@ -37,7 +37,7 @@ export function OperationsAlertsPage() {
       '알림은 운영 이벤트와 예외 상태를 기반으로 만든 즉시 확인용 요약입니다.',
     supplementarySections: [
       {
-        title: '바로 쓰는 순서',
+        title: '작업 진행 순서',
         items: [
           '상단 긴급/경고 건수를 보고 오늘 먼저 대응할 규모를 확인합니다.',
           '목록에서 심각도와 알림 종류를 기준으로 마감 차단, 업로드 실패, 보안 경고를 분리합니다.',
@@ -49,13 +49,15 @@ export function OperationsAlertsPage() {
         links: [
           {
             title: '예외 처리함',
-            description: '알림의 원인이 되는 운영 예외를 우선순위 기준으로 다시 확인합니다.',
+            description:
+              '알림의 원인이 되는 운영 예외를 우선순위 기준으로 다시 확인합니다.',
             href: '/operations/exceptions',
             actionLabel: '예외 처리 보기'
           },
           {
             title: '시스템 상태',
-            description: '시스템, 메일, 최근 활동 상태에서 실제 이상이 있는지 함께 점검합니다.',
+            description:
+              '시스템, 메일, 최근 활동 상태에서 실제 이상이 있는지 함께 점검합니다.',
             href: '/operations/status',
             actionLabel: '시스템 상태 보기'
           }

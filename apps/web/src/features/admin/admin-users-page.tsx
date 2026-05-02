@@ -116,7 +116,7 @@ export function AdminUsersPage() {
     mutationFn: (input: { userId: string; isSystemAdmin: boolean }) =>
       updateAdminUserSystemAdmin(input.userId, {
         isSystemAdmin: input.isSystemAdmin
-    }),
+      }),
     onSuccess: async () => {
       setFeedback({
         severity: 'success',
@@ -150,7 +150,7 @@ export function AdminUsersPage() {
   });
 
   useDomainHelp({
-    title: '전체 사용자 관리 가이드',
+    title: '전체 사용자 관리 화면 도움말',
     description:
       '전체 사용자 관리는 계정 잠금, 세션 만료, 이메일 인증 보정, 전체 관리자 권한을 최소 범위로 조정하는 화면입니다.',
     primaryEntity: '사용자 계정',
@@ -159,7 +159,7 @@ export function AdminUsersPage() {
       '로그인 가능 여부는 사용자 상태, 이메일 인증, 활성 세션 상태를 함께 기준으로 판단합니다.',
     supplementarySections: [
       {
-        title: '확인 기준',
+        title: '먼저 확인할 기준',
         items: [
           '상단 요약에서 잠금 사용자, 전체 관리자, 활성 세션 규모를 먼저 확인합니다.',
           '검색과 상태 필터로 조치 대상 계정을 좁힌 뒤 이메일과 사용자 ID를 다시 확인합니다.',
@@ -169,7 +169,7 @@ export function AdminUsersPage() {
         ]
       },
       {
-        title: '후속 안내',
+        title: '다음 작업',
         links: [
           {
             title: '보안 위협 로그',

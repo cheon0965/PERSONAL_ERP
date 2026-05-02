@@ -63,7 +63,7 @@ export function OperationsNotesPage() {
     }
   });
   useDomainHelp({
-    title: '운영 메모 가이드',
+    title: '운영 메모 화면 도움말',
     description:
       '운영 메모는 월 마감, 예외, 후속 조치를 인수인계용으로 남기는 화면입니다.',
     primaryEntity: '운영 메모',
@@ -72,7 +72,7 @@ export function OperationsNotesPage() {
       '메모는 현재 사업장과 선택한 운영 월 기준으로 저장되고 조회됩니다.',
     supplementarySections: [
       {
-        title: '바로 쓰는 순서',
+        title: '작업 진행 순서',
         items: [
           '메모 종류를 월 마감, 예외, 일반 중 하나로 정해 나중에 찾기 쉽게 남깁니다.',
           '제목에는 결론을 짧게 쓰고 본문에는 처리한 화면, 판단 근거, 남은 일을 적습니다.',
@@ -91,7 +91,8 @@ export function OperationsNotesPage() {
           },
           {
             title: '예외 처리함',
-            description: '예외 처리 후속 메모와 실제 처리 화면을 바로 연결합니다.',
+            description:
+              '예외 처리 후속 메모와 실제 처리 화면을 바로 연결합니다.',
             href: '/operations/exceptions',
             actionLabel: '예외 처리 보기'
           }

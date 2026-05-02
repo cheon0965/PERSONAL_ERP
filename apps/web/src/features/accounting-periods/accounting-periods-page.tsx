@@ -92,8 +92,9 @@ export function AccountingPeriodsPage({
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const [closeNote, setCloseNote] = React.useState('');
   const [reopenReason, setReopenReason] = React.useState('');
-  const [selectedReopenPeriodId, setSelectedReopenPeriodId] =
-    React.useState<string | null>(null);
+  const [selectedReopenPeriodId, setSelectedReopenPeriodId] = React.useState<
+    string | null
+  >(null);
   const [latestClosingResult, setLatestClosingResult] =
     React.useState<CloseAccountingPeriodResponse | null>(null);
   const { data: periods = [], error } = useQuery({
@@ -245,10 +246,15 @@ export function AccountingPeriodsPage({
           ];
         })
       ),
-    [lockedPeriods, periods, reopenCarryForwardQueries, shouldLoadReopenEligibility]
+    [
+      lockedPeriods,
+      periods,
+      reopenCarryForwardQueries,
+      shouldLoadReopenEligibility
+    ]
   );
   const selectedReopenEligibility = selectedReopenPeriod
-    ? reopenEligibilityByPeriodId[selectedReopenPeriod.id] ?? null
+    ? (reopenEligibilityByPeriodId[selectedReopenPeriod.id] ?? null)
     : null;
 
   useDomainHelp(
@@ -497,8 +503,8 @@ export function AccountingPeriodsPage({
 
       {!hasWorkspace ? (
         <Alert severity="warning" variant="outlined">
-          현재 사업장과 장부 정보가 아직 준비되지 않았습니다. 설정 화면에서
-          연결 상태를 먼저 확인해 주세요.
+          현재 사업장과 장부 정보가 아직 준비되지 않았습니다. 설정 화면에서 연결
+          상태를 먼저 확인해 주세요.
         </Alert>
       ) : null}
 

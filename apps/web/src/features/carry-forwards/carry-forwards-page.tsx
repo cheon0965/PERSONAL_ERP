@@ -211,7 +211,9 @@ export function CarryForwardsPage({
 
     try {
       const result = await cancelMutation.mutateAsync(view);
-      notifySuccess(`${result.sourcePeriod.monthLabel} 차기 이월을 취소했습니다.`);
+      notifySuccess(
+        `${result.sourcePeriod.monthLabel} 차기 이월을 취소했습니다.`
+      );
     } catch (error) {
       setFeedback(
         buildErrorFeedback(error, '차기 이월을 취소하지 못했습니다.')
@@ -569,7 +571,7 @@ function buildCarryForwardsHelpContext(mode: CarryForwardsPageMode) {
         '차기 이월은 잠금된 기간의 마감 결과와 잔액 라인을 근거로 생성됩니다.',
       supplementarySections: [
         {
-          title: '이 탭에서 하는 일',
+          title: '이 화면에서 진행할 일',
           items: [
             '이전 월과 다음 월 연결이 맞는지 먼저 확인합니다.',
             '마감 기준의 자산, 부채, 자본 합계가 의도한 기준인지 확인합니다.',
@@ -616,7 +618,7 @@ function buildCarryForwardsHelpContext(mode: CarryForwardsPageMode) {
       '차기 이월은 잠금된 기간의 마감 결과와 잔액 라인을 근거로 생성됩니다.',
     supplementarySections: [
       {
-        title: '이 탭에서 하는 일',
+        title: '이 화면에서 진행할 일',
         items: [
           '잠금된 운영 기간을 선택해 차기 이월 생성 여부를 확인합니다.',
           '차기 이월 생성을 눌러 선택한 월의 마감 잔액을 다음 월 오프닝 기준으로 넘깁니다.',
@@ -647,8 +649,7 @@ function buildCarryForwardsHelpContext(mode: CarryForwardsPageMode) {
           },
           {
             title: '재무제표 생성 / 선택',
-            description:
-              '이월 전 공식 보고 숫자를 다시 확인합니다.',
+            description: '이월 전 공식 보고 숫자를 다시 확인합니다.',
             href: '/financial-statements',
             actionLabel: '재무제표 보기'
           }

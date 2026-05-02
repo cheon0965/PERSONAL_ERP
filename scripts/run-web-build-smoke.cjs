@@ -11,12 +11,19 @@ const baseUrl = `http://${host}:${port}`;
 const readinessUrl = `${baseUrl}/api/health`;
 const buildTimeoutMs = 5 * 60 * 1000;
 const readinessTimeoutMs = 90 * 1000;
+const smokeEnv = {
+  ...process.env,
+  // 스모크 빌드가 CI에서 돌 때는 배포용 공개 환경변수가 없을 수 있다.
+  // 앱 검증은 엄격하게 유지하되, 이 독립 빌드/시작 확인에만 로컬 API 기준값을 제공한다.
+  NEXT_PUBLIC_API_BASE_URL:
+    process.env.NEXT_PUBLIC_API_BASE_URL ?? `${baseUrl}/api`
+};
 
 function runProcess(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd: repoRoot,
-      env: process.env,
+      env: smokeEnv,
       stdio: 'inherit',
       shell: false,
       ...options
@@ -69,7 +76,7 @@ async function terminateProcessTree(child) {
         ['/pid', String(child.pid), '/T', '/F'],
         {
           cwd: repoRoot,
-          env: process.env,
+          env: smokeEnv,
           stdio: 'ignore',
           shell: false
         }
@@ -145,7 +152,7 @@ async function main() {
     ],
     {
       cwd: webAppRoot,
-      env: process.env,
+      env: smokeEnv,
       stdio: 'inherit',
       shell: false
     }

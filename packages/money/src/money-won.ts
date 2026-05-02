@@ -37,7 +37,7 @@ export function parseMoneyWon(
   options?: ParseMoneyWonOptions
 ): MoneyWon | null {
   // 외부 입력은 number와 문자열을 모두 받을 수 있지만, 최종 MoneyWon은 항상
-  // Number.MAX_SAFE_INTEGER 범위 안의 정수로만 통과시킨다.
+  // 값은 `Number.MAX_SAFE_INTEGER` 범위 안의 정수로만 통과시킨다.
   const resolvedOptions = {
     ...DEFAULT_PARSE_OPTIONS,
     ...options

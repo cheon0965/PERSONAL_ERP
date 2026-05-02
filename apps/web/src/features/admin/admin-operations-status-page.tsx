@@ -46,7 +46,7 @@ export function AdminOperationsStatusPage() {
   });
 
   useDomainHelp({
-    title: '운영 상태 가이드',
+    title: '운영 상태 화면 도움말',
     description:
       '운영 상태는 전체 관리자가 배포 후 가장 먼저 보는 점검판입니다. 사용자, 사업장, 보안 위협, 감사 실패 지표를 한 화면에서 확인합니다.',
     primaryEntity: '운영 상태',
@@ -55,7 +55,7 @@ export function AdminOperationsStatusPage() {
       '운영 상태는 서버가 현재 DB와 최근 24시간 이벤트를 읽어 계산한 점검 결과입니다.',
     supplementarySections: [
       {
-        title: '확인 기준',
+        title: '먼저 확인할 기준',
         items: [
           '오류 상태 컴포넌트가 있으면 배포나 운영 확인을 멈추고 해당 항목부터 확인합니다.',
           '최근 24시간 긴급/높음 보안 위협과 실패/거부 감사 이벤트는 운영 리스크 신호로 먼저 봅니다.',
@@ -71,7 +71,7 @@ export function AdminOperationsStatusPage() {
         ]
       },
       {
-        title: '후속 안내',
+        title: '다음 작업',
         links: [
           {
             title: '보안 위협 로그',

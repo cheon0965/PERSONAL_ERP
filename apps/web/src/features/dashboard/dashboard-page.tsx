@@ -21,7 +21,7 @@ export function DashboardPage() {
   });
 
   useDomainHelp({
-    title: '월 운영 대시보드 사용 가이드',
+    title: '월 운영 대시보드 화면 도움말',
     description:
       '대시보드는 월 운영 사이클 중간중간 현재 자금 상태, 확정 지출, 남은 계획, 안전 잉여를 빠르게 읽는 점검 화면입니다.',
     primaryEntity: '사업 장부 / 운영 월',
@@ -35,7 +35,7 @@ export function DashboardPage() {
       '공식 수치는 마감 완료된 월의 마감 스냅샷과 공식 재무제표를 기준으로 확인합니다.',
     supplementarySections: [
       {
-        title: '바로 쓰는 순서',
+        title: '작업 진행 순서',
         items: [
           '상단 운영 기간과 기준 상태를 확인해 현재 화면이 열린 월 기준인지 공식 잠금 기준인지 구분합니다.',
           '현재 자금 잔액과 안전 잉여로 단기 운영 여력을 봅니다.',
@@ -58,25 +58,29 @@ export function DashboardPage() {
         links: [
           {
             title: '기간 운영 전망',
-            description: '월말 예상 잔액과 안전 여력을 더 자세히 해석할 때 이어서 확인합니다.',
+            description:
+              '월말 예상 잔액과 안전 여력을 더 자세히 해석할 때 이어서 확인합니다.',
             href: '/forecast',
             actionLabel: '기간 전망 보기'
           },
           {
             title: '재무제표 생성 / 선택',
-            description: '공식 잠금 기준 숫자와 전기 비교가 필요할 때 이동합니다.',
+            description:
+              '공식 잠금 기준 숫자와 전기 비교가 필요할 때 이동합니다.',
             href: '/financial-statements',
             actionLabel: '재무제표 보기'
           },
           {
             title: '전표 조회',
-            description: '확정 지출 근거가 되는 전표 라인과 조정 흐름을 확인합니다.',
+            description:
+              '확정 지출 근거가 되는 전표 라인과 조정 흐름을 확인합니다.',
             href: '/journal-entries',
             actionLabel: '전표 보기'
           },
           {
             title: '이월 기준 생성 / 선택',
-            description: '다음 월 시작 기준까지 이어서 확인하려면 차기 이월 화면으로 이동합니다.',
+            description:
+              '다음 월 시작 기준까지 이어서 확인하려면 차기 이월 화면으로 이동합니다.',
             href: '/carry-forwards',
             actionLabel: '차기 이월 보기'
           }

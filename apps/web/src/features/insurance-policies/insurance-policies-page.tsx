@@ -120,7 +120,7 @@ export function InsurancePoliciesPage() {
   });
 
   useDomainHelp({
-    title: '보험 계약 사용 가이드',
+    title: '보험 계약 화면 도움말',
     description:
       '이 화면은 매월 또는 매년 반복되는 보험료 기준을 정리하는 운영 화면입니다. 보험 계약을 저장하면 이후 계획 항목을 만들 반복 규칙까지 함께 관리됩니다.',
     primaryEntity: '보험 계약 보조 데이터',
@@ -129,7 +129,7 @@ export function InsurancePoliciesPage() {
       '보험 계약은 회계 확정 데이터가 아니며, 여기서 입력한 납부 기준만 연결된 반복 규칙에 반영됩니다.',
     supplementarySections: [
       {
-        title: '바로 쓰는 순서',
+        title: '작업 진행 순서',
         items: [
           '보험 계약 등록을 열고 보험사, 상품명, 월 보험료, 납부일을 입력합니다.',
           '자금수단, 카테고리, 반복 시작일을 채워 연결 반복 규칙이 바로 계획 생성에 쓰이게 합니다.',

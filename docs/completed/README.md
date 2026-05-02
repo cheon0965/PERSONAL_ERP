@@ -14,13 +14,15 @@
 ## 완료 문서
 
 - [`ALIGNMENT_PATCH_EXECUTION_PLAN.md`](./ALIGNMENT_PATCH_EXECUTION_PLAN.md): 내부 정합성 패치와 설계 모델 분리를 완료하고 보관한 실행 계획
+- [`ACCOUNTING_PERIOD_OPEN_CLOSE_DECOUPLING_EXECUTION_PLAN.md`](./ACCOUNTING_PERIOD_OPEN_CLOSE_DECOUPLING_EXECUTION_PLAN.md): 기간 open/close/reopen 경계와 월 운영 상태 전이를 분리한 뒤 보관한 실행 계획
 - [`ADMIN_MEMBER_LOG_MANAGEMENT_PLAN.md`](./ADMIN_MEMBER_LOG_MANAGEMENT_PLAN.md): workspace-scoped 관리자 회원관리, 감사 로그, 초대 수락 흐름, 공통 감사 저장 경계를 완료하고 보관한 실행 계획
-- [`ASVS_L2_REMEDIATION_EXECUTION_PLAN.md`](./ASVS_L2_REMEDIATION_EXECUTION_PLAN.md): ASVS L2 보강 점검에서 도출한 Woori HTML fail-closed, Web 보안 헤더, refresh cookie hardening, CSV formula guard, password policy, JWT secret entropy 검증을 완료하고 보관한 실행 계획
+- [`ASVS_L2_REMEDIATION_EXECUTION_PLAN.md`](./ASVS_L2_REMEDIATION_EXECUTION_PLAN.md): ASVS L2 보강 점검에서 도출한 Woori HTML 스크립트 실행 제거와 안전 복호화, Web 보안 헤더, refresh cookie hardening, CSV formula guard, password policy, JWT secret entropy 검증을 완료하고 보관한 실행 계획
 - [`AUTH_REGISTRATION_GMAIL_PLAN.md`](./AUTH_REGISTRATION_GMAIL_PLAN.md): 회원가입, 이메일 인증, Gmail API/console mail sender 경계, Web 가입/인증 화면, 관련 테스트와 문서 동기화를 완료하고 보관한 실행 계획
 - [`BUSINESS_FLOW_IMPROVEMENT_EXECUTION_PLAN.md`](./BUSINESS_FLOW_IMPROVEMENT_EXECUTION_PLAN.md): 현재 범위 완료 후 보관한 메인 비즈니스 흐름 개선 실행 계획 및 반영 현황
 - [`CONCURRENCY_AND_IDEMPOTENCY_EXECUTION_PLAN.md`](./CONCURRENCY_AND_IDEMPOTENCY_EXECUTION_PLAN.md): 전표 번호 allocator, 업로드 행 흡수 claim, 계획 항목 DB 멱등화, 주요 마스터 normalized unique까지 반영 후 보관한 실행 계획
 - [`FRONTEND_SCREEN_SPLIT_AND_COPY_CLEANUP_EXECUTION_PLAN.md`](./FRONTEND_SCREEN_SPLIT_AND_COPY_CLEANUP_EXECUTION_PLAN.md): 프론트 화면 책임 분리와 설명문구 정리 기준을 완료 처리하고 보관한 실행 계획
 - [`IM_BANK_PDF_IMPORT_BATCH_EXECUTION_PLAN.md`](./IM_BANK_PDF_IMPORT_BATCH_EXECUTION_PLAN.md): IM뱅크 PDF 거래내역 파일첨부 업로드 배치, 계좌/카드 연결, 실제 PDF 565행 파싱 검증까지 완료 후 보관한 실행 계획
+- [`IMPORT_BATCH_MULTI_MONTH_COLLECTION_EXECUTION_PLAN.md`](./IMPORT_BATCH_MULTI_MONTH_COLLECTION_EXECUTION_PLAN.md): 업로드 배치 행 수집 범위를 최신 진행월 정책으로 재정렬하기 전 검토와 실행 이력을 보관한 실행 계획
 - [`IN_REPO_EXECUTION_PLAN.md`](./IN_REPO_EXECUTION_PLAN.md): 저장소 안에서 선별한 후속 작업을 모두 완료한 뒤 보관한 실행계획
 - [`LEGACY_TRANSACTION_REMOVAL_PREP.md`](./LEGACY_TRANSACTION_REMOVAL_PREP.md): 구형 `Transaction` 제거 직전 인벤토리, backfill/rollback, 삭제 순서를 남긴 준비 메모
 - [`LEGACY_TRANSACTION_SCHEMA_REMOVAL_CHECKLIST.md`](./LEGACY_TRANSACTION_SCHEMA_REMOVAL_CHECKLIST.md): 구형 `Transaction` 물리 제거에서 정리한 schema/code touchpoint 체크리스트

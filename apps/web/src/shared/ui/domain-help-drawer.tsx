@@ -28,10 +28,29 @@ type HelpSection = NonNullable<
 >[number];
 
 const STANDARD_HELP_TABS = [
-  { value: 'overview' as const, label: '개요' },
-  { value: 'checkpoints' as const, label: '확인 기준' },
-  { value: 'followup' as const, label: '후속 안내' }
+  { value: 'overview' as const, label: '화면 안내' },
+  { value: 'checkpoints' as const, label: '작업 기준' },
+  { value: 'followup' as const, label: '다음 작업' }
 ] as const;
+
+const COMMON_HELP_CHECKPOINTS = [
+  {
+    title: '공통 화면 조작',
+    items: [
+      '화면 이름 옆 상태 배지로 현재 범위, 처리 건수, 연동 상태를 먼저 확인합니다.',
+      '조회조건과 상태 칩을 바꾸면 목록, 카드, 요약 수치가 같은 기준으로 갱신됩니다.',
+      '모바일에서는 표가 카드 목록으로 바뀌며, 같은 페이지 이동과 필터 기준으로 계속 작업합니다.'
+    ]
+  },
+  {
+    title: '오류 메시지 확인',
+    items: [
+      '오류가 발생하면 화면 상단의 사용자용 메시지를 먼저 확인하고 안내된 조치부터 진행합니다.',
+      '개발자용 오류 코드, 요청번호, 세부 항목은 기본 접힘 상태의 상세 영역을 열어 확인합니다.',
+      '문제가 반복되면 화면 이름, 작업 시각, 오류 코드, 요청번호를 함께 남겨 원인 추적에 사용합니다.'
+    ]
+  }
+] as const satisfies readonly HelpSection[];
 
 export function DomainHelpDrawer() {
   const { activeContext, isDrawerOpen, setDrawerOpen } = useDomainHelpStore();
@@ -136,10 +155,17 @@ export function DomainHelpDrawer() {
             <Stack spacing={1.25}>
               <Box>
                 <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  fontWeight={700}
+                >
+                  이 화면에서 확인할 일
+                </Typography>
+                <Typography
                   variant="subtitle2"
                   color="primary"
                   fontWeight={700}
-                  gutterBottom
+                  sx={{ mt: 0.35, mb: 0.5 }}
                 >
                   {activeContext.title || '화면 개요'}
                 </Typography>
@@ -153,7 +179,7 @@ export function DomainHelpDrawer() {
               </Box>
               <div>
                 <Chip
-                  label={`핵심 기준 · ${activeContext.primaryEntity}`}
+                  label={`먼저 볼 정보 · ${activeContext.primaryEntity}`}
                   color="primary"
                   variant="outlined"
                   sx={{ borderRadius: 1.5 }}
@@ -184,13 +210,13 @@ export function DomainHelpDrawer() {
 
           {activeTab === 'overview' ? (
             <Stack spacing={1.5}>
-              <HelpPanelCard title="핵심 기준">
+              <HelpPanelCard title="가장 먼저 볼 정보">
                 <Typography variant="body1" fontWeight={700}>
                   {activeContext.primaryEntity}
                 </Typography>
               </HelpPanelCard>
 
-              <HelpPanelCard title="함께 확인할 항목">
+              <HelpPanelCard title="함께 보여주는 정보">
                 <Stack direction="row" flexWrap="wrap" gap={1}>
                   {activeContext.relatedEntities.map((entity) => (
                     <Chip
@@ -204,14 +230,14 @@ export function DomainHelpDrawer() {
                 </Stack>
               </HelpPanelCard>
 
-              <HelpPanelCard title="회계 확정 기준" tone="subtle">
+              <HelpPanelCard title="데이터 기준" tone="subtle">
                 <Typography variant="body2" color="text.secondary">
                   {activeContext.truthSource}
                 </Typography>
               </HelpPanelCard>
 
               {activeContext.readModelNote ? (
-                <HelpPanelCard title="주의 사항 / 참고" tone="primary">
+                <HelpPanelCard title="작업 전 참고" tone="primary">
                   <Typography variant="body2" color="inherit">
                     {activeContext.readModelNote}
                   </Typography>
@@ -230,8 +256,8 @@ export function DomainHelpDrawer() {
               </Stack>
             ) : (
               <HelpEmptyState
-                title="확인 기준"
-                description="이 화면에서 먼저 볼 기준과 확인 순서는 개요 탭과 본문 카드에서 함께 확인할 수 있습니다."
+                title="작업 기준"
+                description="이 화면에서 먼저 볼 정보와 작업 순서는 화면 안내 탭과 본문 카드에서 함께 확인할 수 있습니다."
               />
             )
           ) : null}
@@ -247,13 +273,13 @@ export function DomainHelpDrawer() {
                 ))
               ) : (
                 <HelpEmptyState
-                  title="후속 안내"
-                  description="현재 화면에서 바로 이어지는 후속 작업은 별도 등록되지 않았습니다. 본문 액션 버튼이나 좌측 메뉴를 사용해 다음 화면으로 이동할 수 있습니다."
+                  title="다음 작업"
+                  description="현재 화면에서 바로 이어지는 작업은 별도 등록되지 않았습니다. 본문 액션 버튼이나 좌측 메뉴를 사용해 다음 화면으로 이동할 수 있습니다."
                 />
               )}
 
               {activeContext.readModelNote ? (
-                <HelpPanelCard title="주의 사항 / 참고" tone="primary">
+                <HelpPanelCard title="작업 전 참고" tone="primary">
                   <Typography variant="body2" color="inherit">
                     {activeContext.readModelNote}
                   </Typography>
@@ -274,7 +300,7 @@ export function DomainHelpDrawer() {
         }}
       >
         <Typography variant="caption" color="text.secondary">
-          현재 화면의 도움말 탭을 기준으로 읽는 순서, 확인 기준, 이어지는 화면을
+          현재 화면이 무엇을 보여주는지, 어떤 순서로 작업할지, 어디로 이어갈지
           빠르게 확인할 수 있습니다.
         </Typography>
       </Box>
@@ -457,7 +483,10 @@ function HelpEmptyState({
 }
 
 function buildStandardHelpSections(context: DomainHelpContextType | null) {
-  const sections = context?.supplementarySections ?? [];
+  const sections = [
+    ...COMMON_HELP_CHECKPOINTS,
+    ...(context?.supplementarySections ?? [])
+  ];
 
   return sections.reduce(
     (groups, section) => {

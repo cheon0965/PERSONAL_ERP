@@ -1,7 +1,14 @@
+x-json-log-options: &json-log-options
+  driver: json-file
+  options:
+    max-size: "${DOCKER_LOG_MAX_SIZE:-10m}"
+    max-file: "${DOCKER_LOG_MAX_FILE:-5}"
+
 services:
   mysql:
     image: mysql:8.4
     restart: unless-stopped
+    logging: *json-log-options
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-personal_erp}
@@ -27,6 +34,7 @@ services:
 
   migrate:
     image: ${MIGRATE_IMAGE_NAME:-personal-erp-migrate}:${IMAGE_TAG:-latest}
+    logging: *json-log-options
     build:
       context: .
       dockerfile: Dockerfile
@@ -45,6 +53,7 @@ services:
 
   api:
     image: ${API_IMAGE_NAME:-personal-erp-api}:${IMAGE_TAG:-latest}
+    logging: *json-log-options
     build:
       context: .
       dockerfile: Dockerfile
@@ -66,6 +75,10 @@ services:
       EMAIL_VERIFICATION_TTL: ${EMAIL_VERIFICATION_TTL:-30m}
       DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
       DEMO_EMAIL: ${DEMO_EMAIL:-demo@example.com}
+      DEMO_RESET_SCHEDULE_ENABLED: ${DEMO_RESET_SCHEDULE_ENABLED:-true}
+      LOG_RETENTION_SCHEDULE_ENABLED: ${LOG_RETENTION_SCHEDULE_ENABLED:-true}
+      WORKSPACE_AUDIT_LOG_RETENTION_DAYS: ${WORKSPACE_AUDIT_LOG_RETENTION_DAYS:-180}
+      SECURITY_THREAT_LOG_RETENTION_DAYS: ${SECURITY_THREAT_LOG_RETENTION_DAYS:-365}
       INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
       INITIAL_ADMIN_NAME: ${INITIAL_ADMIN_NAME:-}
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-}
@@ -98,6 +111,7 @@ services:
 
   web:
     image: ${WEB_IMAGE_NAME:-personal-erp-web}:${IMAGE_TAG:-latest}
+    logging: *json-log-options
     build:
       context: .
       dockerfile: Dockerfile

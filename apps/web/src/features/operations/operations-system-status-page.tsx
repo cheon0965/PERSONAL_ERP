@@ -27,7 +27,7 @@ export function OperationsSystemStatusPage() {
   const status = systemStatusQuery.data;
 
   useDomainHelp({
-    title: '시스템 상태 가이드',
+    title: '시스템 상태 화면 도움말',
     description:
       '시스템 상태 화면은 서비스, 데이터베이스, 메일, 감사 관련 상태를 운영 관점에서 확인하는 화면입니다.',
     primaryEntity: '시스템 상태',
@@ -36,7 +36,7 @@ export function OperationsSystemStatusPage() {
       '표시되는 상태는 현재 시스템 상태 확인과 운영 서비스 응답을 기준으로 계산됩니다.',
     supplementarySections: [
       {
-        title: '바로 쓰는 순서',
+        title: '작업 진행 순서',
         items: [
           '전체 상태와 메일 제공자를 먼저 보고 기본 서비스가 정상인지 확인합니다.',
           '오류나 경고 컴포넌트가 있으면 데이터베이스, 감사 로그, 메일 순서로 원인을 좁힙니다.',
@@ -49,7 +49,8 @@ export function OperationsSystemStatusPage() {
         links: [
           {
             title: '감사 로그',
-            description: '최근 성공/실패 이벤트와 보안 관련 흐름을 요청번호 기준으로 추적합니다.',
+            description:
+              '최근 성공/실패 이벤트와 보안 관련 흐름을 요청번호 기준으로 추적합니다.',
             href: '/admin/logs',
             actionLabel: '감사 로그 보기'
           },
@@ -135,7 +136,10 @@ export function OperationsSystemStatusPage() {
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-            <SystemInfoItem label="메일 제공자" value={status?.mail.provider ?? '-'} />
+            <SystemInfoItem
+              label="메일 제공자"
+              value={status?.mail.provider ?? '-'}
+            />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
             <SystemInfoItem
@@ -268,4 +272,3 @@ function SystemInfoItem({ label, value }: { label: string; value: string }) {
     </Stack>
   );
 }
-

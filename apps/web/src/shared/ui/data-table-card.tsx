@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   DataGrid,
   type DataGridProps,
@@ -16,9 +16,11 @@ import {
   Checkbox,
   Divider,
   Stack,
+  TablePagination,
   Typography
 } from '@mui/material';
-import { alpha } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { alpha, useTheme } from '@mui/material/styles';
 import { brandTokens } from '@/shared/theme/tokens';
 import { appLayout } from './layout-metrics';
 
@@ -37,6 +39,7 @@ type DataTableCardProps<T extends { id: string }> = {
   onRowSelectionModelChange?: DataGridProps<T>['onRowSelectionModelChange'];
   isRowSelectable?: DataGridProps<T>['isRowSelectable'];
   mobileCard?: (row: T, context: DataTableMobileCardContext) => ReactNode;
+  emptyLabel?: string;
   mobileEmptyLabel?: string;
   disableMobileCards?: boolean;
 };
@@ -62,10 +65,15 @@ export function DataTableCard<T extends { id: string }>({
   onRowSelectionModelChange,
   isRowSelectable,
   mobileCard,
-  mobileEmptyLabel = '표시할 항목이 없습니다.',
+  emptyLabel,
+  mobileEmptyLabel,
   disableMobileCards = false
 }: DataTableCardProps<T>) {
+  const resolvedEmptyLabel =
+    emptyLabel ?? mobileEmptyLabel ?? '표시할 항목이 없습니다.';
   const resolvedRowHeight = rowHeight ?? 64;
+  const [mobilePage, setMobilePage] = useState(0);
+  const [mobileRowsPerPage, setMobileRowsPerPage] = useState(5);
   const responsiveColumns = useMemo(
     () =>
       columns.map((column) =>
@@ -76,6 +84,26 @@ export function DataTableCard<T extends { id: string }>({
     [columns]
   );
   const usesMobileCards = !disableMobileCards;
+  const theme = useTheme();
+  const isDesktopGridViewport = useMediaQuery(theme.breakpoints.up('md'), {
+    noSsr: true
+  });
+  const shouldRenderDesktopGrid = !usesMobileCards || isDesktopGridViewport;
+  const shouldRenderMobileCards = usesMobileCards && !isDesktopGridViewport;
+  // 모바일 카드 목록도 표와 같은 데이터 양을 다루므로, 화면 높이를 밀어내지 않게 자체 페이지를 둔다.
+  const mobilePageCount = Math.max(
+    1,
+    Math.ceil(rows.length / mobileRowsPerPage)
+  );
+  const hasMobilePagination = rows.length > 5;
+  const visibleMobileRows = useMemo(
+    () =>
+      rows.slice(
+        mobilePage * mobileRowsPerPage,
+        mobilePage * mobileRowsPerPage + mobileRowsPerPage
+      ),
+    [mobilePage, mobileRowsPerPage, rows]
+  );
   const selectedRowIds = useMemo(() => {
     if (!rowSelectionModel || rowSelectionModel.type !== 'include') {
       return new Set<GridRowId>();
@@ -83,6 +111,12 @@ export function DataTableCard<T extends { id: string }>({
 
     return rowSelectionModel.ids;
   }, [rowSelectionModel]);
+
+  useEffect(() => {
+    if (mobilePage > mobilePageCount - 1) {
+      setMobilePage(mobilePageCount - 1);
+    }
+  }, [mobilePage, mobilePageCount]);
 
   function handleMobileSelectionToggle(row: T, selectable: boolean) {
     if (!selectable || !rowSelectionModel || !onRowSelectionModelChange) {
@@ -364,113 +398,119 @@ export function DataTableCard<T extends { id: string }>({
             ) : null}
           </Stack>
           {toolbar ? <Box sx={{ minWidth: 0 }}>{toolbar}</Box> : null}
-          <Box
-            sx={{
-              width: '100%',
-              minWidth: 0,
-              height,
-              borderRadius: 2,
-              overflow: 'hidden',
-              display: usesMobileCards ? { xs: 'none', md: 'block' } : 'block'
-            }}
-          >
-            <DataGrid
-              rows={rows}
-              columns={responsiveColumns}
-              rowHeight={resolvedRowHeight}
-              getRowHeight={getRowHeight}
-              pageSizeOptions={[5, 10, 20]}
-              initialState={{
-                pagination: {
-                  paginationModel: {
-                    pageSize: 5,
-                    page: 0
-                  }
-                }
-              }}
-              disableRowSelectionOnClick
-              checkboxSelection={checkboxSelection}
-              rowSelectionModel={rowSelectionModel}
-              onRowSelectionModelChange={onRowSelectionModelChange}
-              isRowSelectable={isRowSelectable}
+          {shouldRenderDesktopGrid ? (
+            <Box
               sx={{
+                width: '100%',
                 minWidth: 0,
-                '& .MuiDataGrid-main': {
-                  minWidth: 0
-                },
-                '& .MuiDataGrid-columnHeaderTitle': {
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis'
-                },
-                '& .MuiDataGrid-cell': {
-                  display: 'flex',
-                  alignItems: 'center',
-                  py: 0.75,
-                  lineHeight: 1.45,
-                  minWidth: 0
-                },
-                '& .MuiDataGrid-cell > *': {
-                  maxWidth: '100%'
-                },
-                '& .MuiDataGrid-cellContent': {
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis'
-                },
-                '& .MuiDataGrid-cell .MuiButton-root': {
-                  minHeight: 30,
-                  px: 1.1,
-                  borderRadius: 999,
-                  borderWidth: 1.5,
-                  whiteSpace: 'nowrap'
-                },
-                '& .MuiDataGrid-cell .MuiButton-contained': {
-                  boxShadow: 'none'
-                },
-                '& .MuiDataGrid-cell .MuiButton-text': {
-                  px: 0.75,
-                  backgroundColor: 'transparent',
-                  '&:hover': {
-                    backgroundColor: alpha(
-                      brandTokens.palette.primaryBright,
-                      0.08
-                    )
-                  }
-                },
-                '& .MuiDataGrid-cell .MuiChip-root': {
-                  flexShrink: 0,
-                  maxWidth: '100%',
-                  cursor: 'default'
-                },
-                '& .MuiDataGrid-cell .MuiTypography-root': {
-                  lineHeight: 1.45
-                },
-                '& .MuiDataGrid-footerContainer': {
-                  minWidth: 0,
-                  overflow: 'hidden'
-                },
-                '& .MuiTablePagination-toolbar': {
-                  flexWrap: 'wrap',
-                  minHeight: 'auto',
-                  rowGap: 0.5,
-                  py: 0.5,
-                  pl: { xs: 0.5, sm: 2 },
-                  pr: { xs: 0.5, sm: 2 }
-                },
-                '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows':
-                  {
-                    my: 0.5
-                  },
-                '& .MuiTablePagination-spacer': {
-                  display: { xs: 'none', sm: 'block' }
-                }
+                height,
+                borderRadius: 2,
+                overflow: 'hidden'
               }}
-            />
-          </Box>
-          {usesMobileCards ? (
-            <Box sx={{ display: { xs: 'block', md: 'none' }, minWidth: 0 }}>
+            >
+              <DataGrid
+                rows={rows}
+                columns={responsiveColumns}
+                columnBufferPx={4096}
+                rowHeight={resolvedRowHeight}
+                getRowHeight={getRowHeight}
+                pageSizeOptions={[5, 10, 20]}
+                initialState={{
+                  pagination: {
+                    paginationModel: {
+                      pageSize: 5,
+                      page: 0
+                    }
+                  }
+                }}
+                disableRowSelectionOnClick
+                checkboxSelection={checkboxSelection}
+                rowSelectionModel={rowSelectionModel}
+                onRowSelectionModelChange={onRowSelectionModelChange}
+                isRowSelectable={isRowSelectable}
+                localeText={{
+                  noRowsLabel: resolvedEmptyLabel,
+                  noResultsOverlayLabel: resolvedEmptyLabel
+                }}
+                sx={{
+                  minWidth: 0,
+                  '& .MuiDataGrid-main': {
+                    minWidth: 0
+                  },
+                  '& .MuiDataGrid-columnHeaderTitle': {
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  },
+                  '& .MuiDataGrid-cell': {
+                    display: 'flex',
+                    alignItems: 'center',
+                    py: 0.75,
+                    lineHeight: 1.45,
+                    minWidth: 0
+                  },
+                  '& .MuiDataGrid-cell > *': {
+                    maxWidth: '100%'
+                  },
+                  '& .MuiDataGrid-cellContent': {
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  },
+                  '& .MuiDataGrid-cell .MuiButton-root': {
+                    minHeight: 30,
+                    px: 1.1,
+                    borderRadius: 999,
+                    borderWidth: 1.5,
+                    whiteSpace: 'nowrap'
+                  },
+                  '& .MuiDataGrid-cell .MuiButton-contained': {
+                    boxShadow: 'none'
+                  },
+                  '& .MuiDataGrid-cell .MuiButton-text': {
+                    px: 0.75,
+                    backgroundColor: 'transparent',
+                    '&:hover': {
+                      backgroundColor: alpha(
+                        brandTokens.palette.primaryBright,
+                        0.08
+                      )
+                    }
+                  },
+                  '& .MuiDataGrid-cell .MuiChip-root': {
+                    flexShrink: 0,
+                    maxWidth: '100%',
+                    cursor: 'default'
+                  },
+                  '& .MuiDataGrid-cell .MuiTypography-root': {
+                    lineHeight: 1.45
+                  },
+                  '& .MuiDataGrid-footerContainer': {
+                    minWidth: 0,
+                    overflow: 'hidden'
+                  },
+                  '& .MuiTablePagination-toolbar': {
+                    flexWrap: 'wrap',
+                    minHeight: 'auto',
+                    rowGap: 0.5,
+                    py: 0.5,
+                    pl: { xs: 0.5, sm: 2 },
+                    pr: { xs: 0.5, sm: 2 }
+                  },
+                  '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows':
+                    {
+                      my: 0.5
+                    },
+                  '& .MuiTablePagination-spacer': {
+                    display: { xs: 'none', sm: 'block' }
+                  }
+                }}
+              />
+            </Box>
+          ) : null}
+          {shouldRenderMobileCards ? (
+            <Box sx={{ minWidth: 0 }}>
               {rows.length > 0 ? (
                 <Stack spacing={1.25}>
-                  {rows.map((row) => {
+                  {visibleMobileRows.map((row) => {
                     const selectable = readMobileRowSelectable(row);
 
                     return (
@@ -485,6 +525,63 @@ export function DataTableCard<T extends { id: string }>({
                       </Box>
                     );
                   })}
+                  {hasMobilePagination ? (
+                    <Box
+                      sx={{
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        bgcolor: 'background.default',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <TablePagination
+                        component="div"
+                        count={rows.length}
+                        page={mobilePage}
+                        rowsPerPage={mobileRowsPerPage}
+                        rowsPerPageOptions={[5, 10, 20]}
+                        labelRowsPerPage="페이지당 항목"
+                        labelDisplayedRows={({ from, to, count }) =>
+                          `${from}-${to} / ${count}`
+                        }
+                        onPageChange={(_, page) => {
+                          setMobilePage(page);
+                        }}
+                        onRowsPerPageChange={(event) => {
+                          setMobileRowsPerPage(Number(event.target.value));
+                          setMobilePage(0);
+                        }}
+                        sx={{
+                          '& .MuiTablePagination-toolbar': {
+                            flexWrap: 'wrap',
+                            alignItems: 'center',
+                            justifyContent: 'flex-end',
+                            minHeight: 'auto',
+                            gap: 0.75,
+                            px: 1,
+                            py: 0.75
+                          },
+                          '& .MuiTablePagination-spacer': {
+                            display: 'none'
+                          },
+                          '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows':
+                            {
+                              my: 0,
+                              fontSize: (theme) =>
+                                theme.typography.caption.fontSize
+                            },
+                          '& .MuiTablePagination-input': {
+                            mr: 0.5
+                          },
+                          '& .MuiTablePagination-actions': {
+                            ml: 0,
+                            flexShrink: 0
+                          }
+                        }}
+                      />
+                    </Box>
+                  ) : null}
                 </Stack>
               ) : (
                 <Box
@@ -501,7 +598,7 @@ export function DataTableCard<T extends { id: string }>({
                   }}
                 >
                   <Typography variant="body2" color="text.secondary">
-                    {mobileEmptyLabel}
+                    {resolvedEmptyLabel}
                   </Typography>
                 </Box>
               )}
@@ -530,9 +627,7 @@ const preferredMobilePrimaryFields = new Set([
 const mobileAmountFieldPattern =
   /(amount|total|balance|premium|cost|expense|won|금액|보험료|비용|잔액|합계)/i;
 
-function isMobileActionColumn<T extends { id: string }>(
-  column: GridColDef<T>
-) {
+function isMobileActionColumn<T extends { id: string }>(column: GridColDef<T>) {
   const field = column.field.toLowerCase();
   const headerName = String(column.headerName ?? '').toLowerCase();
 

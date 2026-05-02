@@ -1,6 +1,8 @@
 import type {
   AccountingPeriodItem,
+  AccountType,
   CollectImportedRowResponse,
+  FundingAccountItem,
   ImportBatchParseStatus,
   ImportBatchItem,
   ImportSourceKind,
@@ -12,19 +14,68 @@ import { resolveStatusLabel } from '@/shared/ui/status-chip';
 export const sourceKindOptions: Array<{
   value: ImportSourceKind;
   label: string;
+  disabled?: boolean;
 }> = [
   { value: 'MANUAL_UPLOAD', label: '직접 붙여넣기' },
   { value: 'BANK_CSV', label: '계좌 CSV' },
   { value: 'CARD_EXCEL', label: '카드 엑셀' },
   { value: 'IM_BANK_PDF', label: 'IM뱅크 PDF' },
-  { value: 'WOORI_BANK_HTML', label: '우리은행 HTML' }
+  { value: 'WOORI_BANK_HTML', label: '우리은행 HTML' },
+  { value: 'WOORI_CARD_HTML', label: '우리카드 HTML' },
+  { value: 'KB_KOOKMIN_BANK_PDF', label: 'KB국민은행 PDF' }
 ];
 
-export const selectableSourceKindOptions = sourceKindOptions.filter(
-  (option) => option.value !== 'WOORI_BANK_HTML'
-);
+export const selectableSourceKindOptions = sourceKindOptions;
 
-export const fileUploadSourceKinds: ImportSourceKind[] = ['IM_BANK_PDF'];
+export const fileUploadSourceKinds: ImportSourceKind[] = [
+  'IM_BANK_PDF',
+  'WOORI_BANK_HTML',
+  'WOORI_CARD_HTML',
+  'KB_KOOKMIN_BANK_PDF'
+];
+
+export type ImportBatchFundingAccountType = Extract<
+  AccountType,
+  'BANK' | 'CARD'
+>;
+
+export function readImportSourceFundingAccountType(
+  sourceKind: ImportSourceKind
+): ImportBatchFundingAccountType | null {
+  switch (sourceKind) {
+    case 'CARD_EXCEL':
+    case 'WOORI_CARD_HTML':
+      return 'CARD';
+    case 'BANK_CSV':
+    case 'IM_BANK_PDF':
+    case 'WOORI_BANK_HTML':
+    case 'KB_KOOKMIN_BANK_PDF':
+      return 'BANK';
+    case 'MANUAL_UPLOAD':
+      return null;
+  }
+}
+
+export function filterFundingAccountsForImportSource(
+  fundingAccounts: FundingAccountItem[],
+  sourceKind: ImportSourceKind
+) {
+  const requiredType = readImportSourceFundingAccountType(sourceKind);
+
+  return requiredType
+    ? fundingAccounts.filter(
+        (fundingAccount) => fundingAccount.type === requiredType
+      )
+    : fundingAccounts;
+}
+
+export function readImportSourceFundingAccountTypeLabel(
+  sourceKind: ImportSourceKind
+) {
+  return readImportSourceFundingAccountType(sourceKind) === 'CARD'
+    ? '카드'
+    : '은행 계좌';
+}
 
 export type FeedbackState = FeedbackAlertValue;
 

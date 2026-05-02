@@ -31,7 +31,7 @@ import {
  * 수집 거래 확정 포트를 Prisma 트랜잭션 구현으로 연결하는 어댑터입니다.
  *
  * 유스케이스는 "확정에 필요한 회계 상태 전이"만 알고, 이 파일은 실제 Prisma include,
- * Decimal 변환, updateMany 기반 낙관적 잠금, 전표 라인 생성 세부사항을 책임집니다.
+ * 금액 `Decimal` 변환, `updateMany` 기반 낙관적 잠금, 전표 라인 생성 세부사항을 책임집니다.
  */
 const confirmationCollectedTransactionInclude = {
   period: {
@@ -266,7 +266,7 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
     currentStatus: CollectedTransactionStatus;
   }): Promise<{ count: number }> {
     // 상태 조건을 포함한 updateMany로 선점한다.
-    // count가 0이면 다른 요청이 먼저 확정/정정/삭제한 것으로 보고 상위에서 충돌 처리한다.
+    // 갱신 건수가 0이면 다른 요청이 먼저 확정/정정/삭제한 것으로 보고 상위에서 충돌 처리한다.
     const result = await this.tx.collectedTransaction.updateMany({
       where: {
         id: input.collectedTransactionId,

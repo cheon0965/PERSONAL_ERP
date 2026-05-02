@@ -75,14 +75,16 @@
 
 - 프런트는 `fetch-json.ts`에서 `ApiRequestError`, `UnauthorizedRequestError`로 실패를 구분합니다.
 - `401`은 먼저 `POST /auth/refresh`로 한 번 복구를 시도하고, 실패하면 세션 정리와 로그인 복귀 흐름으로 이어집니다.
-- 일반 API 실패는 `status`, `userMessage`, `errorCode`, `requestId`, `technicalMessage`, `responseBody`를 분리한 오류로 다룹니다.
-- 화면에는 사용자가 바로 취할 수 있는 문구를 먼저 보여주고, 개발자 단서가 필요한 경우에는 오류 코드와 요청번호를 별도 진단 정보로 남깁니다.
+- 일반 API 실패는 `status`, `userMessage`, `method`, `path`, `errorCode`, `requestId`, `statusText`, `serverError`, `validationMessages`, `technicalMessage`, `timestamp`, `responseBody`를 분리한 오류로 다룹니다.
+- 화면에는 사용자가 바로 취할 수 있는 문구를 먼저 보여주고, 개발자 단서가 필요한 경우에는 오류 코드, HTTP 상태, 요청 메서드/경로, 요청번호, validator 원본 항목, 원본 응답 본문을 별도 진단 정보로 남깁니다.
+- `FeedbackAlert`와 `QueryErrorAlert`는 오류 발생 시 해당 Alert로 스크롤/포커스를 이동시키고, 개발자 진단 정보는 기본 접힘 상태로 표시합니다.
 - API가 아직 영어 리소스명, 정책명, validator 문구를 반환하더라도 Web 공통 계층에서 사용자용 한국어 문구로 변환하고, 원문은 `technicalMessage`와 `responseBody`에 보존합니다.
 
 현재 기준 코드:
 
 - [`apps/web/src/shared/api/fetch-json.ts`](../apps/web/src/shared/api/fetch-json.ts#L156)
 - [`apps/web/src/shared/ui/query-error-alert.tsx`](../apps/web/src/shared/ui/query-error-alert.tsx#L11)
+- [`apps/web/src/shared/ui/error-alert-behavior.tsx`](../apps/web/src/shared/ui/error-alert-behavior.tsx#L1)
 - [`apps/web/src/features/auth/auth.api.ts`](../apps/web/src/features/auth/auth.api.ts#L168)
 
 ### 2. 인증 실패는 재시도를 줄이고 빠르게 세션 정리한다

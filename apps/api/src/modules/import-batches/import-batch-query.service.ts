@@ -104,7 +104,7 @@ export class ImportBatchQueryService {
       return null;
     }
 
-    // ERP 장부 잔액 조회
+    // 장부 잔액 조회
     const accounts = await readWorkspaceFundingAccountLiveBalances(
       this.prisma,
       {

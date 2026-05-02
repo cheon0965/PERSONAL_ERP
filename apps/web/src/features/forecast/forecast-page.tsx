@@ -53,7 +53,7 @@ export function ForecastPage() {
   const forecast = forecastQuery.data;
 
   useDomainHelp({
-    title: '기간 운영 전망 사용 가이드',
+    title: '기간 운영 전망 화면 도움말',
     description:
       '이 화면은 선택한 운영 월의 확정 전표와 남은 계획을 함께 읽어 월말 예상 잔액과 안전 여력을 판단하는 곳입니다. 다음 달 운영 준비 상태를 볼 때도 사용합니다.',
     primaryEntity: '운영 월',
@@ -62,7 +62,7 @@ export function ForecastPage() {
       '잠금된 기간의 공식 기준은 월 마감 결과와 공식 재무제표이며, 전망은 마감 전 운영 판단용 수치입니다.',
     supplementarySections: [
       {
-        title: '바로 쓰는 순서',
+        title: '작업 진행 순서',
         items: [
           '전망 대상 선택에서 열린 운영 월 또는 다시 볼 잠금 월을 고릅니다.',
           '상단 상태 칩으로 운영 전망 기준인지 공식 잠금 기준인지 먼저 구분합니다.',
@@ -72,7 +72,7 @@ export function ForecastPage() {
         ]
       },
       {
-        title: '막히면 확인',
+        title: '문제가 있을 때 확인',
         items: [
           '운영 기간이 없으면 월 운영 화면에서 먼저 월을 엽니다.',
           '계획이 비어 있으면 계획 항목 화면에서 선택 월의 계획 항목을 생성합니다.',
@@ -105,8 +105,7 @@ export function ForecastPage() {
           },
           {
             title: '재무제표 생성 / 선택',
-            description:
-              '잠금된 월의 공식 보고 숫자와 전망 숫자를 비교합니다.',
+            description: '잠금된 월의 공식 보고 숫자와 전망 숫자를 비교합니다.',
             href: '/financial-statements',
             actionLabel: '재무제표 보기'
           }
@@ -116,12 +115,11 @@ export function ForecastPage() {
         title: '참고 메모',
         description:
           '본문의 참고사항은 화면 도움말로 옮겨 관리합니다. 전망을 해석할 때 아래 메모를 함께 확인합니다.',
-        items:
-          forecast?.notes.length
-            ? forecast.notes
-            : [
-                '전망 메모가 아직 없으면 현재 확정 전표, 남은 계획, 공식 비교 기준을 먼저 확인합니다.'
-              ]
+        items: forecast?.notes.length
+          ? forecast.notes
+          : [
+              '전망 메모가 아직 없으면 현재 확정 전표, 남은 계획, 공식 비교 기준을 먼저 확인합니다.'
+            ]
       }
     ],
     readModelNote:

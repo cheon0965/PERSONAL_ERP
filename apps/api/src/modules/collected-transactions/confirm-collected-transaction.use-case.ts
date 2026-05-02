@@ -362,7 +362,7 @@ function isImportedReversalTransaction(
   collectedTransaction: ConfirmationCollectedTransaction
 ): boolean {
   // 업로드 파서가 승인취소 후보로 분류한 행은 MANUAL_ADJUSTMENT 정책을 사용한다.
-  // importedRow 존재 여부까지 함께 확인해 수기 조정 거래와 구분한다.
+  // 가져온 행 존재 여부까지 함께 확인해 수기 조정 거래와 구분한다.
   return (
     collectedTransaction.ledgerTransactionType.postingPolicyKey ===
       'MANUAL_ADJUSTMENT' && collectedTransaction.importedRow != null

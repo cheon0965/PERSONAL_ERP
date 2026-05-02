@@ -105,13 +105,14 @@ export function Topbar({ onOpenNavigation }: TopbarProps) {
       >
         <Toolbar
           sx={{
-            minHeight: { xs: 60, md: 64 },
-            gap: { xs: 1, sm: 1.5 },
-            rowGap: 0.75,
-            flexWrap: 'nowrap',
+            minHeight: { xs: 'auto', sm: 64 },
+            gap: { xs: 0.75, sm: 1.25, md: 1.5 },
+            rowGap: { xs: 0.75, sm: 0.5 },
+            flexWrap: { xs: 'wrap', sm: 'nowrap' },
             justifyContent: 'space-between',
             alignItems: 'center',
-            py: { xs: 0.75, sm: 0 },
+            py: { xs: 0.9, sm: 0 },
+            px: { xs: 1.25, sm: 2, md: 3 },
             minWidth: 0
           }}
         >
@@ -135,8 +136,9 @@ export function Topbar({ onOpenNavigation }: TopbarProps) {
             spacing={0.25}
             sx={{
               minWidth: 0,
-              flex: 1,
-              flexBasis: 0
+              flex: { xs: '1 1 calc(100% - 48px)', sm: 1 },
+              flexBasis: { xs: 'calc(100% - 48px)', sm: 0 },
+              order: { xs: 1, sm: 0 }
             }}
           >
             <Typography
@@ -166,7 +168,9 @@ export function Topbar({ onOpenNavigation }: TopbarProps) {
                   minWidth: 0,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  fontSize: { xs: '0.8125rem', sm: '0.875rem' },
+                  lineHeight: { xs: 1.25, sm: 1.43 }
                 }}
               >
                 {currentWorkspace
@@ -201,7 +205,16 @@ export function Topbar({ onOpenNavigation }: TopbarProps) {
             spacing={0.75}
             useFlexGap
             flexWrap="nowrap"
-            sx={{ justifyContent: 'flex-end', minWidth: 0, flexShrink: 0 }}
+            sx={{
+              justifyContent: { xs: 'space-between', sm: 'flex-end' },
+              minWidth: 0,
+              width: { xs: '100%', sm: 'auto' },
+              flexShrink: 0,
+              order: { xs: 2, sm: 0 },
+              pt: { xs: 0.75, sm: 0 },
+              borderTop: { xs: '1px solid', sm: 0 },
+              borderColor: alpha(brandTokens.palette.primaryBright, 0.12)
+            }}
           >
             <Button
               size="small"
@@ -239,16 +252,18 @@ export function Topbar({ onOpenNavigation }: TopbarProps) {
               sx={{
                 pl: { xs: 0.5, sm: 1 },
                 borderLeft: '1px solid',
-                borderColor: alpha(brandTokens.palette.primaryBright, 0.12)
+                borderColor: alpha(brandTokens.palette.primaryBright, 0.12),
+                minWidth: 0,
+                flexShrink: 1
               }}
             >
               <ButtonBase
                 onClick={(event) => setAccountAnchorEl(event.currentTarget)}
                 sx={{
                   minWidth: 0,
-                  maxWidth: { xs: 44, sm: 260 },
+                  maxWidth: { xs: 'min(48vw, 180px)', sm: 220, md: 260 },
                   borderRadius: 999,
-                  px: { xs: 0.25, sm: 0.75 },
+                  px: { xs: 0.4, sm: 0.75 },
                   py: 0.25,
                   transition:
                     'background-color 160ms ease, box-shadow 160ms ease',
@@ -278,8 +293,8 @@ export function Topbar({ onOpenNavigation }: TopbarProps) {
                     spacing={0}
                     sx={{
                       minWidth: 0,
-                      maxWidth: 220,
-                      display: { xs: 'none', md: 'flex' },
+                      maxWidth: { xs: 118, sm: 160, md: 220 },
+                      display: 'flex',
                       textAlign: 'left'
                     }}
                   >
@@ -299,7 +314,8 @@ export function Topbar({ onOpenNavigation }: TopbarProps) {
                     fontSize="small"
                     sx={{
                       color: 'text.secondary',
-                      display: { xs: 'none', sm: 'block' }
+                      display: 'block',
+                      flexShrink: 0
                     }}
                   />
                 </Stack>
@@ -645,15 +661,16 @@ function ContextDetailRow({ label, value }: { label: string; value: string }) {
 }
 
 const topbarButtonSx = {
-  minHeight: 34,
-  minWidth: 34,
+  minHeight: { xs: 32, sm: 34 },
+  minWidth: { xs: 64, sm: 34 },
   px: { xs: 1, md: 1.25 },
   borderRadius: 999,
   textTransform: 'none',
   fontWeight: 700,
   whiteSpace: 'nowrap',
   borderColor: alpha(brandTokens.palette.primaryBright, 0.24),
-  backgroundColor: alpha(brandTokens.palette.surface, 0.72)
+  backgroundColor: alpha(brandTokens.palette.surface, 0.72),
+  flexShrink: 0
 } as const;
 
 const topbarIconButtonSx = {

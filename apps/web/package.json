@@ -11,9 +11,9 @@
     "typecheck": "tsc --noEmit --incremental false -p tsconfig.test.json",
     "test": "tsc -p tsconfig.test-run.json && node --test --test-concurrency=1 --test-isolation=none .test-dist/apps/web/test/*.test.js",
     "test:e2e": "playwright test",
-    "test:e2e:smoke": "playwright test e2e/auth-and-transactions --grep @smoke",
+    "test:e2e:smoke": "playwright test --grep @smoke",
     "test:e2e:smoke:build": "node ../../scripts/run-web-build-smoke.cjs",
-    "test:e2e:smoke:build:browser": "npm run build:e2e:smoke && playwright test --config playwright.build.config.mjs e2e/auth-and-transactions --grep @smoke"
+    "test:e2e:smoke:build:browser": "npm run build:e2e:smoke && playwright test --config playwright.build.config.mjs --grep @smoke"
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",
@@ -26,6 +26,7 @@
     "@mui/x-charts": "^8.0.0",
     "@mui/x-data-grid": "^8.0.0",
     "@mui/x-date-pickers": "^8.0.0",
+    "@personal-erp/contracts": "0.1.0",
     "@personal-erp/money": "0.1.0",
     "@tanstack/react-query": "^5.66.8",
     "dayjs": "^1.11.13",

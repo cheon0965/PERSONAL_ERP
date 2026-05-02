@@ -113,12 +113,14 @@ export function RecurringRulesPage() {
       }
     },
     onError: (error) => {
-      setFeedback(buildErrorFeedback(error, '반복 규칙을 삭제하지 못했습니다.'));
+      setFeedback(
+        buildErrorFeedback(error, '반복 규칙을 삭제하지 못했습니다.')
+      );
     }
   });
 
   useDomainHelp({
-    title: '반복 규칙 사용 가이드',
+    title: '반복 규칙 화면 도움말',
     description:
       '이 화면은 월세, 구독료, 정기 수입, 보험료처럼 반복되는 거래의 계획 기준을 관리하는 곳입니다. 규칙을 만들면 다음 단계에서 해당 월의 계획 항목으로 펼칠 수 있습니다.',
     primaryEntity: '반복 규칙',
@@ -133,7 +135,7 @@ export function RecurringRulesPage() {
       '반복 규칙은 계획 생성 기준이며, 회계 확정은 이후 생성된 계획 항목의 연결 수집 거래와 전표에서 이뤄집니다.',
     supplementarySections: [
       {
-        title: '바로 쓰는 순서',
+        title: '작업 진행 순서',
         items: [
           '목록에서 활성 상태, 주기, 다음 생성 기준을 먼저 보고 이번 달 계획에 쓸 규칙을 확인합니다.',
           '반복 규칙 등록을 열고 제목, 금액, 주기, 시작일을 입력합니다.',
@@ -144,7 +146,7 @@ export function RecurringRulesPage() {
         ]
       },
       {
-        title: '주의할 점',
+        title: '작업 전 확인',
         items: [
           '반복 규칙을 삭제해도 이미 생성된 기존 계획 항목은 자동으로 지워지지 않습니다.',
           '규칙은 미래 계획의 기준이며, 실제 납부나 입금 여부는 수집 거래에서 확인합니다.',

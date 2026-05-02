@@ -27,7 +27,7 @@ export function OperationsMonthEndPage() {
   const monthEnd = monthEndQuery.data;
 
   useDomainHelp({
-    title: '월 마감 가이드',
+    title: '월 마감 화면 도움말',
     description:
       '월 마감 화면은 현재 운영 월의 마감 가능 여부와 차단 사유를 점검하는 화면입니다.',
     primaryEntity: '운영 기간',
@@ -42,7 +42,7 @@ export function OperationsMonthEndPage() {
       '마감 가능 여부는 현재 운영 월 기준의 미확정 거래, 실패 행, 남은 계획, 보고 자료 상태를 함께 읽어 판단합니다.',
     supplementarySections: [
       {
-        title: '읽는 순서',
+        title: '확인 순서',
         items: [
           '현재 운영 월과 마감 상태를 먼저 확인합니다.',
           '미확정 거래, 업로드 실패 행, 남은 계획, 스냅샷 생성 여부를 순서대로 확인합니다.',
@@ -223,7 +223,11 @@ export function OperationsMonthEndPage() {
               {blocker}
             </Alert>
           ))}
-          <Button component={Link} href="/operations/exceptions" variant="outlined">
+          <Button
+            component={Link}
+            href="/operations/exceptions"
+            variant="outlined"
+          >
             예외 처리함 보기
           </Button>
         </Stack>
@@ -262,4 +266,3 @@ function MonthEndInfoItem({ label, value }: { label: string; value: string }) {
     </Stack>
   );
 }
-
