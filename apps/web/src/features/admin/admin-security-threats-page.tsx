@@ -89,7 +89,7 @@ export function AdminSecurityThreatsPage() {
   });
 
   useDomainHelp({
-    title: '보안 위협 로그 가이드',
+    title: '보안 위협 로그 화면 도움말',
     description:
       '보안 위협 로그는 로그인 실패, 가입 제한, 세션 재사용 감지, 출처 차단, 권한 거부처럼 보안상 별도로 확인해야 하는 이벤트만 모아보는 전체 관리자 화면입니다.',
     primaryEntity: '보안 위협 이벤트',
@@ -98,7 +98,7 @@ export function AdminSecurityThreatsPage() {
       '원본 이벤트는 서버 보안 로거가 기록하며, IP는 원문이 아닌 해시로 저장합니다.',
     supplementarySections: [
       {
-        title: '확인 기준',
+        title: '먼저 확인할 기준',
         items: [
           '긴급 또는 높음 등급 이벤트를 먼저 확인해 반복 공격이나 세션 탈취 의심 흐름을 빠르게 분리합니다.',
           '요청번호가 있는 경우 감사 로그와 함께 열어 같은 요청에서 어떤 관리 작업이나 접근 거부가 이어졌는지 확인합니다.',
@@ -114,7 +114,7 @@ export function AdminSecurityThreatsPage() {
         ]
       },
       {
-        title: '후속 안내',
+        title: '다음 작업',
         items: [
           '반복 로그인 실패와 가입 제한은 인증 정책, 계정 잠금 기준, 안내 문구를 함께 점검합니다.',
           '세션 재사용 감지는 해당 사용자의 세션 만료와 비밀번호 변경 안내까지 이어서 확인합니다.',

@@ -201,6 +201,8 @@ enum ImportSourceKind {
   MANUAL_UPLOAD
   IM_BANK_PDF
   WOORI_BANK_HTML
+  WOORI_CARD_HTML
+  KB_KOOKMIN_BANK_PDF
 }
 
 enum ImportBatchParseStatus {
@@ -496,6 +498,7 @@ model WorkspaceAuditEvent {
   @@index([tenantId, eventCategory, occurredAt])
   @@index([tenantId, action, occurredAt])
   @@index([tenantId, actorMembershipId, occurredAt])
+  @@index([tenantId, result, occurredAt], map: "wae_tenant_result_occurred_idx")
   @@index([tenantId, requestId])
 }
 
@@ -519,6 +522,7 @@ model SecurityThreatEvent {
   @@index([eventCategory, occurredAt])
   @@index([eventName, occurredAt])
   @@index([clientIpHash, occurredAt])
+  @@index([userId, occurredAt], map: "ste_user_occurred_idx")
   @@index([requestId])
 }
 
@@ -833,6 +837,7 @@ model ImportBatch {
   collectedTransactions  CollectedTransaction[]
 
   @@index([ledgerId, uploadedAt])
+  @@index([tenantId, ledgerId, uploadedAt], map: "ib_tenant_ledger_uploaded_idx")
   @@index([fileHash])
   @@index([fundingAccountId])
 }
@@ -944,6 +949,7 @@ model CollectedTransaction {
 
   @@index([ledgerId, status, occurredOn])
   @@index([ledgerId, sourceFingerprint])
+  @@index([tenantId, ledgerId, occurredOn, createdAt], map: "ctx_tenant_ledger_occurred_created_idx")
   @@index([periodId, amount, fundingAccountId, ledgerTransactionTypeId, status, occurredOn], map: "ctx_collect_match_idx")
 }
 
@@ -981,6 +987,7 @@ model JournalEntry {
 
   @@unique([ledgerId, entryNumber])
   @@index([periodId, entryDate])
+  @@index([tenantId, ledgerId, entryDate, createdAt], map: "je_tenant_ledger_entry_created_idx")
   @@index([correctsJournalEntryId])
 }
 

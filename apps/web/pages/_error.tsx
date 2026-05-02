@@ -42,13 +42,43 @@ export default function ErrorPage({ statusCode }: ErrorPageProps) {
       }}
     >
       <section style={{ maxWidth: '32rem', textAlign: 'center' }}>
-        <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700 }}>
-          {statusCode}
-        </p>
         <h1 style={{ margin: '0.5rem 0 0', fontSize: '2rem' }}>{title}</h1>
         <p style={{ margin: '1rem 0 0', lineHeight: 1.6, color: '#52606d' }}>
           {description}
         </p>
+        <details
+          style={{
+            marginTop: '1rem',
+            textAlign: 'left',
+            border: '1px solid #cbd2d9',
+            borderRadius: '6px',
+            padding: '0.75rem',
+            background: '#fff'
+          }}
+        >
+          <summary
+            style={{
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              fontWeight: 700
+            }}
+          >
+            개발자 진단 정보
+          </summary>
+          <pre
+            style={{
+              margin: '0.75rem 0 0',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-all',
+              color: '#52606d',
+              fontFamily:
+                'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+              fontSize: '0.75rem'
+            }}
+          >
+            HTTP {statusCode}
+          </pre>
+        </details>
       </section>
     </main>
   );

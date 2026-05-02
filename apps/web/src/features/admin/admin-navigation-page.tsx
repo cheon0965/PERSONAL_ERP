@@ -97,9 +97,7 @@ export function AdminNavigationPage() {
       ]);
     },
     onError: (error) => {
-      setFeedback(
-        buildErrorFeedback(error, '메뉴 권한 저장에 실패했습니다.')
-      );
+      setFeedback(buildErrorFeedback(error, '메뉴 권한 저장에 실패했습니다.'));
     }
   });
 
@@ -123,7 +121,7 @@ export function AdminNavigationPage() {
   };
 
   useDomainHelp({
-    title: '메뉴 권한 가이드',
+    title: '메뉴 권한 화면 도움말',
     description:
       '메뉴 권한 관리는 저장된 메뉴 구조와 메뉴별 허용 역할을 조정하는 화면입니다.',
     primaryEntity: '메뉴 권한',
@@ -132,7 +130,7 @@ export function AdminNavigationPage() {
       '사이드바 노출과 직접 URL 접근 제한은 모두 저장된 메뉴 트리와 허용 역할을 기준으로 판정합니다.',
     supplementarySections: [
       {
-        title: '이 화면에서 읽는 것',
+        title: '이 화면에서 확인할 정보',
         items: [
           '그룹과 페이지 메뉴 구조를 트리로 확인합니다.',
           '숨김 메뉴와 제한 메뉴 수를 보고 권한 정책이 의도대로 좁혀져 있는지 확인합니다.',
@@ -167,8 +165,7 @@ export function AdminNavigationPage() {
           },
           {
             title: '감사 로그',
-            description:
-              '메뉴 권한 변경 이력과 요청번호를 추적합니다.',
+            description: '메뉴 권한 변경 이력과 요청번호를 추적합니다.',
             href: '/admin/logs',
             actionLabel: '감사 로그 열기'
           }
@@ -303,8 +300,8 @@ export function AdminNavigationPage() {
 
           {rows.length === 0 ? (
             <Alert severity="info" variant="outlined">
-              아직 저장된 메뉴가 없습니다. 기본 메뉴가 생성되면 이곳에
-              트리가 표시됩니다.
+              아직 저장된 메뉴가 없습니다. 기본 메뉴가 생성되면 이곳에 트리가
+              표시됩니다.
             </Alert>
           ) : null}
         </Stack>

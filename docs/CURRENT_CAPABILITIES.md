@@ -130,7 +130,7 @@
 - `recurring-rules`: 반복 규칙 CRUD
 - `plan-items`: 계획 항목 생성과 기간별 추적
 - `collected-transactions`: 생성, 상세 조회, 수정, 삭제, 전표 확정
-- `import-batches`: UTF-8 텍스트 업로드 파싱, 활성 계좌/카드 연결형 IM뱅크 텍스트 PDF 파일첨부 파싱, 스캔/이미지 PDF 명시 차단, 월별 open/close 정책에 맞춘 최신 진행월 기준 collect preview/단건 collect, 신규 계좌/카드 bootstrap 자동 운영월 생성과 완료 전환, 배치 삭제, 배치 상세 일괄 등록 Job/진행률/중단/행별 결과 조회
+- `import-batches`: UTF-8 텍스트 업로드 파싱, 활성 계좌/카드 연결형 IM뱅크 텍스트 PDF·우리은행/우리카드 저장·암호화 HTML 파일첨부 파싱, 스캔/이미지 PDF 명시 차단, 월별 open/close 정책에 맞춘 최신 진행월 기준 collect preview/단건 collect, 신규 계좌/카드 bootstrap 자동 운영월 생성과 완료 전환, 배치 삭제, 배치 상세 일괄 등록 Job/진행률/중단/행별 결과 조회
 - `journal-entries`: 전표 조회, 반전 전표, 정정 전표
 - `financial-statements`: 잠금 기간 재무제표 스냅샷 생성/조회
 - `funding-account-status`: 자금수단별 수입/지출/이체/잔액 현황, 수집 거래 기준과 확정 전표 기준 비교, 최근 월 추이와 카테고리 breakdown
@@ -145,7 +145,9 @@
 ## 운영 지원과 검증 가드
 
 - 모든 API 응답에 `x-request-id` 헤더가 포함됩니다.
-- 브라우저 API 오류는 사용자용 문구와 개발자 추적 단서(`errorCode`, `requestId`, 원본 기술 메시지)를 분리해 다룹니다.
+- 브라우저 API 오류는 사용자용 문구와 개발자 추적 단서를 분리해 다룹니다.
+- 개발자 진단 정보는 `errorCode`, HTTP 상태, 요청 메서드/경로, `requestId`, validator 원본 항목, 원본 응답 본문까지 접힌 영역에서 확인할 수 있습니다.
+- 표 중심 화면은 공통 `DataTableCard`를 통해 데스크톱에서는 DataGrid, 모바일에서는 카드 목록으로 표시되며 모바일 카드 목록도 5/10/20개 단위 페이지네이션을 제공합니다.
 - 주요 업무 화면은 상단 도움말 버튼을 통해 현재 화면에서 확인할 기준, 작업 순서, 이어지는 후속 화면을 안내합니다.
 - `GET /api/health/ready`로 DB readiness를 확인합니다.
 - 운영 반출은 현재 `UTF-8 CSV` payload를 생성하고 감사 이벤트를 남깁니다.

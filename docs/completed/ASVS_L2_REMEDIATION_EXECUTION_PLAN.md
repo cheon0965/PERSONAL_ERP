@@ -33,7 +33,7 @@
 
 상태: Phase 1-6 코드는 적용 완료, Phase 7-9는 운영 증적과 최종 검증 단계로 남긴다.
 
-- Phase 1 완료: `WOORI_BANK_HTML` 업로드는 서버에서 400으로 fail-closed 처리하고, HTML 복호화 경로의 dynamic JavaScript 실행을 제거했다. Web 업로드 화면에서도 신규 선택지를 숨겼다.
+- Phase 1 완료: `WOORI_BANK_HTML`/`WOORI_CARD_HTML`의 HTML 복호화 경로에서 dynamic JavaScript 실행을 제거했다. 이후 정적 저장 HTML 업로드를 유지하고, 암호화 VestMail 원본은 서버 내 SEED/CBC 구현으로만 복호화하도록 복구했다.
 - Phase 2 완료: Next.js web route 전체에 CSP, HSTS, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, frame 방어 헤더를 적용하고 테스트를 추가했다.
 - Phase 3 완료: refresh cookie를 `__Host-refreshToken`, `Secure`, `HttpOnly`, `SameSite=Strict`, path `/` 기준으로 고정하고 legacy `refreshToken` 읽기/삭제 전환 경로를 남겼다.
 - Phase 4 완료: 운영 CSV 반출 문자열 셀에 spreadsheet formula guard를 적용하고 요청 단위 테스트를 추가했다.
@@ -76,7 +76,7 @@ npm.cmd run audit:runtime
 
 - 보안 패치 전 기준 결과가 이 문서 또는 후속 validation note에 남아 있다.
 
-## Phase 1. WOORI_BANK_HTML dynamic JS execution 제거
+## Phase 1. Woori HTML dynamic JS execution 제거
 
 상태: 최우선
 
@@ -97,17 +97,17 @@ npm.cmd run audit:runtime
 
 현재 위험:
 
-- `WOORI_BANK_HTML` 업로드 시 HTML에서 추출한 JavaScript를 `new Function(...)`으로 서버에서 실행한다.
+- Woori HTML 업로드 시 HTML에서 추출한 JavaScript를 `new Function(...)`으로 서버에서 실행하던 위험을 제거한다.
 - 함수명이 `runDecryptionInSandbox`지만 Node 프로세스 내부 실행이므로 보안 sandbox로 볼 수 없다.
 - 비밀번호가 JavaScript 문자열에 직접 보간된다.
 
-실행 방안 A: 당장 적용할 fail-closed 패치
+실행 방안: 서버 JS 실행 제거와 정적 HTML 허용
 
-- [ ] `WOORI_BANK_HTML` 파일 업로드를 서버에서 명시적으로 차단한다.
-- [ ] 응답은 `400 Bad Request`로 고정하고, 메시지는 "현재 보안 점검으로 우리은행 HTML 업로드가 비활성화되었습니다."처럼 사용자에게 안전하게 안내한다.
-- [ ] `new Function` 경로가 런타임에서 호출되지 않도록 한다.
-- [ ] `WOORI_BANK_HTML` UI가 있다면 업로드 옵션을 숨기거나 비활성화한다.
-- [ ] 기존 parser 파일은 즉시 삭제하지 않고, 후속 안전 구현 전까지 호출 불가능 상태로 둔다.
+- [x] `new Function` 경로가 런타임에서 호출되지 않도록 한다.
+- [x] 암호화 VestMail 원본은 업로드된 JavaScript 실행 없이 서버 내 SEED/CBC 구현으로만 복호화한다.
+- [x] 브라우저에서 열어 저장한 정적 Woori HTML 파일 업로드는 허용한다.
+- [x] Web 업로드 화면에서는 Woori HTML을 파일 첨부 옵션으로 노출한다.
+- [x] 기존 parser 파일은 정적 HTML 파싱 전용으로 유지한다.
 
 권장 수정 파일:
 
@@ -118,14 +118,16 @@ npm.cmd run audit:runtime
 
 DTO 보강:
 
-- [ ] `password`에 `@Matches(/^\d{6}$/)`를 추가한다.
-- [ ] `WOORI_BANK_HTML`이 비활성화되어도 DTO 자체는 positive validation을 갖게 둔다.
+- [x] `password`에 `@Matches(/^\d{6}$/)`를 추가한다.
+- [x] Woori HTML이 정적 HTML로 재허용되어도 DTO 자체는 positive validation을 갖게 둔다.
 
 테스트:
 
-- [ ] `POST /import-batches/files`가 `WOORI_BANK_HTML` 요청을 400으로 거부한다.
-- [ ] `WOORI_BANK_HTML` 비밀번호가 숫자 6자리가 아니면 DTO validation에서 실패한다.
-- [ ] `IM_BANK_PDF` 업로드 기존 테스트는 계속 통과한다.
+- [x] `POST /import-batches/files`가 저장된 Woori HTML 요청을 배치로 생성한다.
+- [x] `POST /import-batches/files`가 암호화 VestMail 원본을 비밀번호 숫자 6자리로 배치 생성한다.
+- [x] `POST /import-batches/files`가 암호화 VestMail 원본의 누락/오류 비밀번호를 400으로 거부한다.
+- [x] Woori HTML 비밀번호가 숫자 6자리가 아니면 DTO validation에서 실패한다.
+- [x] `IM_BANK_PDF` 업로드 기존 테스트는 계속 통과한다.
 
 검증:
 
@@ -142,9 +144,9 @@ rg --encoding utf-8 -n "new Function|runDecryptionInSandbox" apps\api\src
 
 후속 방안 B: 기능 복구
 
-- [ ] VestMail/SEED 복호화를 신뢰 가능한 순수 구현 또는 검증된 라이브러리로 대체한다.
-- [ ] 외부 HTML script는 절대 서버에서 실행하지 않는다.
-- [ ] 복호화 테스트 fixture는 synthetic fixture를 사용하고, 실제 개인정보가 담긴 파일을 저장소에 넣지 않는다.
+- [x] VestMail/SEED 복호화를 서버 내 순수 구현으로 대체한다.
+- [x] 외부 HTML script는 절대 서버에서 실행하지 않는다.
+- [x] 복호화 테스트 fixture는 synthetic fixture를 사용하고, 실제 개인정보가 담긴 파일을 저장소에 넣지 않는다.
 
 ## Phase 2. Web security headers 고정
 
@@ -546,7 +548,7 @@ npm.cmd run docs:check
 완료 기준:
 
 - 문서가 실제 코드와 테스트 상태를 반영한다.
-- 비밀번호 재설정, cookie, web headers, runtime audit, Woori HTML 비활성화 상태가 모두 최신이다.
+- 비밀번호 재설정, cookie, web headers, runtime audit, Woori HTML 안전 복호화 복구 상태가 모두 최신이다.
 
 ## 최종 승인 게이트
 
@@ -569,7 +571,7 @@ npm.cmd run ci:local:gitleaks
 
 ASVS L2 주장 가능 조건:
 
-- `WOORI_BANK_HTML` dynamic JS execution이 제거 또는 운영 차단되어 있다.
+- Woori HTML dynamic JS execution이 제거되어 있고, 암호화 VestMail 원본은 서버 내 SEED/CBC 구현으로만 복호화된다.
 - web/API 보안 헤더 범위가 저장소와 운영 증적으로 확인된다.
 - refresh cookie가 운영 기준으로 `__Host-` 또는 `__Secure-` 요구를 충족한다.
 - password, JWT secret, CSV export, rate limit의 partial 항목이 코드 또는 운영 증적으로 보강되어 있다.

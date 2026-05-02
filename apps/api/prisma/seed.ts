@@ -29,17 +29,33 @@ import {
   VehicleMaintenanceCategory
 } from '@prisma/client';
 import * as argon2 from 'argon2';
-import { getApiEnv } from '../src/config/api-env';
+import { getApiEnv, type ApiEnv } from '../src/config/api-env';
 import { buildSourceFingerprint } from '../src/modules/import-batches/import-batch.policy';
 import { normalizeCaseInsensitiveText } from '../src/common/utils/normalize-unique-key.util';
+import { resetDemoUserAndOwnedWorkspaces } from './demo-reset';
 import { ensurePhase1BackboneForUser } from './phase1-backbone';
 
-const prisma = new PrismaClient();
-const env = getApiEnv();
+let prisma: PrismaClient;
+let env: ApiEnv;
+let defaultPrismaClient: PrismaClient | null = null;
 
 const DEMO_USER_NAME = 'Demo User';
 const DEMO_LOGIN_PHRASE = ['Demo', '1234!'].join('');
-const demoCredentialDigestPromise = argon2.hash(DEMO_LOGIN_PHRASE);
+let demoCredentialDigestPromise: Promise<string>;
+
+function getDefaultPrismaClient() {
+  defaultPrismaClient ??= new PrismaClient();
+  return defaultPrismaClient;
+}
+
+async function disconnectDefaultPrismaClient() {
+  if (!defaultPrismaClient) {
+    return;
+  }
+
+  await defaultPrismaClient.$disconnect();
+  defaultPrismaClient = null;
+}
 
 const DEMO_SETTINGS = {
   minimumReserveWon: 400000,
@@ -136,6 +152,30 @@ const DEMO_CATEGORIES = [
     name: '임차료',
     kind: CategoryKind.EXPENSE,
     sortOrder: 8
+  },
+  {
+    fixtureId: 'deliveryCategory',
+    name: '배송비',
+    kind: CategoryKind.EXPENSE,
+    sortOrder: 9
+  },
+  {
+    fixtureId: 'marketingCategory',
+    name: '광고·판촉비',
+    kind: CategoryKind.EXPENSE,
+    sortOrder: 10
+  },
+  {
+    fixtureId: 'subscriptionCategory',
+    name: '업무 도구 구독료',
+    kind: CategoryKind.EXPENSE,
+    sortOrder: 11
+  },
+  {
+    fixtureId: 'financeCategory',
+    name: '대출 이자/금융비용',
+    kind: CategoryKind.EXPENSE,
+    sortOrder: 12
   }
 ] as const;
 
@@ -172,6 +212,17 @@ const DEMO_RECURRING_RULES = [
     nextRunDate: date('2026-05-10T00:00:00.000Z'),
     accountKey: 'mainAccount',
     categoryKey: 'utilitiesCategory'
+  },
+  {
+    fixtureId: 'softwareRule',
+    title: '업무 도구 구독료',
+    amountWon: 39000,
+    frequency: RecurrenceFrequency.MONTHLY,
+    dayOfMonth: 15,
+    startDate: date('2026-01-15T00:00:00.000Z'),
+    nextRunDate: date('2026-05-15T00:00:00.000Z'),
+    accountKey: 'mainAccount',
+    categoryKey: 'subscriptionCategory'
   },
   {
     fixtureId: 'vehicleInsuranceRule',
@@ -240,7 +291,7 @@ const DEMO_LIABILITY_AGREEMENTS = [
     repaymentMethod: LiabilityRepaymentMethod.EQUAL_PAYMENT,
     paymentDay: 25,
     defaultFundingAccountKey: 'mainAccount',
-    interestExpenseCategoryKey: 'utilitiesCategory',
+    interestExpenseCategoryKey: 'financeCategory',
     feeExpenseCategoryKey: null,
     status: LiabilityAgreementStatus.ACTIVE,
     memo: '월 운영 현금흐름에서 원금과 이자를 분리 확인하는 데모 대출',
@@ -252,6 +303,14 @@ const DEMO_LIABILITY_AGREEMENTS = [
         feeAmount: 0,
         status: LiabilityRepaymentScheduleStatus.SCHEDULED,
         memo: '4월 정기 상환 예정'
+      },
+      {
+        dueDate: date('2026-05-25T00:00:00.000Z'),
+        principalAmount: 1000000,
+        interestAmount: 101500,
+        feeAmount: 0,
+        status: LiabilityRepaymentScheduleStatus.SCHEDULED,
+        memo: '5월 정기 상환 예정'
       }
     ]
   }
@@ -310,6 +369,15 @@ const DEMO_FUEL_LOGS = [
     amountWon: 87000,
     unitPriceWon: 1638,
     isFullTank: true
+  },
+  {
+    fixtureId: 'fuelLogApr29',
+    filledOn: date('2026-04-29T00:00:00.000Z'),
+    odometerKm: 129790,
+    liters: '42.700',
+    amountWon: 71000,
+    unitPriceWon: 1663,
+    isFullTank: true
   }
 ] as const;
 
@@ -343,6 +411,16 @@ const DEMO_VEHICLE_MAINTENANCE_LOGS = [
     description: '엔진오일 및 필터 교체',
     amountWon: 128000,
     memo: '4월 정기 점검'
+  },
+  {
+    fixtureId: 'maintenanceTireRotation',
+    performedOn: date('2026-04-24T00:00:00.000Z'),
+    odometerKm: 129580,
+    category: VehicleMaintenanceCategory.INSPECTION,
+    vendor: '현대 블루핸즈',
+    description: '타이어 위치 교환 및 공기압 점검',
+    amountWon: 65000,
+    memo: '장거리 배송 전 점검'
   }
 ] as const;
 
@@ -676,6 +754,23 @@ const DEMO_PERIODS: DemoPeriodDefinition[] = [
         fundingAccountKey: 'reserveAccount',
         amount: 128000,
         sourceCollectedTransactionRef: 'txnMaintenanceApr17'
+      }),
+      buildExpenseEntry({
+        entryNumber: 'JE-202604-005',
+        entryDate: date('2026-04-15T00:00:00.000Z'),
+        memo: '업무 도구 구독료',
+        fundingAccountKey: 'mainAccount',
+        amount: 39000,
+        sourceCollectedTransactionRef: 'txnSubscriptionApr15',
+        sourcePlanItemRef: 'planSoftwareApr15'
+      }),
+      buildIncomeEntry({
+        entryNumber: 'JE-202604-006',
+        entryDate: date('2026-04-24T00:00:00.000Z'),
+        memo: 'B2B 납품 정산',
+        fundingAccountKey: 'mainAccount',
+        amount: 720000,
+        sourceCollectedTransactionRef: 'txnB2BApr24'
       })
     ]
   }
@@ -704,7 +799,7 @@ const DEMO_PLAN_ITEMS: DemoPlanItemDefinition[] = [
     title: '월세 자동 이체',
     plannedAmount: 620000,
     plannedDate: date('2026-04-05T00:00:00.000Z'),
-    status: PlanItemStatus.DRAFT
+    status: PlanItemStatus.MATCHED
   },
   {
     fixtureId: 'planUtilitiesApr10',
@@ -716,7 +811,19 @@ const DEMO_PLAN_ITEMS: DemoPlanItemDefinition[] = [
     title: 'POS/인터넷 요금',
     plannedAmount: 75000,
     plannedDate: date('2026-04-10T00:00:00.000Z'),
-    status: PlanItemStatus.CONFIRMED
+    status: PlanItemStatus.MATCHED
+  },
+  {
+    fixtureId: 'planSoftwareApr15',
+    periodKey: '2026-04',
+    recurringRuleKey: 'softwareRule',
+    transactionTypeCode: DEMO_TRANSACTION_TYPE_CODES.expense,
+    fundingAccountKey: 'mainAccount',
+    categoryKey: 'subscriptionCategory',
+    title: '업무 도구 구독료',
+    plannedAmount: 39000,
+    plannedDate: date('2026-04-15T00:00:00.000Z'),
+    status: PlanItemStatus.MATCHED
   },
   {
     fixtureId: 'planVehicleInsuranceApr25',
@@ -728,7 +835,7 @@ const DEMO_PLAN_ITEMS: DemoPlanItemDefinition[] = [
     title: '업무용 차량 보험료',
     plannedAmount: 98000,
     plannedDate: date('2026-04-25T00:00:00.000Z'),
-    status: PlanItemStatus.DRAFT
+    status: PlanItemStatus.MATCHED
   },
   {
     fixtureId: 'planLiabilityInsuranceApr25',
@@ -753,7 +860,7 @@ const DEMO_IMPORT_BATCHES: DemoImportBatchDefinition[] = [
     fileHash: 'demo-bank-2026-04-v3',
     fundingAccountKey: 'mainAccount',
     parseStatus: ImportBatchParseStatus.COMPLETED,
-    uploadedAt: date('2026-04-22T01:00:00.000Z'),
+    uploadedAt: date('2026-04-30T01:00:00.000Z'),
     rows: [
       buildImportedRow({
         rowNumber: 1,
@@ -826,6 +933,78 @@ const DEMO_IMPORT_BATCHES: DemoImportBatchDefinition[] = [
         directionLabel: '출금',
         collectTypeHint: 'EXPENSE',
         sourceOrigin: '사업 운영 통장'
+      }),
+      buildImportedRow({
+        rowNumber: 7,
+        sourceKind: ImportSourceKind.BANK_CSV,
+        occurredOn: '2026-04-05',
+        title: '월세 자동 이체',
+        amount: 620000,
+        signedAmount: -620000,
+        direction: 'WITHDRAWAL',
+        directionLabel: '출금',
+        collectTypeHint: 'EXPENSE',
+        sourceOrigin: '사업 운영 통장'
+      }),
+      buildImportedRow({
+        rowNumber: 8,
+        sourceKind: ImportSourceKind.BANK_CSV,
+        occurredOn: '2026-04-15',
+        title: '업무 도구 구독료',
+        amount: 39000,
+        signedAmount: -39000,
+        direction: 'WITHDRAWAL',
+        directionLabel: '출금',
+        collectTypeHint: 'EXPENSE',
+        sourceOrigin: '사업 운영 통장'
+      }),
+      buildImportedRow({
+        rowNumber: 9,
+        sourceKind: ImportSourceKind.BANK_CSV,
+        occurredOn: '2026-04-24',
+        title: 'B2B 납품 정산',
+        amount: 720000,
+        signedAmount: 720000,
+        direction: 'DEPOSIT',
+        directionLabel: '입금',
+        collectTypeHint: 'INCOME',
+        sourceOrigin: '사업 운영 통장'
+      }),
+      buildImportedRow({
+        rowNumber: 10,
+        sourceKind: ImportSourceKind.BANK_CSV,
+        occurredOn: '2026-04-25',
+        title: '업무용 차량 보험료',
+        amount: 98000,
+        signedAmount: -98000,
+        direction: 'WITHDRAWAL',
+        directionLabel: '출금',
+        collectTypeHint: 'EXPENSE',
+        sourceOrigin: '사업 운영 통장'
+      }),
+      buildImportedRow({
+        rowNumber: 11,
+        sourceKind: ImportSourceKind.BANK_CSV,
+        occurredOn: '2026-04-29',
+        title: '서부에너지 주유',
+        amount: 71000,
+        signedAmount: -71000,
+        direction: 'WITHDRAWAL',
+        directionLabel: '출금',
+        collectTypeHint: 'EXPENSE',
+        sourceOrigin: '사업 운영 통장'
+      }),
+      buildImportedRow({
+        rowNumber: 12,
+        sourceKind: ImportSourceKind.BANK_CSV,
+        occurredOn: '2026-04-30',
+        title: '정기 택배비 정산',
+        amount: 125000,
+        signedAmount: -125000,
+        direction: 'WITHDRAWAL',
+        directionLabel: '출금',
+        collectTypeHint: 'EXPENSE',
+        sourceOrigin: '사업 운영 통장'
       })
     ]
   },
@@ -836,8 +1015,8 @@ const DEMO_IMPORT_BATCHES: DemoImportBatchDefinition[] = [
     fileName: 'demo-card-2026-04.xlsx',
     fileHash: 'demo-card-2026-04-v2',
     fundingAccountKey: 'cardAccount',
-    parseStatus: ImportBatchParseStatus.PARTIAL,
-    uploadedAt: date('2026-04-20T05:00:00.000Z'),
+    parseStatus: ImportBatchParseStatus.COMPLETED,
+    uploadedAt: date('2026-04-30T05:00:00.000Z'),
     rows: [
       buildImportedRow({
         rowNumber: 1,
@@ -851,15 +1030,53 @@ const DEMO_IMPORT_BATCHES: DemoImportBatchDefinition[] = [
         collectTypeHint: 'EXPENSE',
         sourceOrigin: '사업용 카드'
       }),
-      buildFailedImportedRow({
+      buildImportedRow({
         rowNumber: 2,
-        original: {
-          approved_at: '2026/04/20',
-          merchant: '',
-          amount: '',
-          card_name: '사업용 카드'
-        },
-        parseError: 'title 값이 비어 있습니다. amount 값이 올바르지 않습니다.'
+        sourceKind: ImportSourceKind.CARD_EXCEL,
+        occurredOn: '2026-04-21',
+        title: '온라인 광고 소재 구매',
+        amount: 86000,
+        signedAmount: -86000,
+        direction: 'WITHDRAWAL',
+        directionLabel: '승인',
+        collectTypeHint: 'EXPENSE',
+        sourceOrigin: '사업용 카드'
+      }),
+      buildImportedRow({
+        rowNumber: 3,
+        sourceKind: ImportSourceKind.CARD_EXCEL,
+        occurredOn: '2026-04-24',
+        title: '타이어 위치 교환',
+        amount: 65000,
+        signedAmount: -65000,
+        direction: 'WITHDRAWAL',
+        directionLabel: '승인',
+        collectTypeHint: 'EXPENSE',
+        sourceOrigin: '사업용 카드'
+      }),
+      buildImportedRow({
+        rowNumber: 4,
+        sourceKind: ImportSourceKind.CARD_EXCEL,
+        occurredOn: '2026-04-27',
+        title: '주차·통행료',
+        amount: 18500,
+        signedAmount: -18500,
+        direction: 'WITHDRAWAL',
+        directionLabel: '승인',
+        collectTypeHint: 'EXPENSE',
+        sourceOrigin: '사업용 카드'
+      }),
+      buildImportedRow({
+        rowNumber: 5,
+        sourceKind: ImportSourceKind.CARD_EXCEL,
+        occurredOn: '2026-04-29',
+        title: '사무용 문구 구입',
+        amount: 32400,
+        signedAmount: -32400,
+        direction: 'WITHDRAWAL',
+        directionLabel: '승인',
+        collectTypeHint: 'EXPENSE',
+        sourceOrigin: '사업용 카드'
       })
     ]
   }
@@ -897,6 +1114,21 @@ const DEMO_COLLECTED_TRANSACTIONS: DemoCollectedTransactionDefinition[] = [
     memo: '자동 계획 항목과 매칭'
   },
   {
+    fixtureId: 'txnRentApr05',
+    periodKey: '2026-04',
+    importBatchKey: 'mainBankApril',
+    importedRowNumber: 7,
+    transactionTypeCode: DEMO_TRANSACTION_TYPE_CODES.expense,
+    fundingAccountKey: 'mainAccount',
+    categoryKey: 'rentCategory',
+    matchedPlanItemRef: 'planRentApr05',
+    title: '월세 자동 이체',
+    occurredOn: date('2026-04-05T00:00:00.000Z'),
+    amount: 620000,
+    status: CollectedTransactionStatus.READY_TO_POST,
+    memo: '정기 임차료 계획 항목과 매칭'
+  },
+  {
     fixtureId: 'txnUtilitiesApr10',
     periodKey: '2026-04',
     importBatchKey: 'mainBankApril',
@@ -910,6 +1142,21 @@ const DEMO_COLLECTED_TRANSACTIONS: DemoCollectedTransactionDefinition[] = [
     amount: 75000,
     status: CollectedTransactionStatus.POSTED,
     memo: '자동 계획 항목 확정'
+  },
+  {
+    fixtureId: 'txnSubscriptionApr15',
+    periodKey: '2026-04',
+    importBatchKey: 'mainBankApril',
+    importedRowNumber: 8,
+    transactionTypeCode: DEMO_TRANSACTION_TYPE_CODES.expense,
+    fundingAccountKey: 'mainAccount',
+    categoryKey: 'subscriptionCategory',
+    matchedPlanItemRef: 'planSoftwareApr15',
+    title: '업무 도구 구독료',
+    occurredOn: date('2026-04-15T00:00:00.000Z'),
+    amount: 39000,
+    status: CollectedTransactionStatus.POSTED,
+    memo: '월간 업무 도구 구독료 자동 매칭'
   },
   {
     fixtureId: 'txnSalesApr12',
@@ -943,6 +1190,21 @@ const DEMO_COLLECTED_TRANSACTIONS: DemoCollectedTransactionDefinition[] = [
     linkedMaintenanceLogKey: 'maintenanceEngineOil'
   },
   {
+    fixtureId: 'txnMarketingApr21',
+    periodKey: '2026-04',
+    importBatchKey: 'cardApril',
+    importedRowNumber: 2,
+    transactionTypeCode: DEMO_TRANSACTION_TYPE_CODES.expense,
+    fundingAccountKey: 'cardAccount',
+    categoryKey: 'marketingCategory',
+    matchedPlanItemRef: null,
+    title: '온라인 광고 소재 구매',
+    occurredOn: date('2026-04-21T00:00:00.000Z'),
+    amount: 86000,
+    status: CollectedTransactionStatus.REVIEWED,
+    memo: '다음 캠페인 소재 준비 비용'
+  },
+  {
     fixtureId: 'txnFuelApr18',
     periodKey: '2026-04',
     importBatchKey: 'mainBankApril',
@@ -972,6 +1234,68 @@ const DEMO_COLLECTED_TRANSACTIONS: DemoCollectedTransactionDefinition[] = [
     amount: 43000,
     status: CollectedTransactionStatus.READY_TO_POST,
     memo: '보험료 자동 계획 항목과 매칭'
+  },
+  {
+    fixtureId: 'txnB2BApr24',
+    periodKey: '2026-04',
+    importBatchKey: 'mainBankApril',
+    importedRowNumber: 9,
+    transactionTypeCode: DEMO_TRANSACTION_TYPE_CODES.income,
+    fundingAccountKey: 'mainAccount',
+    categoryKey: 'salesCategory',
+    matchedPlanItemRef: null,
+    title: 'B2B 납품 정산',
+    occurredOn: date('2026-04-24T00:00:00.000Z'),
+    amount: 720000,
+    status: CollectedTransactionStatus.POSTED,
+    memo: '월말 납품 대금 정산'
+  },
+  {
+    fixtureId: 'txnTireInspectionApr24',
+    periodKey: '2026-04',
+    importBatchKey: 'cardApril',
+    importedRowNumber: 3,
+    transactionTypeCode: DEMO_TRANSACTION_TYPE_CODES.expense,
+    fundingAccountKey: 'cardAccount',
+    categoryKey: 'maintenanceCategory',
+    matchedPlanItemRef: null,
+    title: '타이어 위치 교환',
+    occurredOn: date('2026-04-24T00:00:00.000Z'),
+    amount: 65000,
+    status: CollectedTransactionStatus.READY_TO_POST,
+    memo: '차량 점검 로그와 연결',
+    linkedMaintenanceLogKey: 'maintenanceTireRotation'
+  },
+  {
+    fixtureId: 'txnVehicleInsuranceApr25',
+    periodKey: '2026-04',
+    importBatchKey: 'mainBankApril',
+    importedRowNumber: 10,
+    transactionTypeCode: DEMO_TRANSACTION_TYPE_CODES.expense,
+    fundingAccountKey: 'mainAccount',
+    categoryKey: 'insuranceCategory',
+    matchedPlanItemRef: 'planVehicleInsuranceApr25',
+    title: '업무용 차량 보험료',
+    occurredOn: date('2026-04-25T00:00:00.000Z'),
+    amount: 98000,
+    status: CollectedTransactionStatus.READY_TO_POST,
+    memo: '차량 보험 자동 계획 항목과 매칭'
+  },
+  {
+    fixtureId: 'txnFuelApr29',
+    periodKey: '2026-04',
+    importBatchKey: 'mainBankApril',
+    importedRowNumber: 11,
+    transactionTypeCode: DEMO_TRANSACTION_TYPE_CODES.expense,
+    fundingAccountKey: 'mainAccount',
+    categoryKey: 'fuelCategory',
+    matchedPlanItemRef: null,
+    title: '서부에너지 주유',
+    occurredOn: date('2026-04-29T00:00:00.000Z'),
+    amount: 71000,
+    status: CollectedTransactionStatus.REVIEWED,
+    memo: '4월 말 배송 전 주유 로그와 연결',
+    linkedFuelLogKey: 'fuelLogApr29'
   }
 ];
 
@@ -990,7 +1314,7 @@ const DEMO_OPERATIONAL_NOTES: DemoOperationalNoteDefinition[] = [
     periodKey: '2026-04',
     kind: OperationalNoteKind.FOLLOW_UP,
     title: '4월 운영 체크',
-    body: '월세와 차량 보험 자동 항목은 아직 확정 전입니다. 25일 이후 실거래 수집 내역을 확인한 뒤 확정 전표로 전환하세요.',
+    body: '월세, 보험료, 구독료가 계획 항목과 연결되어 있습니다. 준비 상태 거래를 검토한 뒤 전표 확정까지 이어가면 월 운영 흐름을 빠르게 확인할 수 있습니다.',
     relatedHref: '/workspace/monthly/plan-items',
     createdAt: date('2026-04-18T03:00:00.000Z')
   },
@@ -999,18 +1323,18 @@ const DEMO_OPERATIONAL_NOTES: DemoOperationalNoteDefinition[] = [
     periodKey: '2026-04',
     kind: OperationalNoteKind.ALERT,
     title: '차량 유지비 검토',
-    body: '4월 주유 1건이 검토 대기 상태입니다. 차량 로그와 연결된 거래를 확인하고 분개 확정 여부를 판단하세요.',
+    body: '4월 주유와 정비 로그가 수집 거래와 연결되어 있습니다. 차량 비용 내역에서 로그와 거래가 함께 보이는지 확인하세요.',
     relatedHref: '/workspace/vehicles',
     createdAt: date('2026-04-22T06:00:00.000Z')
   }
 ];
 
-type SummaryItem = {
+export type SummaryItem = {
   created: number;
   skipped: number;
 };
 
-type SeedSummary = {
+export type SeedSummary = {
   resetDemoUser: boolean;
   user: SummaryItem;
   settings: SummaryItem;
@@ -1173,22 +1497,6 @@ function buildImportedRow(input: {
       description: input.title,
       sourceOrigin: input.sourceOrigin
     })
-  };
-}
-
-function buildFailedImportedRow(input: {
-  rowNumber: number;
-  original: Record<string, string>;
-  parseError: string;
-}): DemoImportBatchRowDefinition {
-  return {
-    rowNumber: input.rowNumber,
-    rawPayload: {
-      original: input.original
-    },
-    parseStatus: ImportedRowParseStatus.FAILED,
-    parseError: input.parseError,
-    sourceFingerprint: null
   };
 }
 
@@ -1678,7 +1986,9 @@ async function ensureDemoLiabilityAgreements(
   });
 
   if (!liabilityAccountSubject) {
-    throw new Error('Missing liability account subject for demo liability seed');
+    throw new Error(
+      'Missing liability account subject for demo liability seed'
+    );
   }
 
   for (const agreement of DEMO_LIABILITY_AGREEMENTS) {
@@ -1783,15 +2093,16 @@ async function ensureDemoLiabilityAgreements(
     trackSummary(summary.liabilityAgreements, Boolean(existingAgreement));
 
     for (const schedule of agreement.schedules) {
-      const existingSchedule = await prisma.liabilityRepaymentSchedule.findFirst({
-        where: {
-          liabilityAgreementId: savedAgreement.id,
-          dueDate: schedule.dueDate
-        },
-        select: {
-          id: true
-        }
-      });
+      const existingSchedule =
+        await prisma.liabilityRepaymentSchedule.findFirst({
+          where: {
+            liabilityAgreementId: savedAgreement.id,
+            dueDate: schedule.dueDate
+          },
+          select: {
+            id: true
+          }
+        });
       const scheduleData = {
         tenantId,
         ledgerId,
@@ -1801,7 +2112,9 @@ async function ensureDemoLiabilityAgreements(
         interestAmount: schedule.interestAmount,
         feeAmount: schedule.feeAmount,
         totalAmount:
-          schedule.principalAmount + schedule.interestAmount + schedule.feeAmount,
+          schedule.principalAmount +
+          schedule.interestAmount +
+          schedule.feeAmount,
         status: schedule.status,
         memo: schedule.memo
       };
@@ -3369,24 +3682,27 @@ async function ensureDemoMonthlyOperations(input: {
   );
 }
 
-async function resetDemoUserIfRequested(summary: SeedSummary) {
-  const shouldReset = process.argv.includes('--reset');
+type DemoSeedOptions = {
+  prismaClient?: PrismaClient;
+  apiEnv?: ApiEnv;
+  resetDemoUser?: boolean;
+  seedInitialAdmin?: boolean;
+  shouldPrintSummary?: boolean;
+};
 
+async function resetDemoUserIfRequested(
+  summary: SeedSummary,
+  shouldReset: boolean
+) {
   if (!shouldReset) {
     return;
   }
 
-  const existingUser = await prisma.user.findUnique({
-    where: { email: env.DEMO_EMAIL },
-    select: { id: true }
-  });
-
-  if (!existingUser) {
-    return;
-  }
-
-  await prisma.user.delete({ where: { id: existingUser.id } });
-  summary.resetDemoUser = true;
+  const resetSummary = await resetDemoUserAndOwnedWorkspaces(
+    prisma,
+    env.DEMO_EMAIL
+  );
+  summary.resetDemoUser = resetSummary.userDeleted;
 }
 
 function readInitialAdminSeedCredentials(): {
@@ -3440,95 +3756,126 @@ function requireMapValue<K, V>(map: Map<K, V>, key: K, context: string) {
   return value;
 }
 
-async function main() {
+export async function seedDemoData(options: DemoSeedOptions = {}) {
+  const previousPrisma = prisma;
+  const previousEnv = env;
+  const previousCredentialDigestPromise = demoCredentialDigestPromise;
+  prisma = options.prismaClient ?? previousPrisma ?? getDefaultPrismaClient();
+  env = options.apiEnv ?? previousEnv ?? getApiEnv();
+  demoCredentialDigestPromise = argon2.hash(DEMO_LOGIN_PHRASE);
+
   const summary = createSummary();
+  const seedInitialAdmin = options.seedInitialAdmin ?? true;
 
-  await resetDemoUserIfRequested(summary);
+  try {
+    await resetDemoUserIfRequested(summary, options.resetDemoUser ?? false);
 
-  const userId = await ensureDemoUser(summary);
-  await ensureDemoSettings(userId, summary);
-  const backbone = await ensurePhase1BackboneForUser(prisma, userId);
-  const initialAdminUserId = await ensureInitialAdminUser(summary);
+    const userId = await ensureDemoUser(summary);
+    await ensureDemoSettings(userId, summary);
+    const backbone = await ensurePhase1BackboneForUser(prisma, userId);
 
-  if (initialAdminUserId) {
-    await ensureDemoSettings(initialAdminUserId, summary);
-    await ensurePhase1BackboneForUser(prisma, initialAdminUserId);
+    if (seedInitialAdmin) {
+      const initialAdminUserId = await ensureInitialAdminUser(summary);
+
+      if (initialAdminUserId) {
+        await ensureDemoSettings(initialAdminUserId, summary);
+        await ensurePhase1BackboneForUser(prisma, initialAdminUserId);
+      }
+    }
+
+    const accountIds = await ensureDemoAccounts(
+      userId,
+      backbone.tenantId,
+      backbone.ledgerId,
+      summary
+    );
+    const categoryIds = await ensureDemoCategories(
+      userId,
+      backbone.tenantId,
+      backbone.ledgerId,
+      summary
+    );
+    const recurringRuleIds = await ensureDemoRecurringRules(
+      userId,
+      backbone.tenantId,
+      backbone.ledgerId,
+      accountIds,
+      categoryIds,
+      summary
+    );
+
+    await ensureDemoInsurancePolicies(
+      userId,
+      backbone.tenantId,
+      backbone.ledgerId,
+      accountIds,
+      categoryIds,
+      recurringRuleIds,
+      summary
+    );
+
+    await ensureDemoLiabilityAgreements(
+      userId,
+      backbone.tenantId,
+      backbone.ledgerId,
+      accountIds,
+      categoryIds,
+      summary
+    );
+
+    const vehicleId = await ensureDemoVehicle(
+      userId,
+      backbone.tenantId,
+      backbone.ledgerId,
+      accountIds,
+      categoryIds,
+      summary
+    );
+    const fuelLogIds = await ensureDemoFuelLogs(vehicleId, summary);
+    const maintenanceLogIds = await ensureDemoVehicleMaintenanceLogs(
+      vehicleId,
+      summary
+    );
+
+    await ensureDemoMonthlyOperations({
+      tenantId: backbone.tenantId,
+      ledgerId: backbone.ledgerId,
+      membershipId: backbone.membershipId,
+      accountIds,
+      categoryIds,
+      recurringRuleIds,
+      fuelLogIds,
+      maintenanceLogIds,
+      summary
+    });
+
+    if (options.shouldPrintSummary ?? true) {
+      printSummary(summary);
+    }
+
+    return summary;
+  } finally {
+    prisma = previousPrisma;
+    env = previousEnv;
+    demoCredentialDigestPromise = previousCredentialDigestPromise;
   }
-
-  const accountIds = await ensureDemoAccounts(
-    userId,
-    backbone.tenantId,
-    backbone.ledgerId,
-    summary
-  );
-  const categoryIds = await ensureDemoCategories(
-    userId,
-    backbone.tenantId,
-    backbone.ledgerId,
-    summary
-  );
-  const recurringRuleIds = await ensureDemoRecurringRules(
-    userId,
-    backbone.tenantId,
-    backbone.ledgerId,
-    accountIds,
-    categoryIds,
-    summary
-  );
-
-  await ensureDemoInsurancePolicies(
-    userId,
-    backbone.tenantId,
-    backbone.ledgerId,
-    accountIds,
-    categoryIds,
-    recurringRuleIds,
-    summary
-  );
-
-  await ensureDemoLiabilityAgreements(
-    userId,
-    backbone.tenantId,
-    backbone.ledgerId,
-    accountIds,
-    categoryIds,
-    summary
-  );
-
-  const vehicleId = await ensureDemoVehicle(
-    userId,
-    backbone.tenantId,
-    backbone.ledgerId,
-    accountIds,
-    categoryIds,
-    summary
-  );
-  const fuelLogIds = await ensureDemoFuelLogs(vehicleId, summary);
-  const maintenanceLogIds = await ensureDemoVehicleMaintenanceLogs(
-    vehicleId,
-    summary
-  );
-
-  await ensureDemoMonthlyOperations({
-    tenantId: backbone.tenantId,
-    ledgerId: backbone.ledgerId,
-    membershipId: backbone.membershipId,
-    accountIds,
-    categoryIds,
-    recurringRuleIds,
-    fuelLogIds,
-    maintenanceLogIds,
-    summary
-  });
-
-  printSummary(summary);
 }
 
-main()
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
+async function main() {
+  await seedDemoData({
+    resetDemoUser: process.argv.includes('--reset'),
+    seedInitialAdmin: true,
+    shouldPrintSummary: true
   });
+}
+
+if (require.main === module) {
+  main()
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await disconnectDefaultPrismaClient();
+    });
+}

@@ -13,16 +13,27 @@ import { PrismaService } from '../../../../common/prisma/prisma.service';
 import { resolveImportBatchFundingAccountId } from '../../import-batch-funding-account.policy';
 import { parseImBankPdfStatement } from '../../im-bank-pdf-statement.parser';
 import { mapImportBatchRecordToItem } from '../../import-batch.mapper';
+import { parseKbKookminBankPdfStatement } from '../../kb-kookmin-bank-pdf-statement.parser';
+import { parseWooriBankHtmlStatement } from '../../woori-bank-html-statement.parser';
+import { parseWooriCardHtmlStatement } from '../../woori-card-html-statement.parser';
 import { ImportBatchWritePort } from '../ports/import-batch-write.port';
 
 const FILE_UPLOAD_SOURCE_KINDS: ImportSourceKind[] = [
   'IM_BANK_PDF',
-  'WOORI_BANK_HTML'
+  'WOORI_BANK_HTML',
+  'WOORI_CARD_HTML',
+  'KB_KOOKMIN_BANK_PDF'
 ];
 
 const ALLOWED_CONTENT_TYPES: Record<ImportSourceKind, string[]> = {
   IM_BANK_PDF: ['application/pdf', 'application/octet-stream'],
+  KB_KOOKMIN_BANK_PDF: ['application/pdf', 'application/octet-stream'],
   WOORI_BANK_HTML: [
+    'text/html',
+    'application/octet-stream',
+    'application/x-html'
+  ],
+  WOORI_CARD_HTML: [
     'text/html',
     'application/octet-stream',
     'application/x-html'
@@ -60,13 +71,7 @@ export class CreateImportBatchFromFileUseCase {
 
     if (!FILE_UPLOAD_SOURCE_KINDS.includes(input.sourceKind)) {
       throw new BadRequestException(
-        '파일 첨부 업로드는 현재 IM뱅크 PDF 또는 우리은행 HTML만 지원합니다.'
-      );
-    }
-
-    if (input.sourceKind === 'WOORI_BANK_HTML') {
-      throw new BadRequestException(
-        '현재 보안 점검으로 우리은행 HTML 업로드가 비활성화되었습니다. IM뱅크 PDF 또는 수동 업로드를 사용해 주세요.'
+        '파일 첨부 업로드는 현재 IM뱅크 PDF, KB국민은행 PDF, 우리은행 HTML, 우리카드 HTML만 지원합니다.'
       );
     }
 
@@ -76,14 +81,20 @@ export class CreateImportBatchFromFileUseCase {
       allowedTypes.length > 0 &&
       !allowedTypes.includes(input.contentType)
     ) {
-      throw new BadRequestException('PDF 파일만 업로드할 수 있습니다.');
+      throw new BadRequestException(
+        input.sourceKind === 'IM_BANK_PDF' ||
+          input.sourceKind === 'KB_KOOKMIN_BANK_PDF'
+          ? 'PDF 파일만 업로드할 수 있습니다.'
+          : 'HTML 파일만 업로드할 수 있습니다.'
+      );
     }
 
     const fundingAccountId = await resolveImportBatchFundingAccountId({
       client: this.prisma,
       workspace,
+      sourceKind: input.sourceKind,
       fundingAccountId: input.fundingAccountId,
-      requiredMessage: 'IM뱅크 PDF 업로드에는 연결 계좌/카드를 선택해 주세요.'
+      requiredMessage: '파일 업로드에는 연결 계좌/카드를 선택해 주세요.'
     });
 
     const fingerprintScope = {
@@ -91,11 +102,35 @@ export class CreateImportBatchFromFileUseCase {
       ledgerId: workspace.ledgerId
     };
 
-    const parsedBatch = parseImBankPdfStatement({
-      buffer: input.buffer,
-      fileName: input.fileName,
-      fingerprintScope
-    });
+    // 파일 원본과 복호화 비밀번호는 저장하지 않는다.
+    // 파서는 행 원본과 중복 판단용 fingerprint만 만들어 배치 저장 경계로 넘긴다.
+    const parsedBatch =
+      input.sourceKind === 'IM_BANK_PDF'
+        ? parseImBankPdfStatement({
+            buffer: input.buffer,
+            fileName: input.fileName,
+            fingerprintScope
+          })
+        : input.sourceKind === 'KB_KOOKMIN_BANK_PDF'
+          ? parseKbKookminBankPdfStatement({
+              buffer: input.buffer,
+              fileName: input.fileName,
+              password: input.password ?? '',
+              fingerprintScope
+            })
+          : input.sourceKind === 'WOORI_BANK_HTML'
+            ? parseWooriBankHtmlStatement({
+                buffer: input.buffer,
+                fileName: input.fileName,
+                password: input.password ?? '',
+                fingerprintScope
+              })
+            : parseWooriCardHtmlStatement({
+                buffer: input.buffer,
+                fileName: input.fileName,
+                password: input.password ?? '',
+                fingerprintScope
+              });
 
     const fileHash = createHash('sha256').update(input.buffer).digest('hex');
 

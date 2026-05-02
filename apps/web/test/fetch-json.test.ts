@@ -265,12 +265,23 @@ test('buildErrorFeedback separates user guidance from diagnostics', async () => 
   );
   const feedback = buildErrorFeedback(error, '작업을 완료하지 못했습니다.');
 
-  assert.deepEqual(feedback, {
-    severity: 'error',
-    message: '현재 데이터 상태와 맞지 않아 작업을 완료하지 못했습니다.',
-    diagnostics:
-      'HTTP 409 · 오류 코드 BUSINESS_RULE_CONFLICT · 요청번호 request-correction-1 · 경로 /journal-entries/entry-1/corrections'
-  });
+  assert.equal(feedback.severity, 'error');
+  assert.equal(
+    feedback.message,
+    '현재 데이터 상태와 맞지 않아 작업을 완료하지 못했습니다.'
+  );
+  assert.match(feedback.diagnostics ?? '', /오류 코드: BUSINESS_RULE_CONFLICT/);
+  assert.match(feedback.diagnostics ?? '', /HTTP 상태: 409/);
+  assert.match(
+    feedback.diagnostics ?? '',
+    /요청 경로: \/journal-entries\/entry-1\/corrections/
+  );
+  assert.match(feedback.diagnostics ?? '', /요청번호: request-correction-1/);
+  assert.match(
+    feedback.diagnostics ?? '',
+    /기술 메시지: Journal entry changed during correction\. Please retry\./
+  );
+  assert.match(feedback.diagnostics ?? '', /원본 응답 본문:/);
   assert.match(error.message, /진단:/);
   assert.doesNotMatch(feedback.message, /진단:/);
 });

@@ -38,6 +38,7 @@ RUN npm rebuild
 RUN npm run build:money
 RUN npm run build --workspace @personal-erp/api
 RUN npm run build --workspace @personal-erp/web
+RUN rm -rf apps/web/.next/cache
 
 FROM build AS prod-node-modules
 RUN npm prune --omit=dev --ignore-scripts

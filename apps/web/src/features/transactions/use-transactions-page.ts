@@ -22,9 +22,7 @@ import {
   getReferenceDataReadiness,
   referenceDataReadinessQueryKey
 } from '@/features/reference-data/reference-data.api';
-import {
-  buildErrorFeedback
-} from '@/shared/api/fetch-json';
+import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { webRuntime } from '@/shared/config/env';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { useAppNotification } from '@/shared/providers/notification-provider';
@@ -175,10 +173,7 @@ export function useTransactionsPage() {
     },
     onError: (error) => {
       setFeedback(
-        buildErrorFeedback(
-          error,
-          '수집 거래를 일괄 전표 확정하지 못했습니다.'
-        )
+        buildErrorFeedback(error, '수집 거래를 일괄 전표 확정하지 못했습니다.')
       );
     }
   });
@@ -209,7 +204,9 @@ export function useTransactionsPage() {
       }
     },
     onError: (error) => {
-      setFeedback(buildErrorFeedback(error, '수집 거래를 삭제하지 못했습니다.'));
+      setFeedback(
+        buildErrorFeedback(error, '수집 거래를 삭제하지 못했습니다.')
+      );
     }
   });
 
@@ -238,7 +235,7 @@ export function useTransactionsPage() {
   );
 
   useDomainHelp({
-    title: '수집 거래 사용 가이드',
+    title: '수집 거래 화면 도움말',
     description:
       '이 화면은 현재 운영 월을 기본 기준으로 실제 거래 후보를 검토하고 전표로 확정하는 핵심 작업 화면입니다. 수기 입력, 업로드 행 등록, 계획 항목에서 생성된 거래가 모두 이곳에 모입니다.',
     primaryEntity: '수집 거래',
@@ -253,7 +250,7 @@ export function useTransactionsPage() {
       '공식 회계 기준은 전표이되, 수집 거래는 전표 확정 전 단계의 운영 기록입니다.',
     supplementarySections: [
       {
-        title: '바로 쓰는 순서',
+        title: '작업 진행 순서',
         items: [
           '운영 월 카드에서 거래일 허용 범위를 먼저 확인합니다.',
           '필터로 자금수단, 카테고리, 전표 반영 상태를 좁혀 처리할 거래를 찾습니다.',

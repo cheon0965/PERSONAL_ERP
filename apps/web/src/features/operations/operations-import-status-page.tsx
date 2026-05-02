@@ -35,7 +35,7 @@ export function OperationsImportStatusPage() {
   const importStatus = importStatusQuery.data;
 
   useDomainHelp({
-    title: '업로드 운영 현황 가이드',
+    title: '업로드 운영 현황 화면 도움말',
     description:
       '업로드 운영 현황은 최근 배치의 실패 행과 미수집 행을 운영 관점에서 점검하는 화면입니다.',
     primaryEntity: '업로드 배치',
@@ -57,13 +57,15 @@ export function OperationsImportStatusPage() {
         links: [
           {
             title: '업로드 배치',
-            description: '원본 업로드, 행 검토, 거래 등록을 바로 이어서 진행합니다.',
+            description:
+              '원본 업로드, 행 검토, 거래 등록을 바로 이어서 진행합니다.',
             href: '/imports',
             actionLabel: '업로드 배치 열기'
           },
           {
             title: '예외 처리함',
-            description: '미수집 행과 업로드 관련 예외를 우선순위로 다시 확인합니다.',
+            description:
+              '미수집 행과 업로드 관련 예외를 우선순위로 다시 확인합니다.',
             href: '/operations/exceptions',
             actionLabel: '예외 처리 보기'
           }

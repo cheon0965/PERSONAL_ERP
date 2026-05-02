@@ -35,12 +35,16 @@
 - `JWT_REFRESH_SECRET`
 - `ACCESS_TOKEN_TTL`
 - `REFRESH_TOKEN_TTL`
+- `EMAIL_VERIFICATION_TTL`
 - `DATABASE_URL`
 - `DEMO_EMAIL`
+- `DEMO_RESET_SCHEDULE_ENABLED`
 - `INITIAL_ADMIN_EMAIL`
 - `INITIAL_ADMIN_NAME`
 - `INITIAL_ADMIN_PASSWORD`
 - `MAIL_PROVIDER` (console 또는 gmail-api)
+- `MAIL_FROM_EMAIL`
+- `MAIL_FROM_NAME`
 - `GMAIL_CLIENT_ID`
 - `GMAIL_CLIENT_SECRET`
 - `GMAIL_REFRESH_TOKEN`
@@ -126,7 +130,9 @@
 - `/journal-entries`에서 확정 전표를 조회하고 반전/정정 전표 CTA가 유지되는지 확인합니다.
 - `/financial-statements`, `/funding-account-status`, `/carry-forwards`, `/forecast`에서 재무제표 생성, 자금수단별 현황, 차기 이월 생성, 현재 월/다음 달 전망 확인 흐름이 깨지지 않았는지 확인합니다.
 - 브라우저 새로고침 후 `POST /auth/refresh` 기반 세션 복원이 되는지 확인합니다.
-- 실패 경고가 내부 함수명이나 영어 정책명만 노출하지 않고, 사용자가 취할 수 있는 안내와 오류 코드/요청번호를 함께 보여주는지 확인합니다.
+- 실패 경고가 내부 함수명이나 영어 정책명만 노출하지 않고, 사용자가 취할 수 있는 안내를 먼저 보여주는지 확인합니다.
+- 실패 경고의 `개발자 진단 정보`를 펼쳤을 때 오류 코드, HTTP 상태, 요청 경로, 요청번호, validator 원본 항목 또는 원본 응답 본문을 확인할 수 있는지 확인합니다.
+- 모바일 폭에서 `DataTableCard` 기반 목록이 카드형으로 전환되고, 5개 초과 목록에서 5/10/20개 단위 페이지네이션과 이전/다음 이동이 동작하는지 확인합니다.
 - `dashboard`, `reference-data`, `periods`, `plan-items`, `transactions`, `journal-entries`, `financial-statements`, `funding-account-status`, `carry-forwards`, `forecast`의 운영 안내 empty state와 CTA가 깨지지 않았는지 확인합니다.
 
 ## DB와 시드 데이터 경계

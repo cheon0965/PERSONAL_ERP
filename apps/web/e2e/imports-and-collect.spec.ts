@@ -320,6 +320,24 @@ test('@smoke uploads an import batch, collects it into a transaction, confirms i
       return;
     }
 
+    if (path === '/api/auth/workspaces' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: currentUser.currentWorkspace
+            ? [
+                {
+                  ...currentUser.currentWorkspace,
+                  isCurrent: true
+                }
+              ]
+            : []
+        })
+      });
+      return;
+    }
+
     if (path === '/api/navigation/tree' && request.method() === 'GET') {
       await route.fulfill({
         status: 200,
@@ -757,13 +775,12 @@ test('@smoke uploads an import batch, collects it into a transaction, confirms i
   await expect(
     page.getByText('Coffee beans 행을 수집 거래로 올렸습니다.')
   ).toBeVisible();
-  await expect(
-    page.locator('a[href="/transactions?transactionId=txn-import-e2e-1"]')
-  ).toBeVisible();
+  const collectedTransactionLink = page.locator(
+    'a[href="/transactions?transactionId=txn-import-e2e-1"]:visible'
+  );
+  await expect(collectedTransactionLink).toBeVisible();
 
-  await page
-    .locator('a[href="/transactions?transactionId=txn-import-e2e-1"]')
-    .click();
+  await collectedTransactionLink.click();
 
   await expect(page).toHaveURL(
     /\/transactions\?transactionId=txn-import-e2e-1$/

@@ -44,6 +44,7 @@ export class CreateImportBatchUseCase {
     const fundingAccountId = await resolveImportBatchFundingAccountId({
       client: this.prisma,
       workspace,
+      sourceKind: input.sourceKind,
       fundingAccountId: input.fundingAccountId
     });
 

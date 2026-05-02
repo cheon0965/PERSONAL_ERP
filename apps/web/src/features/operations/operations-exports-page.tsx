@@ -2,14 +2,7 @@
 
 import { useState } from 'react';
 import type { OperationsExportResult } from '@personal-erp/contracts';
-import {
-  Box,
-  Button,
-  Chip,
-  Grid,
-  Stack,
-  Typography
-} from '@mui/material';
+import { Box, Button, Chip, Grid, Stack, Typography } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { formatDateTime, formatNumber } from '@/shared/lib/format';
@@ -48,7 +41,7 @@ export function OperationsExportsPage() {
   });
   const exports = exportsQuery.data;
   useDomainHelp({
-    title: '백업 / 내보내기 가이드',
+    title: '백업 / 내보내기 화면 도움말',
     description:
       '백업 / 내보내기 화면은 운영 데이터를 어떤 범위로 반출할지 선택하는 화면입니다.',
     primaryEntity: '내보내기 결과',
@@ -57,7 +50,7 @@ export function OperationsExportsPage() {
       '내보내기 가능 범위와 최근 실행 결과는 서버가 제공하는 내보내기 기준을 따라 표시됩니다.',
     supplementarySections: [
       {
-        title: '바로 쓰는 순서',
+        title: '작업 진행 순서',
         items: [
           '상단에서 반출 범위 수, 대상 행 수, 마지막 반출 시각을 먼저 확인합니다.',
           '반출 범위 목록에서 필요한 데이터 범위를 고르고 행 수가 예상과 맞는지 확인합니다.',
@@ -70,13 +63,15 @@ export function OperationsExportsPage() {
         links: [
           {
             title: '감사 로그',
-            description: '수동 반출 실행 전후의 운영 이벤트와 요청 흐름을 함께 확인합니다.',
+            description:
+              '수동 반출 실행 전후의 운영 이벤트와 요청 흐름을 함께 확인합니다.',
             href: '/admin/logs',
             actionLabel: '감사 로그 보기'
           },
           {
             title: '재무제표 생성 / 선택',
-            description: '공식 스냅샷이 최신인지 확인한 뒤 재무제표 범위를 반출합니다.',
+            description:
+              '공식 스냅샷이 최신인지 확인한 뒤 재무제표 범위를 반출합니다.',
             href: '/financial-statements',
             actionLabel: '재무제표 보기'
           }

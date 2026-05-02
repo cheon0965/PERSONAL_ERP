@@ -86,7 +86,7 @@ export function AdminTenantsPage() {
   });
 
   useDomainHelp({
-    title: '사업장 관리 가이드',
+    title: '사업장 관리 화면 도움말',
     description:
       '사업장 관리는 전체 관리자가 사업장 상태, 기본 장부, 멤버 구성을 확인하고 운영 상태를 최소 범위로 조정하는 화면입니다.',
     primaryEntity: '사업장',
@@ -95,7 +95,7 @@ export function AdminTenantsPage() {
       '사업장 접근 가능 여부는 사업장 상태와 기본 장부 존재 여부를 함께 기준으로 봅니다.',
     supplementarySections: [
       {
-        title: '확인 기준',
+        title: '먼저 확인할 기준',
         items: [
           '사업장 목록에서 상태, 기본 장부, 활성 멤버, 소유자 수를 먼저 확인합니다.',
           '상세를 열어 장부와 멤버 구성이 실제 운영 대상과 맞는지 확인합니다.',
@@ -105,7 +105,7 @@ export function AdminTenantsPage() {
         ]
       },
       {
-        title: '후속 안내',
+        title: '다음 작업',
         links: [
           {
             title: '사업장 전환 / 지원 모드',

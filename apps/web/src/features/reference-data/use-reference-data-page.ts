@@ -60,16 +60,12 @@ export function useReferenceDataPage(
   const { notifySuccess } = useAppNotification();
   const { user } = useAuthSession();
   const [pageFeedback, setPageFeedback] = React.useState<FeedbackState>(null);
-  const [
-    fundingAccountEditorFeedback,
-    setFundingAccountEditorFeedback
-  ] = React.useState<FeedbackState>(null);
+  const [fundingAccountEditorFeedback, setFundingAccountEditorFeedback] =
+    React.useState<FeedbackState>(null);
   const [categoryEditorFeedback, setCategoryEditorFeedback] =
     React.useState<FeedbackState>(null);
-  const [
-    fundingAccountBootstrapFeedback,
-    setFundingAccountBootstrapFeedback
-  ] = React.useState<FeedbackState>(null);
+  const [fundingAccountBootstrapFeedback, setFundingAccountBootstrapFeedback] =
+    React.useState<FeedbackState>(null);
   const [fundingAccountEditorState, setFundingAccountEditorState] =
     React.useState<FundingAccountEditorState>(null);
   const [categoryEditorState, setCategoryEditorState] =
@@ -589,7 +585,8 @@ function buildReferenceDataHelpContext(
     links: [
       {
         title: '자금수단',
-        description: '실제 입출금 기준이 되는 통장, 카드, 현금 계정을 관리합니다.',
+        description:
+          '실제 입출금 기준이 되는 통장, 카드, 현금 계정을 관리합니다.',
         href: '/reference-data/funding-accounts',
         actionLabel: '자금수단 보기'
       },
@@ -601,7 +598,8 @@ function buildReferenceDataHelpContext(
       },
       {
         title: '공식 참조값',
-        description: '계정과목과 거래유형 같은 시스템 제공 기준값을 확인합니다.',
+        description:
+          '계정과목과 거래유형 같은 시스템 제공 기준값을 확인합니다.',
         href: '/reference-data/lookups',
         actionLabel: '공식 참조값 보기'
       }
@@ -621,7 +619,7 @@ function buildReferenceDataHelpContext(
         supplementarySections: [
           currentContextSection,
           {
-            title: '이 탭에서 하는 일',
+            title: '이 화면에서 진행할 일',
             items: [
               '수입·지출 카테고리를 추가하고 거래 입력자가 알아볼 수 있는 이름으로 정리합니다.',
               '목록의 활성 상태를 보고 새 입력에 계속 쓸 분류와 숨길 분류를 구분합니다.',
@@ -646,7 +644,7 @@ function buildReferenceDataHelpContext(
         supplementarySections: [
           currentContextSection,
           {
-            title: '이 탭에서 하는 일',
+            title: '이 화면에서 진행할 일',
             items: [
               '계정과목과 거래유형 목록을 보고 전표 자동 생성에 필요한 공식 기준값이 준비되어 있는지 확인합니다.',
               '직접 편집하지 않고, 어떤 기준이 실제 화면에서 참조되는지 읽는 용도로 사용합니다.',
@@ -671,7 +669,7 @@ function buildReferenceDataHelpContext(
         supplementarySections: [
           currentContextSection,
           {
-            title: '이 탭에서 하는 일',
+            title: '이 화면에서 진행할 일',
             items: [
               '운영 통장, 카드, 현금 같은 실제 입출금 기준을 추가하거나 이름을 정리합니다.',
               '기초 등록 대기 상태의 자금수단은 시작 금액과 계정과목을 확인해 운영 기준으로 닫습니다.',

@@ -41,6 +41,24 @@
 - `npm run audit:runtime:full`은 allowlist 적용 없이 현재 runtime advisory 전체를 다시 확인할 때 사용하는 follow-up 명령입니다.
 - 현재 기본 `npm run test`에서는 Prisma 통합 테스트가 안내 문구와 함께 skip됩니다.
 
+## 2026-05-01 문서 최신화 점검
+
+이번 문서 점검의 파일 조회와 수정은 UTF-8 기준으로 수행했습니다.
+
+- `npm run docs:check`: 통과
+  - Markdown 58개 파일의 `npm run` 명령 참조 308개 확인
+  - Web route 61개, API operation 136개, `docs/API.md` route map 61개 확인
+  - `docs/CURRENT_CAPABILITIES.md`, `docs/OPERATIONS_CHECKLIST.md`, `docs/VALIDATION_NOTES.md`의 Web/API surface 정합성 확인
+- 수동 대조:
+  - `apps/api/src/config/api-env.ts`, `env-examples/api.env.example`, `env-examples/deploy.compose.env.example` 기준으로 운영 체크리스트 env 목록을 보정
+  - `docker-compose.prod.yml`, `Dockerfile`, `build-docker-images.bat` 기준으로 Docker 배포 문서의 현재 저장소 경로와 태그 예시를 보정
+  - `docs/completed/` 실제 보관 파일 목록과 완료 문서 인덱스를 대조해 누락 항목을 추가
+  - ASVS ADR의 작성 당시 표현과 현재 구현 상태가 충돌하지 않도록 현재 판정 우선 문서를 명시
+  - `CONTRIBUTING.md`와 `pull_request_template.md`의 구조 규칙, 문서 갱신 대상, 검증 체크리스트를 현재 문서 체계에 맞게 보정
+  - Web 공통 오류 진단 정보와 모바일 `DataTableCard` 페이지네이션 기준을 `README.md`, `docs/API.md`, `docs/CURRENT_CAPABILITIES.md`, `docs/DEVELOPMENT_GUIDE.md`, `docs/DESIGN_SYSTEM.md`, `docs/ERROR_HANDLING_AND_LOGGING.md`, `docs/OPERATIONS_CHECKLIST.md`, `docs/PROJECT_PLAN.md`에 반영
+- 추가 포맷 확인:
+  - `npm run format:check -- --end-of-line auto`: 통과
+
 ## 2026-04-30 ASVS L2 보강 검증
 
 이번 ASVS 보강 작업의 파일 읽기, 생성, 수정은 UTF-8 기준으로 수행했습니다.
@@ -195,7 +213,7 @@
 - `/settings/workspace`, `/settings/account/profile`, `/settings/account/password`, `/settings/account/sessions`, `/settings/account/events` 설정 route와 workspace/account API helper의 보호 요청 path, Bearer token, mutation body 직렬화
 - `/operations`, `/operations/checklist`, `/operations/exceptions`, `/operations/month-end`, `/operations/imports`, `/operations/status`, `/operations/alerts`, `/operations/exports`, `/operations/notes` 운영 지원 route와 operations API helper의 보호 요청 path, Bearer token, mutation body 직렬화
 - 요청 실패 메시지 안내
-  공통 `fetch-json` 경계에서 네트워크 실패, 인증 만료, 개발자식 API 문구, 권한 정책 문구, validator 배열 메시지를 사용자용 문구로 변환하고 `errorCode`, `requestId`, `technicalMessage`를 보존하는지 검증
+  공통 `fetch-json` 경계에서 네트워크 실패, 인증 만료, 개발자식 API 문구, 권한 정책 문구, validator 배열 메시지를 사용자용 문구로 변환하고 `errorCode`, HTTP 상태, 요청 경로, `requestId`, `technicalMessage`, 원본 응답 본문을 개발자 진단 정보로 보존하는지 검증
 - 브라우저에서 `/transactions` 보호 라우트(Collected Transactions 화면) 리다이렉트
 - 브라우저 기준 로그인 후 세션 복원
 - 실제 브라우저 상호작용으로 거래 Quick Add 성공 및 목록 갱신
@@ -218,6 +236,7 @@
 ## 현재 남아 있는 공백
 
 - 간결 헤더와 `도메인 가이드` 노출, 페이지 전환 시 도움말 문맥 정리 동작은 현재 전용 자동 테스트가 없음
+- 모바일 카드 목록의 5/10/20개 페이지네이션은 공통 `DataTableCard` 단위 타입체크/린트/웹 테스트로 보호되며, 전용 브라우저 E2E는 아직 없음
 - `/funding-account-status`의 기준 토글, 자금수단 필터, 차트/거래 테이블 상호작용은 현재 전용 브라우저 E2E가 없음
 - 루트 `/` 공개 홍보 메인의 비로그인 CTA와 인증 사용자 `/dashboard` 이동은 현재 전용 자동 테스트가 없음
 - Docker가 없는 개발 PC에서는 `test:prisma`, `semgrep-ce`, `gitleaks`를 로컬에서 CI와 동일하게 재현하기 어려움

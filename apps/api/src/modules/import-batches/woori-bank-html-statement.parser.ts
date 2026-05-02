@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { BadRequestException } from '@nestjs/common';
-import type { ImportBatchFileUnsupportedReason } from '@personal-erp/contracts';
+import { decode } from 'iconv-lite';
 import { parseMoneyWon } from '@personal-erp/money';
 import {
   ImportBatchParseStatus,
@@ -13,11 +13,10 @@ import {
   type ParsedImportedRowDraft,
   buildSourceFingerprint
 } from './import-batch.policy';
+import { decryptVestMailHtml } from './vestmail-html-decryption';
 
 const MAX_WOORI_HTML_BYTES = 10 * 1024 * 1024;
 const SEOUL_TIME_OFFSET = '+09:00';
-const VESTMAIL_DECRYPTION_FAILED =
-  'VESTMAIL_DECRYPTION_FAILED' satisfies ImportBatchFileUnsupportedReason;
 
 export type ParseWooriBankHtmlStatementInput = {
   buffer: Buffer;
@@ -52,20 +51,18 @@ export function parseWooriBankHtmlStatement(
 ): ParsedImportBatchDraft {
   assertHtmlUpload(input.buffer, input.fileName);
 
-  const rawHtml = input.buffer.toString('utf8');
+  const rawHtml = decodeWooriBankHtml(input.buffer);
   const isEncrypted = isVestMailEncrypted(rawHtml);
 
-  if (isEncrypted && !/^\d{6}$/.test(input.password)) {
-    throw new BadRequestException(
-      '우리은행 보안메일은 복호화를 위해 주민등록번호 앞자리 6자리를 입력해야 합니다.'
-    );
-  }
-
-  if (isEncrypted) {
-    throwDecryptionDisabled();
-  }
-
-  const decryptedHtml = rawHtml;
+  const decryptedHtml = isEncrypted
+    ? decryptVestMailHtml({
+        html: rawHtml,
+        password: input.password,
+        serviceName: '우리은행',
+        fallbackUploadMessage:
+          '브라우저에서 열어 저장한 거래내역 HTML을 업로드해 주세요.'
+      })
+    : rawHtml;
 
   const header = parseWooriHeader(decryptedHtml, input.fingerprintScope);
   const tableRows = parseWooriTransactionTable(decryptedHtml);
@@ -80,9 +77,7 @@ export function parseWooriBankHtmlStatement(
     mapWooriRowToImportedRow(row, index + 1, header)
   );
 
-  const parsedCount = rows.filter(
-    (row) => row.parseStatus === 'PARSED'
-  ).length;
+  const parsedCount = rows.filter((row) => row.parseStatus === 'PARSED').length;
 
   return {
     rowCount: rows.length,
@@ -98,10 +93,7 @@ export function parseWooriBankHtmlStatement(
 
 // ─── Validation ──────────────────────────────────────────────────
 
-function assertHtmlUpload(
-  buffer: Buffer,
-  fileName: string
-): void {
+function assertHtmlUpload(buffer: Buffer, fileName: string): void {
   if (buffer.length === 0) {
     throw new BadRequestException('업로드 파일이 비어 있습니다.');
   }
@@ -124,18 +116,22 @@ function assertHtmlUpload(
 
 function isVestMailEncrypted(html: string): boolean {
   return (
-    html.includes('WOORIBANK') &&
-    html.includes('var s=') &&
-    html.includes('vestmail')
+    /WOORIBANK/i.test(html) &&
+    /var\s+s\s*=/.test(html) &&
+    /vestmail/i.test(html)
   );
 }
 
-function throwDecryptionDisabled(): never {
-  throw new BadRequestException({
-    code: VESTMAIL_DECRYPTION_FAILED,
-    message:
-      '현재 보안 점검으로 우리은행 보안메일 HTML 복호화가 비활성화되었습니다.'
-  });
+function decodeWooriBankHtml(buffer: Buffer): string {
+  const utf8Preview = buffer.toString('utf8');
+  const charsetMatch = utf8Preview.match(/charset\s*=\s*["']?([^"'\s>]+)/i);
+  const charset = charsetMatch?.[1]?.toLowerCase();
+
+  if (charset === 'euc-kr' || charset === 'ks_c_5601-1987') {
+    return decode(buffer, 'euc-kr');
+  }
+
+  return utf8Preview;
 }
 
 // ─── HTML table parsing ──────────────────────────────────────────
@@ -144,14 +140,10 @@ function parseWooriHeader(
   html: string,
   scope: ParseWooriBankHtmlStatementInput['fingerprintScope']
 ): WooriParsedHeader {
-  const accountMatch = html.match(
-    /계좌번호<\/th>\s*<td[^>]*>([^<]+)<\/td>/
-  );
+  const accountMatch = html.match(/계좌번호<\/th>\s*<td[^>]*>([^<]+)<\/td>/);
   const accountNumber = accountMatch?.[1]?.trim() ?? 'unknown';
 
-  const periodMatch = html.match(
-    /조회기간<\/th>\s*<td[^>]*>([^<]+)<\/td>/
-  );
+  const periodMatch = html.match(/조회기간<\/th>\s*<td[^>]*>([^<]+)<\/td>/);
   const periodText = periodMatch?.[1]?.trim() ?? '';
   const periodParts = periodText.match(
     /(\d{4}\.\d{2}\.\d{2})\s*~\s*(\d{4}\.\d{2}\.\d{2})/
@@ -252,7 +244,9 @@ function mapWooriRowToImportedRow(
   const direction =
     withdrawal != null && withdrawal > 0 && (deposit == null || deposit === 0)
       ? 'WITHDRAWAL'
-      : deposit != null && deposit > 0 && (withdrawal == null || withdrawal === 0)
+      : deposit != null &&
+          deposit > 0 &&
+          (withdrawal == null || withdrawal === 0)
         ? 'DEPOSIT'
         : null;
 

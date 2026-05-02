@@ -2,7 +2,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ImportSourceKind } from '@prisma/client';
 import {
   IsEnum,
-  Matches,
   IsOptional,
   IsString,
   MaxLength,
@@ -29,15 +28,11 @@ export class CreateImportBatchFileRequestDto {
   @ApiPropertyOptional({
     example: '990101',
     description:
-      '우리은행 보안메일 HTML 복호화를 위한 비밀번호(주민등록번호 앞 6자리)입니다. WOORI_BANK_HTML 소스일 때만 필수입니다.'
+      '암호화 원본을 서버에서 안전하게 복호화할 때만 사용하는 비밀번호입니다. 우리은행/우리카드 VestMail은 숫자 6자리, KB국민은행 PDF는 PDF 비밀번호를 입력합니다. 비밀번호는 저장하지 않습니다.'
   })
   @IsOptional()
   @IsString()
-  @MinLength(6)
-  @MaxLength(6)
-  @Matches(/^\d{6}$/, {
-    message: '우리은행 보안메일 비밀번호는 숫자 6자리여야 합니다.'
-  })
+  @MinLength(1)
+  @MaxLength(64)
   password?: string;
 }
-

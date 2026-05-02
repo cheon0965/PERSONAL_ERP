@@ -54,10 +54,21 @@ export const mockFundingAccounts: FundingAccountItem[] = [
 export const mockCategories: CategoryItem[] = [
   { id: 'cat-1', name: '매출 입금', kind: 'INCOME', isActive: true },
   { id: 'cat-2', name: '원재료비', kind: 'EXPENSE', isActive: true },
-  { id: 'cat-3', name: '사업 보험료', kind: 'EXPENSE', isActive: true },
-  { id: 'cat-4', name: '배송 차량 유지비', kind: 'EXPENSE', isActive: true },
-  { id: 'cat-5', name: '통신·POS 비용', kind: 'EXPENSE', isActive: true },
-  { id: 'cat-6', name: '과거 판촉비', kind: 'EXPENSE', isActive: false }
+  { id: 'cat-3', name: '보험료', kind: 'EXPENSE', isActive: true },
+  { id: 'cat-4', name: '유류비', kind: 'EXPENSE', isActive: true },
+  { id: 'cat-5', name: '차량 정비비', kind: 'EXPENSE', isActive: true },
+  { id: 'cat-6', name: '통신·POS 비용', kind: 'EXPENSE', isActive: true },
+  { id: 'cat-7', name: '포장재/소모품', kind: 'EXPENSE', isActive: true },
+  { id: 'cat-8', name: '임차료', kind: 'EXPENSE', isActive: true },
+  { id: 'cat-9', name: '배송비', kind: 'EXPENSE', isActive: true },
+  { id: 'cat-10', name: '광고·판촉비', kind: 'EXPENSE', isActive: true },
+  { id: 'cat-11', name: '업무 도구 구독료', kind: 'EXPENSE', isActive: true },
+  {
+    id: 'cat-12',
+    name: '대출 이자/금융비용',
+    kind: 'EXPENSE',
+    isActive: true
+  }
 ];
 
 export const mockAccountSubjects: AccountSubjectItem[] = [

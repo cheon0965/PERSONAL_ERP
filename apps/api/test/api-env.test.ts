@@ -62,6 +62,40 @@ test('parseApiEnv keeps the initial admin password optional for normal API boot'
   assert.equal(env.INITIAL_ADMIN_PASSWORD, null);
 });
 
+test('parseApiEnv enables demo reset schedule by default', () => {
+  const env = parseApiEnv(createBaseEnv());
+
+  assert.equal(env.DEMO_RESET_SCHEDULE_ENABLED, true);
+});
+
+test('parseApiEnv accepts explicit DEMO_RESET_SCHEDULE_ENABLED=false', () => {
+  const env = parseApiEnv({
+    ...createBaseEnv(),
+    DEMO_RESET_SCHEDULE_ENABLED: 'false'
+  });
+
+  assert.equal(env.DEMO_RESET_SCHEDULE_ENABLED, false);
+});
+
+test('parseApiEnv defaults log retention schedule and retention windows', () => {
+  const env = parseApiEnv(createBaseEnv());
+
+  assert.equal(env.LOG_RETENTION_SCHEDULE_ENABLED, true);
+  assert.equal(env.WORKSPACE_AUDIT_LOG_RETENTION_DAYS, 180);
+  assert.equal(env.SECURITY_THREAT_LOG_RETENTION_DAYS, 365);
+});
+
+test('parseApiEnv rejects log retention windows outside the supported range', () => {
+  assert.throws(
+    () =>
+      parseApiEnv({
+        ...createBaseEnv(),
+        WORKSPACE_AUDIT_LOG_RETENTION_DAYS: '7'
+      }),
+    /WORKSPACE_AUDIT_LOG_RETENTION_DAYS/
+  );
+});
+
 test('parseApiEnv rejects short JWT secrets', () => {
   assert.throws(
     () =>

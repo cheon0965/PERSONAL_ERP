@@ -28,7 +28,7 @@ export function OperationsExceptionsPage() {
   const exceptions = exceptionsQuery.data;
 
   useDomainHelp({
-    title: '예외 처리함 가이드',
+    title: '예외 처리함 화면 도움말',
     description:
       '예외 처리함은 미확정 거래, 업로드 문제, 마감 차단 사유를 우선순위대로 모아 보는 화면입니다.',
     primaryEntity: '운영 예외',
@@ -37,7 +37,7 @@ export function OperationsExceptionsPage() {
       '예외 항목은 현재 운영 상태에서 즉시 조치가 필요한 항목을 모은 운영 요약입니다.',
     supplementarySections: [
       {
-        title: '기본 순서',
+        title: '작업 진행 순서',
         items: [
           '긴급/경고 수량을 먼저 확인하고 긴급 예외부터 처리합니다.',
           '예외 종류가 미확정 거래, 업로드, 기준 데이터, 마감 중 어디에 속하는지 확인합니다.',
@@ -50,13 +50,15 @@ export function OperationsExceptionsPage() {
         links: [
           {
             title: '월 마감',
-            description: '마감 차단 사유와 현재 월 준비 상태를 다시 확인합니다.',
+            description:
+              '마감 차단 사유와 현재 월 준비 상태를 다시 확인합니다.',
             href: '/operations/month-end',
             actionLabel: '월 마감 보기'
           },
           {
             title: '업로드 운영 현황',
-            description: '미수집 행과 실패 배치 기준으로 업로드 관련 예외를 점검합니다.',
+            description:
+              '미수집 행과 실패 배치 기준으로 업로드 관련 예외를 점검합니다.',
             href: '/operations/imports',
             actionLabel: '업로드 현황 보기'
           }

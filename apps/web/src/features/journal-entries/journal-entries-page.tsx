@@ -391,7 +391,7 @@ function buildJournalEntriesHelpContext(isDetailLayout: boolean) {
         '월 운영 중 확정된 거래는 반드시 전표로 이어지고, 이후 마감과 보고는 이 전표를 기준으로 진행됩니다.',
       supplementarySections: [
         {
-          title: '이 탭에서 하는 일',
+          title: '이 화면에서 진행할 일',
           items: [
             '선택한 전표의 차변과 대변 라인이 의도한 계정과목과 자금수단으로 잡혔는지 확인합니다.',
             '취소가 필요하면 반전 전표를, 금액이나 분류 수정이 필요하면 정정 전표를 생성합니다.',
@@ -439,7 +439,7 @@ function buildJournalEntriesHelpContext(isDetailLayout: boolean) {
       '월 운영 중 확정된 거래는 반드시 전표로 이어지고, 이후 마감과 보고는 이 전표를 기준으로 진행됩니다.',
     supplementarySections: [
       {
-        title: '이 탭에서 하는 일',
+        title: '이 화면에서 진행할 일',
         items: [
           '검색과 기간 필터를 사용해 확인할 전표 범위를 먼저 좁힙니다.',
           '목록에서 전표 번호, 전표 일자, 원본 수집 거래를 먼저 확인합니다.',
@@ -448,7 +448,7 @@ function buildJournalEntriesHelpContext(isDetailLayout: boolean) {
         ]
       },
       {
-        title: '막히면 확인',
+        title: '문제가 있을 때 확인',
         items: [
           '반전/정정 버튼은 현재 열린 운영 기간이 있어야 사용할 수 있습니다.',
           'POSTED 상태 전표만 추가 조정 대상으로 봅니다.',

@@ -11,7 +11,10 @@ import {
 
 type DelimitedImportSourceKind = Exclude<
   ImportSourceKind,
-  typeof ImportSourceKind.IM_BANK_PDF | typeof ImportSourceKind.WOORI_BANK_HTML
+  | typeof ImportSourceKind.IM_BANK_PDF
+  | typeof ImportSourceKind.WOORI_BANK_HTML
+  | typeof ImportSourceKind.WOORI_CARD_HTML
+  | typeof ImportSourceKind.KB_KOOKMIN_BANK_PDF
 >;
 
 export type ParsedImportedRowDraft = {
@@ -276,7 +279,9 @@ export function readParsedImportedRowPayload(
           ? { directionLabel: parsed.directionLabel }
           : {}),
         ...(readParsedCollectTypeHint(parsed.collectTypeHint)
-          ? { collectTypeHint: readParsedCollectTypeHint(parsed.collectTypeHint) }
+          ? {
+              collectTypeHint: readParsedCollectTypeHint(parsed.collectTypeHint)
+            }
           : {}),
         ...(typeof parsed.balanceAfter === 'number'
           ? { balanceAfter: parsed.balanceAfter }
@@ -332,6 +337,18 @@ function assertDelimitedImportSourceKind(
   if (sourceKind === ImportSourceKind.WOORI_BANK_HTML) {
     throw new BadRequestException(
       '우리은행 HTML은 파일 첨부 업로드로 등록해 주세요.'
+    );
+  }
+
+  if (sourceKind === ImportSourceKind.WOORI_CARD_HTML) {
+    throw new BadRequestException(
+      '우리카드 HTML은 파일 첨부 업로드로 등록해 주세요.'
+    );
+  }
+
+  if (sourceKind === ImportSourceKind.KB_KOOKMIN_BANK_PDF) {
+    throw new BadRequestException(
+      'KB국민은행 PDF는 파일 첨부 업로드로 등록해 주세요.'
     );
   }
 }

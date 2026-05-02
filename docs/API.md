@@ -28,7 +28,8 @@
 - 클라이언트가 `x-request-id`를 보내면 같은 값을 그대로 유지합니다.
 - 운영 추적이나 문제 재현 시 이 값을 기준으로 요청 로그를 연결합니다.
 - CORS credential 요청에서도 Web이 요청번호를 읽을 수 있도록 `x-request-id`를 노출 헤더로 공개합니다.
-- Web 공통 요청 계층은 HTTP 오류를 사용자용 메시지와 진단 정보(`errorCode`, `requestId`, 원본 기술 메시지)로 나눠 표시합니다.
+- Web 공통 요청 계층은 HTTP 오류를 사용자용 메시지와 개발자 진단 정보로 나눠 표시합니다.
+- 개발자 진단 정보에는 `errorCode`, HTTP 상태, 요청 메서드/경로, `requestId`, 서버 오류 항목, validator 원본 항목, 원본 기술 메시지, 원본 응답 본문이 포함될 수 있으며 화면에서는 기본 접힘 상태로 노출합니다.
 
 ## 동시성/충돌 응답 원칙
 
@@ -827,8 +828,9 @@
 
 ### `POST /import-batches/files`
 
-- 계약: `multipart/form-data(sourceKind, fundingAccountId, file) -> ImportBatchItem`
-- 현재 파일첨부 업로드는 `IM_BANK_PDF` 원본 형식을 지원합니다.
+- 계약: `multipart/form-data(sourceKind, fundingAccountId, file, password?) -> ImportBatchItem`
+- 현재 파일첨부 업로드는 `IM_BANK_PDF`, `WOORI_BANK_HTML`, `WOORI_CARD_HTML` 원본 형식을 지원합니다.
+- `WOORI_BANK_HTML`과 `WOORI_CARD_HTML`은 브라우저에서 열어 저장한 정적 HTML과 암호화된 VestMail 원본을 지원합니다. 암호화 원본은 `password` 숫자 6자리로 서버에서 동적 스크립트 실행 없이 SEED/CBC 복호화만 수행하며, 비밀번호와 원본 파일은 저장하지 않습니다.
 - `fundingAccountId`는 필수이며, 현재 워크스페이스의 활성 계좌/카드 자금수단이어야 합니다.
 - IM뱅크 PDF 거래내역은 raw bytes SHA-256 `fileHash`를 계산하고, PDF 텍스트 레이어와 좌표를 읽어 `ImportedRow.rawPayload.original/parsed` 구조로 변환합니다.
 - 텍스트 레이어가 없는 스캔/이미지 PDF는 OCR 미도입 범위로 명시 차단하며, `400 Bad Request`와 `code=SCANNED_PDF_TEXT_LAYER_MISSING`를 반환합니다.

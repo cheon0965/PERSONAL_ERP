@@ -13,7 +13,8 @@
 - [ ] 인증/세션, CORS, 보안 헤더를 수정했다면 `npm run test:security:api`를 확인했습니다.
 - [ ] 의존성이나 잠금 파일을 바꿨다면 `npm run audit:runtime` 또는 CI `audit-runtime` 결과를 확인했습니다.
 - [ ] 런타임 감사 예외를 추가하거나 갱신했다면 `security/runtime-audit-allowlist.json`의 만료일과 사유를 함께 검토했습니다.
-- [ ] 웹 라우트, 인증 복원, Next.js 빌드 경로를 수정했다면 `npm run test:e2e:smoke:build` 또는 동등한 브라우저 검증을 확인했습니다.
+- [ ] 웹 라우트, 인증 복원, Next.js 빌드 경로를 수정했다면 `npm run test:e2e:smoke:build`를 확인했습니다.
+- [ ] 브라우저 상호작용까지 바뀌었다면 `npm run test:e2e` 또는 `npm run test:e2e:smoke:build:browser`를 확인했습니다.
 - [ ] 동작 확인 방법, 스크린샷, 또는 요청 예시를 본문에 남겼습니다.
 - [ ] 실행하지 못한 검증이 있다면 이유를 아래에 적었습니다.
 
@@ -32,11 +33,16 @@
 - [ ] `README.md`
 - [ ] `CONTRIBUTING.md`
 - [ ] `ENVIRONMENT_SETUP.md`
+- [ ] `docs/CURRENT_CAPABILITIES.md`
 - [ ] `docs/OPERATIONS_CHECKLIST.md`
+- [ ] `docs/DOCKER_DEPLOYMENT.md`
 - [ ] `docs/API.md`
 - [ ] `docs/ARCHITECTURE.md`
 - [ ] `docs/PROJECT_PLAN.md`
+- [ ] `docs/DESIGN_SYSTEM.md`
 - [ ] `docs/VALIDATION_NOTES.md`
+- [ ] `docs/ERROR_HANDLING_AND_LOGGING.md`
+- [ ] `docs/ASVS_L2_BASELINE_MATRIX.md` 또는 `docs/ASVS_L2_EXECUTION_PLAN.md`
 - [ ] `PORTFOLIO_ARCHITECTURE_GUIDE.md`
 - [ ] 해당 없음
 

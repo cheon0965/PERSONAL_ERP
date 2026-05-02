@@ -306,7 +306,9 @@ export function VehiclesPage({
       });
     },
     onError: (error) => {
-      setFeedback(buildErrorFeedback(error, '차량 기록을 삭제하지 못했습니다.'));
+      setFeedback(
+        buildErrorFeedback(error, '차량 기록을 삭제하지 못했습니다.')
+      );
     }
   });
 
@@ -783,7 +785,7 @@ function buildVehiclesHelpContext(section: VehicleWorkspaceSection) {
           '차량 프로필은 운영 분류 기준이고, 실제 비용 확정은 수집 거래와 전표에서 이뤄집니다.',
         supplementarySections: [
           {
-            title: '이 탭에서 하는 일',
+            title: '이 화면에서 진행할 일',
             items: [
               '차량명, 제조사, 연료 종류, 초기 주행거리 같은 기본 프로필을 등록합니다.',
               '목록에서 상태와 기본 정보를 확인한 뒤 필요한 차량만 수정합니다.',
@@ -810,7 +812,7 @@ function buildVehiclesHelpContext(section: VehicleWorkspaceSection) {
           '연료 기록은 운영 이력이면서, 회계 연동을 켜면 연결된 지출 거래와 전표 흐름까지 이어집니다.',
         supplementarySections: [
           {
-            title: '이 탭에서 하는 일',
+            title: '이 화면에서 진행할 일',
             items: [
               '차량 필터와 최근 기록을 보고 입력할 차량과 누락된 주유일을 먼저 확인합니다.',
               '주유일 또는 충전일, 주행거리, 수량, 금액을 남겨 차량별 연료 이력을 누적합니다.',
@@ -837,7 +839,7 @@ function buildVehiclesHelpContext(section: VehicleWorkspaceSection) {
           '정비 이력은 운영 기록이면서, 회계 연동을 켜면 연결된 지출 거래와 전표 흐름까지 이어집니다.',
         supplementarySections: [
           {
-            title: '이 탭에서 하는 일',
+            title: '이 화면에서 진행할 일',
             items: [
               '차량 필터와 최근 정비 내역을 보고 반복 정비 또는 누락된 정비 항목을 먼저 찾습니다.',
               '정비일, 정비 분류, 주행거리, 금액을 남겨 차량별 정비 이력을 누적합니다.',
@@ -872,7 +874,7 @@ function buildVehiclesHelpContext(section: VehicleWorkspaceSection) {
           '차량과 운영 이력은 기본적으로 운영 데이터이고, 회계 연동을 켜면 수집 거래와 전표 흐름까지 이어집니다.',
         supplementarySections: [
           {
-            title: '이 탭에서 먼저 볼 것',
+            title: '이 화면에서 먼저 볼 것',
             items: [
               '상단 요약과 차량별 운영비 흐름으로 전체 차량 운영 상태를 먼저 봅니다.',
               '최근 연료 기록, 최근 정비 기록, 비용이 큰 차량을 확인해 어떤 탭으로 내려갈지 결정합니다.',

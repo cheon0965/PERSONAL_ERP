@@ -129,11 +129,16 @@ export function PageHeader({
             </Typography>
           ) : null}
           <Stack
-            direction={{ xs: 'column', md: 'row' }}
-            alignItems={{ xs: 'flex-start', md: 'center' }}
+            direction="row"
+            alignItems="center"
             spacing={appLayout.pageHeaderBadgeGap}
             useFlexGap
             flexWrap="wrap"
+            sx={{
+              columnGap: { xs: 0.75, md: appLayout.pageHeaderBadgeGap },
+              rowGap: { xs: 0.75, md: appLayout.pageHeaderBadgeGap },
+              minWidth: 0
+            }}
           >
             <Typography
               component="h1"
@@ -145,7 +150,9 @@ export function PageHeader({
                 lineHeight: 1.15,
                 letterSpacing: 0,
                 color: brandTokens.palette.text,
-                overflowWrap: 'anywhere'
+                overflowWrap: 'anywhere',
+                flex: '0 1 auto',
+                minWidth: 0
               }}
             >
               {title}
@@ -156,6 +163,12 @@ export function PageHeader({
                 spacing={appLayout.pageHeaderBadgeGap}
                 useFlexGap
                 flexWrap="wrap"
+                sx={{
+                  columnGap: { xs: 0.5, md: appLayout.pageHeaderBadgeGap },
+                  rowGap: { xs: 0.5, md: appLayout.pageHeaderBadgeGap },
+                  minWidth: 0,
+                  flex: '0 1 auto'
+                }}
               >
                 {badges.map((badge, index) => (
                   <Chip
@@ -166,9 +179,13 @@ export function PageHeader({
                     size="small"
                     sx={{
                       borderRadius: 999,
+                      maxWidth: '100%',
+                      flexShrink: 0,
                       '& .MuiChip-label': {
                         px: 1.1,
-                        fontWeight: 700
+                        fontWeight: 700,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
                       }
                     }}
                   />

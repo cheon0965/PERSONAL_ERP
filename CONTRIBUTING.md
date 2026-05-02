@@ -47,13 +47,14 @@
 
 - 웹은 `app -> features -> shared` 흐름을 유지합니다.
 - API 기본 흐름은 `컨트롤러 -> 서비스 -> 저장소 -> 변환기/계산기`입니다.
-- `collected-transactions`, `recurring-rules`는 `컨트롤러 -> 유스케이스 -> 포트 -> 어댑터` 경계를 사용합니다.
+- 핵심 쓰기 흐름으로 승격된 모듈은 `컨트롤러 -> 유스케이스 -> 포트 -> 어댑터` 경계를 사용합니다.
+  현재 승격 기준과 목록은 `docs/ARCHITECTURE.md`와 `docs/DEVELOPMENT_GUIDE.md`를 우선합니다.
 - `dashboard`, `funding-account-status`, `forecast`는 `컨트롤러 -> 읽기 서비스 -> 읽기 저장소/계산 -> 투영` 흐름을 사용합니다.
 - 공용 계약은 `packages/contracts`를 단일 소스로 사용합니다.
 - 사용자 경계가 필요한 데이터는 `user.currentWorkspace`와 `tenantId` / `ledgerId` / `membershipRole` 기준으로 다룹니다.
 - `dashboard`, `funding-account-status`, `forecast`는 읽기/조합 컨텍스트로 보고, `collected-transactions`, `recurring-rules`의 쓰기 규칙을 직접 소유하지 않습니다.
 - 다른 모듈의 저장소, 어댑터, 컨트롤러를 직접 가져다 쓰는 방식은 기본 규칙으로 사용하지 않습니다.
-- `collected-transactions`, `recurring-rules`, `dashboard`, `funding-account-status`, `forecast`를 모듈 밖에서 참조할 때는 각 모듈의 `public.ts`만 공식 진입점으로 사용합니다.
+- 모듈 바깥에서 공개 경계가 있는 API 모듈을 참조할 때는 해당 모듈의 `public.ts`만 공식 진입점으로 사용합니다.
 - 서비스 분리, 메시지 브로커, 아웃박스, 게이트웨이 도입은 별도 ADR 없이 진행하지 않습니다.
 
 ## 비밀정보 규칙
@@ -103,9 +104,10 @@
 ## 문서 갱신 규칙
 
 - env 키 또는 SECRET 경로 방식 변경: `ENVIRONMENT_SETUP.md`
-- 배포/운영 절차 변경: `docs/OPERATIONS_CHECKLIST.md`
+- 배포/운영 절차 변경: `docs/OPERATIONS_CHECKLIST.md`, `docs/DOCKER_DEPLOYMENT.md`
 - 협업 흐름 변경: `CONTRIBUTING.md`
 - 구조 변경: `docs/ARCHITECTURE.md`
+- 현재 기능 범위 변경: `docs/CURRENT_CAPABILITIES.md`, `docs/API.md`
 - 금액 계약/연산/검증 기준 변경: `docs/API.md`, `docs/VALIDATION_NOTES.md`, `docs/ARCHITECTURE.md`
 - 설계 결정 기록: `docs/adr/`
 

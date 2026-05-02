@@ -76,7 +76,7 @@ export function AdminLogsPage() {
   });
 
   useDomainHelp({
-    title: '감사 로그 가이드',
+    title: '감사 로그 화면 도움말',
     description:
       '감사 로그는 관리자 작업과 보안 관련 이벤트를 요청번호 기준으로 추적하는 화면입니다.',
     primaryEntity: '감사 로그',
@@ -85,7 +85,7 @@ export function AdminLogsPage() {
       '감사 로그는 서버에서 기록한 이벤트를 그대로 읽는 추적 기록입니다.',
     supplementarySections: [
       {
-        title: '자주 확인하는 기준',
+        title: '먼저 확인할 기준',
         items: [
           '요청번호를 알고 있으면 먼저 요청번호로 좁혀 같은 작업 흐름을 한 번에 확인합니다.',
           '이벤트 분류와 작업명으로 초대, 권한 변경, 상태 변경, 접근 거부를 나눠 봅니다.',

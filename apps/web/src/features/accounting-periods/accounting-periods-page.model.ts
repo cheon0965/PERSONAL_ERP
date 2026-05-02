@@ -430,7 +430,7 @@ function readAccountingPeriodsHelpCopy(section: PeriodWorkspaceSection) {
           '마감 후 정정이 꼭 필요할 때만 재오픈 대상 잠금 월과 사유를 남기고 다시 엽니다.'
         ],
         readModelNote:
-          '마감은 미확정 수집 거래가 남아 있으면 실패할 수 있습니다. 막히면 수집 거래와 예외 처리함을 먼저 정리합니다.'
+          '마감은 미확정 수집 거래가 남아 있으면 실패할 수 있습니다. 차단되면 화면 상단 오류 메시지의 사유를 확인하고 수집 거래와 예외 처리함을 먼저 정리합니다.'
       };
     case 'history':
       return {
@@ -469,7 +469,7 @@ function readAccountingPeriodsHelpCopy(section: PeriodWorkspaceSection) {
           '사업 장부',
           '사용자 권한'
         ],
-        sectionTitle: '이 탭에서 먼저 볼 것',
+        sectionTitle: '이 화면에서 먼저 볼 것',
         sectionDescription:
           '월 운영 전체 흐름을 보기 전에 현재 열린 월과 준비 상태를 여기서 먼저 확인합니다.',
         sectionItems: [
@@ -509,13 +509,15 @@ function buildAccountingPeriodsHelpLinks(section: PeriodWorkspaceSection) {
     },
     {
       title: '월 마감 / 재오픈',
-      description: '열린 월 마감 또는 필요한 잠금 월 재오픈을 집중해서 처리합니다.',
+      description:
+        '열린 월 마감 또는 필요한 잠금 월 재오픈을 집중해서 처리합니다.',
       href: '/periods/close',
       actionLabel: '월 마감 / 재오픈 보기'
     },
     {
       title: '운영 기간 이력',
-      description: '운영 기간 상태 변화와 기초 잔액 출처를 이력 중심으로 확인합니다.',
+      description:
+        '운영 기간 상태 변화와 기초 잔액 출처를 이력 중심으로 확인합니다.',
       href: '/periods/history',
       actionLabel: '운영 기간 이력 보기'
     }

@@ -27,7 +27,7 @@ export function OperationsChecklistPage() {
   const checklist = checklistQuery.data;
 
   useDomainHelp({
-    title: '운영 체크리스트 가이드',
+    title: '운영 체크리스트 화면 도움말',
     description:
       '운영 체크리스트는 월 시작, 일일 점검, 월 마감 준비 항목을 상태별로 읽는 화면입니다.',
     primaryEntity: '운영 체크리스트',
@@ -36,7 +36,7 @@ export function OperationsChecklistPage() {
       '체크리스트 상태는 현재 운영 월과 관련 예외, 수집, 마감 준비 데이터를 기준으로 계산됩니다.',
     supplementarySections: [
       {
-        title: '사용 방식',
+        title: '작업 진행 순서',
         items: [
           '상단 합계와 현재 운영 월을 먼저 확인합니다.',
           '처리 필요 또는 차단 상태인 그룹을 먼저 펼쳐 원인과 이동 경로를 확인합니다.',
@@ -55,7 +55,8 @@ export function OperationsChecklistPage() {
           },
           {
             title: '예외 처리함',
-            description: '처리 필요 또는 차단 항목이 실제로 어떤 예외에서 왔는지 추적합니다.',
+            description:
+              '처리 필요 또는 차단 항목이 실제로 어떤 예외에서 왔는지 추적합니다.',
             href: '/operations/exceptions',
             actionLabel: '예외 처리 보기'
           }

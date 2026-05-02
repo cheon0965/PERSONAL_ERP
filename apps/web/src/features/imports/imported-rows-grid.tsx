@@ -1,15 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
-import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
 import type { GridRowSelectionModel } from '@mui/x-data-grid';
 import {
   Alert,
   Box,
   Button,
   Chip,
-  Collapse,
   LinearProgress,
   MenuItem,
   Stack,
@@ -86,7 +83,6 @@ export function ImportedRowsGrid({
   onBulkCollect: (rowIds?: string[]) => void;
   onCancelBulkCollect: () => void;
 }) {
-  const [isTypeOverridesOpen, setTypeOverridesOpen] = React.useState(false);
   const [filters, setFilters] = React.useState<ImportedRowsFilters>({
     keyword: '',
     parseStatus: '',
@@ -222,7 +218,7 @@ export function ImportedRowsGrid({
     };
 
     targetRows.forEach((row) => {
-      const type = resolveImportedRowBulkCollectType(row, bulkCollectForm.type);
+      const type = resolveImportedRowBulkCollectType(row);
 
       if (type) {
         counts[type] += 1;
@@ -236,28 +232,16 @@ export function ImportedRowsGrid({
         count: counts[type]
       }))
       .filter((item) => item.count > 0);
-  }, [bulkCollectForm.type, targetRows]);
+  }, [targetRows]);
   const unresolvedTargetCount = React.useMemo(
     () =>
-      targetRows.filter(
-        (row) => !resolveImportedRowBulkCollectType(row, bulkCollectForm.type)
-      ).length,
-    [bulkCollectForm.type, targetRows]
+      targetRows.filter((row) => !resolveImportedRowBulkCollectType(row))
+        .length,
+    [targetRows]
   );
   const categoryNameById = React.useMemo(
     () => new Map(categories.map((category) => [category.id, category.name])),
     [categories]
-  );
-  const hasTypeOverrides = React.useMemo(
-    () =>
-      bulkCollectTransactionTypes.some((type) => {
-        const typeOption = bulkCollectForm.typeOptions[type];
-
-        return (
-          Boolean(typeOption.categoryId) || Boolean(typeOption.memo.trim())
-        );
-      }),
-    [bulkCollectForm.typeOptions]
   );
   const bulkCollectProgress =
     bulkCollectJob && bulkCollectJob.requestedRowCount > 0
@@ -480,7 +464,7 @@ export function ImportedRowsGrid({
                 >
                   <Stack spacing={0.5} sx={{ minWidth: 0 }}>
                     <Typography variant="subtitle2">
-                      일괄 적용 기본값
+                      거래유형별 세부 적용
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       {readBulkCollectScopeSummary({
@@ -488,84 +472,11 @@ export function ImportedRowsGrid({
                         selectedCollectableRowCount:
                           visibleSelectedCollectableRowCount,
                         collectableRowCount: visibleCollectableRowCount,
-                        forcedType: bulkCollectForm.type,
                         activeTypeBreakdown,
                         unresolvedTargetCount
                       })}
                     </Typography>
                   </Stack>
-                  <Button
-                    variant={isTypeOverridesOpen ? 'contained' : 'outlined'}
-                    color={hasTypeOverrides ? 'primary' : 'inherit'}
-                    startIcon={<TuneRoundedIcon />}
-                    endIcon={
-                      <ExpandMoreRoundedIcon
-                        sx={{
-                          transition: 'transform 0.2s ease',
-                          transform: isTypeOverridesOpen
-                            ? 'rotate(180deg)'
-                            : 'rotate(0deg)'
-                        }}
-                      />
-                    }
-                    onClick={() => setTypeOverridesOpen((current) => !current)}
-                  >
-                    거래유형별 세부 적용
-                  </Button>
-                </Stack>
-                <Stack
-                  direction={{ xs: 'column', lg: 'row' }}
-                  spacing={1.5}
-                  alignItems={{ xs: 'stretch', lg: 'center' }}
-                >
-                  <TextField
-                    select
-                    label="일괄 거래유형"
-                    size="small"
-                    value={bulkCollectForm.type}
-                    onChange={(event) => {
-                      onBulkCollectFormChange({
-                        type: event.target.value as typeof bulkCollectForm.type
-                      });
-                    }}
-                    sx={{ minWidth: { lg: 180 } }}
-                  >
-                    <MenuItem value="">행 방향 자동</MenuItem>
-                    <MenuItem value="EXPENSE">지출</MenuItem>
-                    <MenuItem value="INCOME">수입</MenuItem>
-                    <MenuItem value="TRANSFER">이체</MenuItem>
-                    <MenuItem value="REVERSAL">승인취소</MenuItem>
-                  </TextField>
-                  <TextField
-                    select
-                    label="기본 카테고리"
-                    size="small"
-                    value={bulkCollectForm.categoryId}
-                    onChange={(event) => {
-                      onBulkCollectFormChange({
-                        categoryId: event.target.value
-                      });
-                    }}
-                    sx={{ minWidth: { lg: 240 } }}
-                  >
-                    <MenuItem value="">자동/미지정</MenuItem>
-                    {categories.map((category) => (
-                      <MenuItem key={category.id} value={category.id}>
-                        {category.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                  <TextField
-                    label="기본 메모"
-                    size="small"
-                    value={bulkCollectForm.memo}
-                    onChange={(event) => {
-                      onBulkCollectFormChange({
-                        memo: event.target.value
-                      });
-                    }}
-                    sx={{ minWidth: { lg: 220 }, flex: 1 }}
-                  />
                 </Stack>
                 <Stack spacing={0.75}>
                   {activeTypeBreakdown.length > 0 ? (
@@ -607,122 +518,119 @@ export function ImportedRowsGrid({
                   )}
                   <Typography variant="body2" color="text.secondary">
                     읽기 완료, 미연결, 현재 운영월 범위에 있는 행만 선택할 수
-                    있습니다. 거래유형별 적용값은 해당 유형 행에 기본 카테고리와
-                    메모보다 먼저 반영됩니다.
+                    있습니다. 거래유형별 적용값은 해당 유형 행에만 반영되고,
+                    비워두면 자동 판정값을 사용합니다.
                   </Typography>
                 </Stack>
-                <Collapse in={isTypeOverridesOpen} unmountOnExit>
-                  <Stack spacing={1} sx={{ pt: 0.5 }}>
-                    {activeTypeBreakdown.length > 0 ? (
-                      activeTypeBreakdown.map((item) => {
-                        const type = item.type;
-                        const label = item.label;
-                        const typeCategories =
-                          type === 'REVERSAL'
-                            ? categories
-                            : categories.filter(
-                                (category) => category.kind === type
-                              );
+                <Stack spacing={1} sx={{ pt: 0.5 }}>
+                  {activeTypeBreakdown.length > 0 ? (
+                    activeTypeBreakdown.map((item) => {
+                      const type = item.type;
+                      const label = item.label;
+                      const typeCategories =
+                        type === 'REVERSAL'
+                          ? categories
+                          : categories.filter(
+                              (category) => category.kind === type
+                            );
 
-                        return (
-                          <Box
-                            key={type}
-                            sx={{
-                              p: 1.25,
-                              border: '1px solid',
-                              borderColor: 'divider',
-                              borderRadius: 1.5
-                            }}
-                          >
-                            <Stack spacing={1}>
+                      return (
+                        <Box
+                          key={type}
+                          sx={{
+                            p: 1.25,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 1.5
+                          }}
+                        >
+                          <Stack spacing={1}>
+                            <Stack
+                              direction={{ xs: 'column', sm: 'row' }}
+                              spacing={1}
+                              justifyContent="space-between"
+                              alignItems={{ xs: 'flex-start', sm: 'center' }}
+                            >
                               <Stack
-                                direction={{ xs: 'column', sm: 'row' }}
+                                direction="row"
                                 spacing={1}
-                                justifyContent="space-between"
-                                alignItems={{ xs: 'flex-start', sm: 'center' }}
+                                alignItems="center"
+                                useFlexGap
+                                flexWrap="wrap"
                               >
-                                <Stack
-                                  direction="row"
-                                  spacing={1}
-                                  alignItems="center"
-                                  useFlexGap
-                                  flexWrap="wrap"
-                                >
-                                  <Chip
-                                    label={`${label} ${item.count}건`}
-                                    size="small"
-                                    color="primary"
-                                    variant="outlined"
-                                  />
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                  >
-                                    {readTypePanelDescription({
-                                      categoryName:
-                                        categoryNameById.get(
-                                          bulkCollectForm.typeOptions[type]
-                                            .categoryId
-                                        ) ?? null,
-                                      memo: bulkCollectForm.typeOptions[type]
-                                        .memo
-                                    })}
-                                  </Typography>
-                                </Stack>
-                              </Stack>
-                              <Stack
-                                direction={{ xs: 'column', lg: 'row' }}
-                                spacing={1}
-                              >
-                                <TextField
-                                  select
-                                  label={`${label} 카테고리`}
+                                <Chip
+                                  label={`${label} ${item.count}건`}
                                   size="small"
-                                  value={
-                                    bulkCollectForm.typeOptions[type].categoryId
-                                  }
-                                  onChange={(event) => {
-                                    updateBulkCollectTypeOption(type, {
-                                      categoryId: event.target.value
-                                    });
-                                  }}
-                                  sx={{ minWidth: 0, flex: 1 }}
-                                >
-                                  <MenuItem value="">기본값 사용</MenuItem>
-                                  {typeCategories.map((category) => (
-                                    <MenuItem
-                                      key={category.id}
-                                      value={category.id}
-                                    >
-                                      {category.name}
-                                    </MenuItem>
-                                  ))}
-                                </TextField>
-                                <TextField
-                                  label={`${label} 메모`}
-                                  size="small"
-                                  value={bulkCollectForm.typeOptions[type].memo}
-                                  onChange={(event) => {
-                                    updateBulkCollectTypeOption(type, {
-                                      memo: event.target.value
-                                    });
-                                  }}
-                                  placeholder="비워두면 기본 메모 사용"
-                                  sx={{ minWidth: 0, flex: 1.2 }}
+                                  color="primary"
+                                  variant="outlined"
                                 />
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  {readTypePanelDescription({
+                                    categoryName:
+                                      categoryNameById.get(
+                                        bulkCollectForm.typeOptions[type]
+                                          .categoryId
+                                      ) ?? null,
+                                    memo: bulkCollectForm.typeOptions[type].memo
+                                  })}
+                                </Typography>
                               </Stack>
                             </Stack>
-                          </Box>
-                        );
-                      })
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">
-                        현재 선택 범위에서 자동 판정되거나 고정된 거래유형이
-                        없어 세부 적용 항목을 표시하지 않습니다.
-                      </Typography>
-                    )}
-                  </Stack>
-                </Collapse>
+                            <Stack
+                              direction={{ xs: 'column', lg: 'row' }}
+                              spacing={1}
+                            >
+                              <TextField
+                                select
+                                label={`${label} 카테고리`}
+                                size="small"
+                                value={
+                                  bulkCollectForm.typeOptions[type].categoryId
+                                }
+                                onChange={(event) => {
+                                  updateBulkCollectTypeOption(type, {
+                                    categoryId: event.target.value
+                                  });
+                                }}
+                                sx={{ minWidth: 0, flex: 1 }}
+                              >
+                                <MenuItem value="">자동/미지정</MenuItem>
+                                {typeCategories.map((category) => (
+                                  <MenuItem
+                                    key={category.id}
+                                    value={category.id}
+                                  >
+                                    {category.name}
+                                  </MenuItem>
+                                ))}
+                              </TextField>
+                              <TextField
+                                label={`${label} 메모`}
+                                size="small"
+                                value={bulkCollectForm.typeOptions[type].memo}
+                                onChange={(event) => {
+                                  updateBulkCollectTypeOption(type, {
+                                    memo: event.target.value
+                                  });
+                                }}
+                                placeholder="필요할 때만 메모 입력"
+                                sx={{ minWidth: 0, flex: 1.2 }}
+                              />
+                            </Stack>
+                          </Stack>
+                        </Box>
+                      );
+                    })
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      현재 선택 범위에서 자동 판정된 거래유형이 없어 세부 적용
+                      항목을 표시하지 않습니다.
+                    </Typography>
+                  )}
+                </Stack>
               </Stack>
             </Box>
             <Stack spacing={1}>
@@ -899,13 +807,8 @@ function readCollectionStatusFilterLabel(value: string) {
 }
 
 function resolveImportedRowBulkCollectType(
-  row: ImportedRowTableItem,
-  forcedType: BulkCollectFormState['type']
+  row: ImportedRowTableItem
 ): BulkCollectTransactionType | null {
-  if (forcedType) {
-    return forcedType;
-  }
-
   if (row.collectTypeHint) {
     return row.collectTypeHint;
   }
@@ -933,7 +836,6 @@ function readBulkCollectScopeSummary(input: {
   selectedRowsCount: number;
   selectedCollectableRowCount: number;
   collectableRowCount: number;
-  forcedType: BulkCollectFormState['type'];
   activeTypeBreakdown: Array<{
     type: BulkCollectTransactionType;
     label: string;
@@ -946,10 +848,6 @@ function readBulkCollectScopeSummary(input: {
       ? `선택한 등록 가능 행 ${input.selectedCollectableRowCount}건`
       : `현재 배치의 등록 가능 행 ${input.collectableRowCount}건`;
 
-  if (input.forcedType) {
-    return `${scopeLabel}을(를) 모두 ${bulkCollectTransactionTypeLabels[input.forcedType]}로 고정해 일괄 적용합니다.`;
-  }
-
   const typeSummary = input.activeTypeBreakdown
     .map((item) => `${item.label} ${item.count}건`)
     .join(', ');
@@ -959,10 +857,10 @@ function readBulkCollectScopeSummary(input: {
   }
 
   if (typeSummary) {
-    return `${scopeLabel} 기준 자동 판정은 ${typeSummary}입니다. 필요할 때만 거래유형별 세부 적용을 열어 덮어쓸 수 있습니다.`;
+    return `${scopeLabel} 기준 자동 판정은 ${typeSummary}입니다. 필요한 유형만 카테고리와 메모를 지정할 수 있습니다.`;
   }
 
-  return `${scopeLabel} 기준으로 아직 자동 판정 가능한 거래유형이 없습니다. 기본값만 적용하거나 단건 검토를 먼저 진행해 주세요.`;
+  return `${scopeLabel} 기준으로 아직 자동 판정 가능한 거래유형이 없습니다. 단건 검토를 먼저 진행해 주세요.`;
 }
 
 function readTypeOverrideSummary(input: {
@@ -982,7 +880,7 @@ function readTypeOverrideSummary(input: {
   }
 
   if (parts.length === 1) {
-    parts.push('기본값 사용');
+    parts.push('자동/미지정');
   }
 
   return parts.join(' · ');
@@ -1004,7 +902,7 @@ function readTypePanelDescription(input: {
 
   return parts.length > 0
     ? parts.join(' · ')
-    : '현재는 기본값을 그대로 사용합니다.';
+    : '현재는 자동 판정값을 사용합니다.';
 }
 
 function BalanceDiscrepancyAlert({
@@ -1024,16 +922,13 @@ function BalanceDiscrepancyAlert({
       </Typography>
       <Typography variant="body2">
         {accountLabel}의 은행 명세 마지막 잔액은{' '}
-        <strong>{formatWon(discrepancy.importedBalanceWon)}</strong>이지만,
-        현재 ERP 장부 잔액은{' '}
-        <strong>{formatWon(discrepancy.ledgerBalanceWon)}</strong>입니다.
-        (차액: {sign}{formatWon(discrepancy.differenceWon)})
+        <strong>{formatWon(discrepancy.importedBalanceWon)}</strong>이지만, 현재
+        ERP 장부 잔액은{' '}
+        <strong>{formatWon(discrepancy.ledgerBalanceWon)}</strong>입니다. (차액:{' '}
+        {sign}
+        {formatWon(discrepancy.differenceWon)})
       </Typography>
-      <Typography
-        variant="body2"
-        color="text.secondary"
-        sx={{ mt: 0.5 }}
-      >
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
         누락된 거래가 있는지 확인하고, 필요한 거래를 추가로 등록해 주세요.
       </Typography>
     </Alert>

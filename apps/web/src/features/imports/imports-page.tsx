@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import { Stack, Typography } from '@mui/material';
 import { ReferenceDataReadinessAlert } from '@/features/reference-data/reference-data-readiness';
 import { FeedbackAlert } from '@/shared/ui/feedback-alert';
@@ -23,6 +24,7 @@ export function ImportsPage({
   mode?: ImportsLayout;
   selectedBatchId?: string | null;
 }) {
+  const router = useRouter();
   const page = useImportsPage(selectedBatchId, mode);
   const isDetailMode = mode === 'detail';
   const pageTitle = isDetailMode ? '업로드 배치 작업대' : '업로드 배치';
@@ -32,6 +34,13 @@ export function ImportsPage({
   const currentPeriodDateRange = page.currentPeriod
     ? `${page.currentPeriod.startDate.slice(0, 10)} ~ ${page.currentPeriod.endDate.slice(0, 10)}`
     : '-';
+  const deleteSelectedBatchAndReturn = async () => {
+    const deleted = await page.deleteSelectedBatch();
+
+    if (deleted) {
+      router.push('/imports');
+    }
+  };
 
   return (
     <Stack spacing={appLayout.pageGap}>
@@ -70,10 +79,24 @@ export function ImportsPage({
           }
         ]}
         metadataSingleRow
-        primaryActionLabel="업로드 배치 등록"
-        primaryActionOnClick={page.openUploadDrawer}
+        primaryActionLabel={
+          isDetailMode
+            ? page.deleteSelectedBatchPending
+              ? '삭제 중...'
+              : '현재 배치 삭제'
+            : '업로드 배치 등록'
+        }
+        primaryActionOnClick={
+          isDetailMode ? deleteSelectedBatchAndReturn : page.openUploadDrawer
+        }
+        primaryActionDisabled={
+          isDetailMode
+            ? !page.selectedBatch || page.deleteSelectedBatchPending
+            : undefined
+        }
+        primaryActionColor={isDetailMode ? 'error' : undefined}
         secondaryActionLabel={
-          isDetailMode ? '배치 목록 보기' : '수집 거래 보기'
+          isDetailMode ? '업로드 배치로 돌아가기' : '수집 거래 보기'
         }
         secondaryActionHref={isDetailMode ? '/imports' : '/transactions'}
       />

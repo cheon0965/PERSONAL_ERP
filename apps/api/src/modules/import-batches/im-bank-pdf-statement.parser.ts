@@ -13,6 +13,10 @@ import {
   type ParsedImportBatchDraft,
   type ParsedImportedRowDraft
 } from './import-batch.policy';
+import {
+  createPdfStandardSecurityDecryptor,
+  type PdfObjectDecryptor
+} from './pdf-standard-security';
 
 const MAX_IM_BANK_PDF_BYTES = 10 * 1024 * 1024;
 const SEOUL_TIME_OFFSET = '+09:00';
@@ -25,7 +29,7 @@ type PdfStream = {
   data: Buffer;
 };
 
-type PositionedText = {
+export type PositionedText = {
   pageNumber: number;
   x: number;
   y: number;
@@ -85,27 +89,10 @@ export function parseImBankPdfStatement(
 ): ParsedImportBatchDraft {
   assertPdfUpload(input.buffer, input.fileName);
 
-  const streams = readPdfStreams(input.buffer);
-  const contentStreams = streams.filter((stream) =>
-    isLikelyPageContentStream(stream)
-  );
-
-  if (contentStreams.length === 0) {
-    throwScannedPdfUnsupported();
-  }
-
-  const unicodeMap = readToUnicodeMap(streams);
-  const positionedTexts = contentStreams.flatMap((stream, index) =>
-    readPositionedTexts({
-      pageNumber: index + 1,
-      stream: stream.data,
-      unicodeMap
-    })
-  );
-
-  if (positionedTexts.length === 0) {
-    throwScannedPdfUnsupported();
-  }
+  const positionedTexts = readTextLayerPdfPositionedTexts({
+    buffer: input.buffer,
+    missingTextLayerMessage: throwScannedPdfUnsupported
+  });
 
   const header = readPdfHeader(positionedTexts, input.fingerprintScope);
   const preparedRows = readPdfRows(positionedTexts).map(prepareImBankPdfRow);
@@ -136,6 +123,52 @@ export function parseImBankPdfStatement(
   };
 }
 
+export function readTextLayerPdfPositionedTexts(input: {
+  buffer: Buffer;
+  password?: string;
+  serviceName?: string;
+  fallbackUploadMessage?: string;
+  missingTextLayerMessage?: () => never;
+}): PositionedText[] {
+  // 은행별 파서는 행 구조만 다르고 PDF 텍스트 레이어 추출과 복호화 경계는 공유한다.
+  // 여기서 스캔 PDF를 먼저 걸러야 각 은행 파서가 OCR 없는 이미지 PDF를 행 누락으로 오해하지 않는다.
+  const decryptor = createPdfStandardSecurityDecryptor(input.buffer, {
+    password: input.password ?? '',
+    serviceName: input.serviceName ?? 'PDF',
+    fallbackUploadMessage:
+      input.fallbackUploadMessage ??
+      '비밀번호가 없는 텍스트 PDF를 다시 내려받아 업로드해 주세요.'
+  });
+  let streams: PdfStream[];
+  try {
+    streams = readPdfStreams(input.buffer, decryptor);
+  } finally {
+    decryptor?.dispose();
+  }
+  const contentStreams = streams.filter((stream) =>
+    isLikelyPageContentStream(stream)
+  );
+
+  if (contentStreams.length === 0) {
+    return input.missingTextLayerMessage?.() ?? throwScannedPdfUnsupported();
+  }
+
+  const unicodeMap = readToUnicodeMap(streams);
+  const positionedTexts = contentStreams.flatMap((stream, index) =>
+    readPositionedTexts({
+      pageNumber: index + 1,
+      stream: stream.data,
+      unicodeMap
+    })
+  );
+
+  if (positionedTexts.length === 0) {
+    return input.missingTextLayerMessage?.() ?? throwScannedPdfUnsupported();
+  }
+
+  return positionedTexts;
+}
+
 function throwScannedPdfUnsupported(): never {
   throw new BadRequestException({
     code: SCANNED_PDF_TEXT_LAYER_MISSING,
@@ -164,7 +197,10 @@ function assertPdfUpload(buffer: Buffer, fileName: string): void {
   }
 }
 
-function readPdfStreams(buffer: Buffer): PdfStream[] {
+function readPdfStreams(
+  buffer: Buffer,
+  decryptor: PdfObjectDecryptor | null
+): PdfStream[] {
   const pdf = buffer.toString('latin1');
   const streamPattern =
     /(\d+)\s+(\d+)\s+obj([\s\S]*?)stream\r?\n([\s\S]*?)\r?\nendstream/g;
@@ -172,8 +208,16 @@ function readPdfStreams(buffer: Buffer): PdfStream[] {
 
   for (const match of pdf.matchAll(streamPattern)) {
     const objectNumber = Number(match[1]);
+    const generationNumber = Number(match[2]);
     const dictionary = match[3] ?? '';
-    const rawStream = Buffer.from(match[4] ?? '', 'latin1');
+    const encryptedStream = Buffer.from(match[4] ?? '', 'latin1');
+    const rawStream = decryptor
+      ? decryptor.decryptObjectBytes(
+          objectNumber,
+          Number.isInteger(generationNumber) ? generationNumber : 0,
+          encryptedStream
+        )
+      : encryptedStream;
 
     if (!Number.isInteger(objectNumber)) {
       continue;
@@ -201,9 +245,9 @@ function readToUnicodeMap(streams: PdfStream[]): Map<number, string> {
   );
 
   if (!cmap) {
-    throw new BadRequestException(
-      'PDF 문자 매핑 정보를 찾을 수 없습니다. IM뱅크 원본 PDF인지 확인해 주세요.'
-    );
+    // 일부 은행 PDF는 ToUnicode CMap 없이 UTF-8 literal text를 그대로 싣는다.
+    // 빈 맵을 넘기면 literal fallback 경로가 텍스트를 복원한다.
+    return new Map();
   }
 
   const unicodeMap = new Map<number, string>();
@@ -448,6 +492,16 @@ function* tokenizePdfContent(stream: Buffer): Generator<PdfToken> {
       continue;
     }
 
+    if (byte === 0x3c && stream[index + 1] !== 0x3c) {
+      const parsed = parsePdfHexString(stream, index);
+      yield {
+        kind: 'literal',
+        value: parsed.value
+      };
+      index = parsed.nextIndex;
+      continue;
+    }
+
     if (byte === 0x5b || byte === 0x5d || byte === 0x3c || byte === 0x3e) {
       yield {
         kind: 'symbol',
@@ -487,6 +541,40 @@ function* tokenizePdfContent(stream: Buffer): Generator<PdfToken> {
           value: rawToken
         };
   }
+}
+
+function parsePdfHexString(
+  stream: Buffer,
+  startIndex: number
+): { value: Buffer; nextIndex: number } {
+  let index = startIndex + 1;
+  let hex = '';
+
+  while (index < stream.length) {
+    const byte = stream[index];
+    if (byte == null) {
+      break;
+    }
+
+    if (byte === 0x3e) {
+      index += 1;
+      break;
+    }
+
+    if (!isWhitespace(byte)) {
+      hex += String.fromCharCode(byte);
+    }
+    index += 1;
+  }
+
+  const normalizedHex = hex.length % 2 === 0 ? hex : `${hex}0`;
+
+  return {
+    value: /^[0-9A-Fa-f]*$/.test(normalizedHex)
+      ? Buffer.from(normalizedHex, 'hex')
+      : Buffer.alloc(0),
+    nextIndex: index
+  };
 }
 
 function parsePdfLiteral(

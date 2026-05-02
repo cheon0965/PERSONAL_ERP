@@ -11,7 +11,9 @@ export type ImportSourceKind =
   | 'BANK_CSV'
   | 'MANUAL_UPLOAD'
   | 'IM_BANK_PDF'
-  | 'WOORI_BANK_HTML';
+  | 'WOORI_BANK_HTML'
+  | 'WOORI_CARD_HTML'
+  | 'KB_KOOKMIN_BANK_PDF';
 
 export type ImportBatchParseStatus =
   | 'PENDING'
@@ -42,7 +44,9 @@ export type ImportBatchCollectionJobRowStatus =
 
 export type ImportBatchFileUnsupportedReason =
   | 'SCANNED_PDF_TEXT_LAYER_MISSING'
-  | 'VESTMAIL_DECRYPTION_FAILED';
+  | 'VESTMAIL_DECRYPTION_FAILED'
+  | 'PDF_DECRYPTION_FAILED'
+  | 'HTML_STATEMENT_PARSE_FAILED';
 
 export type ImportedRowTargetPeriodCreationReason =
   | 'INITIAL_SETUP'

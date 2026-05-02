@@ -138,21 +138,21 @@ export function OperationsHomePage() {
   ] as const;
 
   useDomainHelp({
-    title: '운영 허브 가이드',
+    title: '운영 허브 화면 도움말',
     description:
       '운영 허브는 오늘 처리할 운영 항목과 월 마감 준비 상태를 빠르게 나누어 보는 화면입니다.',
     primaryEntity: '운영 메모 / 운영 기간',
     relatedEntities: [
-      'CollectedTransaction',
-      'ImportBatch',
-      'FinancialStatementSnapshot',
-      'CarryForwardRecord'
+      '수집 거래',
+      '업로드 배치',
+      '재무제표 스냅샷',
+      '차기 이월 기록'
     ],
     truthSource:
       '운영 허브의 수치는 체크리스트, 예외, 업로드, 마감 준비 데이터를 요약한 운영 판단용 값입니다.',
     supplementarySections: [
       {
-        title: '읽는 순서',
+        title: '확인 순서',
         items: [
           '오늘 우선 확인 카드에서 처리 필요 항목, 예외, 미수집 행을 먼저 봅니다.',
           '월 마감 준비 상태가 경고면 월 마감 또는 예외 처리함으로 먼저 이동합니다.',

@@ -39,7 +39,7 @@ docker compose version
 프로젝트 루트에서 실행해야 한다.
 
 ```powershell
-cd "D:\참고자료\프로젝트소스\PERSONAL_ERP Starter"
+cd "D:\PROJECT\PERSONAL_ERP"
 ```
 
 빌드 전에 현재 코드가 정상인지 확인한다.
@@ -82,10 +82,10 @@ MIGRATE_IMAGE_NAME=personal-erp-migrate
 릴리즈 단위로 구분하려면 `IMAGE_TAG`를 날짜나 버전으로 바꾼다.
 
 ```dotenv
-IMAGE_TAG=2026-04-30
+IMAGE_TAG=2026-05-01
 ```
 
-중요: `build-docker-images.bat --tag 2026-04-30`처럼 명령줄로 태그를 지정해 빌드했다면, 컨테이너를 기동할 때도 같은 `IMAGE_TAG`를 써야 한다. 가장 쉬운 방법은 `.deploy\compose.env`의 `IMAGE_TAG`도 같은 값으로 바꾸는 것이다.
+중요: `build-docker-images.bat --tag 2026-05-01`처럼 명령줄로 태그를 지정해 빌드했다면, 컨테이너를 기동할 때도 같은 `IMAGE_TAG`를 써야 한다. 가장 쉬운 방법은 `.deploy\compose.env`의 `IMAGE_TAG`도 같은 값으로 바꾸는 것이다.
 
 ### MySQL 값
 
@@ -169,7 +169,14 @@ EMAIL_VERIFICATION_TTL=30m
 - 두 JWT secret은 서로 달라야 한다.
 - `replace-with-...` placeholder를 그대로 두면 API env 검증에서 실패한다.
 
-### 관리자와 메일
+### 데모 계정, 관리자, 메일
+
+포트폴리오용 데모 계정은 API 내부 스케줄러가 한국시간 매일 04:00에 초기화한다. 이 작업은 `DEMO_EMAIL` 계정과 그 계정만 단독 소유한 데모 워크스페이스만 지우고 다시 시드한다.
+
+```dotenv
+DEMO_EMAIL=demo@example.com
+DEMO_RESET_SCHEDULE_ENABLED=true
+```
 
 첫 운영 관리자 계정이 필요하면 아래 값을 채운다.
 
@@ -210,7 +217,7 @@ docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml config
 태그를 지정한 빌드:
 
 ```powershell
-.\build-docker-images.bat --tag 2026-04-30
+.\build-docker-images.bat --tag 2026-05-01
 ```
 
 base image를 새로 당기면서 빌드:
@@ -242,15 +249,15 @@ docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml build m
 배포 서버에서 직접 빌드하지 않고 이미지 파일을 옮기려면 `--save`를 붙인다.
 
 ```powershell
-.\build-docker-images.bat --tag 2026-04-30 --pull --save
+.\build-docker-images.bat --tag 2026-05-01 --pull --save
 ```
 
 생성 위치:
 
 ```text
-.deploy\images\personal-erp-migrate-2026-04-30.tar
-.deploy\images\personal-erp-api-2026-04-30.tar
-.deploy\images\personal-erp-web-2026-04-30.tar
+.deploy\images\personal-erp-migrate-2026-05-01.tar
+.deploy\images\personal-erp-api-2026-05-01.tar
+.deploy\images\personal-erp-web-2026-05-01.tar
 ```
 
 대상 서버로 세 파일과 `docker-compose.prod.yml`, `.deploy\compose.env`를 옮긴다.
@@ -258,15 +265,15 @@ docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml build m
 대상 서버에서 이미지를 불러온다.
 
 ```powershell
-docker load -i .deploy\images\personal-erp-migrate-2026-04-30.tar
-docker load -i .deploy\images\personal-erp-api-2026-04-30.tar
-docker load -i .deploy\images\personal-erp-web-2026-04-30.tar
+docker load -i .deploy\images\personal-erp-migrate-2026-05-01.tar
+docker load -i .deploy\images\personal-erp-api-2026-05-01.tar
+docker load -i .deploy\images\personal-erp-web-2026-05-01.tar
 ```
 
 대상 서버의 `.deploy\compose.env`에는 같은 태그가 들어 있어야 한다.
 
 ```dotenv
-IMAGE_TAG=2026-04-30
+IMAGE_TAG=2026-05-01
 ```
 
 ## 7. 컨테이너 기동

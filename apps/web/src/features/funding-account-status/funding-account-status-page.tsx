@@ -25,8 +25,9 @@ import {
 } from './funding-account-status-page.sections';
 
 export function FundingAccountStatusPage() {
-  const [basis, setBasis] =
-    React.useState<FundingAccountOverviewBasis>('COLLECTED_TRANSACTIONS');
+  const [basis, setBasis] = React.useState<FundingAccountOverviewBasis>(
+    'COLLECTED_TRANSACTIONS'
+  );
   const [selectedPeriodId, setSelectedPeriodId] = React.useState('');
   const [selectedFundingAccountId, setSelectedFundingAccountId] =
     React.useState('');
@@ -52,7 +53,7 @@ export function FundingAccountStatusPage() {
     null;
 
   useDomainHelp({
-    title: '자금수단별 현황 사용 가이드',
+    title: '자금수단별 현황 화면 도움말',
     description:
       '자금수단별 현황은 등록한 통장, 카드, 현금별로 월초 잔액부터 수입, 지출, 이체, 예상 기간말 잔액까지 한 화면에서 비교하는 월별 재무관리 화면입니다.',
     primaryEntity: '자금수단',
@@ -61,7 +62,7 @@ export function FundingAccountStatusPage() {
       '공식 보고 수치는 잠금된 기간의 전표와 마감 스냅샷이며, 수집 거래 기준은 월중 운영 판단용으로 사용합니다.',
     supplementarySections: [
       {
-        title: '바로 쓰는 순서',
+        title: '작업 진행 순서',
         items: [
           '조회 기준에서 운영 월과 자금수단을 선택합니다.',
           '수집 거래 기준으로 월중 실제 사용 흐름과 미확정 거래를 먼저 확인합니다.',
@@ -79,7 +80,7 @@ export function FundingAccountStatusPage() {
         ]
       },
       {
-        title: '막히면 확인',
+        title: '문제가 있을 때 확인',
         items: [
           '자금수단이 보이지 않으면 기준 데이터의 자금수단 등록 상태를 확인합니다.',
           '확정 전표 기준 숫자가 작으면 수집 거래의 전표 반영 상태를 확인합니다.',
@@ -98,8 +99,7 @@ export function FundingAccountStatusPage() {
           },
           {
             title: '전표 조회',
-            description:
-              '확정 전표 기준 잔액에 반영된 공식 라인을 추적합니다.',
+            description: '확정 전표 기준 잔액에 반영된 공식 라인을 추적합니다.',
             href: '/journal-entries',
             actionLabel: '전표 보기'
           },
@@ -118,7 +118,8 @@ export function FundingAccountStatusPage() {
   });
 
   const headerMonthLabel =
-    selectedPeriod?.monthLabel ?? (selectedPeriodId ? '선택 기간' : '자동 선택');
+    selectedPeriod?.monthLabel ??
+    (selectedPeriodId ? '선택 기간' : '자동 선택');
   const headerPeriodStatus = selectedPeriod
     ? readPeriodStatusLabel(selectedPeriod.status)
     : '기간 확인 중';

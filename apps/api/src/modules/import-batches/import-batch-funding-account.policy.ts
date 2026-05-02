@@ -1,4 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
+import type { AccountType, ImportSourceKind } from '@personal-erp/contracts';
+
+type ImportBatchFundingAccountType = Extract<AccountType, 'BANK' | 'CARD'>;
 
 type FundingAccountLookupClient = {
   account: {
@@ -27,6 +30,7 @@ export async function resolveImportBatchFundingAccountId(input: {
     tenantId: string;
     ledgerId: string;
   };
+  sourceKind?: ImportSourceKind;
   fundingAccountId?: string | null;
   requiredMessage?: string;
 }): Promise<string | null> {
@@ -63,6 +67,16 @@ export async function resolveImportBatchFundingAccountId(input: {
     );
   }
 
+  const requiredType = readImportSourceFundingAccountType(input.sourceKind);
+
+  if (requiredType && fundingAccount.type !== requiredType) {
+    throw new BadRequestException(
+      requiredType === 'CARD'
+        ? '카드 내역 업로드에는 카드 자금수단만 연결할 수 있습니다.'
+        : '은행 계좌 내역 업로드에는 은행 계좌 자금수단만 연결할 수 있습니다.'
+    );
+  }
+
   if (fundingAccount.status !== 'ACTIVE') {
     throw new BadRequestException(
       '활성 상태의 계좌/카드만 업로드 배치에 연결할 수 있습니다.'
@@ -70,4 +84,22 @@ export async function resolveImportBatchFundingAccountId(input: {
   }
 
   return fundingAccount.id;
+}
+
+function readImportSourceFundingAccountType(
+  sourceKind: ImportSourceKind | undefined
+): ImportBatchFundingAccountType | null {
+  switch (sourceKind) {
+    case 'CARD_EXCEL':
+    case 'WOORI_CARD_HTML':
+      return 'CARD';
+    case 'BANK_CSV':
+    case 'IM_BANK_PDF':
+    case 'WOORI_BANK_HTML':
+    case 'KB_KOOKMIN_BANK_PDF':
+      return 'BANK';
+    case 'MANUAL_UPLOAD':
+    case undefined:
+      return null;
+  }
 }

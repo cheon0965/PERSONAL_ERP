@@ -13,17 +13,17 @@ import { resolveImportedCollectedTransactionPostingStatus } from '@/features/tra
 export const mockImportBatches: ImportBatchItem[] = [
   {
     id: 'import-batch-demo-1',
-    sourceKind: 'MANUAL_UPLOAD',
-    fileName: 'march-manual.csv',
+    sourceKind: 'BANK_CSV',
+    fileName: 'demo-bank-2026-04.csv',
     fileHash: 'hash-demo-1',
-    fundingAccountId: null,
-    fundingAccountName: null,
-    fundingAccountType: null,
-    rowCount: 3,
-    parseStatus: 'PARTIAL',
-    uploadedAt: '2026-03-12T09:00:00.000Z',
-    parsedRowCount: 2,
-    failedRowCount: 1,
+    fundingAccountId: 'acc-1',
+    fundingAccountName: '사업 운영 통장',
+    fundingAccountType: 'BANK',
+    rowCount: 4,
+    parseStatus: 'COMPLETED',
+    uploadedAt: '2026-04-30T09:00:00.000Z',
+    parsedRowCount: 4,
+    failedRowCount: 0,
     rows: [
       {
         id: 'imported-row-demo-1',
@@ -35,14 +35,14 @@ export const mockImportBatches: ImportBatchItem[] = [
         collectionSummary: null,
         rawPayload: {
           original: {
-            date: '2026-03-12',
-            title: 'Coffee beans',
-            amount: '19800'
+            date: '2026-04-05',
+            title: '월세 자동 이체',
+            amount: '620000'
           },
           parsed: {
-            occurredOn: '2026-03-12',
-            title: 'Coffee beans',
-            amount: 19800
+            occurredOn: '2026-04-05',
+            title: '월세 자동 이체',
+            amount: 620000
           }
         }
       },
@@ -55,49 +55,70 @@ export const mockImportBatches: ImportBatchItem[] = [
         createdCollectedTransactionId: 'txn-demo-imported-1',
         collectionSummary: {
           createdCollectedTransactionId: 'txn-demo-imported-1',
-          createdCollectedTransactionTitle: 'Lunch',
+          createdCollectedTransactionTitle: '정기 소모품 보충',
           createdCollectedTransactionStatus: 'READY_TO_POST',
           autoPreparation: buildFallbackAutoPreparationSummary({
             type: 'EXPENSE',
             requestedCategoryId: null,
-            matchedPlanItemId: 'plan-item-demo-lunch',
-            matchedPlanItemTitle: '점심 예산',
-            effectiveCategoryId: 'cat-demo-meal',
-            effectiveCategoryName: '식비',
+            matchedPlanItemId: 'plan-item-demo-packaging',
+            matchedPlanItemTitle: '정기 소모품 보충',
+            effectiveCategoryId: 'cat-demo-packaging',
+            effectiveCategoryName: '포장재/소모품',
             hasDuplicateSourceFingerprint: false
           })
         },
         rawPayload: {
           original: {
-            date: '2026-03-14',
-            title: 'Lunch',
-            amount: '12000'
+            date: '2026-04-05',
+            title: '정기 소모품 보충',
+            amount: '280000'
           },
           parsed: {
-            occurredOn: '2026-03-14',
-            title: 'Lunch',
-            amount: 12000
+            occurredOn: '2026-04-05',
+            title: '정기 소모품 보충',
+            amount: 280000
           }
         }
       },
       {
         id: 'imported-row-demo-3',
         rowNumber: 4,
-        parseStatus: 'FAILED',
-        parseError: 'date 값이 올바르지 않습니다.',
-        sourceFingerprint: null,
+        parseStatus: 'PARSED',
+        parseError: null,
+        sourceFingerprint: 'sf:v1:demo-row-3',
         createdCollectedTransactionId: null,
         collectionSummary: null,
         rawPayload: {
           original: {
-            date: 'not-a-date',
-            title: 'Broken row',
-            amount: '9000'
+            date: '2026-04-15',
+            title: '업무 도구 구독료',
+            amount: '39000'
           },
           parsed: {
-            occurredOn: null,
-            title: 'Broken row',
-            amount: 9000
+            occurredOn: '2026-04-15',
+            title: '업무 도구 구독료',
+            amount: 39000
+          }
+        }
+      },
+      {
+        id: 'imported-row-demo-6',
+        rowNumber: 5,
+        parseStatus: 'PARSED',
+        parseError: null,
+        sourceFingerprint: 'sf:v1:demo-row-6',
+        createdCollectedTransactionId: null,
+        collectionSummary: null,
+        rawPayload: {
+          original: {
+            date: '2026-04-30',
+            title: '정기 택배비 정산',
+            amount: '125000'
+          },
+          parsed: {
+            occurredOn: '2026-04-30',
+            title: '정기 택배비 정산',
+            amount: 125000
           }
         }
       }
@@ -105,16 +126,16 @@ export const mockImportBatches: ImportBatchItem[] = [
   },
   {
     id: 'import-batch-demo-2',
-    sourceKind: 'BANK_CSV',
-    fileName: 'bank-export.csv',
+    sourceKind: 'CARD_EXCEL',
+    fileName: 'demo-card-2026-04.xlsx',
     fileHash: 'hash-demo-2',
-    fundingAccountId: 'acc-1',
-    fundingAccountName: '주거래 통장',
-    fundingAccountType: 'BANK',
-    rowCount: 2,
+    fundingAccountId: 'acc-3',
+    fundingAccountName: '사업용 카드',
+    fundingAccountType: 'CARD',
+    rowCount: 3,
     parseStatus: 'COMPLETED',
-    uploadedAt: '2026-03-18T09:00:00.000Z',
-    parsedRowCount: 2,
+    uploadedAt: '2026-04-30T10:00:00.000Z',
+    parsedRowCount: 3,
     failedRowCount: 0,
     rows: [
       {
@@ -127,14 +148,14 @@ export const mockImportBatches: ImportBatchItem[] = [
         collectionSummary: null,
         rawPayload: {
           original: {
-            date: '2026-03-18',
-            title: 'Fuel',
-            amount: '84000'
+            date: '2026-04-21',
+            title: '온라인 광고 소재 구매',
+            amount: '86000'
           },
           parsed: {
-            occurredOn: '2026-03-18',
-            title: 'Fuel',
-            amount: 84000
+            occurredOn: '2026-04-21',
+            title: '온라인 광고 소재 구매',
+            amount: 86000
           }
         }
       },
@@ -148,14 +169,35 @@ export const mockImportBatches: ImportBatchItem[] = [
         collectionSummary: null,
         rawPayload: {
           original: {
-            date: '2026-03-19',
-            title: 'Office supplies',
-            amount: '31500'
+            date: '2026-04-24',
+            title: '타이어 위치 교환',
+            amount: '65000'
           },
           parsed: {
-            occurredOn: '2026-03-19',
-            title: 'Office supplies',
-            amount: 31500
+            occurredOn: '2026-04-24',
+            title: '타이어 위치 교환',
+            amount: 65000
+          }
+        }
+      },
+      {
+        id: 'imported-row-demo-7',
+        rowNumber: 4,
+        parseStatus: 'PARSED',
+        parseError: null,
+        sourceFingerprint: 'sf:v1:demo-row-7',
+        createdCollectedTransactionId: null,
+        collectionSummary: null,
+        rawPayload: {
+          original: {
+            date: '2026-04-29',
+            title: '사무용 문구 구입',
+            amount: '32400'
+          },
+          parsed: {
+            occurredOn: '2026-04-29',
+            title: '사무용 문구 구입',
+            amount: 32400
           }
         }
       }
@@ -325,7 +367,7 @@ function buildFallbackAutoPreparationSummary(input: {
   if (nextWorkflowStatus === 'READY_TO_POST') {
     decisionReasons.push(
       (input.type === 'TRANSFER' || input.type === 'REVERSAL') &&
-      !input.effectiveCategoryName
+        !input.effectiveCategoryName
         ? input.type === 'REVERSAL'
           ? '승인취소 거래라 카테고리 없이도 전표 준비 상태로 올립니다.'
           : '이체 거래라 카테고리 없이도 전표 준비 상태로 올립니다.'

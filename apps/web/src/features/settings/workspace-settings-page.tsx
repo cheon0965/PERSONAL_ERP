@@ -88,7 +88,7 @@ export function WorkspaceSettingsPage() {
   });
 
   useDomainHelp({
-    title: '사업장 설정 가이드',
+    title: '사업장 설정 화면 도움말',
     description:
       '사업장 설정은 현재 사업장 이름, 상태, 기본 장부 기준값을 관리하는 화면입니다.',
     primaryEntity: '사업장 / 장부',
