@@ -35,7 +35,7 @@
     "@nestjs/swagger": "^11.4.2",
     "@personal-erp/contracts": "0.1.0",
     "@personal-erp/money": "0.1.0",
-    "@prisma/client": "^6.4.1",
+    "@prisma/client": "^6.19.3",
     "argon2": "^0.44.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
