@@ -7,53 +7,22 @@
 
 ## 완료한 기반 단계
 
-1. 툴링과 CI 정리
-2. 인증과 사용자 경계 정리
-3. 공용 계약 계층 도입
-4. 앱 단위 env 구조 정리
-5. migration-first DB 흐름 정리
-6. API 레이어 분리
-7. 프론트 feature 구조 전환
-8. fallback 정책 명시화
-9. 최소 테스트 매트릭스 도입
-10. 요청 단위 API 검증 보강
-11. Web 인증 세션과 토큰 주입 연결
-12. 거래/반복규칙 실제 mutation 연결
-13. 월 운영, 전표, 공식 보고 backbone 구현
-14. 업로드 배치와 수집 승격 흐름 구현
-    UTF-8 텍스트 업로드, IM뱅크 PDF 파일첨부 업로드, 단건 collect preview/collect, 배치 상세 일괄 등록 Job/진행률/동시 작업 잠금까지 현재 범위에 포함합니다.
-15. 배포/운영 체크리스트 문서화
-16. 메인 비즈니스 흐름 가시성, 준비 경로, 추적성 보강
-17. 기준 데이터 readiness와 자금수단/카테고리 제한적 관리 구현
-18. build 결과물 기준 smoke와 운영 체크리스트 일부 자동화
-19. 금액 정합성 기준 고정
-    `packages/money`의 `MoneyWon` 공용 모듈, Prisma 금액 컬럼 `Decimal(19,0)` 승격, `decimal.js` 기반 `HALF_UP`/배분 잔차 보정, `npm run money:check` 가드까지 완료
-20. 회원가입 및 Gmail API 이메일 인증 도입
-    회원가입/이메일 인증/재발송 API, Gmail API/console mail sender 경계, 이메일 인증 후 workspace bootstrap, Web `/register`/`/verify-email`, 테스트/문서 동기화까지 완료.
-    실행 계획은 [`completed/AUTH_REGISTRATION_GMAIL_PLAN.md`](./completed/AUTH_REGISTRATION_GMAIL_PLAN.md)에 보관합니다.
-21. 관리자 회원관리와 로그관리 1차 범위 구현
-    workspace-scoped 관리자 화면, 멤버 초대/역할/상태 관리, 초대 수락 흐름, 감사 이벤트 영속화/조회, 공통 감사 저장 경계, 테스트/문서 동기화까지 완료.
-    실행 계획은 [`completed/ADMIN_MEMBER_LOG_MANAGEMENT_PLAN.md`](./completed/ADMIN_MEMBER_LOG_MANAGEMENT_PLAN.md)에 보관합니다.
-22. 운영 보조 화면 1차 체계 구현
-    사업장 설정, 내 계정/보안, 권한 정책 요약, 운영 체크리스트, 예외 처리함, 월 마감, 업로드 운영 현황, 시스템 상태/헬스, 로그관리 고도화, 알림 / 이벤트 센터, 수동 UTF-8 CSV 반출, 운영 메모 / 인수인계까지 완료.
-    실행 계획은 [`completed/OPERATIONS_SUPPORT_SURFACES_EXECUTION_PLAN.md`](./completed/OPERATIONS_SUPPORT_SURFACES_EXECUTION_PLAN.md)에 보관합니다.
-23. 핵심 원장 P0 리팩토링 1차 반영
-    `accounting-periods`, `import-batches`, `journal-entries`, `operations-console`의 우선 경계를 현재 리팩토링 기준선에 맞춰 분리하기 시작했고, 이후 P1 모듈(`auth`, `admin`, `insurance-policies`, `plan-items`, `financial-statements`, `carry-forwards`)과 Web 대형 파일 분해까지 완료하여 [`completed/REFACTORING_EXECUTION_PLAN.md`](./completed/REFACTORING_EXECUTION_PLAN.md)에 보관합니다.
-24. 전체 관리자 운영 필수 기능 구현
-    전체 사용자 관리, 사업장 관리, 지원 모드, 보안 위협 로그, 운영 상태 화면과 관련 API/테스트/문서 동기화까지 완료했습니다.
-    실행 계획은 [`completed/SYSTEM_ADMIN_OPERATIONS_EXECUTION_PLAN.md`](./completed/SYSTEM_ADMIN_OPERATIONS_EXECUTION_PLAN.md)에 보관합니다.
-25. 공개 진입점과 회원가입 동의 화면 정리
-    비로그인 루트 `/`에 제품 소개/회원가입 안내 메인 화면을 두고, 인증된 사용자는 `/dashboard`로 이동하도록 연결했습니다. 회원가입 화면은 표시 이름, 필수 약관 동의, 개인정보 처리 동의를 포함하는 현재 계약 기준으로 정리했습니다.
-26. Prisma 실DB 통합검증 재현성 고정
-    `npm run test:prisma`가 Docker 기반 disposable MySQL을 띄워 `generate -> migrate -> minimal fixture seed -> test -> teardown`을 한 명령으로 수행하도록 정리했습니다.
-27. 보안 검증 증적과 runtime audit 예외 정리
-    GitHub CI 첫 전체 통과 증적과 required check 연결, Docker 환경 `npm run test:prisma`, GitHub `prisma-integration` 통과 확인을 완료했습니다. `@nestjs/config`, `@nestjs/swagger`, `next` 패치 업데이트로 당시 runtime audit tracked exception을 해소했습니다. 현재 런타임 감사 판정은 `docs/VALIDATION_NOTES.md`의 최신 날짜별 기록을 우선합니다.
-28. 자금수단별 현황 화면 구현
-    `GET /funding-account-status/summary`와 Web `/funding-account-status`를 추가해 수집 거래 기준과 확정 전표 기준의 자금수단별 수입, 지출, 이체, 잔액 분석을 제공하도록 정리했습니다.
-29. 화면 도움말과 오류/진단 문구 정리
-    주요 업무 화면의 화면 도움말을 현재 작업 기준으로 갱신하고, Web API 오류는 사용자용 안내와 개발자 추적 단서(`errorCode`, `requestId`, 원본 기술 메시지)를 분리해 표시하도록 정리했습니다.
-30. 모바일 카드 목록과 상세 오류 진단 정리
-    공통 `DataTableCard` 모바일 카드 목록에 5/10/20개 페이지네이션을 추가했고, Web 오류 진단 정보는 HTTP 상태, 요청 경로, 요청번호, validator 원본 항목, 원본 응답 본문까지 접힌 영역에서 확인할 수 있게 정리했습니다.
+세부 실행 순서와 당시 판단 근거는 [`completed/README.md`](./completed/README.md)와 각 완료 문서, 검증 증적은 [`VALIDATION_NOTES.md`](./VALIDATION_NOTES.md)를 우선합니다.
+
+1. 저장소 기반
+   워크스페이스 구조, 공용 계약 계층, 앱 단위 env, migration-first DB 흐름, fallback 정책, CI/검증 명령 체계를 정리했습니다.
+2. 인증과 사업장 경계
+   회원가입, 이메일 인증, 초대 수락, 로그인/refresh/logout, 계정 보안, 현재 사업장/장부 전환, 멤버 권한과 감사 로그를 현재 구현 기준으로 닫았습니다.
+3. 월 운영과 공식 회계 흐름
+   기준 데이터, 최신 진행월 open/close/reopen, 수집 거래, 업로드 배치, 전표 확정/반전/정정, 재무제표, 차기 이월, 기간 전망까지 한 사이클로 연결했습니다.
+4. 운영 자산과 자동화
+   반복 규칙/계획 항목, 보험, 부채 상환 일정, 차량 연료/정비 이력, 자금수단별 현황을 월 운영 흐름과 연결했습니다.
+5. 운영 지원과 관리자 화면
+   운영 허브, 체크리스트, 예외 처리함, 월 마감/업로드 현황, 시스템 상태/알림, UTF-8 CSV 반출, 운영 메모, 전체 관리자 사용자/사업장/지원 문맥/보안 위협 로그를 구현했습니다.
+6. 정합성/보안/품질 기준
+   `packages/money`와 `Decimal(19,0)` 기반 금액 정합성, request-id와 오류 진단 분리, ASVS L2 기준 보안 하드닝, 문서 surface drift 검사, browser build smoke, Prisma 실DB 통합검증 경로를 갖췄습니다.
+7. 화면 경험 정리
+   공개 루트, 회원가입 동의 화면, 업무 화면 도움말, 데스크톱 표와 모바일 카드 목록, 모바일 5/10/20개 페이지네이션, 개발자 진단 정보 접힘 표시를 현재 UI 기준으로 맞췄습니다.
 
 ## 현재 MVP 범위
 
@@ -85,7 +54,9 @@
 ## 문서 역할 경계
 
 - 프로젝트 목적, 판단 원칙, 현재 아키텍처 설명과 완료된 MSA-ready 경계 정리는 `PORTFOLIO_ARCHITECTURE_GUIDE.md`
-- 이 문서는 “이미 끝난 일의 작업 로그”가 아니라 앞으로의 중기 제품 로드맵만 유지합니다.
+- 현재 구현 기능 목록은 `CURRENT_CAPABILITIES.md`
+- 완료된 실행계획과 세부 이력은 `docs/completed/`
+- 실제 검증 결과와 날짜별 보안/문서 점검 증적은 `VALIDATION_NOTES.md`
 
 ## 다음 중기 우선순위
 

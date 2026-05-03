@@ -3,6 +3,10 @@
 이 폴더는 현재 기준 문서와 이력성 문서를 구분해서 관리합니다.
 현재 구현 범위, 운영 흐름, 아키텍처, API, 검증 기준을 먼저 읽고, 완료 문서는 배경 맥락과 실행 이력을 확인할 때만 내려갑니다.
 
+현재 구현 여부는 `CURRENT_CAPABILITIES.md`, `API.md`, 실제 코드 surface를 우선합니다.
+중기 방향은 `PROJECT_PLAN.md`, 완료한 세부 실행 로그는 `completed/`에 둡니다.
+문서/코드 surface 정합성은 `npm run docs:check`로 확인합니다.
+
 ## 먼저 읽을 문서
 
 1. `../README.md`
@@ -19,6 +23,13 @@
    현재 노출된 HTTP surface와 인증/쓰기 흐름을 빠르게 확인합니다.
 
 ## 현재 기준 문서
+
+### 저장소 루트 문서
+
+- `../README.md`: 저장소 첫 진입점, 빠른 시작, 현재 구현 범위 요약
+- `../ENVIRONMENT_SETUP.md`: 로컬/운영 env와 secret-dir 구성 기준
+- `../CONTRIBUTING.md`: PR, 검증, 문서 갱신 기준
+- `../PORTFOLIO_ARCHITECTURE_GUIDE.md`: 포트폴리오 관점의 구조 판단과 아키텍처 설명
 
 ### 제품 현재 상태
 

@@ -2,9 +2,9 @@
 
 ## 목적
 
-이 문서는 현재 저장소에서 구형 `Transaction` 제거 이후 신규 회계 흐름의 경계를 짧고 명확하게 고정하기 위한 기준 문서다.
+구형 `Transaction` 제거 이후 신규 회계 흐름의 경계를 고정한다.
 
-상세 도메인 규칙은 [`docs/domain/business-logic-draft.md`](./domain/business-logic-draft.md), [`docs/domain/core-entity-definition.md`](./domain/core-entity-definition.md)를 따른다. 이 문서는 그 기준을 현재 구현과 연결해, 이후 리팩터링이 의미 보존 리팩터링으로 유지되도록 돕는다.
+상세 도메인 규칙은 [`docs/domain/business-logic-draft.md`](./domain/business-logic-draft.md), [`docs/domain/core-entity-definition.md`](./domain/core-entity-definition.md)를 따른다.
 
 이전 제거 준비 메모와 체크리스트는 이력 보존용으로 `docs/completed/`에 보관한다.
 
@@ -68,7 +68,6 @@
 | 4. 스키마 제거      | 구형 `Transaction` 모델과 관련 관계를 제거하고 문서/검증 기준을 같은 변경에서 맞춘다       | 완료      |
 
 핵심은 "`Transaction`을 더 이상 설명 가능한 활성 경계로 남겨두지 않는다"는 점이다.
-즉, 현재 회계 경계는 제거 준비가 아니라 제거 완료 상태를 기준으로 읽어야 한다.
 
 ## 6. 유지 게이트
 

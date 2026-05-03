@@ -2,15 +2,8 @@
 
 ## 목적
 
-이 문서는 현재 `PERSONAL_ERP` 프로젝트를 `OWASP ASVS Level 2` 관점에서 빠르게 점검하기 위한 기준표입니다.
-
-역할은 세 가지입니다.
-
-- 현재 프로젝트가 어디까지 준비되었는지 한눈에 본다.
-- 어떤 파일과 테스트를 근거로 그렇게 판단했는지 남긴다.
-- 아직 남은 운영 과제와 후속 보강 포인트를 정리한다.
-
-이 문서는 ASVS 전체 조항의 완전한 대체물이 아니라, 현재 프로젝트 범위에 맞춘 실용적인 상태표입니다.
+현재 `PERSONAL_ERP` 프로젝트를 `OWASP ASVS Level 2` 관점에서 점검하기 위한 상태표입니다.
+ASVS 전체 조항의 대체물이 아니라, 현재 프로젝트 범위에 맞춘 기준선과 근거 파일, 남은 운영 과제를 정리합니다.
 
 ## 판정 규칙
 
@@ -186,7 +179,7 @@
 4. request-id와 readiness 같은 운영 신호가 있다.
 5. 브라우저 E2E, API 테스트, Prisma 대표 통합 테스트 경로가 역할별로 분리되어 있다.
 
-## P5 완료 반영
+## 접근통제/데이터 보호 보강 반영
 
 - 접근통제는 현재 범위에서 `부분 적용`이 아니라 `적용`으로 본다.
 - 근거는 `GET /collected-transactions`, `GET /recurring-rules`, `GET /dashboard/summary`, `GET /forecast/monthly`에 대한 요청 단위 API 테스트에서 current workspace 범위만 반환하고 내부 접근 제어 필드를 노출하지 않음을 검증한 점이다.
@@ -198,4 +191,4 @@
 - [ASVS L2 실행계획](./ASVS_L2_EXECUTION_PLAN.md)
 - [ADR 0004. ASVS Level 2 Baseline and Evidence Policy](./adr/0004-asvs-level-2-baseline-and-evidence-policy.md)
 
-이 기준표는 `현재 상태`를 설명하고, 실행계획 문서는 `왜 이런 순서로 진행했고 무엇이 아직 남았는지`를 설명합니다.
+이 기준표는 현재 판정을 설명하고, 실행계획 문서는 완료 단계와 남은 운영 항목을 요약합니다.
