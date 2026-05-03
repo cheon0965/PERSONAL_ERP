@@ -41,6 +41,26 @@
 - `npm run audit:runtime:full`은 allowlist 적용 없이 현재 runtime advisory 전체를 다시 확인할 때 사용하는 follow-up 명령입니다.
 - 현재 기본 `npm run test`에서는 Prisma 통합 테스트가 안내 문구와 함께 skip됩니다.
 
+## 2026-05-03 문서 정합성 점검
+
+이번 문서 점검의 파일 조회와 수정은 UTF-8 기준으로 수행했습니다.
+
+- `npm run docs:check`: 통과
+  - Markdown 59개 파일의 `npm run` 명령 참조 300개 확인
+  - Web route 61개, API operation 136개, `docs/API.md` route map 61개 확인
+  - `docs/CURRENT_CAPABILITIES.md`, `docs/OPERATIONS_CHECKLIST.md`, `docs/VALIDATION_NOTES.md`의 Web/API surface 정합성 확인
+- 수동 대조:
+  - `docs/` 전체 Markdown 제목 구조와 완료 문서 인덱스를 확인
+  - `apps/web/app` 라우트, `apps/api/src/modules/*Controller`, `packages/contracts/src` 계약 파일을 현재 구현 surface 기준으로 대조
+  - Markdown 상대 링크를 UTF-8 읽기 기준으로 점검했고 깨진 내부 링크는 발견하지 않음
+- 정리:
+  - `docs/PROJECT_PLAN.md`의 완료 작업 장기 목록을 압축하고, 세부 이력은 `docs/completed/README.md`와 `docs/VALIDATION_NOTES.md`를 우선하도록 정리
+  - `docs/README.md`, `docs/domain/README.md`에 현재 기준 문서와 설계/이력 문서의 우선순위를 명시
+  - ASVS 실행계획이 현재는 P0-P5 완료 후 운영 리허설 추적 문서임을 명시
+  - 도메인 문서의 SaaS 확장 모델 중 아직 구현되지 않은 `TenantSubscription`, `SupportAccessGrant` 성격을 현재 MVP 범위와 분리
+  - 완료 전 작업 지시문이 남아 있던 `ASVS_L2_EXECUTION_PLAN.md`를 완료 단계 요약과 남은 운영 항목 중심으로 압축
+  - `PORTFOLIO_ARCHITECTURE_GUIDE.md`, `ENVIRONMENT_SETUP.md`, `CURRENT_CAPABILITIES.md`, `ACCOUNTING_MODEL_BOUNDARY.md`의 도입부 반복 문구를 제거
+
 ## 2026-05-01 문서 최신화 점검
 
 이번 문서 점검의 파일 조회와 수정은 UTF-8 기준으로 수행했습니다.

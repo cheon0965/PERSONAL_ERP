@@ -30,6 +30,9 @@
 
 본 시스템은 SaaS 운영을 목표로 하므로, 회계 도메인 바깥에 다음 플랫폼 경계가 존재한다.
 
+현재 코드베이스는 `User`, `Tenant`, `Ledger`, `TenantMembership`, `TenantMembershipInvitation`, 전체 관리자 지원 문맥, workspace 감사 이벤트를 구현 기준으로 둔다.
+`TenantSubscription`, `SupportAccessGrant`처럼 과금/지원 접근을 더 강하게 모델링하는 항목은 현재 MVP 범위가 아니라, 기능이 생길 때 별도 ADR/실행계획으로 코드와 함께 승격할 설계 기준이다.
+
 - `PlatformUser`: 플랫폼 로그인 사용자
 - `Tenant`: 고객 데이터/과금/운영 단위
 - `TenantMembership`: 사용자와 Tenant 사이의 역할 관계

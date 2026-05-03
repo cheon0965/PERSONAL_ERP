@@ -1,6 +1,6 @@
 # Environment Setup
 
-이 문서는 현재 프로젝트의 env 구조와 Windows Server 배포 준비 관점에서 필요한 설정을 함께 정리한 문서입니다.
+현재 프로젝트의 env 구조와 Windows Server 배포 준비 설정을 정리합니다.
 기준은 `외부 SECRET 폴더 우선`, `앱 로컬 fallback 허용`, `로컬 개발과 운영 설정 분리`입니다.
 
 실제 배포 순서, 수동 스모크 체크, 운영 장애 대응 순서는 [배포/운영 체크리스트](./docs/OPERATIONS_CHECKLIST.md) 를 기준으로 봅니다.

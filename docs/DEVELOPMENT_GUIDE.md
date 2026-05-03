@@ -91,6 +91,12 @@ API나 공유 계약이 바뀌면 아래 순서를 같은 PR 안에서 닫습니
 - `PORTFOLIO_ARCHITECTURE_GUIDE.md`: 프로젝트 목적, 판단 원칙, 현재 아키텍처 설명
 - `docs/adr/`: 장기 구조 결정
 
+파일 작업 인코딩:
+
+- 이 저장소에서 파일 조회, 생성, 수정, 삭제 작업은 UTF-8 기준으로 수행합니다.
+- PowerShell로 파일을 읽거나 쓸 때는 `Get-Content -Encoding UTF8`, `Set-Content -Encoding UTF8`처럼 UTF-8을 명시합니다.
+- 이 규칙은 Codex 작업 요약과 handoff에도 누락하지 않습니다.
+
 ## 6. DB 변경 규칙
 
 - 스키마 변경은 `npm run db:migrate`를 기본으로 사용합니다.
