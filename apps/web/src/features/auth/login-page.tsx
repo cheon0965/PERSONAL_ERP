@@ -20,7 +20,7 @@ import {
 import { alpha } from '@mui/material/styles';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { readErrorUserMessage } from '@/shared/api/fetch-json';
 import { useAuthSession } from '@/shared/auth/auth-provider';
@@ -43,14 +43,22 @@ export function LoginPage() {
     [searchParams]
   );
   const emailVerified = searchParams?.get('verified') === '1';
+  const registrationVerificationSent = searchParams?.get('registered') === '1';
+  const registrationEmail = registrationVerificationSent
+    ? (searchParams?.get('email')?.trim() ?? '')
+    : '';
+  const verifiedEmail = emailVerified
+    ? (searchParams?.get('email')?.trim() ?? '')
+    : '';
+  const authFlowEmail = registrationEmail || verifiedEmail;
   const { login, status } = useAuthSession();
   const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   const form = useForm<LoginFormInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: 'demo@example.com',
-      password: 'Demo1234!'
+      email: authFlowEmail,
+      password: ''
     }
   });
 
@@ -61,6 +69,8 @@ export function LoginPage() {
   }, [nextPath, router, status]);
 
   const isSubmitting = form.formState.isSubmitting;
+  const emailInput = form.register('email');
+  const passwordInput = form.register('password');
 
   return (
     <Box
@@ -204,12 +214,22 @@ export function LoginPage() {
 
                   {emailVerified ? (
                     <Alert severity="success" variant="outlined">
-                      이메일 인증이 완료되었습니다. 가입한 이메일과 비밀번호로
-                      로그인해 주세요.
+                      {verifiedEmail
+                        ? `${verifiedEmail} 이메일 인증이 완료되었습니다. 가입한 비밀번호로 로그인해 주세요.`
+                        : '이메일 인증이 완료되었습니다. 가입한 이메일과 비밀번호로 로그인해 주세요.'}
+                    </Alert>
+                  ) : null}
+
+                  {registrationVerificationSent ? (
+                    <Alert severity="success" variant="outlined">
+                      {registrationEmail
+                        ? `${registrationEmail} 주소로 인증 메일을 보냈습니다. 메일함의 인증 링크를 연 뒤 로그인해 주세요.`
+                        : '인증 메일을 보냈습니다. 메일함의 인증 링크를 연 뒤 로그인해 주세요.'}
                     </Alert>
                   ) : null}
 
                   <form
+                    autoComplete="on"
                     onSubmit={form.handleSubmit(async (values) => {
                       setSubmitError(null);
 
@@ -224,35 +244,36 @@ export function LoginPage() {
                     })}
                   >
                     <Stack spacing={appLayout.fieldGap}>
-                      <Controller
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                          <TextField
-                            {...field}
-                            fullWidth
-                            label="이메일"
-                            type="email"
-                            autoComplete="email"
-                            error={Boolean(form.formState.errors.email)}
-                            helperText={form.formState.errors.email?.message}
-                          />
-                        )}
+                      <TextField
+                        id="login-email"
+                        fullWidth
+                        label="이메일"
+                        type="email"
+                        autoComplete="username"
+                        inputProps={{
+                          autoCapitalize: 'none',
+                          autoCorrect: 'off',
+                          spellCheck: false
+                        }}
+                        error={Boolean(form.formState.errors.email)}
+                        helperText={form.formState.errors.email?.message}
+                        name={emailInput.name}
+                        onBlur={emailInput.onBlur}
+                        onChange={emailInput.onChange}
+                        inputRef={emailInput.ref}
                       />
-                      <Controller
-                        control={form.control}
-                        name="password"
-                        render={({ field }) => (
-                          <TextField
-                            {...field}
-                            fullWidth
-                            label="비밀번호"
-                            type="password"
-                            autoComplete="current-password"
-                            error={Boolean(form.formState.errors.password)}
-                            helperText={form.formState.errors.password?.message}
-                          />
-                        )}
+                      <TextField
+                        id="login-password"
+                        fullWidth
+                        label="비밀번호"
+                        type="password"
+                        autoComplete="current-password"
+                        error={Boolean(form.formState.errors.password)}
+                        helperText={form.formState.errors.password?.message}
+                        name={passwordInput.name}
+                        onBlur={passwordInput.onBlur}
+                        onChange={passwordInput.onChange}
+                        inputRef={passwordInput.ref}
                       />
                       <Box sx={{ textAlign: 'right', mt: -0.5 }}>
                         <Typography

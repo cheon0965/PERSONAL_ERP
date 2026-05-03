@@ -4,7 +4,6 @@ import * as React from 'react';
 import type { Route } from 'next';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
-import MarkEmailReadRoundedIcon from '@mui/icons-material/MarkEmailReadRounded';
 import PersonAddAltRoundedIcon from '@mui/icons-material/PersonAddAltRounded';
 import {
   Alert,
@@ -133,7 +132,6 @@ const privacyRows = [
 export function RegisterPage() {
   const router = useRouter();
   const [submitError, setSubmitError] = React.useState<string | null>(null);
-  const [sentEmail, setSentEmail] = React.useState<string | null>(null);
 
   const form = useForm<RegisterFormInput>({
     resolver: zodResolver(registerSchema),
@@ -205,17 +203,6 @@ export function RegisterPage() {
                     </Typography>
                   </Stack>
 
-                  {sentEmail ? (
-                    <Alert
-                      severity="success"
-                      icon={<MarkEmailReadRoundedIcon />}
-                      variant="outlined"
-                    >
-                      {sentEmail} 주소로 인증 메일을 보냈습니다. 메일함에서 인증
-                      링크를 열어 주세요.
-                    </Alert>
-                  ) : null}
-
                   {submitError ? (
                     <Alert severity="error" variant="outlined">
                       {submitError}
@@ -225,25 +212,17 @@ export function RegisterPage() {
                   <form
                     onSubmit={form.handleSubmit(async (values) => {
                       setSubmitError(null);
-                      setSentEmail(null);
 
                       try {
+                        const email = values.email.trim();
                         await registerWithPassword({
                           name: values.displayName.trim(),
-                          email: values.email.trim(),
+                          email,
                           password: values.password,
                           termsAccepted: values.termsAccepted,
                           privacyConsentAccepted: values.privacyConsentAccepted
                         });
-                        setSentEmail(values.email.trim());
-                        form.reset({
-                          displayName: values.displayName,
-                          email: values.email,
-                          password: '',
-                          passwordConfirm: '',
-                          termsAccepted: values.termsAccepted,
-                          privacyConsentAccepted: values.privacyConsentAccepted
-                        });
+                        router.replace(buildPostRegistrationLoginPath(email));
                       } catch (error) {
                         setSubmitError(
                           readErrorUserMessage(
@@ -350,6 +329,15 @@ export function RegisterPage() {
       </Container>
     </Box>
   );
+}
+
+function buildPostRegistrationLoginPath(email: string): Route {
+  const params = new URLSearchParams({
+    registered: '1',
+    email
+  });
+
+  return `/login?${params.toString()}` as Route;
 }
 
 function RegisterIntroPanel() {
