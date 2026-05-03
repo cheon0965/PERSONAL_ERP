@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import type { VerifyEmailResponse } from '@personal-erp/contracts';
 import { ClockPort } from '../../../../common/application/ports/clock.port';
 import { SecurityEventLogger } from '../../../../common/infrastructure/operational/security-event.logger';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
@@ -7,8 +8,6 @@ import { WorkspaceBootstrapService } from '../../workspace-bootstrap.service';
 import type { AuthRequestContext } from '../../auth.types';
 import { VerifyEmailDto } from '../../dto/verify-email.dto';
 import { hashEmailVerificationToken } from './register.use-case';
-
-const VERIFY_EMAIL_RESPONSE = { status: 'verified' as const };
 
 @Injectable()
 export class VerifyEmailUseCase {
@@ -23,7 +22,7 @@ export class VerifyEmailUseCase {
   async execute(
     dto: VerifyEmailDto,
     context: AuthRequestContext
-  ): Promise<typeof VERIFY_EMAIL_RESPONSE> {
+  ): Promise<VerifyEmailResponse> {
     this.assertVerifyEmailAttemptAllowed(context);
 
     try {
@@ -78,7 +77,7 @@ export class VerifyEmailUseCase {
         clientIp: context.clientIp,
         userId: verifiedUser.id
       });
-      return VERIFY_EMAIL_RESPONSE;
+      return { status: 'verified', email: verifiedUser.email };
     } catch (error) {
       if (isEmailVerificationError(error)) {
         this.rateLimit.recordFailedVerifyEmailAttempt(context.clientIp);

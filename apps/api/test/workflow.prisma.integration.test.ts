@@ -122,7 +122,7 @@ test('Real API/DB integration covers register -> verify-email -> login -> auth/m
     });
 
     assert.equal(verifyResponse.status, 200);
-    assert.deepEqual(verifyResponse.body, { status: 'verified' });
+    assert.deepEqual(verifyResponse.body, { status: 'verified', email });
 
     const verifiedUser = await context.prisma.user.findUnique({
       where: { email },

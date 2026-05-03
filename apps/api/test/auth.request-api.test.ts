@@ -659,7 +659,10 @@ test('POST /auth/register sends verification email and verified users can login'
     });
 
     assert.equal(verifyResponse.status, 200);
-    assert.deepEqual(verifyResponse.body, { status: 'verified' });
+    assert.deepEqual(verifyResponse.body, {
+      status: 'verified',
+      email: 'owner@example.com'
+    });
     const verifiedUser = context.state.users.find(
       (candidate) => candidate.id === createdUser.id
     );
@@ -1002,7 +1005,10 @@ test('POST /auth/resend-verification reissues tokens without leaking account sta
       '이미 사용한 이메일 인증 링크입니다.'
     );
     assert.equal(resentTokenResponse.status, 200);
-    assert.deepEqual(resentTokenResponse.body, { status: 'verified' });
+    assert.deepEqual(resentTokenResponse.body, {
+      status: 'verified',
+      email: 'resend-owner@example.com'
+    });
 
     const verifiedResendResponse = await context.request(
       '/auth/resend-verification',

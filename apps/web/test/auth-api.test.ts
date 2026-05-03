@@ -30,7 +30,7 @@ test('auth API helpers call the registration and verification endpoints', async 
 
     const path = new URL(String(input)).pathname;
     const responseBody = path.endsWith('/verify-email')
-      ? { status: 'verified' }
+      ? { status: 'verified', email: 'owner@example.com' }
       : path.endsWith('/accept-invitation')
         ? { status: 'accepted' }
         : { status: 'verification_sent' };
@@ -60,7 +60,8 @@ test('auth API helpers call the registration and verification endpoints', async 
       { status: 'verification_sent' }
     );
     assert.deepEqual(await verifyEmail({ token: 'token-123' }), {
-      status: 'verified'
+      status: 'verified',
+      email: 'owner@example.com'
     });
     assert.deepEqual(
       await resendVerificationEmail({ email: 'owner@example.com' }),

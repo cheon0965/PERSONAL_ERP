@@ -43,6 +43,7 @@ export function VerifyEmailPage() {
     'loading'
   );
   const [message, setMessage] = React.useState<string | null>(null);
+  const [verifiedEmail, setVerifiedEmail] = React.useState<string | null>(null);
   const [resendMessage, setResendMessage] = React.useState<string | null>(null);
 
   const form = useForm<ResendFormInput>({
@@ -64,7 +65,8 @@ export function VerifyEmailPage() {
     }
 
     void verifyEmail({ token })
-      .then(() => {
+      .then((response) => {
+        setVerifiedEmail(response.email);
         setStatus('verified');
         setMessage('이메일 인증이 완료되었습니다. 이제 로그인할 수 있습니다.');
       })
@@ -142,7 +144,9 @@ export function VerifyEmailPage() {
                 <Button
                   variant="contained"
                   size="large"
-                  onClick={() => router.push('/login?verified=1' as Route)}
+                  onClick={() =>
+                    router.push(buildVerifiedLoginPath(verifiedEmail))
+                  }
                 >
                   로그인하러 가기
                 </Button>
@@ -229,4 +233,14 @@ export function VerifyEmailPage() {
       </Container>
     </Box>
   );
+}
+
+function buildVerifiedLoginPath(email: string | null): Route {
+  const params = new URLSearchParams({ verified: '1' });
+
+  if (email) {
+    params.set('email', email);
+  }
+
+  return `/login?${params.toString()}` as Route;
 }

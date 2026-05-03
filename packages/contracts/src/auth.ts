@@ -160,6 +160,7 @@ export type VerifyEmailRequest = {
 
 export type VerifyEmailResponse = {
   status: 'verified';
+  email: string;
 };
 
 export type ResendVerificationRequest = {
