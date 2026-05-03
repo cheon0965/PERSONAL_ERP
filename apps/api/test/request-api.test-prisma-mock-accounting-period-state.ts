@@ -484,6 +484,41 @@ export function createAccountingPeriodStatePrismaMock(
         return {
           count: updatedCount
         };
+      },
+      deleteMany: async (args: {
+        where?: {
+          id?: string;
+          tenantId?: string;
+          ledgerId?: string;
+          status?: AccountingPeriodStatus;
+        };
+      }) => {
+        const deletedPeriodIds = state.accountingPeriods
+          .filter((candidate) => {
+            const matchesId = !args.where?.id || candidate.id === args.where.id;
+            const matchesTenant =
+              !args.where?.tenantId ||
+              candidate.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId;
+            const matchesStatus =
+              !args.where?.status || candidate.status === args.where.status;
+
+            return matchesId && matchesTenant && matchesLedger && matchesStatus;
+          })
+          .map((candidate) => candidate.id);
+
+        state.accountingPeriods = state.accountingPeriods.filter(
+          (candidate) => !deletedPeriodIds.includes(candidate.id)
+        );
+        state.periodStatusHistory = state.periodStatusHistory.filter(
+          (candidate) => !deletedPeriodIds.includes(candidate.periodId)
+        );
+
+        return {
+          count: deletedPeriodIds.length
+        };
       }
     },
     periodStatusHistory: {
@@ -522,6 +557,34 @@ export function createAccountingPeriodStatePrismaMock(
 
         state.periodStatusHistory.push(created);
         return created;
+      },
+      deleteMany: async (args: {
+        where?: {
+          tenantId?: string;
+          ledgerId?: string;
+          periodId?: string;
+        };
+      }) => {
+        const beforeCount = state.periodStatusHistory.length;
+        state.periodStatusHistory = state.periodStatusHistory.filter(
+          (candidate) => {
+            const matchesTenant =
+              !args.where?.tenantId ||
+              candidate.tenantId === args.where.tenantId;
+            const matchesLedger =
+              !args.where?.ledgerId ||
+              candidate.ledgerId === args.where.ledgerId;
+            const matchesPeriod =
+              !args.where?.periodId ||
+              candidate.periodId === args.where.periodId;
+
+            return !(matchesTenant && matchesLedger && matchesPeriod);
+          }
+        );
+
+        return {
+          count: beforeCount - state.periodStatusHistory.length
+        };
       }
     }
   };

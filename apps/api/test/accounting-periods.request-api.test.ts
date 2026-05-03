@@ -929,7 +929,7 @@ test('POST /accounting-periods/:id/reopen reopens the latest locked period', asy
   }
 });
 
-test('POST /accounting-periods/:id/reopen blocks reopening when a later operating month exists', async () => {
+test('POST /accounting-periods/:id/reopen rolls back an unused latest successor month before reopening', async () => {
   const context = await createRequestTestContext();
 
   try {
@@ -963,6 +963,19 @@ test('POST /accounting-periods/:id/reopen blocks reopening when a later operatin
         updatedAt: new Date('2026-04-01T00:00:00.000Z')
       }
     );
+    context.state.periodStatusHistory.push({
+      id: 'period-history-reopen-older-next-open',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-reopen-older-next',
+      fromStatus: null,
+      toStatus: AccountingPeriodStatus.OPEN,
+      eventType: 'OPEN',
+      reason: '4월 운영 시작',
+      actorType: AuditActorType.TENANT_MEMBERSHIP,
+      actorMembershipId: 'membership-1',
+      changedAt: new Date('2026-04-01T00:00:00.000Z')
+    });
 
     const response = await context.request(
       '/accounting-periods/period-reopen-older-1/reopen',
@@ -975,18 +988,119 @@ test('POST /accounting-periods/:id/reopen blocks reopening when a later operatin
       }
     );
 
-    assert.equal(response.status, 409);
-    assert.deepEqual(response.body, {
-      statusCode: 409,
-      message:
-        '최근 운영 월 2026-04이 이미 존재해 2026-03은 재오픈할 수 없습니다. 운영 중에는 하나의 최신 진행월만 열어 둡니다.',
-      error: 'Conflict'
-    });
+    const body = response.body as Record<string, unknown>;
+
+    assert.equal(response.status, 201);
+    assert.equal(body.status, AccountingPeriodStatus.OPEN);
+    assert.equal(body.lockedAt, null);
     assert.equal(
       context.state.accountingPeriods.find(
         (candidate) => candidate.id === 'period-reopen-older-1'
       )?.status,
+      AccountingPeriodStatus.OPEN
+    );
+    assert.equal(
+      context.state.accountingPeriods.some(
+        (candidate) => candidate.id === 'period-reopen-older-next'
+      ),
+      false
+    );
+    assert.equal(
+      context.state.periodStatusHistory.some(
+        (candidate) => candidate.periodId === 'period-reopen-older-next'
+      ),
+      false
+    );
+    assert.equal(context.state.periodStatusHistory.at(-1)?.eventType, 'REOPEN');
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /accounting-periods/:id/reopen blocks successor rollback when the latest month has usage', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    context.state.accountingPeriods.push(
+      {
+        id: 'period-reopen-used-1',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        year: 2026,
+        month: 3,
+        startDate: new Date('2026-03-01T00:00:00.000Z'),
+        endDate: new Date('2026-04-01T00:00:00.000Z'),
+        status: AccountingPeriodStatus.LOCKED,
+        openedAt: new Date('2026-03-01T00:00:00.000Z'),
+        lockedAt: new Date('2026-03-31T15:00:00.000Z'),
+        createdAt: new Date('2026-03-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-03-31T15:00:00.000Z')
+      },
+      {
+        id: 'period-reopen-used-next',
+        tenantId: 'tenant-1',
+        ledgerId: 'ledger-1',
+        year: 2026,
+        month: 4,
+        startDate: new Date('2026-04-01T00:00:00.000Z'),
+        endDate: new Date('2026-05-01T00:00:00.000Z'),
+        status: AccountingPeriodStatus.OPEN,
+        openedAt: new Date('2026-04-01T00:00:00.000Z'),
+        lockedAt: null,
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-01T00:00:00.000Z')
+      }
+    );
+    context.state.collectedTransactions.push({
+      id: 'collected-reopen-used-next',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-reopen-used-next',
+      ledgerTransactionTypeId: 'ltt-expense-basic',
+      fundingAccountId: 'acc-1',
+      categoryId: null,
+      matchedPlanItemId: null,
+      importBatchId: null,
+      importedRowId: null,
+      sourceFingerprint: null,
+      title: '4월 운영 거래',
+      occurredOn: new Date('2026-04-03T00:00:00.000Z'),
+      amount: 50_000,
+      status: CollectedTransactionStatus.COLLECTED,
+      memo: null,
+      createdAt: new Date('2026-04-03T00:00:00.000Z'),
+      updatedAt: new Date('2026-04-03T00:00:00.000Z')
+    });
+
+    const response = await context.request(
+      '/accounting-periods/period-reopen-used-1/reopen',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          reason: '최신 월 사용 이력 있는 상태에서 재오픈 시도'
+        }
+      }
+    );
+
+    assert.equal(response.status, 409);
+    assert.deepEqual(response.body, {
+      statusCode: 409,
+      message:
+        '최근 운영 월 2026-04에 수집 거래 1건이 있어 2026-03은 재오픈할 수 없습니다. 최신 월 데이터를 먼저 정리한 뒤 다시 시도해 주세요.',
+      error: 'Conflict'
+    });
+    assert.equal(
+      context.state.accountingPeriods.find(
+        (candidate) => candidate.id === 'period-reopen-used-1'
+      )?.status,
       AccountingPeriodStatus.LOCKED
+    );
+    assert.equal(
+      context.state.accountingPeriods.some(
+        (candidate) => candidate.id === 'period-reopen-used-next'
+      ),
+      true
     );
   } finally {
     await context.close();
