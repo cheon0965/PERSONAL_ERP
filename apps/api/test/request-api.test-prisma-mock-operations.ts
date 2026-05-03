@@ -8,6 +8,25 @@ export function createOperationsPrismaMock(
 
   return {
     workspaceOperationalNote: {
+      count: async (args: {
+        where?: {
+          tenantId?: string;
+          ledgerId?: string;
+          periodId?: string | null;
+        };
+      }) => {
+        return state.workspaceOperationalNotes.filter((candidate) => {
+          const matchesTenant =
+            !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesPeriod =
+            args.where?.periodId === undefined ||
+            candidate.periodId === args.where.periodId;
+
+          return matchesTenant && matchesLedger && matchesPeriod;
+        }).length;
+      },
       findMany: async (args: {
         where?: {
           tenantId?: string;

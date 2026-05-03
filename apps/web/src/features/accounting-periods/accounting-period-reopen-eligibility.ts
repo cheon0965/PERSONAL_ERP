@@ -32,6 +32,70 @@ export function buildAccountingPeriodReopenEligibility(input: {
     nextPeriod?.openingBalanceSourceKind ?? null;
 
   if (latestPeriod && latestPeriod.id !== input.period.id) {
+    const canAskServerToRollbackLatestSuccessor = Boolean(
+      nextPeriod &&
+      latestPeriod.id === nextPeriod.id &&
+      nextPeriod.status === 'OPEN' &&
+      !nextOpeningBalanceSourceKind
+    );
+
+    if (canAskServerToRollbackLatestSuccessor) {
+      if (input.carryForwardError) {
+        return {
+          periodId: input.period.id,
+          isReady: false,
+          canReopen: false,
+          statusLabel: '조건 확인 실패',
+          statusSeverity: 'error',
+          detailLines: [
+            readReopenEligibilityErrorMessage(
+              input.carryForwardError,
+              '차기 이월 상태를 확인하지 못했습니다.'
+            )
+          ],
+          carryForwardRecordId,
+          nextPeriodId: nextPeriod?.id ?? null,
+          nextPeriodMonthLabel: nextPeriod?.monthLabel ?? null,
+          nextOpeningBalanceSourceKind
+        };
+      }
+
+      if (input.carryForwardPending) {
+        return {
+          periodId: input.period.id,
+          isReady: false,
+          canReopen: false,
+          statusLabel: '조건 확인 중',
+          statusSeverity: 'info',
+          detailLines: [
+            '최신 월 여부, 차기 이월, 다음 월 오프닝 스냅샷 상태를 확인하고 있습니다.'
+          ],
+          carryForwardRecordId,
+          nextPeriodId: nextPeriod?.id ?? null,
+          nextPeriodMonthLabel: nextPeriod?.monthLabel ?? null,
+          nextOpeningBalanceSourceKind
+        };
+      }
+
+      if (!carryForwardRecordId) {
+        return {
+          periodId: input.period.id,
+          isReady: true,
+          canReopen: true,
+          statusLabel: '다음 월 롤백 가능',
+          statusSeverity: 'info',
+          detailLines: [
+            `바로 다음 최신 운영 월 ${nextPeriod?.monthLabel ?? latestPeriod.monthLabel}에 차기 이월과 오프닝 스냅샷이 없어 재오픈을 요청할 수 있습니다.`,
+            '서버가 최신 월의 계획, 업로드, 거래, 전표, 보고, 운영 메모 사용 이력을 최종 확인한 뒤 비어 있을 때만 함께 되돌립니다.'
+          ],
+          carryForwardRecordId,
+          nextPeriodId: nextPeriod?.id ?? null,
+          nextPeriodMonthLabel: nextPeriod?.monthLabel ?? null,
+          nextOpeningBalanceSourceKind
+        };
+      }
+    }
+
     return {
       periodId: input.period.id,
       isReady: true,

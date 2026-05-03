@@ -494,7 +494,7 @@
 - 계약: `ReopenAccountingPeriodRequest -> AccountingPeriodItem`
 - 잠금된 운영 기간을 사유와 함께 다시 엽니다.
 - 재오픈 시 해당 기간의 공식 재무제표 snapshot과 closing snapshot을 정리하고 상태를 `OPEN`으로 되돌립니다.
-- 재오픈은 최신 잠금 운영월에만 허용합니다.
+- 재오픈은 최신 잠금 운영월에 허용합니다. 단, 바로 다음 최신 운영월이 `OPEN`이고 차기 이월/opening balance snapshot 및 계획, 업로드, 수집 거래, 전표, 보고 snapshot, 운영 메모가 모두 없으면 그 빈 최신 월을 함께 롤백한 뒤 이전 잠금월을 재오픈할 수 있습니다.
 - 이미 차기 이월 record가 생성되었거나 다음 운영 기간에 opening balance snapshot이 있으면 `409 Conflict`로 막습니다.
 
 ### `GET /reference-data/readiness`
@@ -933,7 +933,7 @@
 - 계약: `CancelCarryForwardRequest -> CancelCarryForwardResponse`
 - 생성된 차기 이월 record와 다음 기간 opening balance snapshot 및 opening balance line을 취소합니다.
 - 안전 조건: 다음 운영 기간이 `OPEN`이고, opening balance 출처가 `CARRY_FORWARD`이며, 다음 기간에 수집 거래, 업로드 배치, 전표, 재무제표 snapshot, closing snapshot이 없어야 합니다.
-- 취소 후에는 원 기간의 `POST /accounting-periods/:id/reopen` 차단 조건도 해소됩니다.
+- 취소 후 다음 운영 기간에 별도 사용 이력이 없다면 원 기간의 `POST /accounting-periods/:id/reopen` 차단 조건도 해소됩니다.
 
 ### `GET /funding-account-status/summary`
 

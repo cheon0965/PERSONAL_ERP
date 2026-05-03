@@ -126,7 +126,7 @@
 
 ### 월 운영과 공식 보고
 
-- `accounting-periods`: 최신 진행월 중심 open, close, reopen, 현재 기간/이력 조회
+- `accounting-periods`: 최신 진행월 중심 open, close, reopen, 빈 최신 다음 월 롤백 후 이전 잠금월 재오픈, 현재 기간/이력 조회
 - `recurring-rules`: 반복 규칙 CRUD
 - `plan-items`: 계획 항목 생성과 기간별 추적
 - `collected-transactions`: 생성, 상세 조회, 수정, 삭제, 전표 확정

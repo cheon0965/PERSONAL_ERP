@@ -12,6 +12,7 @@ export function createPlanItemsPrismaMock(
         where?: {
           tenantId?: string;
           ledgerId?: string;
+          periodId?: string;
           fundingAccountId?: string;
         };
       }) => {
@@ -20,11 +21,18 @@ export function createPlanItemsPrismaMock(
             !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
           const matchesLedger =
             !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesPeriod =
+            !args.where?.periodId || candidate.periodId === args.where.periodId;
           const matchesFundingAccount =
             !args.where?.fundingAccountId ||
             candidate.fundingAccountId === args.where.fundingAccountId;
 
-          return matchesTenant && matchesLedger && matchesFundingAccount;
+          return (
+            matchesTenant &&
+            matchesLedger &&
+            matchesPeriod &&
+            matchesFundingAccount
+          );
         }).length;
       },
       findMany: async (args: {

@@ -37,9 +37,9 @@ test('latest write-period helpers return only the newest collecting and journal-
   );
 });
 
-test('reopen eligibility blocks locked months that are not the latest operating month', () => {
+test('reopen eligibility blocks older locked months when the latest month is not a rollbackable successor', () => {
   const olderLockedPeriod = createPeriod('period-2026-03', 2026, 3, 'LOCKED');
-  const latestOpenPeriod = createPeriod('period-2026-04', 2026, 4, 'OPEN');
+  const latestOpenPeriod = createPeriod('period-2026-05', 2026, 5, 'OPEN');
 
   const eligibility = buildAccountingPeriodReopenEligibility({
     period: olderLockedPeriod,
@@ -53,7 +53,27 @@ test('reopen eligibility blocks locked months that are not the latest operating 
   assert.equal(eligibility.statusLabel, '최신 월 아님');
   assert.match(
     eligibility.detailLines[0] ?? '',
-    /최근 운영 월 2026-04이 이미 존재해 2026-03은 재오픈할 수 없습니다/
+    /최근 운영 월 2026-05이 이미 존재해 2026-03은 재오픈할 수 없습니다/
+  );
+});
+
+test('reopen eligibility allows an older locked month when the empty latest successor can be rolled back', () => {
+  const olderLockedPeriod = createPeriod('period-2026-03', 2026, 3, 'LOCKED');
+  const latestOpenPeriod = createPeriod('period-2026-04', 2026, 4, 'OPEN');
+
+  const eligibility = buildAccountingPeriodReopenEligibility({
+    period: olderLockedPeriod,
+    periods: [latestOpenPeriod, olderLockedPeriod],
+    carryForwardView: null,
+    carryForwardError: null,
+    carryForwardPending: false
+  });
+
+  assert.equal(eligibility.canReopen, true);
+  assert.equal(eligibility.statusLabel, '다음 월 롤백 가능');
+  assert.match(
+    eligibility.detailLines[0] ?? '',
+    /바로 다음 최신 운영 월 2026-04에 차기 이월과 오프닝 스냅샷이 없어/
   );
 });
 
