@@ -116,14 +116,33 @@ if not exist "%ENV_FILE%" (
 call :read_env_defaults
 
 if not defined IMAGE_TAG set "IMAGE_TAG=latest"
-if not defined API_IMAGE_NAME set "API_IMAGE_NAME=personal-erp-api"
-if not defined WEB_IMAGE_NAME set "WEB_IMAGE_NAME=personal-erp-web"
-if not defined MIGRATE_IMAGE_NAME set "MIGRATE_IMAGE_NAME=personal-erp-migrate"
+if not defined API_IMAGE_NAME set "API_IMAGE_NAME=cheon0965/personal-erp-api"
+if not defined WEB_IMAGE_NAME set "WEB_IMAGE_NAME=cheon0965/personal-erp-web"
+if not defined MIGRATE_IMAGE_NAME set "MIGRATE_IMAGE_NAME=cheon0965/personal-erp-migrate"
+set "API_IMAGE_FILE_NAME=%API_IMAGE_NAME:/=-%"
+set "WEB_IMAGE_FILE_NAME=%WEB_IMAGE_NAME:/=-%"
+set "MIGRATE_IMAGE_FILE_NAME=%MIGRATE_IMAGE_NAME:/=-%"
 
 findstr /i /c:"https://api.example.com/api" "%ENV_FILE%" >nul 2>nul
 if not errorlevel 1 (
   echo [WARN] %ENV_FILE% still contains NEXT_PUBLIC_API_BASE_URL=https://api.example.com/api.
   echo        The Web image will bake this API URL into the production bundle.
+  echo.
+)
+
+findstr /i /c:"NEXT_PUBLIC_API_BASE_URL=http://localhost" "%ENV_FILE%" >nul 2>nul
+if not errorlevel 1 (
+  echo [WARN] %ENV_FILE% uses localhost for NEXT_PUBLIC_API_BASE_URL.
+  echo        External browsers will resolve localhost to the visitor machine, not the server.
+  echo        Use the public HTTPS API URL before building the Web image.
+  echo.
+)
+
+findstr /i /c:"NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1" "%ENV_FILE%" >nul 2>nul
+if not errorlevel 1 (
+  echo [WARN] %ENV_FILE% uses 127.0.0.1 for NEXT_PUBLIC_API_BASE_URL.
+  echo        External browsers will resolve 127.0.0.1 to the visitor machine, not the server.
+  echo        Use the public HTTPS API URL before building the Web image.
   echo.
 )
 
@@ -171,11 +190,11 @@ if "%SAVE_IMAGES%"=="1" (
   if not exist ".deploy" mkdir ".deploy"
   if not exist ".deploy\images" mkdir ".deploy\images"
   echo [INFO] Saving Docker image tar files to .deploy\images...
-  docker save -o ".deploy\images\%MIGRATE_IMAGE_NAME%-%IMAGE_TAG%.tar" "%MIGRATE_IMAGE_NAME%:%IMAGE_TAG%"
+  docker save -o ".deploy\images\%MIGRATE_IMAGE_FILE_NAME%-%IMAGE_TAG%.tar" "%MIGRATE_IMAGE_NAME%:%IMAGE_TAG%"
   if errorlevel 1 goto :error
-  docker save -o ".deploy\images\%API_IMAGE_NAME%-%IMAGE_TAG%.tar" "%API_IMAGE_NAME%:%IMAGE_TAG%"
+  docker save -o ".deploy\images\%API_IMAGE_FILE_NAME%-%IMAGE_TAG%.tar" "%API_IMAGE_NAME%:%IMAGE_TAG%"
   if errorlevel 1 goto :error
-  docker save -o ".deploy\images\%WEB_IMAGE_NAME%-%IMAGE_TAG%.tar" "%WEB_IMAGE_NAME%:%IMAGE_TAG%"
+  docker save -o ".deploy\images\%WEB_IMAGE_FILE_NAME%-%IMAGE_TAG%.tar" "%WEB_IMAGE_NAME%:%IMAGE_TAG%"
   if errorlevel 1 goto :error
   echo [OK] Docker image tar files saved.
   echo.

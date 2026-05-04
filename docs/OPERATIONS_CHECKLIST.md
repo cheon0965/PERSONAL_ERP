@@ -22,6 +22,7 @@
 - `APP_ORIGIN`과 `NEXT_PUBLIC_API_BASE_URL` 조합이 실제 도메인과 맞는지 확인합니다.
 - Docker 배포에서는 `docker-compose.prod.yml`과 비공개 `.deploy/compose.env`를 사용하고, 상세 절차는 [`DOCKER_DEPLOYMENT.md`](./DOCKER_DEPLOYMENT.md)를 우선합니다.
 - API와 Web이 사용할 포트, 방화벽, reverse proxy 경로를 미리 정합니다.
+- 현재 공개 배포는 `https://personalerp.theworkpc.com` 단일 도메인, API path `https://personalerp.theworkpc.com/api`, 내부 포트 Web `3100` / API `4100` 기준입니다.
 
 ## 필수 env / secret 점검
 
@@ -83,6 +84,8 @@
 
 ### API
 
+- 현재 공개 배포 기준 `GET https://personalerp.theworkpc.com/api/health`가 `status: ok`를 반환하는지 확인합니다.
+- 현재 공개 배포 기준 `GET https://personalerp.theworkpc.com/api/health/ready`가 `status: ready`와 `checks.database: ok`를 반환하는지 확인합니다.
 - `GET /api/health`가 `status: ok`를 반환하는지 확인합니다.
 - `GET /api/health/ready`가 `status: ready`와 `checks.database: ok`를 반환하는지 확인합니다.
 - `SWAGGER_ENABLED=true`인 환경이라면 `GET /api/docs`가 열리는지 확인합니다.
@@ -104,6 +107,7 @@
 
 ### Web
 
+- 현재 공개 배포 기준 `https://personalerp.theworkpc.com`에서 Web이 열리는지 확인합니다.
 - 루트 `/`에서 비로그인 공개 메인과 회원가입/로그인 CTA가 열리는지 확인합니다.
 - `/login` 화면이 열리는지 확인합니다.
 - `/register`에서 표시 이름, 이메일, 비밀번호, 필수 이용약관/개인정보 처리 동의 입력 흐름이 정상인지 확인합니다.
@@ -158,6 +162,8 @@
 
 - `APP_ORIGIN`과 `NEXT_PUBLIC_API_BASE_URL` 조합이 맞는지 확인합니다.
 - `CORS_ALLOWED_ORIGINS`에 실제 Web origin이 빠지지 않았는지 확인합니다.
+- Docker 배포에서 `NEXT_PUBLIC_API_BASE_URL`을 바꿨다면 Web 이미지를 다시 빌드했는지 확인합니다. 컨테이너 재시작만으로는 Next.js static bundle에 박힌 API URL이 바뀌지 않습니다.
+- `personal-erp-web` 컨테이너 안의 `.next` 산출물에 예전 API URL이 남아 있지 않은지 확인합니다.
 - 브라우저 네트워크 탭에서 `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` 응답 코드를 확인합니다.
 - API 쪽 `401`, CORS, URL mismatch가 있는지 확인합니다.
 - API 로그에서 `auth.login_failed`, `auth.login_rate_limited`, `auth.browser_origin_blocked`, `auth.refresh_failed`, `auth.access_denied`를 먼저 확인합니다.

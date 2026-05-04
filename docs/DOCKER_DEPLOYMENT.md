@@ -10,6 +10,7 @@
 - `.deploy/`는 git ignore 대상이다.
 - 운영 로그인 세션은 HTTPS가 필요하다. refresh cookie가 `__Host-refreshToken`, `Secure`, `HttpOnly`, `SameSite=Strict`로 내려가므로, 공개 운영은 HTTPS reverse proxy 뒤에서 실행해야 한다.
 - `NEXT_PUBLIC_API_BASE_URL`은 Web 이미지 빌드 시점에 번들에 들어간다. API 도메인을 바꾸면 Web 이미지를 다시 빌드한다.
+- 현재 공개 배포는 `https://personalerp.theworkpc.com` 단일 도메인을 사용한다. Caddy가 `/api/*`는 API `127.0.0.1:4100`으로, 나머지는 Web `127.0.0.1:3100`으로 프록시한다.
 
 ## 전체 흐름
 
@@ -74,9 +75,9 @@ Copy-Item -Path env-examples\deploy.compose.env.example -Destination .deploy\com
 
 ```dotenv
 IMAGE_TAG=latest
-API_IMAGE_NAME=personal-erp-api
-WEB_IMAGE_NAME=personal-erp-web
-MIGRATE_IMAGE_NAME=personal-erp-migrate
+API_IMAGE_NAME=cheon0965/personal-erp-api
+WEB_IMAGE_NAME=cheon0965/personal-erp-web
+MIGRATE_IMAGE_NAME=cheon0965/personal-erp-migrate
 ```
 
 릴리즈 단위로 구분하려면 `IMAGE_TAG`를 날짜나 버전으로 바꾼다.
@@ -106,9 +107,9 @@ DATABASE_URL=mysql://erp_user:replace-with-long-random-mysql-app-password@mysql:
 운영은 HTTPS 기준으로 입력한다.
 
 ```dotenv
-APP_ORIGIN=https://app.example.com
-CORS_ALLOWED_ORIGINS=https://app.example.com
-NEXT_PUBLIC_API_BASE_URL=https://api.example.com/api
+APP_ORIGIN=https://personalerp.theworkpc.com
+CORS_ALLOWED_ORIGINS=https://personalerp.theworkpc.com
+NEXT_PUBLIC_API_BASE_URL=https://personalerp.theworkpc.com/api
 NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=false
 ```
 
@@ -126,15 +127,17 @@ NEXT_PUBLIC_API_BASE_URL=https://erp.example.com/api
 
 단, 이 경우 reverse proxy에서 `/api/*`는 API 컨테이너로, 나머지는 Web 컨테이너로 보내야 한다.
 
+현재 공개 배포 도메인은 이 단일 도메인 path 분리 방식을 사용한다.
+
 ### 공개 포트
 
 기본값은 같은 서버의 reverse proxy만 접근하도록 `127.0.0.1`에 묶는다.
 
 ```dotenv
 API_BIND_ADDRESS=127.0.0.1
-API_PUBLISHED_PORT=4000
+API_PUBLISHED_PORT=4100
 WEB_BIND_ADDRESS=127.0.0.1
-WEB_PUBLISHED_PORT=3000
+WEB_PUBLISHED_PORT=3100
 ```
 
 외부에서 컨테이너 포트에 직접 접근해야 하는 특수한 환경이면 `0.0.0.0`으로 바꿀 수 있다.
@@ -235,9 +238,9 @@ base image를 새로 당기면서 빌드:
 
 빌드되는 이미지는 세 개다.
 
-- `personal-erp-migrate:<tag>`: Prisma migration one-shot
-- `personal-erp-api:<tag>`: NestJS API
-- `personal-erp-web:<tag>`: Next.js Web
+- `cheon0965/personal-erp-migrate:<tag>`: Prisma migration one-shot
+- `cheon0965/personal-erp-api:<tag>`: NestJS API
+- `cheon0965/personal-erp-web:<tag>`: Next.js Web
 
 배치 파일은 내부적으로 아래 명령을 실행한다.
 
@@ -256,9 +259,9 @@ docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml build m
 생성 위치:
 
 ```text
-.deploy\images\personal-erp-migrate-2026-05-01.tar
-.deploy\images\personal-erp-api-2026-05-01.tar
-.deploy\images\personal-erp-web-2026-05-01.tar
+.deploy\images\cheon0965-personal-erp-migrate-2026-05-01.tar
+.deploy\images\cheon0965-personal-erp-api-2026-05-01.tar
+.deploy\images\cheon0965-personal-erp-web-2026-05-01.tar
 ```
 
 대상 서버로 세 파일과 `docker-compose.prod.yml`, `.deploy\compose.env`를 옮긴다.
@@ -266,9 +269,9 @@ docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml build m
 대상 서버에서 이미지를 불러온다.
 
 ```powershell
-docker load -i .deploy\images\personal-erp-migrate-2026-05-01.tar
-docker load -i .deploy\images\personal-erp-api-2026-05-01.tar
-docker load -i .deploy\images\personal-erp-web-2026-05-01.tar
+docker load -i .deploy\images\cheon0965-personal-erp-migrate-2026-05-01.tar
+docker load -i .deploy\images\cheon0965-personal-erp-api-2026-05-01.tar
+docker load -i .deploy\images\cheon0965-personal-erp-web-2026-05-01.tar
 ```
 
 대상 서버의 `.deploy\compose.env`에는 같은 태그가 들어 있어야 한다.
@@ -317,9 +320,9 @@ docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml logs -f
 reverse proxy 연결 전, 서버 내부에서 먼저 확인한다.
 
 ```powershell
-Invoke-WebRequest http://127.0.0.1:4000/api/health
-Invoke-WebRequest http://127.0.0.1:4000/api/health/ready
-Invoke-WebRequest http://127.0.0.1:3000
+Invoke-WebRequest http://127.0.0.1:4100/api/health
+Invoke-WebRequest http://127.0.0.1:4100/api/health/ready
+Invoke-WebRequest http://127.0.0.1:3100
 ```
 
 기대값:
@@ -331,33 +334,54 @@ Invoke-WebRequest http://127.0.0.1:3000
 운영 도메인 연결 후 다시 확인한다.
 
 ```powershell
-Invoke-WebRequest https://api.example.com/api/health
-Invoke-WebRequest https://api.example.com/api/health/ready
-Invoke-WebRequest https://app.example.com
+Invoke-WebRequest https://personalerp.theworkpc.com/api/health
+Invoke-WebRequest https://personalerp.theworkpc.com/api/health/ready
+Invoke-WebRequest https://personalerp.theworkpc.com
 ```
 
 ## 9. HTTPS reverse proxy 연결
 
 기본 compose는 포트를 로컬에만 연다.
 
-- Web: `127.0.0.1:3000`
-- API: `127.0.0.1:4000`
+- Web: `127.0.0.1:3100`
+- API: `127.0.0.1:4100`
 
 같은 서버의 Caddy, Nginx, IIS reverse proxy, Cloudflare Tunnel 같은 HTTPS endpoint에서 위 포트로 proxy한다.
 
-분리 도메인 예:
+현재 공개 배포 Caddyfile 예:
 
-- `https://app.example.com` -> `http://127.0.0.1:3000`
-- `https://api.example.com` -> `http://127.0.0.1:4000`
+```caddyfile
+personalerp.theworkpc.com {
+	reverse_proxy /api/* 127.0.0.1:4100
+	reverse_proxy 127.0.0.1:3100
+}
+```
+
+분리 도메인을 쓴다면 예를 들어 아래처럼 proxy한다.
+
+- `https://app.example.com` -> `http://127.0.0.1:3100`
+- `https://api.example.com` -> `http://127.0.0.1:4100`
 
 단일 도메인 path 분리 예:
 
-- `https://erp.example.com/api/*` -> `http://127.0.0.1:4000/api/*`
-- `https://erp.example.com/*` -> `http://127.0.0.1:3000/*`
+- `https://personalerp.theworkpc.com/api/*` -> `http://127.0.0.1:4100/api/*`
+- `https://personalerp.theworkpc.com/*` -> `http://127.0.0.1:3100/*`
 
 reverse proxy 적용 후에는 `Set-Cookie`에 `__Host-refreshToken`, `Secure`, `HttpOnly`, `SameSite=Strict`, `Path=/`가 들어오는지 브라우저 개발자 도구에서 확인한다.
 
 ## 10. 첫 로그인과 스모크 체크
+
+`migrate` 컨테이너는 schema migration만 수행한다. 새 DB에 포트폴리오 데모 계정과 샘플 데이터를 넣으려면 API가 뜬 뒤 seed를 한 번 실행한다.
+
+```powershell
+docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml exec api node apps/api/dist/apps/api/prisma/seed.js --reset
+```
+
+Docker Desktop에서 컨테이너를 수동으로 띄웠다면 현재 컨테이너 이름 기준으로 실행한다.
+
+```powershell
+docker exec personal-erp-api node apps/api/dist/apps/api/prisma/seed.js --reset
+```
 
 최소한 아래 흐름은 직접 확인한다.
 
@@ -435,6 +459,15 @@ Web 이미지 빌드 시점에 들어가는 값이다. `.deploy\compose.env`를 
 ```powershell
 .\build-docker-images.bat --tag <new-tag>
 ```
+
+이미 올라간 Web 컨테이너에 예전 API URL이 박혀 있는지 확인한다.
+
+```powershell
+docker exec personal-erp-web /bin/sh -lc "grep -RIl -- 'localhost:4100' apps/web/.next 2>/dev/null || true"
+docker exec personal-erp-web /bin/sh -lc "grep -RIl -- 'personalerp.theworkpc.com/api' apps/web/.next 2>/dev/null || true"
+```
+
+`localhost:4100`이 나오면 Web 이미지를 public API URL 기준으로 다시 빌드하고 push/pull/recreate한다.
 
 ### API가 env 검증에서 실패함
 

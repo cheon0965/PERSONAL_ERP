@@ -55,7 +55,7 @@ RUN apt-get update \
 
 FROM runtime-base AS api
 
-ENV PORT=4000
+ENV PORT=4100
 
 COPY --from=prod-node-modules --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/package.json ./package.json
@@ -68,7 +68,7 @@ COPY --from=build --chown=node:node /app/packages/money/package.json ./packages/
 COPY --from=build --chown=node:node /app/packages/money/dist ./packages/money/dist
 
 USER node
-EXPOSE 4000
+EXPOSE 4100
 CMD ["node", "apps/api/dist/apps/api/src/main.js"]
 
 FROM runtime-base AS migrate
@@ -81,7 +81,7 @@ CMD ["./node_modules/.bin/prisma", "migrate", "deploy", "--schema", "apps/api/pr
 
 FROM runtime-base AS web
 
-ENV PORT=3000
+ENV PORT=3100
 ENV HOSTNAME=0.0.0.0
 
 COPY --from=prod-node-modules --chown=node:node /app/node_modules ./node_modules
@@ -96,5 +96,5 @@ COPY --from=build --chown=node:node /app/packages/money/package.json ./packages/
 COPY --from=build --chown=node:node /app/packages/money/dist ./packages/money/dist
 
 USER node
-EXPOSE 3000
-CMD ["node", "node_modules/next/dist/bin/next", "start", "apps/web", "--hostname", "0.0.0.0", "--port", "3000"]
+EXPOSE 3100
+CMD ["node", "node_modules/next/dist/bin/next", "start", "apps/web", "--hostname", "0.0.0.0", "--port", "3100"]

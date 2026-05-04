@@ -105,13 +105,13 @@ SWAGGER_ENABLED=true
 
 ```env
 # C:\secrets\personal-erp\web.env
-NEXT_PUBLIC_API_BASE_URL=https://api.example.com/api
+NEXT_PUBLIC_API_BASE_URL=https://personalerp.theworkpc.com/api
 ```
 
 ```env
 # C:\secrets\personal-erp\api.env
-APP_ORIGIN=https://app.example.com
-CORS_ALLOWED_ORIGINS=https://app.example.com
+APP_ORIGIN=https://personalerp.theworkpc.com
+CORS_ALLOWED_ORIGINS=https://personalerp.theworkpc.com
 SWAGGER_ENABLED=false
 ```
 
@@ -378,9 +378,9 @@ NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=false
 ### 운영용 api.env 예시
 
 ```env
-PORT=4000
-APP_ORIGIN=https://app.example.com
-CORS_ALLOWED_ORIGINS=https://app.example.com
+PORT=4100
+APP_ORIGIN=https://personalerp.theworkpc.com
+CORS_ALLOWED_ORIGINS=https://personalerp.theworkpc.com
 SWAGGER_ENABLED=false
 JWT_ACCESS_SECRET=replace-with-production-access-secret
 JWT_REFRESH_SECRET=replace-with-production-refresh-secret
@@ -406,7 +406,7 @@ GMAIL_SENDER_EMAIL=your-gmail@gmail.com
 ### 운영용 web.env 예시
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=https://api.example.com/api
+NEXT_PUBLIC_API_BASE_URL=https://personalerp.theworkpc.com/api
 NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=false
 ```
 
@@ -438,10 +438,11 @@ npm run start --workspace @personal-erp/web
 
 ### 배포 후
 
-- API 접속 확인: `http://<server>:4000/api/health`
-- Web 접속 확인
+- API 내부 접속 확인: `http://127.0.0.1:4100/api/health`
+- 공개 API 접속 확인: `https://personalerp.theworkpc.com/api/health`
+- Web 접속 확인: `https://personalerp.theworkpc.com`
 - 로그인 동작 확인
-- `SWAGGER_ENABLED=true`인 경우에만 Swagger 확인: `http://<server>:4000/api/docs`
+- `SWAGGER_ENABLED=true`인 경우에만 Swagger 확인: `https://personalerp.theworkpc.com/api/docs`
 - DB 연결 확인
 - CORS 오류 여부 확인
 
