@@ -20,6 +20,11 @@
 
 ## 체험 전 준비
 
+공개 데모는 아래 주소에서 바로 확인합니다.
+
+- Web/API 단일 도메인: `https://personalerp.theworkpc.com`
+- API health: `https://personalerp.theworkpc.com/api/health`
+
 로컬에서 체험한다면 먼저 개발 환경을 실행합니다.
 
 ```bash

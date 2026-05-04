@@ -5,6 +5,13 @@
 이 저장소의 포트폴리오용 압축 설명은 [포트폴리오 프로젝트 요약](./docs/PORTFOLIO_PROJECT_BRIEF.md)에 정리되어 있습니다.
 루트 README는 첫 진입점으로, 프로젝트의 목적과 실행 방법, 주요 문서 위치를 빠르게 안내합니다.
 
+## 현재 공개 데모
+
+- Web/API 단일 HTTPS 도메인: `https://personalerp.theworkpc.com`
+- API base URL: `https://personalerp.theworkpc.com/api`
+- Docker 배포 런타임: Web `127.0.0.1:3100`, API `127.0.0.1:4100`을 Caddy가 HTTPS로 프록시합니다.
+- 공개 데모 로그인: `demo@example.com` / `Demo1234!`
+
 ## 먼저 볼 문서
 
 | 목적                 | 문서                                                                 |
@@ -173,7 +180,7 @@ npm run build
 
 ## 데모 계정
 
-로컬 시드 기준 데모 계정은 아래와 같습니다.
+로컬 시드와 공개 데모 기준 계정은 아래와 같습니다.
 
 - 이메일: `demo@example.com`
 - 비밀번호: `Demo1234!`

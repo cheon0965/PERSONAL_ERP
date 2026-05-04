@@ -36,6 +36,12 @@ if "%SKIP_INSTALL%"=="0" (
   echo [INFO] Skipping dependency installation.
 )
 
+if not exist "%~dp0node_modules\.bin\prisma.cmd" (
+  echo [ERROR] Prisma CLI was not found after dependency installation.
+  echo [ERROR] Check whether npm install failed or node_modules is locked by a running process.
+  exit /b 1
+)
+
 echo [INFO] Generating Prisma client...
 call npm.cmd run prisma:generate --workspace @personal-erp/api
 if errorlevel 1 goto :error

@@ -33,7 +33,7 @@ services:
       - no-new-privileges:true
 
   migrate:
-    image: ${MIGRATE_IMAGE_NAME:-personal-erp-migrate}:${IMAGE_TAG:-latest}
+    image: ${MIGRATE_IMAGE_NAME:-cheon0965/personal-erp-migrate}:${IMAGE_TAG:-latest}
     logging: *json-log-options
     build:
       context: .
@@ -52,7 +52,7 @@ services:
       - no-new-privileges:true
 
   api:
-    image: ${API_IMAGE_NAME:-personal-erp-api}:${IMAGE_TAG:-latest}
+    image: ${API_IMAGE_NAME:-cheon0965/personal-erp-api}:${IMAGE_TAG:-latest}
     logging: *json-log-options
     build:
       context: .
@@ -64,7 +64,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: 4000
+      PORT: 4100
       APP_ORIGIN: ${APP_ORIGIN:?set APP_ORIGIN}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?set CORS_ALLOWED_ORIGINS}
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
@@ -95,12 +95,12 @@ services:
       migrate:
         condition: service_completed_successfully
     ports:
-      - '${API_BIND_ADDRESS:-127.0.0.1}:${API_PUBLISHED_PORT:-4000}:4000'
+      - '${API_BIND_ADDRESS:-127.0.0.1}:${API_PUBLISHED_PORT:-4100}:4100'
     healthcheck:
       test:
         [
           'CMD-SHELL',
-          'node -e "const http=require(''node:http'');const req=http.get(''http://127.0.0.1:4000/api/health'',res=>process.exit(res.statusCode===200?0:1));req.on(''error'',()=>process.exit(1));req.setTimeout(5000,()=>{req.destroy();process.exit(1);});"'
+          'node -e "const http=require(''node:http'');const req=http.get(''http://127.0.0.1:4100/api/health'',res=>process.exit(res.statusCode===200?0:1));req.on(''error'',()=>process.exit(1));req.setTimeout(5000,()=>{req.destroy();process.exit(1);});"'
         ]
       interval: 30s
       timeout: 10s
@@ -110,7 +110,7 @@ services:
       - no-new-privileges:true
 
   web:
-    image: ${WEB_IMAGE_NAME:-personal-erp-web}:${IMAGE_TAG:-latest}
+    image: ${WEB_IMAGE_NAME:-cheon0965/personal-erp-web}:${IMAGE_TAG:-latest}
     logging: *json-log-options
     build:
       context: .
@@ -124,18 +124,18 @@ services:
       NODE_ENV: production
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:?set NEXT_PUBLIC_API_BASE_URL}
       NEXT_PUBLIC_ENABLE_DEMO_FALLBACK: ${NEXT_PUBLIC_ENABLE_DEMO_FALLBACK:-false}
-      PORT: 3000
+      PORT: 3100
       HOSTNAME: 0.0.0.0
     depends_on:
       api:
         condition: service_healthy
     ports:
-      - '${WEB_BIND_ADDRESS:-127.0.0.1}:${WEB_PUBLISHED_PORT:-3000}:3000'
+      - '${WEB_BIND_ADDRESS:-127.0.0.1}:${WEB_PUBLISHED_PORT:-3100}:3100'
     healthcheck:
       test:
         [
           'CMD-SHELL',
-          'node -e "const http=require(''node:http'');const req=http.get(''http://127.0.0.1:3000'',res=>process.exit(res.statusCode<500?0:1));req.on(''error'',()=>process.exit(1));req.setTimeout(5000,()=>{req.destroy();process.exit(1);});"'
+          'node -e "const http=require(''node:http'');const req=http.get(''http://127.0.0.1:3100'',res=>process.exit(res.statusCode<500?0:1));req.on(''error'',()=>process.exit(1));req.setTimeout(5000,()=>{req.destroy();process.exit(1);});"'
         ]
       interval: 30s
       timeout: 10s
