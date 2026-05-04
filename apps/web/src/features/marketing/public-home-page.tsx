@@ -27,6 +27,7 @@ import { alpha } from '@mui/material/styles';
 import { useRouter } from 'next/navigation';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { BrandLogo } from '@/shared/brand/brand-logo';
+import { publicSiteUrl } from '@/shared/seo/site';
 import { brandTokens } from '@/shared/theme/tokens';
 import { appLayout } from '@/shared/ui/layout-metrics';
 
@@ -133,6 +134,8 @@ const marketingOverlayBackground = {
 const marketingReadableMutedText = '#34456c';
 const marketingReadableSubtleText = '#42557d';
 const marketingStrengthBackground = `linear-gradient(160deg, ${brandTokens.palette.primaryDark} 0%, ${brandTokens.palette.primary} 58%, ${brandTokens.palette.secondaryDark} 100%)`;
+const publicDemoEmail = 'demo@example.com';
+const publicDemoPassword = 'Demo1234!';
 
 export function PublicHomePage() {
   const router = useRouter();
@@ -383,6 +386,8 @@ function HeroSection() {
             </Button>
           </Stack>
 
+          <PublicDemoNotice />
+
           <Grid container spacing={1.5} sx={{ maxWidth: 620 }}>
             {[
               ['운영 기준', '월 단위 관리'],
@@ -419,6 +424,54 @@ function HeroSection() {
         </Stack>
       </Container>
     </Box>
+  );
+}
+
+function PublicDemoNotice() {
+  return (
+    <Stack
+      spacing={1.25}
+      sx={{
+        maxWidth: 620,
+        p: { xs: 1.75, sm: 2 },
+        borderRadius: '8px',
+        border: '1px solid',
+        borderColor: alpha(brandTokens.palette.primaryBright, 0.2),
+        bgcolor: alpha(brandTokens.palette.surface, 0.86),
+        boxShadow: '0 14px 34px rgba(6, 34, 111, 0.08)'
+      }}
+    >
+      <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+        <Chip label="공개 체험 운영 중" color="success" size="small" />
+        <Chip label="검색 노출 대상 URL" color="primary" size="small" />
+      </Stack>
+      <Stack spacing={0.4}>
+        <Typography variant="subtitle2" fontWeight={900}>
+          실제 체험 URL
+        </Typography>
+        <Typography
+          component="a"
+          href={publicSiteUrl}
+          variant="body1"
+          sx={{
+            color: brandTokens.palette.primary,
+            fontWeight: 900,
+            textDecoration: 'none',
+            wordBreak: 'break-all',
+            '&:hover': { textDecoration: 'underline' }
+          }}
+        >
+          {publicSiteUrl}
+        </Typography>
+      </Stack>
+      <Typography
+        variant="body2"
+        sx={{ color: marketingReadableMutedText, lineHeight: 1.7 }}
+      >
+        데모 로그인은 {publicDemoEmail} / {publicDemoPassword} 계정으로 바로
+        확인할 수 있습니다.
+      </Typography>
+    </Stack>
   );
 }
 

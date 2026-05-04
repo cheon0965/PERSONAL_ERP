@@ -405,6 +405,7 @@ export const appTheme = createTheme(
         styleOverrides: {
           root: {
             border: 'none',
+            borderRadius: '4px 4px 0 0',
             color: brandTokens.palette.text,
             '--DataGrid-rowBorderColor': alpha(
               brandTokens.palette.primary,
@@ -413,8 +414,11 @@ export const appTheme = createTheme(
             '& .MuiDataGrid-columnHeaders': {
               background:
                 'linear-gradient(180deg, rgba(240,246,255,0.98), rgba(233,247,250,0.98))',
-              borderRadius: 14,
+              borderRadius: '4px 4px 0 0',
               border: `1px solid ${alpha(brandTokens.palette.primaryBright, 0.12)}`
+            },
+            '& .MuiDataGrid-columnHeader': {
+              borderRadius: 0
             },
             '& .MuiDataGrid-columnHeaderTitle': {
               fontWeight: 800,

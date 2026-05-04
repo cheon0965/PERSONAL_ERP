@@ -353,7 +353,9 @@ test('@smoke generates plan items and reflects them in the live dashboard and fo
   await expect(
     page.getByRole('heading', { name: '기간 운영 전망' })
   ).toBeVisible();
-  await expect(page.getByText('전망 기준')).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '전망 기준', exact: true })
+  ).toBeVisible();
   await expect(page.getByText('남은 계획 지출').first()).toBeVisible();
   await expect(page.getByRole('heading', { name: '₩0' }).first()).toBeVisible();
 
