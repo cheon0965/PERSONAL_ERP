@@ -18,9 +18,7 @@ export function FinancialStatementsOverview({
   detailHref,
   hasStatements,
   isGenerating,
-  lockedPeriods,
   onGenerate,
-  onSelectPeriod,
   selectedPeriod,
   view
 }: {
@@ -28,9 +26,7 @@ export function FinancialStatementsOverview({
   detailHref: Route | null;
   hasStatements: boolean;
   isGenerating: boolean;
-  lockedPeriods: AccountingPeriodItem[];
   onGenerate: () => void;
-  onSelectPeriod: (periodId: string) => void;
   selectedPeriod: AccountingPeriodItem;
   view: Awaited<ReturnType<typeof getFinancialStatements>> | undefined;
 }) {
@@ -150,95 +146,17 @@ export function FinancialStatementsOverview({
           </SectionCard>
         </Grid>
       </Grid>
-
-      <SectionCard
-        title="잠금 기간 바로가기"
-        description="목록에서 기간을 바꾸고, 스냅샷이 준비된 기간만 보고서 보기 화면으로 이동하면 됩니다."
-      >
-        <Grid container spacing={appLayout.fieldGap}>
-          {lockedPeriods.map((period) => {
-            const isSelected = period.id === selectedPeriod.id;
-
-            return (
-              <Grid key={period.id} size={{ xs: 12, md: 6, xl: 4 }}>
-                <Stack
-                  spacing={1.25}
-                  sx={{
-                    p: appLayout.cardPadding,
-                    borderRadius: 3,
-                    border: '1px solid',
-                    borderColor: isSelected ? 'primary.main' : 'divider',
-                    backgroundColor: isSelected
-                      ? 'action.selected'
-                      : 'background.paper'
-                  }}
-                >
-                  <Typography variant="subtitle1">
-                    {period.monthLabel}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {readPeriodStatusLabel(period.status)} 상태의 공식 보고
-                    대상입니다.
-                  </Typography>
-                  <Stack
-                    direction={{ xs: 'column', sm: 'row' }}
-                    spacing={1}
-                    useFlexGap
-                    flexWrap="wrap"
-                  >
-                    <Button
-                      variant={isSelected ? 'contained' : 'outlined'}
-                      onClick={() => onSelectPeriod(period.id)}
-                    >
-                      {isSelected ? '현재 선택됨' : '이 기간 선택'}
-                    </Button>
-                    {isSelected && detailHref && hasStatements ? (
-                      <Button component={Link} href={detailHref} variant="text">
-                        보고서 보기
-                      </Button>
-                    ) : null}
-                  </Stack>
-                </Stack>
-              </Grid>
-            );
-          })}
-        </Grid>
-      </SectionCard>
     </Stack>
   );
 }
 
 export function FinancialStatementsDetail({
-  lockedPeriods,
-  selectedPeriodId,
   view
 }: {
-  lockedPeriods: AccountingPeriodItem[];
-  selectedPeriodId: string;
   view: NonNullable<Awaited<ReturnType<typeof getFinancialStatements>>>;
 }) {
   return (
     <Stack spacing={appLayout.sectionGap}>
-      <SectionCard
-        title="다른 잠금 기간 보기"
-        description="보고서 화면 안에서도 다른 잠금 기간으로 빠르게 이동할 수 있습니다."
-      >
-        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-          {lockedPeriods.map((period) => (
-            <Button
-              key={period.id}
-              component={Link}
-              href={buildFinancialStatementsDetailHref(period.id)}
-              variant={
-                period.id === selectedPeriodId ? 'contained' : 'outlined'
-              }
-            >
-              {period.monthLabel}
-            </Button>
-          ))}
-        </Stack>
-      </SectionCard>
-
       {view.warnings.map((warning) => (
         <Alert key={warning} severity="info" variant="outlined">
           {warning}

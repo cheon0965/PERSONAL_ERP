@@ -2,6 +2,7 @@
 
 import { Stack } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
+import { useAuthSession } from '@/shared/auth/auth-provider';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
@@ -15,9 +16,17 @@ import {
 import { getDashboardSummary } from './dashboard.api';
 
 export function DashboardPage() {
+  const { status, user } = useAuthSession();
+  const currentWorkspace = user?.currentWorkspace ?? null;
   const summaryQuery = useQuery({
-    queryKey: ['dashboard-summary'],
-    queryFn: () => getDashboardSummary()
+    queryKey: [
+      'dashboard-summary',
+      user?.id ?? 'anonymous',
+      currentWorkspace?.tenant.id ?? 'no-tenant',
+      currentWorkspace?.ledger?.id ?? 'no-ledger'
+    ],
+    queryFn: () => getDashboardSummary(),
+    enabled: status === 'authenticated' && Boolean(user)
   });
 
   useDomainHelp({

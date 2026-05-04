@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type {
   AuthenticatedUser,
   CreateWorkspaceRequest,
@@ -47,17 +48,37 @@ const AuthSessionContext = React.createContext<AuthSessionContextValue | null>(
 );
 
 export function AuthProvider({ children }: React.PropsWithChildren) {
+  const queryClient = useQueryClient();
   const [status, setStatus] = React.useState<AuthStatus>('loading');
   const [user, setUser] = React.useState<AuthenticatedUser | null>(null);
   const didBootstrapRef = React.useRef(false);
+  const sessionCacheScopeRef = React.useRef<string | null>(null);
 
   const applyUnauthenticatedState = React.useCallback(() => {
     clearStoredAccessToken();
+    queryClient.clear();
+    sessionCacheScopeRef.current = null;
     React.startTransition(() => {
       setUser(null);
       setStatus('unauthenticated');
     });
-  }, []);
+  }, [queryClient]);
+
+  const applyAuthenticatedState = React.useCallback(
+    (nextUser: AuthenticatedUser) => {
+      const nextSessionCacheScope = readSessionCacheScope(nextUser);
+      if (sessionCacheScopeRef.current !== nextSessionCacheScope) {
+        queryClient.clear();
+        sessionCacheScopeRef.current = nextSessionCacheScope;
+      }
+
+      React.startTransition(() => {
+        setUser(nextUser);
+        setStatus('authenticated');
+      });
+    },
+    [queryClient]
+  );
 
   React.useEffect(() => {
     setUnauthorizedSessionHandler((_reason: UnauthorizedSessionReason) => {
@@ -73,16 +94,13 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     try {
       const result = await refreshSession();
       setStoredAccessToken(result.accessToken);
-      React.startTransition(() => {
-        setUser(result.user);
-        setStatus('authenticated');
-      });
+      applyAuthenticatedState(result.user);
       return result.accessToken;
     } catch {
       applyUnauthenticatedState();
       return null;
     }
-  }, [applyUnauthenticatedState]);
+  }, [applyAuthenticatedState, applyUnauthenticatedState]);
 
   React.useEffect(() => {
     setRefreshSessionHandler(() => restoreSession());
@@ -126,11 +144,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       try {
         const result = await loginWithPassword(input);
         setStoredAccessToken(result.accessToken);
-
-        React.startTransition(() => {
-          setUser(result.user);
-          setStatus('authenticated');
-        });
+        applyAuthenticatedState(result.user);
 
         return result.user;
       } catch (error) {
@@ -138,7 +152,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
         throw error;
       }
     },
-    [applyUnauthenticatedState]
+    [applyAuthenticatedState, applyUnauthenticatedState]
   );
 
   const logout = React.useCallback(async () => {
@@ -158,16 +172,13 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
 
     try {
       const nextUser = await getCurrentUser(accessToken);
-      React.startTransition(() => {
-        setUser(nextUser);
-        setStatus('authenticated');
-      });
+      applyAuthenticatedState(nextUser);
       return nextUser;
     } catch {
       applyUnauthenticatedState();
       return null;
     }
-  }, [applyUnauthenticatedState]);
+  }, [applyAuthenticatedState, applyUnauthenticatedState]);
 
   const switchWorkspace = React.useCallback(
     async (tenantId: string, ledgerId?: string) => {
@@ -176,40 +187,34 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
         ...(ledgerId ? { ledgerId } : {})
       });
 
-      React.startTransition(() => {
-        setUser(result.user);
-        setStatus('authenticated');
-      });
+      applyAuthenticatedState(result.user);
 
       return result.user;
     },
-    []
+    [applyAuthenticatedState]
   );
 
   const createWorkspace = React.useCallback(
     async (input: CreateWorkspaceRequest) => {
       const result = await createWorkspaceRequest(input);
 
-      React.startTransition(() => {
-        setUser(result.user);
-        setStatus('authenticated');
-      });
+      applyAuthenticatedState(result.user);
 
       return result.user;
     },
-    []
+    [applyAuthenticatedState]
   );
 
-  const deleteWorkspace = React.useCallback(async (tenantId: string) => {
-    const result = await deleteWorkspaceRequest(tenantId);
+  const deleteWorkspace = React.useCallback(
+    async (tenantId: string) => {
+      const result = await deleteWorkspaceRequest(tenantId);
 
-    React.startTransition(() => {
-      setUser(result.user);
-      setStatus('authenticated');
-    });
+      applyAuthenticatedState(result.user);
 
-    return result.user;
-  }, []);
+      return result.user;
+    },
+    [applyAuthenticatedState]
+  );
 
   const value = React.useMemo<AuthSessionContextValue>(
     () => ({
@@ -248,4 +253,15 @@ export function useAuthSession(): AuthSessionContextValue {
   }
 
   return context;
+}
+
+function readSessionCacheScope(user: AuthenticatedUser): string {
+  const currentWorkspace = user.currentWorkspace;
+
+  return [
+    user.id,
+    currentWorkspace?.tenant.id ?? 'no-tenant',
+    currentWorkspace?.ledger?.id ?? 'no-ledger',
+    currentWorkspace?.supportContext?.enabled === true ? 'support' : 'normal'
+  ].join(':');
 }

@@ -4,14 +4,8 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  Button,
-  Grid,
-  MenuItem,
-  Stack,
-  TextField,
-  Typography
-} from '@mui/material';
+import Autocomplete, { createFilterOptions } from '@mui/material/Autocomplete';
+import { Button, Grid, Stack, TextField, Typography } from '@mui/material';
 import type { AccountingPeriodItem } from '@personal-erp/contracts';
 import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
@@ -49,6 +43,11 @@ type FinancialStatementsPageProps = {
   mode?: FinancialStatementsPageMode;
   selectedPeriodId?: string | null;
 };
+
+const lockedPeriodFilter = createFilterOptions<AccountingPeriodItem>({
+  limit: 50,
+  stringify: (period) => period.monthLabel
+});
 
 export function FinancialStatementsPage({
   mode = 'overview',
@@ -252,33 +251,67 @@ export function FinancialStatementsPage({
       >
         <Grid container spacing={appLayout.fieldGap} alignItems="flex-start">
           <Grid size={{ xs: 12, md: 5 }}>
-            <TextField
-              select
+            <Autocomplete
               fullWidth
-              label="잠금된 운영 기간"
-              value={selectedPeriodId}
-              onChange={(event) => {
-                setSelectedPeriodIdState(event.target.value);
+              options={lockedPeriods}
+              value={selectedPeriod}
+              filterOptions={lockedPeriodFilter}
+              getOptionLabel={(period) => period.monthLabel}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              noOptionsText="잠금된 운영 기간이 없습니다"
+              onChange={(_event, nextPeriod) => {
+                if (!nextPeriod) {
+                  return;
+                }
+
+                setSelectedPeriodIdState(nextPeriod.id);
                 setFeedback(null);
                 if (mode === 'detail') {
                   router.push(
-                    buildFinancialStatementsDetailHref(event.target.value)
+                    buildFinancialStatementsDetailHref(nextPeriod.id)
                   );
                 }
               }}
-              helperText={
-                lockedPeriods.length > 0
-                  ? '잠금된 기간을 선택하면 생성 여부를 확인하고, 보고서 보기 화면으로 바로 이동할 수 있습니다.'
-                  : '아직 잠금된 운영 기간이 없습니다.'
-              }
               disabled={lockedPeriods.length === 0}
-            >
-              {lockedPeriods.map((period) => (
-                <MenuItem key={period.id} value={period.id}>
-                  {period.monthLabel}
-                </MenuItem>
-              ))}
-            </TextField>
+              slotProps={{
+                listbox: {
+                  sx: {
+                    maxHeight: 320
+                  }
+                }
+              }}
+              renderOption={(props, period) => {
+                const { key, ...optionProps } = props;
+
+                return (
+                  <li key={key} {...optionProps}>
+                    <Stack spacing={0}>
+                      <Typography component="span" variant="body2">
+                        {period.monthLabel}
+                      </Typography>
+                      <Typography
+                        component="span"
+                        variant="caption"
+                        color="text.secondary"
+                      >
+                        {readPeriodStatusLabel(period.status)}
+                      </Typography>
+                    </Stack>
+                  </li>
+                );
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="잠금된 운영 기간"
+                  helperText={
+                    lockedPeriods.length > 0
+                      ? '월을 입력해 검색할 수 있고, 목록은 한 번에 최대 50개까지만 표시합니다.'
+                      : '아직 잠금된 운영 기간이 없습니다.'
+                  }
+                />
+              )}
+            />
           </Grid>
           <Grid size={{ xs: 12, md: 7 }}>
             <Stack spacing={1.25}>
@@ -359,9 +392,7 @@ export function FinancialStatementsPage({
           detailHref={detailHref}
           hasStatements={hasStatements}
           isGenerating={mutation.isPending}
-          lockedPeriods={lockedPeriods}
           onGenerate={handleGenerateSnapshot}
-          onSelectPeriod={setSelectedPeriodIdState}
           selectedPeriod={selectedPeriod}
           view={view}
         />
@@ -407,11 +438,7 @@ export function FinancialStatementsPage({
           </Stack>
         </SectionCard>
       ) : (
-        <FinancialStatementsDetail
-          lockedPeriods={lockedPeriods}
-          selectedPeriodId={selectedPeriod.id}
-          view={view}
-        />
+        <FinancialStatementsDetail view={view} />
       )}
     </Stack>
   );
