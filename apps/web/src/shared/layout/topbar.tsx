@@ -409,8 +409,12 @@ export function Topbar({ onOpenNavigation }: TopbarProps) {
               startIcon={<LogoutRoundedIcon fontSize="small" />}
               onClick={() => {
                 handleAccountClose();
-                void logout();
-                router.replace('/login' as Route);
+                void logout()
+                  .catch(() => undefined)
+                  .finally(() => {
+                    router.replace('/login' as Route);
+                    router.refresh();
+                  });
               }}
               sx={{ justifyContent: 'flex-start' }}
             >
