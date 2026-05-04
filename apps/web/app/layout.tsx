@@ -1,14 +1,18 @@
 import type { Metadata, Viewport } from 'next';
+import { headers } from 'next/headers';
+import { CspNonceProvider } from '@/shared/security/csp-nonce';
+import { publicSiteMetadata, publicSiteUrl } from '@/shared/seo/site';
 import './globals.css';
 
-const appName = 'PERSONAL ERP';
-const appDescription = '1인 사업자·소상공인을 위한 월 운영 ERP';
+const appName = publicSiteMetadata.name;
+const appDescription = publicSiteMetadata.description;
 
 export const viewport: Viewport = {
   themeColor: '#06226f'
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(publicSiteUrl),
   applicationName: appName,
   title: {
     default: appName,
@@ -33,28 +37,45 @@ export const metadata: Metadata = {
     shortcut: [{ url: '/logo-icon.png', type: 'image/png' }],
     apple: [{ url: '/logo-icon.png', type: 'image/png' }]
   },
+  alternates: {
+    canonical: '/'
+  },
   openGraph: {
     type: 'website',
     locale: 'ko_KR',
     siteName: appName,
     title: appName,
-    description: appDescription
+    description: appDescription,
+    url: publicSiteUrl,
+    images: [
+      {
+        url: '/logo-wordmark.png',
+        width: 2000,
+        height: 666,
+        alt: `${appName} 로고`
+      }
+    ]
   },
   twitter: {
     card: 'summary',
     title: appName,
-    description: appDescription
+    description: appDescription,
+    images: ['/logo-wordmark.png']
   }
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
+
   return (
     <html lang="ko">
-      <body>{children}</body>
+      <body>
+        <CspNonceProvider nonce={nonce}>{children}</CspNonceProvider>
+      </body>
     </html>
   );
 }

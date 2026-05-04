@@ -404,7 +404,7 @@ export function DataTableCard<T extends { id: string }>({
                 width: '100%',
                 minWidth: 0,
                 height,
-                borderRadius: 2,
+                borderRadius: '4px 4px 0 0',
                 overflow: 'hidden'
               }}
             >

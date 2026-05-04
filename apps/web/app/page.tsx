@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import { PublicHomePage } from '@/features/marketing/public-home-page';
 import { AppProviders } from '@/shared/providers/app-providers';
+import { publicSiteMetadata, publicSiteUrl } from '@/shared/seo/site';
 
 const homeTitle = 'PERSONAL ERP | 월 운영 ERP';
-const homeDescription =
-  '수집 거래, 전표, 월 마감, 업로드, 기준 데이터를 한 흐름으로 연결하는 개인·소상공인 ERP';
+const homeDescription = publicSiteMetadata.description;
 
 export const metadata: Metadata = {
   title: {
@@ -15,9 +15,13 @@ export const metadata: Metadata = {
     index: true,
     follow: true
   },
+  alternates: {
+    canonical: '/'
+  },
   openGraph: {
     title: homeTitle,
-    description: homeDescription
+    description: homeDescription,
+    url: publicSiteUrl
   },
   twitter: {
     card: 'summary',

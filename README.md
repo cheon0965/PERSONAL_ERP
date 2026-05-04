@@ -5,12 +5,19 @@
 이 저장소의 포트폴리오용 압축 설명은 [포트폴리오 프로젝트 요약](./docs/PORTFOLIO_PROJECT_BRIEF.md)에 정리되어 있습니다.
 루트 README는 첫 진입점으로, 프로젝트의 목적과 실행 방법, 주요 문서 위치를 빠르게 안내합니다.
 
-## 현재 공개 데모
+## 바로 체험하기
 
-- Web/API 단일 HTTPS 도메인: `https://personalerp.theworkpc.com`
-- API base URL: `https://personalerp.theworkpc.com/api`
-- Docker 배포 런타임: Web `127.0.0.1:3100`, API `127.0.0.1:4100`을 Caddy가 HTTPS로 프록시합니다.
-- 공개 데모 로그인: `demo@example.com` / `Demo1234!`
+**공개 체험 URL: <https://personalerp.theworkpc.com>**
+
+| 항목          | 값                                      |
+| ------------- | --------------------------------------- |
+| Web           | <https://personalerp.theworkpc.com>     |
+| API           | <https://personalerp.theworkpc.com/api> |
+| 데모 이메일   | `demo@example.com`                      |
+| 데모 비밀번호 | `Demo1234!`                             |
+
+Docker 배포 런타임은 Web `127.0.0.1:3100`, API `127.0.0.1:4100`을 Caddy가 단일 HTTPS 도메인으로 프록시합니다.
+검색엔진에는 공개 홈(`/`)만 노출 대상으로 두고, 인증 뒤 업무 화면은 `noindex` 정책을 유지합니다.
 
 ## 먼저 볼 문서
 

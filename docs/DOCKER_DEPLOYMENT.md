@@ -11,6 +11,7 @@
 - 운영 로그인 세션은 HTTPS가 필요하다. refresh cookie가 `__Host-refreshToken`, `Secure`, `HttpOnly`, `SameSite=Strict`로 내려가므로, 공개 운영은 HTTPS reverse proxy 뒤에서 실행해야 한다.
 - `NEXT_PUBLIC_API_BASE_URL`은 Web 이미지 빌드 시점에 번들에 들어간다. API 도메인을 바꾸면 Web 이미지를 다시 빌드한다.
 - 현재 공개 배포는 `https://personalerp.theworkpc.com` 단일 도메인을 사용한다. Caddy가 `/api/*`는 API `127.0.0.1:4100`으로, 나머지는 Web `127.0.0.1:3100`으로 프록시한다.
+- 공개 홈은 검색 노출 대상이다. 배포 후 `https://personalerp.theworkpc.com/robots.txt`와 `https://personalerp.theworkpc.com/sitemap.xml`을 확인하고, Google Search Console에는 `https://personalerp.theworkpc.com/sitemap.xml`을 제출한다.
 
 ## 전체 흐름
 
