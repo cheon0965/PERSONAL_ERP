@@ -12,6 +12,7 @@
 - `NEXT_PUBLIC_API_BASE_URL`은 Web 이미지 빌드 시점에 번들에 들어간다. API 도메인을 바꾸면 Web 이미지를 다시 빌드한다.
 - 현재 공개 배포는 `https://personalerp.theworkpc.com` 단일 도메인을 사용한다. Caddy가 `/api/*`는 API `127.0.0.1:4100`으로, 나머지는 Web `127.0.0.1:3100`으로 프록시한다.
 - 공개 홈은 검색 노출 대상이다. 배포 후 `https://personalerp.theworkpc.com/robots.txt`와 `https://personalerp.theworkpc.com/sitemap.xml`을 확인하고, Google Search Console에는 `https://personalerp.theworkpc.com/sitemap.xml`을 제출한다.
+- GitHub Actions에서 Docker Hub로 이미지를 push해도 서버의 `.deploy/compose.env` 변수 이름은 그대로 사용한다. 서버는 `IMAGE_TAG`, `API_IMAGE_NAME`, `WEB_IMAGE_NAME`, `MIGRATE_IMAGE_NAME`만 맞춰 pull한다.
 
 ## 전체 흐름
 
@@ -28,6 +29,46 @@
 9. 로그인과 주요 화면 스모크 체크
 
 이미지를 다른 서버로 옮겨야 하면 5번에서 `--save` 옵션으로 tar 파일을 만들고, 대상 서버에서 `docker load`를 먼저 수행한다.
+
+## GitHub Actions -> Docker Hub push 흐름
+
+저장소에는 `.github/workflows/docker-publish.yml`이 있으며, `CI` 워크플로가 `main` 또는 `master` push에서 성공한 뒤 Docker Hub에 세 이미지를 push한다.
+
+- `cheon0965/personal-erp-migrate:<tag>`
+- `cheon0965/personal-erp-api:<tag>`
+- `cheon0965/personal-erp-web:<tag>`
+
+GitHub 저장소 설정에는 아래 값을 둔다.
+
+| 구분     | 이름                               | 설명                                    |
+| -------- | ---------------------------------- | --------------------------------------- |
+| Variable | `DOCKERHUB_USERNAME`               | Docker Hub 사용자명                     |
+| Secret   | `DOCKERHUB_TOKEN`                  | Docker Hub access token                 |
+| Variable | `NEXT_PUBLIC_API_BASE_URL`         | Web 이미지에 빌드 시점에 들어갈 API URL |
+| Variable | `NEXT_PUBLIC_ENABLE_DEMO_FALLBACK` | 기본값 `false`, 필요할 때만 명시한다    |
+
+Workflow가 자동으로 발행하는 태그:
+
+- `sha-<commit 12자리>`: 롤백과 추적용 고정 태그
+- `latest`: `main` 또는 `master` push에서 CI가 통과한 경우
+
+수동 실행(`workflow_dispatch`)에서는 추가 `image_tag`와 `latest` 발행 여부를 선택할 수 있다.
+
+운영 서버는 기존 `.deploy/compose.env`를 유지하되, 롤백 가능성을 위해 `IMAGE_TAG`를 `latest`보다 `sha-...` 태그로 지정하는 편이 안전하다.
+
+```dotenv
+IMAGE_TAG=sha-123456789abc
+API_IMAGE_NAME=cheon0965/personal-erp-api
+WEB_IMAGE_NAME=cheon0965/personal-erp-web
+MIGRATE_IMAGE_NAME=cheon0965/personal-erp-migrate
+```
+
+서버 반영은 로컬 build 없이 pull-only로 진행한다.
+
+```powershell
+docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml pull
+docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml up -d --no-build
+```
 
 ## 1. 사전 준비
 
@@ -213,7 +254,9 @@ docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml config
 
 ## 5. Docker 이미지 빌드
 
-기본 빌드:
+GitHub Actions -> Docker Hub push 흐름을 쓰면 운영 서버에서 이 단계를 직접 실행하지 않고, 위의 pull-only 절차를 사용한다.
+
+서버 또는 로컬 PC에서 직접 빌드해야 하는 경우 기본 빌드:
 
 ```powershell
 .\build-docker-images.bat

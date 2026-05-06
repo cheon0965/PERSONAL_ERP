@@ -264,6 +264,8 @@ GMAIL_SENDER_EMAIL=your-gmail@gmail.com
 - Gmail API 값은 모두 `C:\secrets\personal-erp\api.env` 같은 저장소 밖 SECRET 파일에 둡니다.
 - Gmail API scope는 최소 `https://www.googleapis.com/auth/gmail.send`를 사용합니다.
 - `MAIL_PROVIDER=gmail-api`일 때 Gmail 관련 값이 비어 있으면 API가 부팅 단계에서 실패합니다.
+- 회원가입 인증 링크는 `EMAIL_VERIFICATION_TTL`, 비밀번호 재설정 링크는 `PASSWORD_RESET_TTL`, 사업장 초대 링크는 7일 기준으로 만료되며 메일 본문에 만료 안내가 포함됩니다.
+- API는 매일 04:15(Asia/Seoul)에 만료/사용 완료된 인증·재설정·초대 링크와 워크스페이스/세션 없이 활성 인증 링크도 없는 가입 중 미인증 계정을 정리합니다.
 
 ### 7순위. Demo 옵션 확인
 

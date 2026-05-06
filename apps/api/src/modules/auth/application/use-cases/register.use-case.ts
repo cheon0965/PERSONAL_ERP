@@ -7,8 +7,10 @@ import { EmailSenderPort } from '../../../../common/application/ports/email-send
 import { parseJwtDurationToMs } from '../../../../common/auth/jwt-config';
 import { SecurityEventLogger } from '../../../../common/infrastructure/operational/security-event.logger';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
-import { getApiEnv } from '../../../../config/api-env';
+import type { ApiEnv } from '../../../../config/api-env';
+import { InjectApiEnv } from '../../../../config/api-env.provider';
 import { AuthRateLimitService } from '../../auth-rate-limit.service';
+import { formatAuthLinkTtlLabel } from '../../auth-link-ttl.util';
 import { normalizeDisplayName, normalizeEmail } from '../../auth.normalization';
 import { PasswordPolicyService } from '../../password-policy.service';
 import { WorkspaceBootstrapService } from '../../workspace-bootstrap.service';
@@ -26,7 +28,8 @@ export class RegisterUseCase {
     private readonly rateLimit: AuthRateLimitService,
     private readonly securityEvents: SecurityEventLogger,
     private readonly passwordPolicy: PasswordPolicyService,
-    private readonly workspaceBootstrap: WorkspaceBootstrapService
+    private readonly workspaceBootstrap: WorkspaceBootstrapService,
+    @InjectApiEnv() private readonly env: ApiEnv
   ) {}
 
   async execute(
@@ -115,7 +118,8 @@ export class RegisterUseCase {
   ): Promise<void> {
     const rawToken = createEmailVerificationToken();
     const now = this.clock.now();
-    const expiresAt = new Date(now.getTime() + getEmailVerificationTtlMs());
+    const ttlMs = getEmailVerificationTtlMs(this.env);
+    const expiresAt = new Date(now.getTime() + ttlMs);
 
     await this.prisma.emailVerificationToken.updateMany({
       where: { userId: user.id, consumedAt: null },
@@ -134,7 +138,11 @@ export class RegisterUseCase {
         buildVerificationEmail({
           to: user.email,
           name: user.name,
-          verificationUrl: buildVerificationUrl(rawToken)
+          verificationUrl: buildVerificationUrl({
+            appOrigin: this.env.APP_ORIGIN,
+            token: rawToken
+          }),
+          ttlLabel: formatAuthLinkTtlLabel(ttlMs)
         })
       );
       this.securityEvents.log('auth.verification_email_sent', {
@@ -175,16 +183,18 @@ export function hashEmailVerificationToken(token: string): string {
   return createHash('sha256').update(token.trim(), 'utf8').digest('hex');
 }
 
-export function getEmailVerificationTtlMs(): number {
-  return parseJwtDurationToMs(
-    getApiEnv().EMAIL_VERIFICATION_TTL,
-    30 * 60 * 1000
-  );
+export function getEmailVerificationTtlMs(
+  env: Pick<ApiEnv, 'EMAIL_VERIFICATION_TTL'>
+): number {
+  return parseJwtDurationToMs(env.EMAIL_VERIFICATION_TTL, 30 * 60 * 1000);
 }
 
-export function buildVerificationUrl(token: string): string {
-  const url = new URL('/verify-email', getApiEnv().APP_ORIGIN);
-  url.searchParams.set('token', token);
+export function buildVerificationUrl(input: {
+  appOrigin: string;
+  token: string;
+}): string {
+  const url = new URL('/verify-email', input.appOrigin);
+  url.searchParams.set('token', input.token);
   return url.toString();
 }
 
@@ -192,11 +202,13 @@ function buildVerificationEmail(input: {
   to: string;
   name: string;
   verificationUrl: string;
+  ttlLabel: string;
 }) {
   const text = [
     `${input.name}님, PERSONAL_ERP 회원가입 이메일 인증을 진행해 주세요.`,
     '',
     `인증 링크: ${input.verificationUrl}`,
+    `이 링크는 ${input.ttlLabel} 후에 만료됩니다.`,
     '',
     '본인이 요청하지 않았다면 이 메일을 무시해 주세요.'
   ].join('\n');
@@ -216,6 +228,9 @@ function buildVerificationEmail(input: {
       '<p><a href="',
       escapedVerificationUrl,
       '">이메일 인증하기</a></p>',
+      '<p>이 링크는 ',
+      escapeHtml(input.ttlLabel),
+      ' 후에 만료됩니다.</p>',
       '<p>본인이 요청하지 않았다면 이 메일을 무시해 주세요.</p>'
     ].join('')
   };

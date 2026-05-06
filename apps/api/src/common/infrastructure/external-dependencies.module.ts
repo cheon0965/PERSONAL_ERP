@@ -3,7 +3,8 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ClockPort } from '../application/ports/clock.port';
 import { EmailSenderPort } from '../application/ports/email-sender.port';
 import { PrismaModule } from '../prisma/prisma.module';
-import { getApiEnv } from '../../config/api-env';
+import { apiEnvProvider, API_ENV } from '../../config/api-env.provider';
+import type { ApiEnv } from '../../config/api-env';
 import { ConsoleEmailSenderAdapter } from './email/console-email-sender.adapter';
 import { GmailApiEmailSenderAdapter } from './email/gmail-api-email-sender.adapter';
 import { NoopOperationalAuditSinkAdapter } from './operational/noop-operational-audit-sink.adapter';
@@ -19,6 +20,7 @@ import { SystemClockAdapter } from './time/system-clock.adapter';
 @Module({
   imports: [PrismaModule],
   providers: [
+    apiEnvProvider,
     RequestContextInterceptor,
     LogRetentionService,
     SecurityEventLogger,
@@ -36,13 +38,12 @@ import { SystemClockAdapter } from './time/system-clock.adapter';
     },
     {
       provide: EmailSenderPort,
-      useFactory: (securityEvents: SecurityEventLogger) => {
-        const env = getApiEnv();
+      useFactory: (env: ApiEnv, securityEvents: SecurityEventLogger) => {
         return env.MAIL_PROVIDER === 'gmail-api'
           ? new GmailApiEmailSenderAdapter(env, securityEvents)
           : new ConsoleEmailSenderAdapter(env, securityEvents);
       },
-      inject: [SecurityEventLogger]
+      inject: [API_ENV, SecurityEventLogger]
     },
     {
       provide: APP_INTERCEPTOR,
@@ -51,6 +52,7 @@ import { SystemClockAdapter } from './time/system-clock.adapter';
   ],
   exports: [
     PrismaModule,
+    API_ENV,
     ClockPort,
     EmailSenderPort,
     SecurityEventLogger,

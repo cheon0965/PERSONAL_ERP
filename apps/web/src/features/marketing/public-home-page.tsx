@@ -8,6 +8,7 @@ import AssessmentRoundedIcon from '@mui/icons-material/AssessmentRounded';
 import CalendarMonthRoundedIcon from '@mui/icons-material/CalendarMonthRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
+import GitHubIcon from '@mui/icons-material/GitHub';
 import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
 import PersonAddAltRoundedIcon from '@mui/icons-material/PersonAddAltRounded';
 import ReceiptLongRoundedIcon from '@mui/icons-material/ReceiptLongRounded';
@@ -25,9 +26,12 @@ import {
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { useRouter } from 'next/navigation';
+import {
+  demoLoginCredentials,
+  demoLoginPath
+} from '@/features/auth/demo-login';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { BrandLogo } from '@/shared/brand/brand-logo';
-import { publicSiteUrl } from '@/shared/seo/site';
 import { brandTokens } from '@/shared/theme/tokens';
 import { appLayout } from '@/shared/ui/layout-metrics';
 
@@ -134,8 +138,7 @@ const marketingOverlayBackground = {
 const marketingReadableMutedText = '#34456c';
 const marketingReadableSubtleText = '#42557d';
 const marketingStrengthBackground = `linear-gradient(160deg, ${brandTokens.palette.primaryDark} 0%, ${brandTokens.palette.primary} 58%, ${brandTokens.palette.secondaryDark} 100%)`;
-const publicDemoEmail = 'demo@example.com';
-const publicDemoPassword = 'Demo1234!';
+const projectGithubUrl = 'https://github.com/cheon0965/PERSONAL_ERP.git';
 
 export function PublicHomePage() {
   const router = useRouter();
@@ -384,6 +387,21 @@ function HeroSection() {
             >
               기존 계정 로그인
             </Button>
+            <Button
+              component="a"
+              href={projectGithubUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="text"
+              size="large"
+              startIcon={<GitHubIcon />}
+              sx={{
+                px: 2.5,
+                bgcolor: alpha(brandTokens.palette.surface, 0.72)
+              }}
+            >
+              GitHub
+            </Button>
           </Stack>
 
           <PublicDemoNotice />
@@ -443,34 +461,59 @@ function PublicDemoNotice() {
     >
       <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
         <Chip label="공개 체험 운영 중" color="success" size="small" />
-        <Chip label="검색 노출 대상 URL" color="primary" size="small" />
+        <Chip label="데모 계정 자동 입력" color="primary" size="small" />
+        <Chip label="GitHub 공개 저장소" color="default" size="small" />
       </Stack>
       <Stack spacing={0.4}>
         <Typography variant="subtitle2" fontWeight={900}>
-          실제 체험 URL
+          데모 로그인으로 이동
         </Typography>
-        <Typography
-          component="a"
-          href={publicSiteUrl}
-          variant="body1"
+        <Button
+          component={Link}
+          href={demoLoginPath}
+          variant="contained"
+          size="medium"
+          startIcon={<LoginRoundedIcon />}
           sx={{
-            color: brandTokens.palette.primary,
-            fontWeight: 900,
-            textDecoration: 'none',
-            wordBreak: 'break-all',
-            '&:hover': { textDecoration: 'underline' }
+            alignSelf: 'flex-start',
+            px: 2
           }}
         >
-          {publicSiteUrl}
-        </Typography>
+          데모 계정 입력된 로그인 열기
+        </Button>
       </Stack>
       <Typography
         variant="body2"
         sx={{ color: marketingReadableMutedText, lineHeight: 1.7 }}
       >
-        데모 로그인은 {publicDemoEmail} / {publicDemoPassword} 계정으로 바로
-        확인할 수 있습니다.
+        로그인 화면에 {demoLoginCredentials.email} 계정 정보가 자동으로
+        입력됩니다. 로그인 버튼은 직접 눌러 체험을 시작하세요.
       </Typography>
+      <Stack spacing={0.4}>
+        <Typography
+          variant="caption"
+          sx={{ color: marketingReadableSubtleText }}
+        >
+          프로젝트 소스
+        </Typography>
+        <Typography
+          component="a"
+          href={projectGithubUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          variant="body2"
+          sx={{
+            color: brandTokens.palette.primary,
+            fontWeight: 800,
+            lineHeight: 1.6,
+            overflowWrap: 'anywhere',
+            textDecoration: 'none',
+            '&:hover': { textDecoration: 'underline' }
+          }}
+        >
+          {projectGithubUrl}
+        </Typography>
+      </Stack>
     </Stack>
   );
 }

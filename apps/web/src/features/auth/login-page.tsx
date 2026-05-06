@@ -27,6 +27,7 @@ import { useAuthSession } from '@/shared/auth/auth-provider';
 import { BrandLogo } from '@/shared/brand/brand-logo';
 import { brandTokens } from '@/shared/theme/tokens';
 import { appLayout } from '@/shared/ui/layout-metrics';
+import { demoLoginCredentials } from './demo-login';
 
 const loginSchema = z.object({
   email: z.string().email('올바른 이메일 주소를 입력해 주세요.'),
@@ -44,6 +45,7 @@ export function LoginPage() {
   );
   const emailVerified = searchParams?.get('verified') === '1';
   const registrationVerificationSent = searchParams?.get('registered') === '1';
+  const demoLoginRequested = searchParams?.get('demo') === '1';
   const registrationEmail = registrationVerificationSent
     ? (searchParams?.get('email')?.trim() ?? '')
     : '';
@@ -57,10 +59,17 @@ export function LoginPage() {
   const form = useForm<LoginFormInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: authFlowEmail,
-      password: ''
+      email: demoLoginRequested ? demoLoginCredentials.email : authFlowEmail,
+      password: demoLoginRequested ? demoLoginCredentials.password : ''
     }
   });
+
+  React.useEffect(() => {
+    form.reset({
+      email: demoLoginRequested ? demoLoginCredentials.email : authFlowEmail,
+      password: demoLoginRequested ? demoLoginCredentials.password : ''
+    });
+  }, [authFlowEmail, demoLoginRequested, form]);
 
   React.useEffect(() => {
     if (status === 'authenticated') {
@@ -225,6 +234,13 @@ export function LoginPage() {
                       {registrationEmail
                         ? `${registrationEmail} 주소로 인증 메일을 보냈습니다. 메일함의 인증 링크를 연 뒤 로그인해 주세요.`
                         : '인증 메일을 보냈습니다. 메일함의 인증 링크를 연 뒤 로그인해 주세요.'}
+                    </Alert>
+                  ) : null}
+
+                  {demoLoginRequested ? (
+                    <Alert severity="info" variant="outlined">
+                      데모 계정이 입력되었습니다. 내용을 확인한 뒤 로그인 버튼을
+                      눌러 체험을 시작하세요.
                     </Alert>
                   ) : null}
 

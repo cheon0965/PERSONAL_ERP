@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { AuthenticatedWorkspaceResolver } from '../../common/auth/authenticated-workspace-resolver';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { AuthAccountSecurityService } from './auth-account-security.service';
+import { AuthLinkMaintenanceService } from './auth-link-maintenance.service';
 import { AuthRateLimitService } from './auth-rate-limit.service';
 import { AuthController } from './auth.controller';
 import { AuthSessionService } from './auth-session.service';
@@ -33,6 +34,7 @@ import { VerifyEmailUseCase } from './application/use-cases/verify-email.use-cas
     AuthSessionService,
     AuthWorkspaceService,
     AuthAccountSecurityService,
+    AuthLinkMaintenanceService,
     PasswordPolicyService,
     WorkspaceBootstrapService,
     JwtAuthGuard,

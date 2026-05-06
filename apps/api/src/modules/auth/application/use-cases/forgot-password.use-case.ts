@@ -5,7 +5,9 @@ import { EmailSenderPort } from '../../../../common/application/ports/email-send
 import { parseJwtDurationToMs } from '../../../../common/auth/jwt-config';
 import { SecurityEventLogger } from '../../../../common/infrastructure/operational/security-event.logger';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
-import { getApiEnv } from '../../../../config/api-env';
+import type { ApiEnv } from '../../../../config/api-env';
+import { InjectApiEnv } from '../../../../config/api-env.provider';
+import { formatAuthLinkTtlLabel } from '../../auth-link-ttl.util';
 import { AuthRateLimitService } from '../../auth-rate-limit.service';
 import { normalizeEmail } from '../../auth.normalization';
 import type { AuthRequestContext } from '../../auth.types';
@@ -20,7 +22,8 @@ export class ForgotPasswordUseCase {
     private readonly emailSender: EmailSenderPort,
     private readonly clock: ClockPort,
     private readonly rateLimit: AuthRateLimitService,
-    private readonly securityEvents: SecurityEventLogger
+    private readonly securityEvents: SecurityEventLogger,
+    @InjectApiEnv() private readonly env: ApiEnv
   ) {}
 
   async execute(
@@ -48,7 +51,7 @@ export class ForgotPasswordUseCase {
 
     const rawToken = createPasswordResetToken();
     const now = this.clock.now();
-    const ttlMs = getPasswordResetTtlMs();
+    const ttlMs = getPasswordResetTtlMs(this.env);
     const expiresAt = new Date(now.getTime() + ttlMs);
 
     // 기존 미사용 토큰 무효화
@@ -70,7 +73,10 @@ export class ForgotPasswordUseCase {
         buildPasswordResetEmail({
           to: user.email,
           name: user.name,
-          resetUrl: buildPasswordResetUrl(rawToken),
+          resetUrl: buildPasswordResetUrl({
+            appOrigin: this.env.APP_ORIGIN,
+            token: rawToken
+          }),
           ttlLabel: formatPasswordResetTtlLabel(ttlMs)
         })
       );
@@ -119,13 +125,18 @@ export function hashPasswordResetToken(token: string): string {
   return createHash('sha256').update(token.trim(), 'utf8').digest('hex');
 }
 
-export function getPasswordResetTtlMs(): number {
-  return parseJwtDurationToMs(getApiEnv().PASSWORD_RESET_TTL, 30 * 60 * 1000);
+export function getPasswordResetTtlMs(
+  env: Pick<ApiEnv, 'PASSWORD_RESET_TTL'>
+): number {
+  return parseJwtDurationToMs(env.PASSWORD_RESET_TTL, 30 * 60 * 1000);
 }
 
-export function buildPasswordResetUrl(token: string): string {
-  const url = new URL('/reset-password', getApiEnv().APP_ORIGIN);
-  url.searchParams.set('token', token);
+export function buildPasswordResetUrl(input: {
+  appOrigin: string;
+  token: string;
+}): string {
+  const url = new URL('/reset-password', input.appOrigin);
+  url.searchParams.set('token', input.token);
   return url.toString();
 }
 
@@ -256,24 +267,7 @@ function escapeHtml(value: string): string {
 }
 
 export function formatPasswordResetTtlLabel(ttlMs: number): string {
-  const dayMs = 24 * 60 * 60 * 1000;
-  const hourMs = 60 * 60 * 1000;
-  const minuteMs = 60 * 1000;
-  const secondMs = 1000;
-
-  if (ttlMs >= dayMs && ttlMs % dayMs === 0) {
-    return `${ttlMs / dayMs}일`;
-  }
-
-  if (ttlMs >= hourMs && ttlMs % hourMs === 0) {
-    return `${ttlMs / hourMs}시간`;
-  }
-
-  if (ttlMs >= minuteMs) {
-    return `${Math.ceil(ttlMs / minuteMs)}분`;
-  }
-
-  return `${Math.max(1, Math.ceil(ttlMs / secondMs))}초`;
+  return formatAuthLinkTtlLabel(ttlMs);
 }
 
 function isTooManyRequestsError(error: unknown): error is Error {
