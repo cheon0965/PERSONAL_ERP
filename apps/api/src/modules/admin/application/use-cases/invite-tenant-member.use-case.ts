@@ -9,12 +9,15 @@ import type { RequiredWorkspaceContext } from '../../../../common/auth/required-
 import { WorkspaceAuditEventsService } from '../../../../common/infrastructure/operational/workspace-audit-events.service';
 import type { RequestWithContext } from '../../../../common/infrastructure/operational/request-context';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
+import type { ApiEnv } from '../../../../config/api-env';
+import { InjectApiEnv } from '../../../../config/api-env.provider';
 import {
   AdminMemberCommandSupportService,
   buildAdminInvitationEmail,
   buildAdminInvitationUrl,
   createAdminInvitationToken,
   getAdminInvitationExpiresAt,
+  getAdminInvitationTtlLabel,
   hashAdminInvitationToken,
   normalizeAdminInvitationEmail
 } from '../../admin-member-command.support';
@@ -27,7 +30,8 @@ export class InviteTenantMemberUseCase {
     private readonly emailSender: EmailSenderPort,
     private readonly clock: ClockPort,
     private readonly auditEvents: WorkspaceAuditEventsService,
-    private readonly commandSupport: AdminMemberCommandSupportService
+    private readonly commandSupport: AdminMemberCommandSupportService,
+    @InjectApiEnv() private readonly env: ApiEnv
   ) {}
 
   async execute(
@@ -57,6 +61,7 @@ export class InviteTenantMemberUseCase {
     );
 
     const rawToken = createAdminInvitationToken();
+    const expiresAt = getAdminInvitationExpiresAt(now);
     const invitation = await this.prisma.tenantMembershipInvitation.create({
       data: {
         tenantId: workspace.tenantId,
@@ -64,7 +69,7 @@ export class InviteTenantMemberUseCase {
         normalizedEmail: email,
         role: input.role,
         tokenHash: hashAdminInvitationToken(rawToken),
-        expiresAt: getAdminInvitationExpiresAt(now),
+        expiresAt,
         invitedByMembershipId: workspace.membershipId
       }
     });
@@ -82,7 +87,11 @@ export class InviteTenantMemberUseCase {
         buildAdminInvitationEmail({
           to: email,
           tenantName: workspace.tenantName,
-          invitationUrl: buildAdminInvitationUrl(rawToken)
+          invitationUrl: buildAdminInvitationUrl({
+            appOrigin: this.env.APP_ORIGIN,
+            token: rawToken
+          }),
+          ttlLabel: getAdminInvitationTtlLabel()
         })
       );
     } catch {

@@ -423,6 +423,7 @@ test('POST /admin/members/invitations sends an invitation and records an audit e
       context.state.sentEmails[0]?.text ?? '',
       /accept-invitation\?token=/
     );
+    assert.match(context.state.sentEmails[0]?.text ?? '', /7일 후에 만료/);
     assert.equal(context.state.tenantMembershipInvitations.length, 1);
     assert.doesNotMatch(
       context.state.tenantMembershipInvitations[0]?.tokenHash ?? '',

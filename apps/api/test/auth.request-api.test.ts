@@ -614,6 +614,7 @@ test('POST /auth/register sends verification email and verified users can login'
     );
     assert.equal(context.state.sentEmails.length, 1);
     assert.equal(context.state.sentEmails[0]?.to, 'owner@example.com');
+    assert.match(context.state.sentEmails[0]?.text ?? '', /30분 후에 만료/);
 
     const createdUser = context.state.users.find(
       (candidate) => candidate.email === 'owner@example.com'

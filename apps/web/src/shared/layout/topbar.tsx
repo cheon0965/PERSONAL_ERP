@@ -65,12 +65,22 @@ export function Topbar({ onOpenNavigation }: TopbarProps) {
   const contextPopoverOpen = Boolean(contextAnchorEl);
   const accountPopoverOpen = Boolean(accountAnchorEl);
   const { avatarContent, avatarSx } = useAccountAvatar(user?.id, user?.name);
+  const restoreFocusWithoutScroll = React.useCallback(
+    (target: HTMLElement | null) => {
+      window.requestAnimationFrame(() => {
+        target?.focus({ preventScroll: true });
+      });
+    },
+    []
+  );
   const handleContextClose = React.useCallback(() => {
+    restoreFocusWithoutScroll(contextAnchorEl);
     setContextAnchorEl(null);
-  }, []);
+  }, [contextAnchorEl, restoreFocusWithoutScroll]);
   const handleAccountClose = React.useCallback(() => {
+    restoreFocusWithoutScroll(accountAnchorEl);
     setAccountAnchorEl(null);
-  }, []);
+  }, [accountAnchorEl, restoreFocusWithoutScroll]);
   const workspacesQuery = useQuery({
     queryKey: authWorkspacesQueryKey,
     queryFn: getAccessibleWorkspaces,
@@ -329,6 +339,8 @@ export function Topbar({ onOpenNavigation }: TopbarProps) {
         open={accountPopoverOpen}
         anchorEl={accountAnchorEl}
         onClose={handleAccountClose}
+        disableRestoreFocus
+        disableScrollLock
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
@@ -428,6 +440,8 @@ export function Topbar({ onOpenNavigation }: TopbarProps) {
         open={contextPopoverOpen}
         anchorEl={contextAnchorEl}
         onClose={handleContextClose}
+        disableRestoreFocus
+        disableScrollLock
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >

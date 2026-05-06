@@ -8,7 +8,7 @@ import type { InviteTenantMemberRequest } from '@personal-erp/contracts';
 import { createHash, randomBytes } from 'node:crypto';
 import type { RequiredWorkspaceContext } from '../../common/auth/required-workspace.util';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { getApiEnv } from '../../config/api-env';
+import { formatAuthLinkTtlLabel } from '../auth/auth-link-ttl.util';
 
 const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -175,9 +175,16 @@ export function getAdminInvitationExpiresAt(now: Date): Date {
   return new Date(now.getTime() + INVITATION_TTL_MS);
 }
 
-export function buildAdminInvitationUrl(token: string): string {
-  const url = new URL('/accept-invitation', getApiEnv().APP_ORIGIN);
-  url.searchParams.set('token', token);
+export function getAdminInvitationTtlLabel(): string {
+  return formatAuthLinkTtlLabel(INVITATION_TTL_MS);
+}
+
+export function buildAdminInvitationUrl(input: {
+  appOrigin: string;
+  token: string;
+}): string {
+  const url = new URL('/accept-invitation', input.appOrigin);
+  url.searchParams.set('token', input.token);
   return url.toString();
 }
 
@@ -185,11 +192,13 @@ export function buildAdminInvitationEmail(input: {
   to: string;
   tenantName: string;
   invitationUrl: string;
+  ttlLabel: string;
 }) {
   const text = [
     `${input.tenantName} 사업장에 초대되었습니다.`,
     '',
     `초대 수락 링크: ${input.invitationUrl}`,
+    `이 링크는 ${input.ttlLabel} 후에 만료됩니다.`,
     '',
     '본인이 요청하지 않았다면 이 메일을 무시해 주세요.'
   ].join('\n');
@@ -205,6 +214,9 @@ export function buildAdminInvitationEmail(input: {
       '<p><a href="',
       escapeHtml(input.invitationUrl),
       '">초대 수락하기</a></p>',
+      '<p>이 링크는 ',
+      escapeHtml(input.ttlLabel),
+      ' 후에 만료됩니다.</p>',
       '<p>본인이 요청하지 않았다면 이 메일을 무시해 주세요.</p>'
     ].join('')
   };

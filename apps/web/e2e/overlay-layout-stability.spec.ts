@@ -216,6 +216,24 @@ test('keeps the app horizontally stable while common overlays are open', async (
   await page.keyboard.press('Escape');
   await expect(page.locator('.MuiPopover-root')).toHaveCount(0);
 
+  await page.evaluate(() => window.scrollTo({ top: 180 }));
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeGreaterThan(0);
+
+  const beforeAccountPopover = await readLayoutSnapshot(page);
+  const accountScrollY = await page.evaluate(() => window.scrollY);
+  await page.getByRole('button', { name: /Demo User/ }).click();
+  await expect(page.locator('.MuiPopover-root')).toBeVisible();
+  expectStableLayout(beforeAccountPopover, await readLayoutSnapshot(page));
+  await page.mouse.click(80, 260);
+  await expect(page.locator('.MuiPopover-root')).toHaveCount(0);
+  await page.mouse.click(120, 300);
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBe(accountScrollY);
+  await expectStickyHeaderVisible(page);
+
   const beforeDrawer = await readLayoutSnapshot(page);
   await page.locator('main button.MuiButton-contained').first().click();
   await expect(page.getByRole('dialog')).toBeVisible();
@@ -296,6 +314,24 @@ async function expectNoDocumentHorizontalOverflow(page: Page): Promise<void> {
       )
     )
     .toBeLessThanOrEqual(1);
+}
+
+async function expectStickyHeaderVisible(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const headerBox = document
+          .querySelector('header')
+          ?.getBoundingClientRect();
+
+        if (!headerBox) {
+          return false;
+        }
+
+        return headerBox.bottom > 0 && headerBox.top <= 1;
+      })
+    )
+    .toBe(true);
 }
 
 function expectStableLayout(

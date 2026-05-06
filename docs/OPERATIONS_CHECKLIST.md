@@ -36,8 +36,8 @@
 - `JWT_REFRESH_SECRET`
 - `ACCESS_TOKEN_TTL`
 - `REFRESH_TOKEN_TTL`
-- `EMAIL_VERIFICATION_TTL`
-- `PASSWORD_RESET_TTL`
+- `EMAIL_VERIFICATION_TTL` (이메일 인증 링크 만료 및 미인증 계정 정리 기준)
+- `PASSWORD_RESET_TTL` (비밀번호 재설정 링크 만료 기준)
 - `DATABASE_URL`
 - `DEMO_EMAIL`
 - `DEMO_RESET_SCHEDULE_ENABLED`
@@ -75,10 +75,11 @@
 
 1. `env-examples/deploy.compose.env.example`를 `.deploy/compose.env`로 복사하고 실제 secret으로 교체합니다.
 2. `docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml config`로 구성을 확인합니다.
-3. `build-docker-images.bat`로 `migrate`, `api`, `web` 이미지를 빌드합니다. tar 파일이 필요하면 `build-docker-images.bat --tag <tag> --save`를 사용합니다.
-4. `docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml up -d`로 MySQL, migration, API, Web을 기동합니다.
-5. `docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml ps`에서 `api`, `web`, `mysql` health 상태와 `migrate` 완료 상태를 확인합니다.
-6. HTTPS reverse proxy 연결 후 아래 수동 스모크 체크를 완료합니다.
+3. GitHub Actions -> Docker Hub push 방식이면 `IMAGE_TAG`를 발행된 `sha-...` 또는 `latest` 태그로 맞추고 `docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml pull`을 실행합니다.
+4. 서버/로컬 직접 빌드 방식이면 `build-docker-images.bat`로 `migrate`, `api`, `web` 이미지를 빌드합니다. tar 파일이 필요하면 `build-docker-images.bat --tag <tag> --save`를 사용합니다.
+5. `docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml up -d --no-build`로 MySQL, migration, API, Web을 기동합니다.
+6. `docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml ps`에서 `api`, `web`, `mysql` health 상태와 `migrate` 완료 상태를 확인합니다.
+7. HTTPS reverse proxy 연결 후 아래 수동 스모크 체크를 완료합니다.
 
 ## 수동 스모크 체크
 
@@ -111,6 +112,7 @@
 - 루트 `/`에서 비로그인 공개 메인과 회원가입/로그인 CTA가 열리는지 확인합니다.
 - `/login` 화면이 열리는지 확인합니다.
 - `/register`에서 표시 이름, 이메일, 비밀번호, 필수 이용약관/개인정보 처리 동의 입력 흐름이 정상인지 확인합니다.
+- 회원가입 인증 메일 본문에 실제 Web 도메인 인증 링크와 만료 안내가 표시되는지 확인합니다.
 - 로그인 후 대시보드로 이동하는지 확인합니다.
 - 좌측 내비게이션 트리가 현재 로그인한 멤버의 역할(OWNER, MANAGER, VIEWER)에 따라 다르게 필터링되어 렌더링되는지 확인합니다.
 - `/settings/workspace`에서 사업장/기본 장부 설정이 열리고, Owner/Manager 수정 권한 제어가 동작하는지 확인합니다.
@@ -118,6 +120,7 @@
 - 전체 관리자 계정이라면 `/admin`, `/admin/users`, `/admin/tenants`, `/admin/support-context`, `/admin/security-threats`, `/admin/operations`가 정상적으로 열리는지 확인합니다.
 - `/admin/support-context`에서 특정 사업장/장부를 선택했을 때 상단바에 `지원 모드` 배지가 보이고, 지원 문맥 해제 시 배지가 사라지는지 확인합니다.
 - `/admin/members`에서 현재 멤버 목록, 새 멤버 이메일 초대, 역할 수정, 상태(ACTIVE/SUSPENDED) 변경 및 워크스페이스 제거 기능이 동작하는지 확인합니다.
+- 멤버 초대 메일 본문에 실제 Web 도메인 초대 링크와 만료 안내가 표시되는지 확인합니다.
 - `/admin/logs`에서 워크스페이스 단위 주요 권한/보안 감사 이벤트 조회가 되는지 확인합니다.
 - `/admin/policy`에서 권한 정책 요약이 표시되는지 확인합니다.
 - `/operations`, `/operations/checklist`, `/operations/exceptions`, `/operations/month-end`, `/operations/imports`에서 운영 지원 read model이 정상 표시되는지 확인합니다.
