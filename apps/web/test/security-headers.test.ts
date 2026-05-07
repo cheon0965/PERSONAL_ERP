@@ -63,9 +63,21 @@ test('public SEO routes expose the canonical demo URL', () => {
     path.resolve(process.cwd(), 'src/shared/seo/site.ts'),
     'utf8'
   );
+  const homePageSource = readFileSync(
+    path.resolve(process.cwd(), 'app/page.tsx'),
+    'utf8'
+  );
 
   assert.match(siteSource, /https:\/\/personalerp\.theworkpc\.com/);
   assert.match(robotsSource, /sitemap/);
   assert.match(sitemapSource, /publicSiteUrl/);
+  assert.match(sitemapSource, /2026-05-07/);
+  assert.match(siteSource, /publicSiteSearchKeywords/);
+  assert.match(siteSource, /개인사업자 장부관리/);
+  assert.match(siteSource, /소상공인 월마감/);
+  assert.match(siteSource, /FAQPage/);
+  assert.match(homePageSource, /application\/ld\+json/);
+  assert.match(homePageSource, /buildPublicHomeStructuredData/);
+  assert.match(homePageSource, /summary_large_image/);
   assert.doesNotMatch(robotsSource, /Disallow:\s*\//);
 });

@@ -1,6 +1,7 @@
 # 서버 Docker 수동 실행 명령 모음
 
 이 문서는 `personalerp.theworkpc.com` 배포 서버에서 Docker Desktop 또는 PowerShell로 컨테이너를 수동 실행할 때 쓰는 명령을 한곳에 모은 runbook입니다.
+현재 기준일은 2026-05-07이며, 이미 공개 배포된 서버를 재기동하거나 이미지 태그를 교체할 때도 같은 순서를 사용합니다.
 
 ## 기준값
 
@@ -174,7 +175,16 @@ personalerp.theworkpc.com {
 Invoke-WebRequest https://personalerp.theworkpc.com/api/health
 Invoke-WebRequest https://personalerp.theworkpc.com/api/health/ready
 Invoke-WebRequest https://personalerp.theworkpc.com
+Invoke-WebRequest https://personalerp.theworkpc.com/robots.txt
+Invoke-WebRequest https://personalerp.theworkpc.com/sitemap.xml
+Invoke-WebRequest https://personalerp.theworkpc.com/google827b2fac60b63022.html
 ```
+
+공개 홈 검색 노출 확인:
+
+- `robots.txt`가 `https://personalerp.theworkpc.com/sitemap.xml`을 가리키는지 확인합니다.
+- `sitemap.xml`에 루트 URL과 최신 `lastModified`가 들어 있는지 확인합니다.
+- Google Search Console 확인 파일 `google827b2fac60b63022.html`이 200으로 응답하는지 확인합니다.
 
 로그인 API 직접 확인:
 

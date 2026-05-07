@@ -41,6 +41,23 @@
 - `npm run audit:runtime:full`은 allowlist 적용 없이 현재 runtime advisory 전체를 다시 확인할 때 사용하는 follow-up 명령입니다.
 - 현재 기본 `npm run test`에서는 Prisma 통합 테스트가 안내 문구와 함께 skip됩니다.
 
+## 2026-05-07 공개 배포/문서 최신화 점검
+
+이번 문서 점검의 파일 조회와 수정은 UTF-8 기준으로 수행했습니다.
+
+- `npm run docs:check`: 통과
+  - Markdown 60개 파일의 `npm run` 명령 참조 302개 확인
+  - Web route 61개, API operation 136개, `docs/API.md` route map 61개와 operation 136개 확인
+  - `docs/CURRENT_CAPABILITIES.md`, `docs/OPERATIONS_CHECKLIST.md`, `docs/VALIDATION_NOTES.md`의 Web/API surface 정합성 확인
+- `npm run format:check -- --end-of-line auto`: 통과
+- 수동 대조:
+  - 현재 공개 배포 도메인 `https://personalerp.theworkpc.com`, `/api` path 분리, Web `3100` / API `4100` 기준을 README, 운영 체크리스트, Docker 문서, 서버 runbook에 다시 반영
+  - 공개 홈의 실제 운영 화면 스크린샷, 데모/GitHub CTA, 한글 검색어, 활용 사례, FAQ, JSON-LD 구조화 데이터 기준을 현재 기능 문서와 포트폴리오 문서에 반영
+  - `robots.txt`, `sitemap.xml`, `google827b2fac60b63022.html`, Google Search Console 제출/확인 흐름을 배포 후 스모크 체크에 추가
+  - `docs/PROJECT_PLAN.md`의 남은 중기 우선순위에서 이미 완료된 HTTPS 공개 배포 리허설 표현을 제거하고, 배포 후 health/HSTS/sitemap/Search Console 운영 증적 관리로 보정
+- 추가 검증:
+  - 이번 문서 최신화 직전 공개 홈 SEO 보강 변경은 `npm.cmd run typecheck --workspace @personal-erp/web`, `npm.cmd run test --workspace @personal-erp/web`, `npm.cmd run build --workspace @personal-erp/web`, `npm.cmd run test:e2e --workspace @personal-erp/web -- auth-public-style-stability.spec.ts` 통과 상태입니다.
+
 ## 2026-05-03 문서 정합성 점검
 
 이번 문서 점검의 파일 조회와 수정은 UTF-8 기준으로 수행했습니다.

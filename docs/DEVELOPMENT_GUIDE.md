@@ -89,6 +89,7 @@ API나 공유 계약이 바뀌면 아래 순서를 같은 PR 안에서 닫습니
 - `docs/VALIDATION_NOTES.md`: 현재 실제 검증 범위와 남은 공백
 - `docs/PROJECT_PLAN.md`: 중기 로드맵
 - `PORTFOLIO_ARCHITECTURE_GUIDE.md`: 프로젝트 목적, 판단 원칙, 현재 아키텍처 설명
+- 공개 홈/SEO 기준: `apps/web/src/shared/seo/site.ts`, `apps/web/app/page.tsx`, `README.md`, `docs/CURRENT_CAPABILITIES.md`, `docs/OPERATIONS_CHECKLIST.md`
 - `docs/adr/`: 장기 구조 결정
 
 파일 작업 인코딩:

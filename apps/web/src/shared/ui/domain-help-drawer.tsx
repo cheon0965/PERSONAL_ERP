@@ -55,7 +55,17 @@ const COMMON_HELP_CHECKPOINTS = [
 export function DomainHelpDrawer() {
   const { activeContext, isDrawerOpen, setDrawerOpen } = useDomainHelpStore();
 
-  const handleClose = () => setDrawerOpen(false);
+  const handleClose = React.useCallback(() => {
+    const scrollPosition = {
+      left: window.scrollX,
+      top: window.scrollY
+    };
+
+    setDrawerOpen(false);
+    window.requestAnimationFrame(() => {
+      window.scrollTo(scrollPosition);
+    });
+  }, [setDrawerOpen]);
   const [activeTab, setActiveTab] = React.useState<HelpTabValue>('overview');
   const standardSections = React.useMemo(
     () => buildStandardHelpSections(activeContext),
@@ -73,6 +83,11 @@ export function DomainHelpDrawer() {
       anchor="right"
       open={isDrawerOpen}
       onClose={handleClose}
+      ModalProps={{
+        keepMounted: true,
+        disableRestoreFocus: true,
+        disableScrollLock: true
+      }}
       slotProps={{
         backdrop: {
           sx: { backgroundColor: 'rgba(0, 0, 0, 0.1)' }
@@ -121,6 +136,7 @@ export function DomainHelpDrawer() {
           </Typography>
         </Stack>
         <IconButton
+          aria-label="화면 도움말 닫기"
           onClick={handleClose}
           size="small"
           sx={{

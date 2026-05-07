@@ -23,6 +23,8 @@
    `packages/money`와 `Decimal(19,0)` 기반 금액 정합성, request-id와 오류 진단 분리, ASVS L2 기준 보안 하드닝, 문서 surface drift 검사, browser build smoke, Prisma 실DB 통합검증 경로를 갖췄습니다.
 7. 화면 경험 정리
    공개 루트, 회원가입 동의 화면, 업무 화면 도움말, 데스크톱 표와 모바일 카드 목록, 모바일 5/10/20개 페이지네이션, 개발자 진단 정보 접힘 표시를 현재 UI 기준으로 맞췄습니다.
+8. 공개 배포와 검색 노출 기반
+   `https://personalerp.theworkpc.com` 단일 HTTPS 도메인 배포, `/api` reverse proxy, 공개 홈 실제 운영 스크린샷, 한글 검색어 메타데이터, FAQ 구조화 데이터, robots/sitemap, Google Search Console 확인 파일을 현재 기준으로 반영했습니다.
 
 ## 현재 MVP 범위
 
@@ -50,6 +52,7 @@
 - 시스템 상태/헬스, 알림 / 이벤트 센터, 수동 CSV 내보내기, 운영 메모 / 인수인계
 - 디자인 시스템 공통 컴포넌트와 대시보드형 화면 패턴
 - 공통 표 화면의 모바일 카드 전환과 모바일 페이지네이션
+- 공개 홈의 실제 운영 화면 기반 소개, 데모/GitHub CTA, 한글 검색 의도별 활용 사례, FAQ, 구조화 데이터
 
 ## 문서 역할 경계
 
@@ -60,10 +63,10 @@
 
 ## 다음 중기 우선순위
 
-1. 운영 HTTPS/HSTS/Swagger 배포 리허설과 보안 증적 정리
+1. 공개 배포 후 health, HSTS, sitemap/robots, Search Console 색인 상태를 주기적으로 확인하는 운영 증적 정리
 2. Gmail API 운영 secret 등록과 실제 수신 확인
 3. 외부 감사 저장소/장기 보관 정책 초안 정리
-4. 운영 데이터 분류와 보존 기간 정책 구체화
+4. 운영 데이터 분류, 백업, 보존 기간 정책 구체화
 
 ## 범위 밖 항목
 

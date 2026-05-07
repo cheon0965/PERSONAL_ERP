@@ -4,6 +4,7 @@
 기준은 `외부 SECRET 폴더 우선`, `앱 로컬 fallback 허용`, `로컬 개발과 운영 설정 분리`입니다.
 
 실제 배포 순서, 수동 스모크 체크, 운영 장애 대응 순서는 [배포/운영 체크리스트](./docs/OPERATIONS_CHECKLIST.md) 를 기준으로 봅니다.
+Docker Compose 운영 배포는 저장소 밖 `.deploy/compose.env`를 사용하며, 현재 공개 도메인은 `https://personalerp.theworkpc.com`입니다.
 
 ## 1. 현재 기준 경로
 
@@ -39,6 +40,7 @@ C:\secrets\personal-erp\web.env
 - 마지막으로 API는 `apps/api/.env`, Web은 `apps/web/.env.local` fallback을 허용합니다.
 - `docker-compose.yml`의 MySQL 계정은 `npm run db:up`을 바로 실행하기 위한 폐기 가능한 로컬 개발 전용 bootstrap 기본값입니다.
 - 위 bootstrap 값은 shared/staging/production secret로 재사용하지 않습니다.
+- 공개 홈의 sitemap, robots, Google Search Console 확인 파일은 secret이 아니며 저장소 안 `apps/web/app`과 `apps/web/public` 기준으로 배포합니다.
 
 예시 파일:
 

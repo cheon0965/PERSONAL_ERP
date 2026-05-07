@@ -11,6 +11,14 @@
 - API와 Web을 별도 프로세스로 실행하는 운영 방식 기준
 - 외부 SECRET 폴더(`PERSONAL_ERP_SECRET_DIR`)를 사용하는 현재 구조 기준
 
+## 현재 공개 배포 상태
+
+- 기준일: 2026-05-07
+- 공개 Web/API: `https://personalerp.theworkpc.com`
+- API path: `https://personalerp.theworkpc.com/api`
+- 공개 홈(`/`)은 검색 노출 대상이며, 인증 뒤 업무 화면은 `noindex` 정책을 유지합니다.
+- 공개 홈은 실제 운영 대시보드 스크린샷, 한글 검색어 메타데이터, 활용 사례, FAQ, JSON-LD 구조화 데이터, Google Search Console 확인 파일을 포함합니다.
+
 ## 배포 전에 먼저 확인할 것
 
 - 대상 브랜치가 기준 커밋과 일치하는지 확인합니다.
@@ -20,6 +28,7 @@
 - DB 스키마 변경이 포함되면 migration 파일이 함께 있는지 확인합니다.
 - `NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=false`인지 확인합니다.
 - `APP_ORIGIN`과 `NEXT_PUBLIC_API_BASE_URL` 조합이 실제 도메인과 맞는지 확인합니다.
+- 공개 홈/SEO 변경이 포함되면 `robots.ts`, `sitemap.ts`, `src/shared/seo/site.ts`, `public/google827b2fac60b63022.html`이 실제 배포 도메인 기준과 맞는지 확인합니다.
 - Docker 배포에서는 `docker-compose.prod.yml`과 비공개 `.deploy/compose.env`를 사용하고, 상세 절차는 [`DOCKER_DEPLOYMENT.md`](./DOCKER_DEPLOYMENT.md)를 우선합니다.
 - API와 Web이 사용할 포트, 방화벽, reverse proxy 경로를 미리 정합니다.
 - 현재 공개 배포는 `https://personalerp.theworkpc.com` 단일 도메인, API path `https://personalerp.theworkpc.com/api`, 내부 포트 Web `3100` / API `4100` 기준입니다.
@@ -109,7 +118,11 @@
 ### Web
 
 - 현재 공개 배포 기준 `https://personalerp.theworkpc.com`에서 Web이 열리는지 확인합니다.
-- 루트 `/`에서 비로그인 공개 메인과 회원가입/로그인 CTA가 열리는지 확인합니다.
+- 루트 `/`에서 실제 운영 화면 기반 공개 메인, 데모/로그인/GitHub CTA, 활용 사례, FAQ가 열리는지 확인합니다.
+- `GET https://personalerp.theworkpc.com/robots.txt`가 sitemap을 가리키고 공개 홈을 막지 않는지 확인합니다.
+- `GET https://personalerp.theworkpc.com/sitemap.xml`에 `https://personalerp.theworkpc.com/`와 최신 `lastModified`가 포함되는지 확인합니다.
+- `GET https://personalerp.theworkpc.com/google827b2fac60b63022.html`이 Google Search Console 확인 파일로 응답하는지 확인합니다.
+- 공개 홈 HTML 또는 브라우저 개발자 도구에서 `application/ld+json`, Open Graph 이미지, 한글 description/keywords가 포함되는지 확인합니다.
 - `/login` 화면이 열리는지 확인합니다.
 - `/register`에서 표시 이름, 이메일, 비밀번호, 필수 이용약관/개인정보 처리 동의 입력 흐름이 정상인지 확인합니다.
 - 회원가입 인증 메일 본문에 실제 Web 도메인 인증 링크와 만료 안내가 표시되는지 확인합니다.
