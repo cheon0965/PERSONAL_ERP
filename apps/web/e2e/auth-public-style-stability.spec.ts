@@ -184,20 +184,22 @@ test('keeps public and login styles valid after login and logout', async ({
 
   await page.getByRole('link', { name: /PERSONAL ERP 로고/ }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByText(/소규모 사업자의 월 운영/)).toBeVisible();
+  await expect(
+    page.getByRole('heading', {
+      name: /개인사업자와 소상공인의 월별 재무 운영/
+    })
+  ).toBeVisible();
   await expect(page.getByText('https://personalerp.theworkpc.com')).toHaveCount(
     0
   );
   await expect(
     page.getByRole('link', {
-      name: 'https://github.com/cheon0965/PERSONAL_ERP.git'
+      name: 'github.com/cheon0965/PERSONAL_ERP'
     })
   ).toBeVisible();
   await expectMuiStylesUseSingleNonce(page, initialStyleNonce);
 
-  await page
-    .getByRole('link', { name: '데모 계정 입력된 로그인 열기' })
-    .click();
+  await page.getByRole('link', { name: '데모로 둘러보기' }).first().click();
   await expect(page).toHaveURL(new RegExp(`${escapeRegExp(demoLoginPath)}$`));
   await expect(page.getByLabel('이메일')).toHaveValue(
     demoLoginCredentials.email

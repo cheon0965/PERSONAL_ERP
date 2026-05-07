@@ -244,6 +244,11 @@ export function Topbar({ onOpenNavigation }: TopbarProps) {
             >
               <span>
                 <IconButton
+                  aria-label={
+                    activeContext
+                      ? '화면 도움말 열기'
+                      : '아직 화면 도움말이 없습니다'
+                  }
                   size="small"
                   disabled={!activeContext}
                   onClick={() => setDrawerOpen(true)}

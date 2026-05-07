@@ -1,6 +1,7 @@
 # Docker Deployment
 
 이 문서는 현재 저장소 기준으로 Docker 이미지를 만들고, Docker Compose로 `MySQL + migration + API + Web`을 배포하는 순서를 설명한다.
+현재 공개 배포 기준일은 2026-05-07이며, `https://personalerp.theworkpc.com` 단일 HTTPS 도메인과 `/api` path 분리 구조를 기준으로 한다.
 
 ## 먼저 알아둘 것
 
@@ -11,7 +12,8 @@
 - 운영 로그인 세션은 HTTPS가 필요하다. refresh cookie가 `__Host-refreshToken`, `Secure`, `HttpOnly`, `SameSite=Strict`로 내려가므로, 공개 운영은 HTTPS reverse proxy 뒤에서 실행해야 한다.
 - `NEXT_PUBLIC_API_BASE_URL`은 Web 이미지 빌드 시점에 번들에 들어간다. API 도메인을 바꾸면 Web 이미지를 다시 빌드한다.
 - 현재 공개 배포는 `https://personalerp.theworkpc.com` 단일 도메인을 사용한다. Caddy가 `/api/*`는 API `127.0.0.1:4100`으로, 나머지는 Web `127.0.0.1:3100`으로 프록시한다.
-- 공개 홈은 검색 노출 대상이다. 배포 후 `https://personalerp.theworkpc.com/robots.txt`와 `https://personalerp.theworkpc.com/sitemap.xml`을 확인하고, Google Search Console에는 `https://personalerp.theworkpc.com/sitemap.xml`을 제출한다.
+- 공개 홈은 검색 노출 대상이다. 배포 후 `https://personalerp.theworkpc.com/robots.txt`, `https://personalerp.theworkpc.com/sitemap.xml`, `https://personalerp.theworkpc.com/google827b2fac60b63022.html`을 확인하고, Google Search Console에는 `https://personalerp.theworkpc.com/sitemap.xml`을 제출한다.
+- 공개 홈 SEO 문구와 JSON-LD 구조화 데이터는 `apps/web/src/shared/seo/site.ts`, 홈 메타데이터는 `apps/web/app/page.tsx`, 공용 메타데이터는 `apps/web/app/layout.tsx`를 기준으로 한다.
 - GitHub Actions에서 Docker Hub로 이미지를 push해도 서버의 `.deploy/compose.env` 변수 이름은 그대로 사용한다. 서버는 `IMAGE_TAG`, `API_IMAGE_NAME`, `WEB_IMAGE_NAME`, `MIGRATE_IMAGE_NAME`만 맞춰 pull한다.
 
 ## 전체 흐름
@@ -381,6 +383,9 @@ Invoke-WebRequest http://127.0.0.1:3100
 Invoke-WebRequest https://personalerp.theworkpc.com/api/health
 Invoke-WebRequest https://personalerp.theworkpc.com/api/health/ready
 Invoke-WebRequest https://personalerp.theworkpc.com
+Invoke-WebRequest https://personalerp.theworkpc.com/robots.txt
+Invoke-WebRequest https://personalerp.theworkpc.com/sitemap.xml
+Invoke-WebRequest https://personalerp.theworkpc.com/google827b2fac60b63022.html
 ```
 
 ## 9. HTTPS reverse proxy 연결

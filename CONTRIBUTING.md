@@ -105,6 +105,7 @@
 
 - env 키 또는 SECRET 경로 방식 변경: `ENVIRONMENT_SETUP.md`
 - 배포/운영 절차 변경: `docs/OPERATIONS_CHECKLIST.md`, `docs/DOCKER_DEPLOYMENT.md`
+- 공개 홈, 검색 노출, sitemap/robots, Google 확인 파일 변경: `README.md`, `docs/CURRENT_CAPABILITIES.md`, `docs/OPERATIONS_CHECKLIST.md`, `apps/web/src/shared/seo/site.ts`
 - 협업 흐름 변경: `CONTRIBUTING.md`
 - 구조 변경: `docs/ARCHITECTURE.md`
 - 현재 기능 범위 변경: `docs/CURRENT_CAPABILITIES.md`, `docs/API.md`

@@ -1,11 +1,16 @@
 import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
 import { CspNonceProvider } from '@/shared/security/csp-nonce';
-import { publicSiteMetadata, publicSiteUrl } from '@/shared/seo/site';
+import {
+  publicSiteMetadata,
+  publicSiteSearchKeywords,
+  publicSiteUrl
+} from '@/shared/seo/site';
 import './globals.css';
 
 const appName = publicSiteMetadata.name;
 const appDescription = publicSiteMetadata.description;
+const appKeywords = [...publicSiteSearchKeywords];
 
 export const viewport: Viewport = {
   themeColor: '#06226f'
@@ -19,14 +24,7 @@ export const metadata: Metadata = {
     template: `%s | ${appName}`
   },
   description: appDescription,
-  keywords: [
-    '월 운영 ERP',
-    '개인 ERP',
-    '소상공인 ERP',
-    '수집 거래',
-    '전표',
-    '월 마감'
-  ],
+  keywords: appKeywords,
   creator: appName,
   publisher: appName,
   formatDetection: {

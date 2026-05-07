@@ -234,6 +234,23 @@ test('keeps the app horizontally stable while common overlays are open', async (
     .toBe(accountScrollY);
   await expectStickyHeaderVisible(page);
 
+  const beforeHelpDrawer = await readLayoutSnapshot(page);
+  const helpScrollY = await page.evaluate(() => window.scrollY);
+  await page.getByRole('button', { name: '화면 도움말 열기' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.getByText('화면 도움말').first()).toBeVisible();
+  expectStableLayout(beforeHelpDrawer, await readLayoutSnapshot(page));
+  await expectStickyHeaderVisible(page);
+  await expect
+    .poll(() => page.evaluate(() => Math.round(window.scrollY)))
+    .toBe(Math.round(helpScrollY));
+  await page.getByRole('button', { name: '화면 도움말 닫기' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect
+    .poll(() => page.evaluate(() => Math.round(window.scrollY)))
+    .toBe(Math.round(helpScrollY));
+  await expectStickyHeaderVisible(page);
+
   const beforeDrawer = await readLayoutSnapshot(page);
   await page.locator('main button.MuiButton-contained').first().click();
   await expect(page.getByRole('dialog')).toBeVisible();

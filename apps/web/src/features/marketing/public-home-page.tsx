@@ -3,7 +3,6 @@
 import * as React from 'react';
 import type { Route } from 'next';
 import Link from 'next/link';
-import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import AssessmentRoundedIcon from '@mui/icons-material/AssessmentRounded';
 import CalendarMonthRoundedIcon from '@mui/icons-material/CalendarMonthRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
@@ -32,6 +31,7 @@ import {
 } from '@/features/auth/demo-login';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { BrandLogo } from '@/shared/brand/brand-logo';
+import { publicSiteFaqs, publicSiteUseCases } from '@/shared/seo/site';
 import { brandTokens } from '@/shared/theme/tokens';
 import { appLayout } from '@/shared/ui/layout-metrics';
 
@@ -39,42 +39,42 @@ const featureCards = [
   {
     title: '운영 대시보드',
     description:
-      '현재 운영 월의 준비 상태, 최근 흐름, 처리할 예외를 한 화면에서 확인합니다.',
+      '현재 운영 월의 현금 잔액, 확정 지출, 남은 계획, 안전 여력을 빠르게 점검합니다.',
     icon: DashboardRoundedIcon,
     color: brandTokens.palette.primary
   },
   {
     title: '수집 거래',
     description:
-      '수기 입력, 업로드, 반복 규칙에서 들어온 거래를 검토하고 전표 준비 상태로 정리합니다.',
+      '은행·카드 업로드와 반복 규칙에서 들어온 거래 후보를 검토 가능한 작업 목록으로 모읍니다.',
     icon: ReceiptLongRoundedIcon,
     color: brandTokens.palette.secondaryDark
   },
   {
     title: '전표 확정',
     description:
-      '준비된 수집 거래를 공식 전표로 확정해 회계 기준 데이터와 운영 기록을 분리합니다.',
+      '검토가 끝난 거래를 공식 전표로 확정해 운영 기록과 보고 기준을 분리합니다.',
     icon: AssessmentRoundedIcon,
     color: brandTokens.palette.info
   },
   {
     title: '업로드 배치',
     description:
-      '은행·카드 명세 행을 검토하고 필요한 행만 수집 거래로 승격합니다.',
+      '명세 파일의 행 단위 상태를 추적하고 필요한 행만 수집 거래로 승격합니다.',
     icon: UploadFileRoundedIcon,
     color: brandTokens.palette.warning
   },
   {
     title: '월 운영과 마감',
     description:
-      '운영 월 시작, 닫기, 재개방 흐름을 기준으로 데이터 입력 범위를 안정적으로 관리합니다.',
+      '운영 월 시작, 마감, 재개방, 차기 이월까지 기간 단위 흐름을 안정적으로 관리합니다.',
     icon: CalendarMonthRoundedIcon,
     color: brandTokens.palette.secondary
   },
   {
     title: '기준 데이터',
     description:
-      '자금수단, 카테고리, 거래 유형을 먼저 맞춰 이후 거래·전표 흐름을 흔들리지 않게 합니다.',
+      '자금수단, 카테고리, 계정 기준을 먼저 맞춰 이후 거래·전표 흐름을 흔들리지 않게 합니다.',
     icon: SettingsSuggestRoundedIcon,
     color: brandTokens.palette.primaryDark
   }
@@ -83,62 +83,41 @@ const featureCards = [
 const workflowSteps = [
   {
     label: '운영 월 시작',
-    value: '이번 달 입력 범위 고정'
+    value: '이번 달 입력 범위와 기준 잔액 고정'
   },
   {
     label: '자료 수집',
-    value: '업로드·반복·수기 입력 통합'
+    value: '업로드·반복·수기 거래 후보 통합'
   },
   {
     label: '거래 검토',
-    value: '분류와 자금수단 보완'
+    value: '분류, 자금수단, 전표 준비 상태 보완'
   },
   {
     label: '전표 확정',
-    value: '공식 회계 기록 생성'
+    value: '공식 회계 기록과 조정 이력 생성'
   },
   {
     label: '마감과 전망',
-    value: '월 종료 후 다음 기간 준비'
+    value: '재무제표, 차기 이월, 다음 달 전망 연결'
   }
 ];
 
 const strengths = [
-  '업무 흐름이 월 운영 기준으로 이어집니다.',
-  '수집 거래와 공식 전표의 책임 경계가 분명합니다.',
-  '기준 데이터 준비 상태를 먼저 알려 입력 오류를 줄입니다.',
-  '업로드, 반복 규칙, 계획 항목이 같은 회계 흐름으로 모입니다.'
-];
-
-const previewRows = [
-  {
-    title: 'IM뱅크 카드 승인',
-    status: '전표 준비',
-    amount: '128,000원'
-  },
-  {
-    title: '정기 보험료',
-    status: '검토됨',
-    amount: '86,400원'
-  },
-  {
-    title: '스마트스토어 매출',
-    status: '확정 완료',
-    amount: '1,240,000원'
-  }
+  '월별 입력, 검토, 확정, 마감 흐름이 한 화면 체계 안에서 이어집니다.',
+  '수집 거래와 공식 전표의 책임 경계가 분명해 운영 판단과 보고를 섞지 않습니다.',
+  '기준 데이터 준비 상태를 먼저 알려 반복 입력 오류와 마감 누락을 줄입니다.',
+  '업로드, 반복 규칙, 계획 항목이 같은 전표 기반 회계 흐름으로 모입니다.'
 ];
 
 const marketingBorderColor = alpha(brandTokens.palette.primary, 0.08);
-const marketingBorderStrong = alpha(brandTokens.palette.primary, 0.1);
 const marketingGlassBackground = alpha(brandTokens.palette.surface, 0.92);
-const marketingOverlayBackground = {
-  xs: alpha(brandTokens.palette.background, 0.88),
-  md: alpha(brandTokens.palette.background, 0.48)
-} as const;
 const marketingReadableMutedText = '#34456c';
 const marketingReadableSubtleText = '#42557d';
-const marketingStrengthBackground = `linear-gradient(160deg, ${brandTokens.palette.primaryDark} 0%, ${brandTokens.palette.primary} 58%, ${brandTokens.palette.secondaryDark} 100%)`;
+const marketingStrengthBackground = `linear-gradient(135deg, ${brandTokens.palette.secondaryTint} 0%, ${brandTokens.palette.surface} 48%, ${brandTokens.palette.primaryTint} 100%)`;
 const projectGithubUrl = 'https://github.com/cheon0965/PERSONAL_ERP.git';
+const projectGithubDisplayUrl = 'github.com/cheon0965/PERSONAL_ERP';
+const heroDashboardScreenshotSrc = '/marketing-dashboard-screenshot.png';
 
 export function PublicHomePage() {
   const router = useRouter();
@@ -167,7 +146,9 @@ export function PublicHomePage() {
         <HeroSection />
         <WorkflowSection />
         <FeatureSection />
+        <SearchIntentSection />
         <StrengthSection />
+        <FaqSection />
         <CallToActionSection />
       </Box>
     </Box>
@@ -252,9 +233,23 @@ function LandingHeader() {
             <Button
               color="inherit"
               size="small"
+              onClick={() => smoothScrollTo('use-cases')}
+            >
+              활용 사례
+            </Button>
+            <Button
+              color="inherit"
+              size="small"
               onClick={() => smoothScrollTo('strengths')}
             >
               장점
+            </Button>
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => smoothScrollTo('faq')}
+            >
+              FAQ
             </Button>
           </Stack>
 
@@ -292,20 +287,36 @@ function HeroSection() {
       sx={{
         position: 'relative',
         overflow: 'hidden',
-        minHeight: { xs: 'auto', md: 'calc(84svh - 68px)' },
+        minHeight: { xs: 'auto', md: 'calc(88svh - 68px)' },
         display: 'flex',
         alignItems: 'center',
         borderBottom: '1px solid',
-        borderColor: marketingBorderColor
+        borderColor: marketingBorderColor,
+        bgcolor: brandTokens.palette.background
       }}
     >
-      <HeroOperationsScene />
+      <HeroDashboardBackdrop />
       <Box
         aria-hidden
         sx={{
           position: 'absolute',
           inset: 0,
-          bgcolor: marketingOverlayBackground
+          background: {
+            xs: `linear-gradient(180deg, ${alpha(
+              brandTokens.palette.background,
+              0.98
+            )} 0%, ${alpha(brandTokens.palette.background, 0.9)} 56%, ${alpha(
+              brandTokens.palette.background,
+              0.76
+            )} 100%)`,
+            md: `linear-gradient(90deg, ${brandTokens.palette.background} 0%, ${alpha(
+              brandTokens.palette.background,
+              0.98
+            )} 42%, ${alpha(brandTokens.palette.background, 0.9)} 62%, ${alpha(
+              brandTokens.palette.background,
+              0.32
+            )} 100%)`
+          }
         }}
       />
 
@@ -314,7 +325,7 @@ function HeroSection() {
           spacing={3}
           sx={{
             maxWidth: 700,
-            py: { xs: 4.5, md: 9 }
+            py: { xs: 4.5, md: 9.5 }
           }}
         >
           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
@@ -346,36 +357,44 @@ function HeroSection() {
                 fontSize: { xs: '1.22rem', md: '1.75rem' },
                 lineHeight: 1.35,
                 letterSpacing: 0,
-                color: brandTokens.palette.text
+                color: brandTokens.palette.text,
+                wordBreak: 'keep-all'
               }}
             >
-              소규모 사업자의 월 운영, 수집 거래, 전표, 마감을 한 흐름으로
-              정리합니다.
+              개인사업자와 소상공인의 월별 재무 운영을 수집 거래부터 공식
+              보고까지 이어주는 월 운영 ERP입니다.
             </Typography>
             <Typography
               variant="body1"
               sx={{
                 maxWidth: 600,
                 color: marketingReadableMutedText,
-                lineHeight: 1.8
+                lineHeight: 1.8,
+                wordBreak: 'keep-all'
               }}
             >
-              흩어진 거래 후보를 모으고, 기준 데이터를 점검하고, 공식 전표와 월
-              마감까지 이어지는 운영 포털입니다. 지금 필요한 업무만 빠르게
-              확인할 수 있도록 조용하고 밀도 있게 구성했습니다.
+              은행·카드 업로드, 반복 규칙, 계획 항목, 전표 확정, 월 마감
+              스냅샷을 하나의 운영 흐름으로 묶었습니다. 개인사업자 장부관리와
+              소상공인 월마감처럼 매달 반복되는 정리를 더 짧고 분명하게 끝내도록
+              만든 포트폴리오 프로젝트입니다.
             </Typography>
           </Stack>
 
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={1.25}
+            useFlexGap
+            flexWrap="wrap"
+          >
             <Button
               component={Link}
-              href="/register"
+              href={demoLoginPath}
               variant="contained"
               size="large"
-              endIcon={<ArrowForwardRoundedIcon />}
+              startIcon={<LoginRoundedIcon />}
               sx={{ px: 3 }}
             >
-              무료로 시작하기
+              데모로 둘러보기
             </Button>
             <Button
               component={Link}
@@ -392,15 +411,16 @@ function HeroSection() {
               href={projectGithubUrl}
               target="_blank"
               rel="noopener noreferrer"
-              variant="text"
+              variant="outlined"
               size="large"
               startIcon={<GitHubIcon />}
               sx={{
                 px: 2.5,
+                borderColor: alpha(brandTokens.palette.primary, 0.18),
                 bgcolor: alpha(brandTokens.palette.surface, 0.72)
               }}
             >
-              GitHub
+              GitHub 보기
             </Button>
           </Stack>
 
@@ -408,9 +428,9 @@ function HeroSection() {
 
           <Grid container spacing={1.5} sx={{ maxWidth: 620 }}>
             {[
-              ['운영 기준', '월 단위 관리'],
-              ['회계 흐름', '거래에서 전표'],
-              ['입력 방식', '수기·업로드·반복']
+              ['운영 기준', '월 단위 마감'],
+              ['회계 흐름', '거래 후보 → 전표'],
+              ['입력 방식', '업로드·반복·수기']
             ].map(([label, value]) => (
               <Grid key={label} size={{ xs: 4 }}>
                 <Box
@@ -448,77 +468,48 @@ function HeroSection() {
 function PublicDemoNotice() {
   return (
     <Stack
+      direction={{ xs: 'column', sm: 'row' }}
       spacing={1.25}
+      alignItems={{ xs: 'flex-start', sm: 'center' }}
       sx={{
         maxWidth: 620,
-        p: { xs: 1.75, sm: 2 },
+        p: { xs: 1.5, sm: 1.75 },
         borderRadius: '8px',
         border: '1px solid',
-        borderColor: alpha(brandTokens.palette.primaryBright, 0.2),
+        borderColor: alpha(brandTokens.palette.primaryBright, 0.16),
         bgcolor: alpha(brandTokens.palette.surface, 0.86),
-        boxShadow: '0 14px 34px rgba(6, 34, 111, 0.08)'
+        boxShadow: '0 14px 34px rgba(6, 34, 111, 0.06)'
       }}
     >
-      <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-        <Chip label="공개 체험 운영 중" color="success" size="small" />
-        <Chip label="데모 계정 자동 입력" color="primary" size="small" />
-        <Chip label="GitHub 공개 저장소" color="default" size="small" />
-      </Stack>
-      <Stack spacing={0.4}>
-        <Typography variant="subtitle2" fontWeight={900}>
-          데모 로그인으로 이동
+      <Stack direction="row" spacing={1} alignItems="center">
+        <Chip label="공개 데모" color="success" size="small" />
+        <Typography variant="body2" sx={{ color: marketingReadableMutedText }}>
+          로그인 화면에 {demoLoginCredentials.email} 계정 정보가 자동으로
+          입력됩니다.
         </Typography>
-        <Button
-          component={Link}
-          href={demoLoginPath}
-          variant="contained"
-          size="medium"
-          startIcon={<LoginRoundedIcon />}
-          sx={{
-            alignSelf: 'flex-start',
-            px: 2
-          }}
-        >
-          데모 계정 입력된 로그인 열기
-        </Button>
       </Stack>
       <Typography
+        component="a"
+        href={projectGithubUrl}
+        target="_blank"
+        rel="noopener noreferrer"
         variant="body2"
-        sx={{ color: marketingReadableMutedText, lineHeight: 1.7 }}
+        sx={{
+          color: brandTokens.palette.primary,
+          fontWeight: 800,
+          lineHeight: 1.6,
+          overflowWrap: 'anywhere',
+          textDecoration: 'none',
+          '&:hover': { textDecoration: 'underline' }
+        }}
       >
-        로그인 화면에 {demoLoginCredentials.email} 계정 정보가 자동으로
-        입력됩니다. 로그인 버튼은 직접 눌러 체험을 시작하세요.
+        {projectGithubDisplayUrl}
       </Typography>
-      <Stack spacing={0.4}>
-        <Typography
-          variant="caption"
-          sx={{ color: marketingReadableSubtleText }}
-        >
-          프로젝트 소스
-        </Typography>
-        <Typography
-          component="a"
-          href={projectGithubUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          variant="body2"
-          sx={{
-            color: brandTokens.palette.primary,
-            fontWeight: 800,
-            lineHeight: 1.6,
-            overflowWrap: 'anywhere',
-            textDecoration: 'none',
-            '&:hover': { textDecoration: 'underline' }
-          }}
-        >
-          {projectGithubUrl}
-        </Typography>
-      </Stack>
     </Stack>
   );
 }
 
-function HeroOperationsScene() {
+function HeroDashboardBackdrop() {
   return (
     <Box
       aria-hidden
@@ -532,220 +523,29 @@ function HeroOperationsScene() {
       <Box
         sx={{
           position: 'absolute',
-          width: { xs: 560, md: 780 },
-          right: { xs: -480, sm: -280, md: -120, lg: 12 },
-          top: { xs: 106, sm: 72, md: 86 },
-          opacity: { xs: 0.58, md: 0.96 }
+          right: { xs: -430, sm: -250, md: -300, lg: -190, xl: -96 },
+          top: { xs: 156, sm: 108, md: 96 },
+          bottom: { xs: -40, md: 0 },
+          width: { xs: 820, sm: 980, md: '76vw', lg: '72vw' },
+          maxWidth: { md: 1280 },
+          opacity: { xs: 0.26, sm: 0.34, md: 0.78 }
         }}
       >
         <Box
+          component="img"
+          src={heroDashboardScreenshotSrc}
+          alt=""
           sx={{
-            borderRadius: '8px',
-            border: '1px solid',
-            borderColor: marketingBorderStrong,
-            bgcolor: alpha(brandTokens.palette.surface, 0.94),
-            boxShadow: '0 24px 70px rgba(6, 23, 79, 0.12)',
-            overflow: 'hidden'
+            display: 'block',
+            width: '100%',
+            height: { xs: 520, md: 'calc(88svh - 96px)' },
+            minHeight: { md: 560 },
+            objectFit: 'cover',
+            objectPosition: 'right center',
+            filter: 'saturate(1.02) contrast(1.02)',
+            boxShadow: '0 28px 80px rgba(6, 23, 79, 0.18)'
           }}
-        >
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{
-              px: 2,
-              py: 1.5,
-              borderBottom: '1px solid',
-              borderColor: marketingBorderColor,
-              bgcolor: brandTokens.palette.surface
-            }}
-          >
-            <Stack direction="row" spacing={0.75}>
-              {[
-                brandTokens.palette.error,
-                brandTokens.palette.warning,
-                brandTokens.palette.secondaryDark
-              ].map((color) => (
-                <Box
-                  key={color}
-                  sx={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: '50%',
-                    bgcolor: color
-                  }}
-                />
-              ))}
-            </Stack>
-            <Typography variant="caption" color="text.secondary">
-              2026-04 운영 월
-            </Typography>
-          </Stack>
-
-          <Grid container>
-            <Grid
-              size={{ xs: 4 }}
-              sx={{
-                p: 2,
-                bgcolor: brandTokens.palette.surfaceSoft,
-                borderRight: '1px solid',
-                borderColor: marketingBorderColor,
-                minHeight: 420
-              }}
-            >
-              <Stack spacing={1.2}>
-                {['대시보드', '수집 거래', '전표 조회', '월 마감'].map(
-                  (item, index) => (
-                    <Stack
-                      key={item}
-                      direction="row"
-                      spacing={1}
-                      alignItems="center"
-                      sx={{
-                        p: 1,
-                        borderRadius: '8px',
-                        bgcolor:
-                          index === 1
-                            ? alpha(brandTokens.palette.secondary, 0.16)
-                            : 'transparent',
-                        color:
-                          index === 1
-                            ? brandTokens.palette.primary
-                            : brandTokens.palette.textMuted
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          bgcolor:
-                            index === 1
-                              ? brandTokens.palette.primary
-                              : brandTokens.palette.border
-                        }}
-                      />
-                      <Typography variant="caption" fontWeight={800}>
-                        {item}
-                      </Typography>
-                    </Stack>
-                  )
-                )}
-              </Stack>
-            </Grid>
-
-            <Grid size={{ xs: 8 }} sx={{ p: 2.25, minHeight: 420 }}>
-              <Stack spacing={2}>
-                <Stack
-                  direction="row"
-                  spacing={1.25}
-                  alignItems="center"
-                  justifyContent="space-between"
-                >
-                  <Box>
-                    <Typography variant="h6" fontWeight={900}>
-                      수집 거래 작업대
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      검토할 거래와 전표 준비 상태를 함께 확인
-                    </Typography>
-                  </Box>
-                  <Chip label="전표 준비 7건" size="small" color="success" />
-                </Stack>
-
-                <Grid container spacing={1.25}>
-                  {[
-                    [
-                      '이번 달 거래',
-                      '128건',
-                      brandTokens.palette.primarySoft,
-                      brandTokens.palette.primary
-                    ],
-                    [
-                      '업로드 대기',
-                      '14행',
-                      alpha(brandTokens.palette.warning, 0.16),
-                      brandTokens.palette.warning
-                    ],
-                    [
-                      '확정 전표',
-                      '92건',
-                      brandTokens.palette.secondarySoft,
-                      brandTokens.palette.secondaryDark
-                    ]
-                  ].map(([label, value, bgColor, textColor]) => (
-                    <Grid key={label} size={{ xs: 4 }}>
-                      <Box
-                        sx={{
-                          p: 1.4,
-                          borderRadius: '8px',
-                          bgcolor: bgColor,
-                          color: textColor
-                        }}
-                      >
-                        <Typography variant="caption">{label}</Typography>
-                        <Typography variant="h6" fontWeight={900}>
-                          {value}
-                        </Typography>
-                      </Box>
-                    </Grid>
-                  ))}
-                </Grid>
-
-                <Stack spacing={1}>
-                  {previewRows.map((row) => (
-                    <Stack
-                      key={row.title}
-                      direction="row"
-                      alignItems="center"
-                      justifyContent="space-between"
-                      spacing={1}
-                      sx={{
-                        p: 1.25,
-                        borderRadius: '8px',
-                        border: '1px solid',
-                        borderColor: marketingBorderColor,
-                        bgcolor: brandTokens.palette.surface
-                      }}
-                    >
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Box
-                          sx={{
-                            width: 30,
-                            height: 30,
-                            borderRadius: '8px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            bgcolor: alpha(brandTokens.palette.primary, 0.1),
-                            color: brandTokens.palette.primary
-                          }}
-                        >
-                          <ReceiptLongRoundedIcon sx={{ fontSize: 17 }} />
-                        </Box>
-                        <Box>
-                          <Typography variant="caption" fontWeight={900}>
-                            {row.title}
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            display="block"
-                          >
-                            {row.status}
-                          </Typography>
-                        </Box>
-                      </Stack>
-                      <Typography variant="caption" fontWeight={900}>
-                        {row.amount}
-                      </Typography>
-                    </Stack>
-                  ))}
-                </Stack>
-              </Stack>
-            </Grid>
-          </Grid>
-        </Box>
+        />
       </Box>
     </Box>
   );
@@ -766,8 +566,8 @@ function WorkflowSection() {
       <Container maxWidth="lg">
         <SectionHeading
           eyebrow="WORKFLOW"
-          title="월 운영이 끝까지 이어지는 구조"
-          description="입력 화면을 늘리는 대신 실제 업무가 진행되는 순서대로 데이터를 연결합니다."
+          title="매달 반복되는 장부 운영을 하나의 흐름으로"
+          description="운영 월을 열고, 거래 후보를 모으고, 전표로 확정한 뒤 보고와 이월까지 이어지도록 화면과 데이터를 연결했습니다."
         />
 
         <Grid container spacing={1.5} sx={{ mt: 3 }}>
@@ -831,8 +631,8 @@ function FeatureSection() {
       <Container maxWidth="lg">
         <SectionHeading
           eyebrow="FEATURES"
-          title="처음부터 업무 화면으로 작동하는 기능들"
-          description="대시보드, 기준 데이터, 거래 검토, 전표 확정, 월 마감까지 개인 장부 운영에 필요한 핵심 기능을 한 제품 안에 묶었습니다."
+          title="포트폴리오가 아니라 실제 업무 화면처럼"
+          description="대시보드, 기준 데이터, 업로드 배치, 거래 검토, 전표 확정, 월 마감까지 개인 장부 운영에 필요한 핵심 기능을 한 제품 안에 묶었습니다."
         />
 
         <Grid container spacing={2} sx={{ mt: 3 }}>
@@ -889,6 +689,77 @@ function FeatureSection() {
   );
 }
 
+function SearchIntentSection() {
+  return (
+    <Box
+      id="use-cases"
+      component="section"
+      sx={{
+        py: { xs: 6, md: 8 },
+        bgcolor: brandTokens.palette.surface,
+        borderTop: '1px solid',
+        borderBottom: '1px solid',
+        borderColor: marketingBorderColor
+      }}
+    >
+      <Container maxWidth="lg">
+        <SectionHeading
+          eyebrow="SEARCH FIT"
+          title="다양한 한글 검색어가 가리키는 업무를 화면에 담았습니다"
+          description="개인사업자 ERP, 소상공인 장부관리, 거래내역 업로드, 월마감 관리처럼 실제로 찾게 되는 표현을 서비스 문맥 안에서 자연스럽게 설명합니다."
+        />
+
+        <Grid container spacing={2} sx={{ mt: 3 }}>
+          {publicSiteUseCases.map((useCase) => (
+            <Grid key={useCase.title} size={{ xs: 12, sm: 6, md: 4 }}>
+              <Stack
+                spacing={1.5}
+                sx={{
+                  height: '100%',
+                  p: appLayout.cardPadding,
+                  borderRadius: '8px',
+                  border: '1px solid',
+                  borderColor: marketingBorderColor,
+                  bgcolor: brandTokens.palette.surfaceSoft
+                }}
+              >
+                <Box
+                  component="span"
+                  sx={{
+                    alignSelf: 'flex-start',
+                    maxWidth: '100%',
+                    px: 1,
+                    py: 0.5,
+                    borderRadius: '6px',
+                    bgcolor: alpha(brandTokens.palette.primaryBright, 0.1),
+                    color: brandTokens.palette.primaryDark,
+                    fontSize: '0.78rem',
+                    fontWeight: 800,
+                    lineHeight: 1.45,
+                    wordBreak: 'keep-all'
+                  }}
+                >
+                  {useCase.searchText}
+                </Box>
+                <Typography variant="h6" fontWeight={900}>
+                  {useCase.title}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ lineHeight: 1.7, wordBreak: 'keep-all' }}
+                >
+                  {useCase.description}
+                </Typography>
+              </Stack>
+            </Grid>
+          ))}
+        </Grid>
+      </Container>
+    </Box>
+  );
+}
+
 function StrengthSection() {
   return (
     <Box
@@ -917,18 +788,23 @@ function StrengthSection() {
                   fontSize: { xs: '2rem', md: '2.65rem' },
                   lineHeight: 1.12,
                   letterSpacing: 0,
-                  color: brandTokens.palette.primaryDark
+                  color: brandTokens.palette.primaryDark,
+                  wordBreak: 'keep-all'
                 }}
               >
-                작은 사업자의 실제 운영 흐름에 맞춘 ERP
+                작은 사업자의 실제 월말 흐름에 맞춘 ERP
               </Typography>
               <Typography
                 variant="body1"
-                sx={{ color: marketingReadableMutedText, lineHeight: 1.8 }}
+                sx={{
+                  color: marketingReadableMutedText,
+                  lineHeight: 1.8,
+                  wordBreak: 'keep-all'
+                }}
               >
                 화면은 가볍게, 데이터 경계는 단단하게 가져갑니다. 거래를
-                입력하는 순간부터 월 마감 이후의 보고와 전망까지 같은 기준으로
-                이어집니다.
+                입력하는 순간부터 전표, 재무제표, 차기 이월, 다음 달 전망까지
+                같은 기준으로 이어집니다.
               </Typography>
             </Stack>
           </Grid>
@@ -977,6 +853,64 @@ function StrengthSection() {
   );
 }
 
+function FaqSection() {
+  return (
+    <Box
+      id="faq"
+      component="section"
+      sx={{
+        py: { xs: 6, md: 8 },
+        bgcolor: brandTokens.palette.background,
+        borderBottom: '1px solid',
+        borderColor: marketingBorderColor
+      }}
+    >
+      <Container maxWidth="lg">
+        <SectionHeading
+          eyebrow="FAQ"
+          title="검색 전에 자주 궁금해하는 질문"
+          description="프로젝트의 목적과 장부관리 범위를 검색 결과에서도 이해하기 쉽도록 핵심 질문과 답변을 정리했습니다."
+        />
+
+        <Grid container spacing={2} sx={{ mt: 3 }}>
+          {publicSiteFaqs.map((faq) => (
+            <Grid key={faq.question} size={{ xs: 12, md: 6 }}>
+              <Stack
+                component="article"
+                spacing={1}
+                sx={{
+                  height: '100%',
+                  p: appLayout.cardPadding,
+                  borderRadius: '8px',
+                  border: '1px solid',
+                  borderColor: marketingBorderColor,
+                  bgcolor: brandTokens.palette.surface
+                }}
+              >
+                <Typography
+                  component="h3"
+                  variant="h6"
+                  fontWeight={900}
+                  sx={{ wordBreak: 'keep-all' }}
+                >
+                  {faq.question}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ lineHeight: 1.75, wordBreak: 'keep-all' }}
+                >
+                  {faq.answer}
+                </Typography>
+              </Stack>
+            </Grid>
+          ))}
+        </Grid>
+      </Container>
+    </Box>
+  );
+}
+
 function CallToActionSection() {
   return (
     <Box
@@ -998,37 +932,45 @@ function CallToActionSection() {
           }}
         >
           <Stack spacing={1}>
-            <Typography variant="h4" fontWeight={900} letterSpacing={0}>
-              첫 운영 월부터 정리해보세요.
+            <Typography
+              variant="h4"
+              fontWeight={900}
+              letterSpacing={0}
+              sx={{ wordBreak: 'keep-all' }}
+            >
+              데모 계정으로 실제 운영 흐름을 확인해보세요.
             </Typography>
             <Typography
               variant="body1"
               color="text.secondary"
-              sx={{ maxWidth: 620, lineHeight: 1.75 }}
+              sx={{ maxWidth: 620, lineHeight: 1.75, wordBreak: 'keep-all' }}
             >
-              워크스페이스를 만들고 기준 데이터를 준비하면, 수집 거래와 전표
-              확정 흐름을 바로 시작할 수 있습니다.
+              로그인 화면에 데모 계정이 자동 입력됩니다. 대시보드에서 기준
+              데이터, 수집 거래, 전표 확정, 월 마감까지 이어지는 구조를 바로
+              둘러볼 수 있습니다.
             </Typography>
           </Stack>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
             <Button
               component={Link}
-              href="/register"
+              href={demoLoginPath}
               variant="contained"
-              size="large"
-              startIcon={<PersonAddAltRoundedIcon />}
-            >
-              회원가입
-            </Button>
-            <Button
-              component={Link}
-              href="/login"
-              variant="outlined"
               size="large"
               startIcon={<LoginRoundedIcon />}
             >
-              로그인
+              데모로 둘러보기
+            </Button>
+            <Button
+              component="a"
+              href={projectGithubUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="outlined"
+              size="large"
+              startIcon={<GitHubIcon />}
+            >
+              GitHub 보기
             </Button>
           </Stack>
         </Stack>
@@ -1059,9 +1001,10 @@ function SectionHeading({
         variant="h3"
         sx={{
           fontWeight: 900,
-          fontSize: { xs: '2rem', md: '2.65rem' },
+          fontSize: { xs: '1.85rem', md: '2.45rem' },
           lineHeight: 1.14,
-          letterSpacing: 0
+          letterSpacing: 0,
+          wordBreak: 'keep-all'
         }}
       >
         {title}
@@ -1069,7 +1012,7 @@ function SectionHeading({
       <Typography
         variant="body1"
         color="text.secondary"
-        sx={{ lineHeight: 1.8 }}
+        sx={{ lineHeight: 1.8, wordBreak: 'keep-all' }}
       >
         {description}
       </Typography>
