@@ -122,12 +122,7 @@ async function runPrismaIntegrationSuite(databaseUrl) {
 
   run(
     process.execPath,
-    [
-      '--test',
-      '--test-concurrency=1',
-      '--test-isolation=none',
-      ...prismaIntegrationTests
-    ],
+    ['--test', '--test-concurrency=1', ...prismaIntegrationTests],
     {
       env,
       label: 'node --test Prisma integration'

@@ -76,7 +76,7 @@
 
 - `npm.cmd run typecheck --workspace @personal-erp/api`
 - `npm.cmd run compile:test --workspace @personal-erp/api`
-- `node --test --test-concurrency=1 --test-isolation=none apps/api/.test-dist/apps/api/test/accounting-periods.request-api.test.js`
+- `node --test --test-concurrency=1 apps/api/.test-dist/apps/api/test/accounting-periods.request-api.test.js`
 - `npm.cmd run lint --workspace @personal-erp/api`
 - `npm.cmd run build --workspace @personal-erp/web`
 
@@ -123,7 +123,7 @@
 - `npm.cmd run typecheck --workspace @personal-erp/api`
 - `npm.cmd run compile:test --workspace @personal-erp/api`
 - `npm.cmd run build --workspace @personal-erp/web`
-- `node --test --test-concurrency=1 --test-isolation=none apps/api/.test-dist/apps/api/test/transactions.request-api.create.test.js apps/api/.test-dist/apps/api/test/transactions.request-api.journal-adjustments.test.js`
+- `node --test --test-concurrency=1 apps/api/.test-dist/apps/api/test/transactions.request-api.create.test.js apps/api/.test-dist/apps/api/test/transactions.request-api.journal-adjustments.test.js`
 - `npm.cmd run lint --workspace @personal-erp/api`
 - `npm.cmd run docs:check`
 
