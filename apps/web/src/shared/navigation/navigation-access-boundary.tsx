@@ -96,9 +96,15 @@ function isPathAllowed(pathname: string, items: NavigationMenuItem[]) {
       return false;
     }
 
-    return item.matchMode === 'EXACT'
-      ? pathname === item.href
-      : pathname === item.href || pathname.startsWith(`${item.href}/`);
+    if (pathname === item.href) {
+      return true;
+    }
+
+    if (item.matchMode === 'EXACT' || item.children.length > 0) {
+      return false;
+    }
+
+    return pathname.startsWith(`${item.href}/`);
   });
 }
 

@@ -5,14 +5,25 @@ import type {
   ImportBatchItem
 } from '@personal-erp/contracts';
 import { subtractMoneyWon } from '@personal-erp/money';
+import {
+  AccountType,
+  ImportedRowParseStatus,
+  type Prisma
+} from '@prisma/client';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { readWorkspaceFundingAccountLiveBalances } from '../funding-accounts/funding-account-live-balance.reader';
 import {
+  type ImportBatchRecord,
   importBatchRecordInclude,
   mapImportBatchRecordToItem
 } from './import-batch.mapper';
 import { readParsedImportedRowPayload } from './import-batch.policy';
+
+type BalanceReference = Pick<
+  ImportBatchBalanceDiscrepancy,
+  'importedBalanceWon' | 'referenceOccurredOn' | 'referenceRowNumber'
+>;
 
 @Injectable()
 export class ImportBatchQueryService {
@@ -31,7 +42,16 @@ export class ImportBatchQueryService {
       }
     });
 
-    return batches.map(mapImportBatchRecordToItem);
+    const items = batches.map(mapImportBatchRecordToItem);
+
+    await this.attachBalanceDiscrepancies({
+      tenantId: workspace.tenantId,
+      ledgerId: workspace.ledgerId,
+      batches,
+      items
+    });
+
+    return items;
   }
 
   async findOne(
@@ -54,61 +74,56 @@ export class ImportBatchQueryService {
 
     const item = mapImportBatchRecordToItem(batch);
 
-    // 은행 명세 마지막 행의 거래후잔액과 ERP 장부 잔액을 비교한다.
-    if (batch.fundingAccountId) {
-      const discrepancy = await this.computeBalanceDiscrepancy({
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId,
-        fundingAccountId: batch.fundingAccountId,
-        rows: batch.rows
-      });
-
-      if (discrepancy) {
-        item.balanceDiscrepancy = discrepancy;
-      }
-    }
+    await this.attachBalanceDiscrepancies({
+      tenantId: workspace.tenantId,
+      ledgerId: workspace.ledgerId,
+      batches: [batch],
+      items: [item]
+    });
 
     return item;
   }
 
-  /**
-   * 배치의 마지막 파싱된 행에서 거래후잔액을 읽고,
-   * 해당 자금수단의 현재 ERP 장부 잔액과 비교한다.
-   * 차이가 있으면 경고 정보를 반환한다.
-   */
-  private async computeBalanceDiscrepancy(input: {
+  private async attachBalanceDiscrepancies(input: {
     tenantId: string;
     ledgerId: string;
-    fundingAccountId: string;
-    rows: Array<{
-      rawPayload: unknown;
-      parseStatus: string;
-      rowNumber: number;
-    }>;
-  }): Promise<ImportBatchBalanceDiscrepancy | null> {
-    // 파싱된 행을 역순으로 탐색하여 마지막 balanceAfter를 찾는다.
-    const parsedRows = input.rows
-      .filter((row) => row.parseStatus === 'PARSED')
-      .sort((a, b) => b.rowNumber - a.rowNumber);
+    batches: ImportBatchRecord[];
+    items: ImportBatchItem[];
+  }): Promise<void> {
+    const candidates: Array<{
+      item: ImportBatchItem;
+      fundingAccountId: string;
+      reference: BalanceReference;
+    }> = [];
 
-    let importedBalanceWon: number | null = null;
+    for (const [index, batch] of input.batches.entries()) {
+      const item = input.items[index];
 
-    for (const row of parsedRows) {
-      const parsed = readParsedImportedRowPayload(
-        row.rawPayload as unknown as import('@prisma/client').Prisma.JsonValue
-      );
-
-      if (parsed?.balanceAfter != null) {
-        importedBalanceWon = parsed.balanceAfter;
-        break;
+      if (
+        !item ||
+        !batch.fundingAccountId ||
+        batch.fundingAccount?.type !== AccountType.BANK
+      ) {
+        continue;
       }
+
+      const reference = this.readFirstDatedBalanceReference(batch.rows);
+
+      if (!reference) {
+        continue;
+      }
+
+      candidates.push({
+        item,
+        fundingAccountId: batch.fundingAccountId,
+        reference
+      });
     }
 
-    if (importedBalanceWon == null) {
-      return null;
+    if (candidates.length === 0) {
+      return;
     }
 
-    // 장부 잔액 조회
     const accounts = await readWorkspaceFundingAccountLiveBalances(
       this.prisma,
       {
@@ -117,30 +132,70 @@ export class ImportBatchQueryService {
       },
       { includeInactive: true }
     );
-
-    const targetAccount = accounts.find(
-      (account) => account.id === input.fundingAccountId
+    const ledgerBalanceByAccountId = new Map(
+      accounts.map((account) => [account.id, account.balanceWon])
     );
 
-    if (!targetAccount) {
-      return null;
+    for (const candidate of candidates) {
+      const ledgerBalanceWon = ledgerBalanceByAccountId.get(
+        candidate.fundingAccountId
+      );
+
+      if (ledgerBalanceWon == null) {
+        continue;
+      }
+
+      const differenceWon = subtractMoneyWon(
+        candidate.reference.importedBalanceWon,
+        ledgerBalanceWon
+      );
+
+      if (differenceWon === 0) {
+        continue;
+      }
+
+      candidate.item.balanceDiscrepancy = {
+        ...candidate.reference,
+        ledgerBalanceWon,
+        differenceWon
+      };
+    }
+  }
+
+  /**
+   * 배치의 최초 거래일 행에서 거래후잔액을 읽고 장부 잔액 비교 기준으로 삼는다.
+   */
+  private readFirstDatedBalanceReference(
+    rows: ImportBatchRecord['rows']
+  ): BalanceReference | null {
+    const candidates: BalanceReference[] = [];
+
+    for (const row of rows) {
+      if (row.parseStatus !== ImportedRowParseStatus.PARSED) {
+        continue;
+      }
+
+      const parsed = readParsedImportedRowPayload(
+        row.rawPayload as Prisma.JsonValue
+      );
+
+      if (parsed?.balanceAfter == null) {
+        continue;
+      }
+
+      candidates.push({
+        importedBalanceWon: parsed.balanceAfter,
+        referenceOccurredOn: parsed.occurredOn,
+        referenceRowNumber: row.rowNumber
+      });
     }
 
-    const ledgerBalanceWon = targetAccount.balanceWon;
-    const differenceWon = subtractMoneyWon(
-      importedBalanceWon,
-      ledgerBalanceWon
+    candidates.sort(
+      (left, right) =>
+        left.referenceOccurredOn.localeCompare(right.referenceOccurredOn) ||
+        left.referenceRowNumber - right.referenceRowNumber
     );
 
-    // 차이가 없으면 경고 불필요
-    if (differenceWon === 0) {
-      return null;
-    }
-
-    return {
-      importedBalanceWon,
-      ledgerBalanceWon,
-      differenceWon
-    };
+    return candidates[0] ?? null;
   }
 }

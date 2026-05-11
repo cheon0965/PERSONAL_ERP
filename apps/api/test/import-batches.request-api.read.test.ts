@@ -181,6 +181,104 @@ test('GET /import-batches returns only the current workspace batches in reverse 
   }
 });
 
+test('GET /import-batches compares bank balances against the first-dated row balance', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    pushImportBatch(context, {
+      id: 'import-batch-bank-balance',
+      sourceKind: ImportSourceKind.WOORI_BANK_HTML,
+      fileName: 'woori-bank.html',
+      fileHash: 'hash-woori-bank',
+      fundingAccountId: 'acc-1',
+      uploadedAt: new Date('2026-03-20T00:00:00.000Z')
+    });
+    pushImportedRow(context, {
+      id: 'imported-row-bank-first-date',
+      batchId: 'import-batch-bank-balance',
+      rowNumber: 2,
+      original: {
+        occurredAt: '2026.03.13 09:00:00',
+        title: '첫날 입금',
+        amount: '50000',
+        balance: '2050000'
+      },
+      parsed: {
+        occurredOn: '2026-03-13',
+        occurredAt: '2026-03-13T09:00:00+09:00',
+        title: '첫날 입금',
+        amount: 50_000,
+        balanceAfter: 2_050_000
+      }
+    });
+    pushImportedRow(context, {
+      id: 'imported-row-bank-later-date',
+      batchId: 'import-batch-bank-balance',
+      rowNumber: 3,
+      original: {
+        occurredAt: '2026.03.14 09:00:00',
+        title: '다음날 출금',
+        amount: '100000',
+        balance: '1900000'
+      },
+      parsed: {
+        occurredOn: '2026-03-14',
+        occurredAt: '2026-03-14T09:00:00+09:00',
+        title: '다음날 출금',
+        amount: 100_000,
+        balanceAfter: 1_900_000
+      }
+    });
+
+    const response = await context.request('/import-batches', {
+      headers: context.authHeaders()
+    });
+
+    assert.equal(response.status, 200);
+
+    const batches = response.body as Array<{
+      id: string;
+      balanceDiscrepancy?: unknown;
+    }>;
+    const batch = batches.find(
+      (candidate) => candidate.id === 'import-batch-bank-balance'
+    );
+
+    assert.deepEqual(batch?.balanceDiscrepancy, {
+      importedBalanceWon: 2_050_000,
+      referenceOccurredOn: '2026-03-13',
+      referenceRowNumber: 2,
+      ledgerBalanceWon: 2_000_000,
+      differenceWon: 50_000
+    });
+
+    const detailResponse = await context.request(
+      '/import-batches/import-batch-bank-balance',
+      {
+        headers: context.authHeaders()
+      }
+    );
+
+    assert.equal(detailResponse.status, 200);
+    assert.deepEqual(
+      (
+        detailResponse.body as {
+          balanceDiscrepancy?: unknown;
+        }
+      ).balanceDiscrepancy,
+      {
+        importedBalanceWon: 2_050_000,
+        referenceOccurredOn: '2026-03-13',
+        referenceRowNumber: 2,
+        ledgerBalanceWon: 2_000_000,
+        differenceWon: 50_000
+      }
+    );
+  } finally {
+    await context.close();
+  }
+});
+
 test('GET /import-batches/:id returns the batch detail with imported rows', async () => {
   const context = await createRequestTestContext();
 
