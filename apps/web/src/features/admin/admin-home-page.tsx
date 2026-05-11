@@ -46,6 +46,7 @@ export function AdminHomePage() {
   ].filter(Boolean).length;
   const priorityCards = [
     {
+      canRead: canReadSystemUsers,
       eyebrow: '계정 운영',
       title: '전체 사용자 관리',
       value: canReadSystemUsers ? '계정 관리 가능' : '전체 관리자 전용',
@@ -57,6 +58,7 @@ export function AdminHomePage() {
       tone: canReadSystemUsers ? 'success' : 'warning'
     },
     {
+      canRead: canReadTenants,
       eyebrow: '사업장 운영',
       title: '사업장 관리',
       value: canReadTenants ? '사업장 점검 가능' : '전체 관리자 전용',
@@ -68,6 +70,7 @@ export function AdminHomePage() {
       tone: canReadTenants ? 'success' : 'warning'
     },
     {
+      canRead: canUseSupportContext,
       eyebrow: '지원 모드',
       title: '사업장 전환 / 지원 모드',
       value: canUseSupportContext ? '문맥 선택 가능' : '전체 관리자 전용',
@@ -79,6 +82,7 @@ export function AdminHomePage() {
       tone: canUseSupportContext ? 'success' : 'warning'
     },
     {
+      canRead: canReadOperationsStatus,
       eyebrow: '운영 점검',
       title: '운영 상태',
       value: canReadOperationsStatus ? '상태 점검 가능' : '전체 관리자 전용',
@@ -90,6 +94,7 @@ export function AdminHomePage() {
       tone: canReadOperationsStatus ? 'success' : 'warning'
     },
     {
+      canRead: canReadMembers,
       eyebrow: '멤버 운영',
       title: '회원 관리',
       value: canReadMembers ? '사용 가능' : '권한 필요',
@@ -103,6 +108,7 @@ export function AdminHomePage() {
       tone: canReadMembers ? 'success' : 'warning'
     },
     {
+      canRead: canReadNavigation,
       eyebrow: '메뉴 권한',
       title: '메뉴 / 권한',
       value: canUpdateNavigation
@@ -120,6 +126,7 @@ export function AdminHomePage() {
       tone: canReadNavigation ? 'success' : 'warning'
     },
     {
+      canRead: canReadSecurityThreats,
       eyebrow: '보안 감지',
       title: '보안 위협 로그',
       value: canReadSecurityThreats ? '전체 관리자 전용' : '비공개',
@@ -131,6 +138,7 @@ export function AdminHomePage() {
       tone: canReadSecurityThreats ? 'success' : 'warning'
     },
     {
+      canRead: canReadLogs,
       eyebrow: '감사 추적',
       title: '로그 관리',
       value: canReadLogs
@@ -148,6 +156,7 @@ export function AdminHomePage() {
       tone: canReadLogs ? 'success' : 'warning'
     },
     {
+      canRead: canReadPolicy,
       eyebrow: '운영 기준',
       title: '권한 정책',
       value: canReadPolicy ? '표 기준 확인 가능' : '권한 필요',
@@ -159,6 +168,7 @@ export function AdminHomePage() {
       tone: canReadPolicy ? 'success' : 'warning'
     }
   ] as const;
+  const visiblePriorityCards = priorityCards.filter((item) => item.canRead);
   const groupedLinks = [
     {
       title: '플랫폼 운영',
@@ -252,6 +262,12 @@ export function AdminHomePage() {
       ]
     }
   ] as const;
+  const visibleGroupedLinks = groupedLinks
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.disabled)
+    }))
+    .filter((group) => group.items.length > 0);
 
   useDomainHelp({
     title: '관리자 화면 도움말',
@@ -385,21 +401,23 @@ export function AdminHomePage() {
         </Alert>
       ) : null}
 
-      <SectionCard
-        title="지금 우선 확인"
-        description="관리 링크 모음보다 먼저, 현재 권한에서 바로 열 수 있는 핵심 관리 작업을 압축해 보여줍니다."
-      >
-        <Grid container spacing={appLayout.sectionGap}>
-          {priorityCards.map((item) => (
-            <Grid key={item.title} size={{ xs: 12, md: 6, xl: 3 }}>
-              <AdminPriorityCard {...item} />
-            </Grid>
-          ))}
-        </Grid>
-      </SectionCard>
+      {visiblePriorityCards.length > 0 ? (
+        <SectionCard
+          title="지금 우선 확인"
+          description="관리 링크 모음보다 먼저, 현재 권한에서 바로 열 수 있는 핵심 관리 작업을 압축해 보여줍니다."
+        >
+          <Grid container spacing={appLayout.sectionGap}>
+            {visiblePriorityCards.map(({ canRead: _canRead, ...item }) => (
+              <Grid key={item.title} size={{ xs: 12, md: 6, xl: 3 }}>
+                <AdminPriorityCard {...item} />
+              </Grid>
+            ))}
+          </Grid>
+        </SectionCard>
+      ) : null}
 
       <Stack spacing={appLayout.sectionGap}>
-        {groupedLinks.map((group) => (
+        {visibleGroupedLinks.map((group) => (
           <SectionCard
             key={group.title}
             title={group.title}

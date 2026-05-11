@@ -8,8 +8,8 @@ import type {
   ImportSourceKind,
   ImportedRowParseStatus
 } from '@personal-erp/contracts';
-import type { FeedbackAlertValue } from '@/shared/ui/feedback-alert';
-import { resolveStatusLabel } from '@/shared/ui/status-chip';
+import type { FeedbackAlertValue } from '../../shared/ui/feedback-alert';
+import { resolveStatusLabel } from '../../shared/ui/status-chip';
 
 export const sourceKindOptions: Array<{
   value: ImportSourceKind;

@@ -86,8 +86,12 @@ export type ImportedRowItem = {
 };
 
 export type ImportBatchBalanceDiscrepancy = {
-  /** 은행 명세 마지막 행의 거래후잔액 */
+  /** 은행 명세 최초일자 행의 거래후잔액 */
   importedBalanceWon: MoneyWon;
+  /** 잔액 비교에 사용한 최초 거래일 */
+  referenceOccurredOn: string;
+  /** 잔액 비교에 사용한 업로드 행 번호 */
+  referenceRowNumber: number;
   /** ERP 장부 실시간 잔액 */
   ledgerBalanceWon: MoneyWon;
   /** 차액 (importedBalanceWon 빼기 ledgerBalanceWon) */

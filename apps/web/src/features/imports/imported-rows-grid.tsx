@@ -19,6 +19,7 @@ import type {
   ImportBatchCollectionJobItem,
   ImportBatchItem
 } from '@personal-erp/contracts';
+import { formatWon } from '@/shared/lib/format';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { ResponsiveFilterPanel } from '@/shared/ui/responsive-filter-panel';
 import { buildImportedRowsColumns } from './imports.columns';
@@ -26,7 +27,6 @@ import {
   readImportedRowParseStatusLabel,
   type ImportedRowTableItem
 } from './imports.shared';
-import { formatWon } from '@/shared/lib/format';
 import {
   bulkCollectTransactionTypes,
   type BulkCollectFormState
@@ -921,7 +921,8 @@ function BalanceDiscrepancyAlert({
         잔액 불일치 확인 필요
       </Typography>
       <Typography variant="body2">
-        {accountLabel}의 은행 명세 마지막 잔액은{' '}
+        {accountLabel}의 은행 명세 최초일자{' '}
+        <strong>{discrepancy.referenceOccurredOn}</strong> 행 잔액은{' '}
         <strong>{formatWon(discrepancy.importedBalanceWon)}</strong>이지만, 현재
         ERP 장부 잔액은{' '}
         <strong>{formatWon(discrepancy.ledgerBalanceWon)}</strong>입니다. (차액:{' '}

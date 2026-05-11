@@ -58,6 +58,7 @@ import {
   type FeedbackState,
   type ImportedRowTableItem
 } from './imports.shared';
+import { buildBalanceDiscrepancyBulkCollectConfirmationMessage } from './import-balance-discrepancy-confirmation';
 
 export type ImportUploadFormState = CreateImportBatchRequest & {
   fundingAccountId: string;
@@ -904,6 +905,19 @@ export function useImportsPage(
     }
 
     setFeedback(null);
+
+    const balanceDiscrepancyConfirmMessage =
+      buildBalanceDiscrepancyBulkCollectConfirmationMessage({
+        batch: selectedBatch,
+        targetRowCount: targetRows.length
+      });
+
+    if (
+      balanceDiscrepancyConfirmMessage &&
+      !window.confirm(balanceDiscrepancyConfirmMessage)
+    ) {
+      return;
+    }
 
     try {
       const typeOptions = buildBulkCollectTypeOptionsPayload(
