@@ -361,8 +361,8 @@ function HeroSection() {
                 wordBreak: 'keep-all'
               }}
             >
-              개인사업자와 소상공인의 월별 재무 운영을 수집 거래부터 공식
-              보고까지 이어주는 월 운영 ERP입니다.
+              개인사업자와 소상공인의 월별 재무 운영을 한 흐름으로 정리하는
+              ERP입니다.
             </Typography>
             <Typography
               variant="body1"
@@ -373,10 +373,9 @@ function HeroSection() {
                 wordBreak: 'keep-all'
               }}
             >
-              은행·카드 업로드, 반복 규칙, 계획 항목, 전표 확정, 월 마감
-              스냅샷을 하나의 운영 흐름으로 묶었습니다. 개인사업자 장부관리와
-              소상공인 월마감처럼 매달 반복되는 정리를 더 짧고 분명하게 끝내도록
-              만든 포트폴리오 프로젝트입니다.
+              은행·카드 업로드, 반복 규칙, 계획 항목, 전표 확정, 월 마감과 차기
+              이월을 연결했습니다. 매달 반복되는 장부 정리를 더 짧고 분명하게
+              끝내도록 만든 포트폴리오 프로젝트입니다.
             </Typography>
           </Stack>
 
@@ -566,8 +565,8 @@ function WorkflowSection() {
       <Container maxWidth="lg">
         <SectionHeading
           eyebrow="WORKFLOW"
-          title="매달 반복되는 장부 운영을 하나의 흐름으로"
-          description="운영 월을 열고, 거래 후보를 모으고, 전표로 확정한 뒤 보고와 이월까지 이어지도록 화면과 데이터를 연결했습니다."
+          title="매달 반복되는 장부 운영을 한 흐름으로"
+          description="운영 월 시작, 거래 수집, 전표 확정, 마감과 이월을 같은 기준으로 이어줍니다."
         />
 
         <Grid container spacing={1.5} sx={{ mt: 3 }}>
@@ -631,8 +630,8 @@ function FeatureSection() {
       <Container maxWidth="lg">
         <SectionHeading
           eyebrow="FEATURES"
-          title="포트폴리오가 아니라 실제 업무 화면처럼"
-          description="대시보드, 기준 데이터, 업로드 배치, 거래 검토, 전표 확정, 월 마감까지 개인 장부 운영에 필요한 핵심 기능을 한 제품 안에 묶었습니다."
+          title="장부 운영에 필요한 핵심 화면"
+          description="대시보드, 기준 데이터, 업로드 배치, 거래 검토, 전표 확정, 월 마감을 한 제품 안에서 확인할 수 있습니다."
         />
 
         <Grid container spacing={2} sx={{ mt: 3 }}>
@@ -704,9 +703,9 @@ function SearchIntentSection() {
     >
       <Container maxWidth="lg">
         <SectionHeading
-          eyebrow="SEARCH FIT"
-          title="다양한 한글 검색어가 가리키는 업무를 화면에 담았습니다"
-          description="개인사업자 ERP, 소상공인 장부관리, 거래내역 업로드, 월마감 관리처럼 실제로 찾게 되는 표현을 서비스 문맥 안에서 자연스럽게 설명합니다."
+          eyebrow="USE CASES"
+          title="작은 사업자가 자주 겪는 업무를 기준으로 정리했습니다"
+          description="장부 정리, 명세 업로드, 전표 관리, 월 마감처럼 매달 반복되는 일을 실제 화면 흐름으로 풀었습니다."
         />
 
         <Grid container spacing={2} sx={{ mt: 3 }}>
@@ -868,8 +867,8 @@ function FaqSection() {
       <Container maxWidth="lg">
         <SectionHeading
           eyebrow="FAQ"
-          title="검색 전에 자주 궁금해하는 질문"
-          description="프로젝트의 목적과 장부관리 범위를 검색 결과에서도 이해하기 쉽도록 핵심 질문과 답변을 정리했습니다."
+          title="프로젝트 범위와 사용 기준"
+          description="무엇을 돕고 어디까지 책임지는지 첫 화면에서 바로 판단할 수 있도록 정리했습니다."
         />
 
         <Grid container spacing={2} sx={{ mt: 3 }}>
@@ -938,16 +937,15 @@ function CallToActionSection() {
               letterSpacing={0}
               sx={{ wordBreak: 'keep-all' }}
             >
-              데모 계정으로 실제 운영 흐름을 확인해보세요.
+              데모 계정으로 월 운영 흐름을 확인해보세요.
             </Typography>
             <Typography
               variant="body1"
               color="text.secondary"
               sx={{ maxWidth: 620, lineHeight: 1.75, wordBreak: 'keep-all' }}
             >
-              로그인 화면에 데모 계정이 자동 입력됩니다. 대시보드에서 기준
-              데이터, 수집 거래, 전표 확정, 월 마감까지 이어지는 구조를 바로
-              둘러볼 수 있습니다.
+              로그인 화면에 데모 계정이 자동 입력됩니다. 기준 데이터, 수집 거래,
+              전표 확정, 월 마감까지 이어지는 구조를 바로 둘러볼 수 있습니다.
             </Typography>
           </Stack>
 

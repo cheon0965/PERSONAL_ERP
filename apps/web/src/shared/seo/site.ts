@@ -84,16 +84,16 @@ export const publicSiteFaqs = [
       '운영 월을 열고 거래 후보를 모은 뒤 전표로 확정하고, 월 마감과 다음 달 전망까지 이어지는 상태를 대시보드와 보고 화면에서 구분해 확인할 수 있습니다.'
   },
   {
-    question: '세무 신고나 회계 자문을 대신하나요?',
+    question: 'PERSONAL ERP는 어디까지 도와주나요?',
     answer:
-      '아닙니다. PERSONAL ERP는 장부 정리와 내부 운영 판단을 돕는 포트폴리오 프로젝트이며, 세무·회계·법률 자문이나 신고 대행을 대신하지 않습니다.'
+      '월별 장부 운영 흐름을 정리하는 데 집중합니다. 거래 업로드, 수집 거래 검토, 전표 확정, 월 마감과 보고 기준을 한 흐름으로 연결합니다.'
   }
 ] as const;
 
 export const publicSiteMetadata = {
   name: 'PERSONAL ERP',
   description:
-    '1인 사업자와 소상공인을 위한 월별 재무 운영 ERP. 개인사업자 장부관리, 거래내역 업로드, 전표, 월마감, 재무제표, 차기 이월을 한 흐름으로 정리합니다.'
+    '1인 사업자와 소상공인의 월별 장부 운영을 돕는 ERP. 거래내역 업로드, 전표 확정, 월 마감, 재무제표와 차기 이월을 한 흐름으로 정리합니다.'
 } as const;
 
 export function buildPublicHomeStructuredData() {

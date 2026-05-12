@@ -24,14 +24,14 @@
 - 대상 브랜치가 기준 커밋과 일치하는지 확인합니다.
 - `npm run check:quick`가 통과하는지 확인합니다.
 - 배포 직전 기준으로 `npm run build`가 통과하는지 확인합니다.
-- Web 라우트, 인증 복원, Next.js build 경로를 건드렸다면 `npm run test:e2e:smoke:build:browser`도 통과하는지 확인합니다.
-- DB 스키마 변경이 포함되면 migration 파일이 함께 있는지 확인합니다.
+- Web 라우트, 인증 복원, Next.js 빌드 경로를 건드렸다면 `npm run test:e2e:smoke:build:browser`도 통과하는지 확인합니다.
+- DB 스키마 변경이 포함되면 마이그레이션 파일이 함께 있는지 확인합니다.
 - `NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=false`인지 확인합니다.
 - `APP_ORIGIN`과 `NEXT_PUBLIC_API_BASE_URL` 조합이 실제 도메인과 맞는지 확인합니다.
 - 공개 홈/SEO 변경이 포함되면 `robots.ts`, `sitemap.ts`, `src/shared/seo/site.ts`, `public/google827b2fac60b63022.html`이 실제 배포 도메인 기준과 맞는지 확인합니다.
 - Docker 배포에서는 `docker-compose.prod.yml`과 비공개 `.deploy/compose.env`를 사용하고, 상세 절차는 [`DOCKER_DEPLOYMENT.md`](./DOCKER_DEPLOYMENT.md)를 우선합니다.
 - API와 Web이 사용할 포트, 방화벽, reverse proxy 경로를 미리 정합니다.
-- 현재 공개 배포는 `https://personalerp.theworkpc.com` 단일 도메인, API path `https://personalerp.theworkpc.com/api`, 내부 포트 Web `3100` / API `4100` 기준입니다.
+- 현재 공개 배포는 `https://personalerp.theworkpc.com` 단일 도메인, API path `https://personalerp.theworkpc.com/api`, 내부 port Web `3100` / API `4100` 기준입니다.
 
 ## 필수 env / secret 점검
 
@@ -86,7 +86,7 @@
 2. `docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml config`로 구성을 확인합니다.
 3. GitHub Actions -> Docker Hub push 방식이면 `IMAGE_TAG`를 발행된 `sha-...` 또는 `latest` 태그로 맞추고 `docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml pull`을 실행합니다.
 4. 서버/로컬 직접 빌드 방식이면 `build-docker-images.bat`로 `migrate`, `api`, `web` 이미지를 빌드합니다. tar 파일이 필요하면 `build-docker-images.bat --tag <tag> --save`를 사용합니다.
-5. `docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml up -d --no-build`로 MySQL, migration, API, Web을 기동합니다.
+5. `docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml up -d --no-build`로 MySQL, 마이그레이션, API, Web을 기동합니다.
 6. `docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml ps`에서 `api`, `web`, `mysql` health 상태와 `migrate` 완료 상태를 확인합니다.
 7. HTTPS reverse proxy 연결 후 아래 수동 스모크 체크를 완료합니다.
 
@@ -106,11 +106,11 @@
 - 허용되지 않은 origin으로 cookie-auth 요청을 보냈을 때 `403 Origin not allowed`가 나는지 확인합니다.
 - 보호 엔드포인트 호출 시 Bearer 토큰 없이 `401`이 오는지 확인합니다.
 - 차단된 인증/권한 시나리오를 한 번 실행해 `auth.*`, `authorization.scope_denied`, `system.readiness_failed` 로그가 남는지 확인합니다.
-- 로그인 후 `GET /api/operations/summary`, `GET /api/operations/system-status`, `GET /api/operations/alerts`가 현재 workspace 기준으로 응답하는지 확인합니다.
-- 로그인 후 `GET /api/funding-account-status/summary`가 현재 workspace 기준 자금수단별 수입/지출/잔액 현황을 반환하는지 확인합니다.
+- 로그인 후 `GET /api/operations/summary`, `GET /api/operations/system-status`, `GET /api/operations/alerts`가 현재 워크스페이스 기준으로 응답하는지 확인합니다.
+- 로그인 후 `GET /api/funding-account-status/summary`가 현재 워크스페이스 기준 자금수단별 수입/지출/잔액 현황을 반환하는지 확인합니다.
 - 운영 반출을 허용한 계정으로 `POST /api/operations/exports`를 실행했을 때 UTF-8 CSV payload가 내려오고 `operations_export.run` 감사 이벤트가 남는지 확인합니다.
 - 운영 메모를 허용한 계정으로 `POST /api/operations/notes`를 실행했을 때 메모가 저장되고 `operations_note.create` 감사 이벤트가 남는지 확인합니다.
-- 업로드 배치 API를 확인할 때는 `POST /api/import-batches`의 UTF-8 텍스트 배치와 `POST /api/import-batches/files`의 IM뱅크 PDF multipart 배치가 모두 현재 workspace 기준으로 생성되는지 확인합니다.
+- 업로드 배치 API를 확인할 때는 `POST /api/import-batches`의 UTF-8 텍스트 배치와 `POST /api/import-batches/files`의 IM뱅크 PDF multipart 배치가 모두 현재 워크스페이스 기준으로 생성되는지 확인합니다.
 - 배치 상세에서 `POST /api/import-batches/:id/rows/collect`를 실행하면 `202 Accepted` 성격의 일괄 등록 Job이 반환되고, `GET /api/import-batches/:id/collection-jobs/:jobId`로 처리 건수/성공/실패/행별 결과가 갱신되는지 확인합니다.
 - 전체 관리자 계정으로 로그인했을 때 `GET /api/admin/users`, `GET /api/admin/tenants`, `GET /api/admin/operations/status`, `GET /api/admin/security-threats`가 응답하는지 확인합니다.
 - 전체 관리자 계정으로 `POST /api/admin/support-context` 실행 후 `GET /api/auth/me`의 `currentWorkspace`가 선택한 사업장/장부로 바뀌는지, `DELETE /api/admin/support-context` 후 해제되는지 확인합니다.
@@ -158,7 +158,7 @@
 
 ## DB와 시드 데이터 경계
 
-- `npm run db:deploy`는 운영 반영용 migration 명령으로 사용합니다.
+- `npm run db:deploy`는 운영 반영용 마이그레이션 명령으로 사용합니다.
 - `npm run db:migrate`는 개발 환경 기준 명령으로 사용합니다.
 - `npm run db:deploy:latest-baseline`은 새 빈 DB 전용 최신 스키마 1회 적용 명령입니다. 기존 DB나 운영 DB에는 사용하지 않습니다.
 - `npm run db:seed`는 현재 구현상 기존 데이터를 지우고 데모 데이터를 다시 넣습니다.
@@ -178,7 +178,7 @@
 
 - `APP_ORIGIN`과 `NEXT_PUBLIC_API_BASE_URL` 조합이 맞는지 확인합니다.
 - `CORS_ALLOWED_ORIGINS`에 실제 Web origin이 빠지지 않았는지 확인합니다.
-- Docker 배포에서 `NEXT_PUBLIC_API_BASE_URL`을 바꿨다면 Web 이미지를 다시 빌드했는지 확인합니다. 컨테이너 재시작만으로는 Next.js static bundle에 박힌 API URL이 바뀌지 않습니다.
+- Docker 배포에서 `NEXT_PUBLIC_API_BASE_URL`을 바꿨다면 Web 이미지를 다시 빌드했는지 확인합니다. 컨테이너 재시작만으로는 Next.js 정적 번들에 박힌 API URL이 바뀌지 않습니다.
 - `personal-erp-web` 컨테이너 안의 `.next` 산출물에 예전 API URL이 남아 있지 않은지 확인합니다.
 - 브라우저 네트워크 탭에서 `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` 응답 코드를 확인합니다.
 - API 쪽 `401`, CORS, URL mismatch가 있는지 확인합니다.
@@ -187,17 +187,17 @@
 ### 배포 후 데이터가 이상할 때
 
 - 운영 DB에 `npm run db:seed`를 잘못 실행하지 않았는지 가장 먼저 확인합니다.
-- migration 적용 순서와 대상 DB 연결 문자열을 다시 확인합니다.
+- 마이그레이션 적용 순서와 대상 DB 연결 문자열을 다시 확인합니다.
 
 ## 현재 구현 기준 운영 리스크 메모
 
 - 이 저장소는 PM2, NSSM, IIS, systemd 같은 프로세스 관리자 설정을 포함하지 않습니다.
-- reverse proxy, TLS 종료, 서비스 재시작 정책은 운영 환경에서 별도로 정해야 합니다.
+- reverse proxy, TLS 종료, service 재시작 정책은 운영 환경에서 별도로 정해야 합니다.
 - 인증 rate limit은 애플리케이션 내부에서 우선 차단하지만 저장소는 프로세스 메모리입니다. 다중 API 인스턴스나 공개 운영에서는 reverse proxy, WAF, API gateway의 IP 기반 rate limit을 함께 적용합니다.
 - 현재 refresh token 쿠키는 `__Host-refreshToken`과 `Secure`로 고정되므로, 운영 환경에서는 반드시 HTTPS origin과 함께 점검해야 합니다.
 - 운영 환경에서는 `CORS_ALLOWED_ORIGINS`를 필요한 origin만 포함하도록 최소화하고, `SWAGGER_ENABLED=false` 여부를 같이 결정합니다.
 - 현재 보안 이벤트는 애플리케이션 로그에 남기며, 외부 감사 저장소나 중앙 로그 수집기는 아직 연결하지 않았습니다.
-- 업로드 배치 일괄 등록은 Job/행별 결과와 workspace 잠금을 DB에 남기고, 만료된 잠금의 `PENDING/RUNNING` Job은 스케줄러와 조회/명령 진입점에서 자동 종료합니다. 다만 실행 루프 자체는 API 프로세스 안에서 동작하므로, 장기적으로는 외부 worker/outbox 도입 여부를 별도 결정해야 합니다.
+- 업로드 배치 일괄 등록은 Job/행별 결과와 워크스페이스 잠금을 DB에 남기고, 만료된 잠금의 `PENDING/RUNNING` Job은 스케줄러와 조회/명령 진입점에서 자동 종료합니다. 다만 실행 루프 자체는 API 프로세스 안에서 동작하므로, 장기적으로는 외부 worker/outbox 도입 여부를 별도 결정해야 합니다.
 
 ## 함께 보면 좋은 문서
 

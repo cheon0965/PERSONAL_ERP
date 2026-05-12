@@ -11,7 +11,7 @@
 - Docker network: `personal-erp`
 - Web 이미지: `cheon0965/personal-erp-web:latest`
 - API 이미지: `cheon0965/personal-erp-api:latest`
-- Migration 이미지: `cheon0965/personal-erp-migrate:latest`
+- 마이그레이션 이미지: `cheon0965/personal-erp-migrate:latest`
 - MySQL 이미지: `mysql:8.4`
 - API 내부/게시 포트: `4100`
 - Web 내부/게시 포트: `3100`
@@ -72,7 +72,7 @@ docker logs mysql
 
 ## 4. 서버 마이그레이션 실행
 
-`migrate` 컨테이너는 schema migration만 실행하고 정상 종료됩니다. 성공 상태는 `Exited (0)`입니다.
+`migrate` 컨테이너는 스키마 마이그레이션만 실행하고 정상 종료됩니다. 성공 상태는 `Exited (0)`입니다.
 
 ```powershell
 docker rm -f personal-erp-migrate
@@ -114,7 +114,7 @@ Invoke-WebRequest http://127.0.0.1:4100/api/health/ready
 
 ## 6. 기본 데모 데이터 넣기
 
-새 DB에는 migration만으로 데모 계정이 생기지 않습니다. API 컨테이너가 떠 있는 상태에서 seed를 한 번 실행합니다.
+새 DB에는 마이그레이션만으로 데모 계정이 생기지 않습니다. API 컨테이너가 떠 있는 상태에서 seed를 한 번 실행합니다.
 
 ```powershell
 docker exec personal-erp-api node apps/api/dist/apps/api/prisma/seed.js --reset
@@ -136,7 +136,7 @@ docker run --rm --network personal-erp `
   node apps/api/dist/apps/api/prisma/seed.js --reset
 ```
 
-## 7. 프론트엔드 Web 서버 실행
+## 7. 프런트엔드 Web 서버 실행
 
 ```powershell
 docker rm -f personal-erp-web
@@ -234,7 +234,7 @@ docker exec personal-erp-web /bin/sh -lc "grep -RIl -- 'personalerp.theworkpc.co
 ```
 
 - `localhost:4100`이 나오면 Web 이미지를 public API URL 기준으로 다시 빌드해야 합니다.
-- `personalerp.theworkpc.com/api`가 나오면 현재 공개 API URL이 Web bundle에 들어간 상태입니다.
+- `personalerp.theworkpc.com/api`가 나오면 현재 공개 API URL이 Web 번들에 들어간 상태입니다.
 
 ## 11. 안전한 재시작 순서
 

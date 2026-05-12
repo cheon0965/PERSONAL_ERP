@@ -1,7 +1,7 @@
 # Environment Setup
 
 현재 프로젝트의 env 구조와 Windows Server 배포 준비 설정을 정리합니다.
-기준은 `외부 SECRET 폴더 우선`, `앱 로컬 fallback 허용`, `로컬 개발과 운영 설정 분리`입니다.
+기준은 `외부 SECRET 폴더 우선`, `앱 로컬 대체 파일 허용`, `로컬 개발과 운영 설정 분리`입니다.
 
 실제 배포 순서, 수동 스모크 체크, 운영 장애 대응 순서는 [배포/운영 체크리스트](./docs/OPERATIONS_CHECKLIST.md) 를 기준으로 봅니다.
 Docker Compose 운영 배포는 저장소 밖 `.deploy/compose.env`를 사용하며, 현재 공개 도메인은 `https://personalerp.theworkpc.com`입니다.
@@ -37,9 +37,9 @@ C:\secrets\personal-erp\web.env
 - 실제 비밀값은 `PERSONAL_ERP_SECRET_DIR`가 가리키는 위치의 `api.env`, `web.env`에 둡니다.
 - 셸이나 CI에서 직접 주입한 환경변수가 가장 우선합니다.
 - 그다음은 `PERSONAL_ERP_SECRET_DIR`가 가리키는 SECRET 파일입니다.
-- 마지막으로 API는 `apps/api/.env`, Web은 `apps/web/.env.local` fallback을 허용합니다.
-- `docker-compose.yml`의 MySQL 계정은 `npm run db:up`을 바로 실행하기 위한 폐기 가능한 로컬 개발 전용 bootstrap 기본값입니다.
-- 위 bootstrap 값은 shared/staging/production secret로 재사용하지 않습니다.
+- 마지막으로 API는 `apps/api/.env`, Web은 `apps/web/.env.local` 대체 파일을 허용합니다.
+- `docker-compose.yml`의 MySQL 계정은 `npm run db:up`을 바로 실행하기 위한 폐기 가능한 로컬 개발 전용 초기화 기본값입니다.
+- 위 초기화 기본값은 shared/staging/production secret로 재사용하지 않습니다.
 - 공개 홈의 sitemap, robots, Google Search Console 확인 파일은 secret이 아니며 저장소 안 `apps/web/app`과 `apps/web/public` 기준으로 배포합니다.
 
 예시 파일:
@@ -131,7 +131,7 @@ DATABASE_URL=mysql://<username>:<password>@<host>:<port>/<database>
 - `<password>`: DB 비밀번호
 - `<host>`: DB 서버 주소
 - `<port>`: DB 포트
-- `<database>`: 데이터베이스 이름
+- `<database>`: DB 이름
 
 현재 로컬 Docker 기준 예시:
 
@@ -153,7 +153,7 @@ DATABASE_URL=mysql://erp_user:local_erp_not_for_prod@localhost:3306/personal_erp
 
 - 로컬과 CI 모두 기본 모드는 disposable Docker DB입니다.
 - `.github/workflows/ci.yml`의 `prisma-integration` job은 더 이상 `PRISMA_INTEGRATION_DATABASE_URL` secret에 의존하지 않습니다.
-- Docker daemon이 필요합니다. 컨테이너 image는 기본 `mysql:8.4`이며 `PRISMA_INTEGRATION_DOCKER_IMAGE`로 바꿀 수 있습니다.
+- Docker 데몬이 필요합니다. 컨테이너 이미지는 기본 `mysql:8.4`이며 `PRISMA_INTEGRATION_DOCKER_IMAGE`로 바꿀 수 있습니다.
 - 디버깅 중 컨테이너를 남겨야 하면 `PRISMA_INTEGRATION_KEEP_DOCKER=1`을 설정합니다.
 - 외부/shared DB로 강제로 돌려야 하는 예외 상황에서만 아래처럼 명시적으로 전환합니다.
 
@@ -164,7 +164,7 @@ PRISMA_INTEGRATION_DATABASE_URL=mysql://erp_user:local_erp_not_for_prod@localhos
 
 외부 DB 모드 주의:
 
-- CI에서는 existing 모드를 쓰더라도 `DATABASE_URL` fallback을 허용하지 않습니다.
+- CI에서는 existing 모드를 쓰더라도 `DATABASE_URL` 대체 파일을 허용하지 않습니다.
 - 이 값을 production DB로 가리키게 두지 않습니다.
 
 운영 서버 예시:
@@ -177,7 +177,7 @@ DATABASE_URL=mysql://erp_user:StrongPassword123!@10.0.0.25:3306/personal_erp
 
 - 비밀번호에 `@`, `:`, `/`, `?`, `#` 같은 문자가 있으면 URL 인코딩이 필요합니다.
 - 로컬 Docker 계정과 운영 DB 계정은 분리하는 편이 안전합니다.
-- 기존 로컬 Docker volume이 예전 기본값으로 이미 초기화되었다면 새 기본값을 쓰기 전에 로컬 MySQL volume을 다시 만들어야 합니다.
+- 기존 로컬 Docker 볼륨이 예전 기본값으로 이미 초기화되었다면 새 기본값을 쓰기 전에 로컬 MySQL 볼륨을 다시 만들어야 합니다.
 
 ### 4순위. JWT 시크릿과 토큰 만료시간 확인
 
@@ -271,7 +271,7 @@ GMAIL_SENDER_EMAIL=your-gmail@gmail.com
 
 ### 7순위. Demo 옵션 확인
 
-웹은 개발 중에만 demo fallback을 제한적으로 허용합니다.
+웹은 개발 중에만 데모 대체 응답을 제한적으로 허용합니다.
 
 ```env
 NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=false
@@ -305,12 +305,12 @@ date,title,amount
 6. 배치가 생성되면 `/imports/[batchId]` 작업대에서 읽기 완료 행, 등록 가능 행, 연결 완료 행을 확인합니다. 운영 중에는 최신 진행월 범위의 행만 수집 거래로 등록할 수 있습니다.
 7. 행별 `등록 준비`는 계획 항목 매칭, 카테고리 보완, 중복 후보를 먼저 보여주고 단건 수집 거래로 등록합니다.
 8. `선택 행 일괄 등록` 또는 `등록 가능 행 일괄 등록`은 백그라운드 Job을 시작하고, 화면에서 처리 건수/성공/실패/진행률을 확인합니다.
-9. 같은 workspace에서 다른 사용자가 이미 업로드 배치 일괄 등록 Job을 실행 중이면 새 일괄 등록과 단건 등록은 충돌 안내로 보호됩니다.
+9. 같은 워크스페이스에서 다른 사용자가 이미 업로드 배치 일괄 등록 Job을 실행 중이면 새 일괄 등록과 단건 등록은 충돌 안내로 보호됩니다.
 10. 등록된 거래는 `/transactions`에서 확인하고, 전표 준비 상태면 전표 확정을 이어서 실행합니다.
 
 업로드 배치 일괄 등록은 수집 거래 생성/흡수 단계까지 처리합니다.
 업로드 배치도 월별 open/close 흐름을 따르며, 최신 진행월 밖 거래를 등록하거나 과거 여러 월을 되살리는 용도로 쓰지 않습니다.
-업로드 배치가 운영월을 자동으로 여는 경우는 거래 입력 예외가 아니라 아직 운영월이 없는 최초 시작월 또는 최신 잠금월 바로 다음 월의 신규 계좌/카드 bootstrap 초기화로 제한됩니다.
+업로드 배치가 운영월을 자동으로 여는 경우는 거래 입력 예외가 아니라 아직 운영월이 없는 최초 시작월 또는 최신 잠금월 바로 다음 월의 신규 계좌/카드 초기화로 제한됩니다.
 실제 회계 확정은 여전히 `/transactions`의 전표 확정과 `/journal-entries`의 전표 조회에서 확인합니다.
 
 ## 4. env 로딩 우선순위
@@ -319,9 +319,9 @@ date,title,amount
 
 1. 셸, CI, 서버 서비스에서 직접 주입한 환경변수
 2. `PERSONAL_ERP_SECRET_DIR`가 가리키는 `api.env`, `web.env`
-3. 앱 로컬 fallback 파일
+3. 앱 로컬 대체 파일
 
-fallback 경로:
+대체 파일 경로:
 
 - API: `apps/api/.env`
 - Web: `apps/web/.env.local`
@@ -427,7 +427,7 @@ npm run start --workspace @personal-erp/api
 npm run start --workspace @personal-erp/web
 ```
 
-## 7. Windows Server 반영 체크리스트
+## 7. Windows Server 반영 checklist
 
 ### 배포 전
 
@@ -437,7 +437,7 @@ npm run start --workspace @personal-erp/web
 - `DATABASE_URL` 접속 정보 확인
 - `NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=false` 확인
 - `npm run build` 성공 확인
-- Web 라우트, 인증 복원, Next.js build 경로를 건드렸다면 `npm run test:e2e:smoke:build:browser` 확인
+- Web 라우트, 인증 복원, Next.js 빌드 경로를 건드렸다면 `npm run test:e2e:smoke:build:browser` 확인
 - 필요 시 `npm run db:deploy` 준비
 
 ### 배포 후
@@ -456,7 +456,7 @@ npm run start --workspace @personal-erp/web
 - `PRISMA_INTEGRATION_DATABASE_MODE=existing`으로 production DB를 검증 대상으로 연결하지 않습니다.
 - `NEXT_PUBLIC_ENABLE_DEMO_FALLBACK=true`로 운영하지 않습니다.
 - 외부 SECRET 폴더의 실제 비밀 파일을 저장소에 복사해 커밋하지 않습니다.
-- 운영 서버에서 `docker-compose.yml`의 로컬 개발용 MySQL bootstrap 기본값을 재사용하지 않습니다.
+- 운영 서버에서 `docker-compose.yml`의 로컬 개발용 MySQL 초기화 기본값을 재사용하지 않습니다.
 - 같은 JWT 시크릿을 여러 환경에서 재사용하지 않는 편이 좋습니다.
 
 ## 9. 검증 코드 위치

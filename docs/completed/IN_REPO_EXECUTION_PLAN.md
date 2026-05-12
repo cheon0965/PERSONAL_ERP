@@ -1,4 +1,4 @@
-﻿# 저장소 내부 후속 작업 실행계획
+# 저장소 내부 후속 작업 실행계획
 
 > 보관 상태: `2026-04-12` 기준 저장소 내부 후속 작업을 모두 완료한 뒤 `docs/completed/`로 이동했다. 현재 운영 기준은 `docs/API.md`, `docs/VALIDATION_NOTES.md`, `docs/ACCOUNTING_MODEL_BOUNDARY.md`, `docs/DEVELOPMENT_GUIDE.md`를 우선한다.
 
@@ -19,7 +19,7 @@
 
 - GitHub secret `PRISMA_INTEGRATION_DATABASE_URL` 등록과 첫 성공 증적 확보
 - 실제 운영 HTTPS/HSTS/Swagger 배포 리허설과 운영 증적 정리
-- GitHub branch protection, required check, 조직/저장소 보안 설정 조정
+- GitHub 브랜치 protection, required check, 조직/저장소 보안 설정 조정
 
 ## 선별 기준
 
@@ -44,13 +44,13 @@
 
 ## 우선순위 개요
 
-| 우선순위 | 작업                                | 현재 상태 | 비고                                                                              |
-| -------- | ----------------------------------- | --------- | --------------------------------------------------------------------------------- |
-| P1       | 차량 운영 요약 모델 마무리          | 완료      | summary/read model과 물리/응답 표면 정리까지 반영됨                               |
-| P1       | 레거시 `Transaction` 물리 제거      | 완료      | schema relation 제거, migration 추가, active reference guard와 문서 동기화 완료   |
-| P1       | 메인 월 운영 루프 브라우저 E2E 보강 | 완료      | 계획 생성, 업로드 승격, 전표 확정, 재무제표, 차기 이월까지 분리된 spec으로 검증됨 |
-| P2       | 로컬 CI 재현성 보강                 | 완료      | `ci:local:*` 스크립트와 Docker scan wrapper, 문서 매핑표 추가됨                   |
-| P3       | Next.js ESLint plugin 경고 정리     | 완료      | flat config에서 `@next/next` 직접 등록과 `rootDir` 고정으로 build 경고 제거       |
+| 우선순위 | 작업                                | 현재 상태 | 비고                                                                               |
+| -------- | ----------------------------------- | --------- | ---------------------------------------------------------------------------------- |
+| P1       | 차량 운영 요약 모델 마무리          | 완료      | summary/read model과 물리/응답 표면 정리까지 반영됨                                |
+| P1       | 레거시 `Transaction` 물리 제거      | 완료      | 스키마 relation 제거, 마이그레이션 추가, active reference guard와 문서 동기화 완료 |
+| P1       | 메인 월 운영 루프 브라우저 E2E 보강 | 완료      | 계획 생성, 업로드 승격, 전표 확정, 재무제표, 차기 이월까지 분리된 spec으로 검증됨  |
+| P2       | 로컬 CI 재현성 보강                 | 완료      | `ci:local:*` 스크립트와 Docker scan wrapper, 문서 매핑표 추가됨                    |
+| P3       | Next.js ESLint plugin 경고 정리     | 완료      | flat config에서 `@next/next` 직접 등록과 `rootDir` 고정으로 빌드 경고 제거         |
 
 ## 1. 차량 운영 요약 모델 마무리 [P1]
 
@@ -71,14 +71,14 @@
 1. `packages/contracts`에 차량 운영 요약 전용 계약을 추가하거나 기존 차량 계약에서 summary 성격을 분리한다.
 2. API에 차량 운영 요약 read model 또는 projection 조립 경계를 추가한다.
 3. Web의 차량 화면 카드/차트/보조 문구가 summary 데이터에 의존하도록 옮긴다.
-4. `monthlyExpenseWon`을 DTO, form, mapper, Prisma schema, seed, mock, 테스트에서 제거하고 summary projection 기준으로 회귀를 닫는다.
+4. `monthlyExpenseWon`을 DTO, form, mapper, Prisma 스키마, seed, mock, 테스트에서 제거하고 summary projection 기준으로 회귀를 닫는다.
 5. 문서(`docs/completed/VEHICLE_OPERATIONS_MODEL_PLAN.md`, `docs/VALIDATION_NOTES.md`, 필요 시 `docs/API.md`)를 새 구조에 맞게 동기화한다.
 
 ### 완료 기준
 
 - 차량 운영 요약이 별도 read 경계로 설명 가능하다.
 - Web의 운영 요약 표시가 `Vehicle` raw 필드에 직접 묶여 있지 않다.
-- `monthlyExpenseWon`이 `Vehicle` 기본 모델/응답/스키마에 남지 않고, 운영 요약은 별도 projection으로 설명 가능하다.
+- `monthlyExpenseWon`이 `Vehicle` 기본 모델/응답/schema에 남지 않고, 운영 요약은 별도 projection으로 설명 가능하다.
 - 관련 request/API/E2E 테스트가 새 read model 기준으로 통과한다.
 
 ### 검증
@@ -93,33 +93,33 @@
 ### 왜 지금 필요한가
 
 - `docs/ACCOUNTING_MODEL_BOUNDARY.md`는 신규 회계 흐름이 이미 공식 기준이고, 남은 저장소 내부 작업으로는 구형 `Transaction` 물리 제거가 핵심이라고 봤다.
-- 당시 런타임에서 직접 read/write 경로는 이미 막혀 있었고, 남은 작업은 Prisma schema, migration, seed/test, 경계 문서를 같은 변경으로 맞추는 일이었다.
+- 당시 런타임에서 직접 read/write 경로는 이미 막혀 있었고, 남은 작업은 Prisma 스키마, 마이그레이션, seed/테스트, 경계 문서를 같은 변경으로 맞추는 일이었다.
 
 현재 상태 메모:
 
-- 구형 `Transaction` 모델과 relation, 관련 enum은 활성 Prisma schema에서 제거했다.
+- 구형 `Transaction` 모델과 relation, 관련 enum은 활성 Prisma 스키마에서 제거했다.
 - `apps/api/prisma/phase1-backbone.ts`는 더 이상 구형 거래 delegate를 사용하지 않는다.
-- `apps/api/test/legacy-transaction-boundary.test.ts`는 active runtime/doc surface에 구형 거래 직접 참조가 다시 생기지 않도록 잠근다.
+- `apps/api/test/legacy-transaction-boundary.test.ts`는 active 런타임/doc 표면에 구형 거래 직접 참조가 다시 생기지 않도록 잠근다.
 
 ### 목표
 
-- 구형 `Transaction`을 active schema와 테스트 기본 흐름에서 실제로 제거한다.
+- 구형 `Transaction`을 active 스키마와 테스트 기본 흐름에서 실제로 제거한다.
 - 제거 후에도 신규 회계 흐름 경계가 문서와 테스트에서 더 분명해지게 만든다.
 - 회귀 시 다시 구형 거래 표면이 커지지 않도록 guard를 남긴다.
 
 ### 실행 단계
 
-1. schema와 relation, 남은 enum, test mock state에서 구형 거래 표면을 걷어낸다.
+1. 스키마와 relation, 남은 enum, 테스트 mock state에서 구형 거래 표면을 걷어낸다.
 2. `phase1-backbone`, seed, 경계 테스트를 제거 이후 구조에 맞게 조정한다.
-3. Prisma migration을 추가해 실제 schema 변경을 커밋한다.
+3. Prisma 마이그레이션을 추가해 실제 스키마 변경을 커밋한다.
 4. active 문서는 제거 완료 상태와 guard 기준으로 다시 쓴다.
 5. 과거 준비 메모와 체크리스트는 `docs/completed/`로 이동해 이력으로만 보관한다.
 
 ### 완료 기준
 
-- `apps/api/src`, `apps/web/src`, `packages/contracts` 기준 런타임 direct dependency가 계속 0이다.
-- 활성 Prisma schema에서 구형 `Transaction` 표면이 제거돼 있다.
-- seed/test/docs가 신규 회계 흐름을 기본값으로 유지한다.
+- `apps/api/src`, `apps/web/src`, `packages/contracts` 기준 런타임 direct 의존성이 계속 0이다.
+- 활성 Prisma 스키마에서 구형 `Transaction` 표면이 제거돼 있다.
+- seed/테스트/docs가 신규 회계 흐름을 기본값으로 유지한다.
 - 과거 준비 문서는 `docs/completed/`에만 남고, active 문서는 제거 완료 상태를 설명한다.
 
 ### 검증
@@ -152,7 +152,7 @@
 ### 완료 기준
 
 - 메인 운영 루프의 핵심 단계가 브라우저 시나리오로 설명 가능하다.
-- 내비게이션 smoke와 실제 사용자 행위 회귀가 구분되어 있다.
+- 내비게이션 스모크와 실제 사용자 행위 회귀가 구분되어 있다.
 - 도메인별 E2E 실패 시 어느 흐름이 깨졌는지 바로 알 수 있다.
 
 ### 검증
@@ -179,7 +179,7 @@
 1. 현재 CI job과 로컬 명령 매핑표를 문서에 명시한다. 완료: `docs/DEVELOPMENT_GUIDE.md`에 GitHub job -> `ci:local:*` 대응표를 추가함.
 2. 루트 스크립트 또는 보조 스크립트에서 반복 실행 순서를 감싸는 얇은 진입점을 추가한다. 완료: `ci:local:validate`, `ci:local:core`, `ci:local:all`과 Docker scan wrapper를 추가함.
 3. Docker/MySQL 선행조건, `npm run db:up`, `npm run db:down`, `npm run test:prisma` 사용 순서를 정리한다. 완료: DB/Docker 선행조건과 권장 순서를 개발 문서에 반영함.
-4. browser smoke, API security, Prisma integration, runtime audit의 로컬 재현 조건을 문서화한다. 완료: 각 job의 로컬 실행 명령과 제약을 문서화함.
+4. 브라우저 스모크, API security, Prisma integration, 런타임 audit의 로컬 재현 조건을 문서화한다. 완료: 각 job의 로컬 실행 명령과 제약을 문서화함.
 
 ### 완료 기준
 
@@ -198,18 +198,18 @@
 
 ### 왜 지금 필요한가
 
-- build는 통과했지만 Next.js ESLint plugin 감지 경고가 남아 있었다.
+- 빌드는 통과했지만 Next.js ESLint plugin 감지 경고가 남아 있었다.
 - 경고를 그냥 두면 "무시 가능한 경고"인지 "구성 누락"인지 팀 내 공통 판단이 서지 않았다.
 
 ### 목표
 
 - 경고 원인을 코드/설정 기준으로 확정한다.
-- root flat config에서 Web workspace가 Next plugin을 명시적으로 인지하도록 맞춘다.
+- root flat config에서 Web 워크스페이스가 Next plugin을 명시적으로 인지하도록 맞춘다.
 - 이후 Web lint 규칙 변경 시 유지해야 할 설정 기준을 문서에 남긴다.
 
 ### 실행 단계
 
-1. Web workspace ESLint/Next 설정과 build 경로를 비교해 경고 원인을 재현한다.
+1. Web 워크스페이스 ESLint/Next 설정과 빌드 경로를 비교해 경고 원인을 재현한다.
 2. `eslint.config.mjs` flat config에서 `@next/next` plugin과 `settings.next.rootDir`를 직접 등록한다.
 3. 경고 처리 결과와 유지 규칙을 `docs/DEVELOPMENT_GUIDE.md`에 반영한다.
 
@@ -235,8 +235,8 @@
 
 ## 단계별 산출물
 
-- Phase 1 완료 후: 차량 도메인 경계 정리, 관련 계약/API/Web/test 동기화
-- Phase 2 완료 후: 구형 `Transaction` schema 제거, migration 반영, active reference guard 고정
+- Phase 1 완료 후: 차량 도메인 경계 정리, 관련 계약/API/Web/테스트 동기화
+- Phase 2 완료 후: 구형 `Transaction` 스키마 제거, 마이그레이션 반영, active reference guard 고정
 - Phase 3 완료 후: 메인 월 운영 루프 브라우저 회귀 시나리오 확장
 - Phase 4 완료 후: 로컬 CI 재현용 문서/스크립트 정리
 - Phase 5 완료 후: Next.js ESLint 경고 처리 기준 고정
@@ -260,6 +260,6 @@
 
 - `PRISMA_INTEGRATION_DATABASE_URL` GitHub secret 등록과 첫 GitHub `prisma-integration` 성공 증적
 - 운영 HTTPS/HSTS/Swagger 실제 배포 값 검증
-- GitHub required check, branch protection, 저장소 보안 설정 조정
+- GitHub required check, 브랜치 protection, 저장소 보안 설정 조정
 
 이 항목들은 저장소 밖 후속 문맥에서 별도로 관리한다.

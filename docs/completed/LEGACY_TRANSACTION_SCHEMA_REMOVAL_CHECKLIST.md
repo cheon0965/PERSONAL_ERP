@@ -1,4 +1,4 @@
-# LegacyTransaction 스키마 제거 체크리스트
+# LegacyTransaction 스키마 제거 checklist
 
 ## 목적
 
@@ -13,7 +13,7 @@
 
 ## 스키마 삭제 대상
 
-`apps/api/prisma/schema.prisma`에서 아래 항목을 같은 migration에서 정리한다.
+`apps/api/prisma/schema.prisma`에서 아래 항목을 같은 마이그레이션에서 정리한다.
 
 - `User.legacyTransactions`
 - `Tenant.legacyTransactions @relation("TenantLegacyTransactions")`
@@ -23,13 +23,13 @@
 - `model LegacyTransaction`
 - `LegacyTransaction` 안의 `@@map("Transaction")`
 
-migration 결과에서는 아래가 함께 반영돼야 한다.
+마이그레이션 결과에서는 아래가 함께 반영돼야 한다.
 
 - 물리 테이블 `Transaction` 삭제
 - 관련 foreign key 삭제
 - 관련 index 삭제
 
-핵심은 relation 필드 하나만 지우는 것이 아니라, Prisma schema와 실제 DB 테이블 삭제가 한 PR 안에서 같이 닫혀야 한다는 점이다.
+핵심은 relation 필드 하나만 지우는 것이 아니라, Prisma 스키마와 실제 DB 테이블 삭제가 한 PR 안에서 같이 닫혀야 한다는 점이다.
 
 ## 같은 PR에서 같이 정리할 코드
 
@@ -77,8 +77,8 @@ migration 결과에서는 아래가 함께 반영돼야 한다.
 
 1. 대상 DB에 `npm run db:backfill:phase1`를 실행한다.
 2. 제거 대상 환경의 DB backup 또는 snapshot을 확보한다.
-3. `apps/api/prisma/schema.prisma` 기준 제거 migration을 만든다.
-4. 같은 PR에서 bridge 코드, boundary test, 활성 문서를 새 기준으로 맞춘다.
+3. `apps/api/prisma/schema.prisma` 기준 제거 마이그레이션을 만든다.
+4. 같은 PR에서 bridge 코드, boundary 테스트, 활성 문서를 새 기준으로 맞춘다.
 5. Prisma client regenerate 후 애플리케이션 검증을 다시 수행한다.
 
 ## 검증
@@ -90,4 +90,4 @@ migration 결과에서는 아래가 함께 반영돼야 한다.
 - `npm run test:api`
 - `npm run test:prisma`
 
-필요하면 `npm run build`와 `npm run test:e2e`도 follow-up으로 다시 확인하되, 제거 PR의 기본 gate는 schema와 API 경계가 깨지지 않는지 먼저 보는 데 둔다.
+필요하면 `npm run build`와 `npm run test:e2e`도 follow-up으로 다시 확인하되, 제거 PR의 기본 gate는 스키마와 API 경계가 깨지지 않는지 먼저 보는 데 둔다.

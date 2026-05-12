@@ -1,10 +1,10 @@
-﻿# 관리자 회원관리와 로그관리 실행 계획
+# 관리자 회원관리와 로그관리 실행 계획
 
 ## 완료 메모
 
 2026-04-14 기준 관리자 회원관리와 로그관리 1차 범위를 저장소 안에서 구현 완료했다.
-workspace-scoped 관리자 화면, 멤버 초대/역할/상태 관리, 초대 수락 흐름,
-workspace 감사 이벤트 영속화와 조회, 공통 감사 저장 경계, 테스트와 문서 동기화까지
+워크스페이스-scoped 관리자 화면, 멤버 초대/역할/상태 관리, 초대 수락 흐름,
+워크스페이스 감사 이벤트 영속화와 조회, 공통 감사 저장 경계, 테스트와 문서 동기화까지
 현재 계획 범위에 포함한 항목을 반영했다.
 
 실제 운영 DB가 닿는 Prisma 통합 검증은 이 환경에서
@@ -18,7 +18,7 @@ workspace 감사 이벤트 영속화와 조회, 공통 감사 저장 경계, 테
 
 여기서 말하는 관리자는 플랫폼 운영자가 모든 Tenant를 보는 슈퍼 관리자 화면이
 아니라, 현재 로그인 사용자의 `currentWorkspace` 안에서 `OWNER` 또는 필요한 경우
-`MANAGER`가 사업장 멤버와 감사 로그를 관리하는 workspace-scoped 관리자 화면이다.
+`MANAGER`가 사업장 멤버와 감사 로그를 관리하는 워크스페이스-scoped 관리자 화면이다.
 
 ## 현재 기준
 
@@ -43,7 +43,7 @@ workspace 감사 이벤트 영속화와 조회, 공통 감사 저장 경계, 테
 - 관리자 기능은 `Identity & Access` 컨텍스트에 가깝지만, 도메인 쓰기 이벤트
   조회는 `Platform & Contracts`의 공통 감사 인프라를 통해 읽는다.
 - 1차 범위에서는 플랫폼급 멀티테넌시 운영 UI, 결제/구독 관리, 중앙 로그 수집기,
-  OpenTelemetry, 별도 메시지 브로커를 도입하지 않는다.
+  OpenTelemetry, 별도 메시지 broker를 도입하지 않는다.
 - 회원관리와 로그관리는 같은 관리자 영역에 묶되, API 모듈과 화면 feature는
   책임을 분리한다.
 - 감사 로그에는 비밀번호, access token, refresh token, cookie 원문,
@@ -53,7 +53,7 @@ workspace 감사 이벤트 영속화와 조회, 공통 감사 저장 경계, 테
 
 ## 1차 구현 범위
 
-- 관리자 영역 Web route
+- 관리자 영역 Web 라우트
   - `/admin`
   - `/admin/members`
   - `/admin/logs`
@@ -64,14 +64,14 @@ workspace 감사 이벤트 영속화와 조회, 공통 감사 저장 경계, 테
   - 초대 기반 멤버 추가
   - 자기 자신과 마지막 OWNER 보호 규칙
 - 로그관리
-  - workspace-scoped 감사 이벤트 영속화
+  - 워크스페이스-scoped 감사 이벤트 영속화
   - 관리자 화면에서 감사 이벤트 목록/상세 조회
   - 기간, 이벤트 종류, actor, 결과, requestId 기준 필터
   - 민감정보 제거와 metadata allowlist 기준
 - 권한/감사
   - 관리자 action 권한 정책 추가
   - 회원관리 명령 자체의 감사 로그 기록
-  - 주요 workspace write action의 감사 이벤트 저장 연동
+  - 주요 워크스페이스 write action의 감사 이벤트 저장 연동
 - 문서/검증
   - API 문서, 화면 흐름 문서, 검증 문서 업데이트
   - 요청 단위 API 테스트, Web API 테스트, 대표 E2E 보강
@@ -117,14 +117,14 @@ workspace 감사 이벤트 영속화와 조회, 공통 감사 저장 경계, 테
 4. 상태 변경과 제거
    - 하드 삭제보다 `SUSPENDED` 또는 `REMOVED` 상태 전환을 우선한다.
    - `REMOVED` 멤버는 더 이상 currentWorkspace로 선택되지 않게 한다.
-   - `SUSPENDED` 멤버는 로그인 자체는 가능할 수 있지만 해당 workspace 진입은
+   - `SUSPENDED` 멤버는 로그인 자체는 가능할 수 있지만 해당 워크스페이스 진입은
      막는 방향으로 검증한다.
    - 상태 변경 후 기존 refresh session 처리 범위를 결정한다. 1차에서는 해당
-     workspace 접근 차단을 확실히 하고, 모든 세션 강제 폐기는 후속으로 둘 수
+     워크스페이스 접근 차단을 확실히 하고, 모든 세션 강제 폐기는 후속으로 둘 수
      있다.
 
 5. lastAccessAt 갱신
-   - 현재 `TenantMembership.lastAccessAt` 필드가 있으므로, 인증된 workspace를
+   - 현재 `TenantMembership.lastAccessAt` 필드가 있으므로, 인증된 워크스페이스를
      해석하는 시점에 갱신할지 검토한다.
    - 매 요청마다 쓰면 부하와 write noise가 생기므로, 하루 1회 또는 일정 간격
      throttle 기준을 둔다.
@@ -147,7 +147,7 @@ workspace 감사 이벤트 영속화와 조회, 공통 감사 저장 경계, 테
    - 기존 `workspace-action.audit.ts`는 콘솔 보안 이벤트와 DB 감사 이벤트를
      함께 호출할 수 있는 얇은 경계로 확장한다.
    - 로그인 실패처럼 tenant를 알 수 없는 platform-level 이벤트는 1차 관리자
-     로그 화면에는 넣지 않고, tenant/ledger를 알 수 있는 workspace 이벤트부터
+     로그 화면에는 넣지 않고, tenant/ledger를 알 수 있는 워크스페이스 이벤트부터
      저장한다.
 
 3. 감사 대상
@@ -189,7 +189,7 @@ workspace 감사 이벤트 영속화와 조회, 공통 감사 저장 경계, 테
 
 완료 기준:
 
-- 관리자 기능이 platform admin이 아니라 current workspace admin임을 다시 확인한다.
+- 관리자 기능이 platform admin이 아니라 현재 워크스페이스 admin임을 다시 확인한다.
 - 기존 인증/세션 흐름을 변경하지 않는 구현 범위를 확정한다.
 
 ### 1. 관리자 권한 정책 고정
@@ -219,7 +219,7 @@ workspace 감사 이벤트 영속화와 조회, 공통 감사 저장 경계, 테
 - 자기 자신 제거, 마지막 OWNER 제거, OWNER 없는 Tenant가 생기는 경로가 차단된다.
 - 권한 실패 시 기존 `authorization.action_denied` 로그 기준을 유지한다.
 
-### 2. 공용 계약 추가
+### 2. shared contract 추가
 
 수정 후보:
 
@@ -243,12 +243,12 @@ workspace 감사 이벤트 영속화와 조회, 공통 감사 저장 경계, 테
 - Web과 API가 관리자 응답 shape를 같은 타입으로 공유한다.
 - 민감 필드는 계약에 존재하지 않는다.
 
-### 3. Prisma 스키마와 migration 추가
+### 3. Prisma 스키마와 마이그레이션 추가
 
 수정 후보:
 
 - `apps/api/prisma/schema.prisma`
-- 새 migration 디렉터리
+- 새 마이그레이션 디렉터리
 
 추가 모델 후보:
 
@@ -301,8 +301,8 @@ model WorkspaceAuditEvent {
 완료 기준:
 
 - invitation token은 원문이 아니라 hash로 저장된다.
-- 감사 로그는 workspace 범위와 시간순 조회를 빠르게 할 수 있다.
-- 기존 데이터 migration이 필요하면 seed와 테스트 fixture를 함께 맞춘다.
+- 감사 로그는 워크스페이스 범위와 시간순 조회를 빠르게 할 수 있다.
+- 기존 데이터 마이그레이션이 필요하면 seed와 테스트 fixture를 함께 맞춘다.
 
 ### 4. API 관리자 모듈 추가
 
@@ -336,7 +336,7 @@ model WorkspaceAuditEvent {
 
 완료 기준:
 
-- 모든 endpoint는 `requireCurrentWorkspace`를 통과한다.
+- 모든 엔드포인트는 `requireCurrentWorkspace`를 통과한다.
 - `OWNER` 보호 규칙이 service/use-case 단에서 검증된다.
 - DTO validation이 있고, 잘못된 role/status/action은 400으로 막힌다.
 
@@ -427,7 +427,7 @@ API 테스트:
 - VIEWER/EDITOR가 관리자 명령을 실행하면 403으로 막힌다.
 - 마지막 ACTIVE OWNER는 제거하거나 역할을 낮출 수 없다.
 - 멤버 역할 변경 시 감사 이벤트가 저장된다.
-- 멤버 상태 변경 시 current workspace 접근이 차단된다.
+- 멤버 상태 변경 시 현재 워크스페이스 접근이 차단된다.
 - 초대 token은 hash만 저장되고 만료/소비/재사용이 막힌다.
 - 감사 로그 목록은 current tenant 범위만 반환한다.
 - 감사 로그 목록은 민감정보를 포함하지 않는다.
@@ -450,7 +450,7 @@ E2E 후보:
 - 최소 `npm run check:quick` 통과
 - 권장 `npm run test` 통과
 - 권한/로그 경계가 바뀌므로 `npm run test:security:api` 통과
-- Prisma schema가 바뀌므로 대표 `npm run test:prisma` 확인
+- Prisma 스키마가 바뀌므로 대표 `npm run test:prisma` 확인
 
 ### 9. 문서 동기화
 
@@ -471,11 +471,11 @@ E2E 후보:
 - 감사 로그 저장/조회 정책 추가
 - 민감정보 로그 금지 기준 보강
 - 회원 초대와 역할 변경의 검증 범위 추가
-- 관리자 기능이 platform admin이 아니라 workspace admin임을 명시
+- 관리자 기능이 platform admin이 아니라 워크스페이스 admin임을 명시
 
 완료 기준:
 
-- 문서의 endpoint, 권한, 화면 경로가 실제 구현과 맞는다.
+- 문서의 엔드포인트, 권한, 화면 경로가 실제 구현과 맞는다.
 - `npm run docs:check`가 통과한다.
 
 ### 10. 최종 검증과 구현 단위 정리
@@ -492,12 +492,12 @@ E2E 후보:
 권장 구현 단위:
 
 1. 계약과 권한 정책
-2. Prisma migration과 감사 이벤트 저장 경계
+2. Prisma 마이그레이션과 감사 이벤트 저장 경계
 3. 관리자 멤버 목록 read API
 4. 회원 역할/상태 변경 API
 5. 초대 생성/수락 API
 6. 감사 로그 조회 API
-7. Web 관리자 route와 회원관리 화면
+7. Web 관리자 라우트와 회원관리 화면
 8. Web 로그관리 화면
 9. E2E/Prisma 검증
 10. 문서 동기화

@@ -1,6 +1,6 @@
-﻿# 부채 관리 화면 실행계획
+# 부채 관리 화면 실행계획
 
-> 구현 상태: 2026-04-23 기준 1차 구현 범위가 코드에 반영되었다. 부채 계약/상환 일정 Prisma 모델과 contracts, `GET/POST/PATCH /liabilities` API, `/liabilities` Web 화면, 계획 항목 생성 연동, 부채 상환 전표 분리 정책, 데모 seed/fallback, 메뉴 진입점을 추가했다. 업로드 배치와의 연결은 상환 일정에서 생성된 계획 항목/수집 거래를 통해 기존 계획 매칭 흐름으로 이어진다.
+> 구현 상태: 2026-04-23 기준 1차 구현 범위가 코드에 반영되었다. 부채 계약/상환 일정 Prisma 모델과 contracts, `GET/POST/PATCH /liabilities` API, `/liabilities` Web 화면, 계획 항목 생성 연동, 부채 상환 전표 분리 정책, 데모 seed/대체 응답, 메뉴 진입점을 추가했다. 업로드 배치와의 연결은 상환 일정에서 생성된 계획 항목/수집 거래를 통해 기존 계획 매칭 흐름으로 이어진다.
 
 ## 목적
 
@@ -105,7 +105,7 @@
 7. 업로드 배치
 8. 수집 거래
 
-권장 route:
+권장 라우트:
 
 - `/liabilities`
 - 필요 시 후속: `/liabilities/[liabilityId]`
@@ -322,7 +322,7 @@
 
 ### API
 
-추가 후보 endpoint:
+추가 후보 엔드포인트:
 
 - `GET /liabilities`
 - `POST /liabilities`
@@ -361,7 +361,7 @@
 
 목표:
 
-- 이 문서를 기준으로 용어, route, 흐름을 합의한다.
+- 이 문서를 기준으로 용어, 라우트, 흐름을 합의한다.
 - 부채 관리가 공식 회계 진실을 대체하지 않는다는 경계를 고정한다.
 
 작업:
@@ -386,7 +386,7 @@
 - Prisma 모델 추가 초안 작성
 - enum 후보 정의
 - 마이그레이션 작성
-- seed/fallback 데이터 최소 2건 추가
+- seed/대체 데이터 최소 2건 추가
 
 검증:
 
@@ -408,7 +408,7 @@
 
 - `apps/api/src/modules/liabilities` 모듈 추가
 - controller/service/repository 분리
-- workspace scope 적용
+- 워크스페이스 scope 적용
 - role policy 추가
 - 운영 감사 로그 이벤트 추가
 
@@ -432,7 +432,7 @@
 
 작업:
 
-- route 추가
+- 라우트 추가
 - sidebar/navigation 추가
 - 부채 요약 카드
 - 부채 계약 DataGrid
@@ -451,7 +451,7 @@ UI 원칙:
 
 - Web typecheck
 - Web lint
-- 대표 브라우저 흐름 E2E 또는 smoke
+- 대표 브라우저 흐름 E2E 또는 스모크
 
 완료 기준:
 
@@ -576,7 +576,7 @@ UI 원칙:
 
 - `npm run docs:check`
 - `npm run check:quick`
-- 필요한 경우 E2E smoke 추가
+- 필요한 경우 E2E 스모크 추가
 
 완료 기준:
 
@@ -637,7 +637,7 @@ UI 원칙:
 최소 검증:
 
 - contracts typecheck
-- API request tests
+- API 요청 단위 테스트
 - Web typecheck/lint
 - 부채 계약 생성/수정/보관
 - 상환 예정 생성/수정

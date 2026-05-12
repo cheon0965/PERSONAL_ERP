@@ -234,7 +234,7 @@ Round 0이 끝났다고 보기 위한 조건은 아래다.
 Round 1의 첫 작업은 아래로 고정한다.
 
 1. 로그인 이후 현재 `TenantMembership`와 기본 `Ledger`를 해석하는 런타임 문맥 정리
-2. API request context를 `userId` 중심에서 `tenant/membership/ledger` 중심으로 확장
+2. API request 컨텍스트를 `userId` 중심에서 `tenant/membership/ledger` 중심으로 확장
 3. 설정 화면을 실제 현재 작업 장부 확인 화면으로 정리
 4. 이후 `AccountingPeriod` 화면이 바로 붙을 수 있도록 기반 계약을 마련
 

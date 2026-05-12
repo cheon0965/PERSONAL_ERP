@@ -2,20 +2,20 @@
 
 모든 파일 조회, 추가, 수정, 삭제는 UTF-8 인코딩 기준으로 진행한다.
 
-## Phase 1 - Web E2E test split
+## Phase 1 - Web E2E 테스트 split
 
 Status: completed.
 
 - Split the oversized `apps/web/e2e/auth-and-transactions.spec.ts` by feature flow.
-- Keep common Playwright assertions, API route pattern, and shared E2E builders in support files.
-- Update smoke scripts so they keep running the split auth-and-transactions smoke group.
+- Keep common Playwright assertions, API 라우트 pattern, and shared E2E builders in support files.
+- Update 스모크 scripts so they keep running the split auth-and-transactions 스모크 group.
 
-## Phase 2 - API request test mock/state split
+## Phase 2 - API 요청 단위 테스트 mock/state split
 
 Status: completed.
 
 - Split large request API Prisma mock files by domain responsibility.
-- Move bulky request test state/type fixtures into focused domain fixture files.
+- Move bulky 요청 단위 테스트 state/type fixtures into focused domain fixture files.
 - Keep `request-api.test-prisma-mock.ts` as a small composition entrypoint.
 
 ## Phase 3 - Service and UI large file split

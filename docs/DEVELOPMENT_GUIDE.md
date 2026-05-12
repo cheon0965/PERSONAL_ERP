@@ -9,7 +9,7 @@
 5. `npm run db:seed`
 6. `npm run dev`
 
-`npm run db:up`는 [docker-compose.yml](../docker-compose.yml) 의 폐기 가능한 로컬 개발 전용 MySQL bootstrap 기본값을 사용합니다.
+`npm run db:up`는 [docker-compose.yml](../docker-compose.yml) 의 폐기 가능한 로컬 개발 전용 MySQL 초기화 기본값을 사용합니다.
 이 값은 shared/staging/production secret로 재사용하지 않습니다.
 
 작업 전후 기본 검증:
@@ -36,7 +36,7 @@ npm run test
 2. 이어서 이 기능이 `단순 CRUD`, `핵심 쓰기 흐름`, `읽기/조합 흐름` 중 어디에 속하는지 판단합니다.
 3. `packages/contracts`에 새 요청/응답 계약이 필요한지 먼저 확인합니다.
    금액 필드라면 계약 타입은 `MoneyWon` 의미를 유지하고, API/Web 구현은 `@personal-erp/money` helper 기준을 따릅니다.
-4. 필요한 DTO와 컨트롤러 엔드포인트를 추가합니다.
+4. 필요한 DTO와 controller 엔드포인트를 추가합니다.
 5. 구현 패턴은 아래 셋 중 하나를 고릅니다.
    `단순 CRUD`: `controller -> service -> repository -> mapper/calculator`
    `핵심 쓰기 흐름`: `controller -> use-case -> port -> adapter`
@@ -44,7 +44,7 @@ npm run test
    현재 승격 완료 모듈: `collected-transactions`, `recurring-rules`, `accounting-periods`, `import-batches`, `journal-entries`, `auth`, `admin`, `insurance-policies`, `plan-items`, `financial-statements`, `carry-forwards`
 6. `accounting-periods`, `carry-forwards`, `collected-transactions`, `dashboard`, `financial-statements`, `forecast`, `funding-account-status`, `import-batches`, `journal-entries`, `liabilities`, `navigation`, `plan-items`, `recurring-rules`처럼 모듈 바깥 참조가 있는 영역이면 `public.ts` 진입점도 같이 맞춥니다.
 7. 현재 요청이 어떤 `tenantId` / `TenantMembership` / `ActorRef` 경계에서 실행되는지 확인합니다.
-   현재 HTTP surface는 `user.currentWorkspace` 기반으로 동작하더라도, 상위 도메인 기준은 Tenant/Ledger/Actor 경계라는 점을 문서와 코드에서 분리해 둡니다.
+   현재 HTTP 표면은 `user.currentWorkspace` 기반으로 동작하더라도, 상위 도메인 기준은 Tenant/Ledger/Actor 경계라는 점을 문서와 코드에서 분리해 둡니다.
 8. 관련 테스트를 같이 추가합니다.
    `핵심 쓰기 흐름`: use-case 테스트 + 요청 단위 API 테스트
    `읽기/조합 흐름`: read service 테스트
@@ -55,7 +55,7 @@ npm run test
 1. `app`에는 라우트 래퍼만 둡니다.
 2. `features/<domain>`에 페이지, API, 폼, 훅을 둡니다.
 3. 공통 조각만 `shared`로 올립니다.
-4. feature API는 `shared/api/fetch-json.ts`를 사용해 인증/오류/fallback 정책을 같이 따릅니다.
+4. feature API는 `shared/api/fetch-json.ts`를 사용해 인증/오류/대체 응답 정책을 같이 따릅니다.
 5. 로딩 실패와 제출 실패는 사용자용 문구로 보이게 하고, 개발자 추적 단서는 `ApiRequestError`의 `errorCode`, HTTP 상태, 요청 메서드/경로, `requestId`, `technicalMessage`, 원본 응답 본문에 남깁니다.
 6. 사용자에게 노출되는 오류 Alert는 상단으로 이동하고, 개발자 진단 정보는 기본 접힘 상태를 유지합니다.
 7. 표 중심 화면은 가능하면 `DataTableCard`를 사용합니다. 데스크톱 DataGrid와 모바일 카드 목록, 모바일 5/10/20개 페이지네이션을 한 경계에서 유지하기 위함입니다.
@@ -72,7 +72,7 @@ API나 공유 계약이 바뀌면 아래 순서를 같은 PR 안에서 닫습니
 3. Web 구현
    feature API, 화면, 인증/오류 흐름을 맞춥니다.
 4. 테스트
-   서비스 테스트, 요청 단위 테스트, 필요한 Web 테스트를 보강합니다.
+   service 테스트, 요청 단위 테스트, 필요한 Web 테스트를 보강합니다.
 5. 문서
    관련 문서를 같은 PR에서 함께 갱신합니다.
 
@@ -101,7 +101,7 @@ API나 공유 계약이 바뀌면 아래 순서를 같은 PR 안에서 닫습니
 ## 6. DB 변경 규칙
 
 - 스키마 변경은 `npm run db:migrate`를 기본으로 사용합니다.
-- migration 파일을 함께 커밋합니다.
+- 마이그레이션 파일을 함께 커밋합니다.
 - `db:push:unsafe`는 기본 워크플로로 사용하지 않습니다.
 - 새 빈 DB에 과거 레거시 히스토리 없이 최신 스키마만 1회 적용해야 할 때는 `npm run db:deploy:latest-baseline`을 사용합니다.
 - `db:deploy:latest-baseline`은 대상 DB에 테이블이 하나라도 있으면 중단하므로, 기존 DB에는 `npm run db:deploy`를 사용합니다.
@@ -126,7 +126,7 @@ API나 공유 계약이 바뀌면 아래 순서를 같은 PR 안에서 닫습니
 npm run check:quick
 ```
 
-- `npm run check:quick`에는 `npm run docs:check`도 포함되며, 문서의 `npm run` 표기와 `docs/API.md`, `docs/CURRENT_CAPABILITIES.md`, `docs/OPERATIONS_CHECKLIST.md`, `docs/VALIDATION_NOTES.md`의 Web/API surface가 실제 라우트와 controller 기반 Swagger surface와 맞는지 함께 확인합니다.
+- `npm run check:quick`에는 `npm run docs:check`도 포함되며, 문서의 `npm run` 표기와 `docs/API.md`, `docs/CURRENT_CAPABILITIES.md`, `docs/OPERATIONS_CHECKLIST.md`, `docs/VALIDATION_NOTES.md`의 Web/API 표면이 실제 라우트와 controller 기반 Swagger 표면과 맞는지 함께 확인합니다.
 - `npm run check:quick`에는 `npm run money:check`도 포함되며, money package 밖의 금액 필드 raw `Number(...)`, `+/-`, `+=/-=` 유입을 함께 막습니다.
 - Windows에서 `core.autocrlf=true` checkout을 쓰면 Prettier EOL 차이로 `check:quick`가 CI와 다르게 보일 수 있습니다.
 - CI와 같은 LF 기준 포맷 확인이 필요하면 `npm run format:check -- --end-of-line auto`를 함께 봅니다.
@@ -145,8 +145,8 @@ npm run test:e2e
 npm run test:prisma
 ```
 
-- `npm run test:e2e:smoke:build:browser`는 `next build` 결과물을 기준으로 대표 브라우저 smoke를 다시 확인하는 CI 정렬용 검증입니다.
-- `npm run test:e2e:smoke:build`는 브라우저 없는 HTTP health smoke가 필요할 때 선택적으로 사용합니다.
+- `npm run test:e2e:smoke:build:browser`는 `next build` 결과물을 기준으로 대표 브라우저 스모크를 다시 확인하는 CI 정렬용 검증입니다.
+- `npm run test:e2e:smoke:build`는 브라우저 없는 HTTP health 스모크가 필요할 때 선택적으로 사용합니다.
 - `npm run test:e2e`는 브라우저 사용자 흐름 대표 검증입니다.
 - `npm run test:prisma`는 Docker 기반 disposable MySQL을 띄워 실제 MySQL 경계를 보는 대표 통합 검증입니다.
 - 이 명령은 `prisma generate -> prisma migrate deploy -> minimal fixture seed -> UUID 범위 fixture/test -> teardown`을 한 번에 수행하므로 CI secret이나 사전 DB 준비가 필요하지 않습니다.
@@ -157,18 +157,18 @@ npm run test:prisma
 
 GitHub Actions의 주요 job을 로컬에서 같은 순서로 다시 따라가려면 아래 스크립트를 기준으로 실행합니다.
 
-| GitHub job               | 로컬 명령                    | 비고                                                                           |
-| ------------------------ | ---------------------------- | ------------------------------------------------------------------------------ |
-| `validate`               | `npm run ci:local:validate`  | `db:generate -> check:quick -> test` 순서로 CI validate job을 따라갑니다.      |
-| `e2e-smoke`              | `npm run ci:local:e2e-smoke` | build 결과물 기준 브라우저 smoke를 다시 확인합니다.                            |
-| `security-regression`    | `npm run ci:local:security`  | `db:generate` 후 API 보안 회귀를 다시 돌립니다.                                |
-| `prisma-integration`     | `npm run ci:local:prisma`    | disposable MySQL을 Docker로 띄운 뒤 migration과 실DB 통합 테스트를 실행합니다. |
-| `audit-runtime`          | `npm run ci:local:audit`     | runtime dependency high gate와 만료형 allowlist 정합성을 다시 확인합니다.      |
-| `semgrep-ce`             | `npm run ci:local:semgrep`   | Docker 필요                                                                    |
-| `gitleaks`               | `npm run ci:local:gitleaks`  | Docker 필요                                                                    |
-| validate + smoke + audit | `npm run ci:local:core`      | DB secret 없이도 따라가기 쉬운 기본 루프입니다.                                |
-| Docker scans             | `npm run ci:local:docker`    | Semgrep + Gitleaks를 묶어서 실행합니다.                                        |
-| 전체 로컬 CI             | `npm run ci:local:all`       | Prisma disposable DB와 Docker scan을 모두 실행하므로 Docker가 필요합니다.      |
+| GitHub job                | 로컬 명령                    | 비고                                                                              |
+| ------------------------- | ---------------------------- | --------------------------------------------------------------------------------- |
+| `validate`                | `npm run ci:local:validate`  | `db:generate -> check:quick -> test` 순서로 CI validate job을 따라갑니다.         |
+| `e2e-smoke`               | `npm run ci:local:e2e-smoke` | 빌드 결과물 기준 브라우저 스모크를 다시 확인합니다.                               |
+| `security-regression`     | `npm run ci:local:security`  | `db:generate` 후 API 보안 회귀를 다시 돌립니다.                                   |
+| `prisma-integration`      | `npm run ci:local:prisma`    | disposable MySQL을 Docker로 띄운 뒤 마이그레이션과 실DB 통합 테스트를 실행합니다. |
+| `audit-runtime`           | `npm run ci:local:audit`     | 런타임 의존성 high gate와 만료형 allowlist 정합성을 다시 확인합니다.              |
+| `semgrep-ce`              | `npm run ci:local:semgrep`   | Docker 필요                                                                       |
+| `gitleaks`                | `npm run ci:local:gitleaks`  | Docker 필요                                                                       |
+| validate + 스모크 + audit | `npm run ci:local:core`      | DB secret 없이도 따라가기 쉬운 기본 루프입니다.                                   |
+| Docker scans              | `npm run ci:local:docker`    | Semgrep + Gitleaks를 묶어서 실행합니다.                                           |
+| 전체 로컬 CI              | `npm run ci:local:all`       | Prisma disposable DB와 Docker scan을 모두 실행하므로 Docker가 필요합니다.         |
 
 권장 실행 순서:
 
@@ -180,9 +180,9 @@ npm run ci:local:docker
 ```
 
 - Docker가 없는 환경에서는 `npm run ci:local:core`까지만 먼저 확인하고, Prisma integration과 스캔 job은 Docker가 있는 CI 결과를 기준 증적으로 봅니다.
-- `ci:local:prisma`는 별도 DB env 없이 disposable MySQL을 띄우지만 Docker daemon이 선행돼야 합니다.
-- `ci:local:semgrep`, `ci:local:gitleaks`는 workflow와 같은 Docker image/args를 그대로 감싼 얇은 래퍼입니다.
-- `apps/web/eslint.config.mjs`는 Web workspace 기준 flat config 진입점이다. `@next/next` plugin과 `rootDir='.'`를 직접 등록하고, app router-only 구성이므로 `@next/next/no-html-link-for-pages`는 끈 상태를 유지한다.
+- `ci:local:prisma`는 별도 DB env 없이 disposable MySQL을 띄우지만 Docker 데몬이 선행돼야 합니다.
+- `ci:local:semgrep`, `ci:local:gitleaks`는 워크플로와 같은 Docker image/args를 그대로 감싼 얇은 래퍼입니다.
+- `apps/web/eslint.config.mjs`는 Web 워크스페이스 기준 flat config 진입점이다. `@next/next` plugin과 `rootDir='.'`를 직접 등록하고, app router-only 구성이므로 `@next/next/no-html-link-for-pages`는 끈 상태를 유지한다.
 
 전체 CI 수준 검증:
 
@@ -192,7 +192,7 @@ npm run check
 
 ## 9. 자주 놓치기 쉬운 항목
 
-- demo fallback을 기본값처럼 켜두지 않았는지
+- 데모 대체 응답을 기본값처럼 켜두지 않았는지
 - 요청 주체 경계 없이 데이터를 조회하지 않았는지
 - contracts와 실제 응답 shape가 어긋나지 않았는지
 - 금액 필드가 `MoneyWon`, `Decimal(19,0)`, `HALF_UP`, safe integer, `@personal-erp/money` helper 기준을 벗어나지 않았는지

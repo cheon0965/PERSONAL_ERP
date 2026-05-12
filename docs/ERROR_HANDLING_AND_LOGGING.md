@@ -96,11 +96,11 @@
 
 - [`apps/web/src/shared/providers/query-provider.tsx`](../apps/web/src/shared/providers/query-provider.tsx#L11)
 
-### 3. demo fallback은 개발 편의 기능으로만 취급한다
+### 3. 데모 대체 응답은 개발 편의 기능으로만 취급한다
 
-- demo fallback이 켜져 있을 때만 요청 실패를 fallback 데이터로 대체합니다.
-- 이 경우 `console.warn`으로 실제 fallback 사용 사실을 남깁니다.
-- fallback이 꺼져 있으면 오류를 숨기지 않고 그대로 실패시킵니다.
+- 데모 대체 응답이 켜져 있을 때만 요청 실패를 대체 데이터로 대체합니다.
+- 이 경우 `console.warn`으로 실제 대체 응답 사용 사실을 남깁니다.
+- 대체 응답이 꺼져 있으면 오류를 숨기지 않고 그대로 실패시킵니다.
 
 이 규칙 덕분에 로컬 개발 편의성과 실제 실패 인지가 함께 유지됩니다.
 
@@ -113,9 +113,9 @@
 - CORS 응답에서는 `x-request-id`를 노출 헤더로 공개해 Web이 오류 알림에 요청번호를 함께 표시할 수 있게 합니다.
 - API 경계에서는 `[module] METHOD path status duration requestId=...` 형식의 최소 요청 로그를 남깁니다.
 - 보안 이벤트는 `SecurityEvent` 로거에서 `event=... key=value ...` 형식으로 남깁니다.
-- 관리자 회원관리에서 발생한 workspace-scoped 감사 이벤트는 `WorkspaceAuditEvent`에 저장하고, `/admin/logs` 화면에서 조회합니다.
+- 관리자 회원관리에서 발생한 워크스페이스-scoped 감사 이벤트는 `WorkspaceAuditEvent`에 저장하고, `/admin/logs` 화면에서 조회합니다.
 - 운영 지원의 수동 CSV 반출과 운영 메모 생성도 `WorkspaceAuditEvent`에 저장하고, `/admin/logs`에서 `operations_export.run`, `operations_note.create`로 추적합니다.
-- `OperationalAuditSinkPort`는 workspace 감사 이벤트, 기간 상태 이력, 업로드 일괄 등록 Job 결과, 전표 조정 이벤트를 중앙 로그/외부 감사 저장소로 비동기 발행하는 경계입니다. 로컬 기본 구현은 noop이며, sink 실패는 경고 로그만 남기고 회계 트랜잭션을 롤백하지 않습니다.
+- `OperationalAuditSinkPort`는 워크스페이스 감사 이벤트, 기간 상태 이력, 업로드 일괄 등록 Job 결과, 전표 조정 이벤트를 중앙 로그/외부 감사 저장소로 비동기 발행하는 경계입니다. 로컬 기본 구현은 noop이며, sink 실패는 경고 로그만 남기고 회계 트랜잭션을 롤백하지 않습니다.
 - readiness 점검은 `GET /api/health/ready`에서 수행하고, DB 연결 실패 시 `503`으로 드러냅니다.
 - Prisma unique 충돌은 요청 경계에서 raw 500 대신 도메인 `409 Conflict` 메시지로 정리합니다.
 
@@ -178,7 +178,7 @@
 - 애플리케이션 시작/종료에 가까운 로그
 - 요청 경계의 최소 접근 로그
 - seed 실행 성공/실패 로그
-- demo fallback 사용 로그
+- 데모 대체 응답 사용 로그
 - 앞으로 추가될 외부 연동 실패 로그
   예: 메일, 파일 저장소, 외부 API, 배치 작업
 
@@ -215,7 +215,7 @@
 1. 이 실패가 예상 가능한가
 2. 예상 가능하다면 어느 계층에서 가장 먼저 의미가 생기는가
 3. HTTP 상태 코드나 UI 메시지 결정은 너무 안쪽 계층에서 하고 있지 않은가
-4. fallback이 있다면 실제 fallback 사용 사실을 로그나 UI에서 인지할 수 있는가
+4. 대체 응답이 있다면 실제 대체 응답 사용 사실을 로그나 UI에서 인지할 수 있는가
 5. 로그에 민감정보가 섞이지 않는가
 6. 사용자에게 보여줄 문구와 개발자가 추적할 단서가 분리되어 있는가
 
@@ -224,7 +224,7 @@
 - 같은 `requestId`로 접근 로그와 보안 이벤트 로그를 묶어서 봅니다.
 - 로그인 문제가 많으면 `auth.login_failed`, `auth.login_rate_limited`, `auth.browser_origin_blocked`를 먼저 봅니다.
 - 보호 API 접근 문제가 많으면 `auth.access_denied`, `authorization.scope_denied`를 먼저 봅니다.
-- 서비스 준비 상태가 흔들리면 `system.readiness_failed`와 `/api/health/ready` 응답을 함께 봅니다.
+- service 준비 상태가 흔들리면 `system.readiness_failed`와 `/api/health/ready` 응답을 함께 봅니다.
 
 ## 현재 단계에서 의도적으로 하지 않은 것
 
