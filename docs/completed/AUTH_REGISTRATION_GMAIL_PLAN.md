@@ -1,4 +1,4 @@
-﻿# 회원가입 및 Gmail API 이메일 인증 실행 계획
+# 회원가입 및 Gmail API 이메일 인증 실행 계획
 
 ## 완료 메모
 
@@ -11,7 +11,7 @@
 
 현재 로그인 중심 인증 흐름에 회원가입과 이메일 인증을 추가한다. 1차 목표는
 무료로 시작 가능한 Gmail API 발송을 붙이되, 이후 SMTP relay나 전문 메일
-서비스로 바꾸더라도 회원가입 도메인 로직을 다시 쓰지 않도록 메일 발송 경계를
+service로 바꾸더라도 회원가입 도메인 로직을 다시 쓰지 않도록 메일 발송 경계를
 분리하는 것이다.
 
 이 계획은 실제 구현자가 위에서 아래로 실행하는 순서를 기준으로 작성한다.
@@ -26,7 +26,7 @@
   `C:\secrets\personal-erp\api.env` 같은 외부 SECRET 파일에 둔다.
 - 비밀번호, refresh token, 이메일 인증 토큰 원문은 DB와 운영 로그에 남기지
   않는다.
-- 메시지 브로커, outbox, 별도 gateway는 이번 범위에 넣지 않는다. 이 구조를
+- 메시지 broker, outbox, 별도 gateway는 이번 범위에 넣지 않는다. 이 구조를
   도입해야 한다면 별도 ADR을 먼저 작성한다.
 
 ## 1차 구현 범위
@@ -35,8 +35,8 @@
 - `POST /auth/verify-email`
 - `POST /auth/resend-verification`
 - 이메일 인증 전 로그인 차단
-- 인증 완료 후 기본 workspace, ledger, owner membership 생성
-- 로컬/테스트용 console 또는 fake mail sender
+- 인증 완료 후 기본 워크스페이스, ledger, owner membership 생성
+- 로컬/test용 console 또는 fake mail sender
 - 운영 전환용 Gmail API mail sender
 - 회원가입/이메일 인증 Web 화면
 - 계약, env 예시, API 문서, 검증 문서, ASVS 문서 갱신
@@ -76,10 +76,10 @@
 2. `POST /auth/register`는 성공 시 항상 일반화된 응답을 반환한다.
    이미 존재하는 이메일인지 여부를 응답으로 드러내지 않는다.
 3. 신규 사용자는 `emailVerifiedAt = null` 상태로 만든다.
-4. 이메일 인증 토큰 검증이 끝난 뒤 `emailVerifiedAt`을 채우고 기본 workspace를
+4. 이메일 인증 토큰 검증이 끝난 뒤 `emailVerifiedAt`을 채우고 기본 워크스페이스를
    생성한다.
 5. `POST /auth/login`은 `emailVerifiedAt`이 없는 사용자를 거부한다.
-6. 기존 사용자는 migration에서 `emailVerifiedAt = createdAt`으로 채워 로그인
+6. 기존 사용자는 마이그레이션에서 `emailVerifiedAt = createdAt`으로 채워 로그인
    회귀를 막는다.
 7. 인증 완료 후 자동 로그인은 1차 범위에서 제외하고 `/login?verified=1`로
    안내한다.
@@ -90,7 +90,7 @@
   문서화된다.
 - 기존 demo 사용자와 기존 seeded 사용자는 계속 로그인할 수 있다.
 
-### 2. 공용 계약 추가
+### 2. shared contract 추가
 
 수정 대상:
 
@@ -128,12 +128,12 @@ export type ResendVerificationRequest = {
 - Web과 API가 같은 요청/응답 타입을 import할 수 있다.
 - 계약 변경 후 `npm run typecheck:contracts` 기준으로 깨지는 import가 없다.
 
-### 3. Prisma 스키마와 migration 추가
+### 3. Prisma 스키마와 마이그레이션 추가
 
 수정 대상:
 
 - `apps/api/prisma/schema.prisma`
-- 새 migration 디렉터리
+- 새 마이그레이션 디렉터리
 
 권장 스키마 변경:
 
@@ -176,7 +176,7 @@ WHERE `emailVerifiedAt` IS NULL;
 
 - 인증 토큰 원문은 저장하지 않고 해시만 저장한다.
 - 기존 사용자는 모두 이메일 인증 완료 상태로 보정된다.
-- `npm run db:migrate`로 migration 파일이 생성된다.
+- `npm run db:migrate`로 마이그레이션 파일이 생성된다.
 - Prisma client 재생성이 필요한 경우 `npm run db:generate`를 실행한다.
 
 ### 4. API env와 SECRET 기준 추가
@@ -252,9 +252,9 @@ Gmail API 구현 기준:
 - 테스트에서는 fake sender를 주입할 수 있다.
 - 로컬 console sender는 개발 편의를 위해 링크를 확인할 수 있으나 운영에서는
   사용하지 않는다.
-- Gmail API adapter는 회원가입 서비스와 직접 결합하지 않는다.
+- Gmail API adapter는 회원가입 service와 직접 결합하지 않는다.
 
-### 6. 회원가입/인증 서비스 구현
+### 6. 회원가입/인증 service 구현
 
 추가 또는 수정 권장 위치:
 
@@ -278,22 +278,22 @@ Gmail API 구현 기준:
    있다.
 6. verify 흐름을 구현한다.
    토큰 해시 조회, 만료 확인, 소비 여부 확인, `emailVerifiedAt` 업데이트,
-   workspace bootstrap을 하나의 transaction 경계로 묶는다.
+   워크스페이스 초기화를 하나의 transaction 경계로 묶는다.
 7. resend 흐름을 구현한다.
    미인증 사용자에게만 새 토큰을 만들고 메일을 보내되, 응답은 일반화한다.
 8. login 흐름에서 미인증 사용자를 거부한다.
 
-workspace bootstrap 기준:
+워크스페이스 초기화 기준:
 
 - 기존 `apps/api/prisma/phase1-backbone.ts`의 `ensurePhase1BackboneForUser`
-  정책을 런타임 서비스로 안전하게 옮기거나, 동일 정책의
+  정책을 런타임 service로 안전하게 옮기거나, 동일 정책의
   `WorkspaceBootstrapService`를 만든다.
 - 새 사용자는 기본 `Tenant`, `Ledger`, `TenantMembership(OWNER)`, 기본 장부
   마스터를 가진 상태로 인증 완료된다.
 
 완료 기준:
 
-- 회원가입 public endpoint에도 allowlist origin 검증을 적용한다.
+- 회원가입 public 엔드포인트에도 allowlist origin 검증을 적용한다.
 - 인증 성공 전에는 refresh cookie를 발급하지 않는다.
 - 인증 완료 후 기존 `AuthSessionService.issueSession` 흐름은 그대로 유지한다.
 
@@ -337,7 +337,7 @@ API 테스트:
 - register 성공 시 refresh cookie 미발급
 - register 성공 시 메일 sender 호출
 - `POST /auth/verify-email` 성공 시 `emailVerifiedAt` 설정
-- verify 성공 시 workspace, ledger, owner membership 생성
+- verify 성공 시 워크스페이스, ledger, owner membership 생성
 - 만료/소비/잘못된 토큰 검증 실패
 - 미인증 사용자의 `POST /auth/login` 거부
 - register, verify, resend rate limit
@@ -349,7 +349,7 @@ Web 테스트:
 - 회원가입 폼 validation
 - 회원가입 성공 안내
 - 인증 성공 후 로그인 안내
-- 기존 로그인 smoke 유지
+- 기존 로그인 스모크 유지
 
 Prisma 통합 테스트:
 
@@ -389,7 +389,7 @@ Prisma 통합 테스트:
 완료 기준:
 
 - 문서에 적힌 `npm run` 명령이 실제 package script와 맞는다.
-- 구현된 endpoint와 `docs/API.md`, `docs/VALIDATION_NOTES.md`의 surface가
+- 구현된 엔드포인트와 `docs/API.md`, `docs/VALIDATION_NOTES.md`의 표면이
   어긋나지 않는다.
 
 ### 10. Gmail API 운영 전환 준비
@@ -434,24 +434,24 @@ npm run test:prisma
 
 확인 항목:
 
-- migration 파일 포함
+- 마이그레이션 파일 포함
 - `package.json` 또는 lockfile 변경 시 audit 결과 확인
 - SECRET 값이 Git diff에 포함되지 않았는지 확인
 - Gmail refresh token, 인증 링크 token 원문이 로그와 테스트 snapshot에 남지 않는지
   확인
-- 기존 demo 로그인과 E2E smoke가 유지되는지 확인
+- 기존 demo 로그인과 E2E 스모크가 유지되는지 확인
 
 완료 기준:
 
-- PR 본문에 목적, 변경 범위, migration, env, 문서, 검증 결과를 기록할 수 있다.
+- PR 본문에 목적, 변경 범위, 마이그레이션, env, 문서, 검증 결과를 기록할 수 있다.
 - 실패한 검증이 있으면 원인과 후속 조치를 문서화한다.
 
 ## 권장 구현 단위
 
-1. 계약과 Prisma migration
+1. 계약과 Prisma 마이그레이션
 2. env 검증과 mail sender port
 3. console/fake sender 기반 API 회원가입 흐름
-4. workspace bootstrap 서비스
+4. 워크스페이스 초기화 service
 5. Web 회원가입/인증 화면
 6. Gmail API adapter
 7. 테스트 보강

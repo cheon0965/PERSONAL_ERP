@@ -1,4 +1,4 @@
-﻿# 현재 구현 범위
+# 현재 구현 범위
 
 ## 문서 목적
 
@@ -107,10 +107,10 @@
 
 ## API 모듈 관점 현재 범위
 
-### 인증과 workspace 관리
+### 인증과 워크스페이스 관리
 
 - `auth`: register, verify-email, resend-verification, accept-invitation, login, refresh, logout, `auth/me`, 접근 가능 사업장 목록, 세션 단위 사업장 전환, 계정 보안/프로필/비밀번호/세션
-- `workspace-settings`: 현재 workspace/ledger 설정 조회와 Owner/Manager 수정
+- `workspace-settings`: 현재 워크스페이스/원장 설정 조회와 Owner/Manager 수정
 - `admin`: 멤버 초대, 역할/상태 변경, 제거, 전체 사용자/사업장 관리, 지원 문맥 선택, 보안 위협 로그, 운영 상태, 로그관리, 권한 정책 요약
 - `navigation`: DB 기반 메뉴 트리와 역할별 노출 제어
 - `health`: liveness/readiness
@@ -131,7 +131,7 @@
 - `recurring-rules`: 반복 규칙 CRUD
 - `plan-items`: 계획 항목 생성과 기간별 추적
 - `collected-transactions`: 생성, 상세 조회, 수정, 삭제, 전표 확정
-- `import-batches`: UTF-8 텍스트 업로드 파싱, 활성 계좌/카드 연결형 IM뱅크 텍스트 PDF·우리은행/우리카드 저장·암호화 HTML 파일첨부 파싱, 스캔/이미지 PDF 명시 차단, 월별 open/close 정책에 맞춘 최신 진행월 기준 collect preview/단건 collect, 신규 계좌/카드 bootstrap 자동 운영월 생성과 완료 전환, 배치 삭제, 배치 상세 일괄 등록 Job/진행률/중단/행별 결과 조회
+- `import-batches`: UTF-8 텍스트 업로드 파싱, 활성 계좌/카드 연결형 IM뱅크 텍스트 PDF·우리은행/우리카드 저장·암호화 HTML 파일첨부 파싱, 스캔/이미지 PDF 명시 차단, 월별 open/close 정책에 맞춘 최신 진행월 기준 collect preview/단건 collect, 신규 계좌/카드 초기화 자동 운영월 생성과 완료 전환, 배치 삭제, 배치 상세 일괄 등록 Job/진행률/중단/행별 결과 조회
 - `journal-entries`: 전표 조회, 반전 전표, 정정 전표
 - `financial-statements`: 잠금 기간 재무제표 스냅샷 생성/조회
 - `funding-account-status`: 자금수단별 수입/지출/이체/잔액 현황, 수집 거래 기준과 확정 전표 기준 비교, 최근 월 추이와 카테고리 breakdown
@@ -141,7 +141,7 @@
 ### 운영 지원 표면
 
 - `operations-console`: 운영 허브, 운영 체크리스트, 예외 처리함, 월 마감, 업로드 운영 현황, 시스템 상태, 알림 / 이벤트 센터, UTF-8 CSV 반출, 운영 메모 / 인수인계
-- `common/infrastructure/operational`: workspace 감사 이벤트 저장/조회, 주요 운영 이벤트 외부 감사 sink 포트, 운영 지원 공통 기반
+- `common/infrastructure/operational`: 워크스페이스 감사 이벤트 저장/조회, 주요 운영 이벤트 외부 감사 sink port, 운영 지원 공통 기반
 
 ## 운영 지원과 검증 가드
 
@@ -154,10 +154,10 @@
 - 공개 홈은 개인사업자 ERP, 소상공인 장부관리, 거래내역 업로드, 월마감 관리 같은 한글 검색 의도를 메타데이터와 본문 문맥 양쪽에서 제공합니다.
 - `GET /api/health/ready`로 DB readiness를 확인합니다.
 - 운영 반출은 현재 `UTF-8 CSV` payload를 생성하고 감사 이벤트를 남깁니다.
-- `npm run docs:check`는 문서의 `npm run` 표기와 `docs/API.md`, `docs/CURRENT_CAPABILITIES.md`, `docs/OPERATIONS_CHECKLIST.md`, `docs/VALIDATION_NOTES.md`의 Web/API surface를 실제 코드와 대조합니다.
+- `npm run docs:check`는 문서의 `npm run` 표기와 `docs/API.md`, `docs/CURRENT_CAPABILITIES.md`, `docs/OPERATIONS_CHECKLIST.md`, `docs/VALIDATION_NOTES.md`의 Web/API 표면을 실제 코드와 대조합니다.
 - `npm run check:quick`는 문서 점검, 금액 가드, lint, typecheck를 함께 수행합니다.
 - `npm run test:e2e:smoke:build:browser`, `npm run test:e2e`, `npm run test:prisma`가 대표 사용자 흐름과 실DB 경계를 나눠서 검증합니다.
-- demo fallback은 기본적으로 꺼져 있으며, 개발 환경에서만 명시적으로 켤 수 있습니다.
+- 데모 대체 응답은 기본적으로 꺼져 있으며, 개발 환경에서만 명시적으로 켤 수 있습니다.
 
 ## 현재 범위 밖으로 남겨 둔 것
 

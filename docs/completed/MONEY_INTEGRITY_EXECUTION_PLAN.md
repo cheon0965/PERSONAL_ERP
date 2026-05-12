@@ -8,7 +8,7 @@
 
 이 계획의 목표는 네 가지다.
 
-- 도메인 문서에 이미 정의된 `Money` 정책을 실제 코드 구조와 저장소 타입으로 고정한다.
+- 도메인 문서에 이미 정의된 `Money` 정책을 실제 코드 구조와 repository type으로 고정한다.
 - MySQL `Int` 기반 금액 컬럼의 범위 한계를 제거한다.
 - 수집, 전표, 마감, 재무제표, 대시보드, 예측, 업로드 파싱이 같은 금액 연산 규칙을 사용하게 만든다.
 - 이후 기능이 늘어나도 금액 계산이 `임의 number 연산`으로 다시 퍼지지 않도록 공용 모듈과 검증 가드를 남긴다.
@@ -20,7 +20,7 @@
 - `Phase 0` 완료
   - 금액 필드와 합산 경로를 인벤토리로 고정했고, 고액 금액/안전 정수 경계 테스트를 추가했다.
 - `Phase 1` 완료
-  - 신규 workspace package `packages/money`를 도입했고, `MoneyWon` 공용 파싱/검증/연산 helper를 API와 Web에서 함께 사용하도록 연결했다.
+  - 신규 워크스페이스 package `packages/money`를 도입했고, `MoneyWon` 공용 파싱/검증/연산 helper를 API와 Web에서 함께 사용하도록 연결했다.
 - `Phase 2` 완료
   - 수집 거래, 반복규칙, 보험, 차량, 오프닝 잔액, 전표 정정, 업로드 파싱 경계가 공용 money 검증을 사용하도록 통일했다.
 - `Phase 3` 완료
@@ -40,12 +40,12 @@
 - `Phase 6` 완료
   - 실제 DB 마이그레이션 적용과 Prisma 통합 테스트까지 끝냈다.
   - 이번 후속 변경 이후 `npm run build:money`, `npm run money:check`, `npm run test:api`, `npm run check:quick`, `npm run test`, `npm run build`, `npm run test:e2e:smoke:build`를 재실행해 통과했다.
-  - 브라우저 기반 `npm run test:e2e:smoke:build:browser`는 필수 잔여 작업이 아니라 필요 시 별도로 실행하는 심화 smoke로 유지한다.
+  - 브라우저 기반 `npm run test:e2e:smoke:build:browser`는 필수 잔여 작업이 아니라 필요 시 별도로 실행하는 심화 스모크로 유지한다.
 
 ## 상위 기준
 
 - 비즈니스 정책의 상위 기준은 `docs/domain/business-logic-draft.md`를 우선한다.
-- 핵심 엔티티, `Money` 값 객체, 반올림 규칙의 상위 기준은 `docs/domain/core-entity-definition.md`를 우선한다.
+- 핵심 엔티티, `Money` value object, 반올림 규칙의 상위 기준은 `docs/domain/core-entity-definition.md`를 우선한다.
 - 이 문서는 도메인 정책을 새로 정의하지 않고, 현재 저장소에서 그 정책을 어떤 순서로 구현할지 정리하는 실행 문서다.
 
 현재 도메인 기준은 이미 아래를 요구한다.
@@ -61,7 +61,7 @@
 계획 작성 당시 저장소는 금액 의미 자체는 비교적 잘 유지하고 있었지만, 구현 계층별 표현이 분산되어 있었다.
 
 - Prisma/MySQL 금액 컬럼은 대부분 `Int`였다.
-- API DTO, 서비스, read model, contracts, Web form은 대부분 `number`를 사용했다.
+- API DTO, service, read model, contracts, Web form은 대부분 `number`를 사용했다.
 - 업로드 배치 파싱만 `Number.isSafeInteger`를 명시적으로 검사하고, 다른 입력 경계는 `IsInt`, `zod.int()`, `Number()` 변환에 더 많이 의존했다.
 - 마감, 재무제표, 대시보드, 예측, 전표 정정, 화면 합계는 raw `+`, `reduce`, `Number()` 변환으로 합산하는 지점이 있었다.
 - 차량 영역의 `liters`, `estimatedFuelEfficiencyKmPerLiter`는 이미 `Decimal`을 사용하지만, 금액 영역의 공용 정책과는 분리돼 있었다.
@@ -69,7 +69,7 @@
 계획 작성 당시 가장 큰 리스크는 아래 두 가지였다.
 
 1. 금액 컬럼이 `Int`라서 범위가 약 `2,147,483,647`로 제한된다.
-2. 금액 연산이 공용 값 객체가 아니라 일반 `number` 누적에 퍼져 있어, 향후 배분/반올림/대규모 잔액 처리 시 drift가 생길 여지가 있다.
+2. 금액 연산이 공용 value object가 아니라 일반 `number` 누적에 퍼져 있어, 향후 배분/반올림/대규모 잔액 처리 시 drift가 생길 여지가 있다.
 
 ## 이번 실행계획의 기본 결정
 
@@ -79,7 +79,7 @@
 - 즉, DB 타입을 승격하더라도 `소수 금액을 저장하자`는 뜻이 아니다.
 - 소수점은 계산 중간값에서만 허용하고, 저장 전에는 `HALF_UP`으로 확정한다.
 
-### 2. 공용 금액 모듈은 신규 workspace package로 분리한다
+### 2. 공용 금액 모듈은 신규 워크스페이스 package로 분리한다
 
 권장 위치는 신규 `packages/money`다.
 
@@ -93,7 +93,7 @@
 - `HALF_UP` 반올림
 - 금액 배분과 잔차 보정
 
-`packages/contracts`는 계속 HTTP 요청/응답 계약의 역할을 우선하고, exact money runtime 로직은 새 패키지로 분리하는 편이 경계가 더 명확하다.
+`packages/contracts`는 계속 HTTP request/response 계약의 역할을 우선하고, exact money 런타임 로직은 새 패키지로 분리하는 편이 경계가 더 명확하다.
 
 ### 3. Prisma 금액 컬럼 승격의 1차 권장안은 `Decimal(19,0)`다
 
@@ -149,10 +149,10 @@
 ### 앱 계층 범위
 
 - `apps/api`의 DTO, service, use-case, repository, mapper
-- `apps/web`의 form schema, 입력 변환, 합계 표시, 업로드 preview 로직
+- `apps/web`의 form 스키마, 입력 변환, 합계 표시, 업로드 preview 로직
 - `packages/contracts`의 money 관련 계약 타입
 - 신규 `packages/money`
-- seed, mock, request test, prisma integration test, e2e smoke
+- seed, mock, 요청 단위 테스트, prisma integration 테스트, e2e 스모크
 
 ### 범위 밖
 
@@ -253,19 +253,19 @@
 권장 순서:
 
 1. repository/mapper가 `number | Prisma.Decimal` 양쪽을 모두 받아도 동작하도록 먼저 적응시킨다.
-2. 그 다음 Prisma schema의 금액 컬럼을 `Decimal @db.Decimal(19, 0)`으로 승격한다.
-3. migration SQL과 seed, mock, prisma integration test를 같이 맞춘다.
+2. 그 다음 Prisma 스키마의 금액 컬럼을 `Decimal @db.Decimal(19, 0)`으로 승격한다.
+3. 마이그레이션 SQL과 seed, mock, prisma integration 테스트를 같이 맞춘다.
 
 주의사항:
 
 - `CollectedTransaction.amount`처럼 이름이 일반적인 필드는 물리 rename보다 타입 승격을 먼저 한다.
-- `liters`, `estimatedFuelEfficiencyKmPerLiter`는 이번 migration 대상이 아니다.
+- `liters`, `estimatedFuelEfficiencyKmPerLiter`는 이번 마이그레이션 대상이 아니다.
 - JSON payload에 들어가는 재무제표 금액은 별도 컬럼이 아니므로, mapper/serializer 단계에서 정합성을 맞춘다.
 
 완료 기준:
 
 - 금액 컬럼이 더 이상 MySQL `Int` 한계에 묶이지 않는다.
-- Prisma client 타입 변경 후에도 request test와 prisma integration test가 통과한다.
+- Prisma client 타입 변경 후에도 요청 단위 테스트와 prisma integration 테스트가 통과한다.
 
 ### Phase 4. 집계, 전표, 마감, 보고 연산 통일
 
@@ -336,14 +336,14 @@
 1. 공용 money package
 2. API/Web 입력 경계 통일
 3. repository adapter 준비
-4. Prisma schema migration
+4. Prisma 스키마 마이그레이션
 5. exact arithmetic 전환
 6. 문서와 CI 가드 마감
 
 롤백 원칙:
 
-- schema migration 전까지는 코드 롤백만으로 충분해야 한다.
-- schema migration 후에도 값 의미가 바뀌지 않으므로, 문제 발생 시 우선 adapter와 serializer를 되돌리고 데이터 자체는 건드리지 않는다.
+- 스키마 마이그레이션 전까지는 코드 롤백만으로 충분해야 한다.
+- 스키마 마이그레이션 후에도 값 의미가 바뀌지 않으므로, 문제 발생 시 우선 adapter와 serializer를 되돌리고 데이터 자체는 건드리지 않는다.
 - 외부 계약을 string으로 바꾸는 단계는 이번 1차 범위에 넣지 않아, 롤백 범위를 불필요하게 넓히지 않는다.
 
 ## 권장 PR 묶음
@@ -356,7 +356,7 @@
 4. `money-exact-arithmetic`
 5. `money-docs-and-guards`
 
-각 PR은 최소 `코드 + 테스트 + 문서` 세트를 같이 남긴다.
+각 PR은 최소 `코드 + test + 문서` 세트를 같이 남긴다.
 
 ## 완료 기준
 
@@ -366,7 +366,7 @@
 - 금액 입력 경계가 공용 parser와 safe integer 검사를 사용한다.
 - 전표, 마감, 재무제표, 대시보드, 예측, 업로드 파싱의 금액 합산이 공용 money helper를 사용한다.
 - `HALF_UP`과 잔차 보정 정책이 테스트로 고정된다.
-- 문서, contracts, Swagger, seed, mock, prisma integration test, e2e smoke가 같은 money 정책을 설명한다.
+- 문서, contracts, Swagger, seed, mock, prisma integration 테스트, e2e 스모크가 같은 money 정책을 설명한다.
 
 ## 후속 문서 반영 대상
 

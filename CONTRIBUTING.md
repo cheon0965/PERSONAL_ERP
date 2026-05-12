@@ -46,16 +46,16 @@
 ## 구조 규칙
 
 - 웹은 `app -> features -> shared` 흐름을 유지합니다.
-- API 기본 흐름은 `컨트롤러 -> 서비스 -> 저장소 -> 변환기/계산기`입니다.
-- 핵심 쓰기 흐름으로 승격된 모듈은 `컨트롤러 -> 유스케이스 -> 포트 -> 어댑터` 경계를 사용합니다.
+- API 기본 흐름은 `controller -> service -> repository -> mapper/calculator`입니다.
+- 핵심 쓰기 흐름으로 승격된 모듈은 `controller -> use case -> port -> adapter` 경계를 사용합니다.
   현재 승격 기준과 목록은 `docs/ARCHITECTURE.md`와 `docs/DEVELOPMENT_GUIDE.md`를 우선합니다.
-- `dashboard`, `funding-account-status`, `forecast`는 `컨트롤러 -> 읽기 서비스 -> 읽기 저장소/계산 -> 투영` 흐름을 사용합니다.
+- `dashboard`, `funding-account-status`, `forecast`는 `controller -> read service -> read repository/calculation -> projection` 흐름을 사용합니다.
 - 공용 계약은 `packages/contracts`를 단일 소스로 사용합니다.
 - 사용자 경계가 필요한 데이터는 `user.currentWorkspace`와 `tenantId` / `ledgerId` / `membershipRole` 기준으로 다룹니다.
 - `dashboard`, `funding-account-status`, `forecast`는 읽기/조합 컨텍스트로 보고, `collected-transactions`, `recurring-rules`의 쓰기 규칙을 직접 소유하지 않습니다.
-- 다른 모듈의 저장소, 어댑터, 컨트롤러를 직접 가져다 쓰는 방식은 기본 규칙으로 사용하지 않습니다.
+- 다른 모듈의 repository, adapter, controller를 직접 가져다 쓰는 방식은 기본 규칙으로 사용하지 않습니다.
 - 모듈 바깥에서 공개 경계가 있는 API 모듈을 참조할 때는 해당 모듈의 `public.ts`만 공식 진입점으로 사용합니다.
-- 서비스 분리, 메시지 브로커, 아웃박스, 게이트웨이 도입은 별도 ADR 없이 진행하지 않습니다.
+- service 분리, 메시지 broker, outbox, gateway 도입은 별도 ADR 없이 진행하지 않습니다.
 
 ## 비밀정보 규칙
 
@@ -66,11 +66,11 @@
 - macOS/Linux에서는 같은 의미의 절대 경로를 사용하고, 자세한 예시는 `README.md`와 `ENVIRONMENT_SETUP.md`를 기준으로 맞춥니다.
 - 실제 비밀값 파일은 Git에 추가하지 않습니다.
 
-## 데이터베이스 변경 규칙
+## DB 변경 규칙
 
 - 스키마 변경은 `npm run db:migrate` 기준으로 진행합니다.
 - `db:push:unsafe`는 로컬 복구나 예외 상황이 아니면 기본 흐름으로 쓰지 않습니다.
-- 스키마 PR에는 migration 파일이 함께 포함되어야 합니다.
+- 스키마 PR에는 마이그레이션 파일이 함께 포함되어야 합니다.
 
 ## 대체 응답 규칙
 
@@ -83,21 +83,21 @@
 
 - 최소 실행 기준: `npm run check:quick`
 - PR 전 권장 기준: `npm run test`
-- `npm run check:quick`에는 `npm run docs:check`가 포함되며, 문서의 `npm run` 표기와 `docs/API.md`, `docs/CURRENT_CAPABILITIES.md`, `docs/OPERATIONS_CHECKLIST.md`, `docs/VALIDATION_NOTES.md`의 웹/API 표면이 실제 라우트와 컨트롤러 기반 Swagger 표면과 맞는지 함께 확인합니다.
+- `npm run check:quick`에는 `npm run docs:check`가 포함되며, 문서의 `npm run` 표기와 `docs/API.md`, `docs/CURRENT_CAPABILITIES.md`, `docs/OPERATIONS_CHECKLIST.md`, `docs/VALIDATION_NOTES.md`의 웹/API 표면이 실제 라우트와 controller 기반 Swagger 표면과 맞는지 함께 확인합니다.
 - 인증/세션, CORS, 보안 헤더, 브라우저/API 경계 정책을 바꿨다면 `npm run test:security:api`를 같이 봅니다.
 - `package.json` 또는 잠금 파일을 바꿨다면 `npm run audit:runtime`와 CI `audit-runtime` 결과를 같이 확인합니다.
 - 불가피한 런타임 보안 권고 예외를 추가할 때는 `security/runtime-audit-allowlist.json`에 `id`, `package`, `severity`, `trackedAt`, `expiresOn`, `reason`을 함께 남기고, 해소되면 바로 제거합니다.
 - 남아 있는 런타임 보안 권고 상세를 다시 볼 때는 `npm run audit:runtime:full`을 사용합니다.
 - 브라우저 흐름을 건드리면 `npm run test:e2e`를 추가로 봅니다.
-- Next.js build 결과물, 공용 라우팅, 인증 복원, 운영 체크리스트 스모크 검증에 영향을 줄 수 있다면 `npm run test:e2e:smoke:build:browser`를 추가로 봅니다.
+- Next.js 빌드 결과물, 공용 라우팅, 인증 복원, 운영 체크리스트 스모크 검증에 영향을 줄 수 있다면 `npm run test:e2e:smoke:build:browser`를 추가로 봅니다.
 - Prisma/MySQL 경계를 건드리면 `npm run test:prisma`를 대표 심화 검증으로 사용합니다.
 - 인증, 소유권 검증, 월말 계산 로직을 건드리면 관련 테스트를 같이 수정합니다.
-- 금액 필드나 금액 집계/반올림/배분을 건드리면 `@personal-erp/money` 도우미 함수와 `npm run money:check` 기준을 함께 확인합니다.
+- 금액 필드나 금액 집계/반올림/배분을 건드리면 `@personal-erp/money` 헬퍼 함수와 `npm run money:check` 기준을 함께 확인합니다.
 
 ## 금액 규칙
 
 - HTTP 계약의 금액은 `MoneyWon` 의미의 `number`이며 KRW 원 단위 안전한 정수만 허용합니다.
-- Prisma 영속 금액 컬럼은 `Decimal(19,0)` 기준으로 유지하고, API 변환기/어댑터 경계에서 `MoneyWon(number)`로 변환합니다.
+- Prisma 영속 금액 컬럼은 `Decimal(19,0)` 기준으로 유지하고, API mapper/adapter 경계에서 `MoneyWon(number)`로 변환합니다.
 - 금액 합산, 차감, `HALF_UP` 반올림, 배분 잔차 보정은 `@personal-erp/money`를 사용하고 `money` 패키지 밖에서 직접 `Number(...)`, `+/-`, `+=/-=`를 새로 추가하지 않습니다.
 - 이 규칙은 `npm run money:check`와 `npm run check:quick`에 포함된 정적 가드로 검증합니다.
 

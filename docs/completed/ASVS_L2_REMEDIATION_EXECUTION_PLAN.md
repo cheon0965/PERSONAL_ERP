@@ -25,7 +25,7 @@
 ## 실행 원칙
 
 - Critical blocker는 기능 축소가 있더라도 fail-closed로 먼저 막는다.
-- 보안 패치는 기존 사용자 흐름을 깨뜨릴 수 있으므로 API 테스트와 web 테스트를 각 단계마다 실행한다.
+- 보안 패치는 기존 사용자 흐름을 깨뜨릴 수 있으므로 API 테스트와 Web 테스트를 각 단계마다 실행한다.
 - ASVS 문서는 모든 코드 변경이 끝난 뒤 한 번에 최신 증거 기준으로 갱신한다.
 - Docker가 필요한 Semgrep/Gitleaks는 로컬 Docker가 없는 환경에서는 CI 통과 증적으로 대체한다.
 
@@ -34,13 +34,13 @@
 상태: Phase 1-6 코드는 적용 완료, Phase 7-9는 운영 증적과 최종 검증 단계로 남긴다.
 
 - Phase 1 완료: `WOORI_BANK_HTML`/`WOORI_CARD_HTML`의 HTML 복호화 경로에서 dynamic JavaScript 실행을 제거했다. 이후 정적 저장 HTML 업로드를 유지하고, 암호화 VestMail 원본은 서버 내 SEED/CBC 구현으로만 복호화하도록 복구했다.
-- Phase 2 완료: Next.js web route 전체에 CSP, HSTS, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, frame 방어 헤더를 적용하고 테스트를 추가했다.
+- Phase 2 완료: Next.js web 라우트 전체에 CSP, HSTS, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, frame 방어 헤더를 적용하고 테스트를 추가했다.
 - Phase 3 완료: refresh cookie를 `__Host-refreshToken`, `Secure`, `HttpOnly`, `SameSite=Strict`, path `/` 기준으로 고정하고 legacy `refreshToken` 읽기/삭제 전환 경로를 남겼다.
 - Phase 4 완료: 운영 CSV 반출 문자열 셀에 spreadsheet formula guard를 적용하고 요청 단위 테스트를 추가했다.
-- Phase 5 완료: 회원가입, 비밀번호 변경, 비밀번호 재설정 경로에 common/context-derived password 차단 정책을 적용했다.
+- Phase 5 완료: 회원가입, 비밀번호 변경, 비밀번호 재설정 경로에 common/컨텍스트-derived password 차단 정책을 적용했다.
 - Phase 6 완료: JWT access/refresh secret은 32 bytes 이상 base64/base64url random secret, 서로 다른 값, placeholder 금지 조건을 env parse 단계에서 검증한다.
 - Phase 7 남음: 운영 rate limit 계측과 실제 배포 리허설 증적을 보강한다.
-- Phase 8 남음: runtime audit moderate advisory를 만료형 allowlist와 CI 결과로 추적한다.
+- Phase 8 남음: 런타임 audit moderate advisory를 만료형 allowlist와 CI 결과로 추적한다.
 - Phase 9 진행 중: ASVS 기준 문서와 validation note를 최신 구현 상태로 맞추고 최종 승인 게이트를 실행한다.
 
 ## Phase 0. Baseline 고정
@@ -67,8 +67,8 @@ npm.cmd run audit:runtime
 현재 기준 결과:
 
 - `docs:check`: 통과
-- `test:security:api`: 통과, tests 305, fail 0
-- `test:web`: 통과, tests 29, fail 0
+- `test:security:api`: 통과, 테스트 305, fail 0
+- `test:web`: 통과, 테스트 29, fail 0
 - `audit:runtime`: 통과, high 0, critical 0
 - `audit:runtime:full`: `postcss <8.5.10` moderate 3건, 현재 npm 기준 no fix available
 
@@ -85,7 +85,7 @@ npm.cmd run audit:runtime
 관련 ASVS:
 
 - v5.0.0-V1.3.2 dynamic code execution 회피
-- v5.0.0-V1.3.3 dangerous context sanitization
+- v5.0.0-V1.3.3 dangerous 컨텍스트 sanitization
 - v5.0.0-V5.2 uploaded file 검증
 
 문제 근거:
@@ -175,7 +175,7 @@ rg --encoding utf-8 -n "new Function|runDecryptionInSandbox" apps\api\src
 실행 방안:
 
 - [ ] `apps/web/next.config.mjs`에 `async headers()`를 추가한다.
-- [ ] 모든 web route에 기본 보안 헤더를 적용한다.
+- [ ] 모든 web 라우트에 기본 보안 헤더를 적용한다.
 - [ ] 개발 환경에서 필요한 Next.js dev 기능과 충돌하지 않도록 production 중심 CSP를 설계한다.
 - [ ] inline script/style 요구가 있다면 nonce/hash 기반이 가능한지 확인하고, 당장 어렵다면 단계적으로 CSP를 강화한다.
 
@@ -195,8 +195,8 @@ rg --encoding utf-8 -n "new Function|runDecryptionInSandbox" apps\api\src
 
 테스트:
 
-- [ ] web 테스트 또는 별도 unit test로 `next.config.mjs`의 header source가 존재하는지 검증한다.
-- [ ] e2e smoke에서 주요 페이지가 CSP 때문에 깨지지 않는지 확인한다.
+- [ ] Web 테스트 또는 별도 unit 테스트로 `next.config.mjs`의 header source가 존재하는지 검증한다.
+- [ ] e2e 스모크에서 주요 페이지가 CSP 때문에 깨지지 않는지 확인한다.
 
 검증:
 
@@ -326,7 +326,7 @@ npm.cmd run test:security:api
 
 - v5.0.0-V6.2.4 top password denylist
 - v5.0.0-V6.2.9 최소 64자 이상 허용
-- v5.0.0-V6.2.11 context-specific words denylist
+- v5.0.0-V6.2.11 컨텍스트-specific words denylist
 - v5.0.0-V6.2.12 breached password check
 
 문제 근거:
@@ -344,13 +344,13 @@ npm.cmd run test:security:api
 - [ ] `PasswordPolicyService` 또는 동등한 domain helper를 추가한다.
 - [ ] register, accept invitation, change password, reset password에서 같은 정책을 재사용한다.
 - [ ] top/common password denylist를 저장소에 포함한다.
-- [ ] 이메일 local-part, 사용자 이름, `personal`, `erp`, `personal-erp` 같은 context 단어 포함을 거부한다.
+- [ ] 이메일 local-part, 사용자 이름, `personal`, `erp`, `personal-erp` 같은 컨텍스트 단어 포함을 거부한다.
 - [ ] breached password check는 운영 네트워크 의존성을 고려해 단계화한다.
 
 현실적인 1차 적용:
 
 - [ ] 저장소 내 denylist 기반 차단
-- [ ] 사용자 context 기반 차단
+- [ ] 사용자 컨텍스트 기반 차단
 - [ ] 최소 길이 8 유지, 최대 길이 128 유지
 - [ ] 64자 이상 password가 정상 통과하는 테스트 추가
 
@@ -375,7 +375,7 @@ npm.cmd run test:security:api
 완료 기준:
 
 - 주요 비밀번호 설정 경로가 같은 정책을 적용한다.
-- common/context password가 거부된다.
+- common/컨텍스트 password가 거부된다.
 - 64자 이상의 안전한 passphrase가 허용된다.
 
 ## Phase 6. JWT secret entropy 검증 강화
@@ -456,7 +456,7 @@ npm.cmd run typecheck:api
 
 실행 방안:
 
-- [ ] rate limit 저장소 interface를 분리한다.
+- [ ] rate limit repository interface를 분리한다.
 - [ ] 현재 in-memory 구현은 local/dev adapter로 명시한다.
 - [ ] 운영 adapter 후보를 정한다.
 - [ ] 당장 Redis를 도입하지 않는다면 reverse proxy, WAF, API gateway rate limit 설정을 운영 증적으로 문서화한다.
@@ -470,14 +470,14 @@ npm.cmd run typecheck:api
 선택지 B: 운영 경계에서 강화
 
 - [ ] Cloudflare, Nginx, ALB/WAF 등 실제 배포 경계의 rate limit 규칙을 문서화한다.
-- [ ] auth endpoint별 limit과 key 전략을 명시한다.
+- [ ] auth 엔드포인트별 limit과 key 전략을 명시한다.
 
 완료 기준:
 
 - ASVS 문서에서 "운영 환경에서도 brute force 제한이 공유된다"는 증거가 남는다.
 - local/dev in-memory 제한과 production 제한의 책임 경계가 분명하다.
 
-## Phase 8. Runtime audit moderate advisory 처리
+## Phase 8. 런타임 audit moderate advisory 처리
 
 상태: 추적
 
@@ -548,7 +548,7 @@ npm.cmd run docs:check
 완료 기준:
 
 - 문서가 실제 코드와 테스트 상태를 반영한다.
-- 비밀번호 재설정, cookie, web headers, runtime audit, Woori HTML 안전 복호화 복구 상태가 모두 최신이다.
+- 비밀번호 재설정, cookie, web headers, 런타임 audit, Woori HTML 안전 복호화 복구 상태가 모두 최신이다.
 
 ## 최종 승인 게이트
 
@@ -576,7 +576,7 @@ ASVS L2 주장 가능 조건:
 - refresh cookie가 운영 기준으로 `__Host-` 또는 `__Secure-` 요구를 충족한다.
 - password, JWT secret, CSV export, rate limit의 partial 항목이 코드 또는 운영 증적으로 보강되어 있다.
 - `ASVS_L2_BASELINE_MATRIX.md`와 `ASVS_L2_EXECUTION_PLAN.md`가 실제 구현과 일치한다.
-- CI에서 runtime audit, security regression, Semgrep, Gitleaks가 통과한다.
+- CI에서 런타임 audit, security regression, Semgrep, Gitleaks가 통과한다.
 
 ## 권장 작업 순서
 
@@ -587,7 +587,7 @@ ASVS L2 주장 가능 조건:
 5. 완료: Phase 5 Password policy L2 보강
 6. 완료: Phase 6 JWT secret entropy 검증 강화
 7. 남음: Phase 7 운영 rate limit 증적 강화
-8. 남음: Phase 8 runtime audit moderate advisory 추적
+8. 남음: Phase 8 런타임 audit moderate advisory 추적
 9. 진행 중: Phase 9 ASVS 문서 최신화
 
 ## 다음 작업 시작점
@@ -597,5 +597,5 @@ ASVS L2 주장 가능 조건:
 남은 목표:
 
 - 운영 rate limit 설정과 관측 증적을 배포 환경 기준으로 남긴다.
-- runtime audit moderate advisory와 Docker 기반 Semgrep/Gitleaks는 CI 통과 증적으로 관리한다.
+- 런타임 audit moderate advisory와 Docker 기반 Semgrep/Gitleaks는 CI 통과 증적으로 관리한다.
 - `docs:check`, `test:security:api`, `test:web`, `audit:runtime`, `build` 최종 게이트를 통과시킨다.

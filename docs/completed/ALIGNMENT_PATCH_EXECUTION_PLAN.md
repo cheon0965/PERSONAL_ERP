@@ -16,7 +16,7 @@
 
 - 루트 문서: `README.md`, `docs/README.md`, `docs/PROJECT_PLAN.md`, `docs/VALIDATION_NOTES.md`
 - 구현 경계: `apps/api`, `apps/web`, `packages/contracts`
-- 테스트와 운영 스크립트: `package.json`, workspace `package.json`, `scripts/`, `.github/workflows/ci.yml`
+- 테스트와 운영 스크립트: `package.json`, 워크스페이스 `package.json`, `scripts/`, `.github/workflows/ci.yml`
 - 현재 라우트/엔드포인트/문서 링크 정합성
 
 이번 점검에서 실행한 대표 검증은 아래와 같다.
@@ -35,15 +35,15 @@
 
 - `apps/api`, `apps/web`, `packages/contracts`, `docs`의 역할 분리는 현재도 유지되고 있다.
 - `npm run check:quick`, `npm run test`, `npm run build`, `npm run test:e2e:smoke:build`는 현재 기준으로 통과한다.
-- 차량 연료 이력/정비 이력 분리까지 포함한 보험/차량 쓰기 흐름, 문서 드리프트 자동화, runtime audit 분류까지 문서와 코드에 반영됐다.
-- `test:prisma`는 코드와 CI workflow wiring까지 반영됐지만, 실제 GitHub secret 등록과 첫 통과 증적은 저장소 밖 후속으로 남아 있다.
+- 차량 연료 이력/정비 이력 분리까지 포함한 보험/차량 쓰기 흐름, 문서 드리프트 자동화, 런타임 audit 분류까지 문서와 코드에 반영됐다.
+- `test:prisma`는 코드와 CI 워크플로 wiring까지 반영됐지만, 실제 GitHub secret 등록과 첫 통과 증적은 저장소 밖 후속으로 남아 있다.
 
 ## 진행 현황 한눈에 보기
 
 - `완료`: PR-1 `Baseline Restore`
 - `완료`: PR-2 `Docs And Command Alignment`
 - `부분 완료`: PR-3 `Prisma Integration Hardening`
-  저장소 코드와 CI workflow wiring은 끝났고, GitHub secret 등록과 첫 통과 증적만 남아 있다.
+  저장소 코드와 CI 워크플로 wiring은 끝났고, GitHub secret 등록과 첫 통과 증적만 남아 있다.
 - `완료`: PR-4 `Insurance Write Flow Phase 1`
 - `완료`: PR-5 `Vehicles Write Flow Phase 1`
 - `완료`: 차량 연료 이력 read/write 분리와 `/vehicles` 응답 슬림화
@@ -51,7 +51,7 @@
 - `완료`: PR-6 `Drift Guard Automation`
 - `완료`: PR-7 `Runtime Security Follow-up`
 - `부분 완료`: LegacyTransaction 경계 정리
-  schema 표면과 신규 seed/가드레일은 정리됐지만, 물리 테이블과 backfill 브리지 코드는 남아 있다.
+  스키마 표면과 신규 seed/가드레일은 정리됐지만, 물리 테이블과 backfill 브리지 코드는 남아 있다.
 - `미착수`: Next.js ESLint plugin 감지 경고 원인 확정
 
 ## 다음 작업
@@ -82,13 +82,13 @@
 
 - 문서가 실제 현재 라우트와 맞도록 정리했고, 존재하지 않는 페이지를 현재형으로 설명하지 않도록 맞췄다.
 
-### 3. browser smoke 명령 노출 위치 정리 [`완료`]
+### 3. 브라우저 스모크 명령 노출 위치 정리 [`완료`]
 
 - 루트 명령 진입점과 문서 설명을 맞췄다.
 
 ### 4. Prisma 통합 검증 재현성 고정 [`부분 완료`]
 
-- `PRISMA_INTEGRATION_DATABASE_URL` 우선 규칙, 로컬 fallback, CI 전용 강제 규칙, workflow job 연결까지 완료했다.
+- `PRISMA_INTEGRATION_DATABASE_URL` 우선 규칙, 로컬 대체 파일, CI 전용 강제 규칙, 워크플로 job 연결까지 완료했다.
 - 실제 secret 등록과 첫 성공 증적은 저장소 밖 후속이다.
 
 ### 5. 보험/차량 1차 쓰기 흐름과 차량 연료/정비 운영 이력 분리 [`완료`]
@@ -96,17 +96,17 @@
 - 보험 생성/수정, 차량 생성/수정, 차량 연료 이력 생성/수정, 차량 정비 이력 생성/수정까지 반영 완료했다.
 - 이 축의 다음 제품 작업은 차량 운영 요약 모델 정리다.
 
-### 6. 문서/스크립트/Swagger surface 드리프트 자동화 [`완료`]
+### 6. 문서/스크립트/Swagger 표면 드리프트 자동화 [`완료`]
 
 - `docs:check:npm-run`, `docs:check:surface`, `docs:check`를 추가했고 `check:quick`에 연결했다.
 
-### 7. runtime audit high 이슈 분류 [`완료(추적 예외 유지)`]
+### 7. 런타임 audit high 이슈 분류 [`완료(추적 예외 유지)`]
 
 - `critical 0`, `high 4` 상태를 재검토했고, 즉시 해결 불가 항목은 tracked exception으로 문서화했다.
 
 ### 8. Next.js ESLint plugin 감지 경고 [`미착수`]
 
-- build는 통과하지만 경고 원인 판단과 기록은 아직 남아 있다.
+- 빌드는 통과하지만 경고 원인 판단과 기록은 아직 남아 있다.
 
 ### 9. LegacyTransaction 구조 부채 축소 [`부분 완료`]
 
@@ -126,11 +126,11 @@
 
 ### PR-2. Docs And Command Alignment [`완료`]
 
-- 결과: `/design-system` 문서 표현과 browser smoke 명령 진입점을 현재 구현과 맞췄다.
+- 결과: `/design-system` 문서 표현과 브라우저 스모크 명령 진입점을 현재 구현과 맞췄다.
 
 ### PR-3. Prisma Integration Hardening [`부분 완료`]
 
-- 결과: env 규칙, skip 메시지, CI workflow wiring을 정리했다.
+- 결과: env 규칙, skip 메시지, CI 워크플로 wiring을 정리했다.
 - 남은 일: GitHub secret 등록과 첫 `prisma-integration` 통과 증적 확보.
 
 ### PR-4. Insurance Write Flow Phase 1 [`완료`]
@@ -151,11 +151,11 @@
 
 ### PR-6. Drift Guard Automation [`완료`]
 
-- 결과: 문서의 `npm run` 명령과 Web/API surface를 자동 대조하는 가드를 추가했다.
+- 결과: 문서의 `npm run` 명령과 Web/API 표면을 자동 대조하는 가드를 추가했다.
 
-### PR-7. Runtime Security Follow-up [`완료(추적 예외 유지)`]
+### PR-7. 런타임 보안 후속 조치 [`완료(추적 예외 유지)`]
 
-- 결과: runtime audit 결과를 재분류하고 gate와 상세 검토 명령을 분리했다.
+- 결과: 런타임 audit 결과를 재분류하고 gate와 상세 검토 명령을 분리했다.
 
 ## 각 단계 공통 완료 기준
 
@@ -164,7 +164,7 @@
 - 관련 contracts, API, Web, 테스트, 문서가 같은 변경 안에서 맞춰진다.
 - `README.md`, `docs/README.md`, 관련 상세 문서의 설명이 서로 충돌하지 않는다.
 - 기본 검증은 최소 `npm run check:quick`, `npm run test`를 다시 통과한다.
-- build나 브라우저 smoke에 영향이 있는 변경이면 `npm run build`, `npm run test:e2e:smoke:build`까지 다시 확인한다.
+- 빌드나 브라우저 스모크에 영향이 있는 변경이면 `npm run build`, `npm run test:e2e:smoke:build`까지 다시 확인한다.
 
 ## 이번 문서 기준 권장 결정 사항
 

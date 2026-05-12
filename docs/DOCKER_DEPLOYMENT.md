@@ -49,7 +49,7 @@ GitHub 저장소 설정에는 아래 값을 둔다.
 | Variable | `NEXT_PUBLIC_API_BASE_URL`         | Web 이미지에 빌드 시점에 들어갈 API URL |
 | Variable | `NEXT_PUBLIC_ENABLE_DEMO_FALLBACK` | 기본값 `false`, 필요할 때만 명시한다    |
 
-Workflow가 자동으로 발행하는 태그:
+워크플로가 자동으로 발행하는 태그:
 
 - `sha-<commit 12자리>`: 롤백과 추적용 고정 태그
 - `latest`: `main` 또는 `master` push에서 CI가 통과한 경우
@@ -65,7 +65,7 @@ WEB_IMAGE_NAME=cheon0965/personal-erp-web
 MIGRATE_IMAGE_NAME=cheon0965/personal-erp-migrate
 ```
 
-서버 반영은 로컬 build 없이 pull-only로 진행한다.
+서버 반영은 로컬 빌드 없이 pull-only로 진행한다.
 
 ```powershell
 docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml pull
@@ -173,7 +173,7 @@ NEXT_PUBLIC_API_BASE_URL=https://erp.example.com/api
 
 현재 공개 배포 도메인은 이 단일 도메인 path 분리 방식을 사용한다.
 
-### 공개 포트
+### 공개 port
 
 기본값은 같은 서버의 reverse proxy만 접근하도록 `127.0.0.1`에 묶는다.
 
@@ -184,7 +184,7 @@ WEB_BIND_ADDRESS=127.0.0.1
 WEB_PUBLISHED_PORT=3100
 ```
 
-외부에서 컨테이너 포트에 직접 접근해야 하는 특수한 환경이면 `0.0.0.0`으로 바꿀 수 있다.
+외부에서 컨테이너 port에 직접 접근해야 하는 특수한 환경이면 `0.0.0.0`으로 바꿀 수 있다.
 
 ```dotenv
 API_BIND_ADDRESS=0.0.0.0
@@ -284,7 +284,7 @@ base image를 새로 당기면서 빌드:
 
 빌드되는 이미지는 세 개다.
 
-- `cheon0965/personal-erp-migrate:<tag>`: Prisma migration one-shot
+- `cheon0965/personal-erp-migrate:<tag>`: Prisma 마이그레이션 one-shot
 - `cheon0965/personal-erp-api:<tag>`: NestJS API
 - `cheon0965/personal-erp-web:<tag>`: Next.js Web
 
@@ -343,7 +343,7 @@ docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml up -d -
 기동 순서:
 
 1. `mysql`이 먼저 올라간다.
-2. `mysql` health check가 통과하면 `migrate`가 Prisma migration을 실행한다.
+2. `mysql` health check가 통과하면 `migrate`가 Prisma 마이그레이션을 실행한다.
 3. `migrate`가 성공하면 `api`가 올라간다.
 4. `api` health check가 통과하면 `web`이 올라간다.
 
@@ -390,12 +390,12 @@ Invoke-WebRequest https://personalerp.theworkpc.com/google827b2fac60b63022.html
 
 ## 9. HTTPS reverse proxy 연결
 
-기본 compose는 포트를 로컬에만 연다.
+기본 compose는 port를 로컬에만 연다.
 
 - Web: `127.0.0.1:3100`
 - API: `127.0.0.1:4100`
 
-같은 서버의 Caddy, Nginx, IIS reverse proxy, Cloudflare Tunnel 같은 HTTPS endpoint에서 위 포트로 proxy한다.
+같은 서버의 Caddy, Nginx, IIS reverse proxy, Cloudflare Tunnel 같은 HTTPS 엔드포인트에서 위 port로 proxy한다.
 
 현재 공개 배포 Caddyfile 예:
 
@@ -420,7 +420,7 @@ reverse proxy 적용 후에는 `Set-Cookie`에 `__Host-refreshToken`, `Secure`, 
 
 ## 10. 첫 로그인과 스모크 체크
 
-`migrate` 컨테이너는 schema migration만 수행한다. 새 DB에 포트폴리오 데모 계정과 샘플 데이터를 넣으려면 API가 뜬 뒤 seed를 한 번 실행한다.
+`migrate` 컨테이너는 스키마 마이그레이션만 수행한다. 새 DB에 포트폴리오 데모 계정과 샘플 데이터를 넣으려면 API가 뜬 뒤 seed를 한 번 실행한다.
 
 ```powershell
 docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml exec api node apps/api/dist/apps/api/prisma/seed.js --reset
@@ -491,9 +491,9 @@ docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml up -d
 docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml down
 ```
 
-주의: MySQL 데이터는 Docker volume `personal_erp_mysql_data`에 남는다. volume 삭제 명령은 운영 데이터 삭제로 이어질 수 있으므로 사용 전 반드시 백업한다.
+주의: MySQL 데이터는 Docker 볼륨 `personal_erp_mysql_data`에 남는다. volume 삭제 명령은 운영 데이터 삭제로 이어질 수 있으므로 사용 전 반드시 백업한다.
 
-운영 전에는 MySQL volume 백업 정책을 별도로 정한다.
+운영 전에는 MySQL 볼륨 백업 정책을 별도로 정한다.
 
 ## 13. 자주 나는 문제
 
@@ -547,7 +547,7 @@ HTTPS와 cookie 속성을 먼저 본다.
 - reverse proxy가 `Set-Cookie`를 제거하지 않는지
 - 브라우저에서 `__Host-refreshToken` cookie가 저장되는지
 
-### 포트를 이미 사용 중임
+### port를 이미 사용 중임
 
 `.deploy\compose.env`에서 published port를 바꾼다.
 

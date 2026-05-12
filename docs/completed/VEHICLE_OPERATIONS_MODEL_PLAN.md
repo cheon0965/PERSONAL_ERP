@@ -159,7 +159,7 @@
 현재 상태 메모:
 
 - 2026-04-11 기준 `GET /vehicles/operating-summary`를 추가했고, Web `/vehicles` 상단 카드와 차트는 이 summary projection을 우선 사용한다.
-- 2026-04-11 기준 차량 create/update 계약과 Web 폼에서 `monthlyExpenseWon` 입력을 제거했고, 같은 날 `VehicleItem`, Prisma `Vehicle`, seed/mock/test 표면에서도 해당 필드를 제거했다.
+- 2026-04-11 기준 차량 create/update 계약과 Web 폼에서 `monthlyExpenseWon` 입력을 제거했고, 같은 날 `VehicleItem`, Prisma `Vehicle`, seed/mock/테스트 표면에서도 해당 필드를 제거했다.
 - 따라서 운영 요약 read model, write 계약 정리, 물리 필드 제거까지는 반영됐고, 이제 차량 화면은 연료/정비 기록 기반 운영 요약만 별도 projection으로 읽는다.
 
 ## 계약과 스키마에 대한 결정
@@ -194,7 +194,7 @@
 
 중요한 점은 “한 화면에 보인다”와 “한 계약으로 저장한다”를 분리하는 것이다.
 
-즉, 같은 route에 남아 있어도 쿼리와 mutation은 프로필, 연료, 정비를 각각 분리한다.
+즉, 같은 라우트에 남아 있어도 쿼리와 mutation은 프로필, 연료, 정비를 각각 분리한다.
 
 ## 문서와 검증 반영 기준
 

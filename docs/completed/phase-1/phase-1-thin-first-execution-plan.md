@@ -57,7 +57,7 @@
 2. 최소 조회 또는 생성 API가 있다.
 3. 대표 시나리오 안에서 실제로 한 번 호출된다.
 4. 화면 또는 내부 use case에서 그 엔티티를 직접 다룬다.
-5. 최소 smoke test 또는 seed 경로가 있다.
+5. 최소 스모크 테스트 또는 seed 경로가 있다.
 
 즉 테이블만 있거나, 화면 문구에 이름만 붙어 있는 상태는 구현 완료로 보지 않는다.
 
@@ -138,7 +138,7 @@
 1. 엔티티 책임 확정
 2. 최소 DB 구조 반영
 3. 최소 application service 연결
-4. 최소 API 계약 연결
+4. 최소 API contract 연결
 5. 최소 화면 또는 내부 실행 경로 연결
 6. 최소 테스트/시드 확인
 
@@ -186,7 +186,7 @@
 ### 작업
 
 - 로그인 세션 이후 현재 Tenant / Ledger를 해석하는 루트 정리
-- API request context를 `userId` 단독이 아니라 `membership/tenant/ledger` 기준으로 정리
+- API request 컨텍스트를 `userId` 단독이 아니라 `membership/tenant/ledger` 기준으로 정리
 - 기본 Ledger 선택 및 확인 경로 정리
 - 설정 화면은 실제 “현재 작업 장부” 확인 화면으로 승격
 
@@ -451,7 +451,7 @@
 #### 현재 구현 기준
 
 - API/DB에는 `POST /journal-entries/:id/reverse`, `POST /journal-entries/:id/correct`, `POST /accounting-periods/:id/reopen` 최소 경로가 이미 존재한다.
-- 전표 화면에는 반전/정정 다이얼로그가 연결되어 있고 request API 테스트도 존재한다.
+- 전표 화면에는 반전/정정 다이얼로그가 연결되어 있고 요청 단위 API 테스트도 존재한다.
 - `PeriodStatusHistory`, `reversesJournalEntryId`, `correctsJournalEntryId`, `correctionReason`, `createdByActorType` 등 최소 감사 필드는 이미 저장된다.
 - 반면 재오픈은 아직 Web 운영 화면에 연결되지 않았고, adjustment lineage와 corrected transaction 결과도 읽기 모델에 충분히 드러나지 않는다.
 
@@ -483,8 +483,8 @@
    - `audit.action_succeeded` 로그에 `reason`, `reversesJournalEntryId`, `correctsJournalEntryId`, `periodId` 등 핵심 식별자를 함께 남긴다.
    - 범용 AuditLog 테이블 도입은 이 단계에서 미루고, 우선 도메인 엔티티 + 운영 로그 조합으로 추적성을 확보한다.
 5. 회귀 테스트 고정
-   - request API 테스트에 reopen 사유 필수, `eventType` 기록, corrected transaction 표시, lineage 응답 shape를 추가한다.
-   - Web 테스트 또는 최소 smoke 경로에서 reopen 버튼 노출 조건과 조정 전표 표시를 검증한다.
+   - 요청 단위 API 테스트에 reopen 사유 필수, `eventType` 기록, corrected transaction 표시, lineage 응답 shape를 추가한다.
+   - Web 테스트 또는 최소 스모크 경로에서 reopen 버튼 노출 조건과 조정 전표 표시를 검증한다.
 
 #### 완료 기준
 
@@ -492,7 +492,7 @@
 - 누가, 왜, 어떤 원본을 기준으로 조정했는지 API와 화면에서 추적할 수 있다.
 - 재오픈은 Owner만, 최신 잠금 기간에만, 사유를 남기고 실행할 수 있다.
 - `CollectedTransaction`은 정정 이후 `Cancelled`처럼 보이지 않고 `Corrected`와 최신 전표 관계가 드러난다.
-- 정정/반전/재오픈 request API 테스트와 화면 smoke 검증이 함께 고정된다.
+- 정정/반전/재오픈 요청 단위 API 테스트와 화면 스모크 검증이 함께 고정된다.
 
 ### 7.5 5단계: 보고와 운영 분석 강화
 
@@ -514,7 +514,7 @@
 - 운영용 수치와 공식 보고 수치가 어떤 기준으로 다르고 어떤 기준으로 같아야 하는지 계약과 화면에 충분히 드러나지 않는다.
 - `FinancialStatementsView`에는 이전 잠금 기간과의 variance, trend, insight를 표현할 비교 계약이 없다.
 - Web 보고 화면에는 현재 기간 선택, 이전 기간 비교, 추이 요약, carry-forward/closing basis 링크가 없다.
-- request API 테스트도 현재는 생성/조회 최소 경로만 검증하며, 보고 해석 계층의 비교/추이/empty state를 고정하지 않는다.
+- 요청 단위 API 테스트도 현재는 생성/조회 최소 경로만 검증하며, 보고 해석 계층의 비교/추이/empty state를 고정하지 않는다.
 
 #### 실행 순서
 
@@ -525,7 +525,7 @@
 2. 계약/read model 확장
    - `DashboardSummary`, `ForecastResponse`에 `periodId`, `monthLabel`, `basisStatus`, `warnings`, `highlights` 같은 최소 메타데이터를 추가한다.
    - `FinancialStatementsView`와 별도로 “현재 잠금 기간 vs 직전 잠금 기간” 비교를 담는 최소 comparison 계약을 추가한다.
-   - 추이/요약 리포트용으로 월별 `income / expense / periodPnL / netWorth / cash` series를 담는 thin contract를 정의한다.
+   - 추이/요약 리포트용으로 월별 `income / expense / periodPnL / netWorth / cash` series를 담는 `thin contract`를 정의한다.
 3. 백엔드 read layer 보강
    - `dashboard`는 현재 열린 기간 기준의 확정 전표, 남은 `PlanItem`, 자금수단 잔액, 최소 예비자금, 적립금 설정을 조합한다.
    - `forecast`는 선택 월 기준으로 확정 전표 실적 + 미확정 계획 + 적립금/예비자금 가정을 합산하고, 공식 잠금 기간이 있으면 비교 기준도 함께 만든다.
@@ -537,9 +537,9 @@
    - `/financial-statements`는 snapshot 원문 출력에서 한 단계 나아가 전기 대비 비교 카드, 증감 요약, carry-forward/closing basis 안내를 추가한다.
    - 필요하면 `/reports` 성격의 별도 thin 화면을 두지 말고, 우선 기존 세 화면 안에서 비교/추이 카드를 먼저 정착시킨다.
 5. 검증 고정
-   - request API 테스트에 dashboard/forecast의 workspace-period 기준 값, locked/unlocked empty state, previous-period comparison 결과를 추가한다.
+   - 요청 단위 API 테스트에 dashboard/forecast의 워크스페이스-period 기준 값, locked/unlocked empty state, previous-period comparison 결과를 추가한다.
    - financial statements 테스트에 “직전 잠금 기간 없음”, “snapshot은 있으나 comparison 대상 없음”, “carry-forward 이후 비교” 경계를 포함한다.
-   - Web smoke 검증에서는 기간 선택, 비교 카드 노출, 경고 문구, 추이 요약 카드까지 최소 경로를 고정한다.
+   - Web 스모크 검증에서는 기간 선택, 비교 카드 노출, 경고 문구, 추이 요약 카드까지 최소 경로를 고정한다.
 
 #### 완료 기준
 
@@ -547,7 +547,7 @@
 - 운영 화면과 공식 보고 화면이 “무엇이 가정치이고 무엇이 확정치인지”를 명확히 구분해서 보여준다.
 - `financial-statements`에서 현재 잠금 기간과 직전 잠금 기간의 최소 비교가 가능하다.
 - 월별 추이/요약 리포트가 최소 1개 이상 화면에 드러나고, 어떤 기준의 수치인지 설명이 붙는다.
-- request API 테스트와 화면 smoke 경로가 비교/추이/empty state까지 함께 고정된다.
+- 요청 단위 API 테스트와 화면 스모크 경로가 비교/추이/empty state까지 함께 고정된다.
 
 ### 7.6 6단계: 후속 SaaS 확장
 

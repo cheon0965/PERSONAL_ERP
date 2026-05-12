@@ -190,7 +190,7 @@
 
 ### 핵심 기능
 
-- 마감 전 체크리스트
+- 마감 전 checklist
 - 미확정 거래 존재 여부 확인
 - 잠금 가능 여부 검증
 - `PeriodStatusHistory` 기록

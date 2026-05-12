@@ -1,4 +1,4 @@
-﻿# 월별 운영 비즈니스 로직 정합성 개선 실행계획
+# 월별 운영 비즈니스 로직 정합성 개선 실행계획
 
 > 보관 상태: `2026-04-23` 기준 P0-P3 구현, 전체 회귀 테스트, 문서 동기화를 완료한 뒤 `docs/completed/`로 이동했다. 현재 운영 기준은 `docs/API.md`, `docs/CURRENT_CAPABILITIES.md`, `docs/DEMO_GUIDE.md`, `docs/VALIDATION_NOTES.md`, `docs/domain/business-logic-draft.md`, `docs/domain/core-entity-definition.md`를 우선한다.
 
@@ -11,7 +11,7 @@
 ## 목표
 
 1. 월 운영 정책을 "하나의 최신 진행월" 기준으로 API, Web, 문서, 테스트에 일관되게 반영한다.
-2. 업로드 배치의 월 자동 생성은 명시적인 기초데이터 적재와 신규 계좌/카드 bootstrap 예외에만 허용한다.
+2. 업로드 배치의 월 자동 생성은 명시적인 기초데이터 적재와 신규 계좌/카드 초기화 예외에만 허용한다.
 3. 차량 운영비 회계 연동의 남은 후속 항목을 이 계획으로 편입해, 기존 차량 실행계획은 완료 문서로 보관한다.
 4. 거래 출처, 감사, 이월, import parser의 미완료 지점을 제품 정책과 구현 중 하나로 확정한다.
 
@@ -22,7 +22,7 @@
 | 1    | 월 재오픈 화면이 최신월 제한을 모른다                    | 재오픈 eligibility에 최신 기간 여부를 포함하고 문구/버튼 상태를 API 정책과 맞춘다 | P0       |
 | 2    | 월 오픈 화면이 다음 월 사전 오픈을 안내한다              | 최신 기간이 `LOCKED`일 때만 다음 월을 열 수 있다는 화면 모델과 안내로 교체한다    | P0       |
 | 3    | 거래/전표 입력 화면이 여러 열린 월을 허용한다            | Web 기간 선택 헬퍼를 최신 수집 가능월/최신 전표 입력 가능월 기준으로 분리한다     | P0       |
-| 4    | 신규 계좌/카드 기초 업로드 판정이 느슨하다               | 계좌 bootstrap 상태와 회계 이력 검증을 추가해 명시적 신규 계좌/카드만 허용한다    | P1       |
+| 4    | 신규 계좌/카드 기초 업로드 판정이 느슨하다               | 계좌 초기화 상태와 회계 이력 검증을 추가해 명시적 신규 계좌/카드만 허용한다       | P1       |
 | 5    | 차량 생성 수집거래 출처가 `MANUAL`로 보인다              | 계약/매퍼/UI에 차량 로그 출처와 원본 링크를 추가한다                              | P1       |
 | 6    | 계획 항목 생성이 최신 진행월 정책과 완전히 묶이지 않았다 | `plan-items/generate`도 최신 진행월만 대상으로 제한한다                           | P1       |
 | 7    | 차량 연료/정비 이력 삭제가 없다                          | 미확정 연결 정리와 확정 연결 차단 규칙을 포함한 삭제 흐름을 추가한다              | P2       |
@@ -125,27 +125,27 @@
 - 완료. API `plan-items/generate`는 대상 기간이 최신 진행월인지 확인하고, 잠금월뿐 아니라 최신이 아닌 열린/검토/마감 진행월도 거절한다.
 - 완료. Web 계획 항목 생성 화면은 생성 대상 후보를 최신 진행월 하나로 고정한다.
 
-## Phase 2. 업로드 배치와 신규 계좌/카드 bootstrap 엄격화
+## Phase 2. 업로드 배치와 신규 계좌/카드 초기화 엄격화
 
 ### 1. 신규 계좌/카드 판정 모델
 
 작업:
 
-1. `Account`에 bootstrap 상태를 추가하는 방안을 우선 검토한다.
+1. `Account`에 초기화 상태를 추가하는 방안을 우선 검토한다.
    - 예: `bootstrapStatus = NOT_REQUIRED | PENDING | COMPLETED`
-   - 기존 계좌는 migration에서 `COMPLETED` 또는 `NOT_REQUIRED`로 둔다.
+   - 기존 계좌는 마이그레이션에서 `COMPLETED` 또는 `NOT_REQUIRED`로 둔다.
    - 새 `BANK`/`CARD`는 기본 `PENDING`으로 만들되, 사용자가 기초 업로드를 건너뛸 수 있게 한다.
-2. bootstrap 허용 조건을 명시한다.
+2. 초기화 허용 조건을 명시한다.
    - 계좌 상태가 `ACTIVE`
    - 계좌 유형이 `BANK` 또는 `CARD`
-   - bootstrap 상태가 `PENDING`
+   - 초기화 상태가 `PENDING`
    - 해당 계좌의 기존 수집거래, import batch, journal line, opening/closing snapshot line이 없음
    - 대상 월이 최초 운영월이거나 최근 잠금월의 바로 다음 월
-3. 첫 수집 성공 또는 사용자의 완료 처리로 bootstrap 상태를 `COMPLETED`로 전환한다.
+3. 첫 수집 성공 또는 사용자의 완료 처리로 초기화 상태를 `COMPLETED`로 전환한다.
 
 완료 기준:
 
-- "기존 거래가 0건인 오래된 계좌"는 신규 계좌 bootstrap으로 오인되지 않는다.
+- "기존 거래가 0건인 오래된 계좌"는 신규 계좌 초기화로 오인되지 않는다.
 - 새 계좌/카드 등록 직후 기초 업로드 예외만 명확히 열린다.
 
 진행 기록:
@@ -159,7 +159,7 @@
 작업:
 
 1. 업로드 배치에서 현재 운영월 collect와 기초 업로드 collect를 모드로 구분한다.
-2. 기초 업로드 모드는 대상 계좌가 bootstrap 가능할 때만 노출한다.
+2. 기초 업로드 모드는 대상 계좌가 초기화 가능할 때만 노출한다.
 3. 자동 운영월 생성 안내에는 `INITIAL_SETUP`과 `NEW_FUNDING_ACCOUNT` 사유를 명확히 표시한다.
 4. collect preview와 batch job 결과에도 "최신 진행월 collect"와 "신규 계좌/카드 기초 업로드"를 구분해 보여 준다.
 
@@ -293,7 +293,7 @@
 
 작업:
 
-1. workspace 감사 이벤트, period status history, import job 결과, 전표 조정 이벤트를 외부 sink로 내보내는 포트를 정의한다.
+1. 워크스페이스 감사 이벤트, period status history, import job 결과, 전표 조정 이벤트를 외부 sink로 내보내는 port를 정의한다.
 2. 로컬 개발에서는 noop 또는 file sink, 운영에서는 central log sink를 붙일 수 있게 한다.
 3. 실패해도 핵심 회계 트랜잭션을 깨지 않는 outbox 또는 비동기 전송 방식을 검토한다.
 
@@ -305,7 +305,7 @@
 진행 기록:
 
 - 완료. `OperationalAuditSinkPort`와 기본 noop sink, 비동기 `OperationalAuditPublisher`를 추가했다.
-- 완료. workspace 감사 이벤트, 기간 상태 이력, 업로드 일괄 등록 Job 완료, 전표 reverse/correct 이벤트가 외부 sink 경계로 발행되도록 연결했다.
+- 완료. 워크스페이스 감사 이벤트, 기간 상태 이력, 업로드 일괄 등록 Job 완료, 전표 reverse/correct 이벤트가 외부 sink 경계로 발행되도록 연결했다.
 - 완료. sink 실패는 경고 로그만 남기고 핵심 회계 트랜잭션을 롤백하지 않도록 테스트로 고정했다.
 
 ### 3. Carry-forward journal entry
@@ -333,8 +333,8 @@
 
 1. API typecheck
 2. Web typecheck
-3. API request tests
-4. Web unit/component tests
+3. API 요청 단위 테스트
+4. Web unit/컴포넌트 테스트
 5. 월 운영, 업로드 collect, 전표 조정, 차량 회계 연동 E2E
 6. 문서 링크와 현재 정책 문구 점검
 
@@ -356,16 +356,16 @@
 
 진행 기록:
 
-- 완료. 계약/API/Web typecheck, API/Web test, API/Web lint, docs check, production build를 실행해 통과를 확인했다.
+- 완료. 계약/API/Web typecheck, API/Web 테스트, API/Web lint, docs check, production 빌드를 실행해 통과를 확인했다.
 - 완료. Playwright E2E 12개 전체를 재실행해 월 운영, 업로드 collect, 전표 조정, 차량 회계 연동 흐름의 회귀가 없음을 확인했다.
 - 완료. E2E fixture와 selector를 현재 화면 구조와 월별 운영 정책 문구에 맞게 최신화했다.
 
-## 작업 순서 체크리스트
+## 작업 순서 checklist
 
 1. `P0` 재오픈/월오픈 Web 정책 정렬 - 완료
 2. `P0` 거래/전표 최신 진행월 쓰기 제한 정렬 - 완료
 3. `P1` 계획 항목 생성 최신 진행월 제한 - 완료
-4. `P1` 신규 계좌/카드 bootstrap 상태 모델과 import collect 정책 엄격화 - 완료
+4. `P1` 신규 계좌/카드 초기화 상태 모델과 import collect 정책 엄격화 - 완료
 5. `P1` 차량 수집거래 출처 추적 - 완료
 6. `P2` 차량 로그 삭제와 확정 후 보정 링크 - 완료
 7. `P2` 차량 기본값/템플릿/백필 opt-in 설계 - 완료
