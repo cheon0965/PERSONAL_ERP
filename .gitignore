@@ -32,3 +32,8 @@ packages/contracts/src/*.js
 packages/contracts/src/*.js.map
 packages/contracts/src/*.d.ts
 packages/contracts/src/*.d.ts.map
+
+# Local-only portfolio PPT draft generation tools
+/scripts/generate-portfolio-ppt*.ps1
+/scripts/generate-portfolio-ppt*.py
+/scripts/portfolio-ppt-data.json
