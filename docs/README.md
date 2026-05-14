@@ -13,13 +13,15 @@
    저장소 진입점, 빠른 시작, 주요 명령, 상위 문서 링크를 확인합니다.
 2. `PORTFOLIO_PROJECT_BRIEF.md`
    포트폴리오 관점에서 프로젝트 목적, 구현 범위, 도메인, 아키텍처, 검증 체계를 압축해서 확인합니다.
-3. `CURRENT_CAPABILITIES.md`
+3. `PORTFOLIO_PPT_DRAFT.md`
+   저장소와 분리된 포트폴리오 PPT 제작을 위한 슬라이드 구성, 화면 캡처 계획, 화면별 설명, 발표 메시지를 확인합니다.
+4. `CURRENT_CAPABILITIES.md`
    현재 코드베이스에 실제로 구현된 기능과 운영 지원 범위를 한 번에 확인합니다.
-4. `DEMO_GUIDE.md`
+5. `DEMO_GUIDE.md`
    데모 계정 기준 월 운영 사이클과 추천 화면 순서를 확인합니다.
-5. `ARCHITECTURE.md`
+6. `ARCHITECTURE.md`
    워크스페이스 구조, 모듈 경계, 컨텍스트 지도를 확인합니다.
-6. `API.md`
+7. `API.md`
    현재 노출된 HTTP 표면과 인증/쓰기 흐름을 빠르게 확인합니다.
 
 ## 현재 기준 문서
@@ -34,6 +36,7 @@
 ### 제품 현재 상태
 
 - `PORTFOLIO_PROJECT_BRIEF.md`: 포트폴리오용 프로젝트 요약, 핵심 도메인, 아키텍처 판단, 검증 증거 압축본
+- `PORTFOLIO_PPT_DRAFT.md`: 별도 포트폴리오 PPT 제작 설계서, 슬라이드별 메시지, 화면 캡처 계획, 발표/제출용 구성 기준
 - `CURRENT_CAPABILITIES.md`: 현재 구현된 화면, API 모듈, 운영 지원 기능, 검증 가드 요약
 - `DEMO_GUIDE.md`: 데모 계정 기준 월 운영 한 사이클과 추천 메뉴 진행 순서
 - `ACCOUNTING_MODEL_BOUNDARY.md`: 레거시 `Transaction` 제거 이후 회계 경계와 현재 기준 원장
