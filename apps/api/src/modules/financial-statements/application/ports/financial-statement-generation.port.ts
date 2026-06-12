@@ -1,11 +1,16 @@
 import type { FinancialStatementPayload } from '@personal-erp/contracts';
-import type { PrismaMoneyLike } from '../../../../common/money/prisma-money';
-// eslint-disable-next-line no-restricted-imports
-import type {
-  AccountSubjectKind,
-  AccountingPeriodStatus,
-  FinancialStatementKind
-} from '@prisma/client';
+type AccountSubjectKind =
+  | 'ASSET'
+  | 'LIABILITY'
+  | 'EQUITY'
+  | 'INCOME'
+  | 'EXPENSE';
+type AccountingPeriodStatus = 'OPEN' | 'IN_REVIEW' | 'CLOSING' | 'LOCKED';
+type FinancialStatementKind =
+  | 'STATEMENT_OF_FINANCIAL_POSITION'
+  | 'MONTHLY_PROFIT_AND_LOSS'
+  | 'CASH_FLOW_SUMMARY'
+  | 'NET_WORTH_MOVEMENT';
 
 export type FinancialStatementGenerationPeriod = {
   id: string;
@@ -21,10 +26,10 @@ export type FinancialStatementGenerationPeriod = {
 
 export type FinancialStatementGenerationClosingSnapshot = {
   id: string;
-  totalAssetAmount: PrismaMoneyLike;
-  totalLiabilityAmount: PrismaMoneyLike;
-  totalEquityAmount: PrismaMoneyLike;
-  periodPnLAmount: PrismaMoneyLike;
+  totalAssetAmount: number;
+  totalLiabilityAmount: number;
+  totalEquityAmount: number;
+  periodPnLAmount: number;
 };
 
 export type FinancialStatementGenerationContext = {
@@ -32,7 +37,7 @@ export type FinancialStatementGenerationContext = {
   closingSnapshot: FinancialStatementGenerationClosingSnapshot | null;
   closingLines: Array<{
     id: string;
-    balanceAmount: PrismaMoneyLike;
+    balanceAmount: number;
     accountSubject: {
       code: string;
       name: string;
@@ -44,8 +49,8 @@ export type FinancialStatementGenerationContext = {
   }>;
   journalLines: Array<{
     id: string;
-    debitAmount: PrismaMoneyLike;
-    creditAmount: PrismaMoneyLike;
+    debitAmount: number;
+    creditAmount: number;
     accountSubject: {
       code: string;
       name: string;

@@ -1,14 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  BadRequestException,
-  InternalServerErrorException
-} from '@nestjs/common';
+import { AppError } from '../src/common/application/errors/app-error';
 import {
   assertConfirmJournalAccountSubjectIdsResolved,
   assertConfirmJournalLinesSupported,
   resolveConfirmCollectedTransactionJournalLines
-} from '../src/modules/collected-transactions/confirm-collected-transaction.policy';
+} from '../src/modules/collected-transactions/public';
 
 const accountSubjectIds = {
   assetSubjectId: 'subject-asset',
@@ -42,7 +39,8 @@ test('confirm collected transaction policy rejects missing subjects and non-post
   await assert.rejects(
     async () => assertConfirmJournalAccountSubjectIdsResolved(null),
     (error: unknown) =>
-      error instanceof InternalServerErrorException &&
+      error instanceof AppError &&
+      error.kind === 'internal' &&
       error.message === 'Required account subjects are missing in this ledger.'
   );
 
@@ -58,7 +56,8 @@ test('confirm collected transaction policy rejects missing subjects and non-post
         })
       ),
     (error: unknown) =>
-      error instanceof BadRequestException &&
+      error instanceof AppError &&
+      error.kind === 'validation' &&
       error.message ===
         'This posting policy requires a second account selection.'
   );
@@ -75,7 +74,8 @@ test('confirm collected transaction policy rejects missing subjects and non-post
         })
       ),
     (error: unknown) =>
-      error instanceof BadRequestException &&
+      error instanceof AppError &&
+      error.kind === 'validation' &&
       error.message ===
         'This posting policy is not supported for collected transaction confirmation.'
   );

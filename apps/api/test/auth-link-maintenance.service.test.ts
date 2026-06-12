@@ -3,7 +3,7 @@ import test from 'node:test';
 import {
   AuthLinkMaintenanceService,
   buildUnverifiedUserCleanupCutoff
-} from '../src/modules/auth/auth-link-maintenance.service';
+} from '../src/modules/auth/public';
 import type { ApiEnv } from '../src/config/api-env';
 
 const baseEnv = {

@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { ForbiddenException } from '@nestjs/common';
 import type { AuthenticatedUser } from '@personal-erp/contracts';
+import { AppError } from '../src/common/application/errors/app-error';
 import {
   AccountingPeriodStatus,
   CollectedTransactionStatus,
@@ -10,9 +11,9 @@ import {
   PlanItemStatus,
   Prisma
 } from '@prisma/client';
-import { GeneratePlanItemsUseCase } from '../src/modules/plan-items/generate-plan-items.use-case';
-import { PrismaPlanItemGenerationAdapter } from '../src/modules/plan-items/infrastructure/prisma/prisma-plan-item-generation.adapter';
-import { PlanItemsService } from '../src/modules/plan-items/plan-items.service';
+import { GeneratePlanItemsUseCase } from '../src/modules/plan-items/public';
+import { PrismaPlanItemGenerationAdapter } from '../src/modules/plan-items/public';
+import { PlanItemsService } from '../src/modules/plan-items/public';
 
 const user: AuthenticatedUser = {
   id: 'user-1',
@@ -269,7 +270,7 @@ test('GeneratePlanItemsUseCase rejects generation outside the latest collecting 
 
   await assert.rejects(
     () => useCase.execute(user, { periodId: selectedPeriod.id }),
-    BadRequestException
+    (error: unknown) => error instanceof AppError && error.kind === 'validation'
   );
 });
 

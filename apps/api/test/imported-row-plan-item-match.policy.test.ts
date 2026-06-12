@@ -3,7 +3,7 @@ import test from 'node:test';
 import {
   planItemMatchDateToleranceDays,
   resolvePlanItemAutoMatch
-} from '../src/modules/import-batches/imported-row-plan-item-match.policy';
+} from '../src/modules/import-batches/public';
 
 test('resolvePlanItemAutoMatch returns a unique match when one candidate survives the narrowing steps', () => {
   const result = resolvePlanItemAutoMatch({

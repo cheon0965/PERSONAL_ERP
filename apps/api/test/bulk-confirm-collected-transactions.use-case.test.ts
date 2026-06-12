@@ -4,8 +4,7 @@ import type {
   AuthenticatedUser,
   BulkConfirmCollectedTransactionsRequest
 } from '@personal-erp/contracts';
-import { CollectedTransactionStatus } from '@prisma/client';
-import { BulkConfirmCollectedTransactionsUseCase } from '../src/modules/collected-transactions/bulk-confirm-collected-transactions.use-case';
+import { BulkConfirmCollectedTransactionsUseCase } from '../src/modules/collected-transactions/public';
 
 const testUser: AuthenticatedUser = {
   id: 'user-1',
@@ -34,14 +33,14 @@ const testUser: AuthenticatedUser = {
 };
 
 test('BulkConfirmCollectedTransactionsUseCase narrows ready transaction lookup when ids are requested', async () => {
-  let capturedWhere: unknown = null;
+  let capturedScope: unknown = null;
+  let capturedRequestedIds: unknown = null;
 
-  const prisma = {
-    collectedTransaction: {
-      findMany: async (args: { where: unknown }) => {
-        capturedWhere = args.where;
-        return [{ id: 'tx-1' }];
-      }
+  const confirmStore = {
+    findReadyIds: async (scope: unknown, requestedIds: unknown) => {
+      capturedScope = scope;
+      capturedRequestedIds = requestedIds;
+      return ['tx-1'];
     }
   };
   const confirmUseCase = {
@@ -52,7 +51,7 @@ test('BulkConfirmCollectedTransactionsUseCase narrows ready transaction lookup w
       }) as never
   };
   const useCase = new BulkConfirmCollectedTransactionsUseCase(
-    prisma as never,
+    confirmStore as never,
     confirmUseCase as never
   );
 
@@ -61,14 +60,11 @@ test('BulkConfirmCollectedTransactionsUseCase narrows ready transaction lookup w
   };
   const result = await useCase.execute(testUser, input);
 
-  assert.deepEqual(capturedWhere, {
+  assert.deepEqual(capturedScope, {
     tenantId: 'tenant-1',
-    ledgerId: 'ledger-1',
-    status: CollectedTransactionStatus.READY_TO_POST,
-    id: {
-      in: ['tx-1', 'missing-tx']
-    }
+    ledgerId: 'ledger-1'
   });
+  assert.deepEqual(capturedRequestedIds, ['tx-1', 'missing-tx']);
   assert.equal(result.requestedCount, 2);
   assert.equal(result.succeededCount, 1);
   assert.equal(result.skippedCount, 1);

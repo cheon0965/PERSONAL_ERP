@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ConflictException } from '@nestjs/common';
+import { AppError } from '../src/common/application/errors/app-error';
 import { TransactionType } from '@prisma/client';
-import { CreateCollectedTransactionUseCase } from '../src/modules/collected-transactions/application/use-cases/create-collected-transaction.use-case';
-import { DeleteCollectedTransactionUseCase } from '../src/modules/collected-transactions/application/use-cases/delete-collected-transaction.use-case';
-import { ListCollectedTransactionsUseCase } from '../src/modules/collected-transactions/application/use-cases/list-collected-transactions.use-case';
-import { UpdateCollectedTransactionUseCase } from '../src/modules/collected-transactions/application/use-cases/update-collected-transaction.use-case';
-import { MissingOwnedCollectedTransactionReferenceError } from '../src/modules/collected-transactions/domain/collected-transaction-policy';
+import { CreateCollectedTransactionUseCase } from '../src/modules/collected-transactions/public';
+import { DeleteCollectedTransactionUseCase } from '../src/modules/collected-transactions/public';
+import { ListCollectedTransactionsUseCase } from '../src/modules/collected-transactions/public';
+import { UpdateCollectedTransactionUseCase } from '../src/modules/collected-transactions/public';
+import { MissingOwnedCollectedTransactionReferenceError } from '../src/modules/collected-transactions/public';
 
 const createCollectedTransactionCommand = {
   userId: 'user-1',
@@ -307,7 +307,8 @@ test('UpdateCollectedTransactionUseCase rejects already posted collected transac
   await assert.rejects(
     () => useCase.execute(updateCollectedTransactionCommand),
     (error: unknown) =>
-      error instanceof ConflictException &&
+      error instanceof AppError &&
+      error.kind === 'conflict' &&
       error.message ===
         'Posted collected transactions must be adjusted through journal entries.'
   );
@@ -376,7 +377,8 @@ test('DeleteCollectedTransactionUseCase rejects posted collected transactions', 
         'txn-1'
       ),
     (error: unknown) =>
-      error instanceof ConflictException &&
+      error instanceof AppError &&
+      error.kind === 'conflict' &&
       error.message ===
         'Posted collected transactions must be adjusted through journal entries.'
   );

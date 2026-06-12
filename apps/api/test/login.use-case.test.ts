@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as argon2 from 'argon2';
-import { UnauthorizedException } from '@nestjs/common';
-import { LoginUseCase } from '../src/modules/auth/application/use-cases/login.use-case';
+import { AppError } from '../src/common/application/errors/app-error';
+import { LoginHandler } from '../src/modules/auth/infrastructure/services/login.handler';
 
 test('LoginUseCase.execute returns the issued session for valid credentials', async () => {
   const passwordHash = await argon2.hash('Demo1234!');
@@ -56,7 +56,7 @@ test('LoginUseCase.execute returns the issued session for valid credentials', as
     }
   };
 
-  const useCase = new LoginUseCase(
+  const useCase = new LoginHandler(
     prisma as never,
     {
       issueSession: async (identity: {
@@ -117,7 +117,7 @@ test('LoginUseCase.execute rejects invalid credentials', async () => {
     }
   };
 
-  const useCase = new LoginUseCase(
+  const useCase = new LoginHandler(
     prisma as never,
     {
       issueSession: async () => {
@@ -149,7 +149,8 @@ test('LoginUseCase.execute rejects invalid credentials', async () => {
         }
       ),
     (error: unknown) =>
-      error instanceof UnauthorizedException &&
+      error instanceof AppError &&
+      error.kind === 'unauthorized' &&
       error.message === '이메일 또는 비밀번호가 올바르지 않습니다.'
   );
 });

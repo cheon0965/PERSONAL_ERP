@@ -1,0 +1,254 @@
+import { Injectable } from '@nestjs/common';
+import {
+  AppError,
+  unavailableError
+} from '../../../../common/application/errors/app-error';
+import { createHash, randomBytes } from 'node:crypto';
+import { Prisma } from '@prisma/client';
+import * as argon2 from 'argon2';
+import { ClockPort } from '../../../../common/application/ports/clock.port';
+import { EmailSenderPort } from '../../../../common/application/ports/email-sender.port';
+import { parseJwtDurationToMs } from '../../../../common/auth/jwt-config';
+import { SecurityEventLogger } from '../../../../common/infrastructure/operational/security-event.logger';
+import { PrismaService } from '../../../../common/prisma/prisma.service';
+import type { ApiEnv } from '../../../../config/api-env';
+import { InjectApiEnv } from '../../../../config/api-env.provider';
+import { AuthRateLimitService } from '../../application/services/auth-rate-limit.service';
+import { formatAuthLinkTtlLabel } from '../../application/mappers/auth-link-ttl.mapper';
+import {
+  normalizeDisplayName,
+  normalizeEmail
+} from '../../domain/auth.normalization';
+import { PasswordPolicyService } from '../../domain/password-policy';
+import { WorkspaceBootstrapService } from './workspace-bootstrap.service';
+import type { AuthRequestContext } from '../../application/models/auth.types';
+import { RegisterDto } from '../../dto/register.dto';
+
+const REGISTER_RESPONSE = { status: 'verification_sent' as const };
+
+@Injectable()
+export class RegisterHandler {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailSender: EmailSenderPort,
+    private readonly clock: ClockPort,
+    private readonly rateLimit: AuthRateLimitService,
+    private readonly securityEvents: SecurityEventLogger,
+    private readonly passwordPolicy: PasswordPolicyService,
+    private readonly workspaceBootstrap: WorkspaceBootstrapService,
+    @InjectApiEnv() private readonly env: ApiEnv
+  ) {}
+
+  async execute(
+    dto: RegisterDto,
+    context: AuthRequestContext
+  ): Promise<typeof REGISTER_RESPONSE> {
+    const email = normalizeEmail(dto.email);
+    const name = normalizeDisplayName(dto.name);
+
+    this.assertRegisterAttemptAllowed(context, email);
+    this.rateLimit.recordRegisterAttempt(context.clientIp, email);
+    this.passwordPolicy.assertAcceptable(dto.password, { email, name });
+
+    const passwordHash = await argon2.hash(dto.password);
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (existingUser?.emailVerifiedAt) {
+      this.securityEvents.warn('auth.register_existing_email', {
+        requestId: context.requestId,
+        clientIp: context.clientIp
+      });
+      return REGISTER_RESPONSE;
+    }
+
+    if (existingUser) {
+      const updatedUser = await this.prisma.user.update({
+        where: { id: existingUser.id },
+        data: { name, passwordHash }
+      });
+      await this.issueVerificationEmail(updatedUser, context, 'register');
+      return REGISTER_RESPONSE;
+    }
+
+    try {
+      const createdUser = await this.prisma.user.create({
+        data: {
+          email,
+          name,
+          passwordHash,
+          settings: { create: {} }
+        }
+      });
+      await this.issueVerificationEmail(createdUser, context, 'register');
+    } catch (error) {
+      if (isUniqueConstraintError(error)) {
+        const racedUser = await this.prisma.user.findUnique({
+          where: { email }
+        });
+
+        if (racedUser && !racedUser.emailVerifiedAt) {
+          await this.issueVerificationEmail(racedUser, context, 'register');
+        }
+
+        return REGISTER_RESPONSE;
+      }
+
+      throw error;
+    }
+
+    return REGISTER_RESPONSE;
+  }
+
+  private assertRegisterAttemptAllowed(
+    context: AuthRequestContext,
+    email: string
+  ): void {
+    try {
+      this.rateLimit.assertRegisterAttemptAllowed(context.clientIp, email);
+    } catch (error) {
+      if (isTooManyRequestsError(error)) {
+        this.securityEvents.warn('auth.register_rate_limited', {
+          requestId: context.requestId,
+          clientIp: context.clientIp
+        });
+      }
+      throw error;
+    }
+  }
+
+  async issueVerificationEmail(
+    user: { id: string; email: string; name: string },
+    context: AuthRequestContext,
+    reason: 'register' | 'resend'
+  ): Promise<void> {
+    const rawToken = createEmailVerificationToken();
+    const now = this.clock.now();
+    const ttlMs = getEmailVerificationTtlMs(this.env);
+    const expiresAt = new Date(now.getTime() + ttlMs);
+
+    await this.prisma.emailVerificationToken.updateMany({
+      where: { userId: user.id, consumedAt: null },
+      data: { consumedAt: now }
+    });
+    await this.prisma.emailVerificationToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: hashEmailVerificationToken(rawToken),
+        expiresAt
+      }
+    });
+
+    try {
+      await this.emailSender.send(
+        buildVerificationEmail({
+          to: user.email,
+          name: user.name,
+          verificationUrl: buildVerificationUrl({
+            appOrigin: this.env.APP_ORIGIN,
+            token: rawToken
+          }),
+          ttlLabel: formatAuthLinkTtlLabel(ttlMs)
+        })
+      );
+      this.securityEvents.log('auth.verification_email_sent', {
+        requestId: context.requestId,
+        clientIp: context.clientIp,
+        userId: user.id,
+        reason
+      });
+    } catch {
+      this.securityEvents.error('auth.verification_email_send_failed', {
+        requestId: context.requestId,
+        clientIp: context.clientIp,
+        userId: user.id,
+        reason
+      });
+      throw unavailableError(
+        '인증 메일을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.'
+      );
+    }
+  }
+}
+
+function isTooManyRequestsError(error: unknown): error is Error {
+  return error instanceof AppError && error.kind === 'rate_limited';
+}
+
+export function createEmailVerificationToken(): string {
+  return randomBytes(32).toString('base64url');
+}
+
+export function hashEmailVerificationToken(token: string): string {
+  return createHash('sha256').update(token.trim(), 'utf8').digest('hex');
+}
+
+export function getEmailVerificationTtlMs(
+  env: Pick<ApiEnv, 'EMAIL_VERIFICATION_TTL'>
+): number {
+  return parseJwtDurationToMs(env.EMAIL_VERIFICATION_TTL, 30 * 60 * 1000);
+}
+
+export function buildVerificationUrl(input: {
+  appOrigin: string;
+  token: string;
+}): string {
+  const url = new URL('/verify-email', input.appOrigin);
+  url.searchParams.set('token', input.token);
+  return url.toString();
+}
+
+function buildVerificationEmail(input: {
+  to: string;
+  name: string;
+  verificationUrl: string;
+  ttlLabel: string;
+}) {
+  const text = [
+    `${input.name}님, PERSONAL_ERP 회원가입 이메일 인증을 진행해 주세요.`,
+    '',
+    `인증 링크: ${input.verificationUrl}`,
+    `이 링크는 ${input.ttlLabel} 후에 만료됩니다.`,
+    '',
+    '본인이 요청하지 않았다면 이 메일을 무시해 주세요.'
+  ].join('\n');
+
+  const escapedVerificationUrl = escapeHtml(input.verificationUrl);
+  const escapedName = escapeHtml(input.name);
+
+  return {
+    to: input.to,
+    subject: 'PERSONAL_ERP 이메일 인증',
+    text,
+    html: [
+      '<p>',
+      escapedName,
+      '님, PERSONAL_ERP 회원가입 이메일 인증을 진행해 주세요.',
+      '</p>',
+      '<p><a href="',
+      escapedVerificationUrl,
+      '">이메일 인증하기</a></p>',
+      '<p>이 링크는 ',
+      escapeHtml(input.ttlLabel),
+      ' 후에 만료됩니다.</p>',
+      '<p>본인이 요청하지 않았다면 이 메일을 무시해 주세요.</p>'
+    ].join('')
+  };
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2002'
+  );
+}

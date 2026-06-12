@@ -5,6 +5,10 @@ import {
   Prisma
 } from '@prisma/client';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
+import {
+  fromPrismaMoneyWon,
+  type PrismaMoneyLike
+} from '../../../../common/money/prisma-money';
 import type {
   FinancialStatementGenerationContext,
   FinancialStatementGenerationPort
@@ -147,10 +151,17 @@ export class PrismaFinancialStatementGenerationAdapter implements FinancialState
 
     return {
       period,
-      closingSnapshot,
-      closingLines,
-      journalLines,
-      previousClosingSnapshot
+      closingSnapshot: mapClosingSnapshot(closingSnapshot),
+      closingLines: closingLines.map((line) => ({
+        ...line,
+        balanceAmount: fromPrismaMoneyWon(line.balanceAmount)
+      })),
+      journalLines: journalLines.map((line) => ({
+        ...line,
+        debitAmount: fromPrismaMoneyWon(line.debitAmount),
+        creditAmount: fromPrismaMoneyWon(line.creditAmount)
+      })),
+      previousClosingSnapshot: mapClosingSnapshot(previousClosingSnapshot)
     };
   }
 
@@ -184,4 +195,24 @@ export class PrismaFinancialStatementGenerationAdapter implements FinancialState
       }
     });
   }
+}
+
+function mapClosingSnapshot<
+  T extends {
+    id: string;
+    totalAssetAmount: PrismaMoneyLike;
+    totalLiabilityAmount: PrismaMoneyLike;
+    totalEquityAmount: PrismaMoneyLike;
+    periodPnLAmount: PrismaMoneyLike;
+  }
+>(snapshot: T | null) {
+  return snapshot
+    ? {
+        ...snapshot,
+        totalAssetAmount: fromPrismaMoneyWon(snapshot.totalAssetAmount),
+        totalLiabilityAmount: fromPrismaMoneyWon(snapshot.totalLiabilityAmount),
+        totalEquityAmount: fromPrismaMoneyWon(snapshot.totalEquityAmount),
+        periodPnLAmount: fromPrismaMoneyWon(snapshot.periodPnLAmount)
+      }
+    : null;
 }

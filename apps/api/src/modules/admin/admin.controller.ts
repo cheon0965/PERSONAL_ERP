@@ -32,11 +32,11 @@ import {
   logWorkspaceActionDenied,
   logWorkspaceActionSucceeded
 } from '../../common/infrastructure/operational/workspace-action.audit';
-import { AdminAuditEventsService } from './admin-audit-events.service';
-import { AdminMemberQueryService } from './admin-member-query.service';
-import { AdminPolicyService } from './admin-policy.service';
-import { AdminSecurityThreatEventsService } from './admin-security-threat-events.service';
-import { AdminSystemService } from './admin-system.service';
+import { AdminAuditEventsService } from './infrastructure/services/admin-audit-events.service';
+import { AdminMemberQueryService } from './infrastructure/services/admin-member-query.service';
+import { AdminPolicyService } from './infrastructure/services/admin-policy.service';
+import { AdminSecurityThreatEventsService } from './infrastructure/services/admin-security-threat-events.service';
+import { AdminSystemService } from './infrastructure/services/admin-system.service';
 import { NavigationService } from '../navigation/public';
 import { InviteTenantMemberUseCase } from './application/use-cases/invite-tenant-member.use-case';
 import { RemoveTenantMemberUseCase } from './application/use-cases/remove-tenant-member.use-case';

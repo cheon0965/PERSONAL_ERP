@@ -9,8 +9,8 @@ import {
   ImportedRowParseStatus,
   ImportSourceKind
 } from '@prisma/client';
-import { normalizeUploadedFileName } from '../src/modules/import-batches/uploaded-file-name';
-import { encryptSeedCbcPkcs7 } from '../src/modules/import-batches/vestmail-seed-cipher';
+import { normalizeUploadedFileName } from '../src/modules/import-batches/public';
+import { encryptSeedCbcPkcs7 } from '../src/modules/import-batches/public';
 import { createRequestTestContext } from './request-api.test-support';
 import { buildImportRowFingerprint } from './import-batches.request-api.shared';
 

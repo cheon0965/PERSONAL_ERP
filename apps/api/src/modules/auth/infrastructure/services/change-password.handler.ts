@@ -1,0 +1,113 @@
+import { Injectable } from '@nestjs/common';
+import {
+  notFoundError,
+  unauthorizedError,
+  validationError
+} from '../../../../common/application/errors/app-error';
+import type { ChangePasswordResponse } from '@personal-erp/contracts';
+import * as argon2 from 'argon2';
+import type { RequiredWorkspaceContext } from '../../../../common/auth/required-workspace.util';
+import {
+  readClientIp,
+  readRequestId,
+  type RequestWithContext
+} from '../../../../common/infrastructure/operational/request-context';
+import { SecurityEventLogger } from '../../../../common/infrastructure/operational/security-event.logger';
+import { WorkspaceAuditEventsService } from '../../../../common/infrastructure/operational/workspace-audit-events.service';
+import { PrismaService } from '../../../../common/prisma/prisma.service';
+import { AuthSessionService } from './auth-session.service';
+import { PasswordPolicyService } from '../../domain/password-policy';
+
+@Injectable()
+export class ChangePasswordHandler {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly authSessions: AuthSessionService,
+    private readonly auditEvents: WorkspaceAuditEventsService,
+    private readonly securityEvents: SecurityEventLogger,
+    private readonly passwordPolicy: PasswordPolicyService
+  ) {}
+
+  async execute(
+    user: { id: string; email: string },
+    workspace: RequiredWorkspaceContext,
+    request: RequestWithContext,
+    currentSessionId: string,
+    input: { currentPassword: string; nextPassword: string }
+  ): Promise<ChangePasswordResponse> {
+    const currentUser = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        passwordHash: true
+      }
+    });
+
+    if (!currentUser) {
+      throw notFoundError('사용자를 찾을 수 없습니다.');
+    }
+
+    const currentPasswordMatches = await argon2.verify(
+      currentUser.passwordHash,
+      input.currentPassword
+    );
+    if (!currentPasswordMatches) {
+      this.securityEvents.warn('auth.password_change_failed', {
+        requestId: readRequestId(request),
+        clientIp: readClientIp(request),
+        userId: user.id,
+        reason: 'invalid_current_password'
+      });
+      throw unauthorizedError('현재 비밀번호가 올바르지 않습니다.');
+    }
+
+    const nextPasswordMatchesCurrent = await argon2.verify(
+      currentUser.passwordHash,
+      input.nextPassword
+    );
+    if (nextPasswordMatchesCurrent) {
+      throw validationError('새 비밀번호는 현재 비밀번호와 달라야 합니다.');
+    }
+
+    this.passwordPolicy.assertAcceptable(input.nextPassword, {
+      email: currentUser.email,
+      name: currentUser.name
+    });
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash: await argon2.hash(input.nextPassword)
+      }
+    });
+    const revokedSessionCount = await this.authSessions.revokeOtherUserSessions(
+      user.id,
+      currentSessionId
+    );
+
+    await this.auditEvents.record({
+      workspace,
+      request,
+      eventCategory: 'account_security',
+      eventName: 'account.password_changed',
+      action: 'account_security.change_password',
+      resourceType: 'user',
+      resourceId: user.id,
+      result: 'SUCCESS',
+      metadata: {
+        revokedSessionCount
+      }
+    });
+    this.securityEvents.log('auth.password_changed', {
+      requestId: readRequestId(request),
+      clientIp: readClientIp(request),
+      userId: user.id,
+      sessionId: currentSessionId,
+      revokedSessionCount
+    });
+
+    return { status: 'changed' };
+  }
+}

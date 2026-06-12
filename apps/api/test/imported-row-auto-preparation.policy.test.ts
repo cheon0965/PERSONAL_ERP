@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { CollectedTransactionStatus } from '@prisma/client';
-import { resolveImportedRowAutoPreparation } from '../src/modules/import-batches/imported-row-auto-preparation.policy';
+import { resolveImportedRowAutoPreparation } from '../src/modules/import-batches/public';
 
 test('resolveImportedRowAutoPreparation promotes a clean classified row to ready-to-post', () => {
   const result = resolveImportedRowAutoPreparation({

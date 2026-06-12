@@ -1,17 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ConflictException } from '@nestjs/common';
+import { AppError } from '../src/common/application/errors/app-error';
 import type { AuthenticatedUser } from '@personal-erp/contracts';
 import {
   AccountingPeriodStatus,
   CollectedTransactionStatus,
   PostingPolicyKey
 } from '@prisma/client';
-import { ConfirmCollectedTransactionUseCase } from '../src/modules/collected-transactions/confirm-collected-transaction.use-case';
+import { ConfirmCollectedTransactionUseCase } from '../src/modules/collected-transactions/public';
 import type {
   ConfirmationCollectedTransaction,
   CreateConfirmationJournalEntryInput
-} from '../src/modules/collected-transactions/application/ports/confirm-collected-transaction-store.port';
+} from '../src/modules/collected-transactions/public';
 
 const testUser: AuthenticatedUser = {
   id: 'user-1',
@@ -62,7 +62,8 @@ test('ConfirmCollectedTransactionUseCase rejects liability confirmations when re
   await assert.rejects(
     () => useCase.execute(testUser, transaction.id),
     (error: unknown) =>
-      error instanceof ConflictException &&
+      error instanceof AppError &&
+      error.kind === 'conflict' &&
       error.message === '부채 상환 스케줄 상태 갱신에 실패했습니다.'
   );
 });

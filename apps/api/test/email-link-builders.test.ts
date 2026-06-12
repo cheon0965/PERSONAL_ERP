@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildAdminInvitationUrl } from '../src/modules/admin/admin-member-command.support';
-import { buildPasswordResetUrl } from '../src/modules/auth/application/use-cases/forgot-password.use-case';
-import { buildVerificationUrl } from '../src/modules/auth/application/use-cases/register.use-case';
+import { buildAdminInvitationUrl } from '../src/modules/admin/public';
+import { buildPasswordResetUrl } from '../src/modules/auth/public';
+import { buildVerificationUrl } from '../src/modules/auth/public';
 
 const injectedAppOrigin = 'https://personalerp.theworkpc.com';
 

@@ -1,4 +1,4 @@
-﻿import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import type { UpdateInsurancePolicyRequest } from '@personal-erp/contracts';
 import { InsuranceCycle } from '@prisma/client';
 import {

@@ -1,0 +1,110 @@
+import { Injectable } from '@nestjs/common';
+import { notFoundError } from '../../../../common/application/errors/app-error';
+
+import type {
+  AuthenticatedUser,
+  ImportBatchCollectionJobItem
+} from '@personal-erp/contracts';
+import { ImportBatchCollectionJobStatus } from '@prisma/client';
+import { requireCurrentWorkspace } from '../../../../common/auth/required-workspace.util';
+import { assertWorkspaceActionAllowed } from '../../../../common/auth/workspace-action.policy';
+import { PrismaService } from '../../../../common/prisma/prisma.service';
+import {
+  importBatchCollectionJobSelect,
+  mapImportBatchCollectionJobToItem
+} from '../mappers/import-batch-collection-job.mapper';
+import { ImportBatchCollectionJobMaintenanceService } from './import-batch-collection-job-maintenance.service';
+
+const collectionJobCancelMessage =
+  '사용자가 업로드 배치 일괄 등록 작업을 중단했습니다.';
+
+@Injectable()
+export class CancelImportBatchCollectionJobHandler {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jobMaintenance: ImportBatchCollectionJobMaintenanceService
+  ) {}
+
+  async execute(
+    user: AuthenticatedUser,
+    importBatchId: string,
+    jobId: string
+  ): Promise<ImportBatchCollectionJobItem> {
+    const workspace = requireCurrentWorkspace(user);
+    assertWorkspaceActionAllowed(
+      workspace.membershipRole,
+      'import_batch.cancel'
+    );
+    await this.jobMaintenance.reconcileExpiredCollectionJobs(new Date(), {
+      tenantId: workspace.tenantId,
+      ledgerId: workspace.ledgerId,
+      importBatchId
+    });
+
+    const job = await this.prisma.importBatchCollectionJob.findFirst({
+      where: {
+        id: jobId,
+        importBatchId,
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId
+      },
+      select: importBatchCollectionJobSelect
+    });
+
+    if (!job) {
+      throw notFoundError('업로드 배치 일괄 등록 작업을 찾을 수 없습니다.');
+    }
+
+    if (!isCancellableCollectionJobStatus(job.status)) {
+      return mapImportBatchCollectionJobToItem(job);
+    }
+
+    const now = new Date();
+    await this.prisma.importBatchCollectionJob.update({
+      where: {
+        id: job.id
+      },
+      data: {
+        status: ImportBatchCollectionJobStatus.CANCELLED,
+        errorMessage: collectionJobCancelMessage,
+        heartbeatAt: now,
+        ...(job.status === ImportBatchCollectionJobStatus.PENDING
+          ? { finishedAt: now }
+          : {})
+      }
+    });
+
+    if (job.status === ImportBatchCollectionJobStatus.PENDING) {
+      await this.prisma.importBatchCollectionLock.deleteMany({
+        where: {
+          jobId: job.id
+        }
+      });
+    }
+
+    const cancelledJob = await this.prisma.importBatchCollectionJob.findFirst({
+      where: {
+        id: job.id,
+        importBatchId,
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId
+      },
+      select: importBatchCollectionJobSelect
+    });
+
+    if (!cancelledJob) {
+      throw notFoundError('업로드 배치 일괄 등록 작업을 찾을 수 없습니다.');
+    }
+
+    return mapImportBatchCollectionJobToItem(cancelledJob);
+  }
+}
+
+function isCancellableCollectionJobStatus(
+  status: ImportBatchCollectionJobStatus
+) {
+  return (
+    status === ImportBatchCollectionJobStatus.PENDING ||
+    status === ImportBatchCollectionJobStatus.RUNNING
+  );
+}

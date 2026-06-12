@@ -1,0 +1,56 @@
+import { Injectable } from '@nestjs/common';
+import { notFoundError } from '../../../../common/application/errors/app-error';
+
+import type {
+  AuthenticatedUser,
+  ImportBatchCollectionJobItem
+} from '@personal-erp/contracts';
+import { requireCurrentWorkspace } from '../../../../common/auth/required-workspace.util';
+import { assertWorkspaceActionAllowed } from '../../../../common/auth/workspace-action.policy';
+import { PrismaService } from '../../../../common/prisma/prisma.service';
+import {
+  importBatchCollectionJobSelect,
+  mapImportBatchCollectionJobToItem
+} from '../mappers/import-batch-collection-job.mapper';
+import { ImportBatchCollectionJobMaintenanceService } from './import-batch-collection-job-maintenance.service';
+
+@Injectable()
+export class GetImportBatchCollectionJobHandler {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jobMaintenance: ImportBatchCollectionJobMaintenanceService
+  ) {}
+
+  async execute(
+    user: AuthenticatedUser,
+    importBatchId: string,
+    jobId: string
+  ): Promise<ImportBatchCollectionJobItem> {
+    const workspace = requireCurrentWorkspace(user);
+    assertWorkspaceActionAllowed(
+      workspace.membershipRole,
+      'collected_transaction.create'
+    );
+    await this.jobMaintenance.reconcileExpiredCollectionJobs(new Date(), {
+      tenantId: workspace.tenantId,
+      ledgerId: workspace.ledgerId,
+      importBatchId
+    });
+
+    const job = await this.prisma.importBatchCollectionJob.findFirst({
+      where: {
+        id: jobId,
+        importBatchId,
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId
+      },
+      select: importBatchCollectionJobSelect
+    });
+
+    if (!job) {
+      throw notFoundError('업로드 배치 일괄 등록 작업을 찾을 수 없습니다.');
+    }
+
+    return mapImportBatchCollectionJobToItem(job);
+  }
+}

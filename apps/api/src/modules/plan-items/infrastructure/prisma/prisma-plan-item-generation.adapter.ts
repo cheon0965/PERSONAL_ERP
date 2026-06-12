@@ -7,6 +7,7 @@ import {
   PlanItemStatus
 } from '@prisma/client';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
+import { fromPrismaMoneyWon } from '../../../../common/money/prisma-money';
 import type {
   GeneratedPlanItemDraft,
   PlanItemGenerationPort
@@ -60,13 +61,13 @@ export class PrismaPlanItemGenerationAdapter implements PlanItemGenerationPort {
     });
   }
 
-  listRecurringRulesForPeriod(
+  async listRecurringRulesForPeriod(
     tenantId: string,
     ledgerId: string,
     periodStartDate: Date,
     periodEndDate: Date
   ) {
-    return this.prisma.recurringRule.findMany({
+    const records = await this.prisma.recurringRule.findMany({
       where: {
         tenantId,
         ledgerId,
@@ -92,6 +93,10 @@ export class PrismaPlanItemGenerationAdapter implements PlanItemGenerationPort {
       },
       orderBy: [{ nextRunDate: 'asc' }, { createdAt: 'asc' }]
     });
+    return records.map((record) => ({
+      ...record,
+      amountWon: fromPrismaMoneyWon(record.amountWon)
+    }));
   }
 
   listExistingItemsForPeriod(
@@ -127,13 +132,13 @@ export class PrismaPlanItemGenerationAdapter implements PlanItemGenerationPort {
     });
   }
 
-  listLiabilityRepaymentSchedulesForPeriod(
+  async listLiabilityRepaymentSchedulesForPeriod(
     tenantId: string,
     ledgerId: string,
     periodStartDate: Date,
     periodEndDate: Date
   ) {
-    return this.prisma.liabilityRepaymentSchedule.findMany({
+    const records = await this.prisma.liabilityRepaymentSchedule.findMany({
       where: {
         tenantId,
         ledgerId,
@@ -170,6 +175,10 @@ export class PrismaPlanItemGenerationAdapter implements PlanItemGenerationPort {
       },
       orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }]
     });
+    return records.map((record) => ({
+      ...record,
+      totalAmount: fromPrismaMoneyWon(record.totalAmount)
+    }));
   }
 
   async createGeneratedPlanItems(items: GeneratedPlanItemDraft[]) {

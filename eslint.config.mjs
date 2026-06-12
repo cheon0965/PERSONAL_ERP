@@ -28,12 +28,15 @@ const nextWebConfig = {
 
 const modulePublicApiNames = [
   'accounting-periods',
+  'admin',
+  'auth',
   'carry-forwards',
   'collected-transactions',
   'dashboard',
   'financial-statements',
   'forecast',
   'import-batches',
+  'insurance-policies',
   'journal-entries',
   'navigation',
   'plan-items',
@@ -71,13 +74,24 @@ const apiLayerBoundaryRestrictions = {
         'argon2',
         'cookie-parser',
         'express',
-        'rxjs'
+        'rxjs',
+        'node:crypto'
       ],
       message:
         'application/domain layer files must stay framework-free and depend on ports or pure logic instead.'
     },
     {
-      group: ['**/common/prisma/*', '**/common/auth/jwt-config'],
+      group: [
+        '**/common/prisma/*',
+        '**/common/auth/jwt-config',
+        '**/common/infrastructure/*',
+        '**/common/infrastructure/**',
+        '**/common/money/prisma-money',
+        '**/dto/*',
+        '**/dto/**',
+        '**/infrastructure/*',
+        '**/infrastructure/**'
+      ],
       message:
         'application/domain layer files must not import infrastructure helpers directly.'
     }
@@ -201,23 +215,8 @@ export default [
       'no-restricted-imports': ['error', apiModuleBoundaryRestrictions]
     }
   },
-  // 인증/관리자 유스케이스는 NestJS와 Prisma를 직접 쓰는 얇은 헥사고날 형태라
-  // 전체 포트/어댑터 분리 규칙에서는 제외한다.
-  {
-    files: [
-      'apps/api/src/modules/auth/application/**/*.ts',
-      'apps/api/src/modules/admin/application/**/*.ts'
-    ],
-    rules: {
-      'no-restricted-imports': ['error', modulePublicApiRestrictions]
-    }
-  },
   {
     files: ['apps/api/src/**/application/**/*.ts'],
-    ignores: [
-      'apps/api/src/modules/auth/application/**/*.ts',
-      'apps/api/src/modules/admin/application/**/*.ts'
-    ],
     rules: {
       'no-restricted-imports': [
         'error',

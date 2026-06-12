@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AccountingPeriodsModule } from '../accounting-periods/public';
-import { ImportBatchWritePort } from './application/ports/import-batch-write.port';
-import { ImportedRowCollectionPort } from './application/ports/imported-row-collection.port';
+import { ImportBatchWritePort } from './infrastructure/ports/import-batch-write.port';
+import { ImportedRowCollectionPort } from './infrastructure/ports/imported-row-collection.port';
 import { CollectImportedRowUseCase } from './application/use-cases/collect-imported-row.use-case';
 import { BulkCollectImportedRowsUseCase } from './application/use-cases/bulk-collect-imported-rows.use-case';
 import { CancelImportBatchCollectionUseCase } from './application/use-cases/cancel-import-batch-collection.use-case';
@@ -12,13 +12,25 @@ import { DeleteImportBatchUseCase } from './application/use-cases/delete-import-
 import { GetActiveImportBatchCollectionJobUseCase } from './application/use-cases/get-active-import-batch-collection-job.use-case';
 import { GetImportBatchCollectionJobUseCase } from './application/use-cases/get-import-batch-collection-job.use-case';
 import { PreviewImportedRowCollectionUseCase } from './application/use-cases/preview-imported-row-collection.use-case';
-import { ImportBatchQueryService } from './import-batch-query.service';
+import { ImportBatchCommandPort } from './application/ports/import-batch-command.port';
+import { ImportBatchQueryService } from './infrastructure/services/import-batch-query.service';
 import { ImportBatchesController } from './import-batches.controller';
 import { PrismaImportBatchWriteAdapter } from './infrastructure/prisma/prisma-import-batch-write.adapter';
-import { ImportBatchCollectionJobMaintenanceService } from './import-batch-collection-job-maintenance.service';
-import { ImportBatchCollectionJobRunner } from './import-batch-collection-job-runner.service';
-import { ImportedRowCollectionRepository } from './imported-row-collection.repository';
-import { ImportedRowCollectionService } from './imported-row-collection.service';
+import { ImportBatchCollectionJobMaintenanceService } from './infrastructure/services/import-batch-collection-job-maintenance.service';
+import { ImportBatchCollectionJobRunner } from './infrastructure/services/import-batch-collection-job-runner.service';
+import { ImportedRowCollectionRepository } from './infrastructure/prisma/imported-row-collection.repository';
+import { ImportedRowCollectionService } from './infrastructure/services/imported-row-collection.service';
+import { ImportBatchCommandAdapter } from './infrastructure/services/import-batch-command.adapter';
+import { BulkCollectImportedRowsHandler } from './infrastructure/services/bulk-collect-imported-rows.handler';
+import { CancelImportBatchCollectionJobHandler } from './infrastructure/services/cancel-import-batch-collection-job.handler';
+import { CancelImportBatchCollectionHandler } from './infrastructure/services/cancel-import-batch-collection.handler';
+import { CollectImportedRowHandler } from './infrastructure/services/collect-imported-row.handler';
+import { CreateImportBatchFromFileHandler } from './infrastructure/services/create-import-batch-from-file.handler';
+import { CreateImportBatchHandler } from './infrastructure/services/create-import-batch.handler';
+import { DeleteImportBatchHandler } from './infrastructure/services/delete-import-batch.handler';
+import { GetActiveImportBatchCollectionJobHandler } from './infrastructure/services/get-active-import-batch-collection-job.handler';
+import { GetImportBatchCollectionJobHandler } from './infrastructure/services/get-import-batch-collection-job.handler';
+import { PreviewImportedRowCollectionHandler } from './infrastructure/services/preview-imported-row-collection.handler';
 
 @Module({
   imports: [AccountingPeriodsModule],
@@ -36,6 +48,21 @@ import { ImportedRowCollectionService } from './imported-row-collection.service'
       useExisting: ImportedRowCollectionRepository
     },
     ImportedRowCollectionService,
+    CreateImportBatchHandler,
+    CreateImportBatchFromFileHandler,
+    PreviewImportedRowCollectionHandler,
+    CollectImportedRowHandler,
+    BulkCollectImportedRowsHandler,
+    CancelImportBatchCollectionHandler,
+    CancelImportBatchCollectionJobHandler,
+    GetImportBatchCollectionJobHandler,
+    GetActiveImportBatchCollectionJobHandler,
+    DeleteImportBatchHandler,
+    ImportBatchCommandAdapter,
+    {
+      provide: ImportBatchCommandPort,
+      useExisting: ImportBatchCommandAdapter
+    },
     CreateImportBatchUseCase,
     CreateImportBatchFromFileUseCase,
     PreviewImportedRowCollectionUseCase,

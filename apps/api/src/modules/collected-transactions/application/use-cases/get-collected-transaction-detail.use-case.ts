@@ -1,3 +1,4 @@
+import { ApplicationService } from '../../../../common/application/application-service.decorator';
 import type { CollectedTransactionDetailItem } from '@personal-erp/contracts';
 import { mapCollectedTransactionToDetailItem } from '../collected-transaction-item.mapper';
 import type {
@@ -5,6 +6,7 @@ import type {
   CollectedTransactionWorkspaceScope
 } from '../ports/collected-transaction-store.port';
 
+@ApplicationService()
 export class GetCollectedTransactionDetailUseCase {
   constructor(
     private readonly collectedTransactionStore: CollectedTransactionStorePort

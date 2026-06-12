@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert/strict';
+import assert from 'node:assert/strict';
 import test from 'node:test';
 import { AccountingPeriodStatus, TransactionType } from '@prisma/client';
 import { createRequestTestContext } from './request-api.test-support';

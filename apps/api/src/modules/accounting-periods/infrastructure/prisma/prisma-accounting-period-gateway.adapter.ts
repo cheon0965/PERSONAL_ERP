@@ -1,21 +1,14 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable
-} from '@nestjs/common';
-import { AccountingPeriodStatus, type Prisma } from '@prisma/client';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { AccountingPeriodStatus } from '@prisma/client';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
-import { readCollectingAccountingPeriodStatuses } from '../../accounting-period-transition.policy';
-import {
-  accountingPeriodInclude,
-  type AccountingPeriodRecord
-} from '../../accounting-period.records';
+import { readCollectingAccountingPeriodStatuses } from '../../domain/accounting-period-transition.policy';
+import { accountingPeriodInclude } from '../models/accounting-period.records';
+import type { AccountingPeriodRecord } from '../../application/models/accounting-period-record';
 import {
   type AccountingPeriodWorkspaceScope,
   AccountingPeriodReaderPort
 } from '../../application/ports/accounting-period-reader.port';
 import {
-  type AllocatedJournalEntryNumber,
   AccountingPeriodWriteGuardPort,
   type WritableAccountingPeriod
 } from '../../application/ports/accounting-period-write-guard.port';
@@ -106,143 +99,6 @@ export class PrismaAccountingPeriodGatewayAdapter
     });
   }
 
-  async claimJournalWritePeriodInTransaction(
-    tx: Prisma.TransactionClient,
-    workspace: AccountingPeriodWorkspaceScope,
-    periodId: string
-  ): Promise<WritableAccountingPeriod> {
-    const period = await tx.accountingPeriod.findFirst({
-      where: {
-        id: periodId,
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId
-      }
-    });
-
-    if (!period) {
-      throw new BadRequestException(
-        '전표를 기록할 운영 기간을 찾을 수 없습니다.'
-      );
-    }
-
-    assertJournalWritePeriodClaimable(period.status);
-
-    const claimedPeriod = await tx.accountingPeriod.updateMany({
-      where: {
-        id: period.id,
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId,
-        status: period.status
-      },
-      data: {
-        status: period.status
-      }
-    });
-
-    if (claimedPeriod.count === 1) {
-      return period;
-    }
-
-    const latestPeriod = await tx.accountingPeriod.findFirst({
-      where: {
-        id: periodId,
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId
-      }
-    });
-
-    if (!latestPeriod) {
-      throw new BadRequestException(
-        '전표를 기록할 운영 기간을 찾을 수 없습니다.'
-      );
-    }
-
-    assertJournalWritePeriodClaimable(latestPeriod.status);
-
-    throw new ConflictException(
-      '운영 기간 상태가 변경되어 전표를 기록하지 못했습니다. 다시 시도해 주세요.'
-    );
-  }
-
-  async allocateJournalEntryNumberInTransaction(
-    tx: Prisma.TransactionClient,
-    workspace: AccountingPeriodWorkspaceScope,
-    periodId: string
-  ): Promise<AllocatedJournalEntryNumber> {
-    const period = await tx.accountingPeriod.findFirst({
-      where: {
-        id: periodId,
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId
-      }
-    });
-
-    if (!period) {
-      throw new BadRequestException(
-        '전표를 기록할 운영 기간을 찾을 수 없습니다.'
-      );
-    }
-
-    assertJournalWritePeriodClaimable(period.status);
-
-    const allocatedPeriod = await tx.accountingPeriod.updateMany({
-      where: {
-        id: period.id,
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId,
-        status: {
-          in: [AccountingPeriodStatus.OPEN, AccountingPeriodStatus.IN_REVIEW]
-        }
-      },
-      data: {
-        nextJournalEntrySequence: {
-          increment: 1
-        }
-      }
-    });
-
-    if (allocatedPeriod.count !== 1) {
-      const latestPeriod = await tx.accountingPeriod.findFirst({
-        where: {
-          id: periodId,
-          tenantId: workspace.tenantId,
-          ledgerId: workspace.ledgerId
-        }
-      });
-
-      if (!latestPeriod) {
-        throw new BadRequestException(
-          '전표를 기록할 운영 기간을 찾을 수 없습니다.'
-        );
-      }
-
-      assertJournalWritePeriodClaimable(latestPeriod.status);
-
-      throw new ConflictException(
-        '운영 기간 상태가 변경되어 전표 번호를 할당하지 못했습니다. 다시 시도해 주세요.'
-      );
-    }
-
-    const latestPeriod = await tx.accountingPeriod.findFirst({
-      where: {
-        id: periodId,
-        tenantId: workspace.tenantId,
-        ledgerId: workspace.ledgerId
-      }
-    });
-
-    if (!latestPeriod) {
-      throw new BadRequestException(
-        '전표를 기록할 운영 기간을 찾을 수 없습니다.'
-      );
-    }
-
-    return {
-      period: latestPeriod,
-      sequence: latestPeriod.nextJournalEntrySequence - 1
-    };
-  }
-
   private async assertBusinessDateAllowedInWorkspace(input: {
     workspace: AccountingPeriodWorkspaceScope;
     businessDate: string;
@@ -277,21 +133,6 @@ export class PrismaAccountingPeriodGatewayAdapter
 
     return latestWritablePeriod;
   }
-}
-
-function assertJournalWritePeriodClaimable(
-  status: AccountingPeriodStatus
-): void {
-  if (
-    status === AccountingPeriodStatus.OPEN ||
-    status === AccountingPeriodStatus.IN_REVIEW
-  ) {
-    return;
-  }
-
-  throw new BadRequestException(
-    '현재 운영 기간이 마감 중이거나 잠겨 있어 전표를 기록할 수 없습니다.'
-  );
 }
 
 function parseBusinessMoment(businessDate: string) {

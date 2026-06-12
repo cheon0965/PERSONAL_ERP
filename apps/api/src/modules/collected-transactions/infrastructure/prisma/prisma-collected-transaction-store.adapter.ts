@@ -26,9 +26,9 @@ import { PrismaService } from '../../../../common/prisma/prisma.service';
 import {
   assertCollectedTransactionCanBeDeleted,
   assertCollectedTransactionCanBeUpdated
-} from '../../collected-transaction-transition.policy';
-import { mapCollectedTransactionTypeToLedgerTransactionCode } from '../../collected-transaction-type.mapper';
-import { resolveManualCollectedTransactionStatus } from '../../manual-collected-transaction-status.policy';
+} from '../../domain/collected-transaction-transition.policy';
+import { mapCollectedTransactionTypeToLedgerTransactionCode } from '../../application/mappers/collected-transaction-type.mapper';
+import { resolveManualCollectedTransactionStatus } from '../../domain/manual-collected-transaction-status.policy';
 import type {
   CollectedTransactionWorkspaceScope,
   CreateCollectedTransactionRecord,

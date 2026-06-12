@@ -1,8 +1,8 @@
-import type { InsurancePolicyRecord } from '../../insurance-policies.mapper';
+import type { InsurancePolicyRecord } from '../mappers/insurance-policies.mapper';
 import type {
   InsurancePolicyRecurringReferenceState,
   NormalizedInsurancePolicyInput
-} from '../../insurance-policy.write-model';
+} from '../policies/insurance-policy.policy';
 
 export type InsurancePolicyReferenceStateInput = {
   tenantId: string;
@@ -31,6 +31,20 @@ export type DeleteInsurancePolicyCommand = {
 };
 
 export abstract class InsurancePolicyWritePort {
+  abstract findByIdInWorkspace(
+    insurancePolicyId: string,
+    tenantId: string,
+    ledgerId: string
+  ): Promise<InsurancePolicyRecord | null>;
+
+  abstract findDuplicateInWorkspace(
+    tenantId: string,
+    ledgerId: string,
+    provider: string,
+    productName: string,
+    excludeInsurancePolicyId?: string
+  ): Promise<{ id: string; isActive: boolean } | null>;
+
   abstract readRecurringReferenceState(
     input: InsurancePolicyReferenceStateInput
   ): Promise<InsurancePolicyRecurringReferenceState>;

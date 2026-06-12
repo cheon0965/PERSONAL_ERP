@@ -21,10 +21,10 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { normalizeCaseInsensitiveText } from '../../common/utils/normalize-unique-key.util';
 import {
   assertCollectedTransactionCanBeDeleted,
-  assertCollectedTransactionCanBeUpdated
-} from '../collected-transactions/collected-transaction-transition.policy';
-import { mapCollectedTransactionTypeToLedgerTransactionCode } from '../collected-transactions/collected-transaction-type.mapper';
-import { resolveManualCollectedTransactionStatus } from '../collected-transactions/manual-collected-transaction-status.policy';
+  assertCollectedTransactionCanBeUpdated,
+  mapCollectedTransactionTypeToLedgerTransactionCode,
+  resolveManualCollectedTransactionStatus
+} from '../collected-transactions/public';
 
 /**
  * 차량 기준정보와 주유/정비 로그, 연결 수집 거래 저장을 담당하는 repository입니다.

@@ -1,3 +1,4 @@
+import { ApplicationService } from '../../../../common/application/application-service.decorator';
 import type {
   CreateRecurringRuleRequest,
   RecurringRuleItem
@@ -17,6 +18,7 @@ type CreateRecurringRuleCommand = CreateRecurringRuleRequest & {
   ledgerId: string;
 };
 
+@ApplicationService()
 export class CreateRecurringRuleUseCase {
   constructor(
     private readonly recurringRuleStore: RecurringRuleStorePort,

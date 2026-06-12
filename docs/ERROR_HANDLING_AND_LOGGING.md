@@ -39,7 +39,7 @@
 
 - [`apps/api/src/common/auth/jwt-auth.guard.ts`](../apps/api/src/common/auth/jwt-auth.guard.ts#L34)
 - [`apps/api/src/modules/auth/application/use-cases/login.use-case.ts`](../apps/api/src/modules/auth/application/use-cases/login.use-case.ts#L1)
-- [`apps/api/src/modules/auth/auth-session.service.ts`](../apps/api/src/modules/auth/auth-session.service.ts#L1)
+- [`apps/api/src/modules/auth/infrastructure/services/auth-session.service.ts`](../apps/api/src/modules/auth/infrastructure/services/auth-session.service.ts#L1)
 
 ### 3. 도메인 규칙 실패는 controller에서 HTTP 의미로 변환한다
 

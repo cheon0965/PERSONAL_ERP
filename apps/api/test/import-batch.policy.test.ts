@@ -8,7 +8,7 @@ import {
 import {
   buildSourceFingerprint,
   parseImportBatchContent
-} from '../src/modules/import-batches/import-batch.policy';
+} from '../src/modules/import-batches/public';
 
 test('buildSourceFingerprint normalizes description and source origin into a stable candidate key', () => {
   const left = buildSourceFingerprint({

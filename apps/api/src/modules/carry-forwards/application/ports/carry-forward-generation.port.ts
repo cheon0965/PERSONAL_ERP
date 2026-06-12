@@ -1,10 +1,11 @@
-import type { PrismaMoneyLike } from '../../../../common/money/prisma-money';
-// eslint-disable-next-line no-restricted-imports
-import type {
-  AccountSubjectKind,
-  AccountingPeriodStatus,
-  AuditActorType
-} from '@prisma/client';
+type AccountSubjectKind =
+  | 'ASSET'
+  | 'LIABILITY'
+  | 'EQUITY'
+  | 'INCOME'
+  | 'EXPENSE';
+type AccountingPeriodStatus = 'OPEN' | 'IN_REVIEW' | 'CLOSING' | 'LOCKED';
+type AuditActorType = 'TENANT_MEMBERSHIP' | 'SYSTEM';
 
 /**
  * 월마감 결과를 다음 월의 기초 잔액으로 넘기는 이월 생성 포트입니다.
@@ -32,7 +33,7 @@ export type CarryForwardGenerationContext = {
     lines: Array<{
       accountSubjectId: string;
       fundingAccountId: string | null;
-      balanceAmount: PrismaMoneyLike;
+      balanceAmount: number;
       accountSubject: {
         subjectKind: AccountSubjectKind;
       };
@@ -79,7 +80,7 @@ export abstract class CarryForwardGenerationPort {
     carryableLines: Array<{
       accountSubjectId: string;
       fundingAccountId: string | null;
-      balanceAmount: PrismaMoneyLike;
+      balanceAmount: number;
     }>;
     sourceClosingSnapshotId: string;
     actorRef: {

@@ -24,9 +24,9 @@ import {
 } from '../../common/infrastructure/operational/workspace-action.audit';
 import { CorrectJournalEntryRequestDto } from './dto/correct-journal-entry.dto';
 import { ReverseJournalEntryRequestDto } from './dto/reverse-journal-entry.dto';
-import { CorrectJournalEntryUseCase } from './correct-journal-entry.use-case';
-import { JournalEntriesService } from './journal-entries.service';
-import { ReverseJournalEntryUseCase } from './reverse-journal-entry.use-case';
+import { CorrectJournalEntryUseCase } from './application/use-cases/correct-journal-entry.use-case';
+import { JournalEntriesService } from './infrastructure/services/journal-entries.service';
+import { ReverseJournalEntryUseCase } from './application/use-cases/reverse-journal-entry.use-case';
 
 @ApiTags('journal-entries')
 @ApiBearerAuth()

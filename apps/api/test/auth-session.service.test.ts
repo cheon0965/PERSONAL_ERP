@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { resetApiEnvCache } from '../src/config/api-env';
-import { AuthSessionService } from '../src/modules/auth/auth-session.service';
+import { AuthSessionService } from '../src/modules/auth/public';
 
 const primarySigningText = 'TeW6AOOAazbxXapqMRAgtzntQl3feiFJ6f_W721gRLc';
 const secondarySigningText = 'dFu-IUZHIFuvFJkOcFv0Gls_shj0aLmaLGMJzM6mxAk';

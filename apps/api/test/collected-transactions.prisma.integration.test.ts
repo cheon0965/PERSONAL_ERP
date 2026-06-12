@@ -4,10 +4,10 @@ import test from 'node:test';
 import { AccountType, CategoryKind, TransactionType } from '@prisma/client';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { normalizeCaseInsensitiveText } from '../src/common/utils/normalize-unique-key.util';
-import { CreateCollectedTransactionUseCase } from '../src/modules/collected-transactions/application/use-cases/create-collected-transaction.use-case';
-import { ListCollectedTransactionsUseCase } from '../src/modules/collected-transactions/application/use-cases/list-collected-transactions.use-case';
-import { PrismaReferenceOwnershipAdapter } from '../src/modules/collected-transactions/infrastructure/prisma/prisma-reference-ownership.adapter';
-import { PrismaCollectedTransactionStoreAdapter } from '../src/modules/collected-transactions/infrastructure/prisma/prisma-collected-transaction-store.adapter';
+import { CreateCollectedTransactionUseCase } from '../src/modules/collected-transactions/public';
+import { ListCollectedTransactionsUseCase } from '../src/modules/collected-transactions/public';
+import { PrismaReferenceOwnershipAdapter } from '../src/modules/collected-transactions/public';
+import { PrismaCollectedTransactionStoreAdapter } from '../src/modules/collected-transactions/public';
 import { ensurePhase1BackboneForUser } from '../prisma/phase1-backbone';
 import {
   getPrismaIntegrationMissingDatabaseMessage,

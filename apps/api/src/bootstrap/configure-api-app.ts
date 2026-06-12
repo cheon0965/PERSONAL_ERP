@@ -8,6 +8,7 @@ import {
 } from '../common/infrastructure/security/browser-boundary';
 import { REQUEST_ID_HEADER } from '../common/infrastructure/operational/request-context';
 import type { ApiEnv } from '../config/api-env';
+import { AppErrorExceptionFilter } from '../common/infrastructure/http/app-error-exception.filter';
 
 type ConfigureApiAppOptions = {
   logger?: {
@@ -38,6 +39,7 @@ export function configureApiApp(
       forbidNonWhitelisted: true
     })
   );
+  app.useGlobalFilters(new AppErrorExceptionFilter());
 
   if (env.SWAGGER_ENABLED) {
     const swaggerConfig = new DocumentBuilder()

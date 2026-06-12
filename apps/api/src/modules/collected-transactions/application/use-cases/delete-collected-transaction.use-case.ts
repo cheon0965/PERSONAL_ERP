@@ -1,9 +1,11 @@
-import { assertCollectedTransactionCanBeDeleted } from '../../collected-transaction-transition.policy';
+import { ApplicationService } from '../../../../common/application/application-service.decorator';
+import { assertCollectedTransactionCanBeDeleted } from '../../domain/collected-transaction-transition.policy';
 import type {
   CollectedTransactionStorePort,
   CollectedTransactionWorkspaceScope
 } from '../ports/collected-transaction-store.port';
 
+@ApplicationService()
 export class DeleteCollectedTransactionUseCase {
   constructor(
     private readonly collectedTransactionStore: CollectedTransactionStorePort

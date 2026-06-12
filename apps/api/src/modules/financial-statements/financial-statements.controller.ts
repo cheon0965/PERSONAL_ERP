@@ -22,8 +22,8 @@ import {
   logWorkspaceActionSucceeded
 } from '../../common/infrastructure/operational/workspace-action.audit';
 import { GenerateFinancialStatementsRequestDto } from './dto/generate-financial-statements.dto';
-import { FinancialStatementsService } from './financial-statements.service';
-import { GenerateFinancialStatementsUseCase } from './generate-financial-statements.use-case';
+import { FinancialStatementsService } from './infrastructure/services/financial-statements.service';
+import { GenerateFinancialStatementsUseCase } from './application/use-cases/generate-financial-statements.use-case';
 
 @ApiTags('financial-statements')
 @ApiBearerAuth()

@@ -32,7 +32,7 @@ import { UpdateInsurancePolicyDto } from './dto/update-insurance-policy.dto';
 import { CreateInsurancePolicyUseCase } from './application/use-cases/create-insurance-policy.use-case';
 import { DeleteInsurancePolicyUseCase } from './application/use-cases/delete-insurance-policy.use-case';
 import { UpdateInsurancePolicyUseCase } from './application/use-cases/update-insurance-policy.use-case';
-import { InsurancePolicyQueryService } from './insurance-policy-query.service';
+import { InsurancePolicyQueryService } from './infrastructure/services/insurance-policy-query.service';
 
 @ApiTags('insurance-policies')
 @ApiBearerAuth()

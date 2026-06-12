@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { FinancialStatementPayload } from '@personal-erp/contracts';
 import { FinancialStatementKind } from '@prisma/client';
-import { PrismaFinancialStatementGenerationAdapter } from '../src/modules/financial-statements/infrastructure/prisma/prisma-financial-statement-generation.adapter';
+import { PrismaFinancialStatementGenerationAdapter } from '../src/modules/financial-statements/public';
 
 type SnapshotUpsertArgs = {
   where: {

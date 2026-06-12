@@ -3,11 +3,11 @@ import type { Prisma } from '@prisma/client';
 import {
   type CreateImportBatchRecordInput,
   ImportBatchWritePort
-} from '../../application/ports/import-batch-write.port';
+} from '../ports/import-batch-write.port';
 import {
   importBatchRecordInclude,
   type ImportBatchRecord
-} from '../../import-batch.mapper';
+} from '../mappers/import-batch.mapper';
 
 @Injectable()
 export class PrismaImportBatchWriteAdapter extends ImportBatchWritePort {

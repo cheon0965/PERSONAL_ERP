@@ -1,14 +1,20 @@
-// eslint-disable-next-line no-restricted-imports
 import type {
   AccountingPeriodStatus,
   AuditActorType,
-  CollectedTransactionStatus,
+  JournalEntryItem,
   JournalEntrySourceKind,
   JournalEntryStatus,
-  PostingPolicyKey,
-  Prisma
-} from '@prisma/client';
-import type { JournalEntryRecord } from '../../../journal-entries/journal-entry-item.mapper';
+  PostingPolicyKey
+} from '@personal-erp/contracts';
+
+export type CollectedTransactionStatusValue =
+  | 'COLLECTED'
+  | 'REVIEWED'
+  | 'READY_TO_POST'
+  | 'POSTED'
+  | 'CORRECTED'
+  | 'LOCKED';
+export type JournalEntryStatusValue = JournalEntryStatus;
 
 /**
  * 수집 거래 확정 유스케이스가 DB 구현 세부사항에 묶이지 않도록 만든 저장소 포트입니다.
@@ -28,7 +34,7 @@ export type ConfirmationCollectedTransaction = {
   title: string;
   memo: string | null;
   amount: number;
-  status: CollectedTransactionStatus;
+  status: CollectedTransactionStatusValue;
   matchedPlanItemId: string | null;
   matchedLiabilityRepaymentSchedule: {
     id: string;
@@ -55,7 +61,7 @@ export type ConfirmationCollectedTransaction = {
   importedRow: {
     id: string;
     batchId: string;
-    rawPayload: Prisma.JsonValue;
+    rawPayload: unknown;
   } | null;
   postedJournalEntry: {
     id: string;
@@ -66,7 +72,7 @@ export type ConfirmationReversalTarget = {
   id: string;
   createdCollectedTransaction: {
     id: string;
-    status: CollectedTransactionStatus;
+    status: CollectedTransactionStatusValue;
     postedJournalEntry: {
       id: string;
       entryNumber: string;
@@ -74,8 +80,8 @@ export type ConfirmationReversalTarget = {
       lines: Array<{
         accountSubjectId: string;
         fundingAccountId: string | null;
-        debitAmount: Prisma.Decimal;
-        creditAmount: Prisma.Decimal;
+        debitAmount: number;
+        creditAmount: number;
         description: string | null;
       }>;
     } | null;
@@ -149,7 +155,7 @@ export abstract class ConfirmTransactionContext {
     tenantId: string;
     ledgerId: string;
     collectedTransactionId: string;
-    currentStatus: CollectedTransactionStatus;
+    currentStatus: CollectedTransactionStatusValue;
   }): Promise<{ count: number }>;
 
   /**
@@ -167,7 +173,7 @@ export abstract class ConfirmTransactionContext {
    */
   abstract createJournalEntry(
     input: CreateConfirmationJournalEntryInput
-  ): Promise<JournalEntryRecord>;
+  ): Promise<JournalEntryItem>;
 
   /**
    * 일반 수입/지출/이체 확정에 필요한 기본 계정과목을 확정 트랜잭션 안에서 조회합니다.
@@ -221,17 +227,22 @@ export abstract class ConfirmTransactionContext {
     tenantId: string;
     ledgerId: string;
     collectedTransactionId: string;
-    expectedStatuses: CollectedTransactionStatus[];
-    nextStatus: CollectedTransactionStatus;
+    expectedStatuses: CollectedTransactionStatusValue[];
+    nextStatus: CollectedTransactionStatusValue;
   }): Promise<number>;
 
   abstract findCurrentCollectedTransactionStatusInWorkspace(
     scope: ConfirmationWorkspaceScope,
     collectedTransactionId: string
-  ): Promise<CollectedTransactionStatus | null>;
+  ): Promise<CollectedTransactionStatusValue | null>;
 }
 
 export abstract class ConfirmCollectedTransactionStorePort {
+  abstract findReadyIds(
+    scope: ConfirmationWorkspaceScope,
+    requestedIds: string[] | null
+  ): Promise<string[]>;
+
   /**
    * 트랜잭션 밖 1차 검증에 필요한 수집 거래, 기간, 원천 정보를 읽습니다.
    */

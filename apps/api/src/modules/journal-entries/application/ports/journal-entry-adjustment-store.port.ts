@@ -1,13 +1,10 @@
-// eslint-disable-next-line no-restricted-imports
 import type {
   AuditActorType,
-  CollectedTransactionStatus,
+  JournalEntryItem,
   JournalEntrySourceKind,
-  JournalEntryStatus,
-  Prisma
-} from '@prisma/client';
-import type { JournalAdjustmentLineDraft } from '../../journal-entry-adjustment.policy';
-import type { JournalEntryItemRecord } from '../../journal-entry.record';
+  JournalEntryStatus
+} from '@personal-erp/contracts';
+import type { JournalAdjustmentLineDraft } from '../../domain/journal-entry-adjustment.policy';
 
 export type JournalEntryWorkspaceScope = {
   tenantId: string;
@@ -17,6 +14,31 @@ export type JournalEntryWorkspaceScope = {
 export type JournalEntryCreationActorRef = {
   createdByActorType: AuditActorType;
   createdByMembershipId: string;
+};
+
+export type CollectedTransactionStatusValue =
+  | 'COLLECTED'
+  | 'REVIEWED'
+  | 'READY_TO_POST'
+  | 'POSTED'
+  | 'CORRECTED'
+  | 'LOCKED';
+
+export type JournalEntryAdjustmentRecord = {
+  id: string;
+  entryNumber: string;
+  status: JournalEntryStatus;
+  sourceCollectedTransaction: {
+    id: string;
+    status: CollectedTransactionStatusValue;
+  } | null;
+  lines: Array<{
+    accountSubjectId: string;
+    fundingAccountId: string | null;
+    debitAmount: number;
+    creditAmount: number;
+    description: string | null;
+  }>;
 };
 
 export type CreateJournalEntryAdjustmentInput = {
@@ -34,15 +56,27 @@ export type CreateJournalEntryAdjustmentInput = {
   correctionReason?: string | null;
 };
 
-export abstract class JournalEntryAdjustmentStorePort {
+export type AllocatedAdjustmentEntryNumber = {
+  period: {
+    id: string;
+    year: number;
+    month: number;
+  };
+  sequence: number;
+};
+
+export abstract class JournalEntryAdjustmentContext {
+  abstract allocateJournalEntryNumber(
+    workspace: JournalEntryWorkspaceScope,
+    periodId: string
+  ): Promise<AllocatedAdjustmentEntryNumber>;
+
   abstract findByIdInWorkspace(
-    tx: Prisma.TransactionClient,
     workspace: JournalEntryWorkspaceScope,
     journalEntryId: string
-  ): Promise<JournalEntryItemRecord | null>;
+  ): Promise<JournalEntryAdjustmentRecord | null>;
 
   abstract updateStatusInWorkspace(
-    tx: Prisma.TransactionClient,
     workspace: JournalEntryWorkspaceScope,
     journalEntryId: string,
     expectedStatuses: JournalEntryStatus[],
@@ -50,40 +84,40 @@ export abstract class JournalEntryAdjustmentStorePort {
   ): Promise<number>;
 
   abstract findCurrentStatusInWorkspace(
-    tx: Prisma.TransactionClient,
     workspace: JournalEntryWorkspaceScope,
     journalEntryId: string
   ): Promise<JournalEntryStatus | null>;
 
   abstract updateCollectedTransactionStatusInWorkspace(
-    tx: Prisma.TransactionClient,
     workspace: JournalEntryWorkspaceScope,
     collectedTransactionId: string,
-    expectedStatuses: CollectedTransactionStatus[],
-    nextStatus: CollectedTransactionStatus
+    expectedStatuses: CollectedTransactionStatusValue[],
+    nextStatus: CollectedTransactionStatusValue
   ): Promise<number>;
 
   abstract findCollectedTransactionStatusInWorkspace(
-    tx: Prisma.TransactionClient,
     workspace: JournalEntryWorkspaceScope,
     collectedTransactionId: string
-  ): Promise<CollectedTransactionStatus | null>;
+  ): Promise<CollectedTransactionStatusValue | null>;
 
   abstract restoreMatchedPlanningStateAfterReversal(
-    tx: Prisma.TransactionClient,
     workspace: JournalEntryWorkspaceScope,
     collectedTransactionId: string,
     journalEntryId: string
   ): Promise<void>;
 
   abstract createAdjustmentEntry(
-    tx: Prisma.TransactionClient,
     input: CreateJournalEntryAdjustmentInput
-  ): Promise<JournalEntryItemRecord>;
+  ): Promise<JournalEntryItem>;
 
   abstract assertAdjustmentReferencesExist(
-    tx: Prisma.TransactionClient,
     workspace: JournalEntryWorkspaceScope,
     lines: JournalAdjustmentLineDraft[]
   ): Promise<void>;
+}
+
+export abstract class JournalEntryAdjustmentStorePort {
+  abstract runInTransaction<T>(
+    fn: (ctx: JournalEntryAdjustmentContext) => Promise<T>
+  ): Promise<T>;
 }

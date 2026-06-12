@@ -39,8 +39,8 @@ import { assertAllowedBrowserOrigin } from '../../common/infrastructure/security
 import { getApiEnv } from '../../config/api-env';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { Public } from '../../common/auth/public.decorator';
-import { AuthAccountSecurityService } from './auth-account-security.service';
-import { AuthWorkspaceService } from './auth-workspace.service';
+import { AuthAccountSecurityService } from './infrastructure/services/auth-account-security.service';
+import { AuthWorkspaceService } from './infrastructure/services/auth-workspace.service';
 import { AcceptInvitationUseCase } from './application/use-cases/accept-invitation.use-case';
 import { ChangePasswordUseCase } from './application/use-cases/change-password.use-case';
 import { ForgotPasswordUseCase } from './application/use-cases/forgot-password.use-case';

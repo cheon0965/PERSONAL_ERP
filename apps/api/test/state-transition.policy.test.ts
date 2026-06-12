@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { AppError } from '../src/common/application/errors/app-error';
 import {
   AccountingPeriodStatus,
   CollectedTransactionStatus,
@@ -11,17 +11,17 @@ import {
   assertAccountingPeriodCanBeClosed,
   assertAccountingPeriodCanBeReopened,
   assertAccountingPeriodCanBeReopenedWithoutDependents
-} from '../src/modules/accounting-periods/accounting-period-transition.policy';
+} from '../src/modules/accounting-periods/public';
 import {
   assertCollectedTransactionCanBeDeleted,
   assertCollectedTransactionCanBeConfirmed,
   assertCollectedTransactionCanBeCorrected
-} from '../src/modules/collected-transactions/collected-transaction-transition.policy';
-import { resolveManualCollectedTransactionStatus } from '../src/modules/collected-transactions/manual-collected-transaction-status.policy';
+} from '../src/modules/collected-transactions/public';
+import { resolveManualCollectedTransactionStatus } from '../src/modules/collected-transactions/public';
 import {
   assertJournalEntryCanBeCorrected,
   assertJournalEntryCanBeReversed
-} from '../src/modules/journal-entries/journal-entry-transition.policy';
+} from '../src/modules/journal-entries/public';
 
 test('accounting period transition policy allows closing an open period and reopening a locked period', () => {
   assert.doesNotThrow(() =>
@@ -37,7 +37,8 @@ test('accounting period transition policy rejects invalid close and reopen trans
     async () =>
       assertAccountingPeriodCanBeClosed(AccountingPeriodStatus.LOCKED),
     (error: unknown) =>
-      error instanceof ConflictException &&
+      error instanceof AppError &&
+      error.kind === 'conflict' &&
       error.message === '이미 잠긴 운영 기간입니다.'
   );
 
@@ -45,7 +46,8 @@ test('accounting period transition policy rejects invalid close and reopen trans
     async () =>
       assertAccountingPeriodCanBeReopened(AccountingPeriodStatus.OPEN),
     (error: unknown) =>
-      error instanceof ConflictException &&
+      error instanceof AppError &&
+      error.kind === 'conflict' &&
       error.message === '잠금된 운영 기간만 재오픈할 수 있습니다.'
   );
 });
@@ -58,7 +60,8 @@ test('accounting period transition policy rejects reopen when carry-forward outp
         nextOpeningBalanceSourceKind: null
       }),
     (error: unknown) =>
-      error instanceof ConflictException &&
+      error instanceof AppError &&
+      error.kind === 'conflict' &&
       error.message ===
         '차기 이월이 이미 생성된 운영 기간은 재오픈할 수 없습니다.'
   );
@@ -70,7 +73,8 @@ test('accounting period transition policy rejects reopen when carry-forward outp
         nextOpeningBalanceSourceKind: OpeningBalanceSourceKind.CARRY_FORWARD
       }),
     (error: unknown) =>
-      error instanceof ConflictException &&
+      error instanceof AppError &&
+      error.kind === 'conflict' &&
       error.message ===
         '다음 운영 기간에 오프닝 잔액 스냅샷이 이미 생성되어 재오픈할 수 없습니다.'
   );
@@ -104,7 +108,8 @@ test('collected transaction transition policy rejects locked period and invalid 
         postedJournalEntryId: null
       }),
     (error: unknown) =>
-      error instanceof BadRequestException &&
+      error instanceof AppError &&
+      error.kind === 'validation' &&
       error.message ===
         'Collected transaction in a locked period cannot be confirmed.'
   );
@@ -116,7 +121,8 @@ test('collected transaction transition policy rejects locked period and invalid 
         postedJournalEntryId: 'je-1'
       }),
     (error: unknown) =>
-      error instanceof ConflictException &&
+      error instanceof AppError &&
+      error.kind === 'conflict' &&
       error.message ===
         'Posted collected transactions must be adjusted through journal entries.'
   );
@@ -127,7 +133,8 @@ test('collected transaction transition policy rejects locked period and invalid 
         CollectedTransactionStatus.COLLECTED
       ),
     (error: unknown) =>
-      error instanceof ConflictException &&
+      error instanceof AppError &&
+      error.kind === 'conflict' &&
       error.message === 'Only posted collected transactions can be corrected.'
   );
 });
@@ -141,7 +148,8 @@ test('collected transaction transition policy rejects confirmation before the re
         postedJournalEntryId: null
       }),
     (error: unknown) =>
-      error instanceof ConflictException &&
+      error instanceof AppError &&
+      error.kind === 'conflict' &&
       error.message ===
         'Collected transaction in current status cannot be confirmed.'
   );
@@ -183,14 +191,16 @@ test('journal entry transition policy rejects non-posted entries', async () => {
   await assert.rejects(
     async () => assertJournalEntryCanBeReversed(JournalEntryStatus.REVERSED),
     (error: unknown) =>
-      error instanceof ConflictException &&
+      error instanceof AppError &&
+      error.kind === 'conflict' &&
       error.message === 'Only posted journal entries can be reversed.'
   );
 
   await assert.rejects(
     async () => assertJournalEntryCanBeCorrected(JournalEntryStatus.SUPERSEDED),
     (error: unknown) =>
-      error instanceof ConflictException &&
+      error instanceof AppError &&
+      error.kind === 'conflict' &&
       error.message === 'Only posted journal entries can be corrected.'
   );
 });

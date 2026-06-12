@@ -1,7 +1,9 @@
+import { ApplicationService } from '../../../../common/application/application-service.decorator';
 import type { RecurringRuleItem } from '@personal-erp/contracts';
 import type { RecurringRuleStorePort } from '../ports/recurring-rule-store.port';
 import { mapRecurringRuleToItem } from '../recurring-rule-item.mapper';
 
+@ApplicationService()
 export class ListRecurringRulesUseCase {
   constructor(private readonly recurringRuleStore: RecurringRuleStorePort) {}
 

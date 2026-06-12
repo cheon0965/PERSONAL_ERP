@@ -1,15 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { RecurrenceFrequency } from '@prisma/client';
-import { CreateRecurringRuleUseCase } from '../src/modules/recurring-rules/application/use-cases/create-recurring-rule.use-case';
-import { DeleteRecurringRuleUseCase } from '../src/modules/recurring-rules/application/use-cases/delete-recurring-rule.use-case';
-import { ListRecurringRulesUseCase } from '../src/modules/recurring-rules/application/use-cases/list-recurring-rules.use-case';
-import { UpdateRecurringRuleUseCase } from '../src/modules/recurring-rules/application/use-cases/update-recurring-rule.use-case';
+import { CreateRecurringRuleUseCase } from '../src/modules/recurring-rules/public';
+import { DeleteRecurringRuleUseCase } from '../src/modules/recurring-rules/public';
+import { ListRecurringRulesUseCase } from '../src/modules/recurring-rules/public';
+import { UpdateRecurringRuleUseCase } from '../src/modules/recurring-rules/public';
 import {
   InsuranceManagedRecurringRuleError,
   MissingOwnedRecurringRuleReferenceError,
   prepareRecurringRuleSchedule
-} from '../src/modules/recurring-rules/domain/recurring-rule-policy';
+} from '../src/modules/recurring-rules/public';
 
 const createRecurringRuleCommand = {
   userId: 'user-1',

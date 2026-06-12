@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { formatPasswordResetTtlLabel } from '../src/modules/auth/application/use-cases/forgot-password.use-case';
+import { formatPasswordResetTtlLabel } from '../src/modules/auth/public';
 
 test('formatPasswordResetTtlLabel formats common password reset windows', () => {
   assert.equal(formatPasswordResetTtlLabel(30 * 60 * 1000), '30분');

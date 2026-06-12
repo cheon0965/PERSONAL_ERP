@@ -6,7 +6,7 @@ import {
   ImportSourceKind,
   PlanItemStatus
 } from '@prisma/client';
-import { buildSourceFingerprint } from '../src/modules/import-batches/import-batch.policy';
+import { buildSourceFingerprint } from '../src/modules/import-batches/public';
 import type { RequestTestContext } from './request-api.test-support';
 
 type RequestTestState = RequestTestContext['state'];
