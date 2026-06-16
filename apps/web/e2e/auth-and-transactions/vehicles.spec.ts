@@ -24,7 +24,7 @@ import {
   expectNoPageErrors,
   expectNoUnhandledApiRequests
 } from '../support/auth-transactions-common';
-import { buildVehicleOperatingSummaryView } from '../../src/features/vehicles/vehicles.summary';
+import { buildVehicleOperatingSummaryView } from '../../src/features/vehicles/model/vehicles.summary';
 
 test('manages vehicles through the vehicles UI', async ({ page }) => {
   const pageErrors: string[] = [];

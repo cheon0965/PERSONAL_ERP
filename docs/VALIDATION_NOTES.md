@@ -22,7 +22,7 @@
 - HTTP 계약의 금액은 `MoneyWon` 의미의 `number`이며, KRW 원 단위 safe integer만 허용합니다.
 - Prisma 금액 컬럼은 `Decimal(19,0)`로 저장하고 mapper 경계에서 `Prisma.Decimal -> MoneyWon(number)`로 변환합니다.
 - `HALF_UP` 반올림과 배분 잔차 보정은 `@personal-erp/money`의 `decimal.js` 기반 helper로 고정합니다.
-- 금액 합계, 차감, 배분, 업로드 파싱 회귀는 `apps/api/test/money-won.test.ts`와 API/Web 요청 테스트에서 확인합니다.
+- 금액 합계, 차감, 배분, 업로드 파싱 회귀는 `apps/api/test/unit/shared/money-won.test.ts`와 API/Web 요청 테스트에서 확인합니다.
 
 ## 대표 심화 검증
 
@@ -37,9 +37,29 @@
 - 이 명령은 로그인/세션 복원/운영 체크리스트/현재 작업 기준 대체 응답까지 포함한 브라우저 빌드 스모크를 다시 확인합니다.
 - `npm run test:e2e:smoke:build`는 브라우저 없는 in-process `Next.js` production 빌드/start 경로와 health 라우트 기준 최소 HTTP 스모크를 별도로 확인할 때 사용합니다.
 - `npm run test:e2e`는 기준 데이터 CRUD, 반복 규칙 CRUD까지 포함한 전체 브라우저 대표 흐름 검증입니다.
-- `npm run test:prisma`는 기본 루프와 분리된 실DB Prisma/HTTP 통합 검증이며, Docker 기반 disposable MySQL을 띄운 뒤 `prisma generate -> prisma migrate deploy -> minimal fixture seed -> UUID 범위 fixture/test -> teardown`을 한 명령으로 수행합니다. 현재는 collected transaction repository boundary 1개와 실제 API/DB 월 운영 워크플로 4개를 포함합니다. 워크플로는 `운영기간 open -> 업로드 배치 -> 수집 -> 전표 확정 -> close`, `반복규칙 -> plan item 생성 -> import collect 자동 매칭 -> confirm -> 재무제표 생성`, `close -> 재무제표 생성 -> reopen -> 전표 reverse/correct`, `carry-forward 생성 이후 source period reopen 409 보호` 시나리오를 검증합니다.
+- `npm run test:prisma`는 기본 루프와 분리된 실DB Prisma/HTTP 통합 검증이며, Docker 기반 disposable MySQL을 띄운 뒤 `prisma generate -> prisma migrate deploy -> minimal fixture seed -> UUID 범위 fixture/test -> teardown`을 한 명령으로 수행합니다. 현재는 collected transaction repository boundary 1개, 실제 API/DB 인증 흐름 1개, 월 운영 워크플로 4개를 포함합니다. 워크플로는 `운영기간 open -> 업로드 배치 -> 수집 -> 전표 확정 -> close`, `반복규칙 -> plan item 생성 -> import collect 자동 매칭 -> confirm -> 재무제표 생성`, `close -> 재무제표 생성 -> reopen -> 전표 reverse/correct`, `carry-forward 생성 이후 source period reopen 409 보호` 시나리오를 검증합니다.
 - `npm run audit:runtime:full`은 allowlist 적용 없이 현재 런타임 advisory 전체를 다시 확인할 때 사용하는 follow-up 명령입니다.
 - 현재 기본 `npm run test`에서는 Prisma 통합 테스트가 안내 문구와 함께 skip됩니다.
+
+## 2026-06-16 구조 재정리/문서 최신화 점검
+
+이번 문서 점검의 파일 조회와 수정은 UTF-8 기준으로 수행했습니다.
+
+- `npm run docs:check`: 통과
+  - Markdown 62개 파일의 `npm run` 명령 참조 302개 확인
+  - Web 라우트 61개, API operation 136개, `docs/API.md` 라우트 맵 61개와 operation 136개 확인
+  - `docs/CURRENT_CAPABILITIES.md`, `docs/OPERATIONS_CHECKLIST.md`, `docs/VALIDATION_NOTES.md`의 Web/API 표면 정합성 확인
+- `npm run test --workspace @personal-erp/web`: 통과, 테스트 37, pass 37
+- `npm run test --workspace @personal-erp/api`: 통과, 테스트 365, pass 359, skipped 6
+- `npm run audit:runtime`: 통과, high 0, critical 0, total 5, allowlist 0
+- `npm audit --omit=dev --workspace @personal-erp/api --workspace @personal-erp/web --json`: moderate 5, high 0, critical 0
+  - 현재 moderate advisory는 `@nestjs/swagger -> js-yaml`, `next -> postcss`, `qs` 경로입니다.
+  - `next` fix 제안은 `9.3.3`으로 낮추는 semver-major downgrade라 적용하지 않습니다.
+- 수동 대조:
+  - API 테스트는 `unit`, `request-api`, `integration/prisma`, `architecture`, `support` 구조 기준으로 정리되어 있습니다.
+  - Web feature는 파일 4개 이상 feature만 `api`, `pages`, `components`, `hooks`, `model` 역할 폴더를 사용합니다.
+  - API 비승격 모듈은 엄격한 헥사고날 구조 대신 `services`, `repositories`, `readers`, `mappers`, `projections`, `model` 역할 폴더만 얕게 사용합니다.
+  - `docs/ERROR_HANDLING_AND_LOGGING.md`, `docs/ASVS_L2_BASELINE_MATRIX.md`의 구현 근거 파일 경로를 현재 코드 위치로 보정했습니다.
 
 ## 2026-05-07 공개 배포/문서 최신화 점검
 
@@ -104,7 +124,7 @@
 - 비밀번호 재설정 만료시간을 `PASSWORD_RESET_TTL`로 분리했고, 미설정 시 `EMAIL_VERIFICATION_TTL`을 따릅니다. 메일 문구도 실제 TTL에서 계산한 문구를 사용합니다.
 - 인증 rate limit은 여전히 프로세스 메모리 adapter지만, 만료 bucket sweep과 최대 bucket cap을 추가했고 운영 체크리스트에 reverse proxy/WAF/API gateway rate limit 병행 원칙을 명시했습니다.
 - Dependabot 예약 업데이트 설정은 만들지 않습니다. GitHub가 주기적으로 업데이트 PR용 브랜치를 만들지 않게 하고, 의존성 점검은 `npm run audit:runtime`, `npm run audit:runtime:full`, 필요 시 수동 업데이트로 관리합니다.
-- `npm run audit:runtime`은 high/critical gate 기준 통과하지만, `npm run audit:runtime:full`은 2026-05-02 기준 `next@15.5.15 -> postcss@8.4.31` 경유 moderate advisory가 남습니다. `npm audit fix --force`는 `next@9.3.3`으로 낮추는 위험한 제안이므로 적용하지 않고 upstream compatible patch를 추적합니다.
+- 당시 `npm run audit:runtime`은 high/critical gate 기준 통과했지만, `npm run audit:runtime:full`에는 Next/PostCSS 경유 moderate advisory가 남았습니다. `npm audit fix --force`는 Next를 오래된 major로 낮추는 위험한 제안이므로 적용하지 않고 upstream compatible patch를 추적합니다.
 
 ## 2026-04-30 ASVS L2 보강 검증
 
@@ -294,7 +314,7 @@
 - 차량 연료/정비 이력 분리, `GET /vehicles/operating-summary` projection 추가, 차량 `Vehicle` 물리 필드/응답/계약에서 `monthlyExpenseWon` 제거, 차량 연료/정비 이력의 선택적 수집거래 연동과 확정 후 수정 차단, 레거시 `Transaction` 물리 제거와 active reference guard, 메인 월 운영 루프의 `reference-data -> accounting-periods -> insurance/vehicles -> recurring-rules -> plan-items -> collected-transactions/imports -> journal-entries -> financial-statements -> carry-forwards -> forecast` 브라우저 시나리오, `imports -> collected-transactions -> journal-entries` cross-feature 브라우저 시나리오, Next.js ESLint plugin explicit registration까지는 반영됨
 - 이전에 저장소 안 우선순위로 선별했던 작업은 모두 닫혔음
 - `.github/workflows/ci.yml`의 `prisma-integration` job은 disposable MySQL 기반 `npm run test:prisma`로 고정되었으며, Docker 환경 로컬 실행과 GitHub 워크플로 통과 확인까지 완료됨
-- `npm run audit:runtime`는 현재 `high` 기준으로 gate를 걸고 있으며, `security/runtime-audit-allowlist.json`은 비어 있습니다. 2026-04-22에는 `npm run audit:runtime:full`이 `0 vulnerabilities`였지만, 2026-05-02 현재는 `next@15.5.15 -> postcss@8.4.31` 경유 moderate advisory가 남아 위 최신 보완사항 기록을 우선합니다.
+- `npm run audit:runtime`는 현재 `high` 기준으로 gate를 걸고 있으며, `security/runtime-audit-allowlist.json`은 비어 있습니다. 2026-04-22에는 `npm run audit:runtime:full`이 `0 vulnerabilities`였지만, 이후 moderate advisory가 다시 생겼으므로 위 최신 날짜별 보완사항 기록을 우선합니다.
 
 ## 2026-04-22 CI/Prisma 증적 확인
 

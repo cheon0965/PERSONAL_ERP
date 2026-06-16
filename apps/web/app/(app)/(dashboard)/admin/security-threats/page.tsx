@@ -1,4 +1,4 @@
-import { AdminSecurityThreatsPage } from '@/features/admin/admin-security-threats-page';
+import { AdminSecurityThreatsPage } from '@/features/admin/pages/admin-security-threats-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

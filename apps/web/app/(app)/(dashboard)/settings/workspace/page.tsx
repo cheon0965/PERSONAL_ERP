@@ -1,4 +1,4 @@
-import { WorkspaceSettingsPage } from '@/features/settings/workspace-settings-page';
+import { WorkspaceSettingsPage } from '@/features/settings/pages/workspace-settings-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

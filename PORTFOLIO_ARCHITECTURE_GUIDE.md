@@ -147,6 +147,23 @@ docs/          -> 개발, 운영, ADR, 아키텍처 문서
 - `features/`는 기능별 화면과 API 호출 로직을 묶습니다.
 - `shared/`는 공용 UI, 인증 상태, 조회 헬퍼 함수, 레이아웃, 테마를 담당합니다.
 
+파일이 4개 이상인 feature는 필요한 역할 폴더만 사용합니다.
+
+```text
+features/<domain>/
+  api/          # API 호출과 대체 응답
+  pages/        # 페이지와 페이지 전용 구성
+  components/   # 폼, 다이얼로그, 섹션, 그리드, 내비게이션
+  hooks/        # feature 전용 React 훅
+  model/        # schema, mapper, policy, types, columns, helper, 상수
+```
+
+파일이 1~3개인 작은 feature는 평면 구조를 유지하며, 역할이 없는 빈 폴더나
+일괄적인 `index.ts` 진입점을 만들지 않습니다. feature 내부 참조는 상대 경로를,
+다른 feature와 `shared` 참조는 `@/` alias를 사용합니다.
+단, 컴파일된 JavaScript를 Node 테스트 실행기가 직접 불러오는 모듈은 alias 변환이
+없으므로 `shared` 참조에 상대 경로를 유지할 수 있습니다.
+
 이 구조는 프런트엔드에서 지나친 아키텍처 실험보다 `기능 응집도`와 `재사용 가능한 공통 계층`을 우선한 선택입니다.
 
 ### 2. API는 기본적으로 기능별 모듈 구조를 사용한다
@@ -159,6 +176,26 @@ controller -> service -> repository -> mapper/calculator
 
 이 구조는 `funding-accounts`, `categories`, `reference-data-readiness`, `vehicles`, `workspace-settings`, `navigation` 같은 영역에서 여전히 유효합니다.
 특히 기본 생성·조회·수정·삭제 성격이 강하거나 계산 로직만 분리하면 충분한 영역에서는 이 방식이 더 읽기 쉽고 유지보수도 쉽습니다.
+
+비승격 모듈은 루트에 `module`, `controller`, 필요한 경우 `public.ts`만 두고,
+나머지는 탐색성을 위해 얕은 역할 폴더로 나눕니다.
+
+```text
+module-name/
+  module-name.module.ts
+  module-name.controller.ts
+  public.ts      # 공개 경계가 필요한 모듈만
+  dto/
+  services/
+  repositories/
+  readers/
+  mappers/
+  projections/
+  model/
+```
+
+이 폴더들은 파일 위치를 찾기 쉽게 하기 위한 장치이며, 승격 모듈의
+`application/domain/infrastructure` 계층 규칙을 대신하지 않습니다.
 
 ### 3. 핵심 쓰기 모델과 운영 핵심 모듈만 더 엄격한 구조로 승격했다
 

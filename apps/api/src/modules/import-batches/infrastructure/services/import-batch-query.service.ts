@@ -12,7 +12,7 @@ import {
 } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../../../common/auth/required-workspace.util';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
-import { readWorkspaceFundingAccountLiveBalances } from '../../../funding-accounts/funding-account-live-balance.reader';
+import { readWorkspaceFundingAccountLiveBalances } from '../../../funding-accounts/readers/funding-account-live-balance.reader';
 import {
   type ImportBatchRecord,
   importBatchRecordInclude,

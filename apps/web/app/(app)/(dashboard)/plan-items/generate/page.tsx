@@ -1,4 +1,4 @@
-import { PlanItemsPage } from '@/features/plan-items/plan-items-page';
+import { PlanItemsPage } from '@/features/plan-items/pages/plan-items-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

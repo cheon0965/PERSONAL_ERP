@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { LoginPage } from '@/features/auth/login-page';
+import { LoginPage } from '@/features/auth/pages/login-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

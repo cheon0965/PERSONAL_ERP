@@ -28,7 +28,7 @@ import { useRouter } from 'next/navigation';
 import {
   demoLoginCredentials,
   demoLoginPath
-} from '@/features/auth/demo-login';
+} from '@/features/auth/model/demo-login';
 import { useAuthSession } from '@/shared/auth/auth-provider';
 import { BrandLogo } from '@/shared/brand/brand-logo';
 import { publicSiteFaqs, publicSiteUseCases } from '@/shared/seo/site';

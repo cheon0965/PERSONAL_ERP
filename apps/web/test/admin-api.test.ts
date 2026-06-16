@@ -86,7 +86,7 @@ test('admin API helpers call protected member and audit endpoints', async () => 
       removeAdminMember,
       updateAdminMemberRole,
       updateAdminMemberStatus
-    } = await import('../src/features/admin/admin.api');
+    } = await import('../src/features/admin/api/admin.api');
 
     setStoredAccessToken('token-123');
     const fallbackMember = buildMember({});

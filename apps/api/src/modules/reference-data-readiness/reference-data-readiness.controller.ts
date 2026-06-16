@@ -5,7 +5,7 @@ import type {
   ReferenceDataReadinessSummary
 } from '@personal-erp/contracts';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
-import { ReferenceDataReadinessService } from './reference-data-readiness.service';
+import { ReferenceDataReadinessService } from './services/reference-data-readiness.service';
 
 @ApiTags('reference-data')
 @ApiBearerAuth()

@@ -33,7 +33,7 @@ import { CreateLiabilityAgreementDto } from './dto/create-liability-agreement.dt
 import { CreateLiabilityRepaymentScheduleDto } from './dto/create-liability-repayment-schedule.dto';
 import { UpdateLiabilityAgreementDto } from './dto/update-liability-agreement.dto';
 import { UpdateLiabilityRepaymentScheduleDto } from './dto/update-liability-repayment-schedule.dto';
-import { LiabilitiesService } from './liabilities.service';
+import { LiabilitiesService } from './services/liabilities.service';
 
 @ApiTags('liabilities')
 @ApiBearerAuth()

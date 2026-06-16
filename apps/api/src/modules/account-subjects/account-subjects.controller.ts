@@ -5,7 +5,7 @@ import type {
   AuthenticatedUser
 } from '@personal-erp/contracts';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
-import { AccountSubjectsService } from './account-subjects.service';
+import { AccountSubjectsService } from './services/account-subjects.service';
 
 @ApiTags('account-subjects')
 @ApiBearerAuth()

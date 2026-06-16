@@ -9,7 +9,7 @@ import { AccountingPeriodStatus, Prisma } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../../../common/auth/required-workspace.util';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
 import { mapAccountingPeriodRecordToItem } from '../../../accounting-periods/public';
-import { findPreviousLockedPeriod } from '../../../reporting/reporting-period-selection';
+import { findPreviousLockedPeriod } from '../../../reporting/model/reporting-period-selection';
 import { mapFinancialStatementSnapshotRecordToItem } from '../mappers/financial-statement-snapshot.mapper';
 import { sortFinancialStatementSnapshots } from '../../application/projectors/financial-statement-payload.projector';
 import type { FinancialStatementViewPort } from '../../application/ports/financial-statement-view.port';

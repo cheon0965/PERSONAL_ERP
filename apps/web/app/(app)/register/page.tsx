@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { RegisterPage } from '@/features/auth/register-page';
+import { RegisterPage } from '@/features/auth/pages/register-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

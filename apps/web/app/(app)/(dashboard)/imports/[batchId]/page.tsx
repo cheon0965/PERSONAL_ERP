@@ -1,4 +1,4 @@
-import { ImportsPage } from '@/features/imports/imports-page';
+import { ImportsPage } from '@/features/imports/pages/imports-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

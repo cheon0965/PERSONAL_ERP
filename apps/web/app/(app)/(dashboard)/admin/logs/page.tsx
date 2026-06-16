@@ -1,4 +1,4 @@
-import { AdminLogsPage } from '@/features/admin/admin-logs-page';
+import { AdminLogsPage } from '@/features/admin/pages/admin-logs-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

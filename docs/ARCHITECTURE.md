@@ -103,12 +103,27 @@ shared/    # 공통 UI, 레이아웃, 테마, env, fetch 헬퍼 함수
 test/      # 브라우저 없이 가능한 스모크 테스트
 ```
 
+파일이 4개 이상인 feature는 필요한 역할 폴더만 둡니다.
+
+```text
+features/<domain>/
+  api/          # API 호출과 fallback
+  pages/        # 페이지와 페이지 전용 구성
+  components/   # 폼, 다이얼로그, 섹션, 그리드, 내비게이션
+  hooks/        # feature 전용 훅
+  model/        # schema, mapper, policy, types, columns, helper, 상수
+```
+
 원칙:
 
 - 라우트는 얇게 유지합니다.
 - 비즈니스 화면은 `features`에 둡니다.
 - 재사용 가능한 조각만 `shared`로 올립니다.
 - 기능 내부 API 파일이 모의 대체 응답과 실제 fetch 호출을 함께 소유합니다.
+- 파일이 1~3개인 작은 feature는 평면 구조를 유지합니다.
+- 역할이 없는 빈 폴더와 일괄적인 `index.ts` 진입점은 만들지 않습니다.
+- feature 내부는 상대 경로를, 다른 feature와 `shared` 참조는 `@/` alias를 사용합니다.
+- Node 테스트가 컴파일 결과를 직접 실행하는 모듈은 alias 변환이 없으므로 `shared` 참조에 상대 경로를 사용할 수 있습니다.
 
 ## 5. 백엔드 구조
 
@@ -120,18 +135,35 @@ API는 다음 흐름을 기본으로 사용합니다.
 보고와 전망 컨텍스트: controller -> read service -> read repository -> projection
 ```
 
+비승격 모듈은 헥사고날 구조로 확장하지 않고, 필요한 역할 폴더만 얕게 둡니다.
+
+```text
+module-name/
+  module-name.module.ts
+  module-name.controller.ts
+  public.ts      # 공개 경계가 필요한 모듈만
+  dto/
+  services/
+  repositories/
+  readers/
+  mappers/
+  projections/
+  model/
+```
+
 공통 전환 규약:
 
 - 외부 의존성 port는 `apps/api/src/common/application/ports`에 둡니다.
 - 공통 adapter 조립은 `apps/api/src/common/infrastructure`에서 시작합니다.
 - `application/domain/infrastructure` 폴더는 실제 전환 대상 모듈에서만 만듭니다.
-- 현재 승격 완료 모듈: `collected-transactions`, `recurring-rules`, `accounting-periods`, `import-batches`, `journal-entries`, `auth`, `admin`, `insurance-policies`, `plan-items`, `financial-statements`, `carry-forwards`, `operations-console` — `docs/completed/REFACTORING_EXECUTION_PLAN.md` 참조
+- 현재 엄격한 헥사고날 승격 완료 모듈: `collected-transactions`, `recurring-rules`, `accounting-periods`, `import-batches`, `journal-entries`, `auth`, `admin`, `insurance-policies`, `plan-items`, `financial-statements`, `carry-forwards` — `docs/completed/REFACTORING_EXECUTION_PLAN.md` 참조
 - `import-batches`는 업로드 배치/행 보존, IM뱅크 PDF 파싱, 최신 진행월 기준 단건 수집, 일괄 등록 작업/행별 결과/사업장 잠금을 같은 `원장(Ledger)` 경계 안에서 조율합니다. 업로드도 월별 열기/마감 흐름을 따르며, 운영월 자동 생성은 거래 입력 예외가 아니라 최초 시작월 또는 최신 잠금월 바로 다음 월의 신규 계좌/카드 초기화로 제한합니다.
 - `vehicles`는 연료/정비 운영 기록을 소유하되, 회계 연동을 켠 기록은 표준 `CollectedTransaction`을 생성/동기화하고 전표 확정 이후에는 차량 기록 덮어쓰기를 막습니다.
 - `accounting-periods`, `carry-forwards`, `collected-transactions`, `dashboard`, `financial-statements`, `forecast`, `funding-account-status`, `import-batches`, `journal-entries`, `liabilities`, `navigation`, `plan-items`, `recurring-rules`는 모듈 바깥에서 각 모듈의 `public.ts`만 공식 진입점으로 사용합니다.
 - `dashboard`, `funding-account-status`, `forecast`는 `read service -> read repository/calculation -> projection` 성격의 읽기 조합 컨텍스트임을 코드에서 드러냅니다.
 - `auth`는 10개 use case + `SupportService` 기반 "얇은 헥사고날" 구조, `admin`은 4개 use case + `CommandSupport`/`QueryService` 기반 구조를 채택했습니다.
 - 나머지 모듈은 설명 가능한 이유가 생길 때만 같은 방향으로 옮깁니다.
+- 비승격 모듈의 `services`, `repositories`, `readers`, `mappers`, `projections`, `model`은 탐색성만 높이는 역할 폴더이며 계층 규칙을 새로 만들지 않습니다.
 - mapper/calculator/헬퍼 함수는 계속 함수 또는 단순 클래스로 두고 provider/token으로 만들지 않습니다.
 
 ### 5.1 모듈 승격 기준

@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import { OperationsConsoleCommandService } from './operations-console-command.service';
 import { OperationsConsoleController } from './operations-console.controller';
-import { OperationsConsoleReadRepository } from './operations-console-read.repository';
-import { OperationsConsoleService } from './operations-console.service';
+import { OperationsConsoleReadRepository } from './repositories/operations-console-read.repository';
+import { OperationsConsoleCommandService } from './services/operations-console-command.service';
+import { OperationsConsoleService } from './services/operations-console.service';
 
 @Module({
   controllers: [OperationsConsoleController],

@@ -7,9 +7,9 @@ import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';
 import { SectionCard } from '@/shared/ui/section-card';
-import { CreateWorkspaceDialog } from '@/features/settings/create-workspace-dialog';
-import { DeleteWorkspaceDialog } from '@/features/settings/delete-workspace-dialog';
-import { SettingsSectionNav } from '@/features/settings/settings-section-nav';
+import { CreateWorkspaceDialog } from '@/features/settings/components/create-workspace-dialog';
+import { DeleteWorkspaceDialog } from '@/features/settings/components/delete-workspace-dialog';
+import { SettingsSectionNav } from '@/features/settings/components/settings-section-nav';
 
 const sessionStatusLabelMap: Record<string, string> = {
   loading: '확인 중',

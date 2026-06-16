@@ -1,4 +1,4 @@
-import { VehiclesPage } from '@/features/vehicles/vehicles-page';
+import { VehiclesPage } from '@/features/vehicles/pages/vehicles-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

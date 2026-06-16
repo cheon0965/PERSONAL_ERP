@@ -1,4 +1,4 @@
-import { OperationsImportStatusPage } from '@/features/operations/operations-import-status-page';
+import { OperationsImportStatusPage } from '@/features/operations/pages/operations-import-status-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

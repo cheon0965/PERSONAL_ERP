@@ -2,7 +2,7 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
-import { DashboardReadService } from './dashboard-read.service';
+import { DashboardReadService } from './services/dashboard-read.service';
 
 @ApiTags('dashboard')
 @ApiBearerAuth()

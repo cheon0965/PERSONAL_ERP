@@ -1,2 +1,2 @@
 export { LiabilitiesModule } from './liabilities.module';
-export { LiabilitiesService } from './liabilities.service';
+export { LiabilitiesService } from './services/liabilities.service';

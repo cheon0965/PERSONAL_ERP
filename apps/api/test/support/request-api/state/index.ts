@@ -1,0 +1,49 @@
+import * as argon2 from 'argon2';
+import {
+  createRequestAssetStateFixtures,
+  createRequestIdentityStateFixtures,
+  createRequestOperationsStateFixtures,
+  createRequestReferenceDataStateFixtures
+} from './fixtures';
+import type { RequestTestState } from '../types';
+
+const demoPasswordHashPromise = argon2.hash('Demo1234!');
+
+export async function createRequestTestState(): Promise<RequestTestState> {
+  const passwordHash = await demoPasswordHashPromise;
+  const activeSessionExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+  return {
+    databaseReady: true,
+    failOpeningBalanceSnapshotCreate: false,
+    simulateCollectedTransactionAlreadyPostedOnNextTransactionId: null,
+    simulateCollectedTransactionAlreadyLinkedOnNextImportClaimId: null,
+    ...createRequestIdentityStateFixtures({
+      passwordHash,
+      activeSessionExpiresAt
+    }),
+    accountingPeriods: [],
+    periodStatusHistory: [],
+    openingBalanceSnapshots: [],
+    closingSnapshots: [],
+    balanceSnapshotLines: [],
+    financialStatementSnapshots: [],
+    carryForwardRecords: [],
+    emailVerificationTokens: [],
+    tenantMembershipInvitations: [],
+    workspaceAuditEvents: [],
+    securityThreatEvents: [],
+    workspaceNavigationMenuItems: [],
+    workspaceNavigationMenuRoles: [],
+    workspaceOperationalNotes: [],
+    sentEmails: [],
+    importBatches: [],
+    importBatchCollectionJobs: [],
+    importBatchCollectionJobRows: [],
+    importBatchCollectionLocks: [],
+    importedRows: [],
+    ...createRequestReferenceDataStateFixtures(),
+    ...createRequestOperationsStateFixtures(),
+    ...createRequestAssetStateFixtures()
+  };
+}

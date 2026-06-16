@@ -1,4 +1,4 @@
-import { AccountingPeriodsPage } from '@/features/accounting-periods/accounting-periods-page';
+import { AccountingPeriodsPage } from '@/features/accounting-periods/pages/accounting-periods-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

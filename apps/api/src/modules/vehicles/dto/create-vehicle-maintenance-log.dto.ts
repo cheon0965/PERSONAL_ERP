@@ -14,7 +14,7 @@ import {
   ValidateNested
 } from 'class-validator';
 import { moneyWonApiProperty } from '../../../common/money/swagger-money';
-import { vehicleMaintenanceCategoryValues } from '../vehicle-maintenance-category.constants';
+import { vehicleMaintenanceCategoryValues } from '../model/vehicle-maintenance-category.constants';
 import { VehicleLogAccountingLinkDto } from './vehicle-log-accounting-link.dto';
 
 export class CreateVehicleMaintenanceLogDto implements CreateVehicleMaintenanceLogRequest {

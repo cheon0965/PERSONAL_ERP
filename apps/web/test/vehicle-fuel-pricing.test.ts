@@ -3,7 +3,7 @@ import test from 'node:test';
 import {
   calculateFuelPricingAdjustment,
   recordFuelPricingFieldEdit
-} from '../src/features/vehicles/vehicle-fuel-pricing';
+} from '../src/features/vehicles/model/vehicle-fuel-pricing';
 
 test('vehicle fuel pricing calculates unit price from liters and amount', () => {
   const editOrder = recordFuelPricingFieldEdit(

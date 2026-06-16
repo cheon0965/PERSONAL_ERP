@@ -1,4 +1,4 @@
-import { JournalEntriesPage } from '@/features/journal-entries/journal-entries-page';
+import { JournalEntriesPage } from '@/features/journal-entries/pages/journal-entries-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

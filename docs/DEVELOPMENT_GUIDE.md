@@ -43,9 +43,10 @@ npm run test
    `읽기/조합 흐름`: `controller -> read service -> read repository -> projection`
    현재 승격 완료 모듈: `collected-transactions`, `recurring-rules`, `accounting-periods`, `import-batches`, `journal-entries`, `auth`, `admin`, `insurance-policies`, `plan-items`, `financial-statements`, `carry-forwards`
 6. `accounting-periods`, `carry-forwards`, `collected-transactions`, `dashboard`, `financial-statements`, `forecast`, `funding-account-status`, `import-batches`, `journal-entries`, `liabilities`, `navigation`, `plan-items`, `recurring-rules`처럼 모듈 바깥 참조가 있는 영역이면 `public.ts` 진입점도 같이 맞춥니다.
-7. 현재 요청이 어떤 `tenantId` / `TenantMembership` / `ActorRef` 경계에서 실행되는지 확인합니다.
+7. 비승격 모듈은 루트에 module/controller/public만 두고, 필요한 경우 `services`, `repositories`, `readers`, `mappers`, `projections`, `model` 역할 폴더로만 얕게 나눕니다.
+8. 현재 요청이 어떤 `tenantId` / `TenantMembership` / `ActorRef` 경계에서 실행되는지 확인합니다.
    현재 HTTP 표면은 `user.currentWorkspace` 기반으로 동작하더라도, 상위 도메인 기준은 Tenant/Ledger/Actor 경계라는 점을 문서와 코드에서 분리해 둡니다.
-8. 관련 테스트를 같이 추가합니다.
+9. 관련 테스트를 같이 추가합니다.
    `핵심 쓰기 흐름`: use-case 테스트 + 요청 단위 API 테스트
    `읽기/조합 흐름`: read service 테스트
    필요 시 브라우저 E2E 또는 Prisma 대표 통합 테스트
@@ -53,13 +54,18 @@ npm run test
 ## 4. 프런트엔드 기능 추가 순서
 
 1. `app`에는 라우트 래퍼만 둡니다.
-2. `features/<domain>`에 페이지, API, 폼, 훅을 둡니다.
+2. `features/<domain>`에 페이지, API, 폼, 훅을 둡니다. 파일이 4개 이상이면 필요한 역할에 따라 `api`, `pages`, `components`, `hooks`, `model` 폴더로 나누고, 1~3개이면 평면 구조를 유지합니다.
 3. 공통 조각만 `shared`로 올립니다.
 4. feature API는 `shared/api/fetch-json.ts`를 사용해 인증/오류/대체 응답 정책을 같이 따릅니다.
 5. 로딩 실패와 제출 실패는 사용자용 문구로 보이게 하고, 개발자 추적 단서는 `ApiRequestError`의 `errorCode`, HTTP 상태, 요청 메서드/경로, `requestId`, `technicalMessage`, 원본 응답 본문에 남깁니다.
 6. 사용자에게 노출되는 오류 Alert는 상단으로 이동하고, 개발자 진단 정보는 기본 접힘 상태를 유지합니다.
 7. 표 중심 화면은 가능하면 `DataTableCard`를 사용합니다. 데스크톱 DataGrid와 모바일 카드 목록, 모바일 5/10/20개 페이지네이션을 한 경계에서 유지하기 위함입니다.
 8. 목록 갱신이 필요한 mutation이면 query cache 갱신 또는 invalidation을 함께 넣습니다.
+
+feature 내부 import는 상대 경로를 사용하고, 다른 feature 또는 `shared` 참조는
+`@/` alias를 사용합니다. 역할이 없는 빈 폴더와 일괄적인 `index.ts` 진입점은
+추가하지 않습니다. 컴파일된 JavaScript를 Node 테스트에서 직접 실행하는 모듈은
+test runner가 alias를 변환하지 않으므로 `shared` 참조에 상대 경로를 사용합니다.
 
 ## 5. 계약과 문서 동기화 절차
 

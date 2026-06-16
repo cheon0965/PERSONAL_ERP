@@ -9,7 +9,7 @@ import {
 import {
   demoLoginCredentials,
   demoLoginPath
-} from '../src/features/auth/demo-login';
+} from '../src/features/auth/model/demo-login';
 import { createE2ECurrentUser } from './support/auth-transactions-fixtures';
 
 const dashboardSummary: DashboardSummary = {

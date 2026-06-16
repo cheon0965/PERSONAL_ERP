@@ -1,4 +1,4 @@
-import { CarryForwardsPage } from '@/features/carry-forwards/carry-forwards-page';
+import { CarryForwardsPage } from '@/features/carry-forwards/pages/carry-forwards-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

@@ -34,7 +34,7 @@ import { useRouter } from 'next/navigation';
 import {
   authWorkspacesQueryKey,
   getAccessibleWorkspaces
-} from '@/features/auth/auth.api';
+} from '@/features/auth/api/auth.api';
 import { readErrorUserMessage } from '@/shared/api/fetch-json';
 import { useAccountAvatar } from '@/shared/auth/account-avatar';
 import { useAuthSession } from '@/shared/auth/auth-provider';

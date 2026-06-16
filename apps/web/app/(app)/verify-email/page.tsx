@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { VerifyEmailPage } from '@/features/auth/verify-email-page';
+import { VerifyEmailPage } from '@/features/auth/pages/verify-email-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

@@ -23,7 +23,7 @@ import {
   logWorkspaceActionSucceeded
 } from '../../common/infrastructure/operational/workspace-action.audit';
 import { UpdateWorkspaceSettingsDto } from './dto/update-workspace-settings.dto';
-import { WorkspaceSettingsService } from './workspace-settings.service';
+import { WorkspaceSettingsService } from './services/workspace-settings.service';
 
 @ApiTags('settings')
 @ApiBearerAuth()

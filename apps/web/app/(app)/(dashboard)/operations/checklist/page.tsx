@@ -1,4 +1,4 @@
-import { OperationsChecklistPage } from '@/features/operations/operations-checklist-page';
+import { OperationsChecklistPage } from '@/features/operations/pages/operations-checklist-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

@@ -1,4 +1,4 @@
-import { ReferenceDataPage } from '@/features/reference-data/reference-data-page';
+import { ReferenceDataPage } from '@/features/reference-data/pages/reference-data-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({
