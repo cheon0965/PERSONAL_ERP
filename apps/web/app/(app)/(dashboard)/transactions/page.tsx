@@ -1,4 +1,4 @@
-import { TransactionsPage } from '@/features/transactions/transactions-page';
+import { TransactionsPage } from '@/features/transactions/pages/transactions-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

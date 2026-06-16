@@ -1,4 +1,4 @@
-import { AdminNavigationPage } from '@/features/admin/admin-navigation-page';
+import { AdminNavigationPage } from '@/features/admin/pages/admin-navigation-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AccountingPeriodsModule } from '../accounting-periods/public';
 import { LiabilitiesController } from './liabilities.controller';
-import { LiabilitiesService } from './liabilities.service';
+import { LiabilitiesService } from './services/liabilities.service';
 
 @Module({
   imports: [AccountingPeriodsModule],

@@ -5,7 +5,7 @@ import type {
   LedgerTransactionTypeItem
 } from '@personal-erp/contracts';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
-import { LedgerTransactionTypesService } from './ledger-transaction-types.service';
+import { LedgerTransactionTypesService } from './services/ledger-transaction-types.service';
 
 @ApiTags('ledger-transaction-types')
 @ApiBearerAuth()

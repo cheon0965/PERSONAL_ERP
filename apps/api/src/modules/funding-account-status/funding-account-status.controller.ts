@@ -5,7 +5,7 @@ import type {
   FundingAccountOverviewResponse
 } from '@personal-erp/contracts';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
-import { FundingAccountStatusService } from './funding-account-status.service';
+import { FundingAccountStatusService } from './services/funding-account-status.service';
 
 @ApiTags('funding-account-status')
 @ApiBearerAuth()

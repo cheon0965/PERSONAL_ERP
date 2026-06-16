@@ -1,4 +1,4 @@
-import { AdminPolicyPage } from '@/features/admin/admin-policy-page';
+import { AdminPolicyPage } from '@/features/admin/pages/admin-policy-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

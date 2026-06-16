@@ -1,7 +1,11 @@
-import { ConflictException, Injectable } from '@nestjs/common';
 import {
+  BadRequestException,
+  ConflictException,
+  Injectable
+} from '@nestjs/common';
+import {
+  AccountingPeriodStatus,
   CollectedTransactionStatus,
-  JournalEntryStatus,
   LiabilityRepaymentScheduleStatus,
   PlanItemStatus,
   Prisma
@@ -11,21 +15,21 @@ import {
   type PrismaMoneyLike
 } from '../../../../common/money/prisma-money';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
-import { AccountingPeriodWriteGuardPort } from '../../../accounting-periods/public';
-import type { JournalEntryRecord } from '../../../journal-entries/journal-entry-item.mapper';
-import { journalEntryItemInclude } from '../../../journal-entries/journal-entry.record';
+import { mapJournalEntryRecordToItem } from '../../../journal-entries/public';
 import {
   assertConfirmationAllowed,
   assertConfirmationTransactionFound,
   assertConfirmationTransactionHasPeriod
-} from '../../confirm-collected-transaction.validator';
+} from '../../application/policies/confirm-collected-transaction.validator';
 import {
   ConfirmCollectedTransactionStorePort,
   ConfirmTransactionContext,
   type AllocatedConfirmationEntryNumber,
   type ConfirmationCollectedTransaction,
+  type CollectedTransactionStatusValue,
   type ConfirmationWorkspaceScope,
-  type CreateConfirmationJournalEntryInput
+  type CreateConfirmationJournalEntryInput,
+  type JournalEntryStatusValue
 } from '../../application/ports/confirm-collected-transaction-store.port';
 
 /**
@@ -86,6 +90,62 @@ const confirmationCollectedTransactionInclude = {
     }
   }
 } satisfies Prisma.CollectedTransactionInclude;
+
+const confirmationJournalEntryItemInclude =
+  Prisma.validator<Prisma.JournalEntryInclude>()({
+    sourceCollectedTransaction: {
+      select: {
+        id: true,
+        title: true,
+        status: true
+      }
+    },
+    reversesJournalEntry: {
+      select: {
+        id: true,
+        entryNumber: true
+      }
+    },
+    reversedByJournalEntry: {
+      select: {
+        id: true,
+        entryNumber: true
+      }
+    },
+    correctsJournalEntry: {
+      select: {
+        id: true,
+        entryNumber: true
+      }
+    },
+    correctionEntries: {
+      select: {
+        id: true,
+        entryNumber: true
+      },
+      orderBy: {
+        createdAt: 'asc'
+      }
+    },
+    lines: {
+      include: {
+        accountSubject: {
+          select: {
+            code: true,
+            name: true
+          }
+        },
+        fundingAccount: {
+          select: {
+            name: true
+          }
+        }
+      },
+      orderBy: {
+        lineNumber: 'asc'
+      }
+    }
+  });
 
 type PrismaConfirmationRecord = Prisma.CollectedTransactionGetPayload<{
   include: typeof confirmationCollectedTransactionInclude;
@@ -161,10 +221,27 @@ function mapPrismaToConfirmationCollectedTransaction(
 
 @Injectable()
 export class PrismaConfirmCollectedTransactionStoreAdapter implements ConfirmCollectedTransactionStorePort {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly accountingPeriodWriteGuard: AccountingPeriodWriteGuardPort
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
+
+  async findReadyIds(
+    scope: ConfirmationWorkspaceScope,
+    requestedIds: string[] | null
+  ): Promise<string[]> {
+    const records = await this.prisma.collectedTransaction.findMany({
+      where: {
+        tenantId: scope.tenantId,
+        ledgerId: scope.ledgerId,
+        status: CollectedTransactionStatus.READY_TO_POST,
+        ...(requestedIds ? { id: { in: requestedIds } } : {})
+      },
+      select: {
+        id: true
+      },
+      orderBy: [{ occurredOn: 'asc' }, { createdAt: 'asc' }]
+    });
+
+    return records.map((record) => record.id);
+  }
 
   async findForConfirmation(
     scope: ConfirmationWorkspaceScope,
@@ -188,20 +265,14 @@ export class PrismaConfirmCollectedTransactionStoreAdapter implements ConfirmCol
     // 전표 번호 할당과 수집 거래 선점이 반드시 같은 트랜잭션에서 일어나도록
     // 유스케이스에 Prisma TransactionClient 대신 제한된 컨텍스트만 넘긴다.
     return this.prisma.$transaction(async (tx) => {
-      const ctx = new PrismaConfirmTransactionContext(
-        tx,
-        this.accountingPeriodWriteGuard
-      );
+      const ctx = new PrismaConfirmTransactionContext(tx);
       return fn(ctx);
     });
   }
 }
 
 class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
-  constructor(
-    private readonly tx: Prisma.TransactionClient,
-    private readonly accountingPeriodWriteGuard: AccountingPeriodWriteGuardPort
-  ) {
+  constructor(private readonly tx: Prisma.TransactionClient) {
     super();
   }
 
@@ -243,20 +314,65 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
     scope: ConfirmationWorkspaceScope,
     periodId: string
   ): Promise<AllocatedConfirmationEntryNumber> {
-    const result =
-      await this.accountingPeriodWriteGuard.allocateJournalEntryNumberInTransaction(
-        this.tx,
-        scope,
-        periodId
+    const period = await this.tx.accountingPeriod.findFirst({
+      where: {
+        id: periodId,
+        tenantId: scope.tenantId,
+        ledgerId: scope.ledgerId
+      }
+    });
+
+    if (!period) {
+      throw new BadRequestException(
+        '전표를 기록할 운영 기간을 찾을 수 없습니다.'
       );
+    }
+
+    assertJournalWritePeriodClaimable(period.status);
+
+    const allocated = await this.tx.accountingPeriod.updateMany({
+      where: {
+        id: period.id,
+        tenantId: scope.tenantId,
+        ledgerId: scope.ledgerId,
+        status: {
+          in: [AccountingPeriodStatus.OPEN, AccountingPeriodStatus.IN_REVIEW]
+        }
+      },
+      data: {
+        nextJournalEntrySequence: {
+          increment: 1
+        }
+      }
+    });
+
+    if (allocated.count !== 1) {
+      throw new ConflictException(
+        '운영 기간 상태가 변경되어 전표 번호를 할당하지 못했습니다. 다시 시도해 주세요.'
+      );
+    }
+
+    const result = await this.tx.accountingPeriod.findFirst({
+      where: {
+        id: period.id,
+        tenantId: scope.tenantId,
+        ledgerId: scope.ledgerId
+      }
+    });
+
+    if (!result) {
+      throw new BadRequestException(
+        '전표를 기록할 운영 기간을 찾을 수 없습니다.'
+      );
+    }
 
     return {
       period: {
-        id: result.period.id,
-        year: result.period.year,
-        month: result.period.month
+        id: result.id,
+        year: result.year,
+        month: result.month
       },
-      sequence: result.sequence
+      sequence: result.nextJournalEntrySequence - 1
     };
   }
 
@@ -264,7 +380,7 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
     tenantId: string;
     ledgerId: string;
     collectedTransactionId: string;
-    currentStatus: CollectedTransactionStatus;
+    currentStatus: CollectedTransactionStatusValue;
   }): Promise<{ count: number }> {
     // 상태 조건을 포함한 updateMany로 선점한다.
     // 갱신 건수가 0이면 다른 요청이 먼저 확정/정정/삭제한 것으로 보고 상위에서 충돌 처리한다.
@@ -332,10 +448,8 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
     );
   }
 
-  async createJournalEntry(
-    input: CreateConfirmationJournalEntryInput
-  ): Promise<JournalEntryRecord> {
-    return this.tx.journalEntry.create({
+  async createJournalEntry(input: CreateConfirmationJournalEntryInput) {
+    const record = await this.tx.journalEntry.create({
       data: {
         tenantId: input.tenantId,
         ledgerId: input.ledgerId,
@@ -355,8 +469,10 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
           create: input.lines
         }
       },
-      include: journalEntryItemInclude
+      include: confirmationJournalEntryItemInclude
     });
+
+    return mapJournalEntryRecordToItem(record);
   }
 
   async markMatchedPlanItemConfirmed(
@@ -446,6 +562,24 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
       ? {
           id: target.id,
           createdCollectedTransaction: target.createdCollectedTransaction
+            ? {
+                ...target.createdCollectedTransaction,
+                postedJournalEntry: target.createdCollectedTransaction
+                  .postedJournalEntry
+                  ? {
+                      ...target.createdCollectedTransaction.postedJournalEntry,
+                      lines:
+                        target.createdCollectedTransaction.postedJournalEntry.lines.map(
+                          (line) => ({
+                            ...line,
+                            debitAmount: fromPrismaMoneyWon(line.debitAmount),
+                            creditAmount: fromPrismaMoneyWon(line.creditAmount)
+                          })
+                        )
+                    }
+                  : null
+              }
+            : null
         }
       : null;
   }
@@ -454,8 +588,8 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
     tenantId: string;
     ledgerId: string;
     journalEntryId: string;
-    expectedStatuses: JournalEntryStatus[];
-    nextStatus: JournalEntryStatus;
+    expectedStatuses: JournalEntryStatusValue[];
+    nextStatus: JournalEntryStatusValue;
   }): Promise<number> {
     const result = await this.tx.journalEntry.updateMany({
       where: {
@@ -477,7 +611,7 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
   async findCurrentJournalEntryStatusInWorkspace(
     scope: ConfirmationWorkspaceScope,
     journalEntryId: string
-  ): Promise<JournalEntryStatus | null> {
+  ): Promise<JournalEntryStatusValue | null> {
     const current = await this.tx.journalEntry.findFirst({
       where: {
         id: journalEntryId,
@@ -496,8 +630,8 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
     tenantId: string;
     ledgerId: string;
     collectedTransactionId: string;
-    expectedStatuses: CollectedTransactionStatus[];
-    nextStatus: CollectedTransactionStatus;
+    expectedStatuses: CollectedTransactionStatusValue[];
+    nextStatus: CollectedTransactionStatusValue;
   }): Promise<number> {
     const result = await this.tx.collectedTransaction.updateMany({
       where: {
@@ -519,7 +653,7 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
   async findCurrentCollectedTransactionStatusInWorkspace(
     scope: ConfirmationWorkspaceScope,
     collectedTransactionId: string
-  ): Promise<CollectedTransactionStatus | null> {
+  ): Promise<CollectedTransactionStatusValue | null> {
     const current = await this.tx.collectedTransaction.findFirst({
       where: {
         id: collectedTransactionId,
@@ -533,4 +667,19 @@ class PrismaConfirmTransactionContext extends ConfirmTransactionContext {
 
     return current?.status ?? null;
   }
+}
+
+function assertJournalWritePeriodClaimable(
+  status: AccountingPeriodStatus
+): void {
+  if (
+    status === AccountingPeriodStatus.OPEN ||
+    status === AccountingPeriodStatus.IN_REVIEW
+  ) {
+    return;
+  }
+
+  throw new BadRequestException(
+    '현재 운영 기간이 마감 중이거나 잠겨 있어 전표를 기록할 수 없습니다.'
+  );
 }

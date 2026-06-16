@@ -6,8 +6,8 @@ import {
   readLatestCollectingAccountingPeriods,
   readLatestJournalWritableAccountingPeriod,
   readLatestJournalWritableAccountingPeriods
-} from '../src/features/accounting-periods/accounting-period-selection';
-import { buildAccountingPeriodReopenEligibility } from '../src/features/accounting-periods/accounting-period-reopen-eligibility';
+} from '../src/features/accounting-periods/model/accounting-period-selection';
+import { buildAccountingPeriodReopenEligibility } from '../src/features/accounting-periods/model/accounting-period-reopen-eligibility';
 
 test('latest write-period helpers return only the newest collecting and journal-writable month', () => {
   const periods = [

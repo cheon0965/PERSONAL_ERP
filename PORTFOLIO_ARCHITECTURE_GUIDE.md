@@ -147,6 +147,23 @@ docs/          -> 개발, 운영, ADR, 아키텍처 문서
 - `features/`는 기능별 화면과 API 호출 로직을 묶습니다.
 - `shared/`는 공용 UI, 인증 상태, 조회 헬퍼 함수, 레이아웃, 테마를 담당합니다.
 
+파일이 4개 이상인 feature는 필요한 역할 폴더만 사용합니다.
+
+```text
+features/<domain>/
+  api/          # API 호출과 대체 응답
+  pages/        # 페이지와 페이지 전용 구성
+  components/   # 폼, 다이얼로그, 섹션, 그리드, 내비게이션
+  hooks/        # feature 전용 React 훅
+  model/        # schema, mapper, policy, types, columns, helper, 상수
+```
+
+파일이 1~3개인 작은 feature는 평면 구조를 유지하며, 역할이 없는 빈 폴더나
+일괄적인 `index.ts` 진입점을 만들지 않습니다. feature 내부 참조는 상대 경로를,
+다른 feature와 `shared` 참조는 `@/` alias를 사용합니다.
+단, 컴파일된 JavaScript를 Node 테스트 실행기가 직접 불러오는 모듈은 alias 변환이
+없으므로 `shared` 참조에 상대 경로를 유지할 수 있습니다.
+
 이 구조는 프런트엔드에서 지나친 아키텍처 실험보다 `기능 응집도`와 `재사용 가능한 공통 계층`을 우선한 선택입니다.
 
 ### 2. API는 기본적으로 기능별 모듈 구조를 사용한다
@@ -160,6 +177,26 @@ controller -> service -> repository -> mapper/calculator
 이 구조는 `funding-accounts`, `categories`, `reference-data-readiness`, `vehicles`, `workspace-settings`, `navigation` 같은 영역에서 여전히 유효합니다.
 특히 기본 생성·조회·수정·삭제 성격이 강하거나 계산 로직만 분리하면 충분한 영역에서는 이 방식이 더 읽기 쉽고 유지보수도 쉽습니다.
 
+비승격 모듈은 루트에 `module`, `controller`, 필요한 경우 `public.ts`만 두고,
+나머지는 탐색성을 위해 얕은 역할 폴더로 나눕니다.
+
+```text
+module-name/
+  module-name.module.ts
+  module-name.controller.ts
+  public.ts      # 공개 경계가 필요한 모듈만
+  dto/
+  services/
+  repositories/
+  readers/
+  mappers/
+  projections/
+  model/
+```
+
+이 폴더들은 파일 위치를 찾기 쉽게 하기 위한 장치이며, 승격 모듈의
+`application/domain/infrastructure` 계층 규칙을 대신하지 않습니다.
+
 ### 3. 핵심 쓰기 모델과 운영 핵심 모듈만 더 엄격한 구조로 승격했다
 
 `collected-transactions`와 `recurring-rules`를 시작으로, `accounting-periods`, `import-batches`, `journal-entries`, `auth`, `admin`, `insurance-policies`, `plan-items`, `financial-statements`, `carry-forwards`까지 핵심 모듈을 아래 흐름으로 승격했습니다.
@@ -170,6 +207,38 @@ controller -> use case -> port -> adapter
 
 그리고 내부 규칙은 별도 `domain` 파일이나 순수 함수로 분리합니다.
 
+승격 모듈은 파일 탐색 기준을 일관되게 유지하기 위해 아래 폴더 구조를 사용합니다.
+
+```text
+module-name/
+  module-name.module.ts
+  module-name.controller.ts
+  public.ts
+  dto/
+  application/
+    use-cases/
+    ports/
+    mappers/
+    models/
+  domain/
+  infrastructure/
+    prisma/
+    services/
+    mappers/
+    models/
+    parsers/
+    file-processing/
+```
+
+- 모듈 루트에는 조립점, HTTP 진입점, 공개 진입점만 둡니다.
+- `application`은 유스케이스와 포트, 프레임워크 독립 변환을 둡니다.
+- `domain`은 NestJS와 Prisma에 의존하지 않는 순수 규칙을 둡니다.
+- `infrastructure`는 DB, 파일 파싱, 암호화 같은 외부 기술 결합 코드를 둡니다.
+- 승격 모듈에는 책임이 불명확한 `support` 폴더를 두지 않습니다. 정책은 `domain` 또는 `application`, 외부 기술 결합 코드는 `infrastructure`에 배치합니다.
+- 승격 모듈의 `application`과 `domain`은 NestJS, Prisma, DTO, infrastructure 구현을 직접 import하지 않습니다.
+- application port에는 `Prisma.TransactionClient`, `Decimal`, Prisma enum 같은 구현 타입을 노출하지 않으며, DB 트랜잭션은 adapter가 소유합니다.
+- application/domain 오류는 프레임워크 독립 `AppError`로 표현하고, 공통 HTTP 예외 필터가 기존 상태 코드와 응답 메시지로 변환합니다.
+
 이렇게 한 이유는 단순합니다.
 
 - 이 모듈들은 프로젝트의 핵심 쓰기 모델이거나 운영 관리의 핵심 경계입니다.
@@ -177,17 +246,18 @@ controller -> use case -> port -> adapter
 - 테스트와 설명 가치가 높습니다.
 - 다른 모든 모듈에 같은 복잡도를 강요할 필요는 없습니다.
 
-`auth`는 회원가입, 이메일 인증, 로그인, 세션, 계정 보안 등 10개 use case로 분리했고, `admin`은 초대/역할/상태/제거 4개 use case로 분리했습니다.
-`auth`와 `admin`은 완전한 port/adapter 분리 대신 use case 단위로 로직을 나누고 `SupportService`를 통해 공통 로직을 공유하는 `얇은 헥사고날` 구조를 채택했습니다.
+`auth`는 회원가입, 이메일 인증, 로그인, 세션, 계정 보안 등 12개 use case로 분리했고, `admin`은 초대/역할/상태/제거 4개 use case로 분리했습니다.
+application 서비스는 NestJS 데코레이터 대신 프레임워크 독립 `ApplicationService` 메타데이터를 사용하고, 외곽 module에서 실제 DI 컨테이너와 연결합니다.
 
 ### 4. 대상 모듈은 `public.ts`를 공식 공개 경계로 둔다
 
-`accounting-periods`, `carry-forwards`, `collected-transactions`, `dashboard`, `financial-statements`, `forecast`, `funding-account-status`, `import-batches`, `journal-entries`, `liabilities`, `navigation`, `plan-items`, `recurring-rules`는 이제 모듈 바깥에서 직접 내부 파일을 가져다 쓰지 않고 각 모듈의 `public.ts`를 통해서만 접근합니다.
+승격 모듈인 `accounting-periods`, `admin`, `auth`, `carry-forwards`, `collected-transactions`, `financial-statements`, `import-batches`, `insurance-policies`, `journal-entries`, `plan-items`, `recurring-rules`와 기존 읽기·공개 경계 대상 모듈은 모듈 바깥에서 직접 내부 파일을 가져다 쓰지 않고 각 모듈의 `public.ts`를 통해서만 접근합니다.
 
 이 선택의 의미는 단순합니다.
 
 - `collected-transactions.module.ts`, `dashboard-read.service.ts` 같은 파일은 내부 구현입니다.
 - 모듈 조립이나 미래의 확장 포인트는 `public.ts`를 기준으로 설명합니다.
+- `public.ts`는 Prisma select/include와 infrastructure record 타입을 공개하지 않습니다.
 - 아직 퍼사드, interface, 토큰을 과하게 늘리지 않고도 “공개 경계”를 코드에서 보여줄 수 있습니다.
 
 ## 현재 구조를 영역별로 평가하면

@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { AcceptInvitationPage } from '@/features/auth/accept-invitation-page';
+import { AcceptInvitationPage } from '@/features/auth/pages/accept-invitation-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

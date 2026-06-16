@@ -1,14 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import { RecurrenceFrequency, type Prisma } from '@prisma/client';
+import { fromPrismaMoneyWon } from '../../../../common/money/prisma-money';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
 import { normalizeCaseInsensitiveText } from '../../../../common/utils/normalize-unique-key.util';
 import { prepareRecurringRuleSchedule } from '../../../recurring-rules/public';
-import type { InsurancePolicyRecord } from '../../insurance-policies.mapper';
-import { insurancePolicyInclude } from '../../insurance-policies.repository';
+import type { InsurancePolicyRecord } from '../../application/mappers/insurance-policies.mapper';
+import { insurancePolicyInclude } from './insurance-policies.repository';
 import {
   buildInsuranceRecurringRulePayload,
   type NormalizedInsurancePolicyInput
-} from '../../insurance-policy.write-model';
+} from '../../application/policies/insurance-policy.policy';
 import {
   type CreateInsurancePolicyCommand,
   type DeleteInsurancePolicyCommand,
@@ -20,6 +21,51 @@ import {
 @Injectable()
 export class PrismaInsurancePolicyWriteAdapter implements InsurancePolicyWritePort {
   constructor(private readonly prisma: PrismaService) {}
+
+  async findByIdInWorkspace(
+    insurancePolicyId: string,
+    tenantId: string,
+    ledgerId: string
+  ): Promise<InsurancePolicyRecord | null> {
+    const record = await this.prisma.insurancePolicy.findFirst({
+      where: {
+        id: insurancePolicyId,
+        tenantId,
+        ledgerId
+      },
+      include: insurancePolicyInclude
+    });
+
+    return record ? mapInsurancePolicyRecord(record) : null;
+  }
+
+  findDuplicateInWorkspace(
+    tenantId: string,
+    ledgerId: string,
+    provider: string,
+    productName: string,
+    excludeInsurancePolicyId?: string
+  ) {
+    return this.prisma.insurancePolicy.findFirst({
+      where: {
+        tenantId,
+        ledgerId,
+        normalizedProvider: normalizeCaseInsensitiveText(provider),
+        normalizedProductName: normalizeCaseInsensitiveText(productName),
+        ...(excludeInsurancePolicyId
+          ? {
+              id: {
+                not: excludeInsurancePolicyId
+              }
+            }
+          : {})
+      },
+      select: {
+        id: true,
+        isActive: true
+      }
+    });
+  }
 
   async readRecurringReferenceState(input: InsurancePolicyReferenceStateInput) {
     const [fundingAccount, category] = await Promise.all([
@@ -53,10 +99,10 @@ export class PrismaInsurancePolicyWriteAdapter implements InsurancePolicyWritePo
     };
   }
 
-  createPolicy(
+  async createPolicy(
     input: CreateInsurancePolicyCommand
   ): Promise<InsurancePolicyRecord> {
-    return this.prisma.$transaction(async (tx) => {
+    const record = await this.prisma.$transaction(async (tx) => {
       const linkedRecurringRuleId = await this.syncLinkedRecurringRule(tx, {
         userId: input.userId,
         tenantId: input.tenantId,
@@ -69,12 +115,14 @@ export class PrismaInsurancePolicyWriteAdapter implements InsurancePolicyWritePo
         include: insurancePolicyInclude
       });
     });
+
+    return mapInsurancePolicyRecord(record);
   }
 
-  updatePolicy(
+  async updatePolicy(
     input: UpdateInsurancePolicyCommand
   ): Promise<InsurancePolicyRecord> {
-    return this.prisma.$transaction(async (tx) => {
+    const record = await this.prisma.$transaction(async (tx) => {
       const linkedRecurringRuleId = await this.syncLinkedRecurringRule(tx, {
         userId: input.userId,
         tenantId: input.tenantId,
@@ -91,6 +139,8 @@ export class PrismaInsurancePolicyWriteAdapter implements InsurancePolicyWritePo
         include: insurancePolicyInclude
       });
     });
+
+    return mapInsurancePolicyRecord(record);
   }
 
   deletePolicy(input: DeleteInsurancePolicyCommand): Promise<boolean> {
@@ -210,7 +260,9 @@ export class PrismaInsurancePolicyWriteAdapter implements InsurancePolicyWritePo
           categoryId: recurringRulePayload.categoryId,
           title: recurringRulePayload.title,
           amountWon: recurringRulePayload.amountWon,
-          frequency: recurringRulePayload.frequency,
+          frequency: toPrismaRecurrenceFrequency(
+            recurringRulePayload.frequency
+          ),
           dayOfMonth: recurringRulePayload.dayOfMonth,
           startDate: schedule.startDate,
           endDate: schedule.endDate,
@@ -234,7 +286,7 @@ export class PrismaInsurancePolicyWriteAdapter implements InsurancePolicyWritePo
         categoryId: recurringRulePayload.categoryId,
         title: recurringRulePayload.title,
         amountWon: recurringRulePayload.amountWon,
-        frequency: recurringRulePayload.frequency,
+        frequency: toPrismaRecurrenceFrequency(recurringRulePayload.frequency),
         dayOfMonth: recurringRulePayload.dayOfMonth,
         startDate: schedule.startDate,
         endDate: schedule.endDate,
@@ -248,4 +300,21 @@ export class PrismaInsurancePolicyWriteAdapter implements InsurancePolicyWritePo
 
     return created.id;
   }
+}
+
+function mapInsurancePolicyRecord(
+  record: Prisma.InsurancePolicyGetPayload<{
+    include: typeof insurancePolicyInclude;
+  }>
+): InsurancePolicyRecord {
+  return {
+    ...record,
+    monthlyPremiumWon: fromPrismaMoneyWon(record.monthlyPremiumWon)
+  };
+}
+
+function toPrismaRecurrenceFrequency(value: string) {
+  return value === 'YEARLY'
+    ? RecurrenceFrequency.YEARLY
+    : RecurrenceFrequency.MONTHLY;
 }

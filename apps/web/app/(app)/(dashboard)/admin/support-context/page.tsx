@@ -1,4 +1,4 @@
-import { AdminSupportContextPage } from '@/features/admin/admin-support-context-page';
+import { AdminSupportContextPage } from '@/features/admin/pages/admin-support-context-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

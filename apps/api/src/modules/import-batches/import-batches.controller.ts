@@ -48,8 +48,8 @@ import { BulkCollectImportedRowsRequestDto } from './dto/bulk-collect-imported-r
 import { CollectImportedRowRequestDto } from './dto/collect-imported-row.dto';
 import { CreateImportBatchFileRequestDto } from './dto/create-import-batch-file.dto';
 import { CreateImportBatchRequestDto } from './dto/create-import-batch.dto';
-import { ImportBatchQueryService } from './import-batch-query.service';
-import { normalizeUploadedFileName } from './uploaded-file-name';
+import { ImportBatchQueryService } from './infrastructure/services/import-batch-query.service';
+import { normalizeUploadedFileName } from './infrastructure/file-processing/uploaded-file-name';
 
 type UploadedImportFile = {
   originalname: string;

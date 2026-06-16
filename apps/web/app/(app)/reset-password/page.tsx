@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { ResetPasswordPage } from '@/features/auth/reset-password-page';
+import { ResetPasswordPage } from '@/features/auth/pages/reset-password-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

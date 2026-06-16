@@ -47,7 +47,7 @@ test('auth API helpers call the registration and verification endpoints', async 
       registerWithPassword,
       resendVerificationEmail,
       verifyEmail
-    } = await import('../src/features/auth/auth.api');
+    } = await import('../src/features/auth/api/auth.api');
 
     assert.deepEqual(
       await registerWithPassword({
@@ -170,7 +170,7 @@ test('auth API helper calls the protected workspace creation and deletion endpoi
     const { setStoredAccessToken, clearStoredAccessToken } =
       await import('../src/shared/auth/auth-session-store');
     const { createWorkspace, deleteWorkspace } =
-      await import('../src/features/auth/auth.api');
+      await import('../src/features/auth/api/auth.api');
 
     setStoredAccessToken('token-workspace');
 

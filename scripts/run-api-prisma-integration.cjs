@@ -108,13 +108,19 @@ async function runPrismaIntegrationSuite(databaseUrl) {
   runNpm(['run', 'clean:test-dist'], env);
   runNpm(['run', 'compile:test'], env);
 
-  const prismaIntegrationTests = fs
-    .readdirSync(path.join(apiRoot, '.test-dist', 'apps', 'api', 'test'))
+  const compiledTestRoot = path.join(
+    apiRoot,
+    '.test-dist',
+    'apps',
+    'api',
+    'test'
+  );
+  const prismaIntegrationTests = listFilesRecursively(compiledTestRoot)
     .filter((fileName) => fileName.endsWith('.prisma.integration.test.js'))
-    .sort()
     .map((fileName) =>
-      path.posix.join('.test-dist', 'apps', 'api', 'test', fileName)
-    );
+      path.relative(apiRoot, fileName).split(path.sep).join(path.posix.sep)
+    )
+    .sort();
 
   if (prismaIntegrationTests.length === 0) {
     throw new Error('No Prisma integration test files were found.');
@@ -128,6 +134,15 @@ async function runPrismaIntegrationSuite(databaseUrl) {
       label: 'node --test Prisma integration'
     }
   );
+}
+
+function listFilesRecursively(directory) {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const absolutePath = path.join(directory, entry.name);
+    return entry.isDirectory()
+      ? listFilesRecursively(absolutePath)
+      : [absolutePath];
+  });
 }
 
 async function seedMinimalFixture(databaseUrl) {

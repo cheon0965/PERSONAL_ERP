@@ -36,8 +36,8 @@ import {
 } from '../../common/infrastructure/operational/workspace-action.audit';
 import { CreateOperationsExportDto } from './dto/create-operations-export.dto';
 import { CreateOperationsNoteDto } from './dto/create-operations-note.dto';
-import { OperationsConsoleCommandService } from './operations-console-command.service';
-import { OperationsConsoleService } from './operations-console.service';
+import { OperationsConsoleCommandService } from './services/operations-console-command.service';
+import { OperationsConsoleService } from './services/operations-console.service';
 
 @ApiTags('operations')
 @ApiBearerAuth()

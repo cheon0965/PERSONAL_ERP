@@ -1,5 +1,6 @@
-// eslint-disable-next-line no-restricted-imports
-import { BadRequestException } from '@nestjs/common';
+import { ApplicationService } from '../../../../common/application/application-service.decorator';
+import { validationError } from '../../../../common/application/errors/app-error';
+
 import type {
   CollectedTransactionItem,
   CreateCollectedTransactionRequest
@@ -19,6 +20,7 @@ type CreateCollectedTransactionCommand = CreateCollectedTransactionRequest & {
   periodId: string;
 };
 
+@ApplicationService()
 export class CreateCollectedTransactionUseCase {
   constructor(
     private readonly collectedTransactionStore: CollectedTransactionStorePort,
@@ -29,7 +31,7 @@ export class CreateCollectedTransactionUseCase {
     command: CreateCollectedTransactionCommand
   ): Promise<CollectedTransactionItem> {
     if (command.type === 'REVERSAL') {
-      throw new BadRequestException(
+      throw validationError(
         '승인취소 거래는 업로드 배치의 승인취소 행에서만 생성할 수 있습니다.'
       );
     }

@@ -28,7 +28,7 @@
 
 1. 월 오픈 정책 완화
 
-- `apps/api/src/modules/accounting-periods/open-accounting-period.use-case.ts`
+- `apps/api/src/modules/accounting-periods/application/use-cases/open-accounting-period.use-case.ts`
 - 이전 월 `LOCKED` 선행 강제를 제거했다.
 - 대신 기존처럼:
   - 동일 월 중복 생성 금지
@@ -39,7 +39,7 @@
 
 2. 재오픈 정책 정리
 
-- `apps/api/src/modules/accounting-periods/reopen-accounting-period.use-case.ts`
+- `apps/api/src/modules/accounting-periods/application/use-cases/reopen-accounting-period.use-case.ts`
 - `가장 최근 운영 기간만 재오픈 가능` 제한을 제거했다.
 - 대신 기존 종속성 보호를 유지했다.
   - 차기 이월 record 존재 시 차단
@@ -47,7 +47,7 @@
 
 3. 전이 정책 정리
 
-- `apps/api/src/modules/accounting-periods/accounting-period-transition.policy.ts`
+- `apps/api/src/modules/accounting-periods/support/policies/accounting-period-transition.policy.ts`
 - 더 이상 쓰지 않는 `이전 기간 잠금 선행` 검증 함수를 제거했다.
 
 4. 회귀 테스트 추가

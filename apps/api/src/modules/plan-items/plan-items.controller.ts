@@ -23,8 +23,8 @@ import {
   logWorkspaceActionSucceeded
 } from '../../common/infrastructure/operational/workspace-action.audit';
 import { GeneratePlanItemsRequestDto } from './dto/generate-plan-items.dto';
-import { GeneratePlanItemsUseCase } from './generate-plan-items.use-case';
-import { PlanItemsService } from './plan-items.service';
+import { GeneratePlanItemsUseCase } from './application/use-cases/generate-plan-items.use-case';
+import { PlanItemsService } from './infrastructure/services/plan-items.service';
 
 @ApiTags('plan-items')
 @ApiBearerAuth()

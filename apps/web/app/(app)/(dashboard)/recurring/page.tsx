@@ -1,4 +1,4 @@
-import { RecurringRulesPage } from '@/features/recurring-rules/recurring-rules-page';
+import { RecurringRulesPage } from '@/features/recurring-rules/pages/recurring-rules-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

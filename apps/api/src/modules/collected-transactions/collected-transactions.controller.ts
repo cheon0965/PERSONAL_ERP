@@ -43,8 +43,8 @@ import { GetCollectedTransactionDetailUseCase } from './application/use-cases/ge
 import { CreateCollectedTransactionUseCase } from './application/use-cases/create-collected-transaction.use-case';
 import { ListCollectedTransactionsUseCase } from './application/use-cases/list-collected-transactions.use-case';
 import { UpdateCollectedTransactionUseCase } from './application/use-cases/update-collected-transaction.use-case';
-import { BulkConfirmCollectedTransactionsUseCase } from './bulk-confirm-collected-transactions.use-case';
-import { ConfirmCollectedTransactionUseCase } from './confirm-collected-transaction.use-case';
+import { BulkConfirmCollectedTransactionsUseCase } from './application/use-cases/bulk-confirm-collected-transactions.use-case';
+import { ConfirmCollectedTransactionUseCase } from './application/use-cases/confirm-collected-transaction.use-case';
 import { BulkConfirmCollectedTransactionsRequestDto } from './dto/bulk-confirm-collected-transactions.dto';
 import { CreateCollectedTransactionRequestDto } from './dto/create-collected-transaction.dto';
 import { UpdateCollectedTransactionRequestDto } from './dto/update-collected-transaction.dto';

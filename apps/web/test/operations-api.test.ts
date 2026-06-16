@@ -34,7 +34,7 @@ test('operations API helpers call protected operations endpoints', async () => {
       getOperationsSystemStatus,
       runOperationsExport,
       createOperationsNote
-    } = await import('../src/features/operations/operations.api');
+    } = await import('../src/features/operations/api/operations.api');
 
     setStoredAccessToken('token-operations');
 

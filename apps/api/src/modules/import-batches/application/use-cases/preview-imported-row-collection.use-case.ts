@@ -1,17 +1,14 @@
-// eslint-disable-next-line no-restricted-imports
-import { Injectable } from '@nestjs/common';
 import type {
   AuthenticatedUser,
   CollectImportedRowPreview,
   CollectImportedRowRequest
 } from '@personal-erp/contracts';
-import { ImportedRowCollectionService } from '../../imported-row-collection.service';
+import { ApplicationService } from '../../../../common/application/application-service.decorator';
+import { ImportBatchCommandPort } from '../ports/import-batch-command.port';
 
-@Injectable()
+@ApplicationService()
 export class PreviewImportedRowCollectionUseCase {
-  constructor(
-    private readonly importedRowCollectionService: ImportedRowCollectionService
-  ) {}
+  constructor(private readonly commands: ImportBatchCommandPort) {}
 
   execute(
     user: AuthenticatedUser,
@@ -19,11 +16,6 @@ export class PreviewImportedRowCollectionUseCase {
     importedRowId: string,
     input: CollectImportedRowRequest
   ): Promise<CollectImportedRowPreview> {
-    return this.importedRowCollectionService.previewRow(
-      user,
-      importBatchId,
-      importedRowId,
-      input
-    );
+    return this.commands.previewRow(user, importBatchId, importedRowId, input);
   }
 }

@@ -90,8 +90,8 @@ npm.cmd run audit:runtime
 
 문제 근거:
 
-- `apps/api/src/modules/import-batches/woori-bank-html-statement.parser.ts:268`
-- `apps/api/src/modules/import-batches/woori-bank-html-statement.parser.ts:294`
+- `apps/api/src/modules/import-batches/infrastructure/parsers/woori-bank-html-statement.parser.ts:268`
+- `apps/api/src/modules/import-batches/infrastructure/parsers/woori-bank-html-statement.parser.ts:294`
 - `apps/api/src/modules/import-batches/application/use-cases/create-import-batch-from-file.use-case.ts:94`
 - `apps/api/src/modules/import-batches/dto/create-import-batch-file.dto.ts:35`
 
@@ -446,8 +446,8 @@ npm.cmd run typecheck:api
 
 문제 근거:
 
-- `apps/api/src/modules/auth/auth-rate-limit.service.ts:9`
-- `apps/api/src/modules/auth/auth-rate-limit.service.ts:20`
+- `apps/api/src/modules/auth/support/services/auth-rate-limit.service.ts:9`
+- `apps/api/src/modules/auth/support/services/auth-rate-limit.service.ts:20`
 
 현재 상태:
 

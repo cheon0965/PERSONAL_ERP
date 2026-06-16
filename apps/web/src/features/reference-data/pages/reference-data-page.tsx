@@ -1,0 +1,145 @@
+'use client';
+
+import { Stack } from '@mui/material';
+import { useQuery } from '@tanstack/react-query';
+import { useAuthSession } from '@/shared/auth/auth-provider';
+import { membershipRoleLabelMap } from '@/shared/auth/auth-labels';
+import { useDomainHelp } from '@/shared/lib/use-domain-help';
+import { appLayout } from '@/shared/ui/layout-metrics';
+import { PageHeader } from '@/shared/ui/page-header';
+import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
+import {
+  getReferenceDataReadiness,
+  referenceDataReadinessQueryKey
+} from '../api/reference-data.api';
+import { ReferenceDataReadinessSection } from '../components/reference-data-readiness-section';
+import { ReferenceDataSectionNav } from '../components/reference-data-section-nav';
+
+export function ReferenceDataPage() {
+  const { user } = useAuthSession();
+  const readinessQuery = useQuery({
+    queryKey: referenceDataReadinessQueryKey,
+    queryFn: getReferenceDataReadiness
+  });
+
+  const currentWorkspace = user?.currentWorkspace ?? null;
+  const membershipRole = currentWorkspace?.membership.role ?? null;
+  const canManageReferenceData =
+    membershipRole === 'OWNER' || membershipRole === 'MANAGER';
+  const workspaceLabel = currentWorkspace
+    ? `${currentWorkspace.tenant.name} (${currentWorkspace.tenant.slug})`
+    : '-';
+  const ledgerLabel = currentWorkspace?.ledger?.name ?? '-';
+  const membershipRoleLabel = membershipRole
+    ? (membershipRoleLabelMap[membershipRole] ?? membershipRole)
+    : '-';
+
+  useDomainHelp({
+    title: '기준 데이터 준비 상태 화면 도움말',
+    description:
+      '이 화면은 월 운영을 시작하기 전에 자금수단, 카테고리, 계정과목, 거래유형이 운영 가능한 상태인지 한 번에 점검하는 곳입니다. 막히는 화면이 있으면 먼저 부족한 준비 항목을 확인합니다.',
+    primaryEntity: '기준 데이터 준비 상태',
+    relatedEntities: ['자금수단', '거래 분류', '계정과목', '거래 유형'],
+    truthSource:
+      '준비 상태는 현재 사업장과 장부 기준으로 계산한 기준 데이터 요약을 따릅니다.',
+    supplementarySections: [
+      {
+        title: '현재 이용 기준',
+        description:
+          '기준 데이터 준비 상태는 로그인한 사용자의 현재 사업장과 장부 안에서만 판단됩니다.',
+        facts: [
+          {
+            label: '사업장',
+            value: currentWorkspace
+              ? `${currentWorkspace.tenant.name} (${currentWorkspace.tenant.slug})`
+              : '-'
+          },
+          {
+            label: '장부',
+            value: currentWorkspace?.ledger?.name ?? '-'
+          },
+          {
+            label: '권한',
+            value: membershipRoleLabel
+          }
+        ]
+      },
+      {
+        title: '작업 진행 순서',
+        description:
+          '준비 상태 탭에서는 부족한 기준을 먼저 찾고, 필요한 경우 관리 탭으로 넘어가 보완합니다.',
+        items: [
+          '준비 상태 요약에서 월 운영, 거래 입력, 업로드 행 등록에 영향을 주는 부족 항목을 확인합니다.',
+          '자금수단이나 카테고리가 부족하면 기준 데이터 관리 탭에서 추가합니다.',
+          '계정과목과 거래유형은 시스템 제공 항목이므로 존재 여부와 활성 상태를 확인합니다.',
+          '준비 상태가 완료되면 월 운영 화면에서 운영 기간을 엽니다.'
+        ]
+      },
+      {
+        title: '이어지는 화면',
+        links: [
+          {
+            title: '자금수단',
+            description:
+              '통장, 카드, 현금 계정과 기초 등록 상태를 먼저 정리합니다.',
+            href: '/reference-data/funding-accounts',
+            actionLabel: '자금수단 보기'
+          },
+          {
+            title: '카테고리',
+            description:
+              '수입·지출 분류가 거래 입력과 반복 규칙에서 바로 선택되도록 정리합니다.',
+            href: '/reference-data/categories',
+            actionLabel: '카테고리 보기'
+          },
+          {
+            title: '월 운영 시작',
+            description:
+              '기준 데이터 준비가 끝나면 운영 월을 열고 첫 월 기초 잔액을 입력합니다.',
+            href: '/periods/open',
+            actionLabel: '월 운영 시작 보기'
+          }
+        ]
+      }
+    ],
+    readModelNote:
+      '이 화면은 운영 전 점검용 개요 탭입니다. 실제 자금수단/카테고리 편집과 참조 기준값 확인은 같은 영역의 관리 탭에서 수행합니다.'
+  });
+
+  return (
+    <Stack spacing={appLayout.pageGap}>
+      <PageHeader
+        eyebrow="기준 데이터"
+        title="기준 데이터 준비 상태"
+        description="월 운영 전 준비 상태를 먼저 점검하고, 직접 관리가 필요한 항목만 다음 탭에서 정리합니다."
+        badges={[
+          {
+            label: canManageReferenceData ? '관리 가능' : '조회 전용',
+            color: canManageReferenceData ? 'primary' : 'default'
+          }
+        ]}
+        metadata={[
+          { label: '사업장', value: workspaceLabel },
+          { label: '장부', value: ledgerLabel },
+          { label: '권한', value: membershipRoleLabel }
+        ]}
+        primaryActionLabel="자금수단"
+        primaryActionHref="/reference-data/funding-accounts"
+      />
+
+      <ReferenceDataSectionNav />
+
+      {readinessQuery.error ? (
+        <QueryErrorAlert
+          title="기준 데이터 준비 상태를 불러오지 못했습니다."
+          error={readinessQuery.error}
+        />
+      ) : null}
+
+      <ReferenceDataReadinessSection
+        readiness={readinessQuery.data}
+        canManageReferenceData={canManageReferenceData}
+      />
+    </Stack>
+  );
+}

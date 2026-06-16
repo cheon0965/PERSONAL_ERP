@@ -1,4 +1,4 @@
-import { InsurancePoliciesPage } from '@/features/insurance-policies/insurance-policies-page';
+import { InsurancePoliciesPage } from '@/features/insurance-policies/pages/insurance-policies-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

@@ -1,4 +1,4 @@
-import type { AccountingPeriodRecord } from '../../accounting-period.records';
+import type { AccountingPeriodRecord } from '../models/accounting-period-record';
 
 export type AccountingPeriodWorkspaceScope = {
   tenantId: string;

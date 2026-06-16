@@ -6,7 +6,7 @@ import type {
 } from '@personal-erp/contracts';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
-import { NavigationService } from './navigation.service';
+import { NavigationService } from './services/navigation.service';
 
 @ApiTags('navigation')
 @ApiBearerAuth()

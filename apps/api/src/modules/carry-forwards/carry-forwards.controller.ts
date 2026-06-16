@@ -23,11 +23,11 @@ import {
   logWorkspaceActionDenied,
   logWorkspaceActionSucceeded
 } from '../../common/infrastructure/operational/workspace-action.audit';
-import { CancelCarryForwardUseCase } from './cancel-carry-forward.use-case';
-import { CarryForwardsService } from './carry-forwards.service';
+import { CancelCarryForwardUseCase } from './application/use-cases/cancel-carry-forward.use-case';
+import { CarryForwardsService } from './infrastructure/services/carry-forwards.service';
 import { CancelCarryForwardRequestDto } from './dto/cancel-carry-forward.dto';
 import { GenerateCarryForwardRequestDto } from './dto/generate-carry-forward.dto';
-import { GenerateCarryForwardUseCase } from './generate-carry-forward.use-case';
+import { GenerateCarryForwardUseCase } from './application/use-cases/generate-carry-forward.use-case';
 
 @ApiTags('carry-forwards')
 @ApiBearerAuth()

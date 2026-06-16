@@ -1,0 +1,537 @@
+import {
+  BadRequestException,
+  ConflictException,
+  InternalServerErrorException,
+  Injectable,
+  NotFoundException
+} from '@nestjs/common';
+import type { CollectImportedRowRequest } from '@personal-erp/contracts';
+import {
+  CollectedTransactionStatus,
+  LiabilityRepaymentScheduleStatus,
+  PlanItemStatus,
+  Prisma
+} from '@prisma/client';
+import { fromPrismaMoneyWon } from '../../../../common/money/prisma-money';
+import { readCollectingAccountingPeriodStatuses } from '../../../accounting-periods/public';
+import { mapCollectedTransactionTypeToLedgerTransactionCode } from '../../../collected-transactions/public';
+import {
+  type AbsorbImportedRowIntoCollectedTransactionRecordInput,
+  type CreateCollectedTransactionRecordInput,
+  ImportedRowCollectionPort,
+  type ImportedRowCollectionWorkspaceScope,
+  type PrismaClientLike
+} from '../ports/imported-row-collection.port';
+import { assertImportedRowCanBeCollected } from '../policies/imported-row-collection.normalization.policy';
+import { resolveMatchedPlanItemCandidate } from '../../domain/imported-row-collection-plan-item.policy';
+import { planItemMatchDateToleranceDays } from '../../domain/imported-row-plan-item-match.policy';
+import {
+  collectableImportedRowSelect,
+  collectingPeriodSelect,
+  createdCollectedTransactionSelect,
+  type CollectableImportedRow,
+  type CollectingPeriodRecord,
+  type CreatedCollectedTransactionRecord,
+  type PlanItemCollectionCandidate
+} from '../models/imported-row-collection.types';
+
+@Injectable()
+export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
+  async readCollectableImportedRow(
+    client: PrismaClientLike,
+    workspace: ImportedRowCollectionWorkspaceScope,
+    importBatchId: string,
+    importedRowId: string
+  ): Promise<CollectableImportedRow> {
+    const row = await client.importedRow.findFirst({
+      where: {
+        id: importedRowId,
+        batchId: importBatchId,
+        batch: {
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId
+        }
+      },
+      select: collectableImportedRowSelect
+    });
+
+    assertImportedRowCanBeCollected(row);
+    return row;
+  }
+
+  async readCurrentCollectingPeriod(
+    tx: PrismaClientLike,
+    workspace: ImportedRowCollectionWorkspaceScope,
+    periodId: string
+  ): Promise<CollectingPeriodRecord> {
+    const currentCollectingPeriod = await tx.accountingPeriod.findFirst({
+      where: {
+        id: periodId,
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId,
+        status: {
+          in: [...readCollectingAccountingPeriodStatuses()]
+        }
+      },
+      select: collectingPeriodSelect
+    });
+
+    if (!currentCollectingPeriod) {
+      throw new BadRequestException(
+        '현재 Ledger에 열린 운영 기간이 없어 수집 거래를 등록할 수 없습니다.'
+      );
+    }
+
+    return currentCollectingPeriod;
+  }
+
+  async readFundingAccount(
+    tx: PrismaClientLike,
+    workspace: ImportedRowCollectionWorkspaceScope,
+    fundingAccountId: string
+  ): Promise<{ id: string; name: string; type: 'BANK' | 'CASH' | 'CARD' }> {
+    const fundingAccount = await tx.account.findFirst({
+      where: {
+        id: fundingAccountId,
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId
+      },
+      select: {
+        id: true,
+        name: true,
+        type: true
+      }
+    });
+
+    if (!fundingAccount) {
+      throw new NotFoundException('Funding account not found');
+    }
+
+    return fundingAccount;
+  }
+
+  async readLedgerTransactionTypeId(
+    tx: PrismaClientLike,
+    workspace: ImportedRowCollectionWorkspaceScope,
+    type: CollectImportedRowRequest['type']
+  ): Promise<string> {
+    const ledgerTransactionType = await tx.ledgerTransactionType.findFirst({
+      where: {
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId,
+        code: mapCollectedTransactionTypeToLedgerTransactionCode(type),
+        isActive: true
+      },
+      select: {
+        id: true
+      }
+    });
+
+    if (!ledgerTransactionType) {
+      throw new InternalServerErrorException(
+        '현재 Ledger에 수집 거래용 기본 거래유형 마스터가 준비되어 있지 않습니다.'
+      );
+    }
+
+    return ledgerTransactionType.id;
+  }
+
+  private async readDraftPlanItemCandidates(
+    tx: PrismaClientLike,
+    workspace: ImportedRowCollectionWorkspaceScope,
+    input: PlanItemCandidateQueryInput
+  ): Promise<PlanItemCollectionCandidate[]> {
+    const dateWindow = buildPlanItemMatchDateWindow(input.occurredOn);
+    const records = await tx.planItem.findMany({
+      where: {
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId,
+        periodId: input.periodId,
+        status: PlanItemStatus.DRAFT,
+        plannedAmount: input.amount,
+        plannedDate: {
+          gte: dateWindow.start,
+          lt: dateWindow.end
+        },
+        fundingAccountId: input.fundingAccountId,
+        ledgerTransactionTypeId: input.ledgerTransactionTypeId,
+        ...(input.categoryId == null ? {} : { categoryId: input.categoryId }),
+        matchedCollectedTransaction: {
+          is: null
+        }
+      },
+      select: {
+        id: true,
+        title: true,
+        plannedAmount: true,
+        plannedDate: true,
+        fundingAccountId: true,
+        ledgerTransactionTypeId: true,
+        categoryId: true
+      }
+    });
+
+    return records.map((record) => ({
+      ...record,
+      plannedAmount: fromPrismaMoneyWon(record.plannedAmount),
+      existingCollectedTransactionId: null
+    }));
+  }
+
+  private async readRecurringCollectedTransactionCandidates(
+    tx: PrismaClientLike,
+    workspace: ImportedRowCollectionWorkspaceScope,
+    input: PlanItemCandidateQueryInput
+  ): Promise<PlanItemCollectionCandidate[]> {
+    const dateWindow = buildPlanItemMatchDateWindow(input.occurredOn);
+    const records = await tx.collectedTransaction.findMany({
+      where: {
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId,
+        periodId: input.periodId,
+        importBatchId: null,
+        importedRowId: null,
+        amount: input.amount,
+        occurredOn: {
+          gte: dateWindow.start,
+          lt: dateWindow.end
+        },
+        fundingAccountId: input.fundingAccountId,
+        ledgerTransactionTypeId: input.ledgerTransactionTypeId,
+        ...(input.categoryId == null ? {} : { categoryId: input.categoryId }),
+        matchedPlanItemId: {
+          not: null
+        },
+        status: {
+          in: [
+            CollectedTransactionStatus.COLLECTED,
+            CollectedTransactionStatus.REVIEWED,
+            CollectedTransactionStatus.READY_TO_POST
+          ]
+        }
+      },
+      select: {
+        id: true,
+        occurredOn: true,
+        amount: true,
+        fundingAccountId: true,
+        ledgerTransactionTypeId: true,
+        categoryId: true,
+        matchedPlanItem: {
+          select: {
+            id: true,
+            title: true
+          }
+        }
+      }
+    });
+
+    return records.flatMap((record) =>
+      record.matchedPlanItem
+        ? [
+            {
+              id: record.matchedPlanItem.id,
+              title: record.matchedPlanItem.title,
+              plannedAmount: fromPrismaMoneyWon(record.amount),
+              plannedDate: record.occurredOn,
+              fundingAccountId: record.fundingAccountId,
+              ledgerTransactionTypeId: record.ledgerTransactionTypeId,
+              categoryId: record.categoryId,
+              existingCollectedTransactionId: record.id
+            }
+          ]
+        : []
+    );
+  }
+
+  private async readPlanItemCollectionCandidates(
+    tx: PrismaClientLike,
+    workspace: ImportedRowCollectionWorkspaceScope,
+    input: PlanItemCandidateQueryInput
+  ): Promise<PlanItemCollectionCandidate[]> {
+    const [draftCandidates, recurringCandidates] = await Promise.all([
+      this.readDraftPlanItemCandidates(tx, workspace, input),
+      this.readRecurringCollectedTransactionCandidates(tx, workspace, input)
+    ]);
+
+    return [...draftCandidates, ...recurringCandidates];
+  }
+
+  async readMatchedPlanItemCandidate(
+    tx: PrismaClientLike,
+    workspace: ImportedRowCollectionWorkspaceScope,
+    periodId: string,
+    amount: number,
+    occurredOn: Date,
+    fundingAccountId: string,
+    ledgerTransactionTypeId: string,
+    categoryId: string | null
+  ): Promise<PlanItemCollectionCandidate | null> {
+    const candidates = await this.readPlanItemCollectionCandidates(
+      tx,
+      workspace,
+      {
+        periodId,
+        amount,
+        occurredOn,
+        fundingAccountId,
+        ledgerTransactionTypeId,
+        categoryId
+      }
+    );
+
+    return resolveMatchedPlanItemCandidate({
+      candidates,
+      amount,
+      occurredOn,
+      fundingAccountId,
+      ledgerTransactionTypeId,
+      categoryId
+    });
+  }
+
+  async hasDuplicateSourceFingerprint(
+    tx: PrismaClientLike,
+    workspace: ImportedRowCollectionWorkspaceScope,
+    sourceFingerprint: string,
+    currentImportBatchId: string
+  ): Promise<boolean> {
+    const duplicateSourceFingerprints = await tx.collectedTransaction.findMany({
+      where: {
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId,
+        sourceFingerprint
+      },
+      select: {
+        id: true,
+        importBatchId: true
+      }
+    });
+
+    return duplicateSourceFingerprints.some(
+      (candidate) => candidate.importBatchId !== currentImportBatchId
+    );
+  }
+
+  async countPotentialDuplicateTransactions(
+    tx: PrismaClientLike,
+    workspace: ImportedRowCollectionWorkspaceScope,
+    occurredOn: Date,
+    amount: number,
+    ledgerTransactionTypeId: string,
+    currentImportBatchId: string,
+    excludedCollectedTransactionIds: string[] = []
+  ): Promise<number> {
+    const duplicates = await tx.collectedTransaction.findMany({
+      where: {
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId,
+        occurredOn,
+        amount,
+        ledgerTransactionTypeId,
+        ...(excludedCollectedTransactionIds.length > 0
+          ? {
+              id: {
+                notIn: excludedCollectedTransactionIds
+              }
+            }
+          : {})
+      },
+      select: {
+        id: true,
+        importBatchId: true
+      }
+    });
+
+    return duplicates.filter(
+      (candidate) => candidate.importBatchId !== currentImportBatchId
+    ).length;
+  }
+
+  async createCollectedTransactionRecord(
+    input: CreateCollectedTransactionRecordInput
+  ): Promise<CreatedCollectedTransactionRecord> {
+    return input.tx.collectedTransaction.create({
+      data: {
+        tenantId: input.workspace.tenantId,
+        ledgerId: input.workspace.ledgerId,
+        periodId: input.periodId,
+        importBatchId: input.importBatchId,
+        importedRowId: input.importedRowId,
+        matchedPlanItemId: input.matchedPlanItemId,
+        ledgerTransactionTypeId: input.ledgerTransactionTypeId,
+        fundingAccountId: input.fundingAccountId,
+        categoryId: input.categoryId,
+        title: input.title,
+        occurredOn: input.occurredOn,
+        amount: input.amount,
+        status: input.status,
+        sourceFingerprint: input.sourceFingerprint,
+        memo: input.memo
+      },
+      select: createdCollectedTransactionSelect
+    });
+  }
+
+  async absorbImportedRowIntoCollectedTransactionRecord(
+    input: AbsorbImportedRowIntoCollectedTransactionRecordInput
+  ): Promise<CreatedCollectedTransactionRecord> {
+    const claimed = await input.tx.collectedTransaction.updateMany({
+      where: {
+        id: input.collectedTransactionId,
+        matchedPlanItemId: input.matchedPlanItemId,
+        importBatchId: null,
+        importedRowId: null,
+        status: {
+          in: [
+            CollectedTransactionStatus.COLLECTED,
+            CollectedTransactionStatus.REVIEWED,
+            CollectedTransactionStatus.READY_TO_POST
+          ]
+        }
+      },
+      data: {
+        periodId: input.periodId,
+        importBatchId: input.importBatchId,
+        importedRowId: input.importedRowId,
+        ledgerTransactionTypeId: input.ledgerTransactionTypeId,
+        fundingAccountId: input.fundingAccountId,
+        categoryId: input.categoryId,
+        title: input.title,
+        occurredOn: input.occurredOn,
+        amount: input.amount,
+        status: input.status,
+        sourceFingerprint: input.sourceFingerprint,
+        ...(input.memo !== undefined ? { memo: input.memo } : {})
+      }
+    });
+
+    if (claimed.count !== 1) {
+      const latest = await input.tx.collectedTransaction.findFirst({
+        where: {
+          id: input.collectedTransactionId
+        },
+        select: {
+          id: true,
+          importBatchId: true,
+          importedRowId: true,
+          matchedPlanItemId: true
+        }
+      });
+
+      if (!latest) {
+        throw new NotFoundException('수집 거래를 찾을 수 없습니다.');
+      }
+
+      if (
+        latest.importBatchId ||
+        latest.importedRowId ||
+        latest.matchedPlanItemId !== input.matchedPlanItemId
+      ) {
+        throw new ConflictException(
+          '이미 다른 업로드 행과 연결된 반복 수집 거래입니다. 다시 새로고침해 주세요.'
+        );
+      }
+
+      throw new ConflictException(
+        '반복 수집 거래 상태가 변경되어 업로드 행을 연결하지 못했습니다. 다시 시도해 주세요.'
+      );
+    }
+
+    const updated = await input.tx.collectedTransaction.findFirst({
+      where: {
+        id: input.collectedTransactionId
+      },
+      select: createdCollectedTransactionSelect
+    });
+
+    if (!updated) {
+      throw new NotFoundException('수집 거래를 찾을 수 없습니다.');
+    }
+
+    return updated;
+  }
+
+  async markPlanItemMatched(
+    tx: Prisma.TransactionClient,
+    matchedPlanItemId: string | null
+  ): Promise<void> {
+    if (!matchedPlanItemId) {
+      return;
+    }
+
+    await tx.planItem.update({
+      where: {
+        id: matchedPlanItemId
+      },
+      data: {
+        status: PlanItemStatus.MATCHED
+      }
+    });
+    await tx.liabilityRepaymentSchedule.updateMany({
+      where: {
+        linkedPlanItemId: matchedPlanItemId,
+        status: {
+          in: [
+            LiabilityRepaymentScheduleStatus.SCHEDULED,
+            LiabilityRepaymentScheduleStatus.PLANNED
+          ]
+        }
+      },
+      data: {
+        status: LiabilityRepaymentScheduleStatus.MATCHED
+      }
+    });
+  }
+
+  async readEffectiveCategory(
+    tx: PrismaClientLike,
+    workspace: ImportedRowCollectionWorkspaceScope,
+    categoryId: string | null
+  ): Promise<{ id: string; name: string } | null> {
+    if (!categoryId) {
+      return null;
+    }
+
+    const category = await tx.category.findFirst({
+      where: {
+        id: categoryId,
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId
+      },
+      select: {
+        id: true,
+        name: true
+      }
+    });
+
+    if (!category) {
+      throw new NotFoundException('Category not found');
+    }
+
+    return category;
+  }
+}
+
+type PlanItemCandidateQueryInput = {
+  periodId: string;
+  amount: number;
+  occurredOn: Date;
+  fundingAccountId: string;
+  ledgerTransactionTypeId: string;
+  categoryId: string | null;
+};
+
+function buildPlanItemMatchDateWindow(occurredOn: Date) {
+  const utcDay = Date.UTC(
+    occurredOn.getUTCFullYear(),
+    occurredOn.getUTCMonth(),
+    occurredOn.getUTCDate()
+  );
+  const dayMs = 24 * 60 * 60 * 1000;
+
+  return {
+    start: new Date(utcDay - planItemMatchDateToleranceDays * dayMs),
+    end: new Date(utcDay + (planItemMatchDateToleranceDays + 1) * dayMs)
+  };
+}

@@ -1,4 +1,4 @@
-import { FinancialStatementsPage } from '@/features/financial-statements/financial-statements-page';
+import { FinancialStatementsPage } from '@/features/financial-statements/pages/financial-statements-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

@@ -45,7 +45,7 @@ import {
   getAccountSubjects,
   getCategories,
   getFundingAccounts
-} from '@/features/reference-data/reference-data.api';
+} from '@/features/reference-data/api/reference-data.api';
 import { buildErrorFeedback } from '@/shared/api/fetch-json';
 import { webRuntime } from '@/shared/config/env';
 import { formatDate, formatWon } from '@/shared/lib/format';

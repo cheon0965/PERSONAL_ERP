@@ -1,3 +1,4 @@
+import { ApplicationService } from '../../../../common/application/application-service.decorator';
 import type {
   RecurringRuleItem,
   UpdateRecurringRuleRequest
@@ -18,6 +19,7 @@ type UpdateRecurringRuleCommand = UpdateRecurringRuleRequest & {
   ledgerId: string;
 };
 
+@ApplicationService()
 export class UpdateRecurringRuleUseCase {
   constructor(
     private readonly recurringRuleStore: RecurringRuleStorePort,

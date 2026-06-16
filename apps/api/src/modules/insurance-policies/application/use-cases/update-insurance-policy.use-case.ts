@@ -1,25 +1,22 @@
-// eslint-disable-next-line no-restricted-imports
-import { Inject, Injectable } from '@nestjs/common';
+import { ApplicationService } from '../../../../common/application/application-service.decorator';
+
 import type {
   AuthenticatedUser,
   InsurancePolicyItem,
   UpdateInsurancePolicyRequest
 } from '@personal-erp/contracts';
 import { requireCurrentWorkspace } from '../../../../common/auth/required-workspace.util';
-import { mapInsurancePolicyToItem } from '../../insurance-policies.mapper';
-import { InsurancePoliciesRepository } from '../../insurance-policies.repository';
+import { mapInsurancePolicyToItem } from '../mappers/insurance-policies.mapper';
 import {
   assertInsurancePolicyRecurringReferences,
   assertInsurancePolicyUnique,
   normalizeInsurancePolicyInput
-} from '../../insurance-policy.write-model';
+} from '../policies/insurance-policy.policy';
 import { InsurancePolicyWritePort } from '../ports/insurance-policy-write.port';
 
-@Injectable()
+@ApplicationService()
 export class UpdateInsurancePolicyUseCase {
   constructor(
-    private readonly insurancePoliciesRepository: InsurancePoliciesRepository,
-    @Inject(InsurancePolicyWritePort)
     private readonly insurancePolicyWritePort: InsurancePolicyWritePort
   ) {}
 
@@ -29,7 +26,7 @@ export class UpdateInsurancePolicyUseCase {
     input: UpdateInsurancePolicyRequest
   ): Promise<InsurancePolicyItem | null> {
     const workspace = requireCurrentWorkspace(user);
-    const existing = await this.insurancePoliciesRepository.findByIdInWorkspace(
+    const existing = await this.insurancePolicyWritePort.findByIdInWorkspace(
       insurancePolicyId,
       workspace.tenantId,
       workspace.ledgerId
@@ -41,7 +38,7 @@ export class UpdateInsurancePolicyUseCase {
 
     const normalizedInput = normalizeInsurancePolicyInput(input);
     const duplicate =
-      await this.insurancePoliciesRepository.findDuplicateInWorkspace(
+      await this.insurancePolicyWritePort.findDuplicateInWorkspace(
         workspace.tenantId,
         workspace.ledgerId,
         normalizedInput.provider,

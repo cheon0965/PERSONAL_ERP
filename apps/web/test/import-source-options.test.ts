@@ -5,18 +5,21 @@ import test from 'node:test';
 
 test('import upload dialog exposes Woori bank HTML as a file upload option', () => {
   const sharedSource = readFileSync(
-    path.resolve(process.cwd(), 'src/features/imports/imports.shared.ts'),
+    path.resolve(process.cwd(), 'src/features/imports/model/imports.shared.ts'),
     'utf8'
   );
   const dialogSource = readFileSync(
     path.resolve(
       process.cwd(),
-      'src/features/imports/import-upload-dialog.tsx'
+      'src/features/imports/components/import-upload-dialog.tsx'
     ),
     'utf8'
   );
   const pageHookSource = readFileSync(
-    path.resolve(process.cwd(), 'src/features/imports/use-imports-page.ts'),
+    path.resolve(
+      process.cwd(),
+      'src/features/imports/hooks/use-imports-page.ts'
+    ),
     'utf8'
   );
 

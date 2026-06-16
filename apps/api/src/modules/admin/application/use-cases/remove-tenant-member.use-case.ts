@@ -1,53 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { ApplicationService } from '../../../../common/application/application-service.decorator';
+import type { RequestAuditContext } from '../../../../common/application/models/request-audit-context';
 import type { RequiredWorkspaceContext } from '../../../../common/auth/required-workspace.util';
-import { WorkspaceAuditEventsService } from '../../../../common/infrastructure/operational/workspace-audit-events.service';
-import type { RequestWithContext } from '../../../../common/infrastructure/operational/request-context';
-import { PrismaService } from '../../../../common/prisma/prisma.service';
-import { AdminMemberCommandSupportService } from '../../admin-member-command.support';
+import { AdminMemberCommandPort } from '../ports/admin-member-command.port';
 
-@Injectable()
+@ApplicationService()
 export class RemoveTenantMemberUseCase {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly auditEvents: WorkspaceAuditEventsService,
-    private readonly commandSupport: AdminMemberCommandSupportService
-  ) {}
+  constructor(private readonly commands: AdminMemberCommandPort) {}
 
-  async execute(
+  execute(
     workspace: RequiredWorkspaceContext,
-    request: RequestWithContext,
+    request: RequestAuditContext,
     membershipId: string
   ): Promise<void> {
-    const membership = await this.commandSupport.findMembershipInWorkspace(
-      workspace,
-      membershipId
-    );
-
-    if (membership.role === 'OWNER') {
-      await this.commandSupport.assertAnotherActiveOwner(
-        workspace,
-        membership.id
-      );
-    }
-
-    await this.prisma.tenantMembership.update({
-      where: { id: membership.id },
-      data: { status: 'REMOVED' }
-    });
-
-    await this.auditEvents.record({
-      workspace,
-      request,
-      eventCategory: 'admin_member',
-      eventName: 'admin.member_removed',
-      action: 'admin_member.remove',
-      resourceType: 'tenant_membership',
-      resourceId: membership.id,
-      result: 'SUCCESS',
-      metadata: {
-        previousStatus: membership.status,
-        nextStatus: 'REMOVED'
-      }
-    });
+    return this.commands.remove(workspace, request, membershipId);
   }
 }

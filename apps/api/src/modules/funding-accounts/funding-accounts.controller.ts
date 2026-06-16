@@ -27,7 +27,7 @@ import {
   logWorkspaceActionDenied,
   logWorkspaceActionSucceeded
 } from '../../common/infrastructure/operational/workspace-action.audit';
-import { FundingAccountsService } from './funding-accounts.service';
+import { FundingAccountsService } from './services/funding-accounts.service';
 import { CompleteFundingAccountBootstrapDto } from './dto/complete-funding-account-bootstrap.dto';
 import { CreateFundingAccountDto } from './dto/create-funding-account.dto';
 import { UpdateFundingAccountDto } from './dto/update-funding-account.dto';

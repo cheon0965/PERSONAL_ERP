@@ -263,8 +263,8 @@ Gmail API 구현 기준:
 - `apps/api/src/modules/auth/dto/resend-verification.dto.ts`
 - `apps/api/src/modules/auth/auth.controller.ts`
 - `apps/api/src/modules/auth/auth.service.ts`
-- `apps/api/src/modules/auth/auth-rate-limit.service.ts`
-- `apps/api/src/modules/auth/workspace-bootstrap.service.ts`
+- `apps/api/src/modules/auth/support/services/auth-rate-limit.service.ts`
+- `apps/api/src/modules/auth/infrastructure/services/workspace-bootstrap.service.ts`
 
 구현 순서:
 

@@ -11,7 +11,7 @@ import { SegmentedTabs } from '@/shared/ui/section-tabs';
 import {
   accountingPeriodsQueryKey,
   getAccountingPeriods
-} from '@/features/accounting-periods/accounting-periods.api';
+} from '@/features/accounting-periods/api/accounting-periods.api';
 import {
   FORECAST_TABS,
   ForecastContent,

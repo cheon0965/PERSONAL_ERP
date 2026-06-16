@@ -1,6 +1,11 @@
-import type { PrismaMoneyLike } from '../../../../common/money/prisma-money';
-// eslint-disable-next-line no-restricted-imports
-import type { CategoryKind, LedgerTransactionFlowKind } from '@prisma/client';
+type CategoryKind = 'INCOME' | 'EXPENSE' | 'TRANSFER';
+export type LedgerTransactionFlowKindValue =
+  | 'INCOME'
+  | 'EXPENSE'
+  | 'TRANSFER'
+  | 'ADJUSTMENT'
+  | 'OPENING_BALANCE'
+  | 'CARRY_FORWARD';
 
 export type PlanItemGenerationPeriod = {
   id: string;
@@ -18,7 +23,7 @@ export type PlanItemGenerationRecurringRule = {
   accountId: string;
   categoryId: string | null;
   title: string;
-  amountWon: PrismaMoneyLike;
+  amountWon: number;
   startDate: Date;
   endDate: Date | null;
   frequency: 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
@@ -28,14 +33,14 @@ export type PlanItemGenerationRecurringRule = {
   } | null;
   ledgerTransactionType: {
     id: string;
-    flowKind: LedgerTransactionFlowKind;
+    flowKind: LedgerTransactionFlowKindValue;
     isActive: boolean;
   } | null;
 };
 
 export type PlanItemGenerationTransactionType = {
   id: string;
-  flowKind: LedgerTransactionFlowKind;
+  flowKind: LedgerTransactionFlowKindValue;
 };
 
 export type GeneratedPlanItemDraft = {
@@ -57,7 +62,7 @@ export type PlanItemGenerationLiabilityRepaymentSchedule = {
   id: string;
   liabilityAgreementId: string;
   dueDate: Date;
-  totalAmount: PrismaMoneyLike;
+  totalAmount: number;
   agreement: {
     lenderName: string;
     productName: string;

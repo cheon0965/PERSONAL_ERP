@@ -39,7 +39,7 @@
 
 - [`apps/api/src/common/auth/jwt-auth.guard.ts`](../apps/api/src/common/auth/jwt-auth.guard.ts#L34)
 - [`apps/api/src/modules/auth/application/use-cases/login.use-case.ts`](../apps/api/src/modules/auth/application/use-cases/login.use-case.ts#L1)
-- [`apps/api/src/modules/auth/auth-session.service.ts`](../apps/api/src/modules/auth/auth-session.service.ts#L1)
+- [`apps/api/src/modules/auth/infrastructure/services/auth-session.service.ts`](../apps/api/src/modules/auth/infrastructure/services/auth-session.service.ts#L1)
 
 ### 3. 도메인 규칙 실패는 controller에서 HTTP 의미로 변환한다
 
@@ -85,7 +85,7 @@
 - [`apps/web/src/shared/api/fetch-json.ts`](../apps/web/src/shared/api/fetch-json.ts#L156)
 - [`apps/web/src/shared/ui/query-error-alert.tsx`](../apps/web/src/shared/ui/query-error-alert.tsx#L11)
 - [`apps/web/src/shared/ui/error-alert-behavior.tsx`](../apps/web/src/shared/ui/error-alert-behavior.tsx#L1)
-- [`apps/web/src/features/auth/auth.api.ts`](../apps/web/src/features/auth/auth.api.ts#L168)
+- [`apps/web/src/features/auth/api/auth.api.ts`](../apps/web/src/features/auth/api/auth.api.ts#L168)
 
 ### 2. 인증 실패는 재시도를 줄이고 빠르게 세션 정리한다
 

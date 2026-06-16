@@ -31,7 +31,7 @@ import { CreateVehicleMaintenanceLogDto } from './dto/create-vehicle-maintenance
 import { UpdateVehicleFuelLogDto } from './dto/update-vehicle-fuel-log.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import { UpdateVehicleMaintenanceLogDto } from './dto/update-vehicle-maintenance-log.dto';
-import { VehiclesService } from './vehicles.service';
+import { VehiclesService } from './services/vehicles.service';
 
 @ApiTags('vehicles')
 @ApiBearerAuth()

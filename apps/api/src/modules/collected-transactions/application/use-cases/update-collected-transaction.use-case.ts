@@ -1,5 +1,6 @@
-// eslint-disable-next-line no-restricted-imports
-import { BadRequestException } from '@nestjs/common';
+import { ApplicationService } from '../../../../common/application/application-service.decorator';
+import { validationError } from '../../../../common/application/errors/app-error';
+
 import type {
   CollectedTransactionItem,
   UpdateCollectedTransactionRequest
@@ -8,7 +9,7 @@ import {
   MissingOwnedCollectedTransactionReferenceError,
   resolveMissingOwnedCollectedTransactionReference
 } from '../../domain/collected-transaction-policy';
-import { assertCollectedTransactionCanBeUpdated } from '../../collected-transaction-transition.policy';
+import { assertCollectedTransactionCanBeUpdated } from '../../domain/collected-transaction-transition.policy';
 import { mapCollectedTransactionToItem } from '../collected-transaction-item.mapper';
 import type { ReferenceOwnershipPort } from '../ports/reference-ownership.port';
 import type { CollectedTransactionStorePort } from '../ports/collected-transaction-store.port';
@@ -20,6 +21,7 @@ type UpdateCollectedTransactionCommand = UpdateCollectedTransactionRequest & {
   periodId: string;
 };
 
+@ApplicationService()
 export class UpdateCollectedTransactionUseCase {
   constructor(
     private readonly collectedTransactionStore: CollectedTransactionStorePort,
@@ -42,7 +44,7 @@ export class UpdateCollectedTransactionUseCase {
     }
 
     if (command.type === 'REVERSAL' && existing.origin !== 'IMPORT') {
-      throw new BadRequestException(
+      throw validationError(
         '승인취소 거래는 업로드 배치에서 생성된 거래에만 적용할 수 있습니다.'
       );
     }

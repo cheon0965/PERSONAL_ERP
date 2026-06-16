@@ -1,4 +1,4 @@
-import { OperationsExceptionsPage } from '@/features/operations/operations-exceptions-page';
+import { OperationsExceptionsPage } from '@/features/operations/pages/operations-exceptions-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

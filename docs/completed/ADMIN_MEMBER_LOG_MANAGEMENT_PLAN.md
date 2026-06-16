@@ -312,9 +312,9 @@ model WorkspaceAuditEvent {
 - `apps/api/src/modules/admin/admin-members.controller.ts`
 - `apps/api/src/modules/admin/admin-members.service.ts`
 - `apps/api/src/modules/admin/admin-audit-events.controller.ts`
-- `apps/api/src/modules/admin/admin-audit-events.service.ts`
+- `apps/api/src/modules/admin/infrastructure/services/admin-audit-events.service.ts`
 - `apps/api/src/modules/admin/dto/*`
-- `apps/api/src/modules/admin/admin.mapper.ts`
+- `apps/api/src/modules/admin/application/mappers/admin.mapper.ts`
 
 엔드포인트 후보:
 

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { ImportBatchItem } from '@personal-erp/contracts';
-import { buildBalanceDiscrepancyBulkCollectConfirmationMessage } from '../src/features/imports/import-balance-discrepancy-confirmation';
+import { buildBalanceDiscrepancyBulkCollectConfirmationMessage } from '../src/features/imports/model/import-balance-discrepancy-confirmation';
 
 test('bulk collect confirmation explains the first-dated balance discrepancy', () => {
   const message = buildBalanceDiscrepancyBulkCollectConfirmationMessage({

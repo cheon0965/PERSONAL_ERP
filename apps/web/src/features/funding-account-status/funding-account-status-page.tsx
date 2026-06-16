@@ -7,7 +7,7 @@ import type { FundingAccountOverviewBasis } from '@personal-erp/contracts';
 import {
   accountingPeriodsQueryKey,
   getAccountingPeriods
-} from '@/features/accounting-periods/accounting-periods.api';
+} from '@/features/accounting-periods/api/accounting-periods.api';
 import { useDomainHelp } from '@/shared/lib/use-domain-help';
 import { appLayout } from '@/shared/ui/layout-metrics';
 import { PageHeader } from '@/shared/ui/page-header';

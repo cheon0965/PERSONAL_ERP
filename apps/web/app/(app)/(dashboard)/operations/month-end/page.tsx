@@ -1,4 +1,4 @@
-import { OperationsMonthEndPage } from '@/features/operations/operations-month-end-page';
+import { OperationsMonthEndPage } from '@/features/operations/pages/operations-month-end-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

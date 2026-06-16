@@ -15,7 +15,7 @@ import {
   logoutSession,
   refreshSession,
   switchCurrentWorkspace
-} from '@/features/auth/auth.api';
+} from '@/features/auth/api/auth.api';
 import {
   getStoredAccessToken,
   clearStoredAccessToken,

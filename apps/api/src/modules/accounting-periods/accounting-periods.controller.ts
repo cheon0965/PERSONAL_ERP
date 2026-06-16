@@ -22,13 +22,13 @@ import {
   logWorkspaceActionDenied,
   logWorkspaceActionSucceeded
 } from '../../common/infrastructure/operational/workspace-action.audit';
-import { CloseAccountingPeriodUseCase } from './close-accounting-period.use-case';
-import { AccountingPeriodsService } from './accounting-periods.service';
+import { CloseAccountingPeriodUseCase } from './application/use-cases/close-accounting-period.use-case';
+import { AccountingPeriodsService } from './infrastructure/services/accounting-periods.service';
 import { CloseAccountingPeriodRequestDto } from './dto/close-accounting-period.dto';
 import { OpenAccountingPeriodRequestDto } from './dto/open-accounting-period.dto';
 import { ReopenAccountingPeriodRequestDto } from './dto/reopen-accounting-period.dto';
-import { OpenAccountingPeriodUseCase } from './open-accounting-period.use-case';
-import { ReopenAccountingPeriodUseCase } from './reopen-accounting-period.use-case';
+import { OpenAccountingPeriodUseCase } from './application/use-cases/open-accounting-period.use-case';
+import { ReopenAccountingPeriodUseCase } from './application/use-cases/reopen-accounting-period.use-case';
 
 @ApiTags('accounting-periods')
 @ApiBearerAuth()

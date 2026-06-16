@@ -1,4 +1,4 @@
-import { AccountSettingsPage } from '@/features/settings/account-settings-page';
+import { AccountSettingsPage } from '@/features/settings/pages/account-settings-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

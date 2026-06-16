@@ -30,7 +30,7 @@ import {
 } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { getApiEnv, type ApiEnv } from '../src/config/api-env';
-import { buildSourceFingerprint } from '../src/modules/import-batches/import-batch.policy';
+import { buildSourceFingerprint } from '../src/modules/import-batches/public';
 import { normalizeCaseInsensitiveText } from '../src/common/utils/normalize-unique-key.util';
 import { resetDemoUserAndOwnedWorkspaces } from './demo-reset';
 import { ensurePhase1BackboneForUser } from './phase1-backbone';

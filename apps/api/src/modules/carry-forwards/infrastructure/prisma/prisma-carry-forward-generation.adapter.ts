@@ -6,6 +6,7 @@ import {
   OpeningBalanceSourceKind
 } from '@prisma/client';
 import type { PrismaMoneyLike } from '../../../../common/money/prisma-money';
+import { fromPrismaMoneyWon } from '../../../../common/money/prisma-money';
 import { OperationalAuditPublisher } from '../../../../common/infrastructure/operational/operational-audit-publisher.service';
 import { publishPeriodStatusHistoryAudit } from '../../../../common/infrastructure/operational/period-status-history-audit';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
@@ -112,7 +113,15 @@ export class PrismaCarryForwardGenerationAdapter implements CarryForwardGenerati
 
     return {
       sourcePeriod,
-      sourceClosingSnapshot,
+      sourceClosingSnapshot: sourceClosingSnapshot
+        ? {
+            ...sourceClosingSnapshot,
+            lines: sourceClosingSnapshot.lines.map((line) => ({
+              ...line,
+              balanceAmount: fromPrismaMoneyWon(line.balanceAmount)
+            }))
+          }
+        : null,
       existingRecord,
       existingTargetPeriod
     };

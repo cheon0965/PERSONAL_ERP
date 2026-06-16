@@ -5,8 +5,8 @@ import { UpdateInsurancePolicyUseCase } from './application/use-cases/update-ins
 import { InsurancePolicyWritePort } from './application/ports/insurance-policy-write.port';
 import { PrismaInsurancePolicyWriteAdapter } from './infrastructure/prisma/prisma-insurance-policy-write.adapter';
 import { InsurancePoliciesController } from './insurance-policies.controller';
-import { InsurancePolicyQueryService } from './insurance-policy-query.service';
-import { InsurancePoliciesRepository } from './insurance-policies.repository';
+import { InsurancePolicyQueryService } from './infrastructure/services/insurance-policy-query.service';
+import { InsurancePoliciesRepository } from './infrastructure/prisma/insurance-policies.repository';
 
 @Module({
   controllers: [InsurancePoliciesController],

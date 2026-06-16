@@ -48,7 +48,7 @@ import {
   readFundingAccountStatusColor,
   readFundingAccountStatusLabel,
   readFundingAccountTypeLabel
-} from '@/features/reference-data/reference-data.shared';
+} from '@/features/reference-data/model/reference-data.shared';
 
 type FundingAccountStatusControlsProps = {
   periods: AccountingPeriodItem[];

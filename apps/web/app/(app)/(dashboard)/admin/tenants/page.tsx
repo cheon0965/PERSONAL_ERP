@@ -1,4 +1,4 @@
-import { AdminTenantsPage } from '@/features/admin/admin-tenants-page';
+import { AdminTenantsPage } from '@/features/admin/pages/admin-tenants-page';
 import { createPageMetadata } from '@/shared/seo/page-metadata';
 
 export const metadata = createPageMetadata({

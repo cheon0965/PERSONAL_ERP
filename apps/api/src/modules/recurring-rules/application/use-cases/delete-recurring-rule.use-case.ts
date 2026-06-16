@@ -1,6 +1,8 @@
+import { ApplicationService } from '../../../../common/application/application-service.decorator';
 import { InsuranceManagedRecurringRuleError } from '../../domain/recurring-rule-policy';
 import type { RecurringRuleStorePort } from '../ports/recurring-rule-store.port';
 
+@ApplicationService()
 export class DeleteRecurringRuleUseCase {
   constructor(private readonly recurringRuleStore: RecurringRuleStorePort) {}
 
