@@ -13,8 +13,8 @@
    저장소 진입점, 빠른 시작, 주요 명령, 상위 문서 링크를 확인합니다.
 2. `PORTFOLIO_PROJECT_BRIEF.md`
    포트폴리오 관점에서 프로젝트 목적, 구현 범위, 도메인, 아키텍처, 검증 체계를 압축해서 확인합니다.
-3. `PORTFOLIO_PPT_DRAFT.md`
-   저장소와 분리된 포트폴리오 PPT 제작을 위한 슬라이드 구성, 화면 캡처 계획, 화면별 설명, 발표 메시지를 확인합니다.
+3. `portfolio-ppt/README.md`
+   제출용 PPT 산출물, 발표 보조 노트, 화면 캡처 교체 기준을 확인합니다.
 4. `CURRENT_CAPABILITIES.md`
    현재 코드베이스에 실제로 구현된 기능과 운영 지원 범위를 한 번에 확인합니다.
 5. `DEMO_GUIDE.md`
@@ -29,6 +29,8 @@
 ### 저장소 루트 문서
 
 - `../README.md`: 저장소 첫 진입점, 빠른 시작, 현재 구현 범위 요약
+- `../LICENSE`: 프로젝트 자체 소스코드와 문서의 MIT 라이선스
+- `../THIRD_PARTY_NOTICES.md`: 서드파티 의존성, Docker 이미지, 배포 시 확인할 라이선스 고지
 - `../ENVIRONMENT_SETUP.md`: 로컬/운영 env와 secret-dir 구성 기준
 - `../CONTRIBUTING.md`: PR, 검증, 문서 갱신 기준
 - `../PORTFOLIO_ARCHITECTURE_GUIDE.md`: 포트폴리오 관점의 구조 판단과 아키텍처 설명
@@ -36,7 +38,8 @@
 ### 제품 현재 상태
 
 - `PORTFOLIO_PROJECT_BRIEF.md`: 포트폴리오용 프로젝트 요약, 핵심 도메인, 아키텍처 판단, 검증 증거 압축본
-- `PORTFOLIO_PPT_DRAFT.md`: 별도 포트폴리오 PPT 제작 설계서, 슬라이드별 메시지, 화면 캡처 계획, 발표/제출용 구성 기준
+- `portfolio-ppt/README.md`: 제출용 PPT 산출물, 발표자 노트, 화면 캡처 교체 기준
+- `PORTFOLIO_PPT_DRAFT.md`: 별도 포트폴리오 PPT 제작 설계서와 슬라이드 구성 이력
 - `CURRENT_CAPABILITIES.md`: 현재 구현된 화면, API 모듈, 운영 지원 기능, 검증 가드 요약
 - `DEMO_GUIDE.md`: 데모 계정 기준 월 운영 한 사이클과 추천 메뉴 진행 순서
 - `ACCOUNTING_MODEL_BOUNDARY.md`: 레거시 `Transaction` 제거 이후 회계 경계와 현재 기준 원장
