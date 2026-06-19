@@ -74,8 +74,8 @@ LLM이 코드를 제안하더라도 최종 기준은 테스트, 문서 정합성
 ## 발표 전 확인 체크리스트
 
 - PPT 재생성 후 슬라이드 수가 33장인지 확인합니다.
-- 스크린샷 박스에 최신 화면 캡처를 넣습니다.
-- `docs/VALIDATION_NOTES.md`의 최신 검증 수치와 PPT 30장 검증 수치가 맞는지 확인합니다.
+- 스크린샷 구간의 화면 캡처가 최신 화면과 맞는지 확인합니다.
+- `docs/VALIDATION_NOTES.md`의 최신 검증 수치와 PPT 검증 슬라이드의 수치가 맞는지 확인합니다.
 - 발표 직전 `npm run docs:check`, `npm run test`, `npm run audit:runtime` 실행 결과를 최신화합니다.
 - Docker가 필요한 Prisma/E2E/보안 검증은 실행 가능 환경과 별도 표시 여부를 확인합니다.
 

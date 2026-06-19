@@ -1,4 +1,45 @@
 {
   "version": 1,
-  "entries": []
+  "entries": [
+    {
+      "id": "@nestjs/core:@nestjs/core",
+      "package": "@nestjs/core",
+      "severity": "high",
+      "trackedAt": "2026-06-19",
+      "expiresOn": "2026-07-19",
+      "reason": "Transitive multer <2.2.0 advisory through @nestjs/platform-express. Latest @nestjs/platform-express still pins multer 2.1.1; import batch file upload now limits file count, field count, part count, and field nesting depth while waiting for an upstream Nest release."
+    },
+    {
+      "id": "@nestjs/platform-express:@nestjs/platform-express",
+      "package": "@nestjs/platform-express",
+      "severity": "high",
+      "trackedAt": "2026-06-19",
+      "expiresOn": "2026-07-19",
+      "reason": "Transitive multer <2.2.0 advisory through @nestjs/platform-express. Latest @nestjs/platform-express still pins multer 2.1.1; import batch file upload now limits file count, field count, part count, and field nesting depth while waiting for an upstream Nest release."
+    },
+    {
+      "id": "@nestjs/schedule:@nestjs/schedule",
+      "package": "@nestjs/schedule",
+      "severity": "high",
+      "trackedAt": "2026-06-19",
+      "expiresOn": "2026-07-19",
+      "reason": "Transitive multer <2.2.0 advisory is reported through the Nest dependency graph. Latest @nestjs/platform-express still pins multer 2.1.1; upload parsing is constrained while waiting for an upstream Nest release."
+    },
+    {
+      "id": "@nestjs/swagger:@nestjs/swagger",
+      "package": "@nestjs/swagger",
+      "severity": "high",
+      "trackedAt": "2026-06-19",
+      "expiresOn": "2026-07-19",
+      "reason": "Transitive multer <2.2.0 advisory is reported through the Nest dependency graph. Latest @nestjs/platform-express still pins multer 2.1.1; upload parsing is constrained while waiting for an upstream Nest release."
+    },
+    {
+      "id": "GHSA-72gw-mp4g-v24j",
+      "package": "multer",
+      "severity": "high",
+      "trackedAt": "2026-06-19",
+      "expiresOn": "2026-07-19",
+      "reason": "Direct advisory for multer <2.2.0. Latest @nestjs/platform-express still pins multer 2.1.1; import batch file upload now limits file count, field count, part count, and field nesting depth while waiting for an upstream Nest release."
+    }
+  ]
 }

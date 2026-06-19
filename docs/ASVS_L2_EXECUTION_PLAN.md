@@ -40,7 +40,7 @@
 - refresh token 쿠키는 `__Host-refreshToken`, `Secure`, `HttpOnly`, `SameSite=Strict`, path `/` 기준으로 발급되고, 전환 기간 동안 legacy `refreshToken`도 읽고 삭제합니다.
 - refresh token 회전, 서버측 폐기, 재사용 감지, 로그아웃 엔드포인트가 도입되었습니다.
 - 로그인/refresh 엔드포인트에 rate limiting 기반 anti-automation 방어가 들어갔습니다.
-- 브라우저/API 경계에는 CORS allowlist, API/Web 보안 헤더, CSP, HSTS, `Cache-Control: no-store`, 브라우저 origin allowlist 방어가 들어갔지만 운영 HTTPS와 Swagger 노출 토글은 실제 배포 기준으로 다시 점검해야 합니다.
+- 브라우저/API 경계에는 CORS allowlist, API/Web 보안 헤더, CSP, HSTS, `Cache-Control: no-store`, 브라우저 origin allowlist 방어가 들어갔고, 운영 HTTPS와 Swagger 노출 토글은 공개 배포 기준 문서와 수동 스모크 체크에 포함합니다.
 - cookie 기반 인증 흐름은 allowlist 기반 origin 검증으로 1차 보호되지만, 범용 state-changing 폼이 늘어나면 별도 CSRF 전략을 다시 평가해야 합니다.
 - 보안 이벤트 로깅은 request-id 기준으로 남기기 시작했지만, 외부 감사 저장소나 장기 보관 정책은 아직 없습니다.
 - CI에는 `validate`, `e2e-smoke`, `security-regression`, `prisma-integration`, `audit-runtime`, `semgrep-ce`, `gitleaks`가 들어갔고, GitHub 첫 통과 증적과 required check 연결, disposable DB 기반 `prisma-integration` 통과까지 확인했습니다.
@@ -86,7 +86,7 @@
 
 ## 남은 운영 항목
 
-1. 운영 HTTPS, HSTS, `SWAGGER_ENABLED=false` 배포 리허설과 증적 정리
+1. 공개 배포 후 health/HSTS, `SWAGGER_ENABLED=false` 기본값, sitemap/Search Console 상태의 운영 증적 정리
 2. 외부 감사 저장소 또는 장기 보관 정책 초안 정리
 3. 운영 데이터 분류와 보존 기간 정책 구체화
 
