@@ -366,7 +366,7 @@ application 서비스는 NestJS 데코레이터 대신 프레임워크 독립 `A
 ### 잘 부합하는 이유
 
 - 웹, API, shared contract 경계가 명확합니다.
-- 핵심 쓰기 모델 두 개에만 선택적으로 더 엄격한 구조를 적용했습니다.
+- 핵심 쓰기 모델과 운영 핵심 모듈에는 선택적으로 더 엄격한 구조를 적용했습니다.
 - 대상 모듈의 모듈 간 import는 `public.ts` 진입점으로 고정해 공개 경계가 코드에서도 드러납니다.
 - `dashboard`, `forecast`는 read service, `read repository`, `projection` 네이밍으로 보고와 전망 컨텍스트 성격을 코드에서 설명할 수 있습니다.
 - 모든 API 응답에 `x-request-id`를 붙이고 `health/ready`를 제공해 최소 운영 신호도 설명할 수 있습니다.
@@ -397,7 +397,7 @@ application 서비스는 NestJS 데코레이터 대신 프레임워크 독립 `A
 
 - 이 프로젝트는 Next.js, NestJS, Prisma, MySQL 기반의 1인 사업자·소상공인용 월별 재무 운영 시스템입니다.
 - 기본 구조는 modular monolith이며, Web/API 계약은 `packages/contracts`로 통합했습니다.
-- 모든 모듈을 같은 방식으로 과하게 추상화하지 않고, 핵심 쓰기 모델인 `collected-transactions`와 `recurring-rules`에만 use case/port/adapter 경계를 도입했습니다.
+- 모든 모듈을 같은 방식으로 과하게 추상화하지 않고, `collected-transactions`, `recurring-rules`, `accounting-periods`, `import-batches`, `journal-entries` 같은 핵심 쓰기/운영 모듈에 use case/port/adapter 경계를 선택적으로 도입했습니다.
 - Dependency Injection은 외부 기술 경계에만 최소한으로 적용했고, 내부 헬퍼 함수와 변환 함수는 순수 함수로 유지했습니다.
 - 이 선택 덕분에 테스트 용이성과 설명력은 높이고, 1인 개발 복잡도는 통제할 수 있었습니다.
 

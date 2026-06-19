@@ -58,6 +58,15 @@ type UploadedImportFile = {
   buffer: Buffer;
 };
 
+const importBatchFileUploadLimits = {
+  fileSize: 10 * 1024 * 1024,
+  files: 1,
+  fieldSize: 1024,
+  fields: 8,
+  parts: 10,
+  fieldNestingDepth: 1
+};
+
 @ApiTags('import-batches')
 @ApiBearerAuth()
 @Controller('import-batches')
@@ -96,9 +105,7 @@ export class ImportBatchesController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
     FileInterceptor('file', {
-      limits: {
-        fileSize: 10 * 1024 * 1024
-      }
+      limits: importBatchFileUploadLimits
     })
   )
   async createFromFile(

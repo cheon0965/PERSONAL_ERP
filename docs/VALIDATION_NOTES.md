@@ -41,6 +41,16 @@
 - `npm run audit:runtime:full`은 allowlist 적용 없이 현재 런타임 advisory 전체를 다시 확인할 때 사용하는 follow-up 명령입니다.
 - 현재 기본 `npm run test`에서는 Prisma 통합 테스트가 안내 문구와 함께 skip됩니다.
 
+## 2026-06-19 런타임 Audit 후속 조치
+
+이번 보완 작업의 파일 조회와 수정은 UTF-8 기준으로 수행했습니다.
+
+- GitHub Actions `audit-runtime`에서 `@nestjs/platform-express -> multer@2.1.1` 경로의 high advisory가 새로 감지되었습니다.
+- 2026-06-19 기준 npm registry의 최신 `@nestjs/platform-express@11.1.27`도 `multer@2.1.1`을 직접 고정하고 있어, Nest 패키지 업데이트만으로는 `multer@2.2.0`으로 올릴 수 없습니다.
+- `npm audit fix --dry-run`은 이 high advisory를 닫기 위해 Nest 7 계열로 내리는 `--force` 경로를 제안하므로 적용하지 않습니다.
+- 실제 multipart 진입점인 `POST /import-batches/files`는 파일 1개, 일반 field 8개, 전체 part 10개, field size 1KB, field nesting depth 1로 제한했습니다.
+- `security/runtime-audit-allowlist.json`에는 해당 high finding 5개를 `2026-07-19` 만료로 등록했습니다. 만료 전 Nest upstream이 `multer@2.2.0` 이상으로 갱신되면 allowlist를 제거합니다.
+
 ## 2026-06-16 구조 재정리/문서 최신화 점검
 
 이번 문서 점검의 파일 조회와 수정은 UTF-8 기준으로 수행했습니다.
@@ -361,4 +371,4 @@
 
 현재 검증체계는 성공 경로 계약, 인증, DTO validation, 접근 범위 검증, readiness/request-id 같은 운영 신호, 핵심 쓰기 흐름, 대표 브라우저 사용자 흐름까지를 자동으로 막는 상태입니다.
 `npm run test:e2e`, `npm run test:prisma`는 빠른 기본 테스트와 분리된 대표 심화 검증으로 유지합니다.
-다음 보강 우선순위는 운영 HTTPS/HSTS/Swagger 토글 리허설과 외부 감사 저장소/장기 보관 정책 초안 정리입니다.
+다음 보강 우선순위는 공개 배포 후 health/HSTS/sitemap/Search Console 상태를 주기적으로 남기는 운영 증적 관리와 외부 감사 저장소/장기 보관 정책 초안 정리입니다.
