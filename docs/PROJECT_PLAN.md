@@ -63,7 +63,7 @@
 
 ## 다음 중기 우선순위
 
-1. 공개 배포 후 health, HSTS, sitemap/robots, Search Console 색인 상태를 주기적으로 확인하는 운영 증적 정리
+1. 공개 배포 기준 health, HSTS, sitemap/robots, Search Console 색인 상태를 주기적으로 확인하는 운영 증적 유지
 2. Gmail API 운영 secret 등록과 실제 수신 확인
 3. 외부 감사 저장소/장기 보관 정책 초안 정리
 4. 운영 데이터 분류, 백업, 보존 기간 정책 구체화

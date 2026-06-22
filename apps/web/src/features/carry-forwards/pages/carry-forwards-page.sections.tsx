@@ -349,7 +349,7 @@ export function CarryForwardsDetail({
 
       <SectionCard
         title="다음 월 오프닝 라인"
-        description="현재 구현에서는 이월 대상 계정의 잔액을 그대로 다음 월 기초 잔액 라인으로 생성합니다."
+        description="이월 대상 계정의 잠금 시점 잔액을 다음 월 기초 잔액 라인으로 확인합니다."
       >
         <Stack spacing={1}>
           {view.targetOpeningBalanceSnapshot.lines.length > 0 ? (

@@ -1,7 +1,7 @@
 # Docker Deployment
 
 이 문서는 현재 저장소 기준으로 Docker 이미지를 만들고, Docker Compose로 `MySQL + migration + API + Web`을 배포하는 순서를 설명한다.
-현재 공개 배포 기준일은 2026-05-07이며, `https://personalerp.theworkpc.com` 단일 HTTPS 도메인과 `/api` path 분리 구조를 기준으로 한다.
+최초 공개 배포 기준일은 2026-05-07이며, 최종 문서 점검 기준일은 2026-06-22이다. 현재 배포는 `https://personalerp.theworkpc.com` 단일 HTTPS 도메인과 `/api` path 분리 구조를 기준으로 한다.
 
 ## 먼저 알아둘 것
 
@@ -493,7 +493,7 @@ docker compose --env-file .deploy\compose.env -f docker-compose.prod.yml down
 
 주의: MySQL 데이터는 Docker 볼륨 `personal_erp_mysql_data`에 남는다. volume 삭제 명령은 운영 데이터 삭제로 이어질 수 있으므로 사용 전 반드시 백업한다.
 
-운영 전에는 MySQL 볼륨 백업 정책을 별도로 정한다.
+운영 중에는 MySQL 볼륨 백업 정책을 별도로 유지하고, 복구 리허설 결과를 운영 증적으로 남긴다.
 
 ## 13. 자주 나는 문제
 

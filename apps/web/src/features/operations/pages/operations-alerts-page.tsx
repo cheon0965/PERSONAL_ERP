@@ -142,7 +142,7 @@ export function OperationsAlertsPage() {
 
       <SectionCard
         title="파생 알림"
-        description="읽음/확인 처리는 다음 단계로 미루고, 1차에서는 근거 화면으로 이동하는 데 집중합니다."
+        description="각 알림의 근거 화면으로 이동해 원인 데이터를 먼저 확인합니다."
       >
         <Stack spacing={1.5}>
           {(alerts?.items ?? []).length === 0 ? (

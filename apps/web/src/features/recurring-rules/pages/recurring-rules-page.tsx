@@ -127,7 +127,7 @@ export function RecurringRulesPage() {
     relatedEntities: [
       '계획 항목',
       '거래 유형',
-      '입출금 계정',
+      '자금수단',
       '거래 분류',
       '수집 거래'
     ],

@@ -41,6 +41,42 @@
 - `npm run audit:runtime:full`은 allowlist 적용 없이 현재 런타임 advisory 전체를 다시 확인할 때 사용하는 follow-up 명령입니다.
 - 현재 기본 `npm run test`에서는 Prisma 통합 테스트가 안내 문구와 함께 skip됩니다.
 
+## 2026-06-22 최종 점검
+
+이번 최종 점검의 파일 조회와 수정은 UTF-8 기준으로 수행했습니다.
+
+- `qs` 런타임 advisory 후속 조치:
+  - `package.json` root `overrides`에 `qs@6.15.2`를 고정했습니다.
+  - `package-lock.json`의 `node_modules/qs`가 `6.15.0 -> 6.15.2`로 갱신되었습니다.
+  - `npm run audit:runtime`의 runtime advisory 총합은 `9 -> 8`로 줄었습니다.
+- `npm run check:quick`: 통과
+  - Prettier, 문서 명령/표면 정합성, 승격 API 모듈 구조, 금액 raw 연산 가드, lint, typecheck 확인
+  - Markdown `npm run` 참조 322개, Web routes 61개, API operations 136개 확인
+- `npm run test`: 통과
+  - Web 테스트 37개, pass 37
+  - API 테스트 365개, pass 359, skipped 6
+  - skipped 6개는 Docker 기반 `npm run test:prisma` 전용 실제 DB 통합 테스트입니다.
+- `npm run build`: 통과
+  - `@personal-erp/money` build, API Prisma client 생성/Nest build, Web Next.js production build 확인
+  - Web app route 63개 생성
+- `npm run audit:runtime`: 통과
+  - high gate passed, `critical 0`, `high 5`, `total 8`
+  - 남은 high 5건은 `@nestjs/platform-express -> multer <2.2.0` 경로로 `security/runtime-audit-allowlist.json`에 `2026-07-19` 만료로 추적합니다.
+  - npm의 자동 fix 제안은 Nest major downgrade 경로라 적용하지 않습니다.
+- `npm run test:e2e:smoke --workspace @personal-erp/web`: 통과
+  - Playwright dev-server smoke 8개 pass
+  - 운영월 lifecycle, 로그인/세션 복원, 전표 조정, 운영 체크리스트, workspace fallback, import collect, plan/dashboard/forecast, financial statements/carry-forward 흐름 확인
+- `npm run test:e2e:smoke:build:browser`: 로컬 환경 제약으로 미완료
+  - 현재 PATH의 Node는 `v24.11.1`이고, 저장소 `.nvmrc`는 `22`입니다.
+  - `build:e2e:smoke`의 Next in-process build 래퍼가 Windows 로컬 Node 24에서 종료 코드 `3221226505`로 중단됩니다.
+  - 표준 `npm run build`와 dev-server Playwright smoke는 통과했으므로 앱 빌드/대표 브라우저 흐름 자체는 확인됐지만, CI와 동일한 production-start browser smoke는 Node 22 정식 런타임에서 재확인해야 합니다.
+- `npm run test:prisma`, `npm run ci:local:semgrep`, `npm run ci:local:gitleaks`: 로컬 Docker 부재로 미실행
+  - `docker` CLI가 PATH에 없어 `spawnSync docker ENOENT` / Docker required 메시지로 중단되었습니다.
+  - CI 또는 Docker가 설치된 로컬 환경에서 재확인해야 합니다.
+- 텍스트 기반 secret 패턴 점검:
+  - Docker 기반 Gitleaks는 실행하지 못했지만, 저장소 텍스트에서 주요 secret/key/token 패턴을 점검했습니다.
+  - 발견 항목은 env 예시, 문서 placeholder, 테스트 token/password, 로컬 폐기용 DB 예시 중심이며 실제 운영 secret으로 보이는 값은 발견하지 않았습니다.
+
 ## 2026-06-19 런타임 Audit 후속 조치
 
 이번 보완 작업의 파일 조회와 수정은 UTF-8 기준으로 수행했습니다.
@@ -84,7 +120,7 @@
   - 현재 공개 배포 도메인 `https://personalerp.theworkpc.com`, `/api` path 분리, Web `3100` / API `4100` 기준을 README, 운영 체크리스트, Docker 문서, 서버 runbook에 다시 반영
   - 공개 홈의 실제 운영 화면 스크린샷, 데모/GitHub CTA, 한글 검색어, 활용 사례, FAQ, JSON-LD 구조화 데이터 기준을 현재 기능 문서와 포트폴리오 문서에 반영
   - `robots.txt`, `sitemap.xml`, `google827b2fac60b63022.html`, Google Search Console 제출/확인 흐름을 배포 후 스모크 체크에 추가
-  - `docs/PROJECT_PLAN.md`의 남은 중기 우선순위에서 이미 완료된 HTTPS 공개 배포 리허설 표현을 제거하고, 배포 후 health/HSTS/sitemap/Search Console 운영 증적 관리로 보정
+  - `docs/PROJECT_PLAN.md`의 남은 중기 우선순위에서 이미 완료된 HTTPS 공개 배포 리허설 표현을 제거하고, 공개 배포 기준 health/HSTS/sitemap/Search Console 운영 증적 유지로 보정
 - 추가 검증:
   - 이번 문서 최신화 직전 공개 홈 SEO 보강 변경은 `npm.cmd run typecheck --workspace @personal-erp/web`, `npm.cmd run test --workspace @personal-erp/web`, `npm.cmd run build --workspace @personal-erp/web`, `npm.cmd run test:e2e --workspace @personal-erp/web -- auth-public-style-stability.spec.ts` 통과 상태입니다.
 
@@ -103,7 +139,7 @@
 - 정리:
   - `docs/PROJECT_PLAN.md`의 완료 작업 장기 목록을 압축하고, 세부 이력은 `docs/completed/README.md`와 `docs/VALIDATION_NOTES.md`를 우선하도록 정리
   - `docs/README.md`, `docs/domain/README.md`에 현재 기준 문서와 설계/이력 문서의 우선순위를 명시
-  - ASVS 실행계획이 현재는 P0-P5 완료 후 운영 리허설 추적 문서임을 명시
+  - ASVS 실행계획이 P0-P5 완료 후 운영 증적 관리 문서임을 명시
   - 도메인 문서의 SaaS 확장 모델 중 아직 구현되지 않은 `TenantSubscription`, `SupportAccessGrant` 성격을 현재 MVP 범위와 분리
   - 완료 전 작업 지시문이 남아 있던 `ASVS_L2_EXECUTION_PLAN.md`를 완료 단계 요약과 남은 운영 항목 중심으로 압축
   - `PORTFOLIO_ARCHITECTURE_GUIDE.md`, `ENVIRONMENT_SETUP.md`, `CURRENT_CAPABILITIES.md`, `ACCOUNTING_MODEL_BOUNDARY.md`의 도입부 반복 문구를 제거
@@ -324,7 +360,7 @@
 - 차량 연료/정비 이력 분리, `GET /vehicles/operating-summary` projection 추가, 차량 `Vehicle` 물리 필드/응답/계약에서 `monthlyExpenseWon` 제거, 차량 연료/정비 이력의 선택적 수집거래 연동과 확정 후 수정 차단, 레거시 `Transaction` 물리 제거와 active reference guard, 메인 월 운영 루프의 `reference-data -> accounting-periods -> insurance/vehicles -> recurring-rules -> plan-items -> collected-transactions/imports -> journal-entries -> financial-statements -> carry-forwards -> forecast` 브라우저 시나리오, `imports -> collected-transactions -> journal-entries` cross-feature 브라우저 시나리오, Next.js ESLint plugin explicit registration까지는 반영됨
 - 이전에 저장소 안 우선순위로 선별했던 작업은 모두 닫혔음
 - `.github/workflows/ci.yml`의 `prisma-integration` job은 disposable MySQL 기반 `npm run test:prisma`로 고정되었으며, Docker 환경 로컬 실행과 GitHub 워크플로 통과 확인까지 완료됨
-- `npm run audit:runtime`는 현재 `high` 기준으로 gate를 걸고 있으며, `security/runtime-audit-allowlist.json`은 비어 있습니다. 2026-04-22에는 `npm run audit:runtime:full`이 `0 vulnerabilities`였지만, 이후 moderate advisory가 다시 생겼으므로 위 최신 날짜별 보완사항 기록을 우선합니다.
+- `npm run audit:runtime`는 현재 `high` 기준으로 gate를 걸고 있으며, `security/runtime-audit-allowlist.json`에는 `@nestjs/platform-express -> multer <2.2.0` 경로의 high 5건을 2026-07-19 만료로 추적합니다. 2026-04-22에는 `npm run audit:runtime:full`이 `0 vulnerabilities`였지만, 이후 advisory가 다시 생겼으므로 위 최신 날짜별 보완사항 기록을 우선합니다.
 
 ## 2026-04-22 CI/Prisma 증적 확인
 
@@ -371,4 +407,4 @@
 
 현재 검증체계는 성공 경로 계약, 인증, DTO validation, 접근 범위 검증, readiness/request-id 같은 운영 신호, 핵심 쓰기 흐름, 대표 브라우저 사용자 흐름까지를 자동으로 막는 상태입니다.
 `npm run test:e2e`, `npm run test:prisma`는 빠른 기본 테스트와 분리된 대표 심화 검증으로 유지합니다.
-다음 보강 우선순위는 공개 배포 후 health/HSTS/sitemap/Search Console 상태를 주기적으로 남기는 운영 증적 관리와 외부 감사 저장소/장기 보관 정책 초안 정리입니다.
+다음 보강 우선순위는 공개 배포 기준 health/HSTS/sitemap/Search Console 상태를 주기적으로 남기는 운영 증적 유지와 외부 감사 저장소/장기 보관 정책 초안 정리입니다.

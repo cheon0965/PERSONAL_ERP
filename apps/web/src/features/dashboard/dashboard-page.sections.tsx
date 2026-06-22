@@ -70,7 +70,7 @@ export function DashboardSummarySections({
             eyebrow="운영 기준"
             title="현재 자금 잔액"
             value={formatWon(summary.actualBalanceWon)}
-            subtitle="입출금 계정 기준 현재 잔액 또는 마감된 월의 공식 현금 잔액입니다."
+            subtitle="자금수단 기준 현재 잔액 또는 마감된 월의 공식 현금 잔액입니다."
             tone="primary"
             icon={AccountBalanceWalletRoundedIcon}
           />

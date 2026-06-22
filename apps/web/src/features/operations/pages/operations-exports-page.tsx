@@ -227,7 +227,7 @@ export function OperationsExportsPage() {
 
       <SectionCard
         title="수동 CSV 반출"
-        description="자동 백업은 아직 다루지 않고, 운영자가 필요한 시점에 내려받는 1차 흐름만 제공합니다."
+        description="운영자가 필요한 시점에 범위별 UTF-8 CSV를 직접 내려받습니다."
       >
         <Typography variant="body2" color="text.secondary">
           생성된 파일은 브라우저에서 즉시 다운로드되며, UTF-8 CSV 형식으로

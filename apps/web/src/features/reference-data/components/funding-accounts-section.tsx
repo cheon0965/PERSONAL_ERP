@@ -63,7 +63,7 @@ export function FundingAccountsSection({
   return (
     <DataTableCard
       title="자금수단"
-      description="거래 입력과 반복 규칙에서 사용하는 입출금 계정 목록입니다. 기초 업로드 대기 계정은 관리 버튼에서 시작 금액을 닫습니다."
+      description="거래 입력과 반복 규칙에서 사용하는 자금수단 목록입니다. 기초 업로드 대기 계정은 관리 버튼에서 시작 금액을 닫습니다."
       actions={
         canManageReferenceData ? (
           <Button variant="contained" size="small" onClick={onCreate}>

@@ -114,7 +114,7 @@ export function ForecastPage() {
       {
         title: '참고 메모',
         description:
-          '본문의 참고사항은 화면 도움말로 옮겨 관리합니다. 전망을 해석할 때 아래 메모를 함께 확인합니다.',
+          '전망 조회 결과가 제공하는 참고 메모입니다. 전망을 해석할 때 아래 메모를 함께 확인합니다.',
         items: forecast?.notes.length
           ? forecast.notes
           : [
