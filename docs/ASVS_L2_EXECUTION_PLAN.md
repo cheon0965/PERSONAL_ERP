@@ -2,7 +2,7 @@
 
 ## 목적
 
-이 문서는 `PERSONAL_ERP`의 OWASP ASVS Level 2 기준 적용 현황과 남은 운영 리허설 항목을 정리합니다.
+이 문서는 `PERSONAL_ERP`의 OWASP ASVS Level 2 기준 적용 현황과 운영 유지보수 증적 관리 항목을 정리합니다.
 
 현재 코드 보강 단계인 P0-P5는 완료 상태입니다.
 최신 판정은 [ASVS L2 Baseline Matrix](./ASVS_L2_BASELINE_MATRIX.md)를 우선하고, 날짜별 검증 증적은 [검증 메모](./VALIDATION_NOTES.md)를 우선합니다.
@@ -86,7 +86,7 @@
 
 ## 남은 운영 항목
 
-1. 공개 배포 후 health/HSTS, `SWAGGER_ENABLED=false` 기본값, sitemap/Search Console 상태의 운영 증적 정리
+1. 공개 배포 기준 health/HSTS, `SWAGGER_ENABLED=false` 기본값, sitemap/Search Console 상태의 운영 증적 유지
 2. 외부 감사 저장소 또는 장기 보관 정책 초안 정리
 3. 운영 데이터 분류와 보존 기간 정책 구체화
 

@@ -865,7 +865,7 @@ function buildVehiclesHelpContext(section: VehicleWorkspaceSection) {
         relatedEntities: [
           '수집 거래',
           '거래 분류',
-          '입출금 계정',
+          '자금수단',
           '전표',
           '연료 기록',
           '정비 이력'

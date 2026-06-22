@@ -55,7 +55,7 @@ export default function SettingsPage() {
     description:
       '이 화면은 다른 메뉴를 사용하기 전에 현재 로그인 사용자가 어느 사업장, 권한, 장부 기준으로 보고 있는지 확인하는 시작 화면입니다. 데이터가 예상과 다르게 보이면 먼저 이 화면의 기준 정보를 확인합니다.',
     primaryEntity: '사업장 / 권한 / 장부',
-    relatedEntities: ['운영 기간', '입출금 계정', '거래 유형', '수집 거래'],
+    relatedEntities: ['운영 기간', '자금수단', '거래 유형', '수집 거래'],
     truthSource:
       '현재 로그인 중인 사업장과 장부 정보가 모든 화면의 조회, 입력, 확정 권한을 판단하는 기준입니다.',
     supplementarySections: [
@@ -106,7 +106,7 @@ export default function SettingsPage() {
       }
     ],
     readModelNote:
-      '이 화면은 값을 수정하는 곳이 아니라, 앞으로 열 모든 운영 화면의 기준 정보를 확인하는 곳입니다.'
+      '이 화면은 현재 작업 기준을 확인하고 사업장 추가/삭제 흐름으로 들어가는 시작점입니다. 사업장 이름, 장부 기준값 같은 세부 수정은 사업장 설정 화면에서 진행합니다.'
   });
 
   return (

@@ -13,7 +13,7 @@
 
 ## 현재 공개 배포 상태
 
-- 기준일: 2026-05-07
+- 기준일: 2026-06-22
 - 공개 Web/API: `https://personalerp.theworkpc.com`
 - API path: `https://personalerp.theworkpc.com/api`
 - 공개 홈(`/`)은 검색 노출 대상이며, 인증 뒤 업무 화면은 `noindex` 정책을 유지합니다.

@@ -432,7 +432,7 @@ function buildJournalEntriesHelpContext(isDetailLayout: boolean) {
       '전표 라인',
       '수집 거래',
       '계정과목',
-      '입출금 계정',
+      '자금수단',
       '운영 월'
     ],
     truthSource:

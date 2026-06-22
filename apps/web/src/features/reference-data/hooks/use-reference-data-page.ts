@@ -638,7 +638,7 @@ function buildReferenceDataHelpContext(
         description:
           '이 탭은 계정과목과 거래유형처럼 시스템이 제공하는 공식 기준값을 확인하는 읽기 전용 화면입니다.',
         primaryEntity: '공식 참조값',
-        relatedEntities: ['계정과목', '거래유형', '전표', '자동 분류'],
+        relatedEntities: ['계정과목', '거래유형', '전표', '전표 생성 기준'],
         truthSource:
           '계정과목과 거래유형은 시스템 기준값을 따르며, 입력 화면과 자동 생성 전표가 이 값을 참조합니다.',
         supplementarySections: [

@@ -200,7 +200,7 @@ export function OperationsNotesPage() {
         <Grid size={{ xs: 12, lg: 5 }}>
           <SectionCard
             title="새 인수인계 메모"
-            description="첨부, 담당자 지정, 승인 흐름은 다음 단계로 미루고 텍스트 기록부터 안전하게 남깁니다."
+            description="텍스트 메모와 관련 화면 링크를 남겨 다음 운영자가 바로 확인할 수 있게 합니다."
           >
             <Stack
               component="form"
