@@ -52,21 +52,88 @@ export const mockFundingAccounts: FundingAccountItem[] = [
 ];
 
 export const mockCategories: CategoryItem[] = [
-  { id: 'cat-1', name: '매출 입금', kind: 'INCOME', isActive: true },
-  { id: 'cat-2', name: '원재료비', kind: 'EXPENSE', isActive: true },
-  { id: 'cat-3', name: '보험료', kind: 'EXPENSE', isActive: true },
-  { id: 'cat-4', name: '유류비', kind: 'EXPENSE', isActive: true },
-  { id: 'cat-5', name: '차량 정비비', kind: 'EXPENSE', isActive: true },
-  { id: 'cat-6', name: '통신·POS 비용', kind: 'EXPENSE', isActive: true },
-  { id: 'cat-7', name: '포장재/소모품', kind: 'EXPENSE', isActive: true },
-  { id: 'cat-8', name: '임차료', kind: 'EXPENSE', isActive: true },
-  { id: 'cat-9', name: '배송비', kind: 'EXPENSE', isActive: true },
-  { id: 'cat-10', name: '광고·판촉비', kind: 'EXPENSE', isActive: true },
-  { id: 'cat-11', name: '업무 도구 구독료', kind: 'EXPENSE', isActive: true },
+  {
+    id: 'cat-1',
+    name: '매출 입금',
+    kind: 'INCOME',
+    defaultAccountSubjectId: 'as-4110',
+    isActive: true
+  },
+  {
+    id: 'cat-2',
+    name: '원재료비',
+    kind: 'EXPENSE',
+    defaultAccountSubjectId: 'as-5110',
+    isActive: true
+  },
+  {
+    id: 'cat-3',
+    name: '보험료',
+    kind: 'EXPENSE',
+    defaultAccountSubjectId: 'as-5150',
+    isActive: true
+  },
+  {
+    id: 'cat-4',
+    name: '유류비',
+    kind: 'EXPENSE',
+    defaultAccountSubjectId: 'as-5160',
+    isActive: true
+  },
+  {
+    id: 'cat-5',
+    name: '차량 정비비',
+    kind: 'EXPENSE',
+    defaultAccountSubjectId: 'as-5160',
+    isActive: true
+  },
+  {
+    id: 'cat-6',
+    name: '통신·POS 비용',
+    kind: 'EXPENSE',
+    defaultAccountSubjectId: 'as-5170',
+    isActive: true
+  },
+  {
+    id: 'cat-7',
+    name: '포장재/소모품',
+    kind: 'EXPENSE',
+    defaultAccountSubjectId: 'as-5180',
+    isActive: true
+  },
+  {
+    id: 'cat-8',
+    name: '임차료',
+    kind: 'EXPENSE',
+    defaultAccountSubjectId: 'as-5130',
+    isActive: true
+  },
+  {
+    id: 'cat-9',
+    name: '배송비',
+    kind: 'EXPENSE',
+    defaultAccountSubjectId: 'as-5200',
+    isActive: true
+  },
+  {
+    id: 'cat-10',
+    name: '광고·판촉비',
+    kind: 'EXPENSE',
+    defaultAccountSubjectId: 'as-5190',
+    isActive: true
+  },
+  {
+    id: 'cat-11',
+    name: '업무 도구 구독료',
+    kind: 'EXPENSE',
+    defaultAccountSubjectId: 'as-5140',
+    isActive: true
+  },
   {
     id: 'cat-12',
     name: '대출 이자/금융비용',
     kind: 'EXPENSE',
+    defaultAccountSubjectId: 'as-5210',
     isActive: true
   }
 ];
@@ -113,6 +180,26 @@ export const mockAccountSubjects: AccountSubjectItem[] = [
     isActive: true
   },
   {
+    id: 'as-4110',
+    code: '4110',
+    name: '매출수익',
+    statementType: 'PROFIT_AND_LOSS',
+    normalSide: 'CREDIT',
+    subjectKind: 'INCOME',
+    isSystem: true,
+    isActive: true
+  },
+  {
+    id: 'as-4190',
+    code: '4190',
+    name: '기타운영수익',
+    statementType: 'PROFIT_AND_LOSS',
+    normalSide: 'CREDIT',
+    subjectKind: 'INCOME',
+    isSystem: true,
+    isActive: true
+  },
+  {
     id: 'as-5100',
     code: '5100',
     name: '운영비용',
@@ -121,7 +208,34 @@ export const mockAccountSubjects: AccountSubjectItem[] = [
     subjectKind: 'EXPENSE',
     isSystem: true,
     isActive: true
-  }
+  },
+  ...(
+    [
+      ['5110', '원재료비'],
+      ['5120', '인건비'],
+      ['5130', '임차료'],
+      ['5140', '지급수수료'],
+      ['5150', '보험료'],
+      ['5160', '차량유지비'],
+      ['5170', '통신비'],
+      ['5180', '소모품비'],
+      ['5190', '광고선전비'],
+      ['5200', '운반비'],
+      ['5210', '이자비용'],
+      ['5220', '세금과공과']
+    ] as const
+  ).map(
+    ([code, name]): AccountSubjectItem => ({
+      id: `as-${code}`,
+      code,
+      name,
+      statementType: 'PROFIT_AND_LOSS',
+      normalSide: 'DEBIT',
+      subjectKind: 'EXPENSE',
+      isSystem: true,
+      isActive: true
+    })
+  )
 ];
 
 export const mockLedgerTransactionTypes: LedgerTransactionTypeItem[] = [

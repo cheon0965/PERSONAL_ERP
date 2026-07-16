@@ -10,6 +10,7 @@ import type {
   UpdateCategoryRequest
 } from '@personal-erp/contracts';
 import { requireCurrentWorkspace } from '../../../common/auth/required-workspace.util';
+import { readGenericAccountSubjectCode } from '../../../common/prisma/standard-account-subject.catalog';
 import { normalizeCaseInsensitiveText } from '../../../common/utils/normalize-unique-key.util';
 import { mapCategoryToItem } from '../mappers/categories.mapper';
 import { CategoriesRepository } from '../repositories/categories.repository';
@@ -39,6 +40,12 @@ export class CategoriesService {
   ): Promise<CategoryItem> {
     const workspace = requireCurrentWorkspace(user);
     const normalizedName = normalizeCategoryName(input.name);
+    const defaultAccountSubjectId = await this.resolveDefaultAccountSubjectId({
+      tenantId: workspace.tenantId,
+      ledgerId: workspace.ledgerId,
+      categoryKind: input.kind,
+      requestedAccountSubjectId: input.defaultAccountSubjectId
+    });
 
     await this.assertNoDuplicateCategory({
       tenantId: workspace.tenantId,
@@ -53,7 +60,8 @@ export class CategoriesService {
       workspace.ledgerId,
       {
         name: normalizedName,
-        kind: input.kind
+        kind: input.kind,
+        defaultAccountSubjectId
       }
     );
 
@@ -77,6 +85,15 @@ export class CategoriesService {
     }
 
     const normalizedName = normalizeCategoryName(input.name);
+    const defaultAccountSubjectId =
+      input.defaultAccountSubjectId === undefined
+        ? undefined
+        : await this.resolveDefaultAccountSubjectId({
+            tenantId: workspace.tenantId,
+            ledgerId: workspace.ledgerId,
+            categoryKind: existing.kind,
+            requestedAccountSubjectId: input.defaultAccountSubjectId
+          });
 
     await this.assertNoDuplicateCategory({
       tenantId: workspace.tenantId,
@@ -90,6 +107,7 @@ export class CategoriesService {
       categoryId,
       {
         name: normalizedName,
+        defaultAccountSubjectId,
         isActive: input.isActive
       }
     );
@@ -126,6 +144,47 @@ export class CategoriesService {
           : '같은 구분에 같은 이름의 비활성 카테고리가 있습니다. 기존 카테고리를 다시 활성화하거나 다른 이름을 사용해 주세요.'
       );
     }
+  }
+
+  private async resolveDefaultAccountSubjectId(input: {
+    tenantId: string;
+    ledgerId: string;
+    categoryKind: CategoryItem['kind'];
+    requestedAccountSubjectId?: string | null;
+  }): Promise<string | null> {
+    const requestedAccountSubjectId =
+      input.requestedAccountSubjectId?.trim() || null;
+
+    if (input.categoryKind === 'TRANSFER') {
+      if (requestedAccountSubjectId) {
+        throw new BadRequestException(
+          '이체 카테고리에는 기본 손익 계정과목을 연결할 수 없습니다.'
+        );
+      }
+
+      return null;
+    }
+
+    const genericCode = readGenericAccountSubjectCode(input.categoryKind);
+    const accountSubject =
+      await this.categoriesRepository.findEligibleAccountSubjectInWorkspace({
+        tenantId: input.tenantId,
+        ledgerId: input.ledgerId,
+        categoryKind: input.categoryKind,
+        ...(requestedAccountSubjectId
+          ? { accountSubjectId: requestedAccountSubjectId }
+          : { accountSubjectCode: genericCode ?? undefined })
+      });
+
+    if (!accountSubject) {
+      throw new BadRequestException(
+        requestedAccountSubjectId
+          ? '기본 계정과목은 현재 장부의 활성 시스템 손익 계정과목이어야 하며 카테고리 구분과 일치해야 합니다.'
+          : '카테고리에 연결할 기본 시스템 계정과목이 준비되지 않았습니다.'
+      );
+    }
+
+    return accountSubject.id;
   }
 }
 

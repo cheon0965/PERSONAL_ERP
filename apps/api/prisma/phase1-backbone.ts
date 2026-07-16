@@ -1,7 +1,4 @@
 import {
-  AccountNormalSide,
-  AccountSubjectKind,
-  AccountSubjectStatementType,
   LedgerStatus,
   LedgerTransactionFlowKind,
   PostingPolicyKey,
@@ -11,58 +8,14 @@ import {
   TenantStatus
 } from '@prisma/client';
 import { ensureDefaultWorkspaceNavigation } from '../src/common/navigation/workspace-navigation-defaults';
+import {
+  readGenericAccountSubjectCode,
+  STANDARD_ACCOUNT_SUBJECT_CATALOG
+} from '../src/common/prisma/standard-account-subject.catalog';
 
 // 이 파일은 레거시 Transaction 테이블 제거 이후에도
 // 1단계 워크스페이스/장부 백본 초기화를 유지한다.
 const DEFAULT_LEDGER_NAME = '기본 장부';
-
-const DEFAULT_ACCOUNT_SUBJECTS = [
-  {
-    code: '1010',
-    name: '현금및예금',
-    statementType: AccountSubjectStatementType.BALANCE_SHEET,
-    normalSide: AccountNormalSide.DEBIT,
-    subjectKind: AccountSubjectKind.ASSET,
-    isSystem: true,
-    sortOrder: 10
-  },
-  {
-    code: '2100',
-    name: '카드미지급금',
-    statementType: AccountSubjectStatementType.BALANCE_SHEET,
-    normalSide: AccountNormalSide.CREDIT,
-    subjectKind: AccountSubjectKind.LIABILITY,
-    isSystem: true,
-    sortOrder: 20
-  },
-  {
-    code: '3100',
-    name: '순자산',
-    statementType: AccountSubjectStatementType.BALANCE_SHEET,
-    normalSide: AccountNormalSide.CREDIT,
-    subjectKind: AccountSubjectKind.EQUITY,
-    isSystem: true,
-    sortOrder: 30
-  },
-  {
-    code: '4100',
-    name: '운영수익',
-    statementType: AccountSubjectStatementType.PROFIT_AND_LOSS,
-    normalSide: AccountNormalSide.CREDIT,
-    subjectKind: AccountSubjectKind.INCOME,
-    isSystem: true,
-    sortOrder: 40
-  },
-  {
-    code: '5100',
-    name: '운영비용',
-    statementType: AccountSubjectStatementType.PROFIT_AND_LOSS,
-    normalSide: AccountNormalSide.DEBIT,
-    subjectKind: AccountSubjectKind.EXPENSE,
-    isSystem: true,
-    sortOrder: 50
-  }
-] as const;
 
 const DEFAULT_LEDGER_TRANSACTION_TYPES = [
   {
@@ -226,7 +179,7 @@ async function ensureBaseMasters(
   tenantId: string,
   ledgerId: string
 ) {
-  for (const subject of DEFAULT_ACCOUNT_SUBJECTS) {
+  for (const subject of STANDARD_ACCOUNT_SUBJECT_CATALOG) {
     await prisma.accountSubject.upsert({
       where: {
         ledgerId_code: {
@@ -282,6 +235,48 @@ async function ensureBaseMasters(
         postingPolicyKey: type.postingPolicyKey,
         isActive: true,
         sortOrder: type.sortOrder
+      }
+    });
+  }
+}
+
+async function ensureCategoryDefaultAccountSubjects(
+  prisma: PrismaClient,
+  tenantId: string,
+  ledgerId: string
+) {
+  for (const categoryKind of ['INCOME', 'EXPENSE'] as const) {
+    const genericCode = readGenericAccountSubjectCode(categoryKind);
+    const genericSubject = genericCode
+      ? await prisma.accountSubject.findFirst({
+          where: {
+            tenantId,
+            ledgerId,
+            code: genericCode,
+            isSystem: true,
+            isActive: true
+          },
+          select: {
+            id: true
+          }
+        })
+      : null;
+
+    if (!genericSubject) {
+      throw new Error(
+        `Missing generic account subject for category kind: ${categoryKind}`
+      );
+    }
+
+    await prisma.category.updateMany({
+      where: {
+        tenantId,
+        ledgerId,
+        kind: categoryKind,
+        defaultAccountSubjectId: null
+      },
+      data: {
+        defaultAccountSubjectId: genericSubject.id
       }
     });
   }
@@ -507,6 +502,11 @@ export async function ensurePhase1BackboneForUser(
     backbone.tenantId,
     backbone.ledgerId,
     summary
+  );
+  await ensureCategoryDefaultAccountSubjects(
+    prisma,
+    backbone.tenantId,
+    backbone.ledgerId
   );
 
   summary.usersProcessed += 1;

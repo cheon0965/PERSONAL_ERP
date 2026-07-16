@@ -9,6 +9,7 @@ import {
   resolveConfirmCollectedTransactionJournalLines
 } from './confirm-collected-transaction.policy';
 import type { ConfirmationCollectedTransaction } from '../ports/confirm-collected-transaction-store.port';
+import { assessPostingAccountSelection } from '../../domain/posting-account-selection.policy';
 
 export function resolveConfirmationAccountSubjectIds(
   accountSubjects: Array<{ id: string; code: string }>
@@ -22,11 +23,47 @@ export function buildConfirmationJournalLines(input: {
   collectedTransaction: ConfirmationCollectedTransaction;
   accountSubjectIds: ReturnType<typeof resolveConfirmationAccountSubjectIds>;
 }) {
-  // 부채 상환은 단순 비용 전표가 아니다. 원금은 부채 감소로, 이자/수수료는 비용으로
-  // 나누어야 하므로 일반 posting policy보다 먼저 전용 라인을 만든다.
+  // 부채 상환은 원금/이자/수수료를 분리하는 전용 정책이다.
   if (input.collectedTransaction.matchedLiabilityRepaymentSchedule) {
     return buildLiabilityRepaymentJournalLines(input);
   }
+
+  const selection = assessPostingAccountSelection({
+    postingPolicyKey:
+      input.collectedTransaction.ledgerTransactionType.postingPolicyKey,
+    fundingAccountId: input.collectedTransaction.fundingAccount.id,
+    fundingAccountType: input.collectedTransaction.fundingAccount.type,
+    counterpartyFundingAccountId:
+      input.collectedTransaction.counterpartyFundingAccount?.id ?? null,
+    counterpartyFundingAccountType:
+      input.collectedTransaction.counterpartyFundingAccount?.type ?? null,
+    fundingAccountDirection: input.collectedTransaction.fundingAccountDirection,
+    categoryId: input.collectedTransaction.category?.id ?? null
+  });
+
+  if (selection.validationError) {
+    throw validationError(selection.validationError);
+  }
+  if (selection.missingRequirements.length > 0) {
+    throw validationError(
+      `전표 확정에 필요한 정보가 누락되었습니다: ${selection.missingRequirements.join(', ')}`
+    );
+  }
+
+  const fundingAccountSubjectId = resolveLinkedFundingAccountSubjectId(
+    input.collectedTransaction,
+    input.collectedTransaction.fundingAccount
+  );
+  const counterpartyFundingAccountSubjectId = input.collectedTransaction
+    .counterpartyFundingAccount
+    ? resolveLinkedFundingAccountSubjectId(
+        input.collectedTransaction,
+        input.collectedTransaction.counterpartyFundingAccount
+      )
+    : null;
+  const categoryAccountSubjectId = resolveCategoryAccountSubjectId(
+    input.collectedTransaction
+  );
 
   return assertConfirmJournalLinesSupported(
     resolveConfirmCollectedTransactionJournalLines({
@@ -35,6 +72,16 @@ export function buildConfirmationJournalLines(input: {
       amount: input.collectedTransaction.amount,
       title: input.collectedTransaction.title,
       fundingAccountId: input.collectedTransaction.fundingAccount.id,
+      fundingAccountType: input.collectedTransaction.fundingAccount.type,
+      fundingAccountSubjectId,
+      counterpartyFundingAccountId:
+        input.collectedTransaction.counterpartyFundingAccount?.id ?? null,
+      counterpartyFundingAccountType:
+        input.collectedTransaction.counterpartyFundingAccount?.type ?? null,
+      counterpartyFundingAccountSubjectId,
+      fundingAccountDirection:
+        input.collectedTransaction.fundingAccountDirection,
+      categoryAccountSubjectId,
       accountSubjectIds: input.accountSubjectIds
     })
   );
@@ -96,7 +143,9 @@ function buildLiabilityRepaymentJournalLines(input: {
   if (expenseAmount > 0) {
     lines.push({
       lineNumber: lines.length + 1,
-      accountSubjectId: input.accountSubjectIds.expenseSubjectId,
+      accountSubjectId:
+        resolveCategoryAccountSubjectId(input.collectedTransaction) ??
+        input.accountSubjectIds.expenseSubjectId,
       debitAmount: expenseAmount,
       creditAmount: 0,
       description: `${input.collectedTransaction.title} 이자/수수료`
@@ -105,7 +154,11 @@ function buildLiabilityRepaymentJournalLines(input: {
 
   lines.push({
     lineNumber: lines.length + 1,
-    accountSubjectId: input.accountSubjectIds.assetSubjectId,
+    accountSubjectId:
+      resolveLinkedFundingAccountSubjectId(
+        input.collectedTransaction,
+        input.collectedTransaction.fundingAccount
+      ) ?? input.accountSubjectIds.assetSubjectId,
     fundingAccountId: input.collectedTransaction.fundingAccount.id,
     debitAmount: 0,
     creditAmount: input.collectedTransaction.amount,
@@ -113,4 +166,59 @@ function buildLiabilityRepaymentJournalLines(input: {
   });
 
   return lines;
+}
+
+function resolveLinkedFundingAccountSubjectId(
+  transaction: ConfirmationCollectedTransaction,
+  fundingAccount: ConfirmationCollectedTransaction['fundingAccount']
+): string | null {
+  const subject = fundingAccount.linkedAccountSubject;
+  if (!subject) {
+    return null;
+  }
+
+  const expectedKind = fundingAccount.type === 'CARD' ? 'LIABILITY' : 'ASSET';
+  if (
+    !subject.isActive ||
+    subject.ledgerId !== transaction.ledgerId ||
+    subject.subjectKind !== expectedKind
+  ) {
+    throw validationError(
+      `${fundingAccount.name} 자금수단의 연결 계정과목이 현재 Ledger의 활성 ${expectedKind} 계정이 아닙니다.`
+    );
+  }
+
+  return subject.id;
+}
+
+function resolveCategoryAccountSubjectId(
+  transaction: ConfirmationCollectedTransaction
+): string | null {
+  const category = transaction.category;
+  const subject = category?.defaultAccountSubject ?? null;
+  if (!subject) {
+    return null;
+  }
+
+  const postingPolicyKey = transaction.ledgerTransactionType.postingPolicyKey;
+  const expectedKind =
+    postingPolicyKey === 'INCOME_BASIC'
+      ? 'INCOME'
+      : postingPolicyKey === 'EXPENSE_BASIC' ||
+          postingPolicyKey === 'CARD_SPEND'
+        ? 'EXPENSE'
+        : null;
+
+  if (
+    !expectedKind ||
+    !subject.isActive ||
+    subject.ledgerId !== transaction.ledgerId ||
+    subject.subjectKind !== expectedKind
+  ) {
+    throw validationError(
+      `${category?.kind ?? 'UNKNOWN'} 카테고리의 공식 계정과목 매핑이 거래유형과 일치하지 않습니다.`
+    );
+  }
+
+  return subject.id;
 }

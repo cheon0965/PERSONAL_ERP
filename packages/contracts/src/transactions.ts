@@ -1,11 +1,14 @@
 import type { AuditActorType } from './accounting';
 import type { MoneyWon } from './money';
+import type { PostingPolicyKey } from './reference-data';
 
 export type CollectedTransactionType =
   | 'INCOME'
   | 'EXPENSE'
   | 'TRANSFER'
   | 'REVERSAL';
+
+export type FundingAccountDirection = 'INFLOW' | 'OUTFLOW';
 
 export type CollectedTransactionSourceKind =
   | 'MANUAL'
@@ -43,7 +46,13 @@ export type CollectedTransactionItem = {
   title: string;
   type: CollectedTransactionType;
   amountWon: MoneyWon;
+  ledgerTransactionTypeId?: string;
+  ledgerTransactionTypeName?: string;
+  postingPolicyKey?: PostingPolicyKey;
+  fundingAccountDirection?: FundingAccountDirection | null;
   fundingAccountName: string;
+  counterpartyFundingAccountId?: string | null;
+  counterpartyFundingAccountName?: string | null;
   categoryName: string;
   sourceKind: CollectedTransactionSourceKind;
   postingStatus: CollectedTransactionPostingStatus;
@@ -61,7 +70,12 @@ export type CollectedTransactionDetailItem = {
   title: string;
   type: CollectedTransactionType;
   amountWon: MoneyWon;
+  ledgerTransactionTypeId?: string;
+  ledgerTransactionTypeName?: string;
+  postingPolicyKey?: PostingPolicyKey;
+  fundingAccountDirection?: FundingAccountDirection | null;
   fundingAccountId: string;
+  counterpartyFundingAccountId?: string | null;
   categoryId: string | null;
   memo: string | null;
   sourceKind: CollectedTransactionSourceKind;
@@ -80,6 +94,10 @@ export type CreateCollectedTransactionRequest = {
   amountWon: MoneyWon;
   businessDate: string;
   fundingAccountId: string;
+  /** 명시 거래유형. 기존 클라이언트 호환을 위해 생략 시 type과 자금수단으로 안전하게 결정합니다. */
+  ledgerTransactionTypeId?: string;
+  counterpartyFundingAccountId?: string;
+  fundingAccountDirection?: FundingAccountDirection;
   categoryId?: string;
   memo?: string;
 };

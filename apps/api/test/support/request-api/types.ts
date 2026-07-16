@@ -13,6 +13,7 @@ import {
   LiabilityRepaymentScheduleStatus,
   OperationalNoteKind,
   RecurrenceFrequency,
+  OpeningBalanceEquityAdjustmentKind,
   OpeningBalanceSourceKind,
   PlanItemStatus,
   WorkspaceNavigationMenuItemType,
@@ -127,6 +128,8 @@ export type RequestTestState = {
     ledgerId: string;
     effectivePeriodId: string;
     sourceKind: OpeningBalanceSourceKind;
+    equityAdjustmentKind?: OpeningBalanceEquityAdjustmentKind | null;
+    equityAdjustmentAmount?: number;
     createdAt: Date;
     createdByActorType: AuditActorType;
     createdByMembershipId: string | null;
@@ -389,6 +392,7 @@ export type RequestTestState = {
     name: string;
     normalizedName?: string;
     kind?: 'INCOME' | 'EXPENSE' | 'TRANSFER';
+    defaultAccountSubjectId: string | null;
     isActive: boolean;
   }>;
   collectedTransactions: Array<{

@@ -3,6 +3,7 @@ import type {
   AuthenticatedUser,
   CloseAccountingPeriodRequest,
   OpenAccountingPeriodRequest,
+  PreviewOpeningBalanceRequest,
   ReopenAccountingPeriodRequest
 } from '@personal-erp/contracts';
 import { AccountingPeriodLifecyclePort } from '../../application/ports/accounting-period-lifecycle.port';
@@ -18,6 +19,13 @@ export class PrismaAccountingPeriodLifecycleAdapter extends AccountingPeriodLife
     private readonly reopenLifecycle: PrismaReopenAccountingPeriodLifecycle
   ) {
     super();
+  }
+
+  previewOpeningBalance(
+    user: AuthenticatedUser,
+    input: PreviewOpeningBalanceRequest
+  ) {
+    return this.openLifecycle.preview(user, input);
   }
 
   open(user: AuthenticatedUser, input: OpenAccountingPeriodRequest) {

@@ -3,6 +3,10 @@ import {
   validationError
 } from '../../../../common/application/errors/app-error';
 import { buildJournalEntryEntryNumber } from '../../../journal-entries/public';
+import type {
+  AccountType,
+  FundingAccountDirection
+} from '@personal-erp/contracts';
 
 type PostingPolicyKey =
   | 'INCOME_BASIC'
@@ -111,10 +115,24 @@ export function resolveConfirmCollectedTransactionJournalLines(input: {
   amount: number;
   title: string;
   fundingAccountId: string;
+  fundingAccountType?: AccountType;
+  fundingAccountSubjectId?: string | null;
+  counterpartyFundingAccountId?: string | null;
+  counterpartyFundingAccountType?: AccountType | null;
+  counterpartyFundingAccountSubjectId?: string | null;
+  fundingAccountDirection?: FundingAccountDirection | null;
+  categoryAccountSubjectId?: string | null;
   accountSubjectIds: ConfirmJournalAccountSubjectIds;
 }): ResolveConfirmJournalLinesResult {
-  // 현재 MVP에서 자동 전표화할 수 있는 정책만 여기서 라인을 만든다.
-  // 상대 계정 선택이 필요한 이체/카드대금은 화면에서 별도 보완이 필요하므로 명시적으로 제외한다.
+  const primaryAssetSubjectId =
+    input.fundingAccountSubjectId ?? input.accountSubjectIds.assetSubjectId;
+  const primaryLiabilitySubjectId =
+    input.fundingAccountSubjectId ?? input.accountSubjectIds.liabilitySubjectId;
+  const incomeSubjectId =
+    input.categoryAccountSubjectId ?? input.accountSubjectIds.incomeSubjectId;
+  const expenseSubjectId =
+    input.categoryAccountSubjectId ?? input.accountSubjectIds.expenseSubjectId;
+
   switch (input.postingPolicyKey) {
     case 'INCOME_BASIC':
       return {
@@ -122,7 +140,7 @@ export function resolveConfirmCollectedTransactionJournalLines(input: {
         lines: [
           {
             lineNumber: 1,
-            accountSubjectId: input.accountSubjectIds.assetSubjectId,
+            accountSubjectId: primaryAssetSubjectId,
             fundingAccountId: input.fundingAccountId,
             debitAmount: input.amount,
             creditAmount: 0,
@@ -130,7 +148,7 @@ export function resolveConfirmCollectedTransactionJournalLines(input: {
           },
           {
             lineNumber: 2,
-            accountSubjectId: input.accountSubjectIds.incomeSubjectId,
+            accountSubjectId: incomeSubjectId,
             debitAmount: 0,
             creditAmount: input.amount,
             description: input.title
@@ -143,14 +161,14 @@ export function resolveConfirmCollectedTransactionJournalLines(input: {
         lines: [
           {
             lineNumber: 1,
-            accountSubjectId: input.accountSubjectIds.expenseSubjectId,
+            accountSubjectId: expenseSubjectId,
             debitAmount: input.amount,
             creditAmount: 0,
             description: input.title
           },
           {
             lineNumber: 2,
-            accountSubjectId: input.accountSubjectIds.assetSubjectId,
+            accountSubjectId: primaryAssetSubjectId,
             fundingAccountId: input.fundingAccountId,
             debitAmount: 0,
             creditAmount: input.amount,
@@ -164,14 +182,14 @@ export function resolveConfirmCollectedTransactionJournalLines(input: {
         lines: [
           {
             lineNumber: 1,
-            accountSubjectId: input.accountSubjectIds.expenseSubjectId,
+            accountSubjectId: expenseSubjectId,
             debitAmount: input.amount,
             creditAmount: 0,
             description: input.title
           },
           {
             lineNumber: 2,
-            accountSubjectId: input.accountSubjectIds.liabilitySubjectId,
+            accountSubjectId: primaryLiabilitySubjectId,
             fundingAccountId: input.fundingAccountId,
             debitAmount: 0,
             creditAmount: input.amount,
@@ -179,11 +197,92 @@ export function resolveConfirmCollectedTransactionJournalLines(input: {
           }
         ]
       };
-    case 'TRANSFER_BASIC':
-    case 'CARD_PAYMENT':
+    case 'TRANSFER_BASIC': {
+      if (!input.counterpartyFundingAccountId) {
+        return { kind: 'requires_counterparty_account' };
+      }
+
+      const primaryIsSource = input.fundingAccountDirection === 'OUTFLOW';
+      const sourceFundingAccountId = primaryIsSource
+        ? input.fundingAccountId
+        : input.counterpartyFundingAccountId;
+      const destinationFundingAccountId = primaryIsSource
+        ? input.counterpartyFundingAccountId
+        : input.fundingAccountId;
+      const sourceAccountSubjectId = primaryIsSource
+        ? primaryAssetSubjectId
+        : (input.counterpartyFundingAccountSubjectId ??
+          input.accountSubjectIds.assetSubjectId);
+      const destinationAccountSubjectId = primaryIsSource
+        ? (input.counterpartyFundingAccountSubjectId ??
+          input.accountSubjectIds.assetSubjectId)
+        : primaryAssetSubjectId;
+
       return {
-        kind: 'requires_counterparty_account'
+        kind: 'supported',
+        lines: [
+          {
+            lineNumber: 1,
+            accountSubjectId: destinationAccountSubjectId,
+            fundingAccountId: destinationFundingAccountId,
+            debitAmount: input.amount,
+            creditAmount: 0,
+            description: input.title
+          },
+          {
+            lineNumber: 2,
+            accountSubjectId: sourceAccountSubjectId,
+            fundingAccountId: sourceFundingAccountId,
+            debitAmount: 0,
+            creditAmount: input.amount,
+            description: input.title
+          }
+        ]
       };
+    }
+    case 'CARD_PAYMENT': {
+      if (!input.counterpartyFundingAccountId) {
+        return { kind: 'requires_counterparty_account' };
+      }
+
+      const primaryIsCard = input.fundingAccountType === 'CARD';
+      const cardFundingAccountId = primaryIsCard
+        ? input.fundingAccountId
+        : input.counterpartyFundingAccountId;
+      const assetFundingAccountId = primaryIsCard
+        ? input.counterpartyFundingAccountId
+        : input.fundingAccountId;
+      const cardAccountSubjectId = primaryIsCard
+        ? primaryLiabilitySubjectId
+        : (input.counterpartyFundingAccountSubjectId ??
+          input.accountSubjectIds.liabilitySubjectId);
+      const assetAccountSubjectId = primaryIsCard
+        ? (input.counterpartyFundingAccountSubjectId ??
+          input.accountSubjectIds.assetSubjectId)
+        : primaryAssetSubjectId;
+
+      return {
+        kind: 'supported',
+        lines: [
+          {
+            lineNumber: 1,
+            accountSubjectId: cardAccountSubjectId,
+            fundingAccountId: cardFundingAccountId,
+            debitAmount: input.amount,
+            creditAmount: 0,
+            description: input.title
+          },
+          {
+            lineNumber: 2,
+            accountSubjectId: assetAccountSubjectId,
+            fundingAccountId: assetFundingAccountId,
+            debitAmount: 0,
+            creditAmount: input.amount,
+            description: input.title
+          }
+        ]
+      };
+    }
     default:
       return {
         kind: 'unsupported_policy'

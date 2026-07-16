@@ -14,6 +14,11 @@ import { assertWorkspaceActionAllowed } from '../../../../common/auth/workspace-
 import { FinancialStatementGenerationPort } from '../ports/financial-statement-generation.port';
 import { FinancialStatementViewPort } from '../ports/financial-statement-view.port';
 import { buildStatementPayloads } from '../projectors/financial-statement-payload.projector';
+import {
+  assertAccountingEquationBalanced,
+  assertClosingSnapshotIntegrity,
+  summarizeAccountingEquationLines
+} from '../../../accounting-periods/public';
 
 /**
  * 잠금된 운영월의 마감 데이터를 공식 재무제표 스냅샷으로 고정하는 유스케이스입니다.
@@ -45,8 +50,8 @@ export class GenerateFinancialStatementsUseCase {
       period,
       closingSnapshot,
       closingLines,
-      journalLines,
-      previousClosingSnapshot
+      openingBalanceSnapshot,
+      journalLines
     } = generationContext;
 
     if (!period) {
@@ -65,6 +70,33 @@ export class GenerateFinancialStatementsUseCase {
       );
     }
 
+    assertClosingSnapshotIntegrity({
+      snapshot: closingSnapshot,
+      lines: closingLines.map((line) => ({
+        accountSubjectKind: line.accountSubject.subjectKind,
+        balanceAmount: line.balanceAmount
+      }))
+    });
+
+    if (!openingBalanceSnapshot) {
+      throw validationError(
+        '기초 잔액 스냅샷이 없는 운영 기간에는 공식 재무제표를 생성할 수 없습니다.'
+      );
+    }
+
+    const openingTotals = summarizeAccountingEquationLines(
+      openingBalanceSnapshot.lines.map((line) => ({
+        accountSubjectKind: readOpeningBalanceSubjectKind(
+          line.accountSubject.subjectKind
+        ),
+        balanceAmount: line.balanceAmount
+      }))
+    );
+    assertAccountingEquationBalanced(
+      openingTotals,
+      '기초 잔액 스냅샷의 회계등식이 성립하지 않습니다.'
+    );
+
     // 재무제표는 마감 스냅샷과 POSTED 전표 라인을 공식 원천으로 삼는다.
     // 전월 순자산은 순자산 변동표 비교 기준으로만 사용하고 현재 월 수치는 마감 기준에서 산출한다.
     const payloads = buildStatementPayloads({
@@ -72,13 +104,10 @@ export class GenerateFinancialStatementsUseCase {
       closingSnapshot,
       closingLines,
       journalLines,
-      openingNetWorth:
-        previousClosingSnapshot == null
-          ? 0
-          : subtractMoneyWon(
-              previousClosingSnapshot.totalAssetAmount,
-              previousClosingSnapshot.totalLiabilityAmount
-            )
+      openingNetWorth: subtractMoneyWon(
+        openingTotals.totalAssetAmount,
+        openingTotals.totalLiabilityAmount
+      )
     });
 
     await this.financialStatementGenerationPort.upsertStatementSnapshots({
@@ -103,6 +132,20 @@ export class GenerateFinancialStatementsUseCase {
 
     return view;
   }
+}
+
+function readOpeningBalanceSubjectKind(subjectKind: string) {
+  if (
+    subjectKind === 'ASSET' ||
+    subjectKind === 'LIABILITY' ||
+    subjectKind === 'EQUITY'
+  ) {
+    return subjectKind;
+  }
+
+  throw validationError(
+    '기초 잔액 스냅샷에는 재무상태표 계정과목만 포함할 수 있습니다.'
+  );
 }
 
 function assertGeneratePermission(

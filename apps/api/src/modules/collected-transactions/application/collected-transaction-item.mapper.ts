@@ -16,7 +16,30 @@ export function mapCollectedTransactionToItem(
     title: transaction.title,
     type: transaction.type,
     amountWon: transaction.amountWon,
+    ...(transaction.ledgerTransactionTypeId !== undefined
+      ? { ledgerTransactionTypeId: transaction.ledgerTransactionTypeId }
+      : {}),
+    ...(transaction.ledgerTransactionTypeName !== undefined
+      ? { ledgerTransactionTypeName: transaction.ledgerTransactionTypeName }
+      : {}),
+    ...(transaction.postingPolicyKey !== undefined
+      ? { postingPolicyKey: transaction.postingPolicyKey }
+      : {}),
+    ...(transaction.fundingAccountDirection !== undefined
+      ? { fundingAccountDirection: transaction.fundingAccountDirection }
+      : {}),
     fundingAccountName: transaction.account.name,
+    ...(transaction.counterpartyFundingAccountId !== undefined
+      ? {
+          counterpartyFundingAccountId: transaction.counterpartyFundingAccountId
+        }
+      : {}),
+    ...(transaction.counterpartyAccount !== undefined
+      ? {
+          counterpartyFundingAccountName:
+            transaction.counterpartyAccount?.name ?? null
+        }
+      : {}),
     categoryName: transaction.category?.name ?? '-',
     sourceKind: transaction.origin,
     postingStatus: transaction.status,
@@ -42,7 +65,24 @@ export function mapCollectedTransactionToDetailItem(
     title: transaction.title,
     type: transaction.type,
     amountWon: transaction.amountWon,
+    ...(transaction.ledgerTransactionTypeId !== undefined
+      ? { ledgerTransactionTypeId: transaction.ledgerTransactionTypeId }
+      : {}),
+    ...(transaction.ledgerTransactionTypeName !== undefined
+      ? { ledgerTransactionTypeName: transaction.ledgerTransactionTypeName }
+      : {}),
+    ...(transaction.postingPolicyKey !== undefined
+      ? { postingPolicyKey: transaction.postingPolicyKey }
+      : {}),
+    ...(transaction.fundingAccountDirection !== undefined
+      ? { fundingAccountDirection: transaction.fundingAccountDirection }
+      : {}),
     fundingAccountId: transaction.fundingAccountId,
+    ...(transaction.counterpartyFundingAccountId !== undefined
+      ? {
+          counterpartyFundingAccountId: transaction.counterpartyFundingAccountId
+        }
+      : {}),
     categoryId: transaction.categoryId,
     memo: transaction.memo,
     sourceKind: transaction.origin,

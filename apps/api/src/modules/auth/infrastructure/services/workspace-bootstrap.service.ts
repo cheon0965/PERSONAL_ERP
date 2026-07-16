@@ -1,8 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import {
-  AccountNormalSide,
-  AccountSubjectKind,
-  AccountSubjectStatementType,
   LedgerStatus,
   LedgerTransactionFlowKind,
   PostingPolicyKey,
@@ -13,56 +10,12 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
 import { ensureDefaultWorkspaceNavigation } from '../../../../common/navigation/workspace-navigation-defaults';
+import {
+  readGenericAccountSubjectCode,
+  STANDARD_ACCOUNT_SUBJECT_CATALOG
+} from '../../../../common/prisma/standard-account-subject.catalog';
 
 const DEFAULT_LEDGER_NAME = '기본 장부';
-
-const DEFAULT_ACCOUNT_SUBJECTS = [
-  {
-    code: '1010',
-    name: '현금및예금',
-    statementType: AccountSubjectStatementType.BALANCE_SHEET,
-    normalSide: AccountNormalSide.DEBIT,
-    subjectKind: AccountSubjectKind.ASSET,
-    isSystem: true,
-    sortOrder: 10
-  },
-  {
-    code: '2100',
-    name: '카드미지급금',
-    statementType: AccountSubjectStatementType.BALANCE_SHEET,
-    normalSide: AccountNormalSide.CREDIT,
-    subjectKind: AccountSubjectKind.LIABILITY,
-    isSystem: true,
-    sortOrder: 20
-  },
-  {
-    code: '3100',
-    name: '순자산',
-    statementType: AccountSubjectStatementType.BALANCE_SHEET,
-    normalSide: AccountNormalSide.CREDIT,
-    subjectKind: AccountSubjectKind.EQUITY,
-    isSystem: true,
-    sortOrder: 30
-  },
-  {
-    code: '4100',
-    name: '운영수익',
-    statementType: AccountSubjectStatementType.PROFIT_AND_LOSS,
-    normalSide: AccountNormalSide.CREDIT,
-    subjectKind: AccountSubjectKind.INCOME,
-    isSystem: true,
-    sortOrder: 40
-  },
-  {
-    code: '5100',
-    name: '운영비용',
-    statementType: AccountSubjectStatementType.PROFIT_AND_LOSS,
-    normalSide: AccountNormalSide.DEBIT,
-    subjectKind: AccountSubjectKind.EXPENSE,
-    isSystem: true,
-    sortOrder: 50
-  }
-] as const;
 
 const DEFAULT_LEDGER_TRANSACTION_TYPES = [
   {
@@ -331,8 +284,10 @@ export class WorkspaceBootstrapService {
     tenantId: string,
     ledgerId: string
   ): Promise<void> {
-    for (const subject of DEFAULT_ACCOUNT_SUBJECTS) {
-      await prisma.accountSubject.upsert({
+    const accountSubjectIdByCode = new Map<string, string>();
+
+    for (const subject of STANDARD_ACCOUNT_SUBJECT_CATALOG) {
+      const storedSubject = await prisma.accountSubject.upsert({
         where: {
           ledgerId_code: {
             ledgerId,
@@ -359,6 +314,32 @@ export class WorkspaceBootstrapService {
           isSystem: subject.isSystem,
           isActive: true,
           sortOrder: subject.sortOrder
+        }
+      });
+      accountSubjectIdByCode.set(subject.code, storedSubject.id);
+    }
+
+    for (const categoryKind of ['INCOME', 'EXPENSE'] as const) {
+      const genericCode = readGenericAccountSubjectCode(categoryKind);
+      const defaultAccountSubjectId = genericCode
+        ? accountSubjectIdByCode.get(genericCode)
+        : undefined;
+
+      if (!defaultAccountSubjectId) {
+        throw new Error(
+          `Missing generic account subject for category kind: ${categoryKind}`
+        );
+      }
+
+      await prisma.category.updateMany({
+        where: {
+          tenantId,
+          ledgerId,
+          kind: categoryKind,
+          defaultAccountSubjectId: null
+        },
+        data: {
+          defaultAccountSubjectId
         }
       });
     }

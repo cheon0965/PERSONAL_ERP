@@ -47,6 +47,7 @@ import {
   closeAccountingPeriod,
   getAccountingPeriods,
   openAccountingPeriod,
+  previewOpeningBalance,
   reopenAccountingPeriod
 } from '../api/accounting-periods.api';
 import {
@@ -128,6 +129,7 @@ export function AccountingPeriodsPage({
     defaultValues: {
       month: getTodayMonthInputValue(),
       initializeOpeningBalance: true,
+      acceptNetAssetsAdjustment: false,
       openingBalanceLines: [],
       note: ''
     }
@@ -326,6 +328,11 @@ export function AccountingPeriodsPage({
     name: 'openingBalanceLines',
     defaultValue: []
   });
+  const acceptNetAssetsAdjustment = useWatch({
+    control: form.control,
+    name: 'acceptNetAssetsAdjustment',
+    defaultValue: false
+  });
   const openingBalanceTotals = React.useMemo(
     () =>
       buildOpeningBalanceTotals(
@@ -341,7 +348,8 @@ export function AccountingPeriodsPage({
     !isFirstPeriod ||
     (balanceSheetAccountSubjects.length > 0 &&
       openingBalanceFields.length > 0 &&
-      openingBalanceTotals.hasLines);
+      openingBalanceTotals.hasLines &&
+      (openingBalanceTotals.isBalanced || acceptNetAssetsAdjustment));
   const openFormBusy =
     openMutation.isPending ||
     form.formState.isSubmitting ||
@@ -363,18 +371,48 @@ export function AccountingPeriodsPage({
     }
 
     try {
+      const preparedOpeningBalanceLines = values.initializeOpeningBalance
+        ? values.openingBalanceLines.map((line) => ({
+            accountSubjectId: line.accountSubjectId,
+            fundingAccountId: normalizeOptionalIdentifier(
+              line.fundingAccountId
+            ),
+            balanceAmount: parseMoneyWon(line.balanceAmount) ?? 0
+          }))
+        : [];
+      const preview = await previewOpeningBalance(
+        { openingBalanceLines: preparedOpeningBalanceLines },
+        {
+          totalAssetAmount: openingBalanceTotals.assetAmount,
+          totalLiabilityAmount: openingBalanceTotals.liabilityAmount,
+          inputEquityAmount: openingBalanceTotals.equityAmount,
+          adjustmentAmount: openingBalanceTotals.balanceGapAmount,
+          finalNetAssetsAmount:
+            openingBalanceTotals.assetAmount -
+            openingBalanceTotals.liabilityAmount,
+          isBalanced: openingBalanceTotals.isBalanced
+        }
+      );
+
+      if (!preview.isBalanced && !values.acceptNetAssetsAdjustment) {
+        setFeedback({
+          severity: 'error',
+          message:
+            '기초 잔액 차액을 3100 순자산으로 자동 보정하는 데 동의해 주세요.'
+        });
+        return;
+      }
+
       await openMutation.mutateAsync({
         month: values.month,
         initializeOpeningBalance: values.initializeOpeningBalance,
         openingBalanceLines: values.initializeOpeningBalance
-          ? values.openingBalanceLines.map((line) => ({
-              accountSubjectId: line.accountSubjectId,
-              fundingAccountId: normalizeOptionalIdentifier(
-                line.fundingAccountId
-              ),
-              balanceAmount: parseMoneyWon(line.balanceAmount) ?? 0
-            }))
+          ? preparedOpeningBalanceLines
           : undefined,
+        openingBalanceAdjustmentMode:
+          !preview.isBalanced && values.acceptNetAssetsAdjustment
+            ? 'AUTO_TO_NET_ASSETS'
+            : 'REJECT',
         note: values.note.trim() || undefined
       });
 

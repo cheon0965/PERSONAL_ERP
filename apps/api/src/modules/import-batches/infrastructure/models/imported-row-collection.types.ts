@@ -7,6 +7,9 @@ export const createdCollectedTransactionSelect =
     title: true,
     amount: true,
     status: true,
+    ledgerTransactionTypeId: true,
+    counterpartyFundingAccountId: true,
+    fundingAccountDirection: true,
     matchedPlanItem: {
       select: {
         id: true,
@@ -18,9 +21,16 @@ export const createdCollectedTransactionSelect =
         name: true
       }
     },
+    counterpartyFundingAccount: {
+      select: {
+        name: true
+      }
+    },
     ledgerTransactionType: {
       select: {
-        flowKind: true
+        flowKind: true,
+        name: true,
+        postingPolicyKey: true
       }
     },
     category: {
@@ -75,6 +85,8 @@ export type PlanItemCollectionCandidate = {
   plannedAmount: number;
   plannedDate: Date;
   fundingAccountId: string;
+  counterpartyFundingAccountId: string | null;
+  fundingAccountDirection: 'INFLOW' | 'OUTFLOW' | null;
   ledgerTransactionTypeId: string;
   categoryId: string | null;
   existingCollectedTransactionId: string | null;

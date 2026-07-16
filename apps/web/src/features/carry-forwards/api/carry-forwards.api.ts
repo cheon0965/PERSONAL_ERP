@@ -105,6 +105,8 @@ export function buildCarryForwardFallback(
       id: `opening-demo-${sourcePeriod.id}`,
       effectivePeriodId: `${sourcePeriod.id}-next`,
       sourceKind: 'CARRY_FORWARD',
+      equityAdjustmentKind: 'PERIOD_PNL_ROLLOVER',
+      equityAdjustmentAmount: 0,
       createdAt,
       lines: []
     }

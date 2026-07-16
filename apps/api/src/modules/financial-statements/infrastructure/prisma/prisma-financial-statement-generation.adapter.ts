@@ -49,6 +49,7 @@ export class PrismaFinancialStatementGenerationAdapter implements FinancialState
         period: null,
         closingSnapshot: null,
         closingLines: [],
+        openingBalanceSnapshot: null,
         journalLines: [],
         previousClosingSnapshot: null
       };
@@ -86,68 +87,88 @@ export class PrismaFinancialStatementGenerationAdapter implements FinancialState
       }
     });
 
-    const [closingLines, journalLines, previousClosingSnapshot] =
-      await Promise.all([
-        closingSnapshot
-          ? this.prisma.balanceSnapshotLine.findMany({
-              where: {
-                closingSnapshotId: closingSnapshot.id
+    const [
+      closingLines,
+      openingBalanceSnapshot,
+      journalLines,
+      previousClosingSnapshot
+    ] = await Promise.all([
+      closingSnapshot
+        ? this.prisma.balanceSnapshotLine.findMany({
+            where: {
+              closingSnapshotId: closingSnapshot.id
+            },
+            include: {
+              accountSubject: {
+                select: {
+                  code: true,
+                  name: true,
+                  subjectKind: true
+                }
               },
-              include: {
-                accountSubject: {
-                  select: {
-                    code: true,
-                    name: true,
-                    subjectKind: true
-                  }
-                },
-                fundingAccount: {
-                  select: {
-                    name: true
-                  }
+              fundingAccount: {
+                select: {
+                  name: true
                 }
               }
-            })
-          : Promise.resolve([]),
-        this.prisma.journalLine.findMany({
-          where: {
-            journalEntry: {
-              tenantId,
-              ledgerId,
-              periodId: period.id,
-              status: JournalEntryStatus.POSTED
             }
-          },
-          include: {
-            accountSubject: {
-              select: {
-                code: true,
-                name: true,
-                subjectKind: true
-              }
-            },
-            fundingAccount: {
-              select: {
-                name: true
+          })
+        : Promise.resolve([]),
+      this.prisma.openingBalanceSnapshot.findUnique({
+        where: {
+          effectivePeriodId: period.id
+        },
+        include: {
+          lines: {
+            include: {
+              accountSubject: {
+                select: {
+                  subjectKind: true
+                }
               }
             }
           }
-        }),
-        previousLockedPeriod
-          ? this.prisma.closingSnapshot.findUnique({
-              where: {
-                periodId: previousLockedPeriod.id
-              },
-              select: {
-                id: true,
-                totalAssetAmount: true,
-                totalLiabilityAmount: true,
-                totalEquityAmount: true,
-                periodPnLAmount: true
-              }
-            })
-          : Promise.resolve(null)
-      ]);
+        }
+      }),
+      this.prisma.journalLine.findMany({
+        where: {
+          journalEntry: {
+            tenantId,
+            ledgerId,
+            periodId: period.id,
+            status: JournalEntryStatus.POSTED
+          }
+        },
+        include: {
+          accountSubject: {
+            select: {
+              code: true,
+              name: true,
+              subjectKind: true
+            }
+          },
+          fundingAccount: {
+            select: {
+              name: true
+            }
+          }
+        }
+      }),
+      previousLockedPeriod
+        ? this.prisma.closingSnapshot.findUnique({
+            where: {
+              periodId: previousLockedPeriod.id
+            },
+            select: {
+              id: true,
+              totalAssetAmount: true,
+              totalLiabilityAmount: true,
+              totalEquityAmount: true,
+              periodPnLAmount: true
+            }
+          })
+        : Promise.resolve(null)
+    ]);
 
     return {
       period,
@@ -156,6 +177,15 @@ export class PrismaFinancialStatementGenerationAdapter implements FinancialState
         ...line,
         balanceAmount: fromPrismaMoneyWon(line.balanceAmount)
       })),
+      openingBalanceSnapshot: openingBalanceSnapshot
+        ? {
+            id: openingBalanceSnapshot.id,
+            lines: openingBalanceSnapshot.lines.map((line) => ({
+              ...line,
+              balanceAmount: fromPrismaMoneyWon(line.balanceAmount)
+            }))
+          }
+        : null,
       journalLines: journalLines.map((line) => ({
         ...line,
         debitAmount: fromPrismaMoneyWon(line.debitAmount),

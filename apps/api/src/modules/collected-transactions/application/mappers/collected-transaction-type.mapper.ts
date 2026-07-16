@@ -1,7 +1,11 @@
-import type { CollectedTransactionType } from '@personal-erp/contracts';
+import type {
+  AccountType,
+  CollectedTransactionType
+} from '@personal-erp/contracts';
 
 export function mapCollectedTransactionTypeToLedgerTransactionCode(
-  type: CollectedTransactionType
+  type: CollectedTransactionType,
+  fundingAccountType?: AccountType
 ): string {
   switch (type) {
     case 'INCOME':
@@ -11,6 +15,7 @@ export function mapCollectedTransactionTypeToLedgerTransactionCode(
     case 'TRANSFER':
       return 'TRANSFER_BASIC';
     case 'EXPENSE':
+      return fundingAccountType === 'CARD' ? 'CARD_SPEND' : 'EXPENSE_BASIC';
     default:
       return 'EXPENSE_BASIC';
   }

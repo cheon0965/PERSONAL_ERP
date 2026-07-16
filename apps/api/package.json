@@ -22,6 +22,10 @@
     "prisma:migrate:status": "node ../../scripts/run-with-root-env.cjs prisma migrate status",
     "prisma:push:unsafe": "node ../../scripts/run-with-root-env.cjs prisma db push",
     "prisma:backfill:phase1": "npm run prisma:generate && node ../../scripts/run-with-root-env.cjs tsx prisma/backfill-phase1-backbone.ts",
+    "prisma:backfill:accounting-master-data": "npm run prisma:generate && node ../../scripts/run-with-root-env.cjs tsx prisma/backfill-accounting-master-data.ts",
+    "prisma:audit:posting-integrity": "npm run prisma:generate && node ../../scripts/run-with-root-env.cjs tsx prisma/audit-posting-integrity.ts",
+    "prisma:audit:accounting-integrity": "npm run prisma:generate && node ../../scripts/run-with-root-env.cjs tsx prisma/accounting-integrity.ts",
+    "prisma:repair:accounting-integrity": "npm run prisma:generate && node ../../scripts/run-with-root-env.cjs tsx prisma/accounting-integrity.ts --apply",
     "prisma:seed": "npm run prisma:generate && node ../../scripts/run-with-root-env.cjs tsx prisma/seed.ts",
     "prisma:seed:reset": "npm run prisma:generate && node ../../scripts/run-with-root-env.cjs tsx prisma/seed.ts --reset"
   },

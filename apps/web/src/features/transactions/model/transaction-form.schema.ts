@@ -11,7 +11,10 @@ export const transactionSchema = z.object({
   amountWon: createPositiveMoneyWonSchema('금액은 0보다 커야 합니다.'),
   businessDate: z.string().min(1, '거래일을 입력해 주세요.'),
   type: z.enum(['INCOME', 'EXPENSE', 'TRANSFER', 'REVERSAL']),
+  ledgerTransactionTypeId: z.string().min(1, '거래유형을 선택해 주세요.'),
   accountId: z.string().min(1, '자금수단을 선택해 주세요.'),
+  counterpartyAccountId: z.string(),
+  fundingAccountDirection: z.enum(['', 'INFLOW', 'OUTFLOW']),
   categoryId: z.string(),
   memo: z.string().max(500, '메모는 500자 이하여야 합니다.')
 });

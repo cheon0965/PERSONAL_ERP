@@ -65,7 +65,8 @@ export class CategoriesController {
         request,
         workspace,
         details: {
-          categoryId: created.id
+          categoryId: created.id,
+          defaultAccountSubjectId: created.defaultAccountSubjectId
         }
       });
 
@@ -114,7 +115,8 @@ export class CategoriesController {
         request,
         workspace,
         details: {
-          categoryId: updated.id
+          categoryId: updated.id,
+          defaultAccountSubjectId: updated.defaultAccountSubjectId
         }
       });
 

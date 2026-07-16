@@ -3,6 +3,8 @@ import type {
   CloseAccountingPeriodRequest,
   CloseAccountingPeriodResponse,
   OpenAccountingPeriodRequest,
+  OpeningBalancePreview,
+  PreviewOpeningBalanceRequest,
   ReopenAccountingPeriodRequest
 } from '@personal-erp/contracts';
 import { fetchJson, postJson } from '@/shared/api/fetch-json';
@@ -29,6 +31,17 @@ export function openAccountingPeriod(input: OpenAccountingPeriodRequest) {
     '/accounting-periods',
     input,
     buildAccountingPeriodFallbackItem(input)
+  );
+}
+
+export function previewOpeningBalance(
+  input: PreviewOpeningBalanceRequest,
+  fallback: OpeningBalancePreview
+) {
+  return postJson<OpeningBalancePreview, PreviewOpeningBalanceRequest>(
+    '/accounting-periods/opening-balance-preview',
+    input,
+    fallback
   );
 }
 

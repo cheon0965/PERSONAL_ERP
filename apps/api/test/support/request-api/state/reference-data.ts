@@ -173,6 +173,7 @@ export function createRequestReferenceDataStateFixtures(): Pick<
         ledgerId: 'ledger-1',
         name: 'Fuel',
         kind: 'EXPENSE',
+        defaultAccountSubjectId: 'as-1-5100',
         isActive: true
       },
       {
@@ -182,6 +183,7 @@ export function createRequestReferenceDataStateFixtures(): Pick<
         ledgerId: 'ledger-1',
         name: 'Salary',
         kind: 'INCOME',
+        defaultAccountSubjectId: 'as-1-4100',
         isActive: true
       },
       {
@@ -191,6 +193,7 @@ export function createRequestReferenceDataStateFixtures(): Pick<
         ledgerId: 'ledger-1',
         name: 'Utilities',
         kind: 'EXPENSE',
+        defaultAccountSubjectId: 'as-1-5100',
         isActive: true
       },
       {
@@ -200,6 +203,7 @@ export function createRequestReferenceDataStateFixtures(): Pick<
         ledgerId: 'ledger-2',
         name: 'Other category',
         kind: 'EXPENSE',
+        defaultAccountSubjectId: 'as-2-5100',
         isActive: true
       }
     ]

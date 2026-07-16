@@ -1,4 +1,5 @@
 type CategoryKind = 'INCOME' | 'EXPENSE' | 'TRANSFER';
+type FundingAccountDirectionValue = 'INFLOW' | 'OUTFLOW';
 export type LedgerTransactionFlowKindValue =
   | 'INCOME'
   | 'EXPENSE'
@@ -21,6 +22,8 @@ export type PlanItemGenerationPeriod = {
 export type PlanItemGenerationRecurringRule = {
   id: string;
   accountId: string;
+  counterpartyFundingAccountId: string | null;
+  fundingAccountDirection: FundingAccountDirectionValue | null;
   categoryId: string | null;
   title: string;
   amountWon: number;
@@ -41,6 +44,15 @@ export type PlanItemGenerationRecurringRule = {
 export type PlanItemGenerationTransactionType = {
   id: string;
   flowKind: LedgerTransactionFlowKindValue;
+  postingPolicyKey:
+    | 'INCOME_BASIC'
+    | 'EXPENSE_BASIC'
+    | 'TRANSFER_BASIC'
+    | 'CARD_SPEND'
+    | 'CARD_PAYMENT'
+    | 'OPENING_BALANCE'
+    | 'CARRY_FORWARD'
+    | 'MANUAL_ADJUSTMENT';
 };
 
 export type GeneratedPlanItemDraft = {
@@ -51,6 +63,8 @@ export type GeneratedPlanItemDraft = {
   liabilityRepaymentScheduleId?: string | null;
   ledgerTransactionTypeId: string;
   fundingAccountId: string;
+  counterpartyFundingAccountId?: string | null;
+  fundingAccountDirection?: FundingAccountDirectionValue | null;
   categoryId?: string;
   title: string;
   plannedAmount: number;

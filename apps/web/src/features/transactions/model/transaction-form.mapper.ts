@@ -14,7 +14,10 @@ export function mapDetailToFormInput(
     amountWon: transaction.amountWon,
     businessDate: transaction.businessDate,
     type: transaction.type,
+    ledgerTransactionTypeId: transaction.ledgerTransactionTypeId ?? '',
     accountId: transaction.fundingAccountId,
+    counterpartyAccountId: transaction.counterpartyFundingAccountId ?? '',
+    fundingAccountDirection: transaction.fundingAccountDirection ?? '',
     categoryId: transaction.categoryId ?? '',
     memo: transaction.memo ?? ''
   };

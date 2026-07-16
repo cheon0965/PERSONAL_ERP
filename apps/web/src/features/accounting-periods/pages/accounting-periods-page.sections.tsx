@@ -187,7 +187,7 @@ export function OpenAccountingPeriodSection({
         description={
           isFirstPeriod
             ? '첫 월은 기초 잔액 라인을 함께 저장해 시작 기준을 만듭니다.'
-            : '새 운영 월은 최근 운영 월을 먼저 마감한 뒤 열 수 있습니다. 운영 중에는 하나의 최신 진행월만 유지합니다.'
+            : '첫 월 이후에는 최근 월의 마감 결과를 차기 이월해 다음 운영 월을 시작합니다.'
         }
       >
         <form onSubmit={onSubmit}>
@@ -432,8 +432,27 @@ export function OpenAccountingPeriodSection({
                         ? '계정과목과 잔액을 입력하면 월 운영 시작 버튼과 합계가 바로 반영됩니다.'
                         : openingBalanceTotals.isBalanced
                           ? '자산과 부채+자본 합계가 일치합니다.'
-                          : `자산과 부채+자본 차이 ${formatWon(Math.abs(openingBalanceTotals.balanceGapAmount))}이 있습니다. 첫 월 초기 설정에서는 차이가 있어도 운영 시작이 가능합니다.`}
+                          : `자산과 부채+자본 차이 ${formatWon(Math.abs(openingBalanceTotals.balanceGapAmount))}이 있습니다. 동의하면 이 차액을 3100 순자산으로 자동 보정합니다.`}
                   </Typography>
+                  {openingBalanceTotals.hasLines &&
+                  !openingBalanceTotals.isBalanced ? (
+                    <Controller
+                      control={form.control}
+                      name="acceptNetAssetsAdjustment"
+                      render={({ field }) => (
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={field.value}
+                              onChange={(_, checked) => field.onChange(checked)}
+                              disabled={isSubmitting}
+                            />
+                          }
+                          label={`${formatWon(openingBalanceTotals.balanceGapAmount)}을 3100 순자산으로 자동 보정하는 데 동의합니다.`}
+                        />
+                      )}
+                    />
+                  ) : null}
                 </Stack>
               </Stack>
             ) : null}

@@ -102,12 +102,14 @@ test('@smoke protects the transactions route, restores the session, and saves a 
       id: 'cat-materials',
       name: '원재료비',
       kind: 'EXPENSE',
+      defaultAccountSubjectId: 'as-5100',
       isActive: true
     },
     {
       id: 'cat-sales',
       name: '매출 입금',
       kind: 'INCOME',
+      defaultAccountSubjectId: 'as-4100',
       isActive: true
     }
   ];

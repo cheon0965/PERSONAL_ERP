@@ -51,9 +51,13 @@ export function createAccountSubjectsPrismaMock(
       },
       findFirst: async (args: {
         where?: {
+          id?: string;
           tenantId?: string;
           ledgerId?: string;
+          code?: string;
+          statementType?: 'BALANCE_SHEET' | 'PROFIT_AND_LOSS';
           subjectKind?: 'ASSET' | 'LIABILITY' | 'EQUITY' | 'INCOME' | 'EXPENSE';
+          isSystem?: boolean;
           isActive?: boolean;
         };
         select?: {
@@ -61,18 +65,36 @@ export function createAccountSubjectsPrismaMock(
         };
       }) => {
         const item = state.accountSubjects.find((candidate) => {
+          const matchesId = !args.where?.id || candidate.id === args.where.id;
           const matchesTenant =
             !args.where?.tenantId || candidate.tenantId === args.where.tenantId;
           const matchesLedger =
             !args.where?.ledgerId || candidate.ledgerId === args.where.ledgerId;
+          const matchesCode =
+            !args.where?.code || candidate.code === args.where.code;
+          const matchesStatementType =
+            !args.where?.statementType ||
+            candidate.statementType === args.where.statementType;
           const matchesKind =
             !args.where?.subjectKind ||
             candidate.subjectKind === args.where.subjectKind;
+          const matchesSystem =
+            args.where?.isSystem === undefined ||
+            candidate.isSystem === args.where.isSystem;
           const matchesActive =
             args.where?.isActive === undefined ||
             candidate.isActive === args.where.isActive;
 
-          return matchesTenant && matchesLedger && matchesKind && matchesActive;
+          return (
+            matchesId &&
+            matchesTenant &&
+            matchesLedger &&
+            matchesCode &&
+            matchesStatementType &&
+            matchesKind &&
+            matchesSystem &&
+            matchesActive
+          );
         });
 
         if (!item) {

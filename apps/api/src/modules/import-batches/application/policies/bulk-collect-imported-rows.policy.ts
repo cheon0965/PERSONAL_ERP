@@ -30,6 +30,12 @@ export function normalizeBulkCollectRequest(
 ): BulkCollectImportedRowsRequest {
   const categoryId = normalizeOptionalBulkCollectString(input.categoryId);
   const memo = normalizeOptionalBulkCollectString(input.memo);
+  const ledgerTransactionTypeId = normalizeOptionalBulkCollectString(
+    input.ledgerTransactionTypeId
+  );
+  const counterpartyFundingAccountId = normalizeOptionalBulkCollectString(
+    input.counterpartyFundingAccountId
+  );
   const typeOptions = normalizeBulkCollectTypeOptions(input.typeOptions);
 
   return {
@@ -38,6 +44,14 @@ export function normalizeBulkCollectRequest(
       : {}),
     ...(input.type ? { type: input.type } : {}),
     fundingAccountId: input.fundingAccountId.trim(),
+    ...(ledgerTransactionTypeId ? { ledgerTransactionTypeId } : {}),
+    ...(counterpartyFundingAccountId ? { counterpartyFundingAccountId } : {}),
+    ...(input.fundingAccountDirection
+      ? { fundingAccountDirection: input.fundingAccountDirection }
+      : {}),
+    ...(input.postingPolicyHint
+      ? { postingPolicyHint: input.postingPolicyHint }
+      : {}),
     ...(categoryId ? { categoryId } : {}),
     ...(memo ? { memo } : {}),
     ...(typeOptions.length > 0 ? { typeOptions } : {})
@@ -63,14 +77,35 @@ export function normalizeBulkCollectTypeOptions(
 
     const categoryId = normalizeOptionalBulkCollectString(option.categoryId);
     const memo = normalizeOptionalBulkCollectString(option.memo);
+    const ledgerTransactionTypeId = normalizeOptionalBulkCollectString(
+      option.ledgerTransactionTypeId
+    );
+    const counterpartyFundingAccountId = normalizeOptionalBulkCollectString(
+      option.counterpartyFundingAccountId
+    );
 
-    if (!categoryId && !memo) {
+    if (
+      !ledgerTransactionTypeId &&
+      !counterpartyFundingAccountId &&
+      !option.fundingAccountDirection &&
+      !option.postingPolicyHint &&
+      !categoryId &&
+      !memo
+    ) {
       optionByType.delete(option.type);
       return;
     }
 
     optionByType.set(option.type, {
       type: option.type,
+      ...(ledgerTransactionTypeId ? { ledgerTransactionTypeId } : {}),
+      ...(counterpartyFundingAccountId ? { counterpartyFundingAccountId } : {}),
+      ...(option.fundingAccountDirection
+        ? { fundingAccountDirection: option.fundingAccountDirection }
+        : {}),
+      ...(option.postingPolicyHint
+        ? { postingPolicyHint: option.postingPolicyHint }
+        : {}),
       ...(categoryId ? { categoryId } : {}),
       ...(memo ? { memo } : {})
     });
@@ -87,12 +122,27 @@ export function buildCollectRequestForBulkRow(input: {
   const typeOption = input.request.typeOptions?.find(
     (candidate) => candidate.type === type
   );
+  const ledgerTransactionTypeId =
+    typeOption?.ledgerTransactionTypeId ??
+    input.request.ledgerTransactionTypeId;
+  const counterpartyFundingAccountId =
+    typeOption?.counterpartyFundingAccountId ??
+    input.request.counterpartyFundingAccountId;
+  const fundingAccountDirection =
+    typeOption?.fundingAccountDirection ??
+    input.request.fundingAccountDirection;
+  const postingPolicyHint =
+    typeOption?.postingPolicyHint ?? input.request.postingPolicyHint;
   const categoryId = typeOption?.categoryId ?? input.request.categoryId;
   const memo = typeOption?.memo ?? input.request.memo;
 
   return {
     type,
     fundingAccountId: input.request.fundingAccountId,
+    ...(ledgerTransactionTypeId ? { ledgerTransactionTypeId } : {}),
+    ...(counterpartyFundingAccountId ? { counterpartyFundingAccountId } : {}),
+    ...(fundingAccountDirection ? { fundingAccountDirection } : {}),
+    ...(postingPolicyHint ? { postingPolicyHint } : {}),
     ...(categoryId ? { categoryId } : {}),
     ...(memo ? { memo } : {})
   };

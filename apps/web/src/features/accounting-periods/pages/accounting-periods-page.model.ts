@@ -53,8 +53,7 @@ export function buildAccountingPeriodsPageModel({
     periods.find((period) => period.status !== 'LOCKED') ?? null;
   const lockedPeriods = periods.filter((period) => period.status === 'LOCKED');
   const latestPeriod = periods[0] ?? null;
-  const canOpenPeriodByLifecycle =
-    isFirstPeriod || latestPeriod?.status === 'LOCKED';
+  const canOpenPeriodByLifecycle = isFirstPeriod;
   const canOpenPeriod = canOpenPeriodByRole && canOpenPeriodByLifecycle;
   const openPeriodBlockReason = readOpenPeriodBlockReason({
     canOpenPeriodByRole,
@@ -65,6 +64,9 @@ export function buildAccountingPeriodsPageModel({
   const reopenPeriod = lockedPeriods[0] ?? null;
   const currentPeriod = openPeriod ?? latestPeriod ?? null;
   const lockedPeriodCount = lockedPeriods.length;
+  const carryForwardHref = latestPeriod
+    ? (`/carry-forwards/${latestPeriod.id}` as Route)
+    : ('/carry-forwards' as const);
   const periodStatusSummary = periods.reduce(
     (counts, period) => {
       counts[period.status] += 1;
@@ -115,8 +117,10 @@ export function buildAccountingPeriodsPageModel({
             href: '/periods/close' as const
           }
         : {
-            label: '월 운영 시작',
-            href: '/periods/open' as const
+            label: isFirstPeriod
+              ? '첫 월 운영 시작'
+              : '차기 이월로 다음 월 시작',
+            href: isFirstPeriod ? ('/periods/open' as const) : carryForwardHref
           }
       : section === 'open'
         ? openPeriod
@@ -124,10 +128,15 @@ export function buildAccountingPeriodsPageModel({
               label: '현재 상태 보기',
               href: '/periods' as const
             }
-          : {
-              label: '입력 작업대로 이동',
-              href: '#open-accounting-period-form' as const
-            }
+          : !isFirstPeriod
+            ? {
+                label: '차기 이월로 이동',
+                href: carryForwardHref
+              }
+            : {
+                label: '입력 작업대로 이동',
+                href: '#open-accounting-period-form' as const
+              }
         : section === 'close'
           ? {
               label: '마감 작업대로 이동',
@@ -186,7 +195,9 @@ function readOpenPeriodBlockReason(input: {
   }
 
   if (!input.canOpenPeriodByLifecycle && input.latestPeriod) {
-    return `${input.latestPeriod.monthLabel} 운영 월이 아직 ${input.latestPeriod.status} 상태입니다. 새 운영 월은 최근 운영 월을 먼저 마감한 뒤 열 수 있습니다.`;
+    return input.latestPeriod.status === 'LOCKED'
+      ? `${input.latestPeriod.monthLabel} 이후 운영 월은 직접 열 수 없습니다. 차기 이월을 생성하면 다음 월과 균형 잡힌 기초 잔액이 함께 시작됩니다.`
+      : `${input.latestPeriod.monthLabel} 운영 월이 아직 ${input.latestPeriod.status} 상태입니다. 먼저 월 마감을 완료한 뒤 차기 이월로 다음 월을 시작해 주세요.`;
   }
 
   return null;

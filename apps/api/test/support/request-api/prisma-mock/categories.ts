@@ -20,6 +20,7 @@ export function createCategoriesPrismaMock(
           id?: boolean;
           name?: boolean;
           kind?: boolean;
+          defaultAccountSubjectId?: boolean;
           isActive?: boolean;
         };
       }) => {
@@ -48,6 +49,9 @@ export function createCategoriesPrismaMock(
           ...(args.select.id ? { id: category.id } : {}),
           ...(args.select.name ? { name: category.name } : {}),
           ...(args.select.kind ? { kind: category.kind } : {}),
+          ...(args.select.defaultAccountSubjectId
+            ? { defaultAccountSubjectId: category.defaultAccountSubjectId }
+            : {}),
           ...(args.select.isActive ? { isActive: category.isActive } : {})
         };
       },
@@ -143,6 +147,7 @@ export function createCategoriesPrismaMock(
           name: string;
           normalizedName?: string;
           kind: 'INCOME' | 'EXPENSE' | 'TRANSFER';
+          defaultAccountSubjectId?: string | null;
         };
       }) => {
         const created = {
@@ -153,6 +158,7 @@ export function createCategoriesPrismaMock(
           name: args.data.name,
           normalizedName: args.data.normalizedName,
           kind: args.data.kind,
+          defaultAccountSubjectId: args.data.defaultAccountSubjectId ?? null,
           isActive: true
         };
 
@@ -164,6 +170,7 @@ export function createCategoriesPrismaMock(
         data: {
           name?: string;
           normalizedName?: string;
+          defaultAccountSubjectId?: string | null;
           isActive?: boolean;
         };
       }) => {
@@ -184,8 +191,49 @@ export function createCategoriesPrismaMock(
         if (args.data.isActive !== undefined) {
           category.isActive = args.data.isActive;
         }
+        if (args.data.defaultAccountSubjectId !== undefined) {
+          category.defaultAccountSubjectId = args.data.defaultAccountSubjectId;
+        }
 
         return category;
+      },
+      updateMany: async (args: {
+        where: {
+          tenantId?: string;
+          ledgerId?: string;
+          kind?: 'INCOME' | 'EXPENSE' | 'TRANSFER';
+          defaultAccountSubjectId?: string | null;
+        };
+        data: {
+          defaultAccountSubjectId?: string | null;
+        };
+      }) => {
+        let count = 0;
+
+        for (const category of state.categories) {
+          const matchesTenant =
+            !args.where.tenantId || category.tenantId === args.where.tenantId;
+          const matchesLedger =
+            !args.where.ledgerId || category.ledgerId === args.where.ledgerId;
+          const matchesKind =
+            !args.where.kind || category.kind === args.where.kind;
+          const matchesDefault =
+            args.where.defaultAccountSubjectId === undefined ||
+            category.defaultAccountSubjectId ===
+              args.where.defaultAccountSubjectId;
+
+          if (
+            !(matchesTenant && matchesLedger && matchesKind && matchesDefault)
+          ) {
+            continue;
+          }
+
+          category.defaultAccountSubjectId =
+            args.data.defaultAccountSubjectId ?? null;
+          count += 1;
+        }
+
+        return { count };
       }
     }
   };

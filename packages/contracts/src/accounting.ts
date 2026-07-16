@@ -18,6 +18,13 @@ export type AccountingPeriodEventType =
 
 export type OpeningBalanceSourceKind = 'INITIAL_SETUP' | 'CARRY_FORWARD';
 
+export type OpeningBalanceAdjustmentMode = 'REJECT' | 'AUTO_TO_NET_ASSETS';
+
+export type OpeningBalanceEquityAdjustmentKind =
+  | 'INITIAL_AUTO_BALANCE'
+  | 'PERIOD_PNL_ROLLOVER'
+  | 'LEGACY_REPAIR';
+
 export type PeriodStatusHistoryItem = {
   id: string;
   fromStatus: AccountingPeriodStatus | null;
@@ -54,7 +61,21 @@ export type OpenAccountingPeriodRequest = {
   month: string;
   initializeOpeningBalance?: boolean;
   openingBalanceLines?: OpeningBalanceLineInput[];
+  openingBalanceAdjustmentMode?: OpeningBalanceAdjustmentMode;
   note?: string;
+};
+
+export type PreviewOpeningBalanceRequest = {
+  openingBalanceLines: OpeningBalanceLineInput[];
+};
+
+export type OpeningBalancePreview = {
+  totalAssetAmount: MoneyWon;
+  totalLiabilityAmount: MoneyWon;
+  inputEquityAmount: MoneyWon;
+  adjustmentAmount: MoneyWon;
+  finalNetAssetsAmount: MoneyWon;
+  isBalanced: boolean;
 };
 
 export type CloseAccountingPeriodRequest = {
@@ -101,6 +122,8 @@ export type OpeningBalanceSnapshotItem = {
   id: string;
   effectivePeriodId: string;
   sourceKind: OpeningBalanceSourceKind;
+  equityAdjustmentKind: OpeningBalanceEquityAdjustmentKind | null;
+  equityAdjustmentAmount: MoneyWon;
   createdAt: string;
   lines: OpeningBalanceSnapshotLineItem[];
 };

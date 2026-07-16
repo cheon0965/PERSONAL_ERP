@@ -599,17 +599,17 @@ v1 문서에서는 관계와 우선순위에만 등장하고 별도 정의가 �
 - `tenantId`
 - `ledgerId`
 - `name`
-- `categoryGroup`
-- `direction` (`Income`, `Expense`, `Both`)
-- `defaultExpenseAccountSubjectId`
-- `defaultRevenueAccountSubjectId`
+- `kind` (`Income`, `Expense`, `Transfer`)
+- `defaultAccountSubjectId` (Transfer는 nullable)
 - `isSystemDefault`
 - `isActive`
 
 ### 불변조건
 
 - Category는 회계 계정과 1:1일 필요는 없지만, 최소한 기본 매핑 기준은 가져야 한다.
-- Expense 전용 카테고리는 Revenue 계정으로 직접 연결되지 않는다.
+- Income/Expense 카테고리는 같은 Ledger의 활성 시스템 손익 계정 중 같은 계정 종류에만 연결된다.
+- Transfer 카테고리는 손익 계정과 연결되지 않는다.
+- 매핑 변경은 이후 확정되는 전표에만 적용하며 기존 JournalLine의 계정과목을 소급 변경하지 않는다.
 - 비손익 거래는 Category 없이도 존재할 수 있다.
 
 ---
@@ -968,12 +968,12 @@ UTF-8 텍스트/CSV/카드 엑셀 계열 업로드 또는 IM뱅크 PDF 파일첨
 - `sourceFingerprint`
 - `occurredAt`
 - `amount`
-- `direction` (`Inflow`, `Outflow`, `Neutral`)
+- `fundingAccountDirection` (`Inflow`, `Outflow`)
 - `description`
-- `transactionTypeId` (nullable until classified)
+- `transactionTypeId`
 - `categoryId` (nullable)
 - `fundingAccountId`
-- `counterpartyHint`
+- `counterpartyFundingAccountId` (nullable)
 - `status` (`Collected`, `Reviewed`, `ReadyToPost`, `Posted`, `Corrected`, `Locked`)
 - `matchedPlanItemId` (nullable)
 - `postedJournalEntryId` (nullable)
@@ -991,6 +991,8 @@ UTF-8 텍스트/CSV/카드 엑셀 계열 업로드 또는 IM뱅크 PDF 파일첨
 - `Posted` 상태이면 `postedJournalEntryId`가 반드시 존재해야 한다.
 - `ReadyToPost` 상태는 전표 생성에 필요한 최소 필드가 채워져 있어야 한다.
 - 손익 성격 거래유형은 `categoryId`가 확정되기 전까지 `ReadyToPost`가 될 수 없다.
+- `TransferBasic`과 `CardPayment`는 서로 다른 두 자금수단과 기준 자금수단 관점의 방향이 확정되기 전까지 `ReadyToPost`가 될 수 없다.
+- `CardSpend`는 CARD, `TransferBasic`은 BANK/CASH 간 조합, `CardPayment`는 BANK/CASH 출발과 CARD 도착 조합만 허용한다.
 - 동일 SourceFingerprint는 중복 후보 판단 근거가 된다.
 
 ### 시작 원칙

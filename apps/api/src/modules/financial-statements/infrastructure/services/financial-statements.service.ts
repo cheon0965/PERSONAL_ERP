@@ -7,8 +7,13 @@ import type {
 import { subtractMoneyWon } from '@personal-erp/money';
 import { AccountingPeriodStatus, Prisma } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../../../common/auth/required-workspace.util';
+import { validationError } from '../../../../common/application/errors/app-error';
+import { fromPrismaMoneyWon } from '../../../../common/money/prisma-money';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
-import { mapAccountingPeriodRecordToItem } from '../../../accounting-periods/public';
+import {
+  assertClosingSnapshotIntegrity,
+  mapAccountingPeriodRecordToItem
+} from '../../../accounting-periods/public';
 import { findPreviousLockedPeriod } from '../../../reporting/model/reporting-period-selection';
 import { mapFinancialStatementSnapshotRecordToItem } from '../mappers/financial-statement-snapshot.mapper';
 import { sortFinancialStatementSnapshots } from '../../application/projectors/financial-statement-payload.projector';
@@ -128,24 +133,74 @@ export class FinancialStatementsService implements FinancialStatementViewPort {
   private async buildView(
     period: FinancialStatementPeriodRecord
   ): Promise<FinancialStatementsView> {
-    const [snapshots, periods, carryForwardRecord] = await Promise.all([
-      this.findSnapshotsInPeriod(period.tenantId, period.ledgerId, period.id),
-      this.prisma.accountingPeriod.findMany({
-        where: {
-          tenantId: period.tenantId,
-          ledgerId: period.ledgerId
+    const [snapshots, periods, carryForwardRecord, closingSnapshot] =
+      await Promise.all([
+        this.findSnapshotsInPeriod(period.tenantId, period.ledgerId, period.id),
+        this.prisma.accountingPeriod.findMany({
+          where: {
+            tenantId: period.tenantId,
+            ledgerId: period.ledgerId
+          },
+          include: financialStatementPeriodInclude,
+          orderBy: [{ year: 'desc' }, { month: 'desc' }]
+        }),
+        this.prisma.carryForwardRecord.findFirst({
+          where: {
+            tenantId: period.tenantId,
+            ledgerId: period.ledgerId,
+            toPeriodId: period.id
+          }
+        }),
+        this.prisma.closingSnapshot.findUnique({
+          where: {
+            periodId: period.id
+          },
+          include: {
+            lines: {
+              include: {
+                accountSubject: {
+                  select: {
+                    subjectKind: true
+                  }
+                }
+              }
+            }
+          }
+        })
+      ]);
+
+    if (snapshots.length > 0) {
+      if (period.status !== AccountingPeriodStatus.LOCKED) {
+        throw validationError(
+          '잠금되지 않은 운영 기간의 공식 재무제표는 조회할 수 없습니다.'
+        );
+      }
+
+      if (!closingSnapshot) {
+        throw validationError(
+          '공식 재무제표의 기준 마감 스냅샷을 찾을 수 없습니다.'
+        );
+      }
+
+      assertClosingSnapshotIntegrity({
+        snapshot: {
+          totalAssetAmount: fromPrismaMoneyWon(
+            closingSnapshot.totalAssetAmount
+          ),
+          totalLiabilityAmount: fromPrismaMoneyWon(
+            closingSnapshot.totalLiabilityAmount
+          ),
+          totalEquityAmount: fromPrismaMoneyWon(
+            closingSnapshot.totalEquityAmount
+          ),
+          periodPnLAmount: fromPrismaMoneyWon(closingSnapshot.periodPnLAmount)
         },
-        include: financialStatementPeriodInclude,
-        orderBy: [{ year: 'desc' }, { month: 'desc' }]
-      }),
-      this.prisma.carryForwardRecord.findFirst({
-        where: {
-          tenantId: period.tenantId,
-          ledgerId: period.ledgerId,
-          toPeriodId: period.id
-        }
-      })
-    ]);
+        lines: closingSnapshot.lines.map((line) => ({
+          accountSubjectKind: line.accountSubject.subjectKind,
+          balanceAmount: fromPrismaMoneyWon(line.balanceAmount)
+        }))
+      });
+    }
     const previousPeriod = findPreviousLockedPeriod(periods, period.id);
     const previousSnapshots = previousPeriod
       ? await this.findSnapshotsInPeriod(

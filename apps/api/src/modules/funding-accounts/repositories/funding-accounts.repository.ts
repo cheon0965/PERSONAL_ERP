@@ -43,7 +43,7 @@ export class FundingAccountsRepository {
     userId: string,
     tenantId: string,
     ledgerId: string,
-    input: CreateFundingAccountRequest
+    input: CreateFundingAccountRequest & { linkedAccountSubjectId: string }
   ) {
     const lastAccount = await this.prisma.account.findFirst({
       where: {
@@ -63,6 +63,7 @@ export class FundingAccountsRepository {
         userId,
         tenantId,
         ledgerId,
+        linkedAccountSubjectId: input.linkedAccountSubjectId,
         name: input.name,
         normalizedName: normalizeCaseInsensitiveText(input.name),
         type: input.type,

@@ -87,6 +87,7 @@ export class PrismaPlanItemGenerationAdapter implements PlanItemGenerationPort {
           select: {
             id: true,
             flowKind: true,
+            postingPolicyKey: true,
             isActive: true
           }
         }
@@ -126,7 +127,8 @@ export class PrismaPlanItemGenerationAdapter implements PlanItemGenerationPort {
       },
       select: {
         id: true,
-        flowKind: true
+        flowKind: true,
+        postingPolicyKey: true
       },
       orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }]
     });
@@ -200,6 +202,9 @@ export class PrismaPlanItemGenerationAdapter implements PlanItemGenerationPort {
               recurringRuleId: item.recurringRuleId ?? null,
               ledgerTransactionTypeId: item.ledgerTransactionTypeId,
               fundingAccountId: item.fundingAccountId,
+              counterpartyFundingAccountId:
+                item.counterpartyFundingAccountId ?? null,
+              fundingAccountDirection: item.fundingAccountDirection ?? null,
               categoryId: item.categoryId,
               title: item.title,
               plannedAmount: item.plannedAmount,
@@ -212,6 +217,9 @@ export class PrismaPlanItemGenerationAdapter implements PlanItemGenerationPort {
                   periodId: item.periodId,
                   ledgerTransactionTypeId: item.ledgerTransactionTypeId,
                   fundingAccountId: item.fundingAccountId,
+                  counterpartyFundingAccountId:
+                    item.counterpartyFundingAccountId ?? null,
+                  fundingAccountDirection: item.fundingAccountDirection ?? null,
                   categoryId: item.categoryId,
                   title: item.title,
                   occurredOn: item.plannedDate,

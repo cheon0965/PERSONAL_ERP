@@ -4,7 +4,11 @@ import type {
   BulkCollectImportedRowsTypeOption
 } from '@personal-erp/contracts';
 import { Type } from 'class-transformer';
-import { TransactionType } from '@prisma/client';
+import {
+  FundingAccountDirection,
+  PostingPolicyKey,
+  TransactionType
+} from '@prisma/client';
 import {
   ArrayMinSize,
   IsArray,
@@ -21,6 +25,26 @@ class BulkCollectImportedRowsTypeOptionDto implements BulkCollectImportedRowsTyp
   })
   @IsEnum(TransactionType)
   type!: TransactionType;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  ledgerTransactionTypeId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  counterpartyFundingAccountId?: string;
+
+  @ApiProperty({ required: false, enum: FundingAccountDirection })
+  @IsOptional()
+  @IsEnum(FundingAccountDirection)
+  fundingAccountDirection?: FundingAccountDirection;
+
+  @ApiProperty({ required: false, enum: PostingPolicyKey })
+  @IsOptional()
+  @IsEnum(PostingPolicyKey)
+  postingPolicyHint?: PostingPolicyKey;
 
   @ApiProperty({
     required: false,
@@ -65,6 +89,26 @@ export class BulkCollectImportedRowsRequestDto implements BulkCollectImportedRow
   @ApiProperty()
   @IsString()
   fundingAccountId!: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  ledgerTransactionTypeId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  counterpartyFundingAccountId?: string;
+
+  @ApiProperty({ required: false, enum: FundingAccountDirection })
+  @IsOptional()
+  @IsEnum(FundingAccountDirection)
+  fundingAccountDirection?: FundingAccountDirection;
+
+  @ApiProperty({ required: false, enum: PostingPolicyKey })
+  @IsOptional()
+  @IsEnum(PostingPolicyKey)
+  postingPolicyHint?: PostingPolicyKey;
 
   @ApiProperty({ required: false })
   @IsOptional()

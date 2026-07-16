@@ -1,7 +1,9 @@
 import type {
   AccountingPeriodItem,
   AuthenticatedUser,
-  OpenAccountingPeriodRequest
+  OpenAccountingPeriodRequest,
+  OpeningBalancePreview,
+  PreviewOpeningBalanceRequest
 } from '@personal-erp/contracts';
 import { ApplicationService } from '../../../../common/application/application-service.decorator';
 import { AccountingPeriodLifecyclePort } from '../ports/accounting-period-lifecycle.port';
@@ -15,5 +17,12 @@ export class OpenAccountingPeriodUseCase {
     input: OpenAccountingPeriodRequest
   ): Promise<AccountingPeriodItem> {
     return this.lifecycle.open(user, input);
+  }
+
+  preview(
+    user: AuthenticatedUser,
+    input: PreviewOpeningBalanceRequest
+  ): Promise<OpeningBalancePreview> {
+    return this.lifecycle.previewOpeningBalance(user, input);
   }
 }

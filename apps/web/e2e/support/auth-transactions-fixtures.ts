@@ -92,18 +92,21 @@ export function createE2ECategories(): CategoryItem[] {
       id: 'cat-materials',
       name: '원재료비',
       kind: 'EXPENSE',
+      defaultAccountSubjectId: 'as-5100',
       isActive: true
     },
     {
       id: 'cat-insurance',
       name: '보험료',
       kind: 'EXPENSE',
+      defaultAccountSubjectId: 'as-5100',
       isActive: true
     },
     {
       id: 'cat-sales',
       name: '매출 입금',
       kind: 'INCOME',
+      defaultAccountSubjectId: 'as-4100',
       isActive: true
     }
   ];

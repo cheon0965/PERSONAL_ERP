@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import type { CreateRecurringRuleRequest } from '@personal-erp/contracts';
-import { RecurrenceFrequency } from '@prisma/client';
+import { FundingAccountDirection, RecurrenceFrequency } from '@prisma/client';
 import {
   IsBoolean,
   IsDateString,
@@ -16,6 +16,18 @@ import { moneyWonApiProperty } from '../../../common/money/swagger-money';
 export class CreateRecurringRuleDto implements CreateRecurringRuleRequest {
   @ApiProperty() @IsString() title!: string;
   @ApiProperty() @IsString() fundingAccountId!: string;
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  ledgerTransactionTypeId?: string;
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  counterpartyFundingAccountId?: string;
+  @ApiProperty({ required: false, enum: FundingAccountDirection })
+  @IsOptional()
+  @IsEnum(FundingAccountDirection)
+  fundingAccountDirection?: FundingAccountDirection;
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()

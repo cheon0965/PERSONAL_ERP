@@ -499,6 +499,20 @@ function readBulkCollectRequest(
       ? record.type
       : undefined;
   const typeOptions = readBulkCollectTypeOptions(record.typeOptions);
+  const ledgerTransactionTypeId = readOptionalNonBlankString(
+    record.ledgerTransactionTypeId
+  );
+  const counterpartyFundingAccountId = readOptionalNonBlankString(
+    record.counterpartyFundingAccountId
+  );
+  const fundingAccountDirection = isFundingAccountDirection(
+    record.fundingAccountDirection
+  )
+    ? record.fundingAccountDirection
+    : undefined;
+  const postingPolicyHint = isPostingPolicyKey(record.postingPolicyHint)
+    ? record.postingPolicyHint
+    : undefined;
 
   return {
     ...(Array.isArray(record.rowIds)
@@ -510,6 +524,10 @@ function readBulkCollectRequest(
       : {}),
     ...(type ? { type } : {}),
     fundingAccountId: record.fundingAccountId,
+    ...(ledgerTransactionTypeId ? { ledgerTransactionTypeId } : {}),
+    ...(counterpartyFundingAccountId ? { counterpartyFundingAccountId } : {}),
+    ...(fundingAccountDirection ? { fundingAccountDirection } : {}),
+    ...(postingPolicyHint ? { postingPolicyHint } : {}),
     ...(typeof record.categoryId === 'string'
       ? { categoryId: record.categoryId }
       : {}),
@@ -538,22 +556,80 @@ function readBulkCollectTypeOptions(
       return [];
     }
 
-    const categoryId =
-      typeof record.categoryId === 'string' ? record.categoryId : undefined;
-    const memo = typeof record.memo === 'string' ? record.memo : undefined;
+    const categoryId = readOptionalNonBlankString(record.categoryId);
+    const memo = readOptionalNonBlankString(record.memo);
+    const ledgerTransactionTypeId = readOptionalNonBlankString(
+      record.ledgerTransactionTypeId
+    );
+    const counterpartyFundingAccountId = readOptionalNonBlankString(
+      record.counterpartyFundingAccountId
+    );
+    const fundingAccountDirection = isFundingAccountDirection(
+      record.fundingAccountDirection
+    )
+      ? record.fundingAccountDirection
+      : undefined;
+    const postingPolicyHint = isPostingPolicyKey(record.postingPolicyHint)
+      ? record.postingPolicyHint
+      : undefined;
 
-    if (!categoryId && !memo) {
+    if (
+      !ledgerTransactionTypeId &&
+      !counterpartyFundingAccountId &&
+      !fundingAccountDirection &&
+      !postingPolicyHint &&
+      !categoryId &&
+      !memo
+    ) {
       return [];
     }
 
     return [
       {
         type: record.type,
+        ...(ledgerTransactionTypeId ? { ledgerTransactionTypeId } : {}),
+        ...(counterpartyFundingAccountId
+          ? { counterpartyFundingAccountId }
+          : {}),
+        ...(fundingAccountDirection ? { fundingAccountDirection } : {}),
+        ...(postingPolicyHint ? { postingPolicyHint } : {}),
         ...(categoryId ? { categoryId } : {}),
         ...(memo ? { memo } : {})
       }
     ];
   });
+}
+
+function readOptionalNonBlankString(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const normalized = value.trim();
+  return normalized || undefined;
+}
+
+function isFundingAccountDirection(
+  value: unknown
+): value is NonNullable<
+  BulkCollectImportedRowsRequest['fundingAccountDirection']
+> {
+  return value === 'INFLOW' || value === 'OUTFLOW';
+}
+
+function isPostingPolicyKey(
+  value: unknown
+): value is NonNullable<BulkCollectImportedRowsRequest['postingPolicyHint']> {
+  return (
+    value === 'INCOME_BASIC' ||
+    value === 'EXPENSE_BASIC' ||
+    value === 'TRANSFER_BASIC' ||
+    value === 'CARD_SPEND' ||
+    value === 'CARD_PAYMENT' ||
+    value === 'OPENING_BALANCE' ||
+    value === 'CARRY_FORWARD' ||
+    value === 'MANUAL_ADJUSTMENT'
+  );
 }
 
 function resolveFinalJobStatus(input: {

@@ -16,6 +16,9 @@ type LedgerTransactionFlowKind =
 
 type ImportedRowAutoPreparationSummaryInput = {
   type: CollectedTransactionType;
+  ledgerTransactionTypeId?: string;
+  counterpartyFundingAccountId?: string | null;
+  fundingAccountDirection?: 'INFLOW' | 'OUTFLOW' | null;
   requestedCategoryId: string | null;
   matchedPlanItemId: string | null;
   matchedPlanItemTitle: string | null;
@@ -158,6 +161,9 @@ export function buildCollectImportedRowPreview(input: {
   fundingAccountId: string;
   fundingAccountName: string;
   type: CollectedTransactionType;
+  ledgerTransactionTypeId?: string;
+  counterpartyFundingAccountId?: string | null;
+  fundingAccountDirection?: 'INFLOW' | 'OUTFLOW' | null;
   requestedCategoryId: string | null;
   requestedCategoryName: string | null;
   autoPreparation: ImportedRowAutoPreparationSummary;
@@ -170,6 +176,9 @@ export function buildCollectImportedRowPreview(input: {
     fundingAccountId: input.fundingAccountId,
     fundingAccountName: input.fundingAccountName,
     type: input.type,
+    ledgerTransactionTypeId: input.ledgerTransactionTypeId,
+    counterpartyFundingAccountId: input.counterpartyFundingAccountId ?? null,
+    fundingAccountDirection: input.fundingAccountDirection ?? null,
     requestedCategoryId: input.requestedCategoryId,
     requestedCategoryName: input.requestedCategoryName,
     autoPreparation: input.autoPreparation

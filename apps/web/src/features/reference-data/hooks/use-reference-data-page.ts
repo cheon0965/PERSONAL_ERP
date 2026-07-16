@@ -444,13 +444,15 @@ export function useReferenceDataPage(
       payload:
         categoryEditorState?.mode === 'edit'
           ? {
-              name: input.name
+              name: input.name,
+              defaultAccountSubjectId: input.defaultAccountSubjectId
             }
           : input,
       fallback: {
         id: editingCategory?.id ?? `category-demo-${Date.now()}`,
         name: input.name,
         kind: editingCategory?.kind ?? input.kind,
+        defaultAccountSubjectId: input.defaultAccountSubjectId,
         isActive: editingCategory?.isActive ?? true
       }
     });

@@ -5,18 +5,30 @@ import type {
   CollectedTransactionSourceKind,
   CollectedTransactionVehicleLogSource
 } from '@personal-erp/contracts';
+import type {
+  FundingAccountDirection,
+  PostingPolicyKey
+} from '@personal-erp/contracts';
 
 export type StoredCollectedTransaction = {
   id: string;
   businessDate: Date;
   title: string;
   type: CollectedTransactionItem['type'];
+  ledgerTransactionTypeId: string;
+  ledgerTransactionTypeName: string;
+  postingPolicyKey: PostingPolicyKey;
+  fundingAccountDirection: FundingAccountDirection | null;
+  counterpartyFundingAccountId: string | null;
   amountWon: number;
   origin: CollectedTransactionSourceKind;
   status: CollectedTransactionPostingStatus;
   account: {
     name: string;
   };
+  counterpartyAccount: {
+    name: string;
+  } | null;
   category: {
     name: string;
   } | null;
@@ -28,23 +40,10 @@ export type StoredCollectedTransaction = {
   sourceLiabilityRepayment?: CollectedTransactionLiabilityRepaymentSource;
 };
 
-export type StoredCollectedTransactionDetail = {
-  id: string;
-  businessDate: Date;
-  title: string;
-  type: CollectedTransactionItem['type'];
-  amountWon: number;
+export type StoredCollectedTransactionDetail = StoredCollectedTransaction & {
   fundingAccountId: string;
   categoryId: string | null;
   memo: string | null;
-  origin: CollectedTransactionSourceKind;
-  status: CollectedTransactionPostingStatus;
-  postedJournalEntryId: string | null;
-  postedJournalEntryNumber: string | null;
-  matchedPlanItemId: string | null;
-  matchedPlanItemTitle: string | null;
-  sourceVehicleLog?: CollectedTransactionVehicleLogSource;
-  sourceLiabilityRepayment?: CollectedTransactionLiabilityRepaymentSource;
 };
 
 export type CollectedTransactionWorkspaceScope = {
@@ -61,6 +60,9 @@ export type CreateCollectedTransactionRecord = {
   amountWon: number;
   businessDate: Date;
   fundingAccountId: string;
+  ledgerTransactionTypeId?: string;
+  counterpartyFundingAccountId?: string;
+  fundingAccountDirection?: FundingAccountDirection;
   categoryId?: string;
   memo?: string;
 };
@@ -73,6 +75,9 @@ export type UpdateCollectedTransactionRecord = {
   amountWon: number;
   businessDate: Date;
   fundingAccountId: string;
+  ledgerTransactionTypeId?: string;
+  counterpartyFundingAccountId?: string;
+  fundingAccountDirection?: FundingAccountDirection;
   categoryId?: string;
   memo?: string;
 };

@@ -17,7 +17,12 @@ export function mapRecurringRuleToItem(
     frequency: rule.frequency,
     nextRunDate: rule.nextRunDate?.toISOString().slice(0, 10) ?? null,
     linkedInsurancePolicyId: rule.linkedInsurancePolicyId,
+    ledgerTransactionTypeId: rule.ledgerTransactionTypeId,
+    ledgerTransactionTypeName: rule.ledgerTransactionTypeName,
+    fundingAccountDirection: rule.fundingAccountDirection,
     fundingAccountName: rule.account.name,
+    counterpartyFundingAccountId: rule.counterpartyFundingAccountId,
+    counterpartyFundingAccountName: rule.counterpartyAccount?.name ?? null,
     categoryName: rule.category?.name ?? '-',
     isActive: rule.isActive
   };
@@ -30,6 +35,9 @@ export function mapRecurringRuleToDetailItem(
     id: rule.id,
     title: rule.title,
     fundingAccountId: rule.accountId,
+    ledgerTransactionTypeId: rule.ledgerTransactionTypeId,
+    counterpartyFundingAccountId: rule.counterpartyFundingAccountId,
+    fundingAccountDirection: rule.fundingAccountDirection,
     categoryId: rule.categoryId,
     amountWon: rule.amountWon,
     frequency: rule.frequency,

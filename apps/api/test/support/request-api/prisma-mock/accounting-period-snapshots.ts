@@ -1,4 +1,8 @@
-import { AuditActorType, OpeningBalanceSourceKind } from '@prisma/client';
+import {
+  AuditActorType,
+  OpeningBalanceEquityAdjustmentKind,
+  OpeningBalanceSourceKind
+} from '@prisma/client';
 import type { RequestPrismaMockContext } from './shared';
 
 export function createAccountingPeriodSnapshotsPrismaMock(
@@ -105,6 +109,8 @@ export function createAccountingPeriodSnapshotsPrismaMock(
           ledgerId: string;
           effectivePeriodId: string;
           sourceKind: OpeningBalanceSourceKind;
+          equityAdjustmentKind?: OpeningBalanceEquityAdjustmentKind | null;
+          equityAdjustmentAmount?: number;
           createdByActorType: AuditActorType;
           createdByMembershipId: string | null;
         };
@@ -127,6 +133,8 @@ export function createAccountingPeriodSnapshotsPrismaMock(
           ledgerId: args.data.ledgerId,
           effectivePeriodId: args.data.effectivePeriodId,
           sourceKind: args.data.sourceKind,
+          equityAdjustmentKind: args.data.equityAdjustmentKind ?? null,
+          equityAdjustmentAmount: args.data.equityAdjustmentAmount ?? 0,
           createdAt: new Date(),
           createdByActorType: args.data.createdByActorType,
           createdByMembershipId: args.data.createdByMembershipId

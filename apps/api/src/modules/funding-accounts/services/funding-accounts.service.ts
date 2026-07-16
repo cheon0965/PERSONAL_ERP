@@ -20,15 +20,16 @@ import {
 } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../../common/auth/required-workspace.util';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { STANDARD_ACCOUNT_SUBJECT_CODES } from '../../../common/prisma/standard-account-subject.catalog';
 import { normalizeCaseInsensitiveText } from '../../../common/utils/normalize-unique-key.util';
 import { buildJournalEntryEntryNumber } from '../../journal-entries/public';
 import { mapFundingAccountRecordToItem } from '../mappers/funding-account.mapper';
 import { readWorkspaceFundingAccountLiveBalances } from '../readers/funding-account-live-balance.reader';
 import { FundingAccountsRepository } from '../repositories/funding-accounts.repository';
 
-const ASSET_SUBJECT_CODE = '1010';
-const LIABILITY_SUBJECT_CODE = '2100';
-const EQUITY_SUBJECT_CODE = '3100';
+const ASSET_SUBJECT_CODE = STANDARD_ACCOUNT_SUBJECT_CODES.CASH_AND_DEPOSITS;
+const LIABILITY_SUBJECT_CODE = STANDARD_ACCOUNT_SUBJECT_CODES.CARD_PAYABLE;
+const EQUITY_SUBJECT_CODE = STANDARD_ACCOUNT_SUBJECT_CODES.NET_ASSETS;
 
 @Injectable()
 export class FundingAccountsService {
@@ -75,6 +76,11 @@ export class FundingAccountsService {
     });
 
     const initialBalanceWon = input.initialBalanceWon ?? 0;
+    const linkedAccountSubjectId = await this.resolveLinkedAccountSubjectId(
+      workspace.tenantId,
+      workspace.ledgerId,
+      input.type
+    );
 
     if (initialBalanceWon <= 0) {
       const created = await this.fundingAccountsRepository.createInWorkspace(
@@ -83,7 +89,8 @@ export class FundingAccountsService {
         workspace.ledgerId,
         {
           name: normalizedName,
-          type: input.type
+          type: input.type,
+          linkedAccountSubjectId
         }
       );
 
@@ -102,6 +109,7 @@ export class FundingAccountsService {
           userId: workspace.userId,
           tenantId: workspace.tenantId,
           ledgerId: workspace.ledgerId,
+          linkedAccountSubjectId,
           name: normalizedName,
           normalizedName: normalizeCaseInsensitiveText(normalizedName),
           type: input.type,
@@ -127,6 +135,31 @@ export class FundingAccountsService {
     });
 
     return mapFundingAccountRecordToItem(created);
+  }
+
+  private async resolveLinkedAccountSubjectId(
+    tenantId: string,
+    ledgerId: string,
+    accountType: CreateFundingAccountRequest['type']
+  ) {
+    const code =
+      accountType === 'CARD' ? LIABILITY_SUBJECT_CODE : ASSET_SUBJECT_CODE;
+    const subject = await this.prisma.accountSubject.findFirst({
+      where: {
+        tenantId,
+        ledgerId,
+        code,
+        isSystem: true,
+        isActive: true
+      },
+      select: { id: true }
+    });
+    if (!subject) {
+      throw new InternalServerErrorException(
+        `${code} 시스템 계정과목을 찾을 수 없어 자금수단을 생성할 수 없습니다.`
+      );
+    }
+    return subject.id;
   }
 
   async completeBootstrap(

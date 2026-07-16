@@ -188,7 +188,7 @@ test('POST /accounting-periods blocks opening a later period while the previous 
     assert.deepEqual(response.body, {
       statusCode: 409,
       message:
-        '새 운영 기간은 최근 운영 기간을 먼저 마감한 뒤 열 수 있습니다. 운영 중에는 하나의 최신 진행월만 열어 둡니다.',
+        '첫 월 이후 운영 기간은 직접 열 수 없습니다. 최근 잠금 월에서 차기 이월을 생성해 다음 월을 시작해 주세요.',
       error: 'Conflict'
     });
     assert.equal(context.state.accountingPeriods.length, 1);
@@ -198,7 +198,7 @@ test('POST /accounting-periods blocks opening a later period while the previous 
   }
 });
 
-test('POST /accounting-periods allows the first period to open with asset-only opening balance lines', async () => {
+test('POST /accounting-periods rejects an unbalanced first opening balance by default', async () => {
   const context = await createRequestTestContext();
 
   try {
@@ -208,6 +208,39 @@ test('POST /accounting-periods allows the first period to open with asset-only o
       body: {
         month: '2026-03',
         initializeOpeningBalance: true,
+        openingBalanceLines: [
+          {
+            accountSubjectId: 'as-1-1010',
+            fundingAccountId: 'acc-1',
+            balanceAmount: 3000000
+          }
+        ]
+      }
+    });
+
+    assert.equal(response.status, 400);
+    assert.match(
+      String((response.body as { message?: string }).message),
+      /AUTO_TO_NET_ASSETS/
+    );
+    assert.equal(context.state.accountingPeriods.length, 0);
+    assert.equal(context.state.openingBalanceSnapshots.length, 0);
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /accounting-periods auto-balances an asset-only first opening balance after explicit consent', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request('/accounting-periods', {
+      method: 'POST',
+      headers: context.authHeaders(),
+      body: {
+        month: '2026-03',
+        initializeOpeningBalance: true,
+        openingBalanceAdjustmentMode: 'AUTO_TO_NET_ASSETS',
         openingBalanceLines: [
           {
             accountSubjectId: 'as-1-1010',
@@ -231,12 +264,63 @@ test('POST /accounting-periods allows the first period to open with asset-only o
     );
     assert.equal(context.state.accountingPeriods.length, 1);
     assert.equal(context.state.openingBalanceSnapshots.length, 1);
-    assert.equal(context.state.balanceSnapshotLines.length, 1);
+    assert.equal(context.state.balanceSnapshotLines.length, 2);
     assert.equal(
       context.state.balanceSnapshotLines[0]?.accountSubjectId,
       'as-1-1010'
     );
     assert.equal(context.state.balanceSnapshotLines[0]?.balanceAmount, 3000000);
+    assert.equal(
+      context.state.balanceSnapshotLines.find(
+        (line) => line.accountSubjectId === 'as-1-3100'
+      )?.balanceAmount,
+      3000000
+    );
+    assert.equal(
+      context.state.openingBalanceSnapshots[0]?.equityAdjustmentKind,
+      'INITIAL_AUTO_BALANCE'
+    );
+    assert.equal(
+      context.state.openingBalanceSnapshots[0]?.equityAdjustmentAmount,
+      3000000
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test('POST /accounting-periods/opening-balance-preview returns the signed net-assets adjustment without writing', async () => {
+  const context = await createRequestTestContext();
+
+  try {
+    const response = await context.request(
+      '/accounting-periods/opening-balance-preview',
+      {
+        method: 'POST',
+        headers: context.authHeaders(),
+        body: {
+          openingBalanceLines: [
+            {
+              accountSubjectId: 'as-1-1010',
+              fundingAccountId: 'acc-1',
+              balanceAmount: 3000000
+            }
+          ]
+        }
+      }
+    );
+
+    assert.equal(response.status, 201);
+    assert.deepEqual(response.body, {
+      totalAssetAmount: 3000000,
+      totalLiabilityAmount: 0,
+      inputEquityAmount: 0,
+      adjustmentAmount: 3000000,
+      finalNetAssetsAmount: 3000000,
+      isBalanced: false
+    });
+    assert.equal(context.state.accountingPeriods.length, 0);
+    assert.equal(context.state.openingBalanceSnapshots.length, 0);
   } finally {
     await context.close();
   }
