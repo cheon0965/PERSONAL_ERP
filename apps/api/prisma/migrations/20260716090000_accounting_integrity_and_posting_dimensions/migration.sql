@@ -49,32 +49,20 @@ ALTER TABLE `Category`
     FOREIGN KEY (`defaultAccountSubjectId`) REFERENCES `AccountSubject`(`id`)
       ON DELETE SET NULL ON UPDATE CASCADE;
 
+-- MySQL 8.4 rejects CHECK constraints that reference columns participating in
+-- cascading foreign keys (error 3823). The posting-account selection policy
+-- rejects identical source and counterparty accounts before these rows are written.
 ALTER TABLE `RecurringRule`
   ADD CONSTRAINT `RecurringRule_counterpartyFundingAccountId_fkey`
     FOREIGN KEY (`counterpartyFundingAccountId`) REFERENCES `Account`(`id`)
-      ON DELETE RESTRICT ON UPDATE CASCADE,
-  ADD CONSTRAINT `RecurringRule_distinct_funding_accounts_chk`
-    CHECK (
-      `counterpartyFundingAccountId` IS NULL OR
-      `counterpartyFundingAccountId` <> `accountId`
-    );
+      ON DELETE RESTRICT ON UPDATE CASCADE;
 
 ALTER TABLE `PlanItem`
   ADD CONSTRAINT `PlanItem_counterpartyFundingAccountId_fkey`
     FOREIGN KEY (`counterpartyFundingAccountId`) REFERENCES `Account`(`id`)
-      ON DELETE RESTRICT ON UPDATE CASCADE,
-  ADD CONSTRAINT `PlanItem_distinct_funding_accounts_chk`
-    CHECK (
-      `counterpartyFundingAccountId` IS NULL OR
-      `counterpartyFundingAccountId` <> `fundingAccountId`
-    );
+      ON DELETE RESTRICT ON UPDATE CASCADE;
 
 ALTER TABLE `CollectedTransaction`
   ADD CONSTRAINT `CollectedTransaction_counterpartyFundingAccountId_fkey`
     FOREIGN KEY (`counterpartyFundingAccountId`) REFERENCES `Account`(`id`)
-      ON DELETE RESTRICT ON UPDATE CASCADE,
-  ADD CONSTRAINT `CollectedTransaction_distinct_funding_accounts_chk`
-    CHECK (
-      `counterpartyFundingAccountId` IS NULL OR
-      `counterpartyFundingAccountId` <> `fundingAccountId`
-    );
+      ON DELETE RESTRICT ON UPDATE CASCADE;

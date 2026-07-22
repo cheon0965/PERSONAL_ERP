@@ -21,6 +21,20 @@ test('posting selection requires the second account and direction before transfe
   );
 });
 
+test('posting selection rejects identical source and counterparty accounts', () => {
+  const result = assessPostingAccountSelection({
+    postingPolicyKey: 'TRANSFER_BASIC',
+    fundingAccountId: 'bank-1',
+    fundingAccountType: 'BANK',
+    counterpartyFundingAccountId: 'bank-1',
+    counterpartyFundingAccountType: 'BANK',
+    fundingAccountDirection: 'OUTFLOW'
+  });
+
+  assert.equal(result.status, 'REVIEWED');
+  assert.match(result.validationError ?? '', /서로 달라야/);
+});
+
 test('posting selection accepts bank-to-card payment and rejects an invalid direction', () => {
   const ready = assessPostingAccountSelection({
     postingPolicyKey: 'CARD_PAYMENT',
