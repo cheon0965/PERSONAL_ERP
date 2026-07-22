@@ -109,6 +109,9 @@ export class GeneratePlanItemsUseCase {
       string,
       LedgerTransactionFlowKindValue
     >();
+    const postingPolicyByTransactionTypeId = new Map(
+      transactionTypes.map((item) => [item.id, item.postingPolicyKey] as const)
+    );
     for (const transactionType of transactionTypes) {
       if (!defaultTypeIdByFlow.has(transactionType.flowKind)) {
         defaultTypeIdByFlow.set(transactionType.flowKind, transactionType.id);
@@ -138,6 +141,8 @@ export class GeneratePlanItemsUseCase {
       liabilityRepaymentScheduleId?: string | null;
       ledgerTransactionTypeId: string;
       fundingAccountId: string;
+      counterpartyFundingAccountId?: string | null;
+      fundingAccountDirection?: 'INFLOW' | 'OUTFLOW' | null;
       categoryId?: string;
       title: string;
       plannedAmount: number;
@@ -189,6 +194,8 @@ export class GeneratePlanItemsUseCase {
           recurringRuleId: rule.id,
           ledgerTransactionTypeId,
           fundingAccountId: rule.accountId,
+          counterpartyFundingAccountId: rule.counterpartyFundingAccountId,
+          fundingAccountDirection: rule.fundingAccountDirection,
           categoryId: rule.categoryId ?? undefined,
           title: rule.title,
           plannedAmount: rule.amountWon,
@@ -196,7 +203,12 @@ export class GeneratePlanItemsUseCase {
           matchedCollectedTransactionStatus:
             resolveAutoCollectedTransactionStatus({
               flowKind,
-              categoryId: rule.categoryId ?? undefined
+              postingPolicyKey: postingPolicyByTransactionTypeId.get(
+                ledgerTransactionTypeId
+              ),
+              categoryId: rule.categoryId ?? undefined,
+              counterpartyFundingAccountId: rule.counterpartyFundingAccountId,
+              fundingAccountDirection: rule.fundingAccountDirection
             })
         });
       }
@@ -274,16 +286,39 @@ function assertGeneratePermission(
 
 function resolveAutoCollectedTransactionStatus(input: {
   flowKind: LedgerTransactionFlowKindValue;
+  postingPolicyKey?:
+    | 'INCOME_BASIC'
+    | 'EXPENSE_BASIC'
+    | 'TRANSFER_BASIC'
+    | 'CARD_SPEND'
+    | 'CARD_PAYMENT'
+    | 'OPENING_BALANCE'
+    | 'CARRY_FORWARD'
+    | 'MANUAL_ADJUSTMENT';
   categoryId?: string;
+  counterpartyFundingAccountId?: string | null;
+  fundingAccountDirection?: 'INFLOW' | 'OUTFLOW' | null;
 }) {
   // 전표 확정에 필요한 기준이 이미 충분하면 바로 READY_TO_POST로 보낸다.
   // 카테고리가 필요한 수입/지출인데 비어 있으면 사용자가 검토할 수 있도록 REVIEWED에 둔다.
   if (
-    input.flowKind === 'TRANSFER' ||
+    (input.flowKind === 'TRANSFER' &&
+      input.postingPolicyKey !== 'TRANSFER_BASIC' &&
+      input.postingPolicyKey !== 'CARD_PAYMENT') ||
     input.flowKind === 'OPENING_BALANCE' ||
     input.flowKind === 'CARRY_FORWARD'
   ) {
     return 'READY_TO_POST' as const;
+  }
+
+  if (
+    input.postingPolicyKey === 'TRANSFER_BASIC' ||
+    input.postingPolicyKey === 'CARD_PAYMENT'
+  ) {
+    return input.counterpartyFundingAccountId?.trim() &&
+      input.fundingAccountDirection
+      ? ('READY_TO_POST' as const)
+      : ('REVIEWED' as const);
   }
 
   return input.categoryId?.trim()

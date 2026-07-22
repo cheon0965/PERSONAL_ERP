@@ -84,6 +84,8 @@ export function buildStatementPayloads(input: {
   const expenseLines = closingLines.filter(
     (line) => line.accountSubject.subjectKind === 'EXPENSE'
   );
+  const incomeStatementItems = aggregateProfitAndLossLines(incomeLines);
+  const expenseStatementItems = aggregateProfitAndLossLines(expenseLines);
 
   const cashFlowByFundingAccount = new Map<string, number>();
   for (const line of journalLines) {
@@ -161,13 +163,19 @@ export function buildStatementPayloads(input: {
           },
           {
             title: '자본',
-            items: equity.map((line) => ({
-              label: buildLineLabel(
-                line.accountSubject.name,
-                line.fundingAccount?.name
-              ),
-              amountWon: line.balanceAmount
-            }))
+            items: [
+              ...equity.map((line) => ({
+                label: buildLineLabel(
+                  line.accountSubject.name,
+                  line.fundingAccount?.name
+                ),
+                amountWon: line.balanceAmount
+              })),
+              {
+                label: '당기 손익',
+                amountWon: closingSnapshot.periodPnLAmount
+              }
+            ]
           }
         ],
         notes: [
@@ -195,17 +203,11 @@ export function buildStatementPayloads(input: {
         sections: [
           {
             title: '수익',
-            items: incomeLines.map((line) => ({
-              label: line.accountSubject.name,
-              amountWon: line.balanceAmount
-            }))
+            items: incomeStatementItems
           },
           {
             title: '비용',
-            items: expenseLines.map((line) => ({
-              label: line.accountSubject.name,
-              amountWon: line.balanceAmount
-            }))
+            items: expenseStatementItems
           }
         ],
         notes: [
@@ -265,13 +267,44 @@ export function buildStatementPayloads(input: {
           }
         ],
         notes: [
-          input.openingNetWorth === 0
-            ? '이전 잠금 기준이 없어 기초 순자산은 0으로 시작합니다.'
-            : '이전 잠금 기준 ClosingSnapshot을 기초 순자산 기준으로 사용합니다.'
+          '현재 운영 기간의 OpeningBalanceSnapshot을 기초 순자산 기준으로 사용합니다.'
         ]
       }
     ]
   ]);
+}
+
+function aggregateProfitAndLossLines(
+  lines: Array<{
+    balanceAmount: number;
+    accountSubject: {
+      code: string;
+      name: string;
+    };
+  }>
+) {
+  const grouped = new Map<
+    string,
+    { code: string; label: string; amountWon: number }
+  >();
+
+  for (const line of lines) {
+    const key = `${line.accountSubject.code}:${line.accountSubject.name}`;
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.amountWon = addMoneyWon(existing.amountWon, line.balanceAmount);
+    } else {
+      grouped.set(key, {
+        code: line.accountSubject.code,
+        label: line.accountSubject.name,
+        amountWon: line.balanceAmount
+      });
+    }
+  }
+
+  return [...grouped.values()]
+    .sort((left, right) => left.code.localeCompare(right.code))
+    .map(({ label, amountWon }) => ({ label, amountWon }));
 }
 
 function buildLineLabel(

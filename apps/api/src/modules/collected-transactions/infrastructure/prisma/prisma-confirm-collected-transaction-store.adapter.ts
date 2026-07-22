@@ -50,11 +50,51 @@ const confirmationCollectedTransactionInclude = {
   fundingAccount: {
     select: {
       id: true,
-      name: true
+      name: true,
+      type: true,
+      linkedAccountSubject: {
+        select: {
+          id: true,
+          ledgerId: true,
+          subjectKind: true,
+          isActive: true
+        }
+      }
+    }
+  },
+  counterpartyFundingAccount: {
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      linkedAccountSubject: {
+        select: {
+          id: true,
+          ledgerId: true,
+          subjectKind: true,
+          isActive: true
+        }
+      }
+    }
+  },
+  category: {
+    select: {
+      id: true,
+      kind: true,
+      defaultAccountSubject: {
+        select: {
+          id: true,
+          ledgerId: true,
+          subjectKind: true,
+          isActive: true
+        }
+      }
     }
   },
   ledgerTransactionType: {
     select: {
+      id: true,
+      name: true,
       postingPolicyKey: true
     }
   },
@@ -157,6 +197,7 @@ function mapPrismaToConfirmationCollectedTransaction(
   // 유스케이스는 숫자 원화와 최소 관계 정보만 필요하므로 Prisma Decimal과 깊은 관계 구조를 여기서 평평하게 만든다.
   return {
     id: record.id,
+    ledgerId: record.ledgerId,
     occurredOn: record.occurredOn,
     title: record.title,
     memo: record.memo,
@@ -201,9 +242,16 @@ function mapPrismaToConfirmationCollectedTransaction(
       : null,
     fundingAccount: {
       id: record.fundingAccount.id,
-      name: record.fundingAccount.name
+      name: record.fundingAccount.name,
+      type: record.fundingAccount.type,
+      linkedAccountSubject: record.fundingAccount.linkedAccountSubject
     },
+    counterpartyFundingAccount: record.counterpartyFundingAccount,
+    fundingAccountDirection: record.fundingAccountDirection,
+    category: record.category,
     ledgerTransactionType: {
+      id: record.ledgerTransactionType.id,
+      name: record.ledgerTransactionType.name,
       postingPolicyKey: record.ledgerTransactionType.postingPolicyKey
     },
     importedRow: record.importedRow

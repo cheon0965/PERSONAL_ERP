@@ -20,6 +20,7 @@ export const periodFormSchema = z.object({
     .trim()
     .regex(/^\d{4}-\d{2}$/, '운영 월은 YYYY-MM 형식이어야 합니다.'),
   initializeOpeningBalance: z.boolean(),
+  acceptNetAssetsAdjustment: z.boolean(),
   openingBalanceLines: z.array(openingBalanceLineFormSchema),
   note: z.string().max(300, '메모는 300자 이하여야 합니다.')
 });

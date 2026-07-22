@@ -11,7 +11,8 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type {
   AccountingPeriodItem,
   AuthenticatedUser,
-  CloseAccountingPeriodResponse
+  CloseAccountingPeriodResponse,
+  OpeningBalancePreview
 } from '@personal-erp/contracts';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { requireCurrentWorkspace } from '../../common/auth/required-workspace.util';
@@ -29,6 +30,7 @@ import { OpenAccountingPeriodRequestDto } from './dto/open-accounting-period.dto
 import { ReopenAccountingPeriodRequestDto } from './dto/reopen-accounting-period.dto';
 import { OpenAccountingPeriodUseCase } from './application/use-cases/open-accounting-period.use-case';
 import { ReopenAccountingPeriodUseCase } from './application/use-cases/reopen-accounting-period.use-case';
+import { PreviewOpeningBalanceRequestDto } from './dto/preview-opening-balance.dto';
 
 @ApiTags('accounting-periods')
 @ApiBearerAuth()
@@ -54,6 +56,14 @@ export class AccountingPeriodsController {
     @CurrentUser() user: AuthenticatedUser
   ): Promise<AccountingPeriodItem | null> {
     return this.accountingPeriodsService.findCurrent(user);
+  }
+
+  @Post('opening-balance-preview')
+  previewOpeningBalance(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: PreviewOpeningBalanceRequestDto
+  ): Promise<OpeningBalancePreview> {
+    return this.openAccountingPeriodUseCase.preview(user, dto);
   }
 
   @Post()

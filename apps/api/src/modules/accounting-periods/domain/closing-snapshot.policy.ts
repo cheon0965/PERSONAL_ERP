@@ -1,4 +1,6 @@
 import { addMoneyWon, subtractMoneyWon } from '@personal-erp/money';
+import { validationError } from '../../../common/application/errors/app-error';
+import { assertAccountingEquationBalanced } from './accounting-equation.policy';
 
 type AccountSubjectKind =
   | 'ASSET'
@@ -136,7 +138,9 @@ function projectNaturalBalance(
 }
 
 export function summarizeClosingSnapshot(
-  lines: AggregatedClosingSnapshotLine[]
+  lines: Array<
+    Pick<AggregatedClosingSnapshotLine, 'accountSubjectKind' | 'balanceAmount'>
+  >
 ) {
   let totalAssetAmount = 0;
   let totalLiabilityAmount = 0;
@@ -188,4 +192,54 @@ export function summarizeClosingSnapshot(
     totalEquityAmount,
     periodPnLAmount
   };
+}
+
+export function assertClosingSnapshotIntegrity(input: {
+  snapshot: {
+    totalAssetAmount: number;
+    totalLiabilityAmount: number;
+    totalEquityAmount: number;
+    periodPnLAmount: number;
+  };
+  lines: Array<{
+    accountSubjectKind: AccountSubjectKind;
+    balanceAmount: number;
+  }>;
+}) {
+  const recalculated = summarizeClosingSnapshot(input.lines);
+  const totalFields = [
+    'totalAssetAmount',
+    'totalLiabilityAmount',
+    'totalEquityAmount',
+    'periodPnLAmount'
+  ] as const;
+
+  for (const field of totalFields) {
+    if (input.snapshot[field] !== recalculated[field]) {
+      throw validationError(
+        `마감 스냅샷 라인 합계와 ${field} 값이 일치하지 않습니다.`
+      );
+    }
+  }
+
+  assertAccountingEquationBalanced(
+    input.snapshot,
+    '마감 스냅샷의 회계등식(자산=부채+자본)이 성립하지 않습니다.'
+  );
+}
+
+export function assertPostedJournalEntriesBalanced(
+  entries: Array<{
+    entryNumber: string;
+    debitAmount: number;
+    creditAmount: number;
+  }>
+) {
+  for (const entry of entries) {
+    if (entry.debitAmount !== entry.creditAmount) {
+      throw validationError(
+        `확정 전표 ${entry.entryNumber}의 차변과 대변 합계가 일치하지 않습니다.`
+      );
+    }
+  }
 }

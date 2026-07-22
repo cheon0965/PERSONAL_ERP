@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import type { CreateCollectedTransactionRequest } from '@personal-erp/contracts';
-import { TransactionType } from '@prisma/client';
+import { FundingAccountDirection, TransactionType } from '@prisma/client';
 import {
   IsDateString,
   IsEnum,
@@ -32,6 +32,21 @@ export class CreateCollectedTransactionRequestDto implements CreateCollectedTran
   @ApiProperty()
   @IsString()
   fundingAccountId!: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  ledgerTransactionTypeId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  counterpartyFundingAccountId?: string;
+
+  @ApiProperty({ required: false, enum: FundingAccountDirection })
+  @IsOptional()
+  @IsEnum(FundingAccountDirection)
+  fundingAccountDirection?: FundingAccountDirection;
 
   @ApiProperty({ required: false })
   @IsOptional()

@@ -114,7 +114,19 @@ test('PATCH /collected-transactions/:id updates a pending collected transaction 
 
       amountWon: 91_000,
 
+      ledgerTransactionTypeId: 'ltt-1-expense',
+
+      ledgerTransactionTypeName: '기본 지출',
+
+      postingPolicyKey: 'EXPENSE_BASIC',
+
+      fundingAccountDirection: 'OUTFLOW',
+
       fundingAccountName: 'Main checking',
+
+      counterpartyFundingAccountId: null,
+
+      counterpartyFundingAccountName: null,
 
       categoryName: 'Utilities',
 
@@ -148,6 +160,10 @@ test('PATCH /collected-transactions/:id updates a pending collected transaction 
         ledgerTransactionTypeId: 'ltt-1-expense',
 
         fundingAccountId: 'acc-1',
+
+        counterpartyFundingAccountId: null,
+
+        fundingAccountDirection: 'OUTFLOW',
 
         categoryId: 'cat-1c',
 

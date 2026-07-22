@@ -6,8 +6,11 @@ import {
 import type {
   AccountingPeriodItem,
   AuthenticatedUser,
-  OpenAccountingPeriodRequest
+  OpenAccountingPeriodRequest,
+  OpeningBalancePreview,
+  PreviewOpeningBalanceRequest
 } from '@personal-erp/contracts';
+import { addMoneyWon, subtractMoneyWon } from '@personal-erp/money';
 import {
   AccountSubjectKind,
   AccountingPeriodEventType,
@@ -26,12 +29,15 @@ import { publishPeriodStatusHistoryAudit } from '../../../../common/infrastructu
 import { parseMonthRange } from '../../../../common/utils/date.util';
 import { mapAccountingPeriodRecordToItem } from '../../application/mappers/accounting-period.mapper';
 import {
-  compareYearMonth,
   normalizeMonthToken,
   normalizeOptionalText,
   readYearMonth
 } from '../../domain/accounting-period.policy';
 import { assertAccountingPeriodCanRecordInitialOpen } from '../../domain/accounting-period-transition.policy';
+import {
+  calculateAccountingEquationDifference,
+  summarizeAccountingEquationLines
+} from '../../domain/accounting-equation.policy';
 
 /**
  * 새 운영월을 OPEN 상태로 시작하는 유스케이스입니다.
@@ -45,6 +51,47 @@ export class PrismaOpenAccountingPeriodLifecycle {
     private readonly prisma: PrismaService,
     private readonly auditPublisher: OperationalAuditPublisher
   ) {}
+
+  async preview(
+    user: AuthenticatedUser,
+    input: PreviewOpeningBalanceRequest
+  ): Promise<OpeningBalancePreview> {
+    const workspace = requireCurrentWorkspace(user);
+    assertOpenPermission(workspace.membershipRole);
+
+    const lineDrafts = normalizeOpeningBalanceLineDrafts(
+      input.openingBalanceLines
+    );
+    if (lineDrafts.length === 0) {
+      throw validationError(
+        '기초 잔액 미리보기에는 최소 1건 이상의 라인이 필요합니다.'
+      );
+    }
+
+    const [accountSubjects, fundingAccounts] = await Promise.all([
+      this.prisma.accountSubject.findMany({
+        where: {
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId,
+          isActive: true
+        }
+      }),
+      this.prisma.account.findMany({
+        where: {
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId
+        }
+      })
+    ]);
+
+    return buildOpeningBalancePreview(
+      buildValidatedOpeningBalanceLines({
+        lineDrafts,
+        accountSubjects,
+        fundingAccounts
+      })
+    );
+  }
 
   async execute(
     user: AuthenticatedUser,
@@ -85,6 +132,12 @@ export class PrismaOpenAccountingPeriodLifecycle {
       input.openingBalanceLines
     );
 
+    if (!isFirstPeriod) {
+      throw conflictError(
+        '첫 월 이후 운영 기간은 직접 열 수 없습니다. 최근 잠금 월에서 차기 이월을 생성해 다음 월을 시작해 주세요.'
+      );
+    }
+
     // 첫 운영월은 이전 마감 잔액이 없으므로 사용자가 직접 기초 잔액을 제공해야 한다.
     // 반대로 두 번째 달부터는 차기 이월이 오프닝 기준을 만들어야 하므로 직접 입력을 막는다.
     if (!shouldCreateOpeningSnapshot && openingBalanceLineDrafts.length > 0) {
@@ -99,49 +152,27 @@ export class PrismaOpenAccountingPeriodLifecycle {
       );
     }
 
-    if (!isFirstPeriod && shouldCreateOpeningSnapshot) {
-      throw validationError(
-        '오프닝 잔액 스냅샷 직접 생성은 첫 월 운영 시작에서만 허용합니다.'
-      );
-    }
-
     if (isFirstPeriod && openingBalanceLineDrafts.length === 0) {
       throw validationError(
         '첫 월 운영 시작에는 최소 1건 이상의 오프닝 잔액 라인이 필요합니다.'
       );
     }
 
-    if (latestPeriod) {
-      // 월 운영은 하나의 최신 진행월만 허용한다. 과거월 재개나 미래월 선오픈을 허용하면
-      // 계획 생성, 업로드 승격, 마감 스냅샷의 기준월이 어긋날 수 있다.
-      if (
-        compareYearMonth(year, month, latestPeriod.year, latestPeriod.month) <=
-        0
-      ) {
-        throw validationError(
-          '새 운영 기간은 최근 운영 기간보다 이후 월이어야 합니다.'
-        );
-      }
-
-      if (latestPeriod.status !== AccountingPeriodStatus.LOCKED) {
-        throw conflictError(
-          '새 운영 기간은 최근 운영 기간을 먼저 마감한 뒤 열 수 있습니다. 운영 중에는 하나의 최신 진행월만 열어 둡니다.'
-        );
-      }
-    }
-
     assertAccountingPeriodCanRecordInitialOpen();
 
+    const accountSubjects = shouldCreateOpeningSnapshot
+      ? await this.prisma.accountSubject.findMany({
+          where: {
+            tenantId: workspace.tenantId,
+            ledgerId: workspace.ledgerId,
+            isActive: true
+          }
+        })
+      : [];
     const validatedOpeningBalanceLines = shouldCreateOpeningSnapshot
       ? buildValidatedOpeningBalanceLines({
           lineDrafts: openingBalanceLineDrafts,
-          accountSubjects: await this.prisma.accountSubject.findMany({
-            where: {
-              tenantId: workspace.tenantId,
-              ledgerId: workspace.ledgerId,
-              isActive: true
-            }
-          }),
+          accountSubjects,
           fundingAccounts: await this.prisma.account.findMany({
             where: {
               tenantId: workspace.tenantId,
@@ -150,6 +181,11 @@ export class PrismaOpenAccountingPeriodLifecycle {
           })
         })
       : [];
+    const openingBalancePlan = buildOpeningBalancePlan({
+      lines: validatedOpeningBalanceLines,
+      accountSubjects,
+      adjustmentMode: input.openingBalanceAdjustmentMode ?? 'REJECT'
+    });
 
     const { createdPeriod, createdStatusHistory, openingBalanceSnapshot } =
       await this.prisma.$transaction(async (tx) => {
@@ -187,14 +223,17 @@ export class PrismaOpenAccountingPeriodLifecycle {
                 ledgerId: workspace.ledgerId,
                 effectivePeriodId: createdPeriod.id,
                 sourceKind: 'INITIAL_SETUP',
+                equityAdjustmentKind: openingBalancePlan.equityAdjustmentKind,
+                equityAdjustmentAmount:
+                  openingBalancePlan.equityAdjustmentAmount,
                 ...createdByActorRef
               }
             })
           : null;
 
-        if (openingBalanceSnapshot && validatedOpeningBalanceLines.length > 0) {
+        if (openingBalanceSnapshot && openingBalancePlan.lines.length > 0) {
           await tx.balanceSnapshotLine.createMany({
-            data: validatedOpeningBalanceLines.map((line) => ({
+            data: openingBalancePlan.lines.map((line) => ({
               snapshotKind: 'OPENING',
               openingSnapshotId: openingBalanceSnapshot.id,
               accountSubjectId: line.accountSubjectId,
@@ -315,6 +354,106 @@ function buildValidatedOpeningBalanceLines(input: {
       )
     };
   });
+}
+
+type ValidatedOpeningBalanceLine = ReturnType<
+  typeof buildValidatedOpeningBalanceLines
+>[number];
+
+function buildOpeningBalancePreview(
+  lines: ValidatedOpeningBalanceLine[]
+): OpeningBalancePreview {
+  const totals = summarizeAccountingEquationLines(
+    lines.map((line) => ({
+      accountSubjectKind: line.accountSubjectKind,
+      balanceAmount: line.balanceAmount
+    }))
+  );
+  const adjustmentAmount = calculateAccountingEquationDifference(totals);
+
+  return {
+    totalAssetAmount: totals.totalAssetAmount,
+    totalLiabilityAmount: totals.totalLiabilityAmount,
+    inputEquityAmount: totals.totalEquityAmount,
+    adjustmentAmount,
+    finalNetAssetsAmount: subtractMoneyWon(
+      totals.totalAssetAmount,
+      totals.totalLiabilityAmount
+    ),
+    isBalanced: adjustmentAmount === 0
+  };
+}
+
+function buildOpeningBalancePlan(input: {
+  lines: ValidatedOpeningBalanceLine[];
+  accountSubjects: Array<{
+    id: string;
+    code: string;
+    subjectKind: AccountSubjectKind;
+  }>;
+  adjustmentMode: 'REJECT' | 'AUTO_TO_NET_ASSETS';
+}) {
+  const preview = buildOpeningBalancePreview(input.lines);
+  if (preview.isBalanced) {
+    return {
+      lines: input.lines,
+      equityAdjustmentKind: null,
+      equityAdjustmentAmount: 0
+    } as const;
+  }
+
+  if (input.adjustmentMode !== 'AUTO_TO_NET_ASSETS') {
+    throw validationError(
+      `기초 잔액의 자산과 부채+자본 합계가 일치하지 않습니다. 차액 ${preview.adjustmentAmount}원을 3100 순자산으로 보정하려면 openingBalanceAdjustmentMode를 AUTO_TO_NET_ASSETS로 명시해 주세요.`
+    );
+  }
+
+  const netAssetsSubject = input.accountSubjects.find(
+    (candidate) =>
+      candidate.code === '3100' && candidate.subjectKind === 'EQUITY'
+  );
+  if (!netAssetsSubject) {
+    throw validationError(
+      '기초 잔액 자동 보정에 필요한 3100 순자산 계정과목을 찾을 수 없습니다.'
+    );
+  }
+
+  const lines = input.lines.map((line) => ({ ...line }));
+  const existingIndex = lines.findIndex(
+    (line) =>
+      line.accountSubjectId === netAssetsSubject.id &&
+      line.fundingAccountId === null
+  );
+
+  if (existingIndex >= 0) {
+    const existing = lines[existingIndex]!;
+    const adjustedAmount = addMoneyWon(
+      existing.balanceAmount,
+      preview.adjustmentAmount
+    );
+
+    if (adjustedAmount === 0) {
+      lines.splice(existingIndex, 1);
+    } else {
+      lines[existingIndex] = {
+        ...existing,
+        balanceAmount: adjustedAmount
+      };
+    }
+  } else {
+    lines.push({
+      accountSubjectId: netAssetsSubject.id,
+      accountSubjectKind: 'EQUITY',
+      fundingAccountId: null,
+      balanceAmount: preview.adjustmentAmount
+    });
+  }
+
+  return {
+    lines,
+    equityAdjustmentKind: 'INITIAL_AUTO_BALANCE',
+    equityAdjustmentAmount: preview.adjustmentAmount
+  } as const;
 }
 
 function isOpeningBalanceSubjectKind(subjectKind: AccountSubjectKind) {

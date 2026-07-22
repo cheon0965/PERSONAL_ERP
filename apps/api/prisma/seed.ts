@@ -32,6 +32,7 @@ import * as argon2 from 'argon2';
 import { getApiEnv, type ApiEnv } from '../src/config/api-env';
 import { buildSourceFingerprint } from '../src/modules/import-batches/public';
 import { normalizeCaseInsensitiveText } from '../src/common/utils/normalize-unique-key.util';
+import { STANDARD_ACCOUNT_SUBJECT_CODES } from '../src/common/prisma/standard-account-subject.catalog';
 import { resetDemoUserAndOwnedWorkspaces } from './demo-reset';
 import { ensurePhase1BackboneForUser } from './phase1-backbone';
 
@@ -68,11 +69,11 @@ const DEMO_OPENED_FROM_YEAR_MONTH = '2026-01';
 const DEMO_CLOSED_THROUGH_YEAR_MONTH = '2026-03';
 
 const DEMO_ACCOUNT_SUBJECT_CODES = {
-  cash: '1010',
-  liability: '2100',
-  equity: '3100',
-  income: '4100',
-  expense: '5100'
+  cash: STANDARD_ACCOUNT_SUBJECT_CODES.CASH_AND_DEPOSITS,
+  liability: STANDARD_ACCOUNT_SUBJECT_CODES.CARD_PAYABLE,
+  equity: STANDARD_ACCOUNT_SUBJECT_CODES.NET_ASSETS,
+  income: STANDARD_ACCOUNT_SUBJECT_CODES.OPERATING_INCOME,
+  expense: STANDARD_ACCOUNT_SUBJECT_CODES.OPERATING_EXPENSE
 } as const;
 
 const DEMO_TRANSACTION_TYPE_CODES = {
@@ -109,72 +110,84 @@ const DEMO_CATEGORIES = [
     fixtureId: 'salesCategory',
     name: '매출 입금',
     kind: CategoryKind.INCOME,
+    accountSubjectCode: STANDARD_ACCOUNT_SUBJECT_CODES.SALES_INCOME,
     sortOrder: 1
   },
   {
     fixtureId: 'materialCategory',
     name: '원재료비',
     kind: CategoryKind.EXPENSE,
+    accountSubjectCode: STANDARD_ACCOUNT_SUBJECT_CODES.RAW_MATERIALS,
     sortOrder: 2
   },
   {
     fixtureId: 'insuranceCategory',
     name: '보험료',
     kind: CategoryKind.EXPENSE,
+    accountSubjectCode: STANDARD_ACCOUNT_SUBJECT_CODES.INSURANCE_EXPENSE,
     sortOrder: 3
   },
   {
     fixtureId: 'fuelCategory',
     name: '유류비',
     kind: CategoryKind.EXPENSE,
+    accountSubjectCode: STANDARD_ACCOUNT_SUBJECT_CODES.VEHICLE_EXPENSE,
     sortOrder: 4
   },
   {
     fixtureId: 'maintenanceCategory',
     name: '차량 정비비',
     kind: CategoryKind.EXPENSE,
+    accountSubjectCode: STANDARD_ACCOUNT_SUBJECT_CODES.VEHICLE_EXPENSE,
     sortOrder: 5
   },
   {
     fixtureId: 'utilitiesCategory',
     name: '통신·POS 비용',
     kind: CategoryKind.EXPENSE,
+    accountSubjectCode: STANDARD_ACCOUNT_SUBJECT_CODES.COMMUNICATION_EXPENSE,
     sortOrder: 6
   },
   {
     fixtureId: 'packagingCategory',
     name: '포장재/소모품',
     kind: CategoryKind.EXPENSE,
+    accountSubjectCode: STANDARD_ACCOUNT_SUBJECT_CODES.SUPPLIES_EXPENSE,
     sortOrder: 7
   },
   {
     fixtureId: 'rentCategory',
     name: '임차료',
     kind: CategoryKind.EXPENSE,
+    accountSubjectCode: STANDARD_ACCOUNT_SUBJECT_CODES.RENT_EXPENSE,
     sortOrder: 8
   },
   {
     fixtureId: 'deliveryCategory',
     name: '배송비',
     kind: CategoryKind.EXPENSE,
+    accountSubjectCode: STANDARD_ACCOUNT_SUBJECT_CODES.DELIVERY_EXPENSE,
     sortOrder: 9
   },
   {
     fixtureId: 'marketingCategory',
     name: '광고·판촉비',
     kind: CategoryKind.EXPENSE,
+    accountSubjectCode: STANDARD_ACCOUNT_SUBJECT_CODES.ADVERTISING_EXPENSE,
     sortOrder: 10
   },
   {
     fixtureId: 'subscriptionCategory',
     name: '업무 도구 구독료',
     kind: CategoryKind.EXPENSE,
+    accountSubjectCode: STANDARD_ACCOUNT_SUBJECT_CODES.SERVICE_FEES,
     sortOrder: 11
   },
   {
     fixtureId: 'financeCategory',
     name: '대출 이자/금융비용',
     kind: CategoryKind.EXPENSE,
+    accountSubjectCode: STANDARD_ACCOUNT_SUBJECT_CODES.INTEREST_EXPENSE,
     sortOrder: 12
   }
 ] as const;
@@ -1755,14 +1768,43 @@ async function ensureDemoCategories(
   ledgerId: string,
   summary: SeedSummary
 ) {
-  const existingCategories = await prisma.category.findMany({
-    where: { tenantId, ledgerId },
-    select: { id: true, name: true, kind: true, sortOrder: true }
-  });
+  const [existingCategories, accountSubjects] = await Promise.all([
+    prisma.category.findMany({
+      where: { tenantId, ledgerId },
+      select: { id: true, name: true, kind: true, sortOrder: true }
+    }),
+    prisma.accountSubject.findMany({
+      where: {
+        tenantId,
+        ledgerId,
+        code: {
+          in: [
+            ...new Set(DEMO_CATEGORIES.map((item) => item.accountSubjectCode))
+          ]
+        },
+        isActive: true
+      },
+      select: {
+        id: true,
+        code: true
+      }
+    })
+  ]);
+  const accountSubjectIdByCode = new Map(
+    accountSubjects.map((accountSubject) => [
+      accountSubject.code,
+      accountSubject.id
+    ])
+  );
 
   const categoryIds = new Map<string, string>();
 
   for (const category of DEMO_CATEGORIES) {
+    const defaultAccountSubjectId = requireMapValue(
+      accountSubjectIdByCode,
+      category.accountSubjectCode,
+      `demo category account subject ${category.accountSubjectCode}`
+    );
     const existingCategory =
       existingCategories.find(
         (item) =>
@@ -1779,6 +1821,7 @@ async function ensureDemoCategories(
           name: category.name,
           normalizedName: normalizeCaseInsensitiveText(category.name),
           kind: category.kind,
+          defaultAccountSubjectId,
           sortOrder: category.sortOrder,
           isActive: true
         }
@@ -1797,6 +1840,7 @@ async function ensureDemoCategories(
         name: category.name,
         normalizedName: normalizeCaseInsensitiveText(category.name),
         kind: category.kind,
+        defaultAccountSubjectId,
         sortOrder: category.sortOrder,
         isActive: true
       },

@@ -27,7 +27,9 @@ export function createCollectedTransactionWriteMethods(
         matchedPlanItemId?: string | null;
         ledgerTransactionTypeId: string;
         fundingAccountId: string;
-        categoryId?: string;
+        counterpartyFundingAccountId?: string | null;
+        fundingAccountDirection?: 'INFLOW' | 'OUTFLOW' | null;
+        categoryId?: string | null;
         title: string;
         occurredOn: Date;
         amount: number;
@@ -42,6 +44,9 @@ export function createCollectedTransactionWriteMethods(
         amount?: boolean;
         status?: boolean;
         importBatchId?: boolean;
+        ledgerTransactionTypeId?: boolean;
+        counterpartyFundingAccountId?: boolean;
+        fundingAccountDirection?: boolean;
         matchedPlanItemId?: boolean;
         matchedPlanItem?: {
           select?: {
@@ -56,17 +61,27 @@ export function createCollectedTransactionWriteMethods(
           };
         };
         fundingAccount?: {
-          select?: { name?: boolean };
+          select?: { name?: boolean; type?: boolean };
+        };
+        counterpartyFundingAccount?: {
+          select?: { name?: boolean; type?: boolean };
         };
         category?: {
           select?: { name?: boolean };
         };
         ledgerTransactionType?: {
-          select?: { flowKind?: boolean };
+          select?: {
+            flowKind?: boolean;
+            name?: boolean;
+            postingPolicyKey?: boolean;
+          };
         };
       };
     }) => {
       const fundingAccount = resolveAccount(args.data.fundingAccountId);
+      const counterpartyFundingAccount = args.data.counterpartyFundingAccountId
+        ? resolveAccount(args.data.counterpartyFundingAccountId)
+        : null;
       const category = args.data.categoryId
         ? resolveCategory(args.data.categoryId)
         : null;
@@ -80,6 +95,9 @@ export function createCollectedTransactionWriteMethods(
         periodId: args.data.periodId ?? null,
         ledgerTransactionTypeId: args.data.ledgerTransactionTypeId,
         fundingAccountId: args.data.fundingAccountId,
+        counterpartyFundingAccountId:
+          args.data.counterpartyFundingAccountId ?? null,
+        fundingAccountDirection: args.data.fundingAccountDirection ?? null,
         categoryId: args.data.categoryId ?? null,
         matchedPlanItemId: args.data.matchedPlanItemId ?? null,
         importBatchId: args.data.importBatchId ?? null,
@@ -114,6 +132,17 @@ export function createCollectedTransactionWriteMethods(
         ...(args.select.status ? { status: created.status } : {}),
         ...(args.select.importBatchId
           ? { importBatchId: created.importBatchId }
+          : {}),
+        ...(args.select.ledgerTransactionTypeId
+          ? { ledgerTransactionTypeId: created.ledgerTransactionTypeId }
+          : {}),
+        ...(args.select.counterpartyFundingAccountId
+          ? {
+              counterpartyFundingAccountId: created.counterpartyFundingAccountId
+            }
+          : {}),
+        ...(args.select.fundingAccountDirection
+          ? { fundingAccountDirection: created.fundingAccountDirection }
           : {}),
         ...(args.select.matchedPlanItemId
           ? { matchedPlanItemId: created.matchedPlanItemId }
@@ -151,8 +180,25 @@ export function createCollectedTransactionWriteMethods(
               fundingAccount: {
                 ...(args.select.fundingAccount.select?.name
                   ? { name: fundingAccount?.name ?? '' }
+                  : {}),
+                ...(args.select.fundingAccount.select?.type
+                  ? { type: fundingAccount?.type ?? 'BANK' }
                   : {})
               }
+            }
+          : {}),
+        ...(args.select.counterpartyFundingAccount
+          ? {
+              counterpartyFundingAccount: counterpartyFundingAccount
+                ? {
+                    ...(args.select.counterpartyFundingAccount.select?.name
+                      ? { name: counterpartyFundingAccount.name }
+                      : {}),
+                    ...(args.select.counterpartyFundingAccount.select?.type
+                      ? { type: counterpartyFundingAccount.type }
+                      : {})
+                  }
+                : null
             }
           : {}),
         ...(args.select.category
@@ -175,6 +221,21 @@ export function createCollectedTransactionWriteMethods(
                         ledgerTransactionType?.flowKind ??
                         LedgerTransactionFlowKind.EXPENSE
                     }
+                  : {}),
+                ...(args.select.ledgerTransactionType.select?.name
+                  ? {
+                      name:
+                        ledgerTransactionType?.name ??
+                        ledgerTransactionType?.code ??
+                        ''
+                    }
+                  : {}),
+                ...(args.select.ledgerTransactionType.select?.postingPolicyKey
+                  ? {
+                      postingPolicyKey:
+                        ledgerTransactionType?.postingPolicyKey ??
+                        'EXPENSE_BASIC'
+                    }
                   : {})
               }
             }
@@ -189,6 +250,8 @@ export function createCollectedTransactionWriteMethods(
         importedRowId?: string | null;
         ledgerTransactionTypeId?: string;
         fundingAccountId?: string;
+        counterpartyFundingAccountId?: string | null;
+        fundingAccountDirection?: 'INFLOW' | 'OUTFLOW' | null;
         categoryId?: string | null;
         title?: string;
         occurredOn?: Date;
@@ -204,6 +267,9 @@ export function createCollectedTransactionWriteMethods(
         amount?: boolean;
         status?: boolean;
         importBatchId?: boolean;
+        ledgerTransactionTypeId?: boolean;
+        counterpartyFundingAccountId?: boolean;
+        fundingAccountDirection?: boolean;
         matchedPlanItemId?: boolean;
         matchedPlanItem?: {
           select?: {
@@ -218,13 +284,20 @@ export function createCollectedTransactionWriteMethods(
           };
         };
         fundingAccount?: {
-          select?: { name?: boolean };
+          select?: { name?: boolean; type?: boolean };
+        };
+        counterpartyFundingAccount?: {
+          select?: { name?: boolean; type?: boolean };
         };
         category?: {
           select?: { name?: boolean };
         };
         ledgerTransactionType?: {
-          select?: { flowKind?: boolean };
+          select?: {
+            flowKind?: boolean;
+            name?: boolean;
+            postingPolicyKey?: boolean;
+          };
         };
       };
     }) => {
@@ -250,6 +323,14 @@ export function createCollectedTransactionWriteMethods(
       }
       if (args.data.fundingAccountId) {
         candidate.fundingAccountId = args.data.fundingAccountId;
+      }
+      if ('counterpartyFundingAccountId' in args.data) {
+        candidate.counterpartyFundingAccountId =
+          args.data.counterpartyFundingAccountId ?? null;
+      }
+      if ('fundingAccountDirection' in args.data) {
+        candidate.fundingAccountDirection =
+          args.data.fundingAccountDirection ?? null;
       }
       if ('categoryId' in args.data) {
         candidate.categoryId = args.data.categoryId ?? null;
@@ -279,6 +360,9 @@ export function createCollectedTransactionWriteMethods(
       }
 
       const fundingAccount = resolveAccount(candidate.fundingAccountId);
+      const counterpartyFundingAccount = candidate.counterpartyFundingAccountId
+        ? resolveAccount(candidate.counterpartyFundingAccountId)
+        : null;
       const category = candidate.categoryId
         ? resolveCategory(candidate.categoryId)
         : null;
@@ -300,6 +384,20 @@ export function createCollectedTransactionWriteMethods(
         ...(args.select.status ? { status: candidate.status } : {}),
         ...(args.select.importBatchId
           ? { importBatchId: candidate.importBatchId }
+          : {}),
+        ...(args.select.ledgerTransactionTypeId
+          ? { ledgerTransactionTypeId: candidate.ledgerTransactionTypeId }
+          : {}),
+        ...(args.select.counterpartyFundingAccountId
+          ? {
+              counterpartyFundingAccountId:
+                candidate.counterpartyFundingAccountId ?? null
+            }
+          : {}),
+        ...(args.select.fundingAccountDirection
+          ? {
+              fundingAccountDirection: candidate.fundingAccountDirection ?? null
+            }
           : {}),
         ...(args.select.matchedPlanItemId
           ? { matchedPlanItemId: candidate.matchedPlanItemId }
@@ -337,8 +435,25 @@ export function createCollectedTransactionWriteMethods(
               fundingAccount: {
                 ...(args.select.fundingAccount.select?.name
                   ? { name: fundingAccount?.name ?? '' }
+                  : {}),
+                ...(args.select.fundingAccount.select?.type
+                  ? { type: fundingAccount?.type ?? 'BANK' }
                   : {})
               }
+            }
+          : {}),
+        ...(args.select.counterpartyFundingAccount
+          ? {
+              counterpartyFundingAccount: counterpartyFundingAccount
+                ? {
+                    ...(args.select.counterpartyFundingAccount.select?.name
+                      ? { name: counterpartyFundingAccount.name }
+                      : {}),
+                    ...(args.select.counterpartyFundingAccount.select?.type
+                      ? { type: counterpartyFundingAccount.type }
+                      : {})
+                  }
+                : null
             }
           : {}),
         ...(args.select.category
@@ -360,6 +475,21 @@ export function createCollectedTransactionWriteMethods(
                       flowKind:
                         ledgerTransactionType?.flowKind ??
                         LedgerTransactionFlowKind.EXPENSE
+                    }
+                  : {}),
+                ...(args.select.ledgerTransactionType.select?.name
+                  ? {
+                      name:
+                        ledgerTransactionType?.name ??
+                        ledgerTransactionType?.code ??
+                        ''
+                    }
+                  : {}),
+                ...(args.select.ledgerTransactionType.select?.postingPolicyKey
+                  ? {
+                      postingPolicyKey:
+                        ledgerTransactionType?.postingPolicyKey ??
+                        'EXPENSE_BASIC'
                     }
                   : {})
               }
@@ -385,6 +515,8 @@ export function createCollectedTransactionWriteMethods(
         importedRowId?: string | null;
         ledgerTransactionTypeId?: string;
         fundingAccountId?: string;
+        counterpartyFundingAccountId?: string | null;
+        fundingAccountDirection?: 'INFLOW' | 'OUTFLOW' | null;
         categoryId?: string | null;
         title?: string;
         occurredOn?: Date;
@@ -454,6 +586,14 @@ export function createCollectedTransactionWriteMethods(
         }
         if (args.data.fundingAccountId) {
           candidate.fundingAccountId = args.data.fundingAccountId;
+        }
+        if ('counterpartyFundingAccountId' in args.data) {
+          candidate.counterpartyFundingAccountId =
+            args.data.counterpartyFundingAccountId ?? null;
+        }
+        if ('fundingAccountDirection' in args.data) {
+          candidate.fundingAccountDirection =
+            args.data.fundingAccountDirection ?? null;
         }
         if ('categoryId' in args.data) {
           candidate.categoryId = args.data.categoryId ?? null;

@@ -40,7 +40,8 @@ export class PrismaCarryForwardGenerationAdapter implements CarryForwardGenerati
       sourcePeriod,
       sourceClosingSnapshot,
       existingRecord,
-      existingTargetPeriod
+      existingTargetPeriod,
+      netAssetsAccountSubject
     ] = await Promise.all([
       this.prisma.accountingPeriod.findFirst({
         where: {
@@ -71,6 +72,7 @@ export class PrismaCarryForwardGenerationAdapter implements CarryForwardGenerati
             include: {
               accountSubject: {
                 select: {
+                  code: true,
                   subjectKind: true
                 }
               }
@@ -108,14 +110,47 @@ export class PrismaCarryForwardGenerationAdapter implements CarryForwardGenerati
             }
           }
         }
+      }),
+      this.prisma.accountSubject.findFirst({
+        where: {
+          tenantId,
+          ledgerId,
+          code: '3100',
+          subjectKind: 'EQUITY',
+          isActive: true
+        },
+        select: {
+          id: true
+        }
       })
     ]);
+
+    const targetOperationalUsageCount = existingTargetPeriod
+      ? await readTargetOperationalUsageCount(
+          this.prisma,
+          tenantId,
+          ledgerId,
+          existingTargetPeriod.id
+        )
+      : 0;
 
     return {
       sourcePeriod,
       sourceClosingSnapshot: sourceClosingSnapshot
         ? {
             ...sourceClosingSnapshot,
+            totalAssetAmount: fromPrismaMoneyWon(
+              sourceClosingSnapshot.totalAssetAmount
+            ),
+            totalLiabilityAmount: fromPrismaMoneyWon(
+              sourceClosingSnapshot.totalLiabilityAmount
+            ),
+            totalEquityAmount: fromPrismaMoneyWon(
+              sourceClosingSnapshot.totalEquityAmount
+            ),
+            periodPnLAmount: fromPrismaMoneyWon(
+              sourceClosingSnapshot.periodPnLAmount
+            ),
             lines: sourceClosingSnapshot.lines.map((line) => ({
               ...line,
               balanceAmount: fromPrismaMoneyWon(line.balanceAmount)
@@ -123,7 +158,9 @@ export class PrismaCarryForwardGenerationAdapter implements CarryForwardGenerati
           }
         : null,
       existingRecord,
-      existingTargetPeriod
+      existingTargetPeriod,
+      targetOperationalUsageCount,
+      netAssetsAccountSubject
     };
   }
 
@@ -168,6 +205,8 @@ export class PrismaCarryForwardGenerationAdapter implements CarryForwardGenerati
           ledgerId: input.ledgerId,
           effectivePeriodId: targetPeriod.id,
           sourceKind: OpeningBalanceSourceKind.CARRY_FORWARD,
+          equityAdjustmentKind: input.equityAdjustmentKind,
+          equityAdjustmentAmount: input.equityAdjustmentAmount,
           ...input.createdByActorRef
         }
       });
@@ -208,4 +247,31 @@ export class PrismaCarryForwardGenerationAdapter implements CarryForwardGenerati
       );
     }
   }
+}
+
+async function readTargetOperationalUsageCount(
+  prisma: PrismaService,
+  tenantId: string,
+  ledgerId: string,
+  periodId: string
+) {
+  const [transactions, imports, journals, statements, closingSnapshot] =
+    await Promise.all([
+      prisma.collectedTransaction.count({
+        where: { tenantId, ledgerId, periodId }
+      }),
+      prisma.importBatch.count({ where: { tenantId, ledgerId, periodId } }),
+      prisma.journalEntry.count({ where: { tenantId, ledgerId, periodId } }),
+      prisma.financialStatementSnapshot.count({
+        where: { tenantId, ledgerId, periodId }
+      }),
+      prisma.closingSnapshot.findUnique({
+        where: { periodId },
+        select: { id: true }
+      })
+    ]);
+
+  return (
+    transactions + imports + journals + statements + (closingSnapshot ? 1 : 0)
+  );
 }

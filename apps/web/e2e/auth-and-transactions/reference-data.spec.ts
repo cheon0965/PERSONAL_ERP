@@ -272,6 +272,13 @@ test('manages funding accounts and categories across split reference data screen
         id: `cat-e2e-${Date.now()}`,
         name: payload.name,
         kind: payload.kind,
+        defaultAccountSubjectId:
+          payload.defaultAccountSubjectId ??
+          (payload.kind === 'INCOME'
+            ? 'as-4100'
+            : payload.kind === 'EXPENSE'
+              ? 'as-5100'
+              : null),
         isActive: true
       };
 
@@ -293,6 +300,15 @@ test('manages funding accounts and categories across split reference data screen
           ? {
               ...category,
               name: payload.name,
+              defaultAccountSubjectId:
+                payload.defaultAccountSubjectId === undefined
+                  ? category.defaultAccountSubjectId
+                  : (payload.defaultAccountSubjectId ??
+                    (category.kind === 'INCOME'
+                      ? 'as-4100'
+                      : category.kind === 'EXPENSE'
+                        ? 'as-5100'
+                        : null)),
               isActive: payload.isActive ?? category.isActive
             }
           : category

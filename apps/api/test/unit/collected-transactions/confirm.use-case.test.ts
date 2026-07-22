@@ -91,6 +91,7 @@ function buildCollectedTransaction(
 ): ConfirmationCollectedTransaction {
   return {
     id: 'ctx-1',
+    ledgerId: 'ledger-1',
     occurredOn: new Date('2026-03-15T00:00:00.000Z'),
     title: 'Loan repayment',
     memo: null,
@@ -106,9 +107,20 @@ function buildCollectedTransaction(
     },
     fundingAccount: {
       id: 'acc-1',
-      name: 'Main checking'
+      name: 'Main checking',
+      type: 'BANK',
+      linkedAccountSubject: null
+    },
+    counterpartyFundingAccount: null,
+    fundingAccountDirection: 'OUTFLOW',
+    category: {
+      id: 'cat-expense',
+      kind: 'EXPENSE',
+      defaultAccountSubject: null
     },
     ledgerTransactionType: {
+      id: 'ltt-expense',
+      name: '기본 지출',
       postingPolicyKey: PostingPolicyKey.EXPENSE_BASIC
     },
     importedRow: null,

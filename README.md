@@ -132,6 +132,12 @@ docs          제품, 도메인, 운영, 검증 문서
 레거시 Prisma `Transaction` 모델은 공식 회계 기준으로 사용하지 않습니다.
 회계 확정, 정정, 반전, 마감, 보고는 `JournalEntry` 계열과 스냅샷을 기준으로 설명합니다.
 
+- 최초 기초잔액의 불균형은 사용자 확인 없이 저장하지 않으며, 명시적으로 동의한 차액만 `3100 순자산`으로 보정합니다.
+- 모든 월 마감과 공식 재무제표 생성은 `자산 = 부채 + 자본` 검증을 통과해야 합니다.
+- 두 번째 월부터는 직접 월 오픈 대신 `마감 -> 차기 이월 -> 다음 월 opening` 연결만 허용합니다.
+- 카드사용, 계좌이체, 카드대금결제는 서로 다른 거래유형과 전표 정책으로 확정합니다.
+- 운영 카테고리는 시스템 관리형 표준 손익 계정과목에 연결되며, 확정된 전표의 과거 계정과목은 소급 변경하지 않습니다.
+
 자세한 기준은 [구형 거래 모델 제거 이후 회계 경계](./docs/ACCOUNTING_MODEL_BOUNDARY.md), [비즈니스 로직 설계 초안](./docs/domain/business-logic-draft.md), [핵심 엔티티 정의서](./docs/domain/core-entity-definition.md)를 따릅니다.
 
 ## 운영과 품질 기준
@@ -207,6 +213,20 @@ npm run build
 - `npm run test:e2e`: 대표 브라우저 흐름을 확인합니다.
 - `npm run test:prisma`: Docker 기반 MySQL에서 월 운영 흐름과 Prisma 경계를 확인합니다.
 - `npm run audit:runtime`: 배포 대상 런타임 의존성의 보안 기준을 확인합니다.
+
+회계 스키마 변경이 포함된 배포에서는 DB 백업과 쓰기 중지 후 아래 순서로 기존 데이터를 점검합니다. backfill과 repair는 기본적으로 dry-run이며 실제 적용에는 명시적 `--apply` 또는 확인 플래그가 필요합니다.
+
+```bash
+npm run db:backfill:accounting-master-data
+npm run db:backfill:accounting-master-data -- --apply
+npm run db:audit:posting-integrity -- --fail-on-findings
+npm run db:audit:accounting-integrity -- --fail-on-findings
+npm run db:repair:accounting-integrity -- --reason="배포 전 회계 정합성 보정" --confirm-official-snapshot-rewrite
+```
+
+- 기준 데이터 backfill은 표준 계정과목, 자금수단 연결, 카테고리 기본 매핑과 안전하게 판정 가능한 미확정 거래만 보정합니다.
+- 회계 repair는 장부 단위 트랜잭션으로 재산출 가능한 스냅샷만 갱신하며, 불균형 전표나 손상된 기간 연결이 발견되면 해당 장부를 변경하지 않습니다.
+- 확정된 카드 전표의 거래유형 불일치는 자동 재작성하지 않고 posting integrity 보고서에서 수동 정정 대상으로 분리합니다.
 
 최신 검증 결과와 남은 공백은 [검증 메모](./docs/VALIDATION_NOTES.md)를 기준으로 봅니다.
 

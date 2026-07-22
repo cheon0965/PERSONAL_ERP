@@ -4,6 +4,7 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -14,7 +15,7 @@ import {
 } from 'class-validator';
 import { moneyWonApiProperty } from '../../../common/money/swagger-money';
 
-class OpenAccountingPeriodOpeningBalanceLineDto {
+export class OpenAccountingPeriodOpeningBalanceLineDto {
   @ApiProperty({
     example: 'as-1-1010',
     description: '오프닝 잔액 라인에 반영할 계정과목 ID'
@@ -71,6 +72,17 @@ export class OpenAccountingPeriodRequestDto implements OpenAccountingPeriodReque
   @ValidateNested({ each: true })
   @Type(() => OpenAccountingPeriodOpeningBalanceLineDto)
   openingBalanceLines?: OpenAccountingPeriodOpeningBalanceLineDto[];
+
+  @ApiProperty({
+    required: false,
+    enum: ['REJECT', 'AUTO_TO_NET_ASSETS'],
+    default: 'REJECT',
+    description:
+      '기초 잔액 불균형 처리 방식입니다. 자동 보정은 명시적으로 선택한 경우에만 적용됩니다.'
+  })
+  @IsOptional()
+  @IsIn(['REJECT', 'AUTO_TO_NET_ASSETS'])
+  openingBalanceAdjustmentMode?: 'REJECT' | 'AUTO_TO_NET_ASSETS';
 
   @ApiProperty({
     required: false,

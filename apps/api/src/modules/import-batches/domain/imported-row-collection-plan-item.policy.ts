@@ -6,6 +6,8 @@ export type PlanItemCollectionCandidate = {
   plannedAmount: number;
   plannedDate: Date;
   fundingAccountId: string;
+  counterpartyFundingAccountId?: string | null;
+  fundingAccountDirection?: 'INFLOW' | 'OUTFLOW' | null;
   ledgerTransactionTypeId: string;
   categoryId: string | null;
   existingCollectedTransactionId: string | null;
@@ -16,6 +18,8 @@ export function resolveMatchedPlanItemCandidate(input: {
   amount: number;
   occurredOn: Date;
   fundingAccountId: string;
+  counterpartyFundingAccountId?: string | null;
+  fundingAccountDirection?: 'INFLOW' | 'OUTFLOW' | null;
   ledgerTransactionTypeId: string;
   categoryId: string | null;
 }): PlanItemCollectionCandidate | null {
@@ -25,6 +29,8 @@ export function resolveMatchedPlanItemCandidate(input: {
       amount: input.amount,
       occurredOn: input.occurredOn,
       fundingAccountId: input.fundingAccountId,
+      counterpartyFundingAccountId: input.counterpartyFundingAccountId,
+      fundingAccountDirection: input.fundingAccountDirection,
       ledgerTransactionTypeId: input.ledgerTransactionTypeId,
       categoryId: input.categoryId
     }

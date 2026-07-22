@@ -9,12 +9,14 @@ import type {
   CloseAccountingPeriodRequest,
   CloseAccountingPeriodResponse
 } from '@personal-erp/contracts';
+import { addMoneyWon } from '@personal-erp/money';
 import {
   AccountingPeriodEventType,
   AccountingPeriodStatus,
   BalanceSnapshotKind,
   CollectedTransactionStatus,
-  JournalEntryStatus
+  JournalEntryStatus,
+  Prisma
 } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../../../common/auth/required-workspace.util';
 import { readWorkspaceActorRef } from '../../../../common/auth/workspace-actor-ref.util';
@@ -30,8 +32,14 @@ import { normalizeOptionalText } from '../../domain/accounting-period.policy';
 import { assertAccountingPeriodCanBeClosed } from '../../domain/accounting-period-transition.policy';
 import {
   aggregateClosingSnapshotLines,
+  assertClosingSnapshotIntegrity,
+  assertPostedJournalEntriesBalanced,
   summarizeClosingSnapshot
 } from '../../domain/closing-snapshot.policy';
+import {
+  assertAccountingEquationBalanced,
+  summarizeAccountingEquationLines
+} from '../../domain/accounting-equation.policy';
 
 /**
  * 운영 기간을 LOCKED로 전환하고 공식 마감 스냅샷을 생성하는 월마감 유스케이스입니다.
@@ -138,7 +146,8 @@ export class PrismaCloseAccountingPeriodLifecycle {
         const [
           openingBalanceSnapshot,
           pendingCollectedTransactionCount,
-          journalLines
+          journalLines,
+          postedJournalEntries
         ] = await Promise.all([
           tx.openingBalanceSnapshot.findUnique({
             where: {
@@ -204,16 +213,70 @@ export class PrismaCloseAccountingPeriodLifecycle {
                 }
               }
             }
+          }),
+          tx.journalEntry.findMany({
+            where: {
+              tenantId: workspace.tenantId,
+              ledgerId: workspace.ledgerId,
+              periodId: currentPeriod.id,
+              status: JournalEntryStatus.POSTED
+            },
+            include: {
+              lines: true
+            }
           })
         ]);
 
-        // 미확정 수집 거래가 남아 있으면 공식 스냅샷을 만들 수 없다.
-        // 마감 스냅샷은 POSTED 전표만 기준으로 삼기 때문에 여기서 누락 위험을 차단한다.
+        // 미확정 거래 누락 위험을 먼저 알려 사용자가 마감 준비 작업을 바로 이어갈 수 있게 한다.
         if (pendingCollectedTransactionCount > 0) {
           throw validationError(
             `미확정 수집 거래 ${pendingCollectedTransactionCount}건이 남아 있어 운영 기간을 잠글 수 없습니다.`
           );
         }
+
+        if (!openingBalanceSnapshot) {
+          throw validationError(
+            '기초 잔액 스냅샷이 없는 운영 기간은 마감할 수 없습니다.'
+          );
+        }
+
+        await assertOpeningBalanceChain(tx, {
+          tenantId: workspace.tenantId,
+          ledgerId: workspace.ledgerId,
+          period: currentPeriod,
+          openingBalanceSnapshot
+        });
+
+        const openingEquationTotals = summarizeAccountingEquationLines(
+          openingBalanceSnapshot.lines.map((line) => ({
+            accountSubjectKind: readOpeningBalanceSubjectKind(
+              line.accountSubject.subjectKind
+            ),
+            balanceAmount: fromPrismaMoneyWon(line.balanceAmount)
+          }))
+        );
+        assertAccountingEquationBalanced(
+          openingEquationTotals,
+          '기초 잔액 스냅샷의 회계등식이 성립하지 않습니다.'
+        );
+
+        assertPostedJournalEntriesBalanced(
+          postedJournalEntries
+            .filter((entry) => entry.status === JournalEntryStatus.POSTED)
+            .map((entry) => ({
+              entryNumber: entry.entryNumber,
+              debitAmount: entry.lines.reduce(
+                (total, line) =>
+                  addMoneyWon(total, fromPrismaMoneyWon(line.debitAmount)),
+                0
+              ),
+              creditAmount: entry.lines.reduce(
+                (total, line) =>
+                  addMoneyWon(total, fromPrismaMoneyWon(line.creditAmount)),
+                0
+              )
+            }))
+        );
 
         // 기초 잔액과 확정 전표 라인을 계정과목/자금수단 단위로 합산해
         // 재무제표와 차기 이월이 공유할 공식 마감 기준을 만든다.
@@ -231,6 +294,10 @@ export class PrismaCloseAccountingPeriodLifecycle {
           }))
         });
         const totals = summarizeClosingSnapshot(closingLineDrafts);
+        assertClosingSnapshotIntegrity({
+          snapshot: totals,
+          lines: closingLineDrafts
+        });
 
         const createdSnapshot = await tx.closingSnapshot.create({
           data: {
@@ -322,5 +389,96 @@ function assertClosePermission(
   return assertWorkspaceActionAllowed(
     membershipRole,
     'accounting_period.close'
+  );
+}
+
+async function assertOpeningBalanceChain(
+  tx: Prisma.TransactionClient,
+  input: {
+    tenantId: string;
+    ledgerId: string;
+    period: {
+      id: string;
+      year: number;
+      month: number;
+    };
+    openingBalanceSnapshot: {
+      sourceKind: string;
+    };
+  }
+) {
+  if (input.openingBalanceSnapshot.sourceKind === 'INITIAL_SETUP') {
+    return;
+  }
+
+  if (input.openingBalanceSnapshot.sourceKind !== 'CARRY_FORWARD') {
+    throw validationError('알 수 없는 기초 잔액 출처로는 마감할 수 없습니다.');
+  }
+
+  const carryForwardRecord = await tx.carryForwardRecord.findFirst({
+    where: {
+      tenantId: input.tenantId,
+      ledgerId: input.ledgerId,
+      toPeriodId: input.period.id
+    }
+  });
+  if (!carryForwardRecord) {
+    throw validationError(
+      '차기 이월에서 생성된 기초 잔액과 연결된 이월 기록을 찾을 수 없습니다.'
+    );
+  }
+
+  const [sourcePeriod, sourceClosingSnapshot] = await Promise.all([
+    tx.accountingPeriod.findFirst({
+      where: {
+        id: carryForwardRecord.fromPeriodId,
+        tenantId: input.tenantId,
+        ledgerId: input.ledgerId
+      }
+    }),
+    tx.closingSnapshot.findUnique({
+      where: {
+        periodId: carryForwardRecord.fromPeriodId
+      },
+      select: {
+        id: true
+      }
+    })
+  ]);
+
+  if (!sourcePeriod || sourcePeriod.status !== AccountingPeriodStatus.LOCKED) {
+    throw validationError('차기 이월의 원천 운영 기간이 잠금 상태가 아닙니다.');
+  }
+
+  const nextYear =
+    sourcePeriod.month === 12 ? sourcePeriod.year + 1 : sourcePeriod.year;
+  const nextMonth = sourcePeriod.month === 12 ? 1 : sourcePeriod.month + 1;
+  if (nextYear !== input.period.year || nextMonth !== input.period.month) {
+    throw validationError(
+      '기초 잔액 이월 기록이 바로 이전 운영 월과 연결되어 있지 않습니다.'
+    );
+  }
+
+  if (
+    !sourceClosingSnapshot ||
+    sourceClosingSnapshot.id !== carryForwardRecord.sourceClosingSnapshotId
+  ) {
+    throw validationError(
+      '차기 이월 기록의 원천 마감 스냅샷 연결이 올바르지 않습니다.'
+    );
+  }
+}
+
+function readOpeningBalanceSubjectKind(subjectKind: string) {
+  if (
+    subjectKind === 'ASSET' ||
+    subjectKind === 'LIABILITY' ||
+    subjectKind === 'EQUITY'
+  ) {
+    return subjectKind;
+  }
+
+  throw validationError(
+    '기초 잔액 스냅샷에는 재무상태표 계정과목만 포함할 수 있습니다.'
   );
 }

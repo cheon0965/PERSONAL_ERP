@@ -159,6 +159,11 @@ enum FundingAccountBootstrapStatus {
   COMPLETED
 }
 
+enum FundingAccountDirection {
+  INFLOW
+  OUTFLOW
+}
+
 enum PlanItemStatus {
   DRAFT
   MATCHED
@@ -262,6 +267,12 @@ enum JournalEntryStatus {
 enum OpeningBalanceSourceKind {
   INITIAL_SETUP
   CARRY_FORWARD
+}
+
+enum OpeningBalanceEquityAdjustmentKind {
+  INITIAL_AUTO_BALANCE
+  PERIOD_PNL_ROLLOVER
+  LEGACY_REPAIR
 }
 
 enum BalanceSnapshotKind {
@@ -594,35 +605,41 @@ model UserSetting {
 }
 
 model Account {
-  id                     String                        @id @default(cuid())
-  userId                 String
-  tenantId               String
-  ledgerId               String
-  name                   String
-  normalizedName         String                        @db.VarChar(191)
-  type                   AccountType
-  balanceWon             Decimal                       @default(0) @db.Decimal(19, 0)
-  sortOrder              Int                           @default(0)
-  status                 FundingAccountStatus          @default(ACTIVE)
-  bootstrapStatus        FundingAccountBootstrapStatus @default(NOT_REQUIRED)
-  createdAt              DateTime                      @default(now())
-  updatedAt              DateTime                      @updatedAt
-  user                   User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant                 Tenant                        @relation("TenantAccounts", fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger                 Ledger                        @relation("LedgerAccounts", fields: [ledgerId], references: [id], onDelete: Cascade)
-  recurringRules         RecurringRule[]
-  insurancePolicies      InsurancePolicy[]
-  liabilityPaymentProfiles LiabilityAgreement[]        @relation("LiabilityDefaultFundingAccount")
-  planItems              PlanItem[]
-  importBatches          ImportBatch[]
-  collectedTransactions  CollectedTransaction[]
-  journalLines           JournalLine[]
-  balanceSnapshotLines   BalanceSnapshotLine[]
-  vehicleDefaultProfiles Vehicle[]                     @relation("VehicleDefaultFundingAccount")
+  id                                String                        @id @default(cuid())
+  userId                            String
+  tenantId                          String
+  ledgerId                          String
+  linkedAccountSubjectId            String?
+  name                              String
+  normalizedName                    String                        @db.VarChar(191)
+  type                              AccountType
+  balanceWon                        Decimal                       @default(0) @db.Decimal(19, 0)
+  sortOrder                         Int                           @default(0)
+  status                            FundingAccountStatus          @default(ACTIVE)
+  bootstrapStatus                   FundingAccountBootstrapStatus @default(NOT_REQUIRED)
+  createdAt                         DateTime                      @default(now())
+  updatedAt                         DateTime                      @updatedAt
+  user                              User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant                            Tenant                        @relation("TenantAccounts", fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                            Ledger                        @relation("LedgerAccounts", fields: [ledgerId], references: [id], onDelete: Cascade)
+  linkedAccountSubject              AccountSubject?               @relation("FundingAccountLinkedAccountSubject", fields: [linkedAccountSubjectId], references: [id], onDelete: Restrict)
+  recurringRules                    RecurringRule[]               @relation("RecurringRulePrimaryFundingAccount")
+  counterpartyRecurringRules        RecurringRule[]               @relation("RecurringRuleCounterpartyFundingAccount")
+  insurancePolicies                 InsurancePolicy[]
+  liabilityPaymentProfiles          LiabilityAgreement[]          @relation("LiabilityDefaultFundingAccount")
+  planItems                         PlanItem[]                    @relation("PlanItemPrimaryFundingAccount")
+  counterpartyPlanItems             PlanItem[]                    @relation("PlanItemCounterpartyFundingAccount")
+  importBatches                     ImportBatch[]
+  collectedTransactions             CollectedTransaction[]        @relation("CollectedTransactionPrimaryFundingAccount")
+  counterpartyCollectedTransactions CollectedTransaction[]        @relation("CollectedTransactionCounterpartyFundingAccount")
+  journalLines                      JournalLine[]
+  balanceSnapshotLines              BalanceSnapshotLine[]
+  vehicleDefaultProfiles            Vehicle[]                     @relation("VehicleDefaultFundingAccount")
 
   @@unique([ledgerId, normalizedName])
   @@index([userId, sortOrder])
   @@index([tenantId, ledgerId, sortOrder])
+  @@index([linkedAccountSubjectId])
 }
 
 model Category {
@@ -630,6 +647,7 @@ model Category {
   userId                            String
   tenantId                          String
   ledgerId                          String
+  defaultAccountSubjectId           String?
   name                              String
   normalizedName                    String                 @db.VarChar(191)
   kind                              CategoryKind
@@ -640,10 +658,11 @@ model Category {
   user                              User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenant                            Tenant                 @relation("TenantCategories", fields: [tenantId], references: [id], onDelete: Cascade)
   ledger                            Ledger                 @relation("LedgerCategories", fields: [ledgerId], references: [id], onDelete: Cascade)
+  defaultAccountSubject             AccountSubject?        @relation("CategoryDefaultAccountSubject", fields: [defaultAccountSubjectId], references: [id], onDelete: SetNull)
   recurringRules                    RecurringRule[]
   insurancePolicies                 InsurancePolicy[]
-  liabilityInterestProfiles         LiabilityAgreement[] @relation("LiabilityInterestExpenseCategory")
-  liabilityFeeProfiles              LiabilityAgreement[] @relation("LiabilityFeeExpenseCategory")
+  liabilityInterestProfiles         LiabilityAgreement[]   @relation("LiabilityInterestExpenseCategory")
+  liabilityFeeProfiles              LiabilityAgreement[]   @relation("LiabilityFeeExpenseCategory")
   planItems                         PlanItem[]
   collectedTransactions             CollectedTransaction[]
   vehicleDefaultFuelProfiles        Vehicle[]              @relation("VehicleDefaultFuelCategory")
@@ -652,37 +671,42 @@ model Category {
   @@unique([ledgerId, kind, normalizedName])
   @@index([userId, kind, sortOrder])
   @@index([tenantId, ledgerId, kind, sortOrder])
+  @@index([defaultAccountSubjectId])
 }
 
 model RecurringRule {
-  id                      String                 @id @default(cuid())
-  userId                  String
-  tenantId                String
-  ledgerId                String
-  accountId               String
-  categoryId              String?
-  ledgerTransactionTypeId String?
-  title                   String
-  amountWon               Decimal                @db.Decimal(19, 0)
-  frequency               RecurrenceFrequency
-  dayOfMonth              Int?
-  startDate               DateTime
-  endDate                 DateTime?
-  nextRunDate             DateTime?
-  isActive                Boolean                @default(true)
-  createdAt               DateTime               @default(now())
-  updatedAt               DateTime               @updatedAt
-  user                    User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant                  Tenant                 @relation("TenantRecurringRules", fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger                  Ledger                 @relation("LedgerRecurringRules", fields: [ledgerId], references: [id], onDelete: Cascade)
-  account                 Account                @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  category                Category?              @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  ledgerTransactionType   LedgerTransactionType? @relation(fields: [ledgerTransactionTypeId], references: [id], onDelete: SetNull)
-  linkedInsurancePolicy   InsurancePolicy?       @relation("InsurancePolicyLinkedRecurringRule")
-  planItems               PlanItem[]
+  id                           String                   @id @default(cuid())
+  userId                       String
+  tenantId                     String
+  ledgerId                     String
+  accountId                    String
+  counterpartyFundingAccountId String?
+  fundingAccountDirection      FundingAccountDirection?
+  categoryId                   String?
+  ledgerTransactionTypeId      String?
+  title                        String
+  amountWon                    Decimal                  @db.Decimal(19, 0)
+  frequency                    RecurrenceFrequency
+  dayOfMonth                   Int?
+  startDate                    DateTime
+  endDate                      DateTime?
+  nextRunDate                  DateTime?
+  isActive                     Boolean                  @default(true)
+  createdAt                    DateTime                 @default(now())
+  updatedAt                    DateTime                 @updatedAt
+  user                         User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant                       Tenant                   @relation("TenantRecurringRules", fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                       Ledger                   @relation("LedgerRecurringRules", fields: [ledgerId], references: [id], onDelete: Cascade)
+  account                      Account                  @relation("RecurringRulePrimaryFundingAccount", fields: [accountId], references: [id], onDelete: Restrict)
+  counterpartyFundingAccount   Account?                 @relation("RecurringRuleCounterpartyFundingAccount", fields: [counterpartyFundingAccountId], references: [id], onDelete: Restrict)
+  category                     Category?                @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  ledgerTransactionType        LedgerTransactionType?   @relation(fields: [ledgerTransactionTypeId], references: [id], onDelete: SetNull)
+  linkedInsurancePolicy        InsurancePolicy?         @relation("InsurancePolicyLinkedRecurringRule")
+  planItems                    PlanItem[]
 
   @@index([userId, isActive, nextRunDate])
   @@index([tenantId, ledgerId, isActive])
+  @@index([counterpartyFundingAccountId])
 }
 
 model AccountingPeriod {
@@ -737,24 +761,26 @@ model PeriodStatusHistory {
 }
 
 model AccountSubject {
-  id                   String                      @id @default(cuid())
-  tenantId             String
-  ledgerId             String
-  code                 String
-  name                 String
-  statementType        AccountSubjectStatementType
-  normalSide           AccountNormalSide
-  subjectKind          AccountSubjectKind
-  isSystem             Boolean                     @default(false)
-  isActive             Boolean                     @default(true)
-  sortOrder            Int                         @default(0)
-  createdAt            DateTime                    @default(now())
-  updatedAt            DateTime                    @updatedAt
-  tenant               Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger               Ledger                      @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
-  liabilityProfiles    LiabilityAgreement[]        @relation("LiabilityAccountSubject")
-  journalLines         JournalLine[]
-  balanceSnapshotLines BalanceSnapshotLine[]
+  id                    String                      @id @default(cuid())
+  tenantId              String
+  ledgerId              String
+  code                  String
+  name                  String
+  statementType         AccountSubjectStatementType
+  normalSide            AccountNormalSide
+  subjectKind           AccountSubjectKind
+  isSystem              Boolean                     @default(false)
+  isActive              Boolean                     @default(true)
+  sortOrder             Int                         @default(0)
+  createdAt             DateTime                    @default(now())
+  updatedAt             DateTime                    @updatedAt
+  tenant                Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                Ledger                      @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  liabilityProfiles     LiabilityAgreement[]        @relation("LiabilityAccountSubject")
+  linkedFundingAccounts Account[]                   @relation("FundingAccountLinkedAccountSubject")
+  defaultCategories     Category[]                  @relation("CategoryDefaultAccountSubject")
+  journalLines          JournalLine[]
+  balanceSnapshotLines  BalanceSnapshotLine[]
 
   @@unique([ledgerId, code])
   @@index([tenantId, ledgerId, sortOrder])
@@ -785,35 +811,39 @@ model LedgerTransactionType {
 }
 
 model PlanItem {
-  id                          String                @id @default(cuid())
-  tenantId                    String
-  ledgerId                    String
-  periodId                    String
-  recurringRuleId             String?
-  ledgerTransactionTypeId     String
-  fundingAccountId            String
-  categoryId                  String?
-  title                       String
-  plannedAmount               Decimal               @db.Decimal(19, 0)
-  plannedDate                 DateTime
-  status                      PlanItemStatus        @default(DRAFT)
-  createdAt                   DateTime              @default(now())
-  updatedAt                   DateTime              @updatedAt
-  tenant                      Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger                      Ledger                @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
-  period                      AccountingPeriod      @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  recurringRule               RecurringRule?        @relation(fields: [recurringRuleId], references: [id], onDelete: SetNull)
-  ledgerTransactionType       LedgerTransactionType @relation(fields: [ledgerTransactionTypeId], references: [id], onDelete: Restrict)
-  fundingAccount              Account               @relation(fields: [fundingAccountId], references: [id], onDelete: Restrict)
-  category                    Category?             @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  matchedCollectedTransaction CollectedTransaction? @relation("PlanItemMatchedCollectedTransaction")
-  postedJournalEntry          JournalEntry?         @relation("JournalEntrySourcePlanItem")
-  linkedLiabilityRepayment    LiabilityRepaymentSchedule? @relation("LiabilityRepaymentLinkedPlanItem")
+  id                           String                      @id @default(cuid())
+  tenantId                     String
+  ledgerId                     String
+  periodId                     String
+  recurringRuleId              String?
+  ledgerTransactionTypeId      String
+  fundingAccountId             String
+  counterpartyFundingAccountId String?
+  fundingAccountDirection      FundingAccountDirection?
+  categoryId                   String?
+  title                        String
+  plannedAmount                Decimal                     @db.Decimal(19, 0)
+  plannedDate                  DateTime
+  status                       PlanItemStatus              @default(DRAFT)
+  createdAt                    DateTime                    @default(now())
+  updatedAt                    DateTime                    @updatedAt
+  tenant                       Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                       Ledger                      @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  period                       AccountingPeriod            @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  recurringRule                RecurringRule?              @relation(fields: [recurringRuleId], references: [id], onDelete: SetNull)
+  ledgerTransactionType        LedgerTransactionType       @relation(fields: [ledgerTransactionTypeId], references: [id], onDelete: Restrict)
+  fundingAccount               Account                     @relation("PlanItemPrimaryFundingAccount", fields: [fundingAccountId], references: [id], onDelete: Restrict)
+  counterpartyFundingAccount   Account?                    @relation("PlanItemCounterpartyFundingAccount", fields: [counterpartyFundingAccountId], references: [id], onDelete: Restrict)
+  category                     Category?                   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  matchedCollectedTransaction  CollectedTransaction?       @relation("PlanItemMatchedCollectedTransaction")
+  postedJournalEntry           JournalEntry?               @relation("JournalEntrySourcePlanItem")
+  linkedLiabilityRepayment     LiabilityRepaymentSchedule? @relation("LiabilityRepaymentLinkedPlanItem")
 
   @@unique([periodId, recurringRuleId, plannedDate])
   @@index([periodId, status, plannedDate])
   @@index([periodId, status, plannedAmount, fundingAccountId, ledgerTransactionTypeId, plannedDate], map: "plan_item_collect_match_idx")
   @@index([tenantId, ledgerId, plannedDate])
+  @@index([counterpartyFundingAccountId])
 }
 
 model ImportBatch {
@@ -916,72 +946,76 @@ model ImportBatchCollectionLock {
 }
 
 model CollectedTransaction {
-  id                      String                     @id @default(cuid())
-  tenantId                String
-  ledgerId                String
-  periodId                String?
-  importBatchId           String?
-  importedRowId           String?                    @unique
-  ledgerTransactionTypeId String
-  fundingAccountId        String
-  categoryId              String?
-  matchedPlanItemId       String?                    @unique
-  title                   String
-  occurredOn              DateTime
-  amount                  Decimal                    @db.Decimal(19, 0)
-  status                  CollectedTransactionStatus @default(COLLECTED)
-  sourceFingerprint       String?                    @db.VarChar(191)
-  memo                    String?                    @db.Text
-  createdAt               DateTime                   @default(now())
-  updatedAt               DateTime                   @updatedAt
-  tenant                  Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger                  Ledger                     @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
-  period                  AccountingPeriod?          @relation(fields: [periodId], references: [id], onDelete: SetNull)
-  importBatch             ImportBatch?               @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
-  importedRow             ImportedRow?               @relation("ImportedRowCreatedCollectedTransaction", fields: [importedRowId], references: [id], onDelete: SetNull)
-  ledgerTransactionType   LedgerTransactionType      @relation(fields: [ledgerTransactionTypeId], references: [id], onDelete: Restrict)
-  fundingAccount          Account                    @relation(fields: [fundingAccountId], references: [id], onDelete: Restrict)
-  category                Category?                  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  matchedPlanItem         PlanItem?                  @relation("PlanItemMatchedCollectedTransaction", fields: [matchedPlanItemId], references: [id], onDelete: SetNull)
-  postedJournalEntry      JournalEntry?              @relation("JournalEntrySourceCollectedTransaction")
-  linkedFuelLog           FuelLog?                   @relation("FuelLogLinkedCollectedTransaction")
-  linkedMaintenanceLog    VehicleMaintenanceLog?     @relation("VehicleMaintenanceLogLinkedCollectedTransaction")
+  id                           String                     @id @default(cuid())
+  tenantId                     String
+  ledgerId                     String
+  periodId                     String?
+  importBatchId                String?
+  importedRowId                String?                    @unique
+  ledgerTransactionTypeId      String
+  fundingAccountId             String
+  counterpartyFundingAccountId String?
+  fundingAccountDirection      FundingAccountDirection?
+  categoryId                   String?
+  matchedPlanItemId            String?                    @unique
+  title                        String
+  occurredOn                   DateTime
+  amount                       Decimal                    @db.Decimal(19, 0)
+  status                       CollectedTransactionStatus @default(COLLECTED)
+  sourceFingerprint            String?                    @db.VarChar(191)
+  memo                         String?                    @db.Text
+  createdAt                    DateTime                   @default(now())
+  updatedAt                    DateTime                   @updatedAt
+  tenant                       Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                       Ledger                     @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  period                       AccountingPeriod?          @relation(fields: [periodId], references: [id], onDelete: SetNull)
+  importBatch                  ImportBatch?               @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  importedRow                  ImportedRow?               @relation("ImportedRowCreatedCollectedTransaction", fields: [importedRowId], references: [id], onDelete: SetNull)
+  ledgerTransactionType        LedgerTransactionType      @relation(fields: [ledgerTransactionTypeId], references: [id], onDelete: Restrict)
+  fundingAccount               Account                    @relation("CollectedTransactionPrimaryFundingAccount", fields: [fundingAccountId], references: [id], onDelete: Restrict)
+  counterpartyFundingAccount   Account?                   @relation("CollectedTransactionCounterpartyFundingAccount", fields: [counterpartyFundingAccountId], references: [id], onDelete: Restrict)
+  category                     Category?                  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  matchedPlanItem              PlanItem?                  @relation("PlanItemMatchedCollectedTransaction", fields: [matchedPlanItemId], references: [id], onDelete: SetNull)
+  postedJournalEntry           JournalEntry?              @relation("JournalEntrySourceCollectedTransaction")
+  linkedFuelLog                FuelLog?                   @relation("FuelLogLinkedCollectedTransaction")
+  linkedMaintenanceLog         VehicleMaintenanceLog?     @relation("VehicleMaintenanceLogLinkedCollectedTransaction")
 
   @@index([ledgerId, status, occurredOn])
   @@index([ledgerId, sourceFingerprint])
   @@index([tenantId, ledgerId, occurredOn, createdAt], map: "ctx_tenant_ledger_occurred_created_idx")
   @@index([periodId, amount, fundingAccountId, ledgerTransactionTypeId, status, occurredOn], map: "ctx_collect_match_idx")
+  @@index([counterpartyFundingAccountId])
 }
 
 model JournalEntry {
-  id                           String                 @id @default(cuid())
+  id                           String                      @id @default(cuid())
   tenantId                     String
   ledgerId                     String
   periodId                     String
-  entryNumber                  String                 @db.VarChar(50)
+  entryNumber                  String                      @db.VarChar(50)
   entryDate                    DateTime
   sourceKind                   JournalEntrySourceKind
-  sourceCollectedTransactionId String?                @unique
-  sourcePlanItemId             String?                @unique
-  status                       JournalEntryStatus     @default(POSTED)
-  memo                         String?                @db.Text
-  reversesJournalEntryId       String?                @unique
+  sourceCollectedTransactionId String?                     @unique
+  sourcePlanItemId             String?                     @unique
+  status                       JournalEntryStatus          @default(POSTED)
+  memo                         String?                     @db.Text
+  reversesJournalEntryId       String?                     @unique
   correctsJournalEntryId       String?
-  correctionReason             String?                @db.Text
+  correctionReason             String?                     @db.Text
   createdByActorType           AuditActorType
   createdByMembershipId        String?
-  createdAt                    DateTime               @default(now())
-  updatedAt                    DateTime               @updatedAt
-  tenant                       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger                       Ledger                 @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
-  period                       AccountingPeriod       @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  sourceCollectedTransaction   CollectedTransaction?  @relation("JournalEntrySourceCollectedTransaction", fields: [sourceCollectedTransactionId], references: [id], onDelete: SetNull)
-  sourcePlanItem               PlanItem?              @relation("JournalEntrySourcePlanItem", fields: [sourcePlanItemId], references: [id], onDelete: SetNull)
-  reversesJournalEntry         JournalEntry?          @relation("JournalEntryReversal", fields: [reversesJournalEntryId], references: [id], onDelete: SetNull)
-  reversedByJournalEntry       JournalEntry?          @relation("JournalEntryReversal")
-  correctsJournalEntry         JournalEntry?          @relation("JournalEntryCorrection", fields: [correctsJournalEntryId], references: [id], onDelete: SetNull)
-  correctionEntries            JournalEntry[]         @relation("JournalEntryCorrection")
-  createdCarryForwardRecord    CarryForwardRecord?    @relation("CarryForwardCreatedJournalEntry")
+  createdAt                    DateTime                    @default(now())
+  updatedAt                    DateTime                    @updatedAt
+  tenant                       Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                       Ledger                      @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  period                       AccountingPeriod            @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  sourceCollectedTransaction   CollectedTransaction?       @relation("JournalEntrySourceCollectedTransaction", fields: [sourceCollectedTransactionId], references: [id], onDelete: SetNull)
+  sourcePlanItem               PlanItem?                   @relation("JournalEntrySourcePlanItem", fields: [sourcePlanItemId], references: [id], onDelete: SetNull)
+  reversesJournalEntry         JournalEntry?               @relation("JournalEntryReversal", fields: [reversesJournalEntryId], references: [id], onDelete: SetNull)
+  reversedByJournalEntry       JournalEntry?               @relation("JournalEntryReversal")
+  correctsJournalEntry         JournalEntry?               @relation("JournalEntryCorrection", fields: [correctsJournalEntryId], references: [id], onDelete: SetNull)
+  correctionEntries            JournalEntry[]              @relation("JournalEntryCorrection")
+  createdCarryForwardRecord    CarryForwardRecord?         @relation("CarryForwardCreatedJournalEntry")
   postedLiabilityRepayment     LiabilityRepaymentSchedule? @relation("LiabilityRepaymentPostedJournalEntry")
   lines                        JournalLine[]
 
@@ -1009,18 +1043,20 @@ model JournalLine {
 }
 
 model OpeningBalanceSnapshot {
-  id                    String                   @id @default(cuid())
-  tenantId              String
-  ledgerId              String
-  effectivePeriodId     String                   @unique
-  sourceKind            OpeningBalanceSourceKind @default(INITIAL_SETUP)
-  createdAt             DateTime                 @default(now())
-  createdByActorType    AuditActorType
-  createdByMembershipId String?
-  tenant                Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger                Ledger                   @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
-  effectivePeriod       AccountingPeriod         @relation(fields: [effectivePeriodId], references: [id], onDelete: Restrict)
-  lines                 BalanceSnapshotLine[]    @relation("OpeningSnapshotLines")
+  id                     String                              @id @default(cuid())
+  tenantId               String
+  ledgerId               String
+  effectivePeriodId      String                              @unique
+  sourceKind             OpeningBalanceSourceKind            @default(INITIAL_SETUP)
+  equityAdjustmentKind   OpeningBalanceEquityAdjustmentKind?
+  equityAdjustmentAmount Decimal                             @default(0) @db.Decimal(19, 0)
+  createdAt              DateTime                            @default(now())
+  createdByActorType     AuditActorType
+  createdByMembershipId  String?
+  tenant                 Tenant                              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                 Ledger                              @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  effectivePeriod        AccountingPeriod                    @relation(fields: [effectivePeriodId], references: [id], onDelete: Restrict)
+  lines                  BalanceSnapshotLine[]               @relation("OpeningSnapshotLines")
 }
 
 model ClosingSnapshot {
@@ -1133,7 +1169,7 @@ model InsurancePolicy {
 }
 
 model LiabilityAgreement {
-  id                        String                    @id @default(cuid())
+  id                        String                       @id @default(cuid())
   userId                    String
   tenantId                  String
   ledgerId                  String
@@ -1142,28 +1178,28 @@ model LiabilityAgreement {
   interestExpenseCategoryId String?
   feeExpenseCategoryId      String?
   lenderName                String
-  normalizedLenderName      String                    @db.VarChar(191)
+  normalizedLenderName      String                       @db.VarChar(191)
   productName               String
-  normalizedProductName     String                    @db.VarChar(191)
-  loanNumberLast4           String?                   @db.VarChar(4)
-  principalAmount           Decimal                   @db.Decimal(19, 0)
+  normalizedProductName     String                       @db.VarChar(191)
+  loanNumberLast4           String?                      @db.VarChar(4)
+  principalAmount           Decimal                      @db.Decimal(19, 0)
   borrowedAt                DateTime
   maturityDate              DateTime?
-  interestRate              Decimal?                  @db.Decimal(7, 4)
-  interestRateType          LiabilityInterestRateType @default(FIXED)
-  repaymentMethod           LiabilityRepaymentMethod  @default(MANUAL)
+  interestRate              Decimal?                     @db.Decimal(7, 4)
+  interestRateType          LiabilityInterestRateType    @default(FIXED)
+  repaymentMethod           LiabilityRepaymentMethod     @default(MANUAL)
   paymentDay                Int?
-  status                    LiabilityAgreementStatus  @default(ACTIVE)
-  memo                      String?                   @db.Text
-  createdAt                 DateTime                  @default(now())
-  updatedAt                 DateTime                  @updatedAt
-  user                      User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant                    Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  ledger                    Ledger                    @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
-  defaultFundingAccount     Account                   @relation("LiabilityDefaultFundingAccount", fields: [defaultFundingAccountId], references: [id], onDelete: Restrict)
-  liabilityAccountSubject   AccountSubject?           @relation("LiabilityAccountSubject", fields: [liabilityAccountSubjectId], references: [id], onDelete: SetNull)
-  interestExpenseCategory   Category?                 @relation("LiabilityInterestExpenseCategory", fields: [interestExpenseCategoryId], references: [id], onDelete: SetNull)
-  feeExpenseCategory        Category?                 @relation("LiabilityFeeExpenseCategory", fields: [feeExpenseCategoryId], references: [id], onDelete: SetNull)
+  status                    LiabilityAgreementStatus     @default(ACTIVE)
+  memo                      String?                      @db.Text
+  createdAt                 DateTime                     @default(now())
+  updatedAt                 DateTime                     @updatedAt
+  user                      User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant                    Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger                    Ledger                       @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  defaultFundingAccount     Account                      @relation("LiabilityDefaultFundingAccount", fields: [defaultFundingAccountId], references: [id], onDelete: Restrict)
+  liabilityAccountSubject   AccountSubject?              @relation("LiabilityAccountSubject", fields: [liabilityAccountSubjectId], references: [id], onDelete: SetNull)
+  interestExpenseCategory   Category?                    @relation("LiabilityInterestExpenseCategory", fields: [interestExpenseCategoryId], references: [id], onDelete: SetNull)
+  feeExpenseCategory        Category?                    @relation("LiabilityFeeExpenseCategory", fields: [feeExpenseCategoryId], references: [id], onDelete: SetNull)
   repaymentSchedules        LiabilityRepaymentSchedule[]
 
   @@unique([ledgerId, normalizedLenderName, normalizedProductName], map: "LiabilityAgreement_ledger_normlender_normproduct_key")
@@ -1175,24 +1211,24 @@ model LiabilityAgreement {
 }
 
 model LiabilityRepaymentSchedule {
-  id                            String                           @id @default(cuid())
-  tenantId                      String
-  ledgerId                      String
-  liabilityAgreementId          String
-  dueDate                       DateTime
-  principalAmount               Decimal                          @default(0) @db.Decimal(19, 0)
-  interestAmount                Decimal                          @default(0) @db.Decimal(19, 0)
-  feeAmount                     Decimal                          @default(0) @db.Decimal(19, 0)
-  totalAmount                   Decimal                          @db.Decimal(19, 0)
-  status                        LiabilityRepaymentScheduleStatus @default(SCHEDULED)
-  linkedPlanItemId              String?                          @unique
-  postedJournalEntryId          String?                          @unique
-  memo                          String?                          @db.Text
-  createdAt                     DateTime                         @default(now())
-  updatedAt                     DateTime                         @updatedAt
-  agreement                     LiabilityAgreement               @relation(fields: [liabilityAgreementId], references: [id], onDelete: Cascade)
-  linkedPlanItem                PlanItem?                        @relation("LiabilityRepaymentLinkedPlanItem", fields: [linkedPlanItemId], references: [id], onDelete: SetNull)
-  postedJournalEntry            JournalEntry?                    @relation("LiabilityRepaymentPostedJournalEntry", fields: [postedJournalEntryId], references: [id], onDelete: SetNull)
+  id                   String                           @id @default(cuid())
+  tenantId             String
+  ledgerId             String
+  liabilityAgreementId String
+  dueDate              DateTime
+  principalAmount      Decimal                          @default(0) @db.Decimal(19, 0)
+  interestAmount       Decimal                          @default(0) @db.Decimal(19, 0)
+  feeAmount            Decimal                          @default(0) @db.Decimal(19, 0)
+  totalAmount          Decimal                          @db.Decimal(19, 0)
+  status               LiabilityRepaymentScheduleStatus @default(SCHEDULED)
+  linkedPlanItemId     String?                          @unique
+  postedJournalEntryId String?                          @unique
+  memo                 String?                          @db.Text
+  createdAt            DateTime                         @default(now())
+  updatedAt            DateTime                         @updatedAt
+  agreement            LiabilityAgreement               @relation(fields: [liabilityAgreementId], references: [id], onDelete: Cascade)
+  linkedPlanItem       PlanItem?                        @relation("LiabilityRepaymentLinkedPlanItem", fields: [linkedPlanItemId], references: [id], onDelete: SetNull)
+  postedJournalEntry   JournalEntry?                    @relation("LiabilityRepaymentPostedJournalEntry", fields: [postedJournalEntryId], references: [id], onDelete: SetNull)
 
   @@unique([liabilityAgreementId, dueDate], map: "LiabilityRepayment_agreement_due_key")
   @@index([tenantId, ledgerId, dueDate, status], map: "LiabilityRepayment_tenant_ledger_due_status_idx")

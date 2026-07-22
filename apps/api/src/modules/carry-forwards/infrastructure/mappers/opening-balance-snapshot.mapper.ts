@@ -2,7 +2,10 @@ import type {
   OpeningBalanceSnapshotItem,
   OpeningBalanceSnapshotLineItem
 } from '@personal-erp/contracts';
-import type { OpeningBalanceSourceKind } from '@prisma/client';
+import type {
+  OpeningBalanceEquityAdjustmentKind,
+  OpeningBalanceSourceKind
+} from '@prisma/client';
 import {
   fromPrismaMoneyWon,
   type PrismaMoneyLike
@@ -20,6 +23,8 @@ type OpeningBalanceSnapshotRecord = {
   id: string;
   effectivePeriodId: string;
   sourceKind: OpeningBalanceSourceKind;
+  equityAdjustmentKind?: OpeningBalanceEquityAdjustmentKind | null;
+  equityAdjustmentAmount?: PrismaMoneyLike;
   createdAt: Date;
   lines: OpeningBalanceSnapshotLineRecord[];
 };
@@ -31,6 +36,10 @@ export function mapOpeningBalanceSnapshotRecordToItem(
     id: record.id,
     effectivePeriodId: record.effectivePeriodId,
     sourceKind: record.sourceKind,
+    equityAdjustmentKind: record.equityAdjustmentKind ?? null,
+    equityAdjustmentAmount: fromPrismaMoneyWon(
+      record.equityAdjustmentAmount ?? 0
+    ),
     createdAt: record.createdAt.toISOString(),
     lines: record.lines.map(mapOpeningBalanceSnapshotLineRecordToItem)
   };

@@ -7,6 +7,11 @@ export class UpdateCategoryDto implements UpdateCategoryRequest {
   @IsString()
   name!: string;
 
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsString()
+  defaultAccountSubjectId?: string | null;
+
   @ApiProperty({ required: false })
   @IsOptional()
   @IsBoolean()

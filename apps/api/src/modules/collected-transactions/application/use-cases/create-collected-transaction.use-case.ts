@@ -69,6 +69,9 @@ export class CreateCollectedTransactionUseCase {
       amountWon: command.amountWon,
       businessDate: new Date(command.businessDate),
       fundingAccountId: command.fundingAccountId,
+      ledgerTransactionTypeId: command.ledgerTransactionTypeId,
+      counterpartyFundingAccountId: command.counterpartyFundingAccountId,
+      fundingAccountDirection: command.fundingAccountDirection,
       categoryId: command.categoryId,
       memo: command.memo
     });

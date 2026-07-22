@@ -1,5 +1,15 @@
 import type { RequestPrismaMockContext } from './shared';
 
+type PostingPolicyKey =
+  | 'INCOME_BASIC'
+  | 'EXPENSE_BASIC'
+  | 'TRANSFER_BASIC'
+  | 'CARD_SPEND'
+  | 'CARD_PAYMENT'
+  | 'OPENING_BALANCE'
+  | 'CARRY_FORWARD'
+  | 'MANUAL_ADJUSTMENT';
+
 export function createLedgerTransactionTypesPrismaMock(
   context: RequestPrismaMockContext
 ): Record<string, unknown> {
@@ -18,15 +28,7 @@ export function createLedgerTransactionTypesPrismaMock(
             | 'ADJUSTMENT'
             | 'OPENING_BALANCE'
             | 'CARRY_FORWARD';
-          postingPolicyKey:
-            | 'INCOME_BASIC'
-            | 'EXPENSE_BASIC'
-            | 'TRANSFER_BASIC'
-            | 'CARD_SPEND'
-            | 'CARD_PAYMENT'
-            | 'OPENING_BALANCE'
-            | 'CARRY_FORWARD'
-            | 'MANUAL_ADJUSTMENT';
+          postingPolicyKey: PostingPolicyKey;
           isActive: boolean;
           sortOrder: number;
         };
@@ -42,15 +44,7 @@ export function createLedgerTransactionTypesPrismaMock(
             | 'ADJUSTMENT'
             | 'OPENING_BALANCE'
             | 'CARRY_FORWARD';
-          postingPolicyKey:
-            | 'INCOME_BASIC'
-            | 'EXPENSE_BASIC'
-            | 'TRANSFER_BASIC'
-            | 'CARD_SPEND'
-            | 'CARD_PAYMENT'
-            | 'OPENING_BALANCE'
-            | 'CARRY_FORWARD'
-            | 'MANUAL_ADJUSTMENT';
+          postingPolicyKey: PostingPolicyKey;
           isActive: boolean;
           sortOrder: number;
         };
@@ -75,17 +69,21 @@ export function createLedgerTransactionTypesPrismaMock(
       },
       findFirst: async (args: {
         where: {
+          id?: string;
           tenantId?: string;
           ledgerId?: string;
           code?: string;
+          postingPolicyKey?: PostingPolicyKey;
           isActive?: boolean;
         };
         select?: {
           id?: boolean;
+          postingPolicyKey?: boolean;
         };
       }) => {
         const item =
           state.ledgerTransactionTypes.find((candidate) => {
+            const matchesId = !args.where.id || candidate.id === args.where.id;
             const matchesTenant =
               !args.where.tenantId ||
               candidate.tenantId === args.where.tenantId;
@@ -94,12 +92,20 @@ export function createLedgerTransactionTypesPrismaMock(
               candidate.ledgerId === args.where.ledgerId;
             const matchesCode =
               !args.where.code || candidate.code === args.where.code;
+            const matchesPostingPolicy =
+              !args.where.postingPolicyKey ||
+              candidate.postingPolicyKey === args.where.postingPolicyKey;
             const matchesActive =
               args.where.isActive === undefined ||
               candidate.isActive === args.where.isActive;
 
             return (
-              matchesTenant && matchesLedger && matchesCode && matchesActive
+              matchesId &&
+              matchesTenant &&
+              matchesLedger &&
+              matchesCode &&
+              matchesPostingPolicy &&
+              matchesActive
             );
           }) ?? null;
 
@@ -107,9 +113,12 @@ export function createLedgerTransactionTypesPrismaMock(
           return null;
         }
 
-        if (args.select?.id) {
+        if (args.select) {
           return {
-            id: item.id
+            ...(args.select.id ? { id: item.id } : {}),
+            ...(args.select.postingPolicyKey
+              ? { postingPolicyKey: item.postingPolicyKey }
+              : {})
           };
         }
 

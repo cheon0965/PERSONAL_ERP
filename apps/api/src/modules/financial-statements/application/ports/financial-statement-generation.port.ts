@@ -47,6 +47,15 @@ export type FinancialStatementGenerationContext = {
       name: string;
     } | null;
   }>;
+  openingBalanceSnapshot: {
+    id: string;
+    lines: Array<{
+      balanceAmount: number;
+      accountSubject: {
+        subjectKind: AccountSubjectKind;
+      };
+    }>;
+  } | null;
   journalLines: Array<{
     id: string;
     debitAmount: number;

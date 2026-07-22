@@ -9,6 +9,7 @@ import type {
   CarryForwardView,
   GenerateCarryForwardRequest
 } from '@personal-erp/contracts';
+import { addMoneyWon } from '@personal-erp/money';
 import { requireCurrentWorkspace } from '../../../../common/auth/required-workspace.util';
 import {
   readWorkspaceActorRef,
@@ -26,6 +27,11 @@ import {
   buildCarryForwardReplaceReason,
   CancelCarryForwardUseCase
 } from './cancel-carry-forward.use-case';
+import {
+  assertAccountingEquationBalanced,
+  assertClosingSnapshotIntegrity,
+  summarizeAccountingEquationLines
+} from '../../../accounting-periods/public';
 
 /**
  * 잠금 완료된 운영월의 마감 잔액을 다음 운영월의 기초 잔액으로 넘기는 유스케이스입니다.
@@ -95,6 +101,14 @@ export class GenerateCarryForwardUseCase {
       );
     }
 
+    assertClosingSnapshotIntegrity({
+      snapshot: sourceClosingSnapshot,
+      lines: sourceClosingSnapshot.lines.map((line) => ({
+        accountSubjectKind: line.accountSubject.subjectKind,
+        balanceAmount: line.balanceAmount
+      }))
+    });
+
     if (existingRecord && !input.replaceExisting) {
       throw conflictError('해당 운영 기간의 차기 이월이 이미 생성되었습니다.');
     }
@@ -136,9 +150,9 @@ export class GenerateCarryForwardUseCase {
 
     // 다음 월이 이미 잠겼거나 오프닝 스냅샷을 갖고 있으면 이월 기준을 덮어쓸 수 없다.
     // 이월은 다음 월 운영 시작 전 기준을 세우는 작업으로만 허용한다.
-    if (existingTargetPeriod?.status === 'LOCKED') {
+    if (existingTargetPeriod && existingTargetPeriod.status !== 'OPEN') {
       throw conflictError(
-        '이미 잠금된 다음 운영 기간에는 차기 이월을 생성할 수 없습니다.'
+        'OPEN 상태가 아닌 다음 운영 기간에는 차기 이월을 생성할 수 없습니다.'
       );
     }
 
@@ -148,15 +162,78 @@ export class GenerateCarryForwardUseCase {
       );
     }
 
+    if (generationContext.targetOperationalUsageCount > 0) {
+      throw conflictError(
+        '다음 운영 기간에 거래, 업로드, 전표 또는 마감 산출물이 있어 차기 이월을 생성할 수 없습니다.'
+      );
+    }
+
     // 손익 계정은 다음 달 기초 잔액으로 넘어가지 않는다.
     // 자산/부채/자본 계정만 이월해 다음 월 opening balance snapshot을 구성한다.
-    const carryableLines = sourceClosingSnapshot.lines
-      .filter((line) => isCarryForwardAccount(line.accountSubject.subjectKind))
-      .map((line) => ({
-        accountSubjectId: line.accountSubjectId,
-        fundingAccountId: line.fundingAccountId,
-        balanceAmount: line.balanceAmount
-      }));
+    const carryableLines = sourceClosingSnapshot.lines.flatMap((line) => {
+      const accountSubjectKind = line.accountSubject.subjectKind;
+      return isCarryForwardAccount(accountSubjectKind)
+        ? [
+            {
+              accountSubjectId: line.accountSubjectId,
+              accountSubjectCode: line.accountSubject.code,
+              accountSubjectKind,
+              fundingAccountId: line.fundingAccountId,
+              balanceAmount: line.balanceAmount
+            }
+          ]
+        : [];
+    });
+
+    const periodPnLAmount = sourceClosingSnapshot.periodPnLAmount;
+    if (periodPnLAmount !== 0) {
+      const netAssetsLineIndex = carryableLines.findIndex(
+        (line) =>
+          line.accountSubjectCode === '3100' &&
+          line.accountSubjectKind === 'EQUITY' &&
+          line.fundingAccountId === null
+      );
+
+      if (netAssetsLineIndex >= 0) {
+        const existingLine = carryableLines[netAssetsLineIndex]!;
+        const adjustedAmount = addMoneyWon(
+          existingLine.balanceAmount,
+          periodPnLAmount
+        );
+        if (adjustedAmount === 0) {
+          carryableLines.splice(netAssetsLineIndex, 1);
+        } else {
+          carryableLines[netAssetsLineIndex] = {
+            ...existingLine,
+            balanceAmount: adjustedAmount
+          };
+        }
+      } else {
+        if (!generationContext.netAssetsAccountSubject) {
+          throw validationError(
+            '당기손익 이월에 필요한 3100 순자산 계정과목을 찾을 수 없습니다.'
+          );
+        }
+
+        carryableLines.push({
+          accountSubjectId: generationContext.netAssetsAccountSubject.id,
+          accountSubjectCode: '3100',
+          accountSubjectKind: 'EQUITY',
+          fundingAccountId: null,
+          balanceAmount: periodPnLAmount
+        });
+      }
+    }
+
+    assertAccountingEquationBalanced(
+      summarizeAccountingEquationLines(
+        carryableLines.map((line) => ({
+          accountSubjectKind: line.accountSubjectKind,
+          balanceAmount: line.balanceAmount
+        }))
+      ),
+      '차기 이월 기초 잔액의 회계등식이 성립하지 않습니다.'
+    );
 
     const nextPeriodBoundary = readPeriodBoundary(nextYear, nextMonth);
 
@@ -172,8 +249,14 @@ export class GenerateCarryForwardUseCase {
       nextMonth,
       nextPeriodBoundary,
       existingTargetPeriod,
-      carryableLines,
+      carryableLines: carryableLines.map((line) => ({
+        accountSubjectId: line.accountSubjectId,
+        fundingAccountId: line.fundingAccountId,
+        balanceAmount: line.balanceAmount
+      })),
       sourceClosingSnapshotId: sourceClosingSnapshot.id,
+      equityAdjustmentKind: 'PERIOD_PNL_ROLLOVER',
+      equityAdjustmentAmount: periodPnLAmount,
       actorRef,
       createdByActorRef
     });

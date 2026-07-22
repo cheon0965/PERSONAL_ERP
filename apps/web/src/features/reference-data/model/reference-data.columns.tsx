@@ -190,6 +190,7 @@ export function buildFundingAccountColumns(input: {
 }
 
 export function buildCategoryColumns(input: {
+  accountSubjects: AccountSubjectItem[];
   canManageReferenceData: boolean;
   onEdit: (category: CategoryItem) => void;
   onToggle: (category: CategoryItem) => void;
@@ -201,6 +202,29 @@ export function buildCategoryColumns(input: {
       headerName: '구분',
       flex: 0.8,
       valueFormatter: (value) => readCategoryKindLabel(String(value))
+    },
+    {
+      field: 'defaultAccountSubjectId',
+      headerName: '기본 계정과목',
+      flex: 1.2,
+      minWidth: 170,
+      renderCell: (params) => {
+        const accountSubject = input.accountSubjects.find(
+          (candidate) => candidate.id === params.row.defaultAccountSubjectId
+        );
+
+        return (
+          <GridInlineCell>
+            <Typography variant="body2" color="text.secondary">
+              {accountSubject
+                ? `${accountSubject.code} · ${accountSubject.name}`
+                : params.row.kind === 'TRANSFER'
+                  ? '해당 없음'
+                  : '기본 미지정'}
+            </Typography>
+          </GridInlineCell>
+        );
+      }
     },
     {
       field: 'isActive',

@@ -110,7 +110,7 @@ test('POST /auth/register sends verification email and verified users can login'
       context.state.accountSubjects.filter(
         (candidate) => candidate.ledgerId === createdLedger.id
       ).length,
-      5
+      19
     );
     assert.equal(
       context.state.ledgerTransactionTypes.filter(

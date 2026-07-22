@@ -41,16 +41,19 @@ export type CategoryItem = {
   id: string;
   name: string;
   kind: CategoryKind;
+  defaultAccountSubjectId: string | null;
   isActive: boolean;
 };
 
 export type CreateCategoryRequest = {
   name: string;
   kind: CategoryKind;
+  defaultAccountSubjectId?: string | null;
 };
 
 export type UpdateCategoryRequest = {
   name: string;
+  defaultAccountSubjectId?: string | null;
   isActive?: boolean;
 };
 

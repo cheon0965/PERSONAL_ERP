@@ -9,6 +9,7 @@ export {
 export { mapCollectedTransactionTypeToLedgerTransactionCode } from './application/mappers/collected-transaction-type.mapper';
 export { resolveManualCollectedTransactionStatus } from './domain/manual-collected-transaction-status.policy';
 export { MissingOwnedCollectedTransactionReferenceError } from './domain/collected-transaction-policy';
+export { assessPostingAccountSelection } from './domain/posting-account-selection.policy';
 export type {
   ConfirmationCollectedTransaction,
   CreateConfirmationJournalEntryInput

@@ -13,6 +13,7 @@ import {
   LiabilityRepaymentScheduleStatus,
   OperationalNoteKind,
   RecurrenceFrequency,
+  OpeningBalanceEquityAdjustmentKind,
   OpeningBalanceSourceKind,
   PlanItemStatus,
   WorkspaceNavigationMenuItemType,
@@ -127,6 +128,8 @@ export type RequestTestState = {
     ledgerId: string;
     effectivePeriodId: string;
     sourceKind: OpeningBalanceSourceKind;
+    equityAdjustmentKind?: OpeningBalanceEquityAdjustmentKind | null;
+    equityAdjustmentAmount?: number;
     createdAt: Date;
     createdByActorType: AuditActorType;
     createdByMembershipId: string | null;
@@ -376,6 +379,7 @@ export type RequestTestState = {
     name: string;
     normalizedName?: string;
     type?: 'BANK' | 'CASH' | 'CARD';
+    linkedAccountSubjectId?: string | null;
     balanceWon: number;
     sortOrder?: number;
     status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
@@ -389,6 +393,7 @@ export type RequestTestState = {
     name: string;
     normalizedName?: string;
     kind?: 'INCOME' | 'EXPENSE' | 'TRANSFER';
+    defaultAccountSubjectId: string | null;
     isActive: boolean;
   }>;
   collectedTransactions: Array<{
@@ -398,6 +403,8 @@ export type RequestTestState = {
     periodId: string | null;
     ledgerTransactionTypeId: string;
     fundingAccountId: string;
+    counterpartyFundingAccountId?: string | null;
+    fundingAccountDirection?: 'INFLOW' | 'OUTFLOW' | null;
     categoryId: string | null;
     matchedPlanItemId: string | null;
     importBatchId: string | null;
@@ -417,6 +424,9 @@ export type RequestTestState = {
     tenantId: string;
     ledgerId: string;
     accountId: string;
+    ledgerTransactionTypeId: string | null;
+    counterpartyFundingAccountId: string | null;
+    fundingAccountDirection: 'INFLOW' | 'OUTFLOW' | null;
     categoryId: string;
     title: string;
     amountWon: number;
@@ -437,6 +447,8 @@ export type RequestTestState = {
     recurringRuleId: string | null;
     ledgerTransactionTypeId: string;
     fundingAccountId: string;
+    counterpartyFundingAccountId?: string | null;
+    fundingAccountDirection?: 'INFLOW' | 'OUTFLOW' | null;
     categoryId: string | null;
     title: string;
     plannedAmount: number;

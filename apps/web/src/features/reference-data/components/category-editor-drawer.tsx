@@ -1,7 +1,7 @@
 'use client';
 
 import { Alert } from '@mui/material';
-import type { CategoryItem } from '@personal-erp/contracts';
+import type { AccountSubjectItem, CategoryItem } from '@personal-erp/contracts';
 import type { FeedbackAlertValue } from '@/shared/ui/feedback-alert';
 import { FormDrawer } from '@/shared/ui/form-drawer';
 import {
@@ -13,6 +13,7 @@ import type { CategoryEditorState } from '../model/reference-data.shared';
 export function CategoryEditorDrawer({
   editorState,
   editingCategory,
+  accountSubjects,
   feedback,
   busy,
   onClose,
@@ -20,6 +21,7 @@ export function CategoryEditorDrawer({
 }: {
   editorState: CategoryEditorState;
   editingCategory: CategoryItem | null;
+  accountSubjects: AccountSubjectItem[];
   feedback: FeedbackAlertValue;
   busy: boolean;
   onClose: () => void;
@@ -32,8 +34,8 @@ export function CategoryEditorDrawer({
       title={editorState?.mode === 'edit' ? '카테고리 수정' : '카테고리 추가'}
       description={
         editorState?.mode === 'edit'
-          ? '현재 범위에서는 카테고리 이름과 활성 상태만 관리합니다.'
-          : '현재 장부에 새 카테고리를 추가합니다. 생성 후에는 입력 화면의 활성 선택지에 반영됩니다.'
+          ? '카테고리 이름과 전표에 사용할 표준 손익 계정과목을 관리합니다.'
+          : '현재 장부에 새 카테고리를 추가하고 전표에 사용할 표준 손익 계정과목을 연결합니다.'
       }
     >
       {editorState?.mode === 'edit' && !editingCategory ? (
@@ -45,6 +47,7 @@ export function CategoryEditorDrawer({
           feedback={feedback}
           mode={editorState?.mode ?? 'create'}
           initialCategory={editingCategory}
+          accountSubjects={accountSubjects}
           busy={busy}
           onSubmit={onSubmit}
         />

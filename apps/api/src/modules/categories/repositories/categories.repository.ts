@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type {
+  CategoryKind,
   CreateCategoryRequest,
   UpdateCategoryRequest
 } from '@personal-erp/contracts';
@@ -41,7 +42,7 @@ export class CategoriesRepository {
     userId: string,
     tenantId: string,
     ledgerId: string,
-    input: CreateCategoryRequest
+    input: CreateCategoryRequest & { defaultAccountSubjectId: string | null }
   ) {
     return this.prisma.category.create({
       data: {
@@ -50,7 +51,8 @@ export class CategoriesRepository {
         ledgerId,
         name: input.name,
         normalizedName: normalizeCaseInsensitiveText(input.name),
-        kind: input.kind
+        kind: input.kind,
+        defaultAccountSubjectId: input.defaultAccountSubjectId
       }
     });
   }
@@ -63,7 +65,34 @@ export class CategoriesRepository {
       data: {
         name: input.name,
         normalizedName: normalizeCaseInsensitiveText(input.name),
+        ...(input.defaultAccountSubjectId === undefined
+          ? {}
+          : { defaultAccountSubjectId: input.defaultAccountSubjectId }),
         ...(input.isActive === undefined ? {} : { isActive: input.isActive })
+      }
+    });
+  }
+
+  findEligibleAccountSubjectInWorkspace(input: {
+    tenantId: string;
+    ledgerId: string;
+    categoryKind: Exclude<CategoryKind, 'TRANSFER'>;
+    accountSubjectId?: string;
+    accountSubjectCode?: string;
+  }) {
+    return this.prisma.accountSubject.findFirst({
+      where: {
+        tenantId: input.tenantId,
+        ledgerId: input.ledgerId,
+        ...(input.accountSubjectId ? { id: input.accountSubjectId } : {}),
+        ...(input.accountSubjectCode ? { code: input.accountSubjectCode } : {}),
+        statementType: 'PROFIT_AND_LOSS',
+        subjectKind: input.categoryKind,
+        isSystem: true,
+        isActive: true
+      },
+      select: {
+        id: true
       }
     });
   }

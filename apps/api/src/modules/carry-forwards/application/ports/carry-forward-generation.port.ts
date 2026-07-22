@@ -30,11 +30,16 @@ export type CarryForwardGenerationContext = {
   sourcePeriod: CarryForwardGenerationPeriod | null;
   sourceClosingSnapshot: {
     id: string;
+    totalAssetAmount: number;
+    totalLiabilityAmount: number;
+    totalEquityAmount: number;
+    periodPnLAmount: number;
     lines: Array<{
       accountSubjectId: string;
       fundingAccountId: string | null;
       balanceAmount: number;
       accountSubject: {
+        code: string;
         subjectKind: AccountSubjectKind;
       };
     }>;
@@ -43,6 +48,10 @@ export type CarryForwardGenerationContext = {
     id: string;
   } | null;
   existingTargetPeriod: CarryForwardGenerationPeriod | null;
+  targetOperationalUsageCount: number;
+  netAssetsAccountSubject: {
+    id: string;
+  } | null;
 };
 
 export abstract class CarryForwardGenerationPort {
@@ -83,6 +92,8 @@ export abstract class CarryForwardGenerationPort {
       balanceAmount: number;
     }>;
     sourceClosingSnapshotId: string;
+    equityAdjustmentKind: 'PERIOD_PNL_ROLLOVER';
+    equityAdjustmentAmount: number;
     actorRef: {
       actorType: AuditActorType;
       actorMembershipId: string;

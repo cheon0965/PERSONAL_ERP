@@ -14,6 +14,7 @@ import type {
 } from '@personal-erp/contracts';
 import {
   CollectedTransactionStatus,
+  FundingAccountDirection,
   LedgerTransactionFlowKind,
   PlanItemStatus,
   Prisma
@@ -28,7 +29,7 @@ import {
   assertCollectedTransactionCanBeUpdated
 } from '../../domain/collected-transaction-transition.policy';
 import { mapCollectedTransactionTypeToLedgerTransactionCode } from '../../application/mappers/collected-transaction-type.mapper';
-import { resolveManualCollectedTransactionStatus } from '../../domain/manual-collected-transaction-status.policy';
+import { assessPostingAccountSelection } from '../../domain/posting-account-selection.policy';
 import type {
   CollectedTransactionWorkspaceScope,
   CreateCollectedTransactionRecord,
@@ -43,6 +44,9 @@ type CollectedTransactionRecord = {
   occurredOn: Date;
   title: string;
   amount: PrismaMoneyLike;
+  ledgerTransactionTypeId: string;
+  counterpartyFundingAccountId: string | null;
+  fundingAccountDirection: FundingAccountDirection | null;
   status: CollectedTransactionStatus;
   importBatchId: string | null;
   matchedPlanItemId: string | null;
@@ -63,12 +67,19 @@ type CollectedTransactionRecord = {
   } | null;
   fundingAccount: {
     name: string;
+    type: 'BANK' | 'CASH' | 'CARD';
   };
+  counterpartyFundingAccount: {
+    name: string;
+    type: 'BANK' | 'CASH' | 'CARD';
+  } | null;
   category: {
     name: string;
   } | null;
   ledgerTransactionType: {
     flowKind: LedgerTransactionFlowKind;
+    name: string;
+    postingPolicyKey: import('@prisma/client').PostingPolicyKey;
   };
   linkedFuelLog?: {
     id: string;
@@ -132,10 +143,9 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
   async createInWorkspace(
     record: CreateCollectedTransactionRecord
   ): Promise<StoredCollectedTransaction> {
-    const ledgerTransactionTypeId = await this.findLedgerTransactionTypeId(
-      record.tenantId,
-      record.ledgerId,
-      record.type
+    const postingSetup = await this.resolvePostingSetupInClient(
+      this.prisma,
+      record
     );
 
     const created = await this.prisma.collectedTransaction.create({
@@ -143,16 +153,16 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
         tenantId: record.tenantId,
         ledgerId: record.ledgerId,
         periodId: record.periodId,
-        ledgerTransactionTypeId,
+        ledgerTransactionTypeId: postingSetup.ledgerTransactionTypeId,
         fundingAccountId: record.fundingAccountId,
+        counterpartyFundingAccountId:
+          record.counterpartyFundingAccountId ?? null,
+        fundingAccountDirection: postingSetup.fundingAccountDirection,
         categoryId: record.categoryId,
         title: record.title,
         occurredOn: record.businessDate,
         amount: record.amountWon,
-        status: resolveManualCollectedTransactionStatus({
-          type: record.type,
-          categoryId: record.categoryId
-        }),
+        status: postingSetup.status,
         memo: record.memo
       },
       select: buildCollectedTransactionSelect()
@@ -217,13 +227,11 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
         postedJournalEntryId: current.postedJournalEntry?.id ?? null
       });
 
-      const ledgerTransactionTypeId =
-        await this.findLedgerTransactionTypeIdInClient(
-          tx,
-          workspace.tenantId,
-          workspace.ledgerId,
-          record.type
-        );
+      const postingSetup = await this.resolvePostingSetupInClient(tx, {
+        ...record,
+        tenantId: workspace.tenantId,
+        ledgerId: workspace.ledgerId
+      });
 
       const result = await tx.collectedTransaction.updateMany({
         where: {
@@ -240,16 +248,16 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
         },
         data: {
           periodId: record.periodId,
-          ledgerTransactionTypeId,
+          ledgerTransactionTypeId: postingSetup.ledgerTransactionTypeId,
           fundingAccountId: record.fundingAccountId,
+          counterpartyFundingAccountId:
+            record.counterpartyFundingAccountId ?? null,
+          fundingAccountDirection: postingSetup.fundingAccountDirection,
           categoryId: record.categoryId,
           title: record.title,
           occurredOn: record.businessDate,
           amount: record.amountWon,
-          status: resolveManualCollectedTransactionStatus({
-            type: record.type,
-            categoryId: record.categoryId
-          }),
+          status: postingSetup.status,
           memo: record.memo
         }
       });
@@ -393,34 +401,67 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
     });
   }
 
-  private async findLedgerTransactionTypeId(
-    tenantId: string,
-    ledgerId: string,
-    type: CollectedTransactionType
-  ): Promise<string> {
-    return this.findLedgerTransactionTypeIdInClient(
-      this.prisma,
-      tenantId,
-      ledgerId,
-      type
+  private async resolvePostingSetupInClient(
+    client: Pick<Prisma.TransactionClient, 'ledgerTransactionType' | 'account'>,
+    record: Pick<
+      CreateCollectedTransactionRecord,
+      | 'tenantId'
+      | 'ledgerId'
+      | 'type'
+      | 'ledgerTransactionTypeId'
+      | 'fundingAccountId'
+      | 'counterpartyFundingAccountId'
+      | 'fundingAccountDirection'
+      | 'categoryId'
+    >
+  ) {
+    const fundingAccounts = await client.account.findMany({
+      where: {
+        tenantId: record.tenantId,
+        ledgerId: record.ledgerId,
+        id: {
+          in: [
+            record.fundingAccountId,
+            ...(record.counterpartyFundingAccountId
+              ? [record.counterpartyFundingAccountId]
+              : [])
+          ]
+        }
+      },
+      select: { id: true, type: true }
+    });
+    const primary = fundingAccounts.find(
+      (account) => account.id === record.fundingAccountId
     );
-  }
+    const counterparty = record.counterpartyFundingAccountId
+      ? fundingAccounts.find(
+          (account) => account.id === record.counterpartyFundingAccountId
+        )
+      : null;
 
-  private async findLedgerTransactionTypeIdInClient(
-    client: Pick<Prisma.TransactionClient, 'ledgerTransactionType'>,
-    tenantId: string,
-    ledgerId: string,
-    type: CollectedTransactionType
-  ): Promise<string> {
+    if (!primary || (record.counterpartyFundingAccountId && !counterparty)) {
+      throw new BadRequestException(
+        '현재 Ledger에서 선택한 자금수단을 찾을 수 없습니다.'
+      );
+    }
+
     const ledgerTransactionType = await client.ledgerTransactionType.findFirst({
       where: {
-        tenantId,
-        ledgerId,
-        code: mapCollectedTransactionTypeToLedgerTransactionCode(type),
+        tenantId: record.tenantId,
+        ledgerId: record.ledgerId,
+        ...(record.ledgerTransactionTypeId
+          ? { id: record.ledgerTransactionTypeId }
+          : {
+              code: mapCollectedTransactionTypeToLedgerTransactionCode(
+                record.type,
+                primary.type
+              )
+            }),
         isActive: true
       },
       select: {
-        id: true
+        id: true,
+        postingPolicyKey: true
       }
     });
 
@@ -430,7 +471,27 @@ export class PrismaCollectedTransactionStoreAdapter implements CollectedTransact
       );
     }
 
-    return ledgerTransactionType.id;
+    const assessment = assessPostingAccountSelection({
+      postingPolicyKey: ledgerTransactionType.postingPolicyKey,
+      fundingAccountId: primary.id,
+      fundingAccountType: primary.type,
+      counterpartyFundingAccountId: counterparty?.id ?? null,
+      counterpartyFundingAccountType: counterparty?.type ?? null,
+      fundingAccountDirection: record.fundingAccountDirection,
+      categoryId: record.categoryId
+    });
+
+    if (assessment.validationError) {
+      throw new BadRequestException(assessment.validationError);
+    }
+
+    return {
+      ledgerTransactionTypeId: ledgerTransactionType.id,
+      fundingAccountDirection: assessment.direction
+        ? FundingAccountDirection[assessment.direction]
+        : null,
+      status: CollectedTransactionStatus[assessment.status]
+    };
   }
 }
 
@@ -440,6 +501,9 @@ function buildCollectedTransactionSelect() {
     occurredOn: true,
     title: true,
     amount: true,
+    ledgerTransactionTypeId: true,
+    counterpartyFundingAccountId: true,
+    fundingAccountDirection: true,
     status: true,
     importBatchId: true,
     matchedPlanItemId: true,
@@ -468,7 +532,14 @@ function buildCollectedTransactionSelect() {
     },
     fundingAccount: {
       select: {
-        name: true
+        name: true,
+        type: true
+      }
+    },
+    counterpartyFundingAccount: {
+      select: {
+        name: true,
+        type: true
       }
     },
     category: {
@@ -478,7 +549,9 @@ function buildCollectedTransactionSelect() {
     },
     ledgerTransactionType: {
       select: {
-        flowKind: true
+        flowKind: true,
+        name: true,
+        postingPolicyKey: true
       }
     },
     linkedFuelLog: {
@@ -526,11 +599,19 @@ function mapCollectedTransactionRecordToStoredTransaction(
       transaction.ledgerTransactionType.flowKind
     ),
     amountWon: fromPrismaMoneyWon(transaction.amount),
+    ledgerTransactionTypeId: transaction.ledgerTransactionTypeId,
+    ledgerTransactionTypeName: transaction.ledgerTransactionType.name,
+    postingPolicyKey: transaction.ledgerTransactionType.postingPolicyKey,
+    fundingAccountDirection: transaction.fundingAccountDirection,
+    counterpartyFundingAccountId: transaction.counterpartyFundingAccountId,
     origin: mapCollectedTransactionSourceKind(transaction),
     status: mapCollectedTransactionPostingStatus(transaction.status),
     account: {
       name: transaction.fundingAccount.name
     },
+    counterpartyAccount: transaction.counterpartyFundingAccount
+      ? { name: transaction.counterpartyFundingAccount.name }
+      : null,
     category: transaction.category
       ? {
           name: transaction.category.name
@@ -554,6 +635,7 @@ function mapCollectedTransactionRecordToStoredTransactionDetail(
   return {
     ...base,
     fundingAccountId: transaction.fundingAccountId,
+    counterpartyFundingAccountId: transaction.counterpartyFundingAccountId,
     categoryId: transaction.categoryId,
     memo: transaction.memo
   };

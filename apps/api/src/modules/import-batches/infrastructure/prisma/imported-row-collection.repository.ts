@@ -110,20 +110,36 @@ export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
     return fundingAccount;
   }
 
-  async readLedgerTransactionTypeId(
+  async readLedgerTransactionType(
     tx: PrismaClientLike,
     workspace: ImportedRowCollectionWorkspaceScope,
-    type: CollectImportedRowRequest['type']
-  ): Promise<string> {
+    input: {
+      type: CollectImportedRowRequest['type'];
+      ledgerTransactionTypeId?: string;
+      postingPolicyHint?: CollectImportedRowRequest['postingPolicyHint'];
+      fundingAccountType: 'BANK' | 'CASH' | 'CARD';
+    }
+  ) {
     const ledgerTransactionType = await tx.ledgerTransactionType.findFirst({
       where: {
         tenantId: workspace.tenantId,
         ledgerId: workspace.ledgerId,
-        code: mapCollectedTransactionTypeToLedgerTransactionCode(type),
+        ...(input.ledgerTransactionTypeId
+          ? { id: input.ledgerTransactionTypeId }
+          : input.postingPolicyHint
+            ? { postingPolicyKey: input.postingPolicyHint }
+            : {
+                code: mapCollectedTransactionTypeToLedgerTransactionCode(
+                  input.type,
+                  input.fundingAccountType
+                )
+              }),
         isActive: true
       },
       select: {
-        id: true
+        id: true,
+        name: true,
+        postingPolicyKey: true
       }
     });
 
@@ -133,7 +149,7 @@ export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
       );
     }
 
-    return ledgerTransactionType.id;
+    return ledgerTransactionType;
   }
 
   private async readDraftPlanItemCandidates(
@@ -154,6 +170,8 @@ export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
           lt: dateWindow.end
         },
         fundingAccountId: input.fundingAccountId,
+        counterpartyFundingAccountId: input.counterpartyFundingAccountId,
+        fundingAccountDirection: input.fundingAccountDirection,
         ledgerTransactionTypeId: input.ledgerTransactionTypeId,
         ...(input.categoryId == null ? {} : { categoryId: input.categoryId }),
         matchedCollectedTransaction: {
@@ -166,6 +184,8 @@ export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
         plannedAmount: true,
         plannedDate: true,
         fundingAccountId: true,
+        counterpartyFundingAccountId: true,
+        fundingAccountDirection: true,
         ledgerTransactionTypeId: true,
         categoryId: true
       }
@@ -197,6 +217,8 @@ export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
           lt: dateWindow.end
         },
         fundingAccountId: input.fundingAccountId,
+        counterpartyFundingAccountId: input.counterpartyFundingAccountId,
+        fundingAccountDirection: input.fundingAccountDirection,
         ledgerTransactionTypeId: input.ledgerTransactionTypeId,
         ...(input.categoryId == null ? {} : { categoryId: input.categoryId }),
         matchedPlanItemId: {
@@ -215,6 +237,8 @@ export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
         occurredOn: true,
         amount: true,
         fundingAccountId: true,
+        counterpartyFundingAccountId: true,
+        fundingAccountDirection: true,
         ledgerTransactionTypeId: true,
         categoryId: true,
         matchedPlanItem: {
@@ -235,6 +259,8 @@ export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
               plannedAmount: fromPrismaMoneyWon(record.amount),
               plannedDate: record.occurredOn,
               fundingAccountId: record.fundingAccountId,
+              counterpartyFundingAccountId: record.counterpartyFundingAccountId,
+              fundingAccountDirection: record.fundingAccountDirection,
               ledgerTransactionTypeId: record.ledgerTransactionTypeId,
               categoryId: record.categoryId,
               existingCollectedTransactionId: record.id
@@ -264,6 +290,8 @@ export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
     amount: number,
     occurredOn: Date,
     fundingAccountId: string,
+    counterpartyFundingAccountId: string | null,
+    fundingAccountDirection: 'INFLOW' | 'OUTFLOW' | null,
     ledgerTransactionTypeId: string,
     categoryId: string | null
   ): Promise<PlanItemCollectionCandidate | null> {
@@ -275,19 +303,31 @@ export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
         amount,
         occurredOn,
         fundingAccountId,
+        counterpartyFundingAccountId,
+        fundingAccountDirection,
         ledgerTransactionTypeId,
         categoryId
       }
     );
 
-    return resolveMatchedPlanItemCandidate({
+    const resolved = resolveMatchedPlanItemCandidate({
       candidates,
       amount,
       occurredOn,
       fundingAccountId,
+      counterpartyFundingAccountId,
+      fundingAccountDirection,
       ledgerTransactionTypeId,
       categoryId
     });
+    return resolved
+      ? {
+          ...resolved,
+          counterpartyFundingAccountId:
+            resolved.counterpartyFundingAccountId ?? null,
+          fundingAccountDirection: resolved.fundingAccountDirection ?? null
+        }
+      : null;
   }
 
   async hasDuplicateSourceFingerprint(
@@ -361,6 +401,8 @@ export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
         matchedPlanItemId: input.matchedPlanItemId,
         ledgerTransactionTypeId: input.ledgerTransactionTypeId,
         fundingAccountId: input.fundingAccountId,
+        counterpartyFundingAccountId: input.counterpartyFundingAccountId,
+        fundingAccountDirection: input.fundingAccountDirection,
         categoryId: input.categoryId,
         title: input.title,
         occurredOn: input.occurredOn,
@@ -396,6 +438,8 @@ export class ImportedRowCollectionRepository extends ImportedRowCollectionPort {
         importedRowId: input.importedRowId,
         ledgerTransactionTypeId: input.ledgerTransactionTypeId,
         fundingAccountId: input.fundingAccountId,
+        counterpartyFundingAccountId: input.counterpartyFundingAccountId,
+        fundingAccountDirection: input.fundingAccountDirection,
         categoryId: input.categoryId,
         title: input.title,
         occurredOn: input.occurredOn,
@@ -518,6 +562,8 @@ type PlanItemCandidateQueryInput = {
   amount: number;
   occurredOn: Date;
   fundingAccountId: string;
+  counterpartyFundingAccountId: string | null;
+  fundingAccountDirection: 'INFLOW' | 'OUTFLOW' | null;
   ledgerTransactionTypeId: string;
   categoryId: string | null;
 };

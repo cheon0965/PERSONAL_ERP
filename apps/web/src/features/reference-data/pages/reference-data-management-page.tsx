@@ -134,6 +134,7 @@ export function ReferenceDataManagementPage({
         <>
           <CategoriesSection
             rows={page.categories}
+            accountSubjects={page.accountSubjects}
             canManageReferenceData={page.canManageReferenceData}
             onCreate={page.openCategoryCreate}
             onEdit={page.openCategoryEdit}
@@ -142,6 +143,7 @@ export function ReferenceDataManagementPage({
           <CategoryEditorDrawer
             editorState={page.categoryEditorState}
             editingCategory={page.editingCategory}
+            accountSubjects={page.accountSubjects}
             feedback={page.categoryEditorFeedback}
             busy={page.saveCategoryPending}
             onClose={page.closeCategoryEditor}

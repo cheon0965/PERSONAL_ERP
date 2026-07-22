@@ -247,7 +247,9 @@ export function buildCollectedTransactionFallbackItem(
 ): CollectedTransactionItem {
   const computedPostingStatus = resolveManualCollectedTransactionPostingStatus({
     type: input.type,
-    categoryId: input.categoryId
+    categoryId: input.categoryId,
+    counterpartyFundingAccountId: input.counterpartyFundingAccountId,
+    fundingAccountDirection: input.fundingAccountDirection
   });
   const preservedPostingStatus =
     context.postingStatus &&
@@ -320,7 +322,9 @@ function resolveCollectedTransactionDetailFallback(
       base?.postingStatus ??
       resolveManualCollectedTransactionPostingStatus({
         type: base?.type ?? 'EXPENSE',
-        categoryId: null
+        categoryId: null,
+        counterpartyFundingAccountId: base?.counterpartyFundingAccountId,
+        fundingAccountDirection: base?.fundingAccountDirection
       }),
     postedJournalEntryId: base?.postedJournalEntryId ?? null,
     postedJournalEntryNumber: base?.postedJournalEntryNumber ?? null,

@@ -340,7 +340,16 @@ export function CarryForwardsDetail({
               <CarryForwardInfoItem
                 label="자본 합계"
                 value={formatWon(view.sourceClosingSnapshot.totalEquityAmount)}
-                description="손익 계정을 제외한 자본 잔액입니다."
+                description="당기손익을 포함한 잠금 시점 자본 합계입니다."
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <CarryForwardInfoItem
+                label="순자산 이월 조정"
+                value={formatWon(
+                  view.targetOpeningBalanceSnapshot.equityAdjustmentAmount
+                )}
+                description="당기손익을 3100 순자산에 누적해 다음 월 회계등식을 맞춘 금액입니다."
               />
             </Grid>
           </Grid>

@@ -5,6 +5,8 @@ import type {
 } from './transactions';
 import type { MoneyWon } from './money';
 import type { AccountType } from './reference-data';
+import type { PostingPolicyKey } from './reference-data';
+import type { FundingAccountDirection } from './transactions';
 
 export type ImportSourceKind =
   | 'CARD_EXCEL'
@@ -125,6 +127,10 @@ export type CreateImportBatchRequest = {
 export type CollectImportedRowRequest = {
   type: CollectedTransactionType;
   fundingAccountId: string;
+  ledgerTransactionTypeId?: string;
+  counterpartyFundingAccountId?: string;
+  fundingAccountDirection?: FundingAccountDirection;
+  postingPolicyHint?: PostingPolicyKey;
   categoryId?: string;
   confirmPotentialDuplicate?: boolean;
   memo?: string;
@@ -132,6 +138,10 @@ export type CollectImportedRowRequest = {
 
 export type BulkCollectImportedRowsTypeOption = {
   type: CollectedTransactionType;
+  ledgerTransactionTypeId?: string;
+  counterpartyFundingAccountId?: string;
+  fundingAccountDirection?: FundingAccountDirection;
+  postingPolicyHint?: PostingPolicyKey;
   categoryId?: string;
   memo?: string;
 };
@@ -140,6 +150,10 @@ export type BulkCollectImportedRowsRequest = {
   rowIds?: string[];
   type?: CollectedTransactionType;
   fundingAccountId: string;
+  ledgerTransactionTypeId?: string;
+  counterpartyFundingAccountId?: string;
+  fundingAccountDirection?: FundingAccountDirection;
+  postingPolicyHint?: PostingPolicyKey;
   categoryId?: string;
   memo?: string;
   typeOptions?: BulkCollectImportedRowsTypeOption[];
@@ -186,6 +200,9 @@ export type CollectImportedRowPreview = {
   fundingAccountId: string;
   fundingAccountName: string;
   type: CollectedTransactionType;
+  ledgerTransactionTypeId?: string;
+  counterpartyFundingAccountId?: string | null;
+  fundingAccountDirection?: FundingAccountDirection | null;
   requestedCategoryId: string | null;
   requestedCategoryName: string | null;
   autoPreparation: ImportedRowAutoPreparationSummary;

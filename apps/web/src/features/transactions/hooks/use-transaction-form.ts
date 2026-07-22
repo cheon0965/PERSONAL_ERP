@@ -39,7 +39,10 @@ import {
   updateCollectedTransaction
 } from '../api/transactions.api';
 import { resolveManualCollectedTransactionPostingStatus } from '../model/transaction-workflow';
-import { mapDetailToFormInput } from '../model/transaction-form.mapper';
+import {
+  buildPreservedPostingDimensionPayload,
+  mapDetailToFormInput
+} from '../model/transaction-form.mapper';
 import {
   resolveInitialBusinessDate,
   transactionSchema,
@@ -108,13 +111,21 @@ export function useTransactionForm(input: {
       amountWon: 0,
       businessDate: resolveInitialBusinessDate(preferredPeriod),
       type: 'EXPENSE',
+      ledgerTransactionTypeId: '',
       accountId: '',
+      counterpartyFundingAccountId: '',
+      fundingAccountDirection: '',
       categoryId: '',
       memo: ''
     }
   });
   const selectedType = form.watch('type');
   const selectedFundingAccountId = form.watch('accountId');
+  const selectedLedgerTransactionTypeId = form.watch('ledgerTransactionTypeId');
+  const selectedCounterpartyFundingAccountId = form.watch(
+    'counterpartyFundingAccountId'
+  );
+  const selectedFundingAccountDirection = form.watch('fundingAccountDirection');
   const selectedCategoryId = form.watch('categoryId');
   const availableFundingAccounts = React.useMemo(
     () =>
@@ -134,14 +145,34 @@ export function useTransactionForm(input: {
       ),
     [categories, selectedCategoryId, selectedType]
   );
-  const predictedStatus = React.useMemo(
-    () =>
-      resolveManualCollectedTransactionPostingStatus({
+  const predictedStatus = React.useMemo(() => {
+    const postingDimensions = buildPreservedPostingDimensionPayload(
+      {
         type: selectedType,
-        categoryId: selectedCategoryId
-      }),
-    [selectedCategoryId, selectedType]
-  );
+        accountId: selectedFundingAccountId,
+        ledgerTransactionTypeId: selectedLedgerTransactionTypeId,
+        counterpartyFundingAccountId: selectedCounterpartyFundingAccountId,
+        fundingAccountDirection: selectedFundingAccountDirection
+      },
+      input.initialTransaction
+    );
+
+    return resolveManualCollectedTransactionPostingStatus({
+      type: selectedType,
+      categoryId: selectedCategoryId,
+      counterpartyFundingAccountId:
+        postingDimensions.counterpartyFundingAccountId,
+      fundingAccountDirection: postingDimensions.fundingAccountDirection
+    });
+  }, [
+    input.initialTransaction,
+    selectedCategoryId,
+    selectedCounterpartyFundingAccountId,
+    selectedFundingAccountDirection,
+    selectedFundingAccountId,
+    selectedLedgerTransactionTypeId,
+    selectedType
+  ]);
 
   const mutation = useMutation({
     mutationFn: ({
@@ -221,7 +252,10 @@ export function useTransactionForm(input: {
       amountWon: 0,
       businessDate: resolveInitialBusinessDate(preferredPeriod),
       type: 'EXPENSE',
+      ledgerTransactionTypeId: '',
       accountId: '',
+      counterpartyFundingAccountId: '',
+      fundingAccountDirection: '',
       categoryId: '',
       memo: ''
     });
@@ -297,6 +331,10 @@ export function useTransactionForm(input: {
       amountWon: values.amountWon,
       businessDate: values.businessDate,
       fundingAccountId: values.accountId,
+      ...buildPreservedPostingDimensionPayload(
+        values,
+        input.initialTransaction
+      ),
       categoryId: values.categoryId || undefined,
       memo: values.memo.trim() || undefined
     };
@@ -329,7 +367,10 @@ export function useTransactionForm(input: {
           amountWon: 0,
           businessDate: resolveInitialBusinessDate(preferredPeriod),
           type: values.type,
+          ledgerTransactionTypeId: values.ledgerTransactionTypeId,
           accountId: values.accountId,
+          counterpartyFundingAccountId: values.counterpartyFundingAccountId,
+          fundingAccountDirection: values.fundingAccountDirection,
           categoryId: '',
           memo: ''
         });

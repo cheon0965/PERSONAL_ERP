@@ -5,6 +5,8 @@ export type PlanItemMatchCandidate = {
   plannedAmount: number;
   plannedDate: Date;
   fundingAccountId: string;
+  counterpartyFundingAccountId?: string | null;
+  fundingAccountDirection?: 'INFLOW' | 'OUTFLOW' | null;
   ledgerTransactionTypeId: string;
   categoryId: string | null;
 };
@@ -13,6 +15,8 @@ export type PlanItemMatchInput = {
   amount: number;
   occurredOn: Date;
   fundingAccountId: string;
+  counterpartyFundingAccountId?: string | null;
+  fundingAccountDirection?: 'INFLOW' | 'OUTFLOW' | null;
   ledgerTransactionTypeId: string;
   categoryId: string | null;
 };
@@ -67,7 +71,18 @@ export function resolvePlanItemAutoMatch(input: {
     };
   }
 
-  const ledgerTypeCandidates = fundingAccountCandidates.filter(
+  const accountPairCandidates = fundingAccountCandidates.filter(
+    (candidate) =>
+      (candidate.counterpartyFundingAccountId ?? null) ===
+        (input.collected.counterpartyFundingAccountId ?? null) &&
+      (candidate.fundingAccountDirection ?? null) ===
+        (input.collected.fundingAccountDirection ?? null)
+  );
+  if (accountPairCandidates.length === 0) {
+    return { outcome: 'unmatched' };
+  }
+
+  const ledgerTypeCandidates = accountPairCandidates.filter(
     (candidate) =>
       candidate.ledgerTransactionTypeId ===
       input.collected.ledgerTransactionTypeId

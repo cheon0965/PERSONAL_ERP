@@ -2,19 +2,21 @@
 
 import * as React from 'react';
 import { Button, Chip, Stack } from '@mui/material';
-import type { CategoryItem } from '@personal-erp/contracts';
+import type { AccountSubjectItem, CategoryItem } from '@personal-erp/contracts';
 import { DataTableCard } from '@/shared/ui/data-table-card';
 import { buildCategoryColumns } from '../model/reference-data.columns';
 import { readCategoryKindLabel } from '../model/reference-data.shared';
 
 export function CategoriesSection({
   rows,
+  accountSubjects,
   canManageReferenceData,
   onCreate,
   onEdit,
   onToggle
 }: {
   rows: CategoryItem[];
+  accountSubjects: AccountSubjectItem[];
   canManageReferenceData: boolean;
   onCreate: () => void;
   onEdit: (category: CategoryItem) => void;
@@ -24,10 +26,11 @@ export function CategoriesSection({
     () =>
       buildCategoryColumns({
         canManageReferenceData,
+        accountSubjects,
         onEdit,
         onToggle
       }),
-    [canManageReferenceData, onEdit, onToggle]
+    [accountSubjects, canManageReferenceData, onEdit, onToggle]
   );
   const activitySummary = React.useMemo(() => {
     const activeCount = rows.filter((row) => row.isActive).length;
@@ -55,7 +58,7 @@ export function CategoriesSection({
   return (
     <DataTableCard
       title="카테고리"
-      description="수입, 지출, 이체를 분류할 때 사용하는 공식 카테고리 목록입니다."
+      description="수입, 지출, 이체를 분류하고 공식 손익 계정과목에 연결하는 카테고리 목록입니다."
       actions={
         canManageReferenceData ? (
           <Button variant="contained" size="small" onClick={onCreate}>

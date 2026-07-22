@@ -250,7 +250,19 @@ test('POST /collected-transactions returns the created collected transaction ite
 
       amountWon: 84000,
 
+      ledgerTransactionTypeId: 'ltt-1-expense',
+
+      ledgerTransactionTypeName: '기본 지출',
+
+      postingPolicyKey: 'EXPENSE_BASIC',
+
+      fundingAccountDirection: 'OUTFLOW',
+
       fundingAccountName: 'Main checking',
+
+      counterpartyFundingAccountId: null,
+
+      counterpartyFundingAccountName: null,
 
       categoryName: 'Fuel',
 

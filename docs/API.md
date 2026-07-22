@@ -478,16 +478,23 @@
 ### `POST /accounting-periods`
 
 - contract: `OpenAccountingPeriodRequest -> AccountingPeriodItem`
-- 선택한 `month`의 운영 기간을 열고, 필요하면 opening balance 초기화를 시작합니다.
-- 월 오픈은 월별 운영 사이클의 시작이며, 이미 존재하는 가장 최근 운영 기간이 `LOCKED` 상태일 때만 이후 월을 열 수 있습니다.
-- 운영 중에는 하나의 최신 진행월만 열어 두는 것을 기본 정책으로 삼습니다.
-- 첫 월의 opening balance와 이후 차기 이월 opening balance는 거래 등록 예외가 아니라 해당 월 시작 잔액 기준입니다.
+- 일반 월 오픈은 최초 운영월의 `INITIAL_SETUP`에만 허용하며 최소 1건의 opening balance line이 필요합니다.
+- `openingBalanceAdjustmentMode`의 기본값은 `REJECT`입니다. 불균형 입력은 `AUTO_TO_NET_ASSETS`를 명시한 경우에만 차액을 `3100 순자산`으로 반영합니다.
+- 사용자가 입력하는 line은 양수만 허용하고, 부채가 자산보다 큰 경우 시스템이 생성하는 `3100` 보정 line만 음수가 될 수 있습니다.
+- 두 번째 월부터는 이 API로 직접 열 수 없으며 `POST /carry-forwards/generate`가 직전 마감과 연결된 opening snapshot과 다음 운영월을 함께 생성합니다.
+
+### `POST /accounting-periods/opening-balance-preview`
+
+- contract: `OpeningBalancePreviewRequest -> OpeningBalancePreview`
+- 최초 기초잔액을 저장하지 않고 자산·부채·자본·차액과 `3100` 반영 후 합계를 계산합니다.
+- 실제 open 요청은 같은 검증을 다시 수행하므로 preview 결과 자체를 쓰기 입력으로 신뢰하지 않습니다.
 
 ### `POST /accounting-periods/:id/close`
 
 - contract: `CloseAccountingPeriodRequest -> CloseAccountingPeriodResponse`
 - 운영 기간을 잠그고 closing snapshot을 생성합니다.
 - 공식 `financial-statements`와 `carry-forwards`의 선행 조건입니다.
+- opening 연결, POSTED 전표별 차대변, closing line 합계와 `자산=부채+자본`이 모두 일치할 때만 잠금합니다.
 
 ### `POST /accounting-periods/:id/reopen`
 
@@ -556,13 +563,16 @@
 
 - contract: `CreateCategoryRequest -> CategoryItem`
 - 현재 작업 문맥의 Owner/Manager만 새 카테고리를 생성할 수 있습니다.
-- 현재 범위는 `name`, `kind` 생성과 활성 상태 기본값(`true`)까지로 한정합니다.
+- `defaultAccountSubjectId`로 공식 손익 계정과목을 선택합니다. 생략하면 수입은 `4100`, 지출은 `5100`으로 연결합니다.
+- 수입/지출은 같은 장부의 활성 시스템 손익 계정만 선택할 수 있고, 이체 카테고리는 계정과목을 연결할 수 없습니다.
 - 이름은 `kind + normalizedName` 기준으로 중복을 판정하며, 동시 생성 충돌은 `409 Conflict`로 정리합니다.
 
 ### `PATCH /categories/:id`
 
 - contract: `UpdateCategoryRequest -> CategoryItem`
 - 현재 작업 문맥의 Owner/Manager만 카테고리 이름 변경과 활성/비활성 전환을 수행할 수 있습니다.
+- `defaultAccountSubjectId` 생략은 기존 매핑 유지, `null`은 해당 종류의 `4100/5100` 기본값 복원을 뜻합니다.
+- 매핑 변경은 이후 확정되는 전표부터 적용되며 기존 POSTED 전표와 잠금 스냅샷은 소급 변경하지 않습니다.
 - 현재 범위는 `kind` 변경과 하드 삭제를 지원하지 않습니다.
 - 같은 구분 안의 이름 중복이나 경합은 `409 Conflict`로 응답합니다.
 
@@ -749,6 +759,9 @@
 - 최신 진행월 범위 안의 거래일에 수집 거래를 생성합니다.
 - 현재 API 구현 이름은 `collected-transactions`이고, Web 화면 경로는 shorthand로 `/transactions`를 사용합니다.
 - 현재 응답은 `GET /collected-transactions` 목록 아이템 shape와 동일하게 매핑됩니다.
+- `ledgerTransactionTypeId`로 수입, 일반지출, 카드사용, 계좌이체, 카드대금결제 정책을 명시합니다. 기존 coarse `type`은 호환 입력과 응답으로 유지됩니다.
+- 이체와 카드대금은 `counterpartyFundingAccountId`와 기준 계정 관점의 `fundingAccountDirection`을 거래에 저장합니다.
+- 계정·방향·카테고리 등 정책별 필수 기준이 완성된 거래만 `READY_TO_POST`가 되고, 누락 거래는 `REVIEWED`로 남습니다.
 - 기준 데이터 readiness가 부족한 경우에도 현재 구현은 저장 요청 자체를 일괄 차단하지는 않지만, Web은 `reference-data/readiness`를 기준으로 준비 부족 안내와 이동 링크를 함께 노출합니다.
 
 ### `GET /collected-transactions/:id`
@@ -776,6 +789,8 @@
 
 - contract: request body 없음 -> `JournalEntryItem`
 - 수집 거래를 확정해 `JournalEntry`를 생성합니다.
+- 확정 요청에는 상대 계정을 다시 보내지 않습니다. 거래에 저장된 양쪽 자금수단과 방향을 트랜잭션 안에서 재검증합니다.
+- 계좌이체는 도착 자산 차변/출발 자산 대변, 카드대금은 카드미지급금 차변/결제 자산 대변으로 처리하며 두 정책 모두 손익에 영향을 주지 않습니다.
 - 연결된 `PlanItem`이 있으면 현재 구현은 해당 항목을 `CONFIRMED`로 갱신합니다.
 - 전표 번호는 현재 운영 기간의 원자적 sequence로 할당합니다.
 - 같은 수집 거래 재확정, 전표 번호 경합, 잠금/상태 경합은 `409 Conflict` 또는 `400 Bad Request`로 정리합니다.
@@ -792,6 +807,7 @@
 - contract: `CreateRecurringRuleRequest -> RecurringRuleItem`
 - 반복 규칙을 등록합니다.
 - 현재 엔드포인트는 도메인 기준의 `RecurringRule -> PlanItem` 생성 흐름의 입력 단계 구현입니다.
+- 거래유형, 기준/상대 자금수단, 방향을 저장해 생성되는 PlanItem과 수집 거래에 그대로 전달합니다.
 
 ### `GET /recurring-rules/:id`
 
@@ -920,11 +936,15 @@
 
 - contract: `GenerateFinancialStatementSnapshotsRequest -> FinancialStatementsView`
 - 잠금된 운영 기간과 closing snapshot이 있을 때 공식 재무제표 snapshot을 생성하거나 갱신합니다.
+- closing line 재합계와 회계등식이 일치하지 않으면 공식 snapshot을 생성하지 않습니다.
+- 재무상태표 자본에는 당기손익을 포함하고 순자산변동표의 기초 순자산은 해당 월 opening snapshot을 사용합니다.
 
 ### `POST /carry-forwards/generate`
 
 - contract: `GenerateCarryForwardRequest -> CarryForwardView`
 - 잠금된 운영 기간의 closing snapshot을 다음 기간 opening balance snapshot으로 이월합니다.
+- 자산·부채·기존 자본을 보존하고 당기손익을 `3100 순자산`에 반영한 뒤 target opening의 회계등식을 재검증합니다.
+- 다음 운영월의 유일한 정상 생성 경로이며, 기존 대상 월에 사용 이력이나 허용되지 않는 상태가 있으면 `409 Conflict`로 차단합니다.
 - 현재 구현은 opening balance snapshot 전용 정책입니다. `CarryForwardRecord.createdJournalEntryId`는 의도적으로 `null`이며, 별도 `CARRY_FORWARD` 전표는 생성하지 않습니다.
 - `replaceExisting=true`를 보내면 기존 차기 이월을 안전 취소한 뒤 현재 closing snapshot 기준으로 다시 생성합니다. 이 경우 취소 권한까지 필요합니다.
 
@@ -949,7 +969,7 @@
 ### `reference-data -> accounting-periods -> insurance/liabilities/vehicles -> recurring-rules -> plan-items -> collected-transactions/imports -> journal-entries -> financial-statements -> funding-account-status -> carry-forwards -> forecast`
 
 1. `GET /reference-data/readiness`, `POST /funding-accounts`, `POST /categories`로 기준 데이터 준비 상태를 확인하고 필요한 자금수단/카테고리를 정리합니다.
-2. `POST /accounting-periods`로 운영 기간을 엽니다. 다음 월은 최근 월을 마감한 뒤 열며, 운영 중에는 하나의 최신 진행월만 열어 둡니다.
+2. 최초 월만 `POST /accounting-periods/opening-balance-preview` 확인 후 `POST /accounting-periods`로 엽니다. 이후 월은 직전 월 마감과 차기 이월로만 생성합니다.
 3. `POST /insurance-policies`, `POST /liabilities`, `POST /liabilities/:id/repayments`, `POST /vehicles`, `POST /vehicles/:id/fuel-logs`, `POST /vehicles/:id/maintenance-logs`로 보험 계약, 부채 상환 기준, 차량 운영 기준을 정리합니다. 부채 상환 일정은 계획 항목/수집 거래로 연결하고, 차량 연료/정비 저장 시 회계 연동을 켜면 같은 요청에서 표준 수집 거래를 함께 생성합니다.
 4. `POST /recurring-rules`와 `POST /plan-items/generate`로 반복 규칙을 현재 월 계획 항목으로 펼치고, 계획 기반 수집 거래까지 생성합니다.
 5. `POST /collected-transactions` 또는 `POST /import-batches/:id/rows/:rowId/collect`로 최신 진행월 범위의 수집 거래를 만들거나 업로드 행을 계획 기반 수집 거래에 흡수/매칭합니다.
@@ -959,7 +979,7 @@
 9. `POST /accounting-periods/:id/close`로 운영 기간을 잠그고 closing snapshot을 만듭니다.
 10. `POST /financial-statements/generate`로 잠금 기간의 공식 재무제표 snapshot을 생성합니다.
 11. 차기 이월 전 수정이 필요하면 `POST /accounting-periods/:id/reopen`로 잠금 기간을 다시 열고 재무제표/마감 snapshot을 정리합니다.
-12. `POST /carry-forwards/generate`로 다음 기간 opening balance snapshot과 carry-forward record를 생성합니다.
+12. `POST /carry-forwards/generate`로 당기손익을 `3100`에 반영한 다음 기간 opening balance snapshot, 운영 기간, carry-forward record를 생성합니다.
 13. 차기 이월 후 정정이 필요하고 다음 기간 사용 이력이 없다면 `POST /carry-forwards/:id/cancel` 또는 `POST /carry-forwards/generate`의 `replaceExisting=true`로 안전 취소/재생성을 수행합니다.
 14. `GET /funding-account-status/summary`로 자금수단별 수입, 지출, 이체, 잔액 흐름을 수집 거래 기준과 확정 전표 기준으로 비교합니다.
 15. `GET /forecast/monthly`로 현재 월과 다음 달 전망을 확인합니다.

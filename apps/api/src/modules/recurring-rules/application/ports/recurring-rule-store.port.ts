@@ -1,4 +1,7 @@
-import type { RecurringRuleItem } from '@personal-erp/contracts';
+import type {
+  FundingAccountDirection,
+  RecurringRuleItem
+} from '@personal-erp/contracts';
 
 export type StoredRecurringRule = {
   id: string;
@@ -8,9 +11,14 @@ export type StoredRecurringRule = {
   nextRunDate: Date | null;
   isActive: boolean;
   linkedInsurancePolicyId: string | null;
+  ledgerTransactionTypeId: string | null;
+  ledgerTransactionTypeName: string | null;
+  fundingAccountDirection: FundingAccountDirection | null;
+  counterpartyFundingAccountId: string | null;
   account: {
     name: string;
   };
+  counterpartyAccount: { name: string } | null;
   category: {
     name: string;
   } | null;
@@ -20,6 +28,9 @@ export type StoredRecurringRuleDetail = {
   id: string;
   title: string;
   accountId: string;
+  ledgerTransactionTypeId: string | null;
+  counterpartyFundingAccountId: string | null;
+  fundingAccountDirection: FundingAccountDirection | null;
   categoryId: string | null;
   amountWon: number;
   frequency: RecurringRuleItem['frequency'];
@@ -37,6 +48,9 @@ export type CreateRecurringRuleRecord = {
   ledgerId: string;
   title: string;
   accountId: string;
+  ledgerTransactionTypeId?: string;
+  counterpartyFundingAccountId?: string;
+  fundingAccountDirection?: FundingAccountDirection;
   categoryId?: string;
   amountWon: number;
   frequency: RecurringRuleItem['frequency'];
@@ -51,6 +65,9 @@ export type UpdateRecurringRuleRecord = {
   id: string;
   title: string;
   accountId: string;
+  ledgerTransactionTypeId?: string;
+  counterpartyFundingAccountId?: string;
+  fundingAccountDirection?: FundingAccountDirection;
   categoryId?: string;
   amountWon: number;
   frequency: RecurringRuleItem['frequency'];

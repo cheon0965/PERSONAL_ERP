@@ -6,6 +6,10 @@ type AccountSubjectKind =
   | 'EQUITY'
   | 'INCOME'
   | 'EXPENSE';
+export type CarryForwardAccountSubjectKind = Extract<
+  AccountSubjectKind,
+  'ASSET' | 'LIABILITY' | 'EQUITY'
+>;
 type AccountingPeriodStatus = 'OPEN' | 'IN_REVIEW' | 'CLOSING' | 'LOCKED';
 type OpeningBalanceSourceKind = string;
 
@@ -33,7 +37,9 @@ export function readPeriodBoundary(year: number, month: number) {
   };
 }
 
-export function isCarryForwardAccount(subjectKind: AccountSubjectKind) {
+export function isCarryForwardAccount(
+  subjectKind: AccountSubjectKind
+): subjectKind is CarryForwardAccountSubjectKind {
   return (
     subjectKind === 'ASSET' ||
     subjectKind === 'LIABILITY' ||

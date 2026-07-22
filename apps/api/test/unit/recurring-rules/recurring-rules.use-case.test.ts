@@ -60,6 +60,9 @@ test('CreateRecurringRuleUseCase persists a rule after ownership checks pass', a
     ledgerId: 'ledger-1',
     title: 'Phone bill',
     accountId: 'acc-1',
+    ledgerTransactionTypeId: undefined,
+    counterpartyFundingAccountId: undefined,
+    fundingAccountDirection: undefined,
     categoryId: 'cat-1',
     amountWon: 75000,
     frequency: RecurrenceFrequency.MONTHLY,
@@ -76,7 +79,12 @@ test('CreateRecurringRuleUseCase persists a rule after ownership checks pass', a
     frequency: RecurrenceFrequency.MONTHLY,
     nextRunDate: '2026-03-10',
     linkedInsurancePolicyId: null,
+    ledgerTransactionTypeId: undefined,
+    ledgerTransactionTypeName: undefined,
+    fundingAccountDirection: undefined,
     fundingAccountName: 'Main checking',
+    counterpartyFundingAccountId: undefined,
+    counterpartyFundingAccountName: null,
     categoryName: 'Fuel',
     isActive: true
   });
@@ -162,7 +170,12 @@ test('ListRecurringRulesUseCase maps stored rules into the shared response shape
       frequency: RecurrenceFrequency.MONTHLY,
       nextRunDate: '2026-03-10',
       linkedInsurancePolicyId: null,
+      ledgerTransactionTypeId: undefined,
+      ledgerTransactionTypeName: undefined,
+      fundingAccountDirection: undefined,
       fundingAccountName: 'Main checking',
+      counterpartyFundingAccountId: undefined,
+      counterpartyFundingAccountName: null,
       categoryName: 'Fuel',
       isActive: true
     }
@@ -256,6 +269,9 @@ test('UpdateRecurringRuleUseCase persists updated schedule data after ownership 
     id: 'rr-1',
     title: 'Phone bill revised',
     accountId: 'acc-1',
+    ledgerTransactionTypeId: undefined,
+    counterpartyFundingAccountId: undefined,
+    fundingAccountDirection: undefined,
     categoryId: 'cat-1',
     amountWon: 88000,
     frequency: RecurrenceFrequency.MONTHLY,
@@ -272,7 +288,12 @@ test('UpdateRecurringRuleUseCase persists updated schedule data after ownership 
     frequency: RecurrenceFrequency.MONTHLY,
     nextRunDate: '2026-03-15',
     linkedInsurancePolicyId: null,
+    ledgerTransactionTypeId: undefined,
+    ledgerTransactionTypeName: undefined,
+    fundingAccountDirection: undefined,
     fundingAccountName: 'Main checking',
+    counterpartyFundingAccountId: undefined,
+    counterpartyFundingAccountName: null,
     categoryName: 'Fuel',
     isActive: false
   });

@@ -2,44 +2,20 @@
   "version": 1,
   "entries": [
     {
-      "id": "@nestjs/core:@nestjs/core",
-      "package": "@nestjs/core",
+      "id": "next:next",
+      "package": "next",
       "severity": "high",
-      "trackedAt": "2026-06-19",
-      "expiresOn": "2026-07-19",
-      "reason": "Transitive multer <2.2.0 advisory through @nestjs/platform-express. Latest @nestjs/platform-express still pins multer 2.1.1; import batch file upload now limits file count, field count, part count, and field nesting depth while waiting for an upstream Nest release."
+      "trackedAt": "2026-07-22",
+      "expiresOn": "2026-08-21",
+      "reason": "Next 15.5.21 declares optional sharp ^0.34.3 for its supported production image-optimization path, so npm propagates the unresolved sharp advisory through next. Recheck for a supported Next 15 patch or compatible sharp fix and remove this exception by the expiry date."
     },
     {
-      "id": "@nestjs/platform-express:@nestjs/platform-express",
-      "package": "@nestjs/platform-express",
+      "id": "GHSA-f88m-g3jw-g9cj",
+      "package": "sharp",
       "severity": "high",
-      "trackedAt": "2026-06-19",
-      "expiresOn": "2026-07-19",
-      "reason": "Transitive multer <2.2.0 advisory through @nestjs/platform-express. Latest @nestjs/platform-express still pins multer 2.1.1; import batch file upload now limits file count, field count, part count, and field nesting depth while waiting for an upstream Nest release."
-    },
-    {
-      "id": "@nestjs/schedule:@nestjs/schedule",
-      "package": "@nestjs/schedule",
-      "severity": "high",
-      "trackedAt": "2026-06-19",
-      "expiresOn": "2026-07-19",
-      "reason": "Transitive multer <2.2.0 advisory is reported through the Nest dependency graph. Latest @nestjs/platform-express still pins multer 2.1.1; upload parsing is constrained while waiting for an upstream Nest release."
-    },
-    {
-      "id": "@nestjs/swagger:@nestjs/swagger",
-      "package": "@nestjs/swagger",
-      "severity": "high",
-      "trackedAt": "2026-06-19",
-      "expiresOn": "2026-07-19",
-      "reason": "Transitive multer <2.2.0 advisory is reported through the Nest dependency graph. Latest @nestjs/platform-express still pins multer 2.1.1; upload parsing is constrained while waiting for an upstream Nest release."
-    },
-    {
-      "id": "GHSA-72gw-mp4g-v24j",
-      "package": "multer",
-      "severity": "high",
-      "trackedAt": "2026-06-19",
-      "expiresOn": "2026-07-19",
-      "reason": "Direct advisory for multer <2.2.0. Latest @nestjs/platform-express still pins multer 2.1.1; import batch file upload now limits file count, field count, part count, and field nesting depth while waiting for an upstream Nest release."
+      "trackedAt": "2026-07-22",
+      "expiresOn": "2026-08-21",
+      "reason": "Next 15.5.21 supports production image optimization through optional sharp ^0.34.3, whose ^0.34.x range remains affected by GHSA-f88m-g3jw-g9cj. Monitor the supported Next/sharp range, upgrade when a compatible fix is available, and remove this exception by the expiry date."
     }
   ]
 }

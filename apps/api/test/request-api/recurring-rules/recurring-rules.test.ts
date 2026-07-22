@@ -21,7 +21,12 @@ test('GET /recurring-rules returns only the current user recurring rule items wi
         frequency: RecurrenceFrequency.MONTHLY,
         nextRunDate: '2026-03-10',
         linkedInsurancePolicyId: null,
+        ledgerTransactionTypeId: 'ltt-1-expense',
+        ledgerTransactionTypeName: '기본 지출',
+        fundingAccountDirection: 'OUTFLOW',
         fundingAccountName: 'Main checking',
+        counterpartyFundingAccountId: null,
+        counterpartyFundingAccountName: null,
         categoryName: 'Utilities',
         isActive: true
       }
@@ -191,7 +196,12 @@ test('POST /recurring-rules returns the created recurring rule item shape', asyn
       frequency: RecurrenceFrequency.MONTHLY,
       nextRunDate: '2026-03-10',
       linkedInsurancePolicyId: null,
+      ledgerTransactionTypeId: 'ltt-1-expense',
+      ledgerTransactionTypeName: '기본 지출',
+      fundingAccountDirection: 'OUTFLOW',
       fundingAccountName: 'Main checking',
+      counterpartyFundingAccountId: null,
+      counterpartyFundingAccountName: null,
       categoryName: 'Fuel',
       isActive: true
     });
@@ -225,6 +235,9 @@ test('GET /recurring-rules/:id returns the recurring rule detail without ownersh
       id: 'rr-seed-1',
       title: 'Phone bill',
       fundingAccountId: 'acc-1',
+      ledgerTransactionTypeId: 'ltt-1-expense',
+      counterpartyFundingAccountId: null,
+      fundingAccountDirection: 'OUTFLOW',
       categoryId: 'cat-1c',
       amountWon: 75_000,
       frequency: RecurrenceFrequency.MONTHLY,
@@ -276,7 +289,12 @@ test('PATCH /recurring-rules/:id updates the recurring rule and returns the shar
       frequency: RecurrenceFrequency.MONTHLY,
       nextRunDate: '2026-03-15',
       linkedInsurancePolicyId: null,
+      ledgerTransactionTypeId: 'ltt-1-expense',
+      ledgerTransactionTypeName: '기본 지출',
+      fundingAccountDirection: 'OUTFLOW',
       fundingAccountName: 'Main checking',
+      counterpartyFundingAccountId: null,
+      counterpartyFundingAccountName: null,
       categoryName: 'Fuel',
       isActive: false
     });
@@ -290,6 +308,9 @@ test('PATCH /recurring-rules/:id updates the recurring rule and returns the shar
         tenantId: 'tenant-1',
         ledgerId: 'ledger-1',
         accountId: 'acc-1',
+        ledgerTransactionTypeId: 'ltt-1-expense',
+        counterpartyFundingAccountId: null,
+        fundingAccountDirection: 'OUTFLOW',
         categoryId: 'cat-1',
         title: 'Phone bill revised',
         amountWon: 88_000,

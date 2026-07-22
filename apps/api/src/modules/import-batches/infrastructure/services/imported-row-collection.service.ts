@@ -10,16 +10,10 @@ import type {
   CollectImportedRowRequest,
   CollectImportedRowResponse
 } from '@personal-erp/contracts';
-import {
-  AccountingPeriodEventType,
-  AccountingPeriodStatus,
-  Prisma
-} from '@prisma/client';
+import { AccountingPeriodStatus, Prisma } from '@prisma/client';
 import { requireCurrentWorkspace } from '../../../../common/auth/required-workspace.util';
-import { readWorkspaceActorRef } from '../../../../common/auth/workspace-actor-ref.util';
 import { assertWorkspaceActionAllowed } from '../../../../common/auth/workspace-action.policy';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
-import { parseMonthRange } from '../../../../common/utils/date.util';
 import { readCollectingAccountingPeriodStatuses } from '../../../accounting-periods/public';
 import {
   ImportedRowCollectionPort,
@@ -39,11 +33,14 @@ import {
 } from '../policies/imported-row-collection.normalization.policy';
 import { resolveCollectedSourceFingerprint } from '../policies/imported-row-collection-source-fingerprint.policy';
 import type { PlanItemCollectionCandidate } from '../models/imported-row-collection.types';
+import { assessPostingAccountSelection } from '../../../collected-transactions/public';
 
 type RowCollectionAssessment = {
   occurredOn: Date;
   normalizedRow: ParsedImportedRowPayload;
   ledgerTransactionTypeId: string;
+  counterpartyFundingAccountId: string | null;
+  fundingAccountDirection: 'INFLOW' | 'OUTFLOW' | null;
   fundingAccount: {
     id: string;
     name: string;
@@ -117,13 +114,10 @@ export class ImportedRowCollectionService {
         importedRowId
       );
     const parsedRow = readNormalizedImportedRow(importedRow);
-    const actorRef = readWorkspaceActorRef(workspace);
-
     return this.prisma.$transaction((tx) =>
       this.collectRowInTransaction({
         tx,
         workspace: workspaceScope,
-        actorRef,
         importBatchId,
         importedRowId,
         input,
@@ -182,7 +176,6 @@ export class ImportedRowCollectionService {
   private async collectRowInTransaction(input: {
     tx: Prisma.TransactionClient;
     workspace: ImportedRowCollectionWorkspaceScope;
-    actorRef: ReturnType<typeof readWorkspaceActorRef>;
     importBatchId: string;
     importedRowId: string;
     input: CollectImportedRowRequest;
@@ -193,7 +186,6 @@ export class ImportedRowCollectionService {
       await this.resolveOrCreateTargetCollectionPeriodInTransaction({
         tx: input.tx,
         workspace: input.workspace,
-        actorRef: input.actorRef,
         importBatchId: input.importBatchId,
         occurredOnIso: input.occurredOnIso,
         fundingAccountId: input.fundingAccountId
@@ -233,6 +225,9 @@ export class ImportedRowCollectionService {
               periodId: targetPeriod.id,
               ledgerTransactionTypeId: assessment.ledgerTransactionTypeId,
               fundingAccountId: assessment.fundingAccount.id,
+              counterpartyFundingAccountId:
+                assessment.counterpartyFundingAccountId,
+              fundingAccountDirection: assessment.fundingAccountDirection,
               categoryId: assessment.effectiveCategory?.id ?? null,
               title: assessment.normalizedRow.title,
               occurredOn: assessment.occurredOn,
@@ -252,6 +247,9 @@ export class ImportedRowCollectionService {
             matchedPlanItemId,
             ledgerTransactionTypeId: assessment.ledgerTransactionTypeId,
             fundingAccountId: assessment.fundingAccount.id,
+            counterpartyFundingAccountId:
+              assessment.counterpartyFundingAccountId,
+            fundingAccountDirection: assessment.fundingAccountDirection,
             categoryId: assessment.effectiveCategory?.id ?? null,
             title: assessment.normalizedRow.title,
             occurredOn: assessment.occurredOn,
@@ -307,12 +305,42 @@ export class ImportedRowCollectionService {
       input.workspace,
       input.input.fundingAccountId
     );
-    const ledgerTransactionTypeId =
-      await this.collectionRepository.readLedgerTransactionTypeId(
+    const counterpartyFundingAccount = input.input.counterpartyFundingAccountId
+      ? await this.collectionRepository.readFundingAccount(
+          input.client,
+          input.workspace,
+          input.input.counterpartyFundingAccountId
+        )
+      : null;
+    const ledgerTransactionType =
+      await this.collectionRepository.readLedgerTransactionType(
         input.client,
         input.workspace,
-        input.input.type
+        {
+          type: input.input.type,
+          ledgerTransactionTypeId: input.input.ledgerTransactionTypeId,
+          postingPolicyHint: input.input.postingPolicyHint,
+          fundingAccountType: fundingAccount.type
+        }
       );
+    const ledgerTransactionTypeId = ledgerTransactionType.id;
+    // 계획 항목은 반복 규칙 생성 시 posting policy의 기본 방향을 이미 저장한다.
+    // 업로드 요청에서 방향이 생략된 경우에도 같은 기본값으로 정규화한 뒤 후보를
+    // 조회해야 EXPENSE_BASIC/INCOME_BASIC 계획 항목과 정확히 매칭된다.
+    const initialPostingAssessment = assessPostingAccountSelection({
+      postingPolicyKey: ledgerTransactionType.postingPolicyKey,
+      fundingAccountId: fundingAccount.id,
+      fundingAccountType: fundingAccount.type,
+      counterpartyFundingAccountId: counterpartyFundingAccount?.id ?? null,
+      counterpartyFundingAccountType: counterpartyFundingAccount?.type ?? null,
+      fundingAccountDirection: input.input.fundingAccountDirection,
+      categoryId: input.input.categoryId ?? null
+    });
+    if (initialPostingAssessment.validationError) {
+      throw new BadRequestException(initialPostingAssessment.validationError);
+    }
+    const normalizedFundingAccountDirection =
+      initialPostingAssessment.direction;
     const matchedPlanItem = input.targetPeriod.id
       ? await this.collectionRepository.readMatchedPlanItemCandidate(
           input.client,
@@ -321,6 +349,8 @@ export class ImportedRowCollectionService {
           normalizedRow.amount,
           occurredOn,
           fundingAccount.id,
+          counterpartyFundingAccount?.id ?? null,
+          normalizedFundingAccountDirection,
           ledgerTransactionTypeId,
           input.input.categoryId ?? null
         )
@@ -365,6 +395,25 @@ export class ImportedRowCollectionService {
         input.workspace,
         autoPreparation.effectiveCategoryId
       );
+    const postingAssessment = assessPostingAccountSelection({
+      postingPolicyKey: ledgerTransactionType.postingPolicyKey,
+      fundingAccountId: fundingAccount.id,
+      fundingAccountType: fundingAccount.type,
+      counterpartyFundingAccountId: counterpartyFundingAccount?.id ?? null,
+      counterpartyFundingAccountType: counterpartyFundingAccount?.type ?? null,
+      fundingAccountDirection: normalizedFundingAccountDirection,
+      categoryId: effectiveCategory?.id ?? null
+    });
+    if (postingAssessment.validationError) {
+      throw new BadRequestException(postingAssessment.validationError);
+    }
+    const nextWorkflowStatus =
+      autoPreparation.nextStatus === 'COLLECTED'
+        ? 'COLLECTED'
+        : autoPreparation.nextStatus === 'READY_TO_POST' &&
+            postingAssessment.status === 'READY_TO_POST'
+          ? 'READY_TO_POST'
+          : 'REVIEWED';
     const requestedCategoryName = input.input.categoryId
       ? (effectiveCategory?.name ?? null)
       : null;
@@ -375,7 +424,7 @@ export class ImportedRowCollectionService {
       matchedPlanItemTitle: matchedPlanItem?.title ?? null,
       effectiveCategoryId: effectiveCategory?.id ?? null,
       effectiveCategoryName: effectiveCategory?.name ?? null,
-      nextWorkflowStatus: autoPreparation.nextStatus,
+      nextWorkflowStatus,
       hasDuplicateSourceFingerprint,
       allowPlanItemMatch: autoPreparation.allowPlanItemMatch,
       targetPeriodMonthLabel: input.targetPeriod.monthLabel,
@@ -388,6 +437,8 @@ export class ImportedRowCollectionService {
       occurredOn,
       normalizedRow,
       ledgerTransactionTypeId,
+      counterpartyFundingAccountId: counterpartyFundingAccount?.id ?? null,
+      fundingAccountDirection: postingAssessment.direction,
       fundingAccount,
       matchedPlanItem,
       effectiveCategory,
@@ -401,6 +452,9 @@ export class ImportedRowCollectionService {
         fundingAccountId: fundingAccount.id,
         fundingAccountName: fundingAccount.name,
         type: input.input.type,
+        ledgerTransactionTypeId,
+        counterpartyFundingAccountId: counterpartyFundingAccount?.id ?? null,
+        fundingAccountDirection: postingAssessment.direction,
         requestedCategoryId: input.input.categoryId ?? null,
         requestedCategoryName,
         autoPreparation: autoPreparationSummary
@@ -477,46 +531,14 @@ export class ImportedRowCollectionService {
       };
     }
 
-    const monthLabel = formatYearMonth(year, month);
-    const periodBoundary = parseMonthRange(monthLabel);
-    const latestPeriod = periods[0] ?? null;
-    const canCreateInitialSetupPeriod = latestPeriod == null;
-    const canCreateNewFundingAccountPeriod =
-      latestPeriod?.status === AccountingPeriodStatus.LOCKED &&
-      isImmediatelyAfter(latestPeriod, { year, month }) &&
-      (await this.isNewFundingAccountBootstrapCandidate({
-        client: input.client,
-        workspace: input.workspace,
-        currentImportBatchId: input.importBatchId,
-        fundingAccountId: input.fundingAccountId
-      }));
-
-    // 업로드가 운영월을 자동 생성할 수 있는 경우는 두 가지뿐이다.
-    // 첫 시작월 초기화 또는 마감 직후 신규 계좌/카드 기초 업로드다.
-    if (!canCreateInitialSetupPeriod && !canCreateNewFundingAccountPeriod) {
-      throw new BadRequestException(
-        `${monthLabel} 운영월은 업로드 배치에서 자동으로 추가할 수 없습니다. 운영 중에는 월 운영 화면에서 최신 진행월을 먼저 열고 해당 월 거래만 등록해 주세요.`
-      );
-    }
-
-    return {
-      id: null,
-      year,
-      month,
-      monthLabel,
-      startDate: periodBoundary.start,
-      endDate: periodBoundary.end,
-      willCreateOnCollect: true,
-      creationReason: canCreateNewFundingAccountPeriod
-        ? 'NEW_FUNDING_ACCOUNT'
-        : 'INITIAL_SETUP'
-    };
+    throw new BadRequestException(
+      `${formatYearMonth(year, month)} 운영월이 없습니다. 최초 월은 기초잔액과 함께 월 운영 화면에서 열고, 이후 월은 전월 마감 후 차기 이월로 생성해 주세요.`
+    );
   }
 
   private async resolveOrCreateTargetCollectionPeriodInTransaction(input: {
     tx: Prisma.TransactionClient;
     workspace: ImportedRowCollectionWorkspaceScope;
-    actorRef: ReturnType<typeof readWorkspaceActorRef>;
     importBatchId: string;
     occurredOnIso: string;
     fundingAccountId: string;
@@ -529,63 +551,7 @@ export class ImportedRowCollectionService {
       fundingAccountId: input.fundingAccountId
     });
 
-    if (targetPeriod.id) {
-      return targetPeriod as ResolvedCollectionPeriod & { id: string };
-    }
-
-    try {
-      const createdPeriod = await input.tx.accountingPeriod.create({
-        data: {
-          tenantId: input.workspace.tenantId,
-          ledgerId: input.workspace.ledgerId,
-          year: targetPeriod.year,
-          month: targetPeriod.month,
-          startDate: targetPeriod.startDate,
-          endDate: targetPeriod.endDate,
-          status: AccountingPeriodStatus.OPEN
-        }
-      });
-
-      await input.tx.periodStatusHistory.create({
-        data: {
-          tenantId: input.workspace.tenantId,
-          ledgerId: input.workspace.ledgerId,
-          periodId: createdPeriod.id,
-          fromStatus: null,
-          toStatus: AccountingPeriodStatus.OPEN,
-          eventType: AccountingPeriodEventType.OPEN,
-          reason:
-            targetPeriod.creationReason === 'NEW_FUNDING_ACCOUNT'
-              ? `신규 계좌/카드 기초 업로드 자동 생성 (${targetPeriod.monthLabel})`
-              : `업로드 배치 거래 등록 자동 생성 (${targetPeriod.monthLabel})`,
-          ...input.actorRef
-        }
-      });
-
-      return {
-        ...targetPeriod,
-        id: createdPeriod.id
-      };
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        const latestPeriod = await this.resolveTargetCollectionPeriod({
-          client: input.tx,
-          workspace: input.workspace,
-          importBatchId: input.importBatchId,
-          occurredOnIso: input.occurredOnIso,
-          fundingAccountId: input.fundingAccountId
-        });
-
-        if (latestPeriod.id) {
-          return latestPeriod as ResolvedCollectionPeriod & { id: string };
-        }
-      }
-
-      throw error;
-    }
+    return targetPeriod as ResolvedCollectionPeriod & { id: string };
   }
 
   private async isNewFundingAccountBootstrapCandidate(input: {
@@ -754,14 +720,4 @@ function isCollectingAccountingPeriodStatus(
   return readCollectingAccountingPeriodStatuses().some(
     (candidate) => candidate === status
   );
-}
-
-function isImmediatelyAfter(
-  left: Pick<CollectionPeriodRecord, 'year' | 'month'>,
-  right: Pick<CollectionPeriodRecord, 'year' | 'month'>
-) {
-  const nextMonth = left.month === 12 ? 1 : left.month + 1;
-  const nextYear = left.month === 12 ? left.year + 1 : left.year;
-
-  return right.year === nextYear && right.month === nextMonth;
 }

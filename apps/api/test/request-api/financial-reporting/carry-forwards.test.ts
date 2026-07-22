@@ -121,6 +121,14 @@ test('POST /carry-forwards/generate creates a carry forward record and the next 
       0
     );
     assert.equal(body.targetOpeningBalanceSnapshot.sourceKind, 'CARRY_FORWARD');
+    assert.equal(
+      body.targetOpeningBalanceSnapshot.equityAdjustmentKind,
+      'PERIOD_PNL_ROLLOVER'
+    );
+    assert.equal(
+      body.targetOpeningBalanceSnapshot.equityAdjustmentAmount,
+      -84_000
+    );
     assert.equal(body.targetOpeningBalanceSnapshot.lines.length, 2);
     assert.deepEqual(
       body.targetOpeningBalanceSnapshot.lines.map((line) => ({
@@ -134,7 +142,7 @@ test('POST /carry-forwards/generate creates a carry forward record and the next 
         },
         {
           accountSubjectCode: '3100',
-          balanceAmount: 3_000_000
+          balanceAmount: 2_916_000
         }
       ]
     );

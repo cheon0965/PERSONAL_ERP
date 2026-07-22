@@ -484,6 +484,8 @@ export function createCarryForwardView(input: {
       id: 'opening-2026-05',
       effectivePeriodId: input.targetPeriod.id,
       sourceKind: 'CARRY_FORWARD',
+      equityAdjustmentKind: 'PERIOD_PNL_ROLLOVER',
+      equityAdjustmentAmount: 120_000,
       createdAt: '2026-04-30T15:20:00.000Z',
       lines: [
         {

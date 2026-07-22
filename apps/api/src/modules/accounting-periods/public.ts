@@ -11,3 +11,13 @@ export {
   assertAccountingPeriodCanBeReopened,
   assertAccountingPeriodCanBeReopenedWithoutDependents
 } from './domain/accounting-period-transition.policy';
+export {
+  assertAccountingEquationBalanced,
+  summarizeAccountingEquationLines
+} from './domain/accounting-equation.policy';
+export {
+  aggregateClosingSnapshotLines,
+  assertClosingSnapshotIntegrity,
+  summarizeClosingSnapshot
+} from './domain/closing-snapshot.policy';
+export type { AggregatedClosingSnapshotLine } from './domain/closing-snapshot.policy';

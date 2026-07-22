@@ -3,7 +3,11 @@
 import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Alert, Button, MenuItem, Stack, TextField } from '@mui/material';
-import type { CategoryItem, CategoryKind } from '@personal-erp/contracts';
+import type {
+  AccountSubjectItem,
+  CategoryItem,
+  CategoryKind
+} from '@personal-erp/contracts';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
@@ -12,28 +16,45 @@ import {
 } from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
 
-const categoryManagementSchema = z.object({
-  name: z.string().trim().min(1, '카테고리 이름을 입력해 주세요.'),
-  kind: z.enum(['INCOME', 'EXPENSE', 'TRANSFER'])
-});
+const categoryManagementSchema = z
+  .object({
+    name: z.string().trim().min(1, '카테고리 이름을 입력해 주세요.'),
+    kind: z.enum(['INCOME', 'EXPENSE', 'TRANSFER']),
+    defaultAccountSubjectId: z.string()
+  })
+  .superRefine((value, context) => {
+    if (
+      value.kind !== 'TRANSFER' &&
+      value.defaultAccountSubjectId.trim().length === 0
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['defaultAccountSubjectId'],
+        message: '전표에 사용할 기본 계정과목을 선택해 주세요.'
+      });
+    }
+  });
 
 type CategoryManagementFormInput = z.infer<typeof categoryManagementSchema>;
 
 export type CategoryManagementSubmitInput = {
   name: string;
   kind: CategoryKind;
+  defaultAccountSubjectId: string | null;
 };
 
 export function CategoryManagementForm({
   feedback,
   mode,
   initialCategory,
+  accountSubjects,
   busy,
   onSubmit
 }: {
   feedback: FeedbackAlertValue;
   mode: 'create' | 'edit';
   initialCategory?: CategoryItem | null;
+  accountSubjects: AccountSubjectItem[];
   busy: boolean;
   onSubmit: (input: CategoryManagementSubmitInput) => Promise<void> | void;
 }) {
@@ -41,24 +62,64 @@ export function CategoryManagementForm({
     resolver: zodResolver(categoryManagementSchema),
     defaultValues: {
       name: '',
-      kind: 'EXPENSE'
+      kind: 'EXPENSE',
+      defaultAccountSubjectId: ''
     }
   });
+  const selectedKind = form.watch('kind');
+  const eligibleAccountSubjects = React.useMemo(
+    () =>
+      accountSubjects.filter(
+        (accountSubject) =>
+          selectedKind !== 'TRANSFER' &&
+          accountSubject.statementType === 'PROFIT_AND_LOSS' &&
+          accountSubject.subjectKind === selectedKind &&
+          accountSubject.isSystem &&
+          accountSubject.isActive
+      ),
+    [accountSubjects, selectedKind]
+  );
 
   React.useEffect(() => {
     if (mode === 'edit' && initialCategory) {
       form.reset({
         name: initialCategory.name,
-        kind: initialCategory.kind
+        kind: initialCategory.kind,
+        defaultAccountSubjectId: initialCategory.defaultAccountSubjectId ?? ''
       });
       return;
     }
 
     form.reset({
       name: '',
-      kind: 'EXPENSE'
+      kind: 'EXPENSE',
+      defaultAccountSubjectId: ''
     });
   }, [form, initialCategory, mode]);
+
+  React.useEffect(() => {
+    if (selectedKind === 'TRANSFER') {
+      form.setValue('defaultAccountSubjectId', '');
+      return;
+    }
+
+    const currentAccountSubjectId = form.getValues('defaultAccountSubjectId');
+    if (
+      eligibleAccountSubjects.some(
+        (accountSubject) => accountSubject.id === currentAccountSubjectId
+      )
+    ) {
+      return;
+    }
+
+    const genericCode = selectedKind === 'INCOME' ? '4100' : '5100';
+    form.setValue(
+      'defaultAccountSubjectId',
+      eligibleAccountSubjects.find(
+        (accountSubject) => accountSubject.code === genericCode
+      )?.id ?? ''
+    );
+  }, [eligibleAccountSubjects, form, selectedKind]);
 
   return (
     <form
@@ -66,7 +127,9 @@ export function CategoryManagementForm({
         try {
           await onSubmit({
             name: values.name.trim(),
-            kind: values.kind
+            kind: values.kind,
+            defaultAccountSubjectId:
+              values.kind === 'TRANSFER' ? null : values.defaultAccountSubjectId
           });
         } catch {
           // 상위 mutation onError가 드로어 피드백을 갱신한다.
@@ -76,8 +139,8 @@ export function CategoryManagementForm({
       <Stack spacing={appLayout.cardGap}>
         <Alert severity="info" variant="outlined">
           {mode === 'create'
-            ? '현재 범위에서는 카테고리를 새로 만들고 바로 활성 상태로 운영에 투입할 수 있습니다.'
-            : '현재 범위에서는 카테고리 이름과 활성 상태만 관리합니다. 구분(kind)은 기존 거래 의미를 보존하기 위해 수정하지 않습니다.'}
+            ? '카테고리를 만들 때 전표에 사용할 표준 손익 계정과목을 함께 지정합니다.'
+            : '카테고리 이름과 표준 계정과목을 관리합니다. 구분(kind)은 기존 거래 의미를 보존하기 위해 수정하지 않습니다.'}
         </Alert>
 
         <TextField
@@ -104,11 +167,39 @@ export function CategoryManagementForm({
           <MenuItem value="TRANSFER">이체</MenuItem>
         </TextField>
 
+        {selectedKind === 'TRANSFER' ? (
+          <Alert severity="info" variant="outlined">
+            이체는 손익을 만들지 않으므로 기본 계정과목을 연결하지 않습니다.
+          </Alert>
+        ) : (
+          <TextField
+            select
+            label="기본 계정과목"
+            error={Boolean(form.formState.errors.defaultAccountSubjectId)}
+            helperText={
+              form.formState.errors.defaultAccountSubjectId?.message ??
+              '이 카테고리로 전표를 확정할 때 사용할 표준 손익 계정과목입니다.'
+            }
+            disabled={busy || eligibleAccountSubjects.length === 0}
+            {...form.register('defaultAccountSubjectId')}
+          >
+            {eligibleAccountSubjects.map((accountSubject) => (
+              <MenuItem key={accountSubject.id} value={accountSubject.id}>
+                {accountSubject.code} · {accountSubject.name}
+              </MenuItem>
+            ))}
+          </TextField>
+        )}
+
         <FeedbackAlert feedback={feedback} />
         <Button
           type="submit"
           variant="contained"
-          disabled={busy}
+          disabled={
+            busy ||
+            (selectedKind !== 'TRANSFER' &&
+              eligibleAccountSubjects.length === 0)
+          }
           sx={{ alignSelf: 'flex-start' }}
         >
           {busy

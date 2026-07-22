@@ -6,6 +6,12 @@ import type {
   JournalEntryStatus,
   PostingPolicyKey
 } from '@personal-erp/contracts';
+import type {
+  AccountSubjectKind,
+  AccountType,
+  CategoryKind,
+  FundingAccountDirection
+} from '@personal-erp/contracts';
 
 export type CollectedTransactionStatusValue =
   | 'COLLECTED'
@@ -30,6 +36,7 @@ export type ConfirmationWorkspaceScope = {
 
 export type ConfirmationCollectedTransaction = {
   id: string;
+  ledgerId: string;
   occurredOn: Date;
   title: string;
   memo: string | null;
@@ -54,8 +61,39 @@ export type ConfirmationCollectedTransaction = {
   fundingAccount: {
     id: string;
     name: string;
+    type: AccountType;
+    linkedAccountSubject: {
+      id: string;
+      ledgerId: string;
+      subjectKind: AccountSubjectKind;
+      isActive: boolean;
+    } | null;
   };
+  counterpartyFundingAccount: {
+    id: string;
+    name: string;
+    type: AccountType;
+    linkedAccountSubject: {
+      id: string;
+      ledgerId: string;
+      subjectKind: AccountSubjectKind;
+      isActive: boolean;
+    } | null;
+  } | null;
+  fundingAccountDirection: FundingAccountDirection | null;
+  category: {
+    id: string;
+    kind: CategoryKind;
+    defaultAccountSubject: {
+      id: string;
+      ledgerId: string;
+      subjectKind: AccountSubjectKind;
+      isActive: boolean;
+    } | null;
+  } | null;
   ledgerTransactionType: {
+    id: string;
+    name: string;
     postingPolicyKey: PostingPolicyKey;
   };
   importedRow: {

@@ -65,7 +65,35 @@ test('POST /financial-statements/generate creates official statement snapshots f
       periodPnLAmount: -84_000,
       createdAt: new Date('2026-03-31T15:00:00.000Z')
     });
+    context.state.openingBalanceSnapshots.push({
+      id: 'opening-report-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      effectivePeriodId: 'period-report-1',
+      sourceKind: OpeningBalanceSourceKind.INITIAL_SETUP,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
+      createdByMembershipId: 'membership-1'
+    });
     context.state.balanceSnapshotLines.push(
+      {
+        id: 'opening-report-line-1',
+        snapshotKind: 'OPENING',
+        openingSnapshotId: 'opening-report-1',
+        closingSnapshotId: null,
+        accountSubjectId: 'as-1-1010',
+        fundingAccountId: 'acc-1',
+        balanceAmount: 3_000_000
+      },
+      {
+        id: 'opening-report-line-2',
+        snapshotKind: 'OPENING',
+        openingSnapshotId: 'opening-report-1',
+        closingSnapshotId: null,
+        accountSubjectId: 'as-1-3100',
+        fundingAccountId: null,
+        balanceAmount: 3_000_000
+      },
       {
         id: 'balance-report-1',
         snapshotKind: 'CLOSING',
@@ -153,7 +181,7 @@ test('POST /financial-statements/generate creates official statement snapshots f
     assert.equal(response.status, 201);
     assert.equal(body.period.id, 'period-report-1');
     assert.equal(body.previousPeriod, null);
-    assert.equal(body.basis.openingBalanceSourceKind, null);
+    assert.equal(body.basis.openingBalanceSourceKind, 'INITIAL_SETUP');
     assert.equal(body.snapshots.length, 4);
     assert.equal(body.comparison.length, 4);
     assert.equal(
@@ -298,6 +326,38 @@ test('GET /financial-statements returns stored official statement snapshots for 
       createdByActorType: AuditActorType.TENANT_MEMBERSHIP,
       createdByMembershipId: 'membership-1'
     });
+    context.state.closingSnapshots.push({
+      id: 'closing-report-view-1',
+      tenantId: 'tenant-1',
+      ledgerId: 'ledger-1',
+      periodId: 'period-report-view-1',
+      lockedAt: new Date('2026-04-30T15:00:00.000Z'),
+      totalAssetAmount: 3_000_000,
+      totalLiabilityAmount: 0,
+      totalEquityAmount: 3_000_000,
+      periodPnLAmount: 0,
+      createdAt: new Date('2026-04-30T15:00:00.000Z')
+    });
+    context.state.balanceSnapshotLines.push(
+      {
+        id: 'closing-report-view-line-1',
+        snapshotKind: 'CLOSING',
+        openingSnapshotId: null,
+        closingSnapshotId: 'closing-report-view-1',
+        accountSubjectId: 'as-1-1010',
+        fundingAccountId: 'acc-1',
+        balanceAmount: 3_000_000
+      },
+      {
+        id: 'closing-report-view-line-2',
+        snapshotKind: 'CLOSING',
+        openingSnapshotId: null,
+        closingSnapshotId: 'closing-report-view-1',
+        accountSubjectId: 'as-1-3100',
+        fundingAccountId: null,
+        balanceAmount: 3_000_000
+      }
+    );
     context.state.financialStatementSnapshots.push(
       {
         id: 'financial-view-prev-1',

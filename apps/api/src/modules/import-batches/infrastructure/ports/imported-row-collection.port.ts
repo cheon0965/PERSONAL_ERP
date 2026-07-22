@@ -24,6 +24,8 @@ export type CreateCollectedTransactionRecordInput = {
   matchedPlanItemId: string | null;
   ledgerTransactionTypeId: string;
   fundingAccountId: string;
+  counterpartyFundingAccountId: string | null;
+  fundingAccountDirection: Prisma.CollectedTransactionCreateInput['fundingAccountDirection'];
   categoryId: string | null;
   title: string;
   occurredOn: Date;
@@ -42,6 +44,8 @@ export type AbsorbImportedRowIntoCollectedTransactionRecordInput = {
   periodId: string;
   ledgerTransactionTypeId: string;
   fundingAccountId: string;
+  counterpartyFundingAccountId: string | null;
+  fundingAccountDirection: Prisma.CollectedTransactionCreateInput['fundingAccountDirection'];
   categoryId: string | null;
   title: string;
   occurredOn: Date;
@@ -71,11 +75,22 @@ export abstract class ImportedRowCollectionPort {
     fundingAccountId: string
   ): Promise<{ id: string; name: string; type: 'BANK' | 'CASH' | 'CARD' }>;
 
-  abstract readLedgerTransactionTypeId(
+  abstract readLedgerTransactionType(
     tx: PrismaClientLike,
     workspace: ImportedRowCollectionWorkspaceScope,
-    type: CollectImportedRowRequest['type']
-  ): Promise<string>;
+    input: {
+      type: CollectImportedRowRequest['type'];
+      ledgerTransactionTypeId?: string;
+      postingPolicyHint?: CollectImportedRowRequest['postingPolicyHint'];
+      fundingAccountType: 'BANK' | 'CASH' | 'CARD';
+    }
+  ): Promise<{
+    id: string;
+    name: string;
+    postingPolicyKey: NonNullable<
+      CollectImportedRowRequest['postingPolicyHint']
+    >;
+  }>;
 
   abstract readMatchedPlanItemCandidate(
     tx: PrismaClientLike,
@@ -84,6 +99,8 @@ export abstract class ImportedRowCollectionPort {
     amount: number,
     occurredOn: Date,
     fundingAccountId: string,
+    counterpartyFundingAccountId: string | null,
+    fundingAccountDirection: 'INFLOW' | 'OUTFLOW' | null,
     ledgerTransactionTypeId: string,
     categoryId: string | null
   ): Promise<PlanItemCollectionCandidate | null>;
