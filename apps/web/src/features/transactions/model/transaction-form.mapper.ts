@@ -2,9 +2,17 @@
 
 import type {
   CollectedTransactionDetailItem,
-  FundingAccountItem
+  FundingAccountItem,
+  UpdateCollectedTransactionRequest
 } from '@personal-erp/contracts';
 import type { TransactionFormInput } from './transaction-form.schema';
+
+type PostingDimensionRequest = Pick<
+  UpdateCollectedTransactionRequest,
+  | 'ledgerTransactionTypeId'
+  | 'counterpartyFundingAccountId'
+  | 'fundingAccountDirection'
+>;
 
 export function mapDetailToFormInput(
   transaction: CollectedTransactionDetailItem
@@ -16,10 +24,46 @@ export function mapDetailToFormInput(
     type: transaction.type,
     ledgerTransactionTypeId: transaction.ledgerTransactionTypeId ?? '',
     accountId: transaction.fundingAccountId,
-    counterpartyAccountId: transaction.counterpartyFundingAccountId ?? '',
+    counterpartyFundingAccountId:
+      transaction.counterpartyFundingAccountId ?? '',
     fundingAccountDirection: transaction.fundingAccountDirection ?? '',
     categoryId: transaction.categoryId ?? '',
     memo: transaction.memo ?? ''
+  };
+}
+
+export function buildPreservedPostingDimensionPayload(
+  values: Pick<
+    TransactionFormInput,
+    | 'type'
+    | 'accountId'
+    | 'ledgerTransactionTypeId'
+    | 'counterpartyFundingAccountId'
+    | 'fundingAccountDirection'
+  >,
+  initialTransaction: Pick<
+    CollectedTransactionDetailItem,
+    'type' | 'fundingAccountId'
+  > | null
+): PostingDimensionRequest {
+  if (
+    !initialTransaction ||
+    values.type !== initialTransaction.type ||
+    values.accountId !== initialTransaction.fundingAccountId
+  ) {
+    return {};
+  }
+
+  return {
+    ...(values.ledgerTransactionTypeId
+      ? { ledgerTransactionTypeId: values.ledgerTransactionTypeId }
+      : {}),
+    ...(values.counterpartyFundingAccountId
+      ? { counterpartyFundingAccountId: values.counterpartyFundingAccountId }
+      : {}),
+    ...(values.fundingAccountDirection
+      ? { fundingAccountDirection: values.fundingAccountDirection }
+      : {})
   };
 }
 

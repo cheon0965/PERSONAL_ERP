@@ -63,6 +63,9 @@ test('CreateCollectedTransactionUseCase executes ownership checks before persist
     amountWon: 84000,
     businessDate: new Date('2026-03-03T00:00:00.000Z'),
     fundingAccountId: 'acc-1',
+    ledgerTransactionTypeId: undefined,
+    counterpartyFundingAccountId: undefined,
+    fundingAccountDirection: undefined,
     categoryId: 'cat-1',
     memo: 'Full tank'
   });
@@ -254,6 +257,9 @@ test('UpdateCollectedTransactionUseCase updates only unposted collected transact
     amountWon: 91000,
     businessDate: new Date('2026-03-04T00:00:00.000Z'),
     fundingAccountId: 'acc-1',
+    ledgerTransactionTypeId: undefined,
+    counterpartyFundingAccountId: undefined,
+    fundingAccountDirection: undefined,
     categoryId: 'cat-1',
     memo: 'Adjusted after receipt review'
   });

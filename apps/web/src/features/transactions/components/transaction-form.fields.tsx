@@ -40,6 +40,9 @@ export function TransactionFormFields({
 }) {
   return (
     <>
+      <input type="hidden" {...form.register('ledgerTransactionTypeId')} />
+      <input type="hidden" {...form.register('counterpartyFundingAccountId')} />
+      <input type="hidden" {...form.register('fundingAccountDirection')} />
       <Grid container spacing={appLayout.fieldGap}>
         <Grid size={{ xs: 12, md: 6 }}>
           <TextField
@@ -149,7 +152,7 @@ export function TransactionFormFields({
                 helperText={
                   filteredCategories.length === 0
                     ? '선택한 거래 유형에 맞는 카테고리가 없으면 비워 둘 수 있습니다.'
-                    : '이체와 승인취소는 카테고리 없이 전표 준비 상태가 됩니다. 손익 거래는 카테고리가 비어 있으면 검토 상태로 남습니다.'
+                    : '이체는 상대 자금수단과 방향이 보완되기 전까지 검토 상태로 남습니다. 승인취소는 카테고리 없이 준비되며, 손익 거래는 카테고리가 필요합니다.'
                 }
                 name={field.name}
                 value={field.value ?? ''}

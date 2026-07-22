@@ -878,7 +878,7 @@ async function installClosingEquationConstraint(prisma: PrismaClient) {
   if (Number(rows[0]?.count ?? 0) > 0) {
     return false;
   }
-  await prisma.$executeRawUnsafe(`
+  await prisma.$executeRaw(Prisma.sql`
     ALTER TABLE \`ClosingSnapshot\`
       ADD CONSTRAINT \`ClosingSnapshot_accounting_equation_chk\`
       CHECK (\`totalAssetAmount\` = \`totalLiabilityAmount\` + \`totalEquityAmount\`)

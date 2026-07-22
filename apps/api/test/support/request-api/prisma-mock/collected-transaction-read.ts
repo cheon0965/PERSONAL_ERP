@@ -4,6 +4,24 @@ import {
 } from '@prisma/client';
 import type { RequestPrismaMockContext } from './shared';
 
+type ConfirmationAccountSubjectRelation = {
+  select?: {
+    id?: boolean;
+    ledgerId?: boolean;
+    subjectKind?: boolean;
+    isActive?: boolean;
+  };
+};
+
+type ConfirmationFundingAccountRelation = {
+  select?: {
+    id?: boolean;
+    name?: boolean;
+    type?: boolean;
+    linkedAccountSubject?: ConfirmationAccountSubjectRelation;
+  };
+};
+
 export function createCollectedTransactionReadMethods(
   context: RequestPrismaMockContext
 ): Record<string, unknown> {
@@ -110,7 +128,10 @@ export function createCollectedTransactionReadMethods(
             rawPayload?: boolean;
           };
         };
+        ledgerTransactionTypeId?: boolean;
         fundingAccountId?: boolean;
+        counterpartyFundingAccountId?: boolean;
+        fundingAccountDirection?: boolean;
         categoryId?: boolean;
         memo?: boolean;
         period?: {
@@ -121,12 +142,8 @@ export function createCollectedTransactionReadMethods(
             status?: boolean;
           };
         };
-        fundingAccount?: {
-          select?: {
-            id?: boolean;
-            name?: boolean;
-          };
-        };
+        fundingAccount?: ConfirmationFundingAccountRelation;
+        counterpartyFundingAccount?: ConfirmationFundingAccountRelation;
         category?: {
           select?: {
             name?: boolean;
@@ -134,6 +151,8 @@ export function createCollectedTransactionReadMethods(
         };
         ledgerTransactionType?: {
           select?: {
+            id?: boolean;
+            name?: boolean;
             flowKind?: boolean;
             postingPolicyKey?: boolean;
           };
@@ -176,20 +195,26 @@ export function createCollectedTransactionReadMethods(
             status?: boolean;
           };
         };
-        fundingAccount?: {
-          select?: {
-            id?: boolean;
-            name?: boolean;
-          };
-        };
+        fundingAccount?: ConfirmationFundingAccountRelation;
+        counterpartyFundingAccount?: ConfirmationFundingAccountRelation;
         category?: {
           select?: {
+            id?: boolean;
+            kind?: boolean;
             name?: boolean;
+            defaultAccountSubject?: ConfirmationAccountSubjectRelation;
           };
         };
         ledgerTransactionType?: {
           select?: {
+            id?: boolean;
+            name?: boolean;
             postingPolicyKey?: boolean;
+          };
+        };
+        matchedPlanItem?: {
+          select?: {
+            linkedLiabilityRepayment?: boolean | Record<string, unknown>;
           };
         };
         importedRow?: {
@@ -237,8 +262,28 @@ export function createCollectedTransactionReadMethods(
         ? findAccountingPeriod(candidate.periodId)
         : null;
       const fundingAccount = resolveAccount(candidate.fundingAccountId);
+      const fundingAccountSubject = fundingAccount?.linkedAccountSubjectId
+        ? (state.accountSubjects.find(
+            (subject) => subject.id === fundingAccount.linkedAccountSubjectId
+          ) ?? null)
+        : null;
+      const counterpartyFundingAccount = candidate.counterpartyFundingAccountId
+        ? resolveAccount(candidate.counterpartyFundingAccountId)
+        : null;
+      const counterpartyFundingAccountSubject =
+        counterpartyFundingAccount?.linkedAccountSubjectId
+          ? (state.accountSubjects.find(
+              (subject) =>
+                subject.id === counterpartyFundingAccount.linkedAccountSubjectId
+            ) ?? null)
+          : null;
       const category = candidate.categoryId
         ? resolveCategory(candidate.categoryId)
+        : null;
+      const categoryAccountSubject = category?.defaultAccountSubjectId
+        ? (state.accountSubjects.find(
+            (subject) => subject.id === category.defaultAccountSubjectId
+          ) ?? null)
         : null;
       const ledgerTransactionType = resolveLedgerTransactionType(
         candidate.ledgerTransactionTypeId
@@ -339,6 +384,21 @@ export function createCollectedTransactionReadMethods(
           ...(args.select.fundingAccountId
             ? { fundingAccountId: candidate.fundingAccountId }
             : {}),
+          ...(args.select.ledgerTransactionTypeId
+            ? { ledgerTransactionTypeId: candidate.ledgerTransactionTypeId }
+            : {}),
+          ...(args.select.counterpartyFundingAccountId
+            ? {
+                counterpartyFundingAccountId:
+                  candidate.counterpartyFundingAccountId ?? null
+              }
+            : {}),
+          ...(args.select.fundingAccountDirection
+            ? {
+                fundingAccountDirection:
+                  candidate.fundingAccountDirection ?? null
+              }
+            : {}),
           ...(args.select.categoryId
             ? { categoryId: candidate.categoryId }
             : {}),
@@ -371,8 +431,28 @@ export function createCollectedTransactionReadMethods(
                     : {}),
                   ...(args.select.fundingAccount.select?.name
                     ? { name: fundingAccount?.name ?? '' }
+                    : {}),
+                  ...(args.select.fundingAccount.select?.type
+                    ? { type: fundingAccount?.type ?? 'BANK' }
                     : {})
                 }
+              }
+            : {}),
+          ...(args.select.counterpartyFundingAccount
+            ? {
+                counterpartyFundingAccount: counterpartyFundingAccount
+                  ? {
+                      ...(args.select.counterpartyFundingAccount.select?.id
+                        ? { id: counterpartyFundingAccount.id }
+                        : {}),
+                      ...(args.select.counterpartyFundingAccount.select?.name
+                        ? { name: counterpartyFundingAccount.name }
+                        : {}),
+                      ...(args.select.counterpartyFundingAccount.select?.type
+                        ? { type: counterpartyFundingAccount.type }
+                        : {})
+                    }
+                  : null
               }
             : {}),
           ...(args.select.category
@@ -389,6 +469,17 @@ export function createCollectedTransactionReadMethods(
           ...(args.select.ledgerTransactionType
             ? {
                 ledgerTransactionType: {
+                  ...(args.select.ledgerTransactionType.select?.id
+                    ? { id: ledgerTransactionType?.id ?? '' }
+                    : {}),
+                  ...(args.select.ledgerTransactionType.select?.name
+                    ? {
+                        name:
+                          ledgerTransactionType?.name ??
+                          ledgerTransactionType?.code ??
+                          ''
+                      }
+                    : {}),
                   ...(args.select.ledgerTransactionType.select?.flowKind
                     ? {
                         flowKind:
@@ -503,16 +594,70 @@ export function createCollectedTransactionReadMethods(
                   : {}),
                 ...(args.include.fundingAccount.select?.name
                   ? { name: fundingAccount?.name ?? '' }
+                  : {}),
+                ...(args.include.fundingAccount.select?.type
+                  ? { type: fundingAccount?.type ?? 'BANK' }
+                  : {}),
+                ...(args.include.fundingAccount.select?.linkedAccountSubject
+                  ? {
+                      linkedAccountSubject: projectConfirmationAccountSubject(
+                        fundingAccountSubject,
+                        args.include.fundingAccount.select.linkedAccountSubject
+                      )
+                    }
                   : {})
               }
+            }
+          : {}),
+        ...(args.include.counterpartyFundingAccount
+          ? {
+              counterpartyFundingAccount: counterpartyFundingAccount
+                ? {
+                    ...(args.include.counterpartyFundingAccount.select?.id
+                      ? { id: counterpartyFundingAccount.id }
+                      : {}),
+                    ...(args.include.counterpartyFundingAccount.select?.name
+                      ? { name: counterpartyFundingAccount.name }
+                      : {}),
+                    ...(args.include.counterpartyFundingAccount.select?.type
+                      ? { type: counterpartyFundingAccount.type }
+                      : {}),
+                    ...(args.include.counterpartyFundingAccount.select
+                      ?.linkedAccountSubject
+                      ? {
+                          linkedAccountSubject:
+                            projectConfirmationAccountSubject(
+                              counterpartyFundingAccountSubject,
+                              args.include.counterpartyFundingAccount.select
+                                .linkedAccountSubject
+                            )
+                        }
+                      : {})
+                  }
+                : null
             }
           : {}),
         ...(args.include.category
           ? {
               category: category
                 ? {
+                    ...(args.include.category.select?.id
+                      ? { id: category.id }
+                      : {}),
+                    ...(args.include.category.select?.kind
+                      ? { kind: category.kind ?? 'EXPENSE' }
+                      : {}),
                     ...(args.include.category.select?.name
                       ? { name: category.name }
+                      : {}),
+                    ...(args.include.category.select?.defaultAccountSubject
+                      ? {
+                          defaultAccountSubject:
+                            projectConfirmationAccountSubject(
+                              categoryAccountSubject,
+                              args.include.category.select.defaultAccountSubject
+                            )
+                        }
                       : {})
                   }
                 : null
@@ -521,10 +666,33 @@ export function createCollectedTransactionReadMethods(
         ...(args.include.ledgerTransactionType
           ? {
               ledgerTransactionType: {
+                ...(args.include.ledgerTransactionType.select?.id
+                  ? { id: ledgerTransactionType?.id ?? '' }
+                  : {}),
+                ...(args.include.ledgerTransactionType.select?.name
+                  ? {
+                      name:
+                        ledgerTransactionType?.name ??
+                        ledgerTransactionType?.code ??
+                        ''
+                    }
+                  : {}),
                 ...(args.include.ledgerTransactionType.select?.postingPolicyKey
                   ? { postingPolicyKey }
                   : {})
               }
+            }
+          : {}),
+        ...(args.include.matchedPlanItem
+          ? {
+              matchedPlanItem: matchedPlanItem
+                ? {
+                    ...(args.include.matchedPlanItem.select
+                      ?.linkedLiabilityRepayment
+                      ? { linkedLiabilityRepayment: null }
+                      : {})
+                  }
+                : null
             }
           : {}),
         ...(args.include.importedRow
@@ -575,6 +743,8 @@ export function createCollectedTransactionReadMethods(
         amount?: number;
         ledgerTransactionTypeId?: string;
         fundingAccountId?: string;
+        counterpartyFundingAccountId?: string | null;
+        fundingAccountDirection?: 'INFLOW' | 'OUTFLOW' | null;
         categoryId?: string | null;
         matchedPlanItemId?: {
           not?: null;
@@ -624,6 +794,8 @@ export function createCollectedTransactionReadMethods(
           };
         };
         fundingAccountId?: boolean;
+        counterpartyFundingAccountId?: boolean;
+        fundingAccountDirection?: boolean;
         ledgerTransactionTypeId?: boolean;
         categoryId?: boolean;
         postedJournalEntry?: {
@@ -632,14 +804,18 @@ export function createCollectedTransactionReadMethods(
             entryNumber?: boolean;
           };
         };
-        fundingAccount?: {
-          select?: { name?: boolean };
-        };
+        fundingAccount?: ConfirmationFundingAccountRelation;
+        counterpartyFundingAccount?: ConfirmationFundingAccountRelation;
         category?: {
           select?: { name?: boolean };
         };
         ledgerTransactionType?: {
-          select?: { flowKind?: boolean };
+          select?: {
+            id?: boolean;
+            name?: boolean;
+            flowKind?: boolean;
+            postingPolicyKey?: boolean;
+          };
         };
       };
       orderBy?: Array<{
@@ -681,6 +857,14 @@ export function createCollectedTransactionReadMethods(
         const matchesFundingAccount =
           args.where?.fundingAccountId === undefined ||
           candidate.fundingAccountId === args.where.fundingAccountId;
+        const matchesCounterpartyFundingAccount =
+          args.where?.counterpartyFundingAccountId === undefined ||
+          (candidate.counterpartyFundingAccountId ?? null) ===
+            args.where.counterpartyFundingAccountId;
+        const matchesFundingAccountDirection =
+          args.where?.fundingAccountDirection === undefined ||
+          (candidate.fundingAccountDirection ?? null) ===
+            args.where.fundingAccountDirection;
         const matchesCategory =
           args.where?.categoryId === undefined ||
           candidate.categoryId === args.where.categoryId;
@@ -707,6 +891,8 @@ export function createCollectedTransactionReadMethods(
           matchesAmount &&
           matchesLedgerTransactionType &&
           matchesFundingAccount &&
+          matchesCounterpartyFundingAccount &&
+          matchesFundingAccountDirection &&
           matchesCategory &&
           matchesMatchedPlanItem &&
           matchesStatus
@@ -741,6 +927,10 @@ export function createCollectedTransactionReadMethods(
 
       return items.map((candidate) => {
         const fundingAccount = resolveAccount(candidate.fundingAccountId);
+        const counterpartyFundingAccount =
+          candidate.counterpartyFundingAccountId
+            ? resolveAccount(candidate.counterpartyFundingAccountId)
+            : null;
         const category = candidate.categoryId
           ? resolveCategory(candidate.categoryId)
           : null;
@@ -870,6 +1060,18 @@ export function createCollectedTransactionReadMethods(
           ...(args.select.fundingAccountId
             ? { fundingAccountId: candidate.fundingAccountId }
             : {}),
+          ...(args.select.counterpartyFundingAccountId
+            ? {
+                counterpartyFundingAccountId:
+                  candidate.counterpartyFundingAccountId ?? null
+              }
+            : {}),
+          ...(args.select.fundingAccountDirection
+            ? {
+                fundingAccountDirection:
+                  candidate.fundingAccountDirection ?? null
+              }
+            : {}),
           ...(args.select.ledgerTransactionTypeId
             ? { ledgerTransactionTypeId: candidate.ledgerTransactionTypeId }
             : {}),
@@ -895,8 +1097,25 @@ export function createCollectedTransactionReadMethods(
                 fundingAccount: {
                   ...(args.select.fundingAccount.select?.name
                     ? { name: fundingAccount?.name ?? '' }
+                    : {}),
+                  ...(args.select.fundingAccount.select?.type
+                    ? { type: fundingAccount?.type ?? 'BANK' }
                     : {})
                 }
+              }
+            : {}),
+          ...(args.select.counterpartyFundingAccount
+            ? {
+                counterpartyFundingAccount: counterpartyFundingAccount
+                  ? {
+                      ...(args.select.counterpartyFundingAccount.select?.name
+                        ? { name: counterpartyFundingAccount.name }
+                        : {}),
+                      ...(args.select.counterpartyFundingAccount.select?.type
+                        ? { type: counterpartyFundingAccount.type }
+                        : {})
+                    }
+                  : null
               }
             : {}),
           ...(args.select.category
@@ -913,11 +1132,26 @@ export function createCollectedTransactionReadMethods(
           ...(args.select.ledgerTransactionType
             ? {
                 ledgerTransactionType: {
+                  ...(args.select.ledgerTransactionType.select?.name
+                    ? {
+                        name:
+                          ledgerTransactionType?.name ??
+                          ledgerTransactionType?.code ??
+                          ''
+                      }
+                    : {}),
                   ...(args.select.ledgerTransactionType.select?.flowKind
                     ? {
                         flowKind:
                           ledgerTransactionType?.flowKind ??
                           LedgerTransactionFlowKind.EXPENSE
+                      }
+                    : {}),
+                  ...(args.select.ledgerTransactionType.select?.postingPolicyKey
+                    ? {
+                        postingPolicyKey:
+                          ledgerTransactionType?.postingPolicyKey ??
+                          'EXPENSE_BASIC'
                       }
                     : {})
                 }
@@ -926,6 +1160,29 @@ export function createCollectedTransactionReadMethods(
         };
       });
     }
+  };
+}
+
+function projectConfirmationAccountSubject(
+  subject: {
+    id: string;
+    ledgerId: string;
+    subjectKind?: 'ASSET' | 'LIABILITY' | 'EQUITY' | 'INCOME' | 'EXPENSE';
+    isActive: boolean;
+  } | null,
+  relation: ConfirmationAccountSubjectRelation
+) {
+  if (!subject) {
+    return null;
+  }
+
+  return {
+    ...(relation.select?.id ? { id: subject.id } : {}),
+    ...(relation.select?.ledgerId ? { ledgerId: subject.ledgerId } : {}),
+    ...(relation.select?.subjectKind
+      ? { subjectKind: subject.subjectKind ?? 'ASSET' }
+      : {}),
+    ...(relation.select?.isActive ? { isActive: subject.isActive } : {})
   };
 }
 

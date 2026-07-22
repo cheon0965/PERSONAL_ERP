@@ -98,7 +98,7 @@ test('Real API/DB integration covers register -> verify-email -> login -> auth/m
       await context.prisma.accountSubject.count({
         where: { ledgerId: membership.tenant.defaultLedgerId }
       }),
-      5
+      19
     );
     assert.equal(
       await context.prisma.ledgerTransactionType.count({

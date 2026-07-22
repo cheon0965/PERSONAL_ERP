@@ -1,11 +1,41 @@
 import { RecurrenceFrequency } from '@prisma/client';
 import type { RequestPrismaMockContext } from './shared';
 
+type NamedRelationInclude =
+  | true
+  | {
+      select?: {
+        name?: boolean;
+      };
+    };
+
+function projectNamedRelation(
+  candidate: { name?: string } | null,
+  include: NamedRelationInclude
+) {
+  if (!candidate) {
+    return null;
+  }
+
+  if (include === true) {
+    return candidate;
+  }
+
+  return {
+    ...(include.select?.name ? { name: candidate.name ?? '' } : {})
+  };
+}
+
 export function createRecurringRulesPrismaMock(
   context: RequestPrismaMockContext
 ): Record<string, unknown> {
-  const { state, sortRecurringRules, resolveAccount, resolveCategory } =
-    context;
+  const {
+    state,
+    sortRecurringRules,
+    resolveAccount,
+    resolveCategory,
+    resolveLedgerTransactionType
+  } = context;
 
   const resolveLinkedInsurancePolicy = (recurringRuleId?: string | null) => {
     if (!recurringRuleId) {
@@ -50,6 +80,8 @@ export function createRecurringRulesPrismaMock(
         };
         include?: {
           account?: boolean;
+          counterpartyFundingAccount?: NamedRelationInclude;
+          ledgerTransactionType?: NamedRelationInclude;
           category?: boolean;
           linkedInsurancePolicy?: {
             select?: {
@@ -61,6 +93,9 @@ export function createRecurringRulesPrismaMock(
           id?: boolean;
           title?: boolean;
           accountId?: boolean;
+          ledgerTransactionTypeId?: boolean;
+          counterpartyFundingAccountId?: boolean;
+          fundingAccountDirection?: boolean;
           categoryId?: boolean;
           amountWon?: boolean;
           frequency?: boolean;
@@ -112,6 +147,22 @@ export function createRecurringRulesPrismaMock(
             ...(args.select.accountId
               ? { accountId: candidate.accountId }
               : {}),
+            ...(args.select.ledgerTransactionTypeId
+              ? {
+                  ledgerTransactionTypeId: candidate.ledgerTransactionTypeId
+                }
+              : {}),
+            ...(args.select.counterpartyFundingAccountId
+              ? {
+                  counterpartyFundingAccountId:
+                    candidate.counterpartyFundingAccountId
+                }
+              : {}),
+            ...(args.select.fundingAccountDirection
+              ? {
+                  fundingAccountDirection: candidate.fundingAccountDirection
+                }
+              : {}),
             ...(args.select.categoryId
               ? { categoryId: candidate.categoryId }
               : {}),
@@ -143,6 +194,13 @@ export function createRecurringRulesPrismaMock(
         }
 
         const account = resolveAccount(candidate.accountId);
+        const counterpartyFundingAccount =
+          candidate.counterpartyFundingAccountId
+            ? resolveAccount(candidate.counterpartyFundingAccountId)
+            : null;
+        const ledgerTransactionType = candidate.ledgerTransactionTypeId
+          ? resolveLedgerTransactionType(candidate.ledgerTransactionTypeId)
+          : null;
         const category = resolveCategory(candidate.categoryId);
         const linkedInsurancePolicy = resolveLinkedInsurancePolicy(
           candidate.id
@@ -152,6 +210,18 @@ export function createRecurringRulesPrismaMock(
           return {
             ...candidate,
             account: args.include.account ? account : undefined,
+            counterpartyFundingAccount: args.include.counterpartyFundingAccount
+              ? projectNamedRelation(
+                  counterpartyFundingAccount,
+                  args.include.counterpartyFundingAccount
+                )
+              : undefined,
+            ledgerTransactionType: args.include.ledgerTransactionType
+              ? projectNamedRelation(
+                  ledgerTransactionType,
+                  args.include.ledgerTransactionType
+                )
+              : undefined,
             category: args.include.category ? category : undefined,
             linkedInsurancePolicy: args.include.linkedInsurancePolicy
               ? linkedInsurancePolicy
@@ -172,6 +242,8 @@ export function createRecurringRulesPrismaMock(
         };
         include?: {
           account?: boolean;
+          counterpartyFundingAccount?: NamedRelationInclude;
+          ledgerTransactionType?: NamedRelationInclude;
           category?: boolean;
           linkedInsurancePolicy?: {
             select?: {
@@ -210,6 +282,13 @@ export function createRecurringRulesPrismaMock(
           }
 
           const account = resolveAccount(candidate.accountId);
+          const counterpartyFundingAccount =
+            candidate.counterpartyFundingAccountId
+              ? resolveAccount(candidate.counterpartyFundingAccountId)
+              : null;
+          const ledgerTransactionType = candidate.ledgerTransactionTypeId
+            ? resolveLedgerTransactionType(candidate.ledgerTransactionTypeId)
+            : null;
           const category = resolveCategory(candidate.categoryId);
           const linkedInsurancePolicy = resolveLinkedInsurancePolicy(
             candidate.id
@@ -219,6 +298,19 @@ export function createRecurringRulesPrismaMock(
             return {
               ...candidate,
               account: args.include.account ? account : undefined,
+              counterpartyFundingAccount: args.include
+                .counterpartyFundingAccount
+                ? projectNamedRelation(
+                    counterpartyFundingAccount,
+                    args.include.counterpartyFundingAccount
+                  )
+                : undefined,
+              ledgerTransactionType: args.include.ledgerTransactionType
+                ? projectNamedRelation(
+                    ledgerTransactionType,
+                    args.include.ledgerTransactionType
+                  )
+                : undefined,
               category: args.include.category ? category : undefined,
               linkedInsurancePolicy: args.include.linkedInsurancePolicy
                 ? linkedInsurancePolicy
@@ -235,6 +327,8 @@ export function createRecurringRulesPrismaMock(
         data: Record<string, unknown>;
         include?: {
           account?: boolean;
+          counterpartyFundingAccount?: NamedRelationInclude;
+          ledgerTransactionType?: NamedRelationInclude;
           category?: boolean;
           linkedInsurancePolicy?: {
             select?: {
@@ -251,6 +345,20 @@ export function createRecurringRulesPrismaMock(
           tenantId: String(args.data.tenantId),
           ledgerId: String(args.data.ledgerId),
           accountId: String(args.data.accountId),
+          ledgerTransactionTypeId:
+            args.data.ledgerTransactionTypeId == null
+              ? null
+              : String(args.data.ledgerTransactionTypeId),
+          counterpartyFundingAccountId:
+            args.data.counterpartyFundingAccountId == null
+              ? null
+              : String(args.data.counterpartyFundingAccountId),
+          fundingAccountDirection:
+            args.data.fundingAccountDirection == null
+              ? null
+              : (String(args.data.fundingAccountDirection) as
+                  | 'INFLOW'
+                  | 'OUTFLOW'),
           categoryId: String(args.data.categoryId),
           title: String(args.data.title),
           amountWon: Number(args.data.amountWon),
@@ -267,10 +375,28 @@ export function createRecurringRulesPrismaMock(
           updatedAt: new Date()
         };
         state.recurringRules.push(created);
+        const counterpartyFundingAccount = created.counterpartyFundingAccountId
+          ? resolveAccount(created.counterpartyFundingAccountId)
+          : null;
+        const ledgerTransactionType = created.ledgerTransactionTypeId
+          ? resolveLedgerTransactionType(created.ledgerTransactionTypeId)
+          : null;
         const linkedInsurancePolicy = resolveLinkedInsurancePolicy(created.id);
         return {
           ...created,
           account: args.include?.account ? account : undefined,
+          counterpartyFundingAccount: args.include?.counterpartyFundingAccount
+            ? projectNamedRelation(
+                counterpartyFundingAccount,
+                args.include.counterpartyFundingAccount
+              )
+            : undefined,
+          ledgerTransactionType: args.include?.ledgerTransactionType
+            ? projectNamedRelation(
+                ledgerTransactionType,
+                args.include.ledgerTransactionType
+              )
+            : undefined,
           category: args.include?.category ? category : undefined,
           linkedInsurancePolicy: args.include?.linkedInsurancePolicy
             ? linkedInsurancePolicy
@@ -283,6 +409,9 @@ export function createRecurringRulesPrismaMock(
         where: { id: string };
         data: {
           accountId?: string;
+          ledgerTransactionTypeId?: string | null;
+          counterpartyFundingAccountId?: string | null;
+          fundingAccountDirection?: 'INFLOW' | 'OUTFLOW' | null;
           categoryId?: string;
           title?: string;
           amountWon?: number;
@@ -295,6 +424,8 @@ export function createRecurringRulesPrismaMock(
         };
         include?: {
           account?: boolean;
+          counterpartyFundingAccount?: NamedRelationInclude;
+          ledgerTransactionType?: NamedRelationInclude;
           category?: boolean;
           linkedInsurancePolicy?: {
             select?: {
@@ -313,6 +444,18 @@ export function createRecurringRulesPrismaMock(
 
         if (args.data.accountId) {
           candidate.accountId = args.data.accountId;
+        }
+        if ('ledgerTransactionTypeId' in args.data) {
+          candidate.ledgerTransactionTypeId =
+            args.data.ledgerTransactionTypeId ?? null;
+        }
+        if ('counterpartyFundingAccountId' in args.data) {
+          candidate.counterpartyFundingAccountId =
+            args.data.counterpartyFundingAccountId ?? null;
+        }
+        if ('fundingAccountDirection' in args.data) {
+          candidate.fundingAccountDirection =
+            args.data.fundingAccountDirection ?? null;
         }
         if (args.data.categoryId) {
           candidate.categoryId = args.data.categoryId;
@@ -346,6 +489,13 @@ export function createRecurringRulesPrismaMock(
         candidate.updatedAt = new Date();
 
         const account = resolveAccount(candidate.accountId);
+        const counterpartyFundingAccount =
+          candidate.counterpartyFundingAccountId
+            ? resolveAccount(candidate.counterpartyFundingAccountId)
+            : null;
+        const ledgerTransactionType = candidate.ledgerTransactionTypeId
+          ? resolveLedgerTransactionType(candidate.ledgerTransactionTypeId)
+          : null;
         const category = resolveCategory(candidate.categoryId);
         const linkedInsurancePolicy = resolveLinkedInsurancePolicy(
           candidate.id
@@ -355,6 +505,18 @@ export function createRecurringRulesPrismaMock(
           return {
             ...candidate,
             account: args.include.account ? account : undefined,
+            counterpartyFundingAccount: args.include.counterpartyFundingAccount
+              ? projectNamedRelation(
+                  counterpartyFundingAccount,
+                  args.include.counterpartyFundingAccount
+                )
+              : undefined,
+            ledgerTransactionType: args.include.ledgerTransactionType
+              ? projectNamedRelation(
+                  ledgerTransactionType,
+                  args.include.ledgerTransactionType
+                )
+              : undefined,
             category: args.include.category ? category : undefined,
             linkedInsurancePolicy: args.include.linkedInsurancePolicy
               ? linkedInsurancePolicy

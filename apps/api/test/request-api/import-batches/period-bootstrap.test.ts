@@ -13,7 +13,7 @@ import {
   seedCollectableImportScenario
 } from './shared';
 
-test('POST /import-batches/:id/rows/:rowId/collect auto-creates the target operating month before saving', async () => {
+test('POST /import-batches/:id/rows/:rowId/collect requires the missing initial month to be opened with opening balances', async () => {
   const context = await createRequestTestContext();
 
   try {
@@ -50,50 +50,18 @@ test('POST /import-batches/:id/rows/:rowId/collect auto-creates the target opera
       }
     );
 
-    assert.equal(response.status, 201);
-    assert.equal(context.state.accountingPeriods.length, 1);
-    assert.deepEqual(context.state.accountingPeriods[0], {
-      id: 'period-1',
-      tenantId: 'tenant-1',
-      ledgerId: 'ledger-1',
-      year: 2026,
-      month: 2,
-      startDate: new Date('2026-02-01T00:00:00.000Z'),
-      endDate: new Date('2026-03-01T00:00:00.000Z'),
-      status: 'OPEN',
-      nextJournalEntrySequence: 1,
-      openedAt: context.state.accountingPeriods[0]?.openedAt,
-      lockedAt: null,
-      createdAt: context.state.accountingPeriods[0]?.createdAt,
-      updatedAt: context.state.accountingPeriods[0]?.updatedAt
+    assert.equal(response.status, 400);
+    assert.deepEqual(response.body, {
+      statusCode: 400,
+      message:
+        '2026-02 운영월이 없습니다. 최초 월은 기초잔액과 함께 월 운영 화면에서 열고, 이후 월은 전월 마감 후 차기 이월로 생성해 주세요.',
+      error: 'Bad Request'
     });
-    assert.equal(
-      context.state.collectedTransactions.at(-1)?.periodId,
-      'period-1'
-    );
+    assert.equal(context.state.accountingPeriods.length, 0);
+    assert.equal(context.state.collectedTransactions.length, 3);
     assert.deepEqual(context.state.openingBalanceSnapshots, []);
     assert.deepEqual(context.state.balanceSnapshotLines, []);
-    assert.ok(
-      context.state.periodStatusHistory.some(
-        (candidate) =>
-          candidate.periodId === 'period-1' &&
-          candidate.eventType === 'OPEN' &&
-          candidate.reason === '업로드 배치 거래 등록 자동 생성 (2026-02)'
-      )
-    );
-    assert.ok(
-      (
-        response.body as {
-          preview: {
-            autoPreparation: {
-              decisionReasons: string[];
-            };
-          };
-        }
-      ).preview.autoPreparation.decisionReasons.includes(
-        '2026-02 운영월이 없어 등록 과정에서 자동으로 추가합니다.'
-      )
-    );
+    assert.equal(context.state.periodStatusHistory.length, 0);
   } finally {
     await context.close();
   }
@@ -129,7 +97,7 @@ test('POST /import-batches/:id/rows/:rowId/collect blocks automatic month creati
     assert.deepEqual(response.body, {
       statusCode: 400,
       message:
-        '2026-02 운영월은 업로드 배치에서 자동으로 추가할 수 없습니다. 운영 중에는 월 운영 화면에서 최신 진행월을 먼저 열고 해당 월 거래만 등록해 주세요.',
+        '2026-02 운영월이 없습니다. 최초 월은 기초잔액과 함께 월 운영 화면에서 열고, 이후 월은 전월 마감 후 차기 이월로 생성해 주세요.',
       error: 'Bad Request'
     });
     assert.equal(context.state.accountingPeriods.length, 1);
@@ -139,7 +107,7 @@ test('POST /import-batches/:id/rows/:rowId/collect blocks automatic month creati
   }
 });
 
-test('POST /import-batches/:id/rows/:rowId/collect can create the next month for a new account/card bootstrap after the latest month is locked', async () => {
+test('POST /import-batches/:id/rows/:rowId/collect requires carry-forward before a new card can use the next month', async () => {
   const context = await createRequestTestContext();
 
   try {
@@ -151,6 +119,7 @@ test('POST /import-batches/:id/rows/:rowId/collect can create the next month for
       name: 'New card',
       normalizedName: 'new card',
       type: 'CARD',
+      linkedAccountSubjectId: 'as-1-2100',
       balanceWon: 0,
       sortOrder: 10,
       status: 'ACTIVE',
@@ -206,71 +175,24 @@ test('POST /import-batches/:id/rows/:rowId/collect can create the next month for
       }
     );
 
-    assert.equal(response.status, 201);
-    assert.deepEqual(
-      {
-        willCreateTargetPeriod: (
-          response.body as {
-            preview: {
-              autoPreparation: {
-                willCreateTargetPeriod?: boolean;
-                targetPeriodMonthLabel?: string;
-                targetPeriodCreationReason?: string;
-              };
-            };
-          }
-        ).preview.autoPreparation.willCreateTargetPeriod,
-        targetPeriodMonthLabel: (
-          response.body as {
-            preview: {
-              autoPreparation: {
-                willCreateTargetPeriod?: boolean;
-                targetPeriodMonthLabel?: string;
-                targetPeriodCreationReason?: string;
-              };
-            };
-          }
-        ).preview.autoPreparation.targetPeriodMonthLabel,
-        targetPeriodCreationReason: (
-          response.body as {
-            preview: {
-              autoPreparation: {
-                willCreateTargetPeriod?: boolean;
-                targetPeriodMonthLabel?: string;
-                targetPeriodCreationReason?: string;
-              };
-            };
-          }
-        ).preview.autoPreparation.targetPeriodCreationReason
-      },
-      {
-        willCreateTargetPeriod: true,
-        targetPeriodMonthLabel: '2026-04',
-        targetPeriodCreationReason: 'NEW_FUNDING_ACCOUNT'
-      }
-    );
-    assert.equal(context.state.accountingPeriods.length, 2);
-    assert.equal(context.state.accountingPeriods.at(-1)?.year, 2026);
-    assert.equal(context.state.accountingPeriods.at(-1)?.month, 4);
-    assert.equal(
-      context.state.collectedTransactions.at(-1)?.fundingAccountId,
-      'acc-new-card-bootstrap'
-    );
+    assert.equal(response.status, 400);
+    assert.deepEqual(response.body, {
+      statusCode: 400,
+      message:
+        '2026-04 운영월이 없습니다. 최초 월은 기초잔액과 함께 월 운영 화면에서 열고, 이후 월은 전월 마감 후 차기 이월로 생성해 주세요.',
+      error: 'Bad Request'
+    });
+    assert.equal(context.state.accountingPeriods.length, 1);
+    assert.equal(context.state.collectedTransactions.length, 3);
     assert.deepEqual(context.state.openingBalanceSnapshots, []);
     assert.deepEqual(context.state.balanceSnapshotLines, []);
     assert.equal(
       context.state.accounts.find(
         (candidate) => candidate.id === 'acc-new-card-bootstrap'
       )?.bootstrapStatus,
-      'COMPLETED'
+      'PENDING'
     );
-    assert.ok(
-      context.state.periodStatusHistory.some(
-        (candidate) =>
-          candidate.periodId === context.state.accountingPeriods.at(-1)?.id &&
-          candidate.reason === '신규 계좌/카드 기초 업로드 자동 생성 (2026-04)'
-      )
-    );
+    assert.equal(context.state.periodStatusHistory.length, 0);
   } finally {
     await context.close();
   }
@@ -288,6 +210,7 @@ test('POST /import-batches/:id/rows/:rowId/collect rejects new account bootstrap
       name: 'History card',
       normalizedName: 'history card',
       type: 'CARD',
+      linkedAccountSubjectId: 'as-1-2100',
       balanceWon: 0,
       sortOrder: 11,
       status: 'ACTIVE',
@@ -366,7 +289,7 @@ test('POST /import-batches/:id/rows/:rowId/collect rejects new account bootstrap
     assert.equal(response.status, 400);
     assert.equal(
       (response.body as { message: string }).message,
-      '2026-04 운영월은 업로드 배치에서 자동으로 추가할 수 없습니다. 운영 중에는 월 운영 화면에서 최신 진행월을 먼저 열고 해당 월 거래만 등록해 주세요.'
+      '2026-04 운영월이 없습니다. 최초 월은 기초잔액과 함께 월 운영 화면에서 열고, 이후 월은 전월 마감 후 차기 이월로 생성해 주세요.'
     );
     assert.equal(context.state.accountingPeriods.length, 1);
     assert.equal(

@@ -1,7 +1,8 @@
 import type {
   CollectedTransactionItem,
   CollectedTransactionPostingStatus,
-  CollectedTransactionType
+  CollectedTransactionType,
+  FundingAccountDirection
 } from '@personal-erp/contracts';
 
 /**
@@ -71,10 +72,20 @@ export function canConfirmCollectedTransaction(
 export function resolveManualCollectedTransactionPostingStatus(input: {
   type: CollectedTransactionType;
   categoryId?: string | null;
+  counterpartyFundingAccountId?: string | null;
+  fundingAccountDirection?: FundingAccountDirection | null;
 }): CollectedTransactionPostingStatus {
-  // 이체와 반전은 손익 카테고리 없이도 전표 라인을 구성할 수 있어 바로 준비 상태로 둡니다.
-  if (input.type === 'TRANSFER' || input.type === 'REVERSAL') {
+  // 반전은 수동 조정 정책을 사용하므로 손익 카테고리 없이도 전표 준비 상태입니다.
+  if (input.type === 'REVERSAL') {
     return 'READY_TO_POST';
+  }
+
+  // 이체는 출발·도착 자금수단과 흐름 방향이 모두 확정되어야 전표를 만들 수 있습니다.
+  if (input.type === 'TRANSFER') {
+    return normalizeOptionalValue(input.counterpartyFundingAccountId) &&
+      input.fundingAccountDirection
+      ? 'READY_TO_POST'
+      : 'REVIEWED';
   }
 
   // 수기 손익 거래는 카테고리가 있어야 전표 준비 상태가 되며, 없으면 검토 단계에 머뭅니다.

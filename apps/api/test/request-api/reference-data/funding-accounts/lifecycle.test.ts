@@ -185,6 +185,7 @@ test('PATCH /funding-accounts/:id renames and deactivates a funding account for 
         name: 'Main operating account',
         normalizedName: 'main operating account',
         type: 'BANK',
+        linkedAccountSubjectId: 'as-1-1010',
         balanceWon: 2_000_000,
         sortOrder: 0,
         status: 'INACTIVE',

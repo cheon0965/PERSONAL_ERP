@@ -324,6 +324,23 @@ export class ImportedRowCollectionService {
         }
       );
     const ledgerTransactionTypeId = ledgerTransactionType.id;
+    // 계획 항목은 반복 규칙 생성 시 posting policy의 기본 방향을 이미 저장한다.
+    // 업로드 요청에서 방향이 생략된 경우에도 같은 기본값으로 정규화한 뒤 후보를
+    // 조회해야 EXPENSE_BASIC/INCOME_BASIC 계획 항목과 정확히 매칭된다.
+    const initialPostingAssessment = assessPostingAccountSelection({
+      postingPolicyKey: ledgerTransactionType.postingPolicyKey,
+      fundingAccountId: fundingAccount.id,
+      fundingAccountType: fundingAccount.type,
+      counterpartyFundingAccountId: counterpartyFundingAccount?.id ?? null,
+      counterpartyFundingAccountType: counterpartyFundingAccount?.type ?? null,
+      fundingAccountDirection: input.input.fundingAccountDirection,
+      categoryId: input.input.categoryId ?? null
+    });
+    if (initialPostingAssessment.validationError) {
+      throw new BadRequestException(initialPostingAssessment.validationError);
+    }
+    const normalizedFundingAccountDirection =
+      initialPostingAssessment.direction;
     const matchedPlanItem = input.targetPeriod.id
       ? await this.collectionRepository.readMatchedPlanItemCandidate(
           input.client,
@@ -333,7 +350,7 @@ export class ImportedRowCollectionService {
           occurredOn,
           fundingAccount.id,
           counterpartyFundingAccount?.id ?? null,
-          input.input.fundingAccountDirection ?? null,
+          normalizedFundingAccountDirection,
           ledgerTransactionTypeId,
           input.input.categoryId ?? null
         )
@@ -384,17 +401,19 @@ export class ImportedRowCollectionService {
       fundingAccountType: fundingAccount.type,
       counterpartyFundingAccountId: counterpartyFundingAccount?.id ?? null,
       counterpartyFundingAccountType: counterpartyFundingAccount?.type ?? null,
-      fundingAccountDirection: input.input.fundingAccountDirection,
+      fundingAccountDirection: normalizedFundingAccountDirection,
       categoryId: effectiveCategory?.id ?? null
     });
     if (postingAssessment.validationError) {
       throw new BadRequestException(postingAssessment.validationError);
     }
     const nextWorkflowStatus =
-      autoPreparation.nextStatus === 'READY_TO_POST' &&
-      postingAssessment.status === 'READY_TO_POST'
-        ? 'READY_TO_POST'
-        : 'REVIEWED';
+      autoPreparation.nextStatus === 'COLLECTED'
+        ? 'COLLECTED'
+        : autoPreparation.nextStatus === 'READY_TO_POST' &&
+            postingAssessment.status === 'READY_TO_POST'
+          ? 'READY_TO_POST'
+          : 'REVIEWED';
     const requestedCategoryName = input.input.categoryId
       ? (effectiveCategory?.name ?? null)
       : null;

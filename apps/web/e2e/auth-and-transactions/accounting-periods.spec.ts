@@ -4,6 +4,8 @@ import type {
   CloseAccountingPeriodRequest,
   CloseAccountingPeriodResponse,
   OpenAccountingPeriodRequest,
+  OpeningBalancePreview,
+  PreviewOpeningBalanceRequest,
   ReopenAccountingPeriodRequest
 } from '@personal-erp/contracts';
 import {
@@ -36,6 +38,8 @@ test('@smoke manages the accounting period lifecycle through open, close, and re
   });
   let sessionActive = false;
   let periods: AccountingPeriodItem[] = [];
+  let openingBalancePreviewPayload: PreviewOpeningBalanceRequest | null = null;
+  let openPeriodPayload: OpenAccountingPeriodRequest | null = null;
 
   page.on('pageerror', (error) => {
     pageErrors.push(error.stack ?? error.message);
@@ -178,8 +182,32 @@ test('@smoke manages the accounting period lifecycle through open, close, and re
       return;
     }
 
+    if (
+      path === '/api/accounting-periods/opening-balance-preview' &&
+      request.method() === 'POST'
+    ) {
+      openingBalancePreviewPayload =
+        request.postDataJSON() as PreviewOpeningBalanceRequest;
+      const preview: OpeningBalancePreview = {
+        totalAssetAmount: 1_200_000,
+        totalLiabilityAmount: 0,
+        inputEquityAmount: 0,
+        adjustmentAmount: 1_200_000,
+        finalNetAssetsAmount: 1_200_000,
+        isBalanced: false
+      };
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(preview)
+      });
+      return;
+    }
+
     if (path === '/api/accounting-periods' && request.method() === 'POST') {
       const payload = request.postDataJSON() as OpenAccountingPeriodRequest;
+      openPeriodPayload = payload;
       const openedAt = `${payload.month}-01T00:00:00.000Z`;
       const createdPeriod = buildE2EAccountingPeriod({
         id: `period-${payload.month}`,
@@ -380,11 +408,28 @@ test('@smoke manages the accounting period lifecycle through open, close, and re
   await page.getByRole('option', { name: '사업 운영 통장' }).click();
   await openForm.getByLabel('잔액(원)').fill('1200000');
   await openForm.getByLabel('메모').fill('E2E 첫 월 운영 시작');
+  await openForm
+    .getByRole('checkbox', { name: /3100 순자산으로 자동 보정/ })
+    .check();
   await openForm.getByRole('button', { name: '월 운영 시작' }).click();
 
   await expect(
     page.getByText('2026-05 운영 기간을 시작했습니다.')
   ).toBeVisible();
+  expect(openingBalancePreviewPayload).toEqual({
+    openingBalanceLines: [
+      {
+        accountSubjectId: 'as-1010',
+        fundingAccountId: 'acc-main',
+        balanceAmount: 1_200_000
+      }
+    ]
+  });
+  expect(openPeriodPayload).toMatchObject({
+    month: '2026-05',
+    initializeOpeningBalance: true,
+    openingBalanceAdjustmentMode: 'AUTO_TO_NET_ASSETS'
+  });
   await page.goto('/periods/history');
   await expect(page).toHaveURL(/\/periods\/history$/);
   await expect(

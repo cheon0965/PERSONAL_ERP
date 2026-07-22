@@ -11,7 +11,7 @@ import {
   seedCollectableImportScenario
 } from './shared';
 
-test('POST /import-batches/:id/rows/:rowId/collect absorbs a recurring collected transaction that was already created from a matched plan item', async () => {
+test('POST /import-batches/:id/rows/:rowId/collect normalizes omitted expense direction before matching a recurring transaction', async () => {
   const context = await createRequestTestContext();
 
   try {
@@ -34,6 +34,7 @@ test('POST /import-batches/:id/rows/:rowId/collect absorbs a recurring collected
           }
         : candidate
     );
+    assert.equal(seeded.planItem.fundingAccountDirection, 'OUTFLOW');
 
     pushCollectedTransaction(context, {
       id: 'ctx-recurring-existing',
@@ -81,6 +82,8 @@ test('POST /import-batches/:id/rows/:rowId/collect absorbs a recurring collected
         periodId: seeded.period.id,
         ledgerTransactionTypeId: 'ltt-1-expense',
         fundingAccountId: 'acc-1',
+        counterpartyFundingAccountId: null,
+        fundingAccountDirection: 'OUTFLOW',
         categoryId: 'cat-1',
         matchedPlanItemId: seeded.planItem.id,
         importBatchId: seeded.batch.id,
@@ -98,6 +101,12 @@ test('POST /import-batches/:id/rows/:rowId/collect absorbs a recurring collected
           (candidate) => candidate.id === 'ctx-recurring-existing'
         )?.updatedAt
       }
+    );
+    assert.equal(
+      context.state.collectedTransactions.find(
+        (candidate) => candidate.id === 'ctx-recurring-existing'
+      )?.fundingAccountDirection,
+      'OUTFLOW'
     );
   } finally {
     await context.close();

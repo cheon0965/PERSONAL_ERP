@@ -20,6 +20,10 @@ test('POST /import-batches/:id/rows/collect bulk-collects selected rows and infe
   const context = await createRequestTestContext();
 
   try {
+    pushOpenCollectingPeriod(context, {
+      id: 'period-1',
+      nextJournalEntrySequence: 1
+    });
     pushImportBatch(context, {
       id: 'import-batch-bulk-collect',
       sourceKind: ImportSourceKind.IM_BANK_PDF,
@@ -112,8 +116,7 @@ test('POST /import-batches/:id/rows/collect bulk-collects selected rows and infe
           rowNumber: 1,
           status: 'COLLECTED',
           collectedTransactionId: 'ctx-4',
-          message:
-            '2026-03 운영 시작 전 기초 입력으로 운영월을 자동 생성하고 등록했습니다.'
+          message: '카테고리 보완 전까지 검토 상태로 저장합니다.'
         },
         {
           importedRowId: 'imported-row-withdrawal',
@@ -267,6 +270,10 @@ test('POST /import-batches/:id/rows/collect applies a shared type and category t
   const context = await createRequestTestContext();
 
   try {
+    pushOpenCollectingPeriod(context, {
+      id: 'period-open-bulk-classify',
+      nextJournalEntrySequence: 1
+    });
     pushImportBatch(context, {
       id: 'import-batch-bulk-classify',
       sourceKind: ImportSourceKind.IM_BANK_PDF,
@@ -344,10 +351,7 @@ test('POST /import-batches/:id/rows/collect applies a shared type and category t
     assert.equal(completedJob.status, 'SUCCEEDED');
     assert.deepEqual(
       completedJob.results.map((result) => result.message),
-      [
-        '2026-03 운영 시작 전 기초 입력으로 운영월을 자동 생성하고 등록했습니다.',
-        '즉시 전표 준비 상태로 올립니다.'
-      ]
+      ['즉시 전표 준비 상태로 올립니다.', '즉시 전표 준비 상태로 올립니다.']
     );
     assert.deepEqual(
       context.state.collectedTransactions

@@ -51,6 +51,8 @@ test('@smoke protects the transactions route, restores the session, and saves a 
     ]
   };
   let sessionActive = false;
+  let createdTransactionPayload: CreateCollectedTransactionRequest | null =
+    null;
 
   const currentUser: AuthenticatedUser = {
     id: 'user-demo',
@@ -372,6 +374,7 @@ test('@smoke protects the transactions route, restores the session, and saves a 
     if (path === '/api/collected-transactions' && request.method() === 'POST') {
       const payload =
         request.postDataJSON() as CreateCollectedTransactionRequest;
+      createdTransactionPayload = payload;
       const fundingAccountName =
         fundingAccounts.find(
           (fundingAccount) => fundingAccount.id === payload.fundingAccountId
@@ -386,6 +389,11 @@ test('@smoke protects the transactions route, restores the session, and saves a 
         title: payload.title,
         type: payload.type,
         amountWon: payload.amountWon,
+        ledgerTransactionTypeId:
+          payload.ledgerTransactionTypeId ?? 'ltt-expense-basic',
+        fundingAccountDirection: payload.fundingAccountDirection ?? 'OUTFLOW',
+        counterpartyFundingAccountId:
+          payload.counterpartyFundingAccountId ?? null,
         fundingAccountName,
         categoryName,
         sourceKind: 'MANUAL',
@@ -497,6 +505,22 @@ test('@smoke protects the transactions route, restores the session, and saves a 
   await expect(
     page.getByRole('gridcell', { name: transactionTitle, exact: true })
   ).toBeVisible();
+  expect(createdTransactionPayload).toMatchObject({
+    title: transactionTitle,
+    type: 'EXPENSE',
+    amountWon: 54_321,
+    businessDate,
+    fundingAccountId: 'acc-main'
+  });
+  expect(createdTransactionPayload).not.toHaveProperty(
+    'ledgerTransactionTypeId'
+  );
+  expect(createdTransactionPayload).not.toHaveProperty(
+    'counterpartyFundingAccountId'
+  );
+  expect(createdTransactionPayload).not.toHaveProperty(
+    'fundingAccountDirection'
+  );
 
   await page.getByRole('button', { name: '삭제' }).click();
   await expect(

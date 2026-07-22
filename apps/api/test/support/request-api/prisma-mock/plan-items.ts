@@ -47,6 +47,8 @@ export function createPlanItemsPrismaMock(
             lt?: Date;
           };
           fundingAccountId?: string;
+          counterpartyFundingAccountId?: string | null;
+          fundingAccountDirection?: 'INFLOW' | 'OUTFLOW' | null;
           ledgerTransactionTypeId?: string;
           categoryId?: string | null;
           matchedCollectedTransaction?: {
@@ -59,6 +61,8 @@ export function createPlanItemsPrismaMock(
           plannedAmount?: boolean;
           plannedDate?: boolean;
           fundingAccountId?: boolean;
+          counterpartyFundingAccountId?: boolean;
+          fundingAccountDirection?: boolean;
           ledgerTransactionTypeId?: boolean;
           categoryId?: boolean;
         };
@@ -95,6 +99,14 @@ export function createPlanItemsPrismaMock(
             const matchesFundingAccount =
               !args.where?.fundingAccountId ||
               candidate.fundingAccountId === args.where.fundingAccountId;
+            const matchesCounterpartyFundingAccount =
+              args.where?.counterpartyFundingAccountId === undefined ||
+              (candidate.counterpartyFundingAccountId ?? null) ===
+                args.where.counterpartyFundingAccountId;
+            const matchesFundingAccountDirection =
+              args.where?.fundingAccountDirection === undefined ||
+              (candidate.fundingAccountDirection ?? null) ===
+                args.where.fundingAccountDirection;
             const matchesLedgerTransactionType =
               !args.where?.ledgerTransactionTypeId ||
               candidate.ledgerTransactionTypeId ===
@@ -116,6 +128,8 @@ export function createPlanItemsPrismaMock(
               matchesPlannedAmount &&
               matchesPlannedDate &&
               matchesFundingAccount &&
+              matchesCounterpartyFundingAccount &&
+              matchesFundingAccountDirection &&
               matchesLedgerTransactionType &&
               matchesCategory &&
               matchesUnmatched
@@ -147,6 +161,18 @@ export function createPlanItemsPrismaMock(
               : {}),
             ...(args.select.fundingAccountId
               ? { fundingAccountId: candidate.fundingAccountId }
+              : {}),
+            ...(args.select.counterpartyFundingAccountId
+              ? {
+                  counterpartyFundingAccountId:
+                    candidate.counterpartyFundingAccountId ?? null
+                }
+              : {}),
+            ...(args.select.fundingAccountDirection
+              ? {
+                  fundingAccountDirection:
+                    candidate.fundingAccountDirection ?? null
+                }
               : {}),
             ...(args.select.ledgerTransactionTypeId
               ? { ledgerTransactionTypeId: candidate.ledgerTransactionTypeId }
