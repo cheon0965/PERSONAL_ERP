@@ -72,7 +72,7 @@ const vehicleMaintenanceFormSchema = z.object({
   vehicleId: z.string().trim().min(1, '차량을 선택해 주세요.'),
   performedOn: z.string().trim().min(1, '정비일을 입력해 주세요.'),
   odometerKm: z.coerce
-    .number()
+    .number<number | string>()
     .int()
     .min(0, '정비 시점 주행거리는 0 이상이어야 합니다.'),
   category: z.enum(vehicleMaintenanceCategoryValues),
@@ -87,7 +87,10 @@ const vehicleMaintenanceFormSchema = z.object({
   categoryId: z.string().trim()
 });
 
-type VehicleMaintenanceFormInput = z.infer<typeof vehicleMaintenanceFormSchema>;
+type VehicleMaintenanceFormInput = z.input<typeof vehicleMaintenanceFormSchema>;
+type VehicleMaintenanceFormValues = z.output<
+  typeof vehicleMaintenanceFormSchema
+>;
 type VehicleMaintenanceFormMode = 'create' | 'edit';
 
 type SubmitFeedback = FeedbackAlertValue;
@@ -121,7 +124,11 @@ export function VehicleMaintenanceForm({
   const queryClient = useQueryClient();
   const { notifySuccess } = useAppNotification();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
-  const form = useForm<VehicleMaintenanceFormInput>({
+  const form = useForm<
+    VehicleMaintenanceFormInput,
+    unknown,
+    VehicleMaintenanceFormValues
+  >({
     resolver: zodResolver(vehicleMaintenanceFormSchema),
     defaultValues: buildDefaultValues(vehicles, initialVehicleId)
   });

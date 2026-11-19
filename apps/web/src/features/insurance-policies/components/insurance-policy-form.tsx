@@ -37,6 +37,7 @@ import {
   buildDefaultValues,
   buildSuggestedRecurringStartDate,
   type InsurancePolicyFormInput,
+  type InsurancePolicyFormValues,
   insurancePolicySchema,
   mapPolicyToFormInput
 } from '../model/insurance-policy-form.model';
@@ -90,7 +91,11 @@ export function InsurancePolicyForm({
       : categoriesQueryKey,
     queryFn: () => getCategories({ includeInactive: includeInactiveCategories })
   });
-  const form = useForm<InsurancePolicyFormInput>({
+  const form = useForm<
+    InsurancePolicyFormInput,
+    unknown,
+    InsurancePolicyFormValues
+  >({
     resolver: zodResolver(insurancePolicySchema),
     defaultValues: buildDefaultValues()
   });

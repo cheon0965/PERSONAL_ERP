@@ -59,7 +59,7 @@ const vehicleFormSchema = z.object({
   manufacturer: z.string().trim(),
   fuelType: z.enum(['GASOLINE', 'DIESEL', 'LPG', 'HYBRID', 'ELECTRIC']),
   initialOdometerKm: z.coerce
-    .number()
+    .number<number | string>()
     .int()
     .min(0, '초기 주행거리는 0 이상이어야 합니다.'),
   estimatedFuelEfficiencyKmPerLiter: z
@@ -77,7 +77,8 @@ const vehicleFormSchema = z.object({
   operatingExpensePlanOptIn: z.boolean()
 });
 
-type VehicleFormInput = z.infer<typeof vehicleFormSchema>;
+type VehicleFormInput = z.input<typeof vehicleFormSchema>;
+type VehicleFormValues = z.output<typeof vehicleFormSchema>;
 type VehicleFormMode = 'create' | 'edit';
 
 type SubmitFeedback = FeedbackAlertValue;
@@ -103,7 +104,7 @@ export function VehicleForm({
   const queryClient = useQueryClient();
   const { notifySuccess } = useAppNotification();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
-  const form = useForm<VehicleFormInput>({
+  const form = useForm<VehicleFormInput, unknown, VehicleFormValues>({
     resolver: zodResolver(vehicleFormSchema),
     defaultValues: buildDefaultValues()
   });

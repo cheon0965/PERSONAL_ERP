@@ -5,7 +5,7 @@ import { createPositiveMoneyWonSchema } from '@/shared/lib/money';
 import type { ManagedRecurringRuleDetailItem } from '../api/recurring-rules.api';
 
 const optionalDayOfMonthSchema = z.preprocess(
-  (value) => (value === '' ? undefined : value),
+  (value: number | string | undefined) => (value === '' ? undefined : value),
   z.coerce
     .number()
     .int()
@@ -26,7 +26,8 @@ export const recurringRuleSchema = z.object({
   status: z.enum(['ACTIVE', 'PAUSED'])
 });
 
-export type RecurringRuleFormInput = z.infer<typeof recurringRuleSchema>;
+export type RecurringRuleFormInput = z.input<typeof recurringRuleSchema>;
+export type RecurringRuleFormValues = z.output<typeof recurringRuleSchema>;
 
 export function buildDefaultValues(): RecurringRuleFormInput {
   return {
@@ -59,7 +60,7 @@ export function mapDetailToFormInput(
 }
 
 export function buildCreateResetValues(
-  values: RecurringRuleFormInput
+  values: RecurringRuleFormValues
 ): RecurringRuleFormInput {
   return {
     ...buildDefaultValues(),

@@ -7,6 +7,7 @@ import { appLayout } from '@/shared/ui/layout-metrics';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import {
   type InsurancePolicyFormInput,
+  type InsurancePolicyFormValues,
   readFundingAccountOptionLabel
 } from '../model/insurance-policy-form.model';
 
@@ -36,7 +37,11 @@ export function InsurancePolicyFieldGrid({
   availableFundingAccounts,
   availableCategories
 }: {
-  form: UseFormReturn<InsurancePolicyFormInput>;
+  form: UseFormReturn<
+    InsurancePolicyFormInput,
+    unknown,
+    InsurancePolicyFormValues
+  >;
   availableFundingAccounts: FundingAccountItem[];
   availableCategories: CategoryItem[];
 }) {

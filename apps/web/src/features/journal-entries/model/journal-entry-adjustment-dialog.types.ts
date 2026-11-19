@@ -102,7 +102,10 @@ export const correctJournalEntrySchema = z
 export type ReverseJournalEntryFormInput = z.infer<
   typeof reverseJournalEntrySchema
 >;
-export type CorrectJournalEntryFormInput = z.infer<
+export type CorrectJournalEntryFormInput = z.input<
+  typeof correctJournalEntrySchema
+>;
+export type CorrectJournalEntryFormValues = z.output<
   typeof correctJournalEntrySchema
 >;
 export type CorrectionLineInput = CorrectJournalEntryFormInput['lines'][number];

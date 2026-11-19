@@ -7,6 +7,7 @@ import { appLayout } from '@/shared/ui/layout-metrics';
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import {
   type RecurringRuleFormInput,
+  type RecurringRuleFormValues,
   readFundingAccountOptionLabel
 } from '../model/recurring-rule-form.model';
 
@@ -41,7 +42,7 @@ export function RecurringRuleFieldGrid({
 }: {
   availableFundingAccounts: FundingAccountItem[];
   filteredCategories: CategoryItem[];
-  form: UseFormReturn<RecurringRuleFormInput>;
+  form: UseFormReturn<RecurringRuleFormInput, unknown, RecurringRuleFormValues>;
 }) {
   return (
     <Grid container spacing={appLayout.fieldGap}>

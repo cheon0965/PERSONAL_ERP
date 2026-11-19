@@ -19,7 +19,8 @@ export const transactionSchema = z.object({
   memo: z.string().max(500, '메모는 500자 이하여야 합니다.')
 });
 
-export type TransactionFormInput = z.infer<typeof transactionSchema>;
+export type TransactionFormInput = z.input<typeof transactionSchema>;
+export type TransactionFormValues = z.output<typeof transactionSchema>;
 
 export function resolveInitialBusinessDate(
   currentPeriod: AccountingPeriodItem | null

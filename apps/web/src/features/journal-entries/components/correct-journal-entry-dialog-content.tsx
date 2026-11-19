@@ -46,6 +46,7 @@ import {
 import {
   correctJournalEntrySchema,
   type CorrectJournalEntryFormInput,
+  type CorrectJournalEntryFormValues,
   type JournalEntryAdjustmentContentProps,
   type SubmitFeedback
 } from '../model/journal-entry-adjustment-dialog.types';
@@ -103,7 +104,11 @@ export function CorrectJournalEntryDialogContent({
       ),
     [accountSubjects, adjustmentPeriod, entry, fundingAccounts]
   );
-  const form = useForm<CorrectJournalEntryFormInput>({
+  const form = useForm<
+    CorrectJournalEntryFormInput,
+    unknown,
+    CorrectJournalEntryFormValues
+  >({
     resolver: zodResolver(correctJournalEntrySchema),
     defaultValues
   });

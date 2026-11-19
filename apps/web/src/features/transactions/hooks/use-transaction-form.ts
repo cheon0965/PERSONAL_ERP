@@ -46,7 +46,8 @@ import {
 import {
   resolveInitialBusinessDate,
   transactionSchema,
-  type TransactionFormInput
+  type TransactionFormInput,
+  type TransactionFormValues
 } from '../model/transaction-form.schema';
 
 export type TransactionFormMode = 'create' | 'edit';
@@ -104,7 +105,7 @@ export function useTransactionForm(input: {
     queryKey: referenceDataReadinessQueryKey,
     queryFn: getReferenceDataReadiness
   });
-  const form = useForm<TransactionFormInput>({
+  const form = useForm<TransactionFormInput, unknown, TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
     defaultValues: {
       title: '',
@@ -283,7 +284,7 @@ export function useTransactionForm(input: {
     !canSaveInPeriod ||
     (input.mode === 'edit' && !input.initialTransaction);
 
-  async function submit(values: TransactionFormInput) {
+  async function submit(values: TransactionFormValues) {
     setFeedback(null);
 
     if (collectingPeriods.length === 0) {

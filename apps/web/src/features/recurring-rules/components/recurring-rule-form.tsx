@@ -39,6 +39,7 @@ import {
   isVisibleFundingAccount,
   mapDetailToFormInput,
   type RecurringRuleFormInput,
+  type RecurringRuleFormValues,
   recurringRuleSchema
 } from '../model/recurring-rule-form.model';
 import {
@@ -91,7 +92,11 @@ export function RecurringRuleForm({
       : categoriesQueryKey,
     queryFn: () => getCategories({ includeInactive: includeInactiveCategories })
   });
-  const form = useForm<RecurringRuleFormInput>({
+  const form = useForm<
+    RecurringRuleFormInput,
+    unknown,
+    RecurringRuleFormValues
+  >({
     resolver: zodResolver(recurringRuleSchema),
     defaultValues: buildDefaultValues()
   });
