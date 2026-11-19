@@ -12,7 +12,7 @@ export const insurancePolicySchema = z
     monthlyPremiumWon:
       createPositiveMoneyWonSchema('월 보험료는 0보다 커야 합니다.'),
     paymentDay: z.coerce
-      .number()
+      .number<number | string>()
       .int()
       .min(1, '납부일은 1 이상이어야 합니다.')
       .max(31, '납부일은 31 이하여야 합니다.'),
@@ -61,7 +61,8 @@ export const insurancePolicySchema = z
     }
   });
 
-export type InsurancePolicyFormInput = z.infer<typeof insurancePolicySchema>;
+export type InsurancePolicyFormInput = z.input<typeof insurancePolicySchema>;
+export type InsurancePolicyFormValues = z.output<typeof insurancePolicySchema>;
 
 export function buildDefaultValues(): InsurancePolicyFormInput {
   return {

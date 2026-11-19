@@ -68,10 +68,12 @@ const vehicleFuelLogFormSchema = z.object({
   vehicleId: z.string().trim().min(1, '차량을 선택해 주세요.'),
   filledOn: z.string().trim().min(1, '주유일을 입력해 주세요.'),
   odometerKm: z.coerce
-    .number()
+    .number<number | string>()
     .int()
     .min(0, '주유 시점 주행거리는 0 이상이어야 합니다.'),
-  liters: z.coerce.number().positive('주유량은 0보다 커야 합니다.'),
+  liters: z.coerce
+    .number<number | string>()
+    .positive('주유량은 0보다 커야 합니다.'),
   amountWon: createNonNegativeMoneyWonSchema(
     '주유 금액은 0 이상이어야 합니다.'
   ),
@@ -84,7 +86,8 @@ const vehicleFuelLogFormSchema = z.object({
   categoryId: z.string().trim()
 });
 
-type VehicleFuelLogFormInput = z.infer<typeof vehicleFuelLogFormSchema>;
+type VehicleFuelLogFormInput = z.input<typeof vehicleFuelLogFormSchema>;
+type VehicleFuelLogFormValues = z.output<typeof vehicleFuelLogFormSchema>;
 type VehicleFuelLogFormMode = 'create' | 'edit';
 
 type SubmitFeedback = FeedbackAlertValue;
@@ -119,7 +122,11 @@ export function VehicleFuelLogForm({
   const { notifySuccess } = useAppNotification();
   const [feedback, setFeedback] = React.useState<SubmitFeedback>(null);
   const fuelPricingEditOrderRef = React.useRef<FuelPricingField[]>([]);
-  const form = useForm<VehicleFuelLogFormInput>({
+  const form = useForm<
+    VehicleFuelLogFormInput,
+    unknown,
+    VehicleFuelLogFormValues
+  >({
     resolver: zodResolver(vehicleFuelLogFormSchema),
     defaultValues: buildDefaultValues(vehicles, initialVehicleId)
   });

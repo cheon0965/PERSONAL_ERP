@@ -12,7 +12,10 @@ import {
   type FeedbackAlertValue
 } from '@/shared/ui/feedback-alert';
 import { appLayout } from '@/shared/ui/layout-metrics';
-import type { TransactionFormInput } from '../model/transaction-form.schema';
+import type {
+  TransactionFormInput,
+  TransactionFormValues
+} from '../model/transaction-form.schema';
 import { readFundingAccountOptionLabel } from '../model/transaction-form.mapper';
 
 export function TransactionFormFields({
@@ -30,7 +33,7 @@ export function TransactionFormFields({
   currentPeriod: AccountingPeriodItem | null;
   hasCollectingPeriod: boolean;
   hasMultipleCollectingPeriods: boolean;
-  form: UseFormReturn<TransactionFormInput>;
+  form: UseFormReturn<TransactionFormInput, unknown, TransactionFormValues>;
   availableFundingAccounts: FundingAccountItem[];
   filteredCategories: CategoryItem[];
   feedback: FeedbackAlertValue;

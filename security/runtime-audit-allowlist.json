@@ -1,21 +1,4 @@
 {
   "version": 1,
-  "entries": [
-    {
-      "id": "next:next",
-      "package": "next",
-      "severity": "high",
-      "trackedAt": "2026-07-22",
-      "expiresOn": "2026-08-21",
-      "reason": "Next 15.5.21 declares optional sharp ^0.34.3 for its supported production image-optimization path, so npm propagates the unresolved sharp advisory through next. Recheck for a supported Next 15 patch or compatible sharp fix and remove this exception by the expiry date."
-    },
-    {
-      "id": "GHSA-f88m-g3jw-g9cj",
-      "package": "sharp",
-      "severity": "high",
-      "trackedAt": "2026-07-22",
-      "expiresOn": "2026-08-21",
-      "reason": "Next 15.5.21 supports production image optimization through optional sharp ^0.34.3, whose ^0.34.x range remains affected by GHSA-f88m-g3jw-g9cj. Monitor the supported Next/sharp range, upgrade when a compatible fix is available, and remove this exception by the expiry date."
-    }
-  ]
+  "entries": []
 }

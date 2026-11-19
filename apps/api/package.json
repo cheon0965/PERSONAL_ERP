@@ -30,13 +30,13 @@
     "prisma:seed:reset": "npm run prisma:generate && node ../../scripts/run-with-root-env.cjs tsx prisma/seed.ts --reset"
   },
   "dependencies": {
-    "@nestjs/common": "^11.0.11",
+    "@nestjs/common": "^11.2.11",
     "@nestjs/config": "^4.0.4",
-    "@nestjs/core": "^11.0.11",
+    "@nestjs/core": "^11.2.11",
     "@nestjs/jwt": "^11.0.0",
-    "@nestjs/platform-express": "^11.1.28",
+    "@nestjs/platform-express": "^11.2.11",
     "@nestjs/schedule": "^5.0.1",
-    "@nestjs/swagger": "^11.4.6",
+    "@nestjs/swagger": "^11.4.8",
     "@personal-erp/contracts": "0.1.0",
     "@personal-erp/money": "0.1.0",
     "@prisma/client": "^6.4.1",
@@ -45,7 +45,7 @@
     "class-validator": "^0.14.1",
     "cookie-parser": "^1.4.7",
     "iconv-lite": "^0.7.2",
-    "mysql2": "^3.12.0",
+    "mysql2": "^3.24.6",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "swagger-ui-express": "^5.0.1"
@@ -53,7 +53,7 @@
   "devDependencies": {
     "@nestjs/cli": "^11.0.7",
     "@nestjs/schematics": "^11.0.6",
-    "@nestjs/testing": "^11.0.11",
+    "@nestjs/testing": "^11.2.11",
     "@types/cookie-parser": "^1.4.8",
     "@types/express": "^5.0.0",
     "@types/node": "^22.13.10",
